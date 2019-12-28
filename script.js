@@ -3,19 +3,173 @@ document.addEventListener('keydown', keyDownHandler, false);
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d')
 const size = 30;
-const speed = 70;
+const speed = 30;
 
-var snake;
-var food = [Math.random()*(canvas.width-2*size)+size, Math.random()*(canvas.height-2*size)+size];
+const shape1_1 = [
+	[1, 1, 1],
+	[0, 1, 0],
+];
 
-function setup() {
-	snake = new Snake();
+const shape1_2 = [
+	[1, 0],
+	[1, 1],
+	[1, 0],
+];
+
+const shape1_3 = [
+	[0, 1, 0],
+	[1, 1, 1],
+];
+
+const shape1_4 = [
+	[0, 1],
+	[1, 1],
+	[0, 1],
+];
+
+const shape2_1 = [
+	[1, 0],
+	[1, 1],
+	[0, 1],
+];
+
+const shape2_2 = [
+	[0, 1, 1],
+	[1, 1, 0],
+];
+
+const shape3_1 = [
+	[1, 0],
+	[1, 0],
+	[1, 1],
+];
+
+const shape3_2 = [
+	[0, 0, 1],
+	[1, 1, 1],
+];
+
+const shape3_3 = [
+	[1, 1],
+	[0, 1],
+	[0, 1],
+];
+
+const shape3_4 = [
+	[1, 1, 1],
+	[1, 0, 0],
+];
+
+const shape4_1 = [
+	[1, 1],
+	[1, 1],
+];
+
+const shape5_1 = [
+	[1],
+	[1],
+	[1],
+	[1],
+];
+
+const shape5_2 = [
+	[1, 1, 1, 1],
+];
+
+const shapes1 = [shape1_1, shape1_2, shape1_3, shape1_4];
+const shapes2 = [shape2_1, shape2_2];
+const shapes3 = [shape3_1, shape3_2, shape3_3, shape3_4];
+const shapes4 = [shape4_1];
+const shapes5 = [shape5_1, shape5_2];
+const all_shapes = [shapes1, shapes2, shapes3, shapes4, shapes5]
+const colors = ["pink", "green", "orange", "gold", "blue"]
+var shapes = [new Shape(),];
+
+function Shape() {
+	this.random = Math.floor(Math.random() * all_shapes.length);
+	this.shapes = all_shapes[this.random];
+	this.color = colors[this.random];
+	this.index = 0;
+	this.shape = this.shapes[this.index];
+	this.pos = {x: 0, y: 0};
+	this.coordinates = {top_left_x: -1, top_left_y: -1,
+		top_right_x: -1, top_right_y: -1,
+		bottom_left_x: -1, bottom_left_y: -1,
+		bottom_right_x: -1, bottom_right_y: -1,
+	};
+	
+	this.nextShape = function(){
+		if(this.index++ >= this.shapes.length - 1){
+			this.shape = this.shapes[0];
+			this.index = 0;
+		}
+		else{
+			this.shape = this.shapes[this.index];
+		}
+	}
+	
+	this.findCornerCoordinates = function(){
+	//Top-Left, Top-Right, Down-Left, Down-Right
+		var temp = [-1, this.pos.y, -1, this.pos.y, -1, this.pos.y + size*this.shape.length, -1, this.pos.y + size*this.shape.length]
+		for(var i = 0; i < this.shape.length; i++){
+			for(var j = 0; j < this.shape[i].length; j++){
+				if(this.shape[i][j] != 0) {
+					//finding x coordinates on the top
+					if(i == 0) {
+						//furthest to the left
+						if(temp[0] == -1){
+							temp[0] = j + this.pos.x + size*j;
+							temp[2] = j + this.pos.x + size*(j+1);
+						}
+						//furthest to the right
+						else if(temp[2] < j + this.pos.x + size*(j+1)){
+							temp[2] = j + this.pos.x + size*(j+1);
+						}
+					}
+					//finding x coordinates at the bottom
+					if(i == this.shape.length - 1) {
+						//furthest to the left
+						if(temp[4] == -1){
+							temp[4] = j + this.pos.x + size*j;
+							temp[6] = j + this.pos.x + size*(j+1);
+						}
+						//furthest to the right
+						else if(temp[6] < j + this.pos.x + size*(j+1)){
+							temp[6] = j + this.pos.x + size*(j+1);
+						}					
+					}
+				}
+			}
+		}
+		this.coordinates.top_left_x = temp[0];
+		this.coordinates.top_left_y = temp[1];
+		this.coordinates.top_right_x = temp[2];
+		this.coordinates.top_right_y = temp[3];
+		this.coordinates.bottom_left_x = temp[4];
+		this.coordinates.bottom_left_y = temp[5];
+		this.coordinates.bottom_right_x = temp[6];
+		this.coordinates.bottom_right_y = temp[7];
+	}
+	
+	this.drawShape = function(){
+		for(var i = 0; i < this.shape.length; i++){
+			for(var j = 0; j < this.shape[i].length; j++){
+				if(this.shape[i][j] != 0) {
+					ctx.fillStyle = this.color;
+					ctx.fillRect(j + this.pos.x + size*j, i + this.pos.y + size*i, size, size);
+				}
+			}
+		}
+	}
 }
 
 function draw() {
+	shapes[shapes.length-1].pos.y++;
 	drawBackground();
-	drawFood();
-	snake.runSnake();
+	for(var i = 0; i < shapes.length; i++) { 
+		shapes[i].drawShape();
+	}
+	checkBorder();
 	setTimeout(draw, speed);
 }
 
@@ -24,132 +178,39 @@ function drawBackground(){
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
-function drawFood() {
-	ctx.fillStyle = 'rgb(255,0,100)';
-	ctx.fillRect(food[0], food[1], size, size);
-}
-
-function Snake() {
-	this.xHead = 0;
-	this.yHead = 0;
-	this.xDir = size;
-	this.yDir = 0;
-	this.score = 0;
-	this.positions = [[this.xHead, this.yHead]];
-	
-	this.runSnake = function(){
-		this.checkFood();
-		this.update();
-		this.show();
-		this.checkBorder();
+function checkBorder(){
+	shapes[shapes.length-1].findCornerCoordinates();
+	if(Math.min(shapes[shapes.length-1].coordinates.top_left_x, shapes[shapes.length-1].coordinates.bottom_left_x) < 0 ){
+		shapes[shapes.length-1].pos.x = 0;
 	}
-	
-	this.dir = function(x, y) {
-		this.xDir = x;
-		this.yDir = y;
+	if(Math.max(shapes[shapes.length-1].coordinates.top_right_x, shapes[shapes.length-1].coordinates.bottom_right_x) > canvas.width ){
+		shapes[shapes.length-1].pos.x = canvas.width - (Math.max(shapes[shapes.length-1].coordinates.top_right_x, shapes[shapes.length-1].coordinates.bottom_right_x)-Math.min(shapes[shapes.length-1].coordinates.top_left_x, shapes[shapes.length-1].coordinates.bottom_left_x));
 	}
-	
-	this.checkFood = function(){
-		var centerXa = this.xHead + size/2;
-		var centerYa = this.yHead + size/2;
-		var centerXb  = food[0] + size/2;
-		var centerYb = food[1] + size/2;
-		if(Math.abs(centerXa - centerXb) < size && Math.abs(centerYa - centerYb) < size){
-			food = [Math.random()*(canvas.width-2*size)+size, Math.random()*(canvas.height-2*size)+size];
-			this.positions.push([this.xHead+size*this.xDir, this.yHead+size*this.yDir]);
-			this.score++;
-		}
+	if(shapes[shapes.length-1].coordinates.bottom_left_y > canvas.height){
+		shapes[shapes.length-1].pos.y = canvas.height - (shapes[shapes.length-1].coordinates.bottom_left_y - shapes[shapes.length-1].coordinates.top_left_y);
+		shapes.push(new Shape());
 	}
-	
-	this.update = function() {
-		this.xHead += this.xDir;
-		this.yHead += this.yDir;
-		this.updatePositions();
-	}
-	
-	this.show = function() {
-		//draw head 
-		ctx.fillStyle = 'rgb(0,0,0)';
-		ctx.fillRect(this.xHead, this.yHead, size, size);
-		drawCircle(this.xHead + 2*size/3, this.yHead + size/3);
-		
-		//draw rest of the snake
-		ctx.fillStyle = 'rgb(0,0,0)';
-		for(var i = 1; i < this.positions.length; i++){
-			ctx.fillRect(this.positions[i][0], this.positions[i][1], size, size);
-		}		
-	}
-	this.updatePositions = function(){
-		for(var i = this.positions.length - 3; i >= 0 ; i--){
-			this.positions[i+2][0] = this.positions[i][0];
-			this.positions[i+2][1] = this.positions[i][1];
-		}
-		this.positions[0] = [this.xHead, this.yHead];
-	}
-	
-	this.checkBorder = function(){
-		if(this.xHead < 0){
-			end();
-		}
-		if(this.xHead > canvas.width-size){
-			end();
-		}
-		if(this.yHead < 0) {
-			end();
-		}
-		if(this.yHead > canvas.height-size){
-			end();
-		}
-		for(var i = 1; i < this.positions.length; i++){
-			if(this.positions[i][0] == this.xHead && this.positions[i][1] == this.yHead){
-				end();
-			}
-		}
-	}
-}
-
-function end(){
-	ctx.fillStyle = 'rgb(0,0,0)';
-	ctx.fillRect(0, 0, canvas.width, canvas.height);
-	ctx.font = "50px serif";
-	ctx.fillStyle = 'rgb(255,255,255)';
-	ctx.fillText("Game Over", 0.7*canvas.width/2, 1.1*canvas.height/2);
-	ctx.font = "30px serif";
-	ctx.fillText("Your score: " + snake.score, 0.8*canvas.width/2, 0.9*canvas.height/2);
-	setTimeout(end, speed);
-}
-
-function drawCircle(x, y){
-	ctx.beginPath();
-    ctx.arc(x, y, size/5, 0, 2 * Math.PI, false);
-    ctx.fillStyle = 'green';
-    ctx.fill();
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'white';
-    ctx.stroke();
-
 }
 
 function keyDownHandler(event) {
   var x = event.keyCode;
   //left arrow
   if (x == 37) {
-	snake.dir(-size, 0);
-  }
-  //up arrow
-  else if (x == 38) {
-	snake.dir(0, -size);
+	shapes[shapes.length-1].pos.x -= size;
   }
   //right arrow
   else if (x == 39) {
-	snake.dir(size, 0);
+	shapes[shapes.length-1].pos.x += size;
   }
-  //down arrow
+  //up arrow
+  else if (x == 38) {
+	shapes[shapes.length-1].nextShape();
+  }
+    //down arrow
   else if (x == 40) {
-	snake.dir(0, size);
+	shapes[shapes.length-1].pos.y += size;
   }
 }
 
 //main
-setup();
 draw();
