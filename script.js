@@ -118,24 +118,24 @@ function Shape() {
 					if(i == 0) {
 						//furthest to the left
 						if(temp[0] == -1){
-							temp[0] = j + this.pos.x + size*j;
-							temp[2] = j + this.pos.x + size*(j+1);
+							temp[0] = this.pos.x + size*j;
+							temp[2] = this.pos.x + size*(j+1);
 						}
 						//furthest to the right
 						else if(temp[2] < j + this.pos.x + size*(j+1)){
-							temp[2] = j + this.pos.x + size*(j+1);
+							temp[2] = this.pos.x + size*(j+1);
 						}
 					}
 					//finding x coordinates at the bottom
 					if(i == this.shape.length - 1) {
 						//furthest to the left
 						if(temp[4] == -1){
-							temp[4] = j + this.pos.x + size*j;
-							temp[6] = j + this.pos.x + size*(j+1);
+							temp[4] = this.pos.x + size*j;
+							temp[6] = this.pos.x + size*(j+1);
 						}
 						//furthest to the right
 						else if(temp[6] < j + this.pos.x + size*(j+1)){
-							temp[6] = j + this.pos.x + size*(j+1);
+							temp[6] = this.pos.x + size*(j+1);
 						}					
 					}
 				}
@@ -156,7 +156,7 @@ function Shape() {
 			for(var j = 0; j < this.shape[i].length; j++){
 				if(this.shape[i][j] != 0) {
 					ctx.fillStyle = this.color;
-					ctx.fillRect(j + this.pos.x + size*j, i + this.pos.y + size*i, size, size);
+					ctx.fillRect(this.pos.x + size*j, this.pos.y + size*i, size, size);
 				}
 			}
 		}
