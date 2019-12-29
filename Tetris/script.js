@@ -1,8 +1,10 @@
 document.addEventListener('keydown', keyDownHandler, false);
 
 const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d')
-const size = 30;
+const ctx = canvas.getContext('2d');
+ctx.canvas.width  = Math.floor(0.9*window.innerWidth);
+ctx.canvas.height = Math.floor(0.9*window.innerHeight);
+const size = canvas.width/30;
 const speed = 30;
 
 const shape1_1 = [
@@ -118,24 +120,24 @@ function Shape() {
 					if(i == 0) {
 						//furthest to the left
 						if(temp[0] == -1){
-							temp[0] = j + this.pos.x + size*j;
-							temp[2] = j + this.pos.x + size*(j+1);
+							temp[0] = this.pos.x + size*j;
+							temp[2] = this.pos.x + size*(j+1);
 						}
 						//furthest to the right
 						else if(temp[2] < j + this.pos.x + size*(j+1)){
-							temp[2] = j + this.pos.x + size*(j+1);
+							temp[2] = this.pos.x + size*(j+1);
 						}
 					}
 					//finding x coordinates at the bottom
 					if(i == this.shape.length - 1) {
 						//furthest to the left
 						if(temp[4] == -1){
-							temp[4] = j + this.pos.x + size*j;
-							temp[6] = j + this.pos.x + size*(j+1);
+							temp[4] = this.pos.x + size*j;
+							temp[6] = this.pos.x + size*(j+1);
 						}
 						//furthest to the right
 						else if(temp[6] < j + this.pos.x + size*(j+1)){
-							temp[6] = j + this.pos.x + size*(j+1);
+							temp[6] = this.pos.x + size*(j+1);
 						}					
 					}
 				}
@@ -156,7 +158,7 @@ function Shape() {
 			for(var j = 0; j < this.shape[i].length; j++){
 				if(this.shape[i][j] != 0) {
 					ctx.fillStyle = this.color;
-					ctx.fillRect(j + this.pos.x + size*j, i + this.pos.y + size*i, size, size);
+					ctx.fillRect(this.pos.x + size*j, this.pos.y + size*i, size, size);
 				}
 			}
 		}
@@ -184,7 +186,7 @@ function checkBorder(){
 		shapes[shapes.length-1].pos.x = 0;
 	}
 	if(Math.max(shapes[shapes.length-1].coordinates.top_right_x, shapes[shapes.length-1].coordinates.bottom_right_x) > canvas.width ){
-		shapes[shapes.length-1].pos.x = canvas.width - (Math.max(shapes[shapes.length-1].coordinates.top_right_x, shapes[shapes.length-1].coordinates.bottom_right_x)-Math.min(shapes[shapes.length-1].coordinates.top_left_x, shapes[shapes.length-1].coordinates.bottom_left_x));
+		shapes[shapes.length-1].pos.x = size*Math.floor(canvas.width/size)-size*shapes[shapes.length-1].shape[0].length;
 	}
 	if(shapes[shapes.length-1].coordinates.bottom_left_y > canvas.height){
 		shapes[shapes.length-1].pos.y = canvas.height - (shapes[shapes.length-1].coordinates.bottom_left_y - shapes[shapes.length-1].coordinates.top_left_y);
@@ -206,7 +208,7 @@ function keyDownHandler(event) {
   else if (x == 38) {
 	shapes[shapes.length-1].nextShape();
   }
-    //down arrow
+  //down arrow
   else if (x == 40) {
 	shapes[shapes.length-1].pos.y += size;
   }
