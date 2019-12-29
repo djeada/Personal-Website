@@ -2,7 +2,7 @@ document.addEventListener('keydown', keyDownHandler, false);
 
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d')
-const size = 30;
+const size = canvas.width/30;
 const speed = 30;
 
 const shape1_1 = [
@@ -184,7 +184,7 @@ function checkBorder(){
 		shapes[shapes.length-1].pos.x = 0;
 	}
 	if(Math.max(shapes[shapes.length-1].coordinates.top_right_x, shapes[shapes.length-1].coordinates.bottom_right_x) > canvas.width ){
-		shapes[shapes.length-1].pos.x = canvas.width - (Math.max(shapes[shapes.length-1].coordinates.top_right_x, shapes[shapes.length-1].coordinates.bottom_right_x)-Math.min(shapes[shapes.length-1].coordinates.top_left_x, shapes[shapes.length-1].coordinates.bottom_left_x));
+		shapes[shapes.length-1].pos.x = size*Math.floor(canvas.width/size)-size*shapes[shapes.length-1].shape[0].length;
 	}
 	if(shapes[shapes.length-1].coordinates.bottom_left_y > canvas.height){
 		shapes[shapes.length-1].pos.y = canvas.height - (shapes[shapes.length-1].coordinates.bottom_left_y - shapes[shapes.length-1].coordinates.top_left_y);
@@ -206,7 +206,7 @@ function keyDownHandler(event) {
   else if (x == 38) {
 	shapes[shapes.length-1].nextShape();
   }
-    //down arrow
+  //down arrow
   else if (x == 40) {
 	shapes[shapes.length-1].pos.y += size;
   }
