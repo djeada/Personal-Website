@@ -14,18 +14,11 @@ All of the Prism files are also accessible as a CDN, so you don't have to downlo
 Wrap your desired code in `<pre><code class="language-whatever"> ... </pre>`:
 
 ```html
-<pre><code class="language-css">body {
-      font: 100% Helvetica, sans-serif;
-      color: #333;
-    }
-
-    .box {
-      -webkit-border-radius: 10px;
-      -moz-border-radius: 10px;
-      -ms-border-radius: 10px;
-      border-radius: 10px;
-    }
-
+<pre><code class="language-css">
+selector {
+     property_a: some_value;
+     property_b: other_value;
+}
 </pre>
 ```
 
