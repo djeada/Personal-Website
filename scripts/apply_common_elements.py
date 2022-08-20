@@ -3,6 +3,9 @@ Input: a html file
 Output: modified html file with common navbar, footer and so on.
 '''
 
+# TODO:
+# - add option of replacing content based on comments and not only tags
+
 
 import argparse
 from dataclasses import dataclass
