@@ -9,11 +9,27 @@
 * [Building blocks](#🛠-Building-blocks)
 * [Technologies](#ℹ-Technologies)
 
+## Philosophy
+
+* No boilerplates, templates or frameworks used.
+* Everything we need we can built from scratch using HTML, CSS and JavaScript (TypeScript).
+* All common elements across the pages are being updated trough custom Python scripts. 
+
 ## 🛠 Building blocks
 
+HTML elements:
+
+* header
+* navbar section
+* footer section
+* content section
+* article page
+
+CSS files:
+
+* general components
 * navbar
 * footer
-* article page
 
 ## ℹ Technologies
 
