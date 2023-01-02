@@ -102,7 +102,10 @@ class Parser(ArgumentParser):
         super(Parser, self).__init__(*args, **kwargs)
         self.add_argument("path", type=str, help="path to the html file")
         self.add_argument(
-            "--inplace", action="store_true", help="modify the file inplace", default=True
+            "--inplace",
+            action="store_true",
+            help="modify the file inplace",
+            default=True,
         )
         self.add_argument(
             "--debug", action="store_true", help="print debug info to stdout"
@@ -131,6 +134,7 @@ def main():
         Path(input_file_path).write_text(html)
     else:
         print(html)
+
 
 if __name__ == "__main__":
     main()
