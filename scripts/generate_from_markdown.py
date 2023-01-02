@@ -27,21 +27,21 @@ def apply_filters(html):
 
     # if no body tag, add one at the beginning of the file and at the end
     if "<body>" not in html:
-        html = "<body>" + html + "</body>"
+        html = "\n<body>\n" + html + "\n</body>\n"
 
     # if no head tag, add one at the beginning of the file and at the end
     if "<head>" not in html:
-        html = "<head>" + html + "</head>"
+        html = "\n<head>\n\n</head>\n" + html 
 
     # if no <!DOCTYPE html> <html lang="en"> add one at the beginning of the file and at the end
     if "<!DOCTYPE html>" not in html:
-        html = '<!DOCTYPE html>\n<html lang="en">' + html + "</html>"
+        html = '\n<!DOCTYPE html>\n<html lang="en">\n' + html + "\n</html>\n"
 
     # put everything inside the body tag in a div in <section id="article"> </section>
     body_start = html.find("<body>")
     body_end = html.find("</body>")
     body = html[body_start + 6 : body_end]
-    html = html[:body_start + 6] + f'<section id="article">{body}</section>' + html[body_end:]
+    html = html[:body_start + 6] + f'\n<section id="article">\n{body}\n</section>\n' + html[body_end:]
     
     return html
 

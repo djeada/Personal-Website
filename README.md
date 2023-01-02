@@ -38,6 +38,31 @@ Some of the technologies used in this project:
 - [CSS3]()
 - [TypeScript]()
 
+## Formatting and linting
+We use 'js-beautify' to format our code. You can install it with npm:
+
+```bash
+npm install js-beautify -g
+```
+
+For html files, we use the following command:
+
+```bash
+js-beautify --type html -r src/**/*.html
+```
+
+For css files, we use the following command:
+
+```bash
+js-beautify --type css -r src/**/*.css
+```
+
+For js files, we use the following command:
+
+```bash
+js-beautify --type js -r src/**/*.js
+```
+
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
