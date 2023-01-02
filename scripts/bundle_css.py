@@ -2,46 +2,44 @@
 Bundles many CSS files into one.
 """
 
-import os
-import glob
-import argparse
-import logging
+from typing import List
 from pathlib import Path
 
-
-def get_args():
-    """
-    Gets the command line arguments.
-    """
-    parser = argparse.ArgumentParser(description="Bundles many CSS files into one.")
-    parser.add_argument("-i", "--input", help="Input directory", required=True)
-    parser.add_argument("-o", "--output", help="Output file", required=True)
-    parser.add_argument("-d", "--debug", help="Debug mode", action="store_true")
-    return parser.parse_args()
+ASSETS_DIR = Path("../src/resources/assets")
+OUTPUT_FILE = Path("../src/resources/style.css")
 
 
-def get_files(input_dir):
+def gather_css(paths: List[Path]) -> str:
     """
-    Gets all files in the input directory.
+    Gathers all CSS files from the given paths and returns them as a single string.
     """
-    return glob.glob(os.path.join(input_dir, "*.css"))
+    css = ""
+    for path in paths:
+        css += path.read_text() + "\n"
+    return css
+
+
+def find_css_files() -> List[Path]:
+    """
+    Finds all CSS files in the assets directory.
+    """
+    return sorted(list(ASSETS_DIR.glob("**/*.css")))
+
+
+def bundle_css(css: str, output_file: Path) -> None:
+    """
+    Writes the given CSS to the given output file.
+    """
+    output_file.write_text(css)
 
 
 def main():
     """
-    Main function.
+    Bundles all CSS files into one.
     """
-    args = get_args()
-    if args.debug:
-        logging.basicConfig(level=logging.DEBUG)
-    else:
-        logging.basicConfig(level=logging.INFO)
-    logging.debug(args)
-    files = get_files(args.input)
-    logging.debug(files)
-    contents = "\n".join([Path(file).read_text() for file in files])
-    logging.debug(contents)
-    Path(args.output).write_text(contents)
+    css_files = find_css_files()
+    css = gather_css(css_files)
+    bundle_css(css, OUTPUT_FILE)
 
 
 if __name__ == "__main__":

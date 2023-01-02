@@ -5,7 +5,9 @@ Used to run all the specified scripts with provided command line arguments.
 import subprocess
 
 SCRIPTS_TO_ARGS = {
-    "apply_common_elements.py": ["-i ..\src\index.html -o ..\src\index.html"],
+    "python generate_from_markdown": [],
+    "python apply_common_elements": ["**/*.html"],
+    "python bundle_css": [],
 }
 
 
@@ -14,15 +16,12 @@ def run_all():
     Runs all the scripts with provided command line arguments.
     """
     for script, args_list in SCRIPTS_TO_ARGS.items():
-        print("Running {}".format(script))
-        for args in args_list:
-            print("Arguments: {}".format(args))
-            print("----------------------------------------------------")
-            subprocess.call([script, args])
-            print("----------------------------------------------------")
-            print()
+        args = " ".join(args_list)
+        print(f"Running {script} {args}")
+        subprocess.run(f"{script} {args}", shell=True, check=True)
 
 
 if __name__ == "__main__":
+    print("Running all scripts...")
     run_all()
     print("Done!")
