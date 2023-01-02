@@ -11,6 +11,8 @@ HEADER_SOURCE_PATH = "../src/building_blocks/head.html"
 NAVBAR_SOURCE_PATH = "../src/building_blocks/navbar.html"
 FOOTER_SOURCE_PATH = "../src/building_blocks/footer.html"
 
+INPUT_DIR = "../src/articles"
+
 
 def find_common_element(original_html, tag):
     # Find the element in the original HTML
@@ -112,13 +114,8 @@ class Parser(ArgumentParser):
         )
 
 
-def main():
-
-    parser = Parser()
-    args = parser.parse_args()
-    input_file_path = args.path
-    inplace = args.inplace
-    html = Path(input_file_path).read_text()
+def correct_file(file_path):
+    html = Path(file_path).read_text()
 
     paths_filters_pairs = [
         (HEADER_SOURCE_PATH, replace_head),
@@ -130,10 +127,24 @@ def main():
         correct_html = Path(path).read_text()
         html = filter_function(html, correct_html)
 
-    if inplace:
-        Path(input_file_path).write_text(html)
-    else:
-        print(html)
+    Path(file_path).write_text(html)
+
+
+"""
+def main():
+
+    parser = Parser()
+    args = parser.parse_args()
+    input_file_path = args.path
+    inplace = args.inplace
+    
+    correct_file(input_file_path)
+"""
+
+
+def main():
+    for file in Path(INPUT_DIR).glob("*.html"):
+        correct_file(file)
 
 
 if __name__ == "__main__":

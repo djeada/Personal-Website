@@ -1,11 +1,13 @@
 import requests
 import markdown
+import markdownify
 import re
 from pathlib import Path
 from dataclasses import dataclass
 
 
 PATH_TO_CONFIG = "input.txt"
+OUTPUT_DIR = "../src/articles"
 
 
 @dataclass
@@ -59,10 +61,61 @@ def replace_all_tables(html: str) -> str:
     return html
 
 
+def strip_html(html: str) -> str:
+
+    # convert html to markdown
+    md = markdownify.markdownify(html, heading_style="atx")
+
+    # remove empty lines
+    md = re.sub(r"\n\s*\n", "\n", md)
+
+    # insert empty line above lines starting with #
+    md = re.sub(r"\n(\s*#+)", r"\n\n\1", md)
+
+    # remove empty lines from the beginning and the end if there are any
+    md = md.strip()
+
+    return md
+
+
+def apply_prism_for_code_samples(html: str) -> str:
+    # find where the code samples start and end, they are represented by ``` and ```
+    code_start_pattern = re.compile(r"```")
+    code_start_match = code_start_pattern.search(html)
+    while code_start_match is not None:
+        code_end_match = code_start_pattern.search(html, code_start_match.end())
+        if code_end_match is None:
+            break
+        start = code_start_match.start()
+        end = code_end_match.end()
+        code_sample = html[start:end]
+        code_sample = strip_html(code_sample)
+        # check if there is language specified
+        language = re.match(r"```(\w+)", code_sample)
+        if language is None:
+            language = "shell"
+        else:
+            language = language.group(1)
+        code_sample = re.sub(r"`{3,}(\w+)?", "", code_sample)
+        # if the first line is empty, remove it
+        if code_sample.startswith("\n"):
+            code_sample = code_sample[1:]
+        html = (
+            html[:start]
+            + f'<div><pre><code class="language-{language}">{code_sample}</code></pre></div>'
+            + html[end:]
+        )
+        code_start_match = code_start_pattern.search(html, code_end_match.end())
+    return html
+
+
 def apply_filters(html):
 
     # replace all tables
     html = replace_all_tables(html)
+
+    # apply prism for code samples
+    html = apply_prism_for_code_samples(html)
 
     # if no body tag, add one at the beginning of the file and at the end
     if "<body>" not in html:
@@ -86,6 +139,8 @@ def apply_filters(html):
         + html[body_end:]
     )
 
+    html += '\n<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>'
+
     return html
 
 
@@ -104,7 +159,7 @@ def main():
         html = apply_filters(html)
 
         # Create a Path object for the output file
-        output_path = Path(f"{output_name}.html")
+        output_path = Path(OUTPUT_DIR) / f"{output_name.lower()}.html"
 
         # Save the HTML to the output file
         output_path.write_text(html)

@@ -5,6 +5,7 @@ Used to run all the specified scripts with provided command line arguments.
 import subprocess
 
 SCRIPTS_TO_ARGS = {
+    "python get_markdown_urls": [],
     "python generate_from_markdown": [],
     "python apply_common_elements": ["**/*.html"],
     "python bundle_css": [],
