@@ -135,7 +135,7 @@ def apply_filters(html):
     body = html[body_start + 6 : body_end]
     html = (
         html[: body_start + 6]
-        + f'\n<section id="article">\n{body}\n</section>\n'
+        + f'\n<section id="article-body">\n{body}\n</section>\n'
         + html[body_end:]
     )
 
