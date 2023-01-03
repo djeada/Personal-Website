@@ -9,8 +9,8 @@ function onMenuClick(e) {
     rippleDiv.setAttribute("style", "top:" + (String(y) + ("px; left:" + (String(x) + "px;"))));
     dom.appendChild(rippleDiv);
     setTimeout((function() {
-      dom.removeChild(rippleDiv);
-      return /* () */ 0;
+        dom.removeChild(rippleDiv);
+        return /* () */ 0;
     }), 900);
     return /* () */ 0;
-  }
+}

@@ -11,7 +11,7 @@ HEADER_SOURCE_PATH = "../src/building_blocks/head.html"
 NAVBAR_SOURCE_PATH = "../src/building_blocks/navbar.html"
 FOOTER_SOURCE_PATH = "../src/building_blocks/footer.html"
 
-INPUT_DIR = "../src/articles"
+INPUT_DIR = "../src/tools/matrix_multiplication"
 
 
 def find_common_element(original_html, tag):
@@ -119,7 +119,7 @@ def correct_file(file_path):
 
     paths_filters_pairs = [
         (HEADER_SOURCE_PATH, replace_head),
-        #(NAVBAR_SOURCE_PATH, replace_navbar),
+        (NAVBAR_SOURCE_PATH, replace_navbar),
         (FOOTER_SOURCE_PATH, replace_footer),
     ]
 

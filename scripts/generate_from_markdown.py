@@ -27,6 +27,8 @@ def read_urls():
 
 def markdown_to_html_table(markdown_table: str) -> str:
     rows = markdown_table.split("\n")
+    rows = [row[1:] if row.startswith("|") else row for row in rows]
+    rows = [row[:-1] if row.endswith("|") else row for row in rows]
     rows = [row.split("|") for row in rows]
     # if there is a row that mathces ' -- | -- ' then it should be removed
     rows = [

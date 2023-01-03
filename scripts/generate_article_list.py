@@ -1,5 +1,6 @@
 from pathlib import Path
 from bs4 import BeautifulSoup
+import string
 
 INPUT_DIR = "../src/articles"
 INPUT_FILE = "../src/core/blog.html"
@@ -47,7 +48,7 @@ def get_article_description(article):
     soup = BeautifulSoup(article.read_text(), "html.parser")
     text = soup.find("p").text[:300]
     # check if ends in punctuation, if so remove the last character
-    if text[-1] in [".", "!", "?"]:
+    if text[-1] in string.punctuation:
         text = text[:-1]
     return text
 
