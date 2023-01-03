@@ -11,7 +11,7 @@ HEADER_SOURCE_PATH = "../src/building_blocks/head.html"
 NAVBAR_SOURCE_PATH = "../src/building_blocks/navbar.html"
 FOOTER_SOURCE_PATH = "../src/building_blocks/footer.html"
 
-INPUT_DIR = "../src/core"
+INPUT_DIR = "../src/articles"
 
 
 def find_common_element(original_html, tag):
