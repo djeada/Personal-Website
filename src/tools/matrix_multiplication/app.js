@@ -1,9 +1,13 @@
 document.getElementById('reset').addEventListener('click', () => {
     // reset the values of the input fields in the tables
+    reset();
+});
+
+function reset() {
     displayMatrix('matrix-a', []);
     displayMatrix('matrix-b', []);
     displayMatrix('matrix-result', []);
-});
+}
 
 document.getElementById('submit').addEventListener('click', () => {
 
@@ -319,3 +323,5 @@ function multiply(matrixA, matrixB) {
     return result;
 
 }
+
+reset();
