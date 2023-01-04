@@ -393,7 +393,11 @@ function main() {
 
     canvas.addEventListener('touchmove', function(event) {
         event.preventDefault();
-    });
+        // prevent scrolling
+
+        // prevent zooming
+        event.preventDefault();
+        });
 
     // define touch start event listener
     canvas.addEventListener('touchstart', function(event) {
