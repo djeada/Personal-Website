@@ -12,9 +12,9 @@ This is the repository for my personal website, which serves as a platform to sh
 ## 📑 Table of contents
 * [Building blocks](#🛠-Building-blocks)
 * [Technologies](#ℹ-Technologies)
-* [Formatting and Linting](Formatting-and-Linting)
-* [Contributing](Contributing)
-* [License](License)
+* [Formatting and Linting](#Formatting-and-Linting)
+* [Contributing](#Contributing)
+* [License](#License)
 
 ## Philosophy
 
