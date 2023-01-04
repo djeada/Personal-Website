@@ -254,8 +254,16 @@ function main() {
         }
     });
 
+    canvas.onwheel = function(event){
+        event.preventDefault();
+    };
+    
+    canvas.onmousewheel = function(event){
+        event.preventDefault();
+    };
     canvas.addEventListener('touchmove', function(event) {
         event.preventDefault();
+        canvas.focus();
     });
 
     // define touch start event listener
@@ -264,13 +272,13 @@ function main() {
         const x = event.touches[0].clientX;
         const y = event.touches[0].clientY;
 
-        // get current shape coordinates
-        const shapeX = game.currentShape.x;
-        const shapeY = game.currentShape.y;
+        // get current snake coordinates
+        const snakeX = game.snake.x;
+        const snakeY = game.snake.y;
 
-        // calculate distance between touch point and shape
-        const dx = x - shapeX;
-        const dy = y - shapeY;
+        // calculate the difference between touch point and snake coordinates
+        const dx = x - snakeX;
+        const dy = y - snakeY;
 
         // if touch point is on the left side of the shape
         if (dx < 0) {

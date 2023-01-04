@@ -391,12 +391,17 @@ function main() {
 
     });
 
+    canvas.onwheel = function(event){
+        event.preventDefault();
+    };
+    
+    canvas.onmousewheel = function(event){
+        event.preventDefault();
+    };
+
     canvas.addEventListener('touchmove', function(event) {
         event.preventDefault();
-        // prevent scrolling
-
-        // prevent zooming
-        event.preventDefault();
+        canvas.focus();
         });
 
     // define touch start event listener
