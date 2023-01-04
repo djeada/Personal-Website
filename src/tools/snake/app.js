@@ -254,6 +254,10 @@ function main() {
         }
     });
 
+    canvas.addEventListener('touchmove', function(event) {
+        event.preventDefault();
+    });
+
     // define touch start event listener
     canvas.addEventListener('touchstart', function(event) {
         // get touch point coordinates
