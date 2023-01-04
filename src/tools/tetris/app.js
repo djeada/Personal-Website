@@ -1,225 +1,433 @@
-document.addEventListener('keydown', keyDownHandler, false);
+SQUARE_SIZE = 40;
+COLOR_A = "#f98776";
+COLOR_B = "#eec747";
+COLOR_C = "#d3d3d3";
+COLOR_D = "#b3b3b3";
+COLOR_E = "#4ca394";
+COLOR_F = "#6f292e";
 
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-ctx.canvas.width = Math.floor(0.9 * window.innerWidth);
-ctx.canvas.height = Math.floor(0.9 * window.innerHeight);
-const size = canvas.width / 30;
-const speed = 30;
+class Model {
+    constructor(numRows, numCols) {
+        // grid of colors, initially all white
+        this.grid = [];
+        for (let i = 0; i < numRows; i++) {
+            this.grid.push([]);
+            for (let j = 0; j < numCols; j++) {
+                this.grid[i].push("white");
+            }
+        }
+    }
 
-const shape1_1 = [
-    [1, 1, 1],
-    [0, 1, 0],
-];
+    addShape(x, y, shape, color) {
+        for (let i = 0; i < shape.length && y + i < this.grid.length; i++) {
+            for (let j = 0; j < shape[i].length && x + j < this.grid[i].length; j++) {
+                if (shape[i][j] === 1) {
+                    this.grid[y + i][x + j] = color;
+                }
+            }
+        }
+    }
 
-const shape1_2 = [
-    [1, 0],
-    [1, 1],
-    [1, 0],
-];
 
-const shape1_3 = [
-    [0, 1, 0],
-    [1, 1, 1],
-];
+    removeShape(x, y, shape) {
+        for (let i = 0; i < shape.length && y + i < this.grid.length; i++) {
+            for (let j = 0; j < shape[i].length && x + j < this.grid[i].length; j++) {
+                if (shape[i][j] === 1) {
+                    this.grid[y + i][x + j] = "white";
+                }
+            }
+        }
+    }
 
-const shape1_4 = [
-    [0, 1],
-    [1, 1],
-    [0, 1],
-];
+    areCoordinatesInBounds(x, y) {
+        return x >= 0 && x < this.grid[0].length && y >= 0 && y < this.grid.length;
+    }
 
-const shape2_1 = [
-    [1, 0],
-    [1, 1],
-    [0, 1],
-];
+    isAreaFree(x, y, shape) {
+        for (let i = 0; i < shape.length; i++) {
+            for (let j = 0; j < shape[i].length; j++) {
+                if (shape[i][j] === 1) {
+                    if (!this.areCoordinatesInBounds(x + j, y + i) || this.grid[y + i][x + j] !== "white") {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
 
-const shape2_2 = [
-    [0, 1, 1],
-    [1, 1, 0],
-];
+    canMoveShape(oldX, oldY, oldShape, newX, newY, newShape, color) {
+        this.removeShape(oldX, oldY, oldShape);
+        var flag = this.isAreaFree(newX, newY, newShape)
+        this.addShape(oldX, oldY, oldShape, color);
+        return flag;
+    }
 
-const shape3_1 = [
-    [1, 0],
-    [1, 0],
-    [1, 1],
-];
+    moveShape(oldX, oldY, oldShape, newX, newY, newShape, color) {
+        this.removeShape(oldX, oldY, oldShape);
+        this.addShape(newX, newY, newShape, color);
+    }
 
-const shape3_2 = [
-    [0, 0, 1],
-    [1, 1, 1],
-];
 
-const shape3_3 = [
-    [1, 1],
-    [0, 1],
-    [0, 1],
-];
+    isRowFull(row) {
+        for (let i = 0; i < this.grid[row].length; i++) {
+            if (this.grid[row][i] === "white") {
+                return false;
+            }
+        }
+        return true;
+    }
 
-const shape3_4 = [
-    [1, 1, 1],
-    [1, 0, 0],
-];
+    removeRow(row) {
+        // move all rows above down
+        for (let i = row; i > 0; i--) {
+            for (let j = 0; j < this.grid[i].length; j++) {
+                this.grid[i][j] = this.grid[i - 1][j];
+            }
+        }
 
-const shape4_1 = [
-    [1, 1],
-    [1, 1],
-];
+        // set row 0 to white
+        for (let i = 0; i < this.grid[0].length; i++) {
+            this.grid[0][i] = "white";
+        }
+    }
 
-const shape5_1 = [
-    [1],
-    [1],
-    [1],
-    [1],
-];
+    removeFullRows() {
+        for (let i = 0; i < this.grid.length; i++) {
+            if (this.isRowFull(i)) {
+                this.removeRow(i);
+            }
+        }
+    }
 
-const shape5_2 = [
-    [1, 1, 1, 1],
-];
+    draw(ctx) {
+        for (let i = 0; i < this.grid.length; i++) {
+            for (let j = 0; j < this.grid[i].length; j++) {
+                ctx.fillStyle = this.grid[i][j];
+                ctx.fillRect(j * SQUARE_SIZE, i * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE);
+            }
+        }
+    }
 
-const shapes1 = [shape1_1, shape1_2, shape1_3, shape1_4];
-const shapes2 = [shape2_1, shape2_2];
-const shapes3 = [shape3_1, shape3_2, shape3_3, shape3_4];
-const shapes4 = [shape4_1];
-const shapes5 = [shape5_1, shape5_2];
-const all_shapes = [shapes1, shapes2, shapes3, shapes4, shapes5]
-const colors = ["pink", "green", "orange", "gold", "blue"]
-var shapes = [new Shape(), ];
+}
 
-function Shape() {
-    this.random = Math.floor(Math.random() * all_shapes.length);
-    this.shapes = all_shapes[this.random];
-    this.color = colors[this.random];
-    this.index = 0;
-    this.shape = this.shapes[this.index];
-    this.pos = {
-        x: 0,
-        y: 0
-    };
-    this.coordinates = {
-        top_left_x: -1,
-        top_left_y: -1,
-        top_right_x: -1,
-        top_right_y: -1,
-        bottom_left_x: -1,
-        bottom_left_y: -1,
-        bottom_right_x: -1,
-        bottom_right_y: -1,
-    };
+class Shape {
+    constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.dx = 0;
+        this.dy = SQUARE_SIZE / 4;
+        this.rotation = 0;
+        this.color = color;
+        this.evolution = [];
+        this.currentIdx = 0;
+    }
 
-    this.nextShape = function() {
-        if (this.index++ >= this.shapes.length - 1) {
-            this.shape = this.shapes[0];
-            this.index = 0;
+    move(ctx) {
+        console.log("move", this.x, this.y, this.dx, this.dy)
+        this.x += this.dx;
+        this.y += this.dy;
+
+        this.dx = 0;
+        this.dy = SQUARE_SIZE / 4;
+
+        while (this.rotation >= 0) {
+            this.rotate();
+            this.rotation -= 1;
+        }
+
+        if (this.x < 0) {
+
+            this.x = 0;
+        }
+
+        if (this.x + this.shape()[0].length * SQUARE_SIZE > ctx.canvas.width) {
+            this.x = ctx.canvas.width - this.shape()[0].length * SQUARE_SIZE;
+        }
+    }
+
+    rotate() {
+        this.currentIdx = (this.currentIdx + 1) % this.evolution.length;
+    }
+
+    shape() {
+        return this.evolution[this.currentIdx];
+    }
+}
+
+class TShape extends Shape {
+    constructor(x, y, color) {
+        super(x, y, color);
+        this.evolution = [
+            [
+                [1, 1, 1],
+                [0, 1, 0],
+            ],
+            [
+                [1, 0],
+                [1, 1],
+                [1, 0],
+            ],
+            [
+                [0, 1, 0],
+                [1, 1, 1],
+            ],
+            [
+                [0, 1],
+                [1, 1],
+                [0, 1],
+            ],
+        ];
+    }
+}
+
+class LShape extends Shape {
+    constructor(x, y, color) {
+        super(x, y, color);
+        this.evolution = [
+            [
+                [1, 0],
+                [1, 0],
+                [1, 1],
+            ],
+            [
+                [0, 0, 1],
+                [1, 1, 1],
+            ],
+            [
+                [1, 1],
+                [0, 1],
+                [0, 1],
+            ],
+            [
+                [1, 1, 1],
+                [1, 0, 0],
+            ],
+        ];
+    }
+}
+
+class SkewShape extends Shape {
+    constructor(x, y, color) {
+        super(x, y, color);
+        this.evolution = [
+            [
+                [1, 0],
+                [1, 1],
+                [0, 1],
+            ],
+            [
+                [0, 1, 1],
+                [1, 1, 0],
+            ],
+        ];
+    }
+}
+
+class SquareShape extends Shape {
+    constructor(x, y, color) {
+        super(x, y, color);
+        this.evolution = [
+            [
+                [1, 1],
+                [1, 1],
+            ],
+        ];
+    }
+}
+
+class StraightShape extends Shape {
+    constructor(x, y, color) {
+        super(x, y, color);
+        this.evolution = [
+            [
+                [1],
+                [1],
+                [1],
+                [1],
+            ],
+            [
+                [1, 1, 1, 1],
+            ],
+        ];
+    }
+}
+
+
+class Game {
+    constructor(ctx) {
+        this.init(ctx);
+    }
+
+    init(ctx) {
+        this.currentShape = null;
+        this.isGameOver = false;
+
+        let numRows = Math.floor(ctx.canvas.height / SQUARE_SIZE);
+        let numCols = Math.floor(ctx.canvas.width / SQUARE_SIZE);
+        this.model = new Model(numRows, numCols);
+    }
+
+    startOver(ctx) {
+        this.init(ctx);
+    }
+
+    generateShape() {
+        let shape = Math.floor(Math.random() * 5);
+        let color = Math.floor(Math.random() * 6);
+        let x = SQUARE_SIZE * Math.floor(Math.random() * 12);
+        let y = 0;
+
+        let colors = [COLOR_A, COLOR_B, COLOR_C, COLOR_D, COLOR_E, COLOR_F];
+        let shapes = [TShape, LShape, SkewShape, SquareShape, StraightShape];
+
+        this.currentShape = new shapes[shape](x, y, colors[color]);
+    }
+
+    draw(ctx) {
+
+        if (this.isGameOver) {
+            ctx.font = "30px Arial";
+            ctx.fillStyle = "black";
+            ctx.fillText("Game Over", ctx.canvas.width / 2 - 100, ctx.canvas.height / 2);
+            return;
+        }
+
+        this.model.draw(ctx);
+    }
+
+    update(ctx) {
+
+        if (this.isGameOver) {
+            return;
+        }
+
+        if (!this.currentShape) {
+            this.generateShape();
+            this.model.addShape(this.currentShape.x, this.currentShape.y, this.currentShape.shape(), this.currentShape.color);
+        }
+
+        var oldX = Math.floor(this.currentShape.x / SQUARE_SIZE);
+        var oldY = Math.floor(this.currentShape.y / SQUARE_SIZE);
+        let oldShape = this.currentShape.shape();
+        this.currentShape.move(ctx);
+        var newX = Math.floor(this.currentShape.x / SQUARE_SIZE);
+        var newY = Math.floor(this.currentShape.y / SQUARE_SIZE);
+        let newShape = this.currentShape.shape();
+
+        console.log("Old: " + oldX + ", " + oldY + ", " + oldShape);
+        console.log("New: " + newX + ", " + newY + ", " + newShape);
+
+        if (this.model.canMoveShape(oldX, oldY, oldShape, newX, newY, newShape, this.currentShape.color)) {
+            this.model.moveShape(oldX, oldY, oldShape, newX, newY, newShape, this.currentShape.color);
         } else {
-            this.shape = this.shapes[this.index];
-        }
-    }
 
-    this.findCornerCoordinates = function() {
-        //Top-Left, Top-Right, Down-Left, Down-Right
-        var temp = [-1, this.pos.y, -1, this.pos.y, -1, this.pos.y + size * this.shape.length, -1, this.pos.y + size * this.shape.length]
-        for (var i = 0; i < this.shape.length; i++) {
-            for (var j = 0; j < this.shape[i].length; j++) {
-                if (this.shape[i][j] != 0) {
-                    //finding x coordinates on the top
-                    if (i == 0) {
-                        //furthest to the left
-                        if (temp[0] == -1) {
-                            temp[0] = this.pos.x + size * j;
-                            temp[2] = this.pos.x + size * (j + 1);
-                        }
-                        //furthest to the right
-                        else if (temp[2] < j + this.pos.x + size * (j + 1)) {
-                            temp[2] = this.pos.x + size * (j + 1);
-                        }
-                    }
-                    //finding x coordinates at the bottom
-                    if (i == this.shape.length - 1) {
-                        //furthest to the left
-                        if (temp[4] == -1) {
-                            temp[4] = this.pos.x + size * j;
-                            temp[6] = this.pos.x + size * (j + 1);
-                        }
-                        //furthest to the right
-                        else if (temp[6] < j + this.pos.x + size * (j + 1)) {
-                            temp[6] = this.pos.x + size * (j + 1);
-                        }
-                    }
-                }
+            if (newY == 0) {
+                this.isGameOver = true;
+                return;
+            }
+            this.currentShape = null;
+        }
+
+        this.model.removeFullRows();
+
+    }
+}
+
+function main() {
+    window.addEventListener("keydown", function(e) {
+        if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].indexOf(e.code) > -1) {
+            e.preventDefault();
+        }
+    }, false);
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // set the width of the canvas to match a neat multiple of SQUARE_SIZE
+    canvas.width = canvas.width - canvas.width % SQUARE_SIZE;
+    canvas.height = canvas.height - canvas.height % SQUARE_SIZE;
+
+    // focus on the canvas
+    canvas.focus();
+
+    let game = new Game(ctx);
+
+    document.addEventListener('keydown', function(event) {
+        const key = event.key;
+        if (key === 'ArrowLeft') {
+            if (game.currentShape) {
+                game.currentShape.dx = -SQUARE_SIZE;
             }
         }
-        this.coordinates.top_left_x = temp[0];
-        this.coordinates.top_left_y = temp[1];
-        this.coordinates.top_right_x = temp[2];
-        this.coordinates.top_right_y = temp[3];
-        this.coordinates.bottom_left_x = temp[4];
-        this.coordinates.bottom_left_y = temp[5];
-        this.coordinates.bottom_right_x = temp[6];
-        this.coordinates.bottom_right_y = temp[7];
-    }
 
-    this.drawShape = function() {
-        for (var i = 0; i < this.shape.length; i++) {
-            for (var j = 0; j < this.shape[i].length; j++) {
-                if (this.shape[i][j] != 0) {
-                    ctx.fillStyle = this.color;
-                    ctx.fillRect(this.pos.x + size * j, this.pos.y + size * i, size, size);
-                }
+        if (key === 'ArrowRight') {
+            if (game.currentShape) {
+
+                game.currentShape.dx = SQUARE_SIZE;
             }
         }
-    }
+
+        if (key === 'ArrowDown') {
+            if (game.currentShape) {
+
+                game.currentShape.dy += SQUARE_SIZE / 4;
+            }
+        }
+
+        if (key === ' ') {
+            if (game.currentShape) {
+
+                game.currentShape.rotation += 1;
+            }
+        }
+
+        if (key === 'Escape') {
+            game.startOver(ctx);
+        }
+
+    });
+
+    // define touch start event listener
+    canvas.addEventListener('touchstart', function(event) {
+        // get touch point coordinates
+        const x = event.touches[0].clientX;
+        const y = event.touches[0].clientY;
+
+        // use touch point coordinates to move shape
+        if (x < canvas.width / 2) {
+            // move shape left
+            game.currentShape.dx = -SQUARE_SIZE;
+        } else {
+            // move shape right
+            game.currentShape.dx = SQUARE_SIZE;
+        }
+    });
+
+    let lastTap = null;
+
+    canvas.addEventListener('touchend', function(event) {
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap;
+        if (lastTap && tapLength < 500 && tapLength > 0) {
+            game.startOver(ctx);
+        }
+        lastTap = currentTime;
+    });
+
+    // use setInterval to update and draw the game 10 times per second
+    setInterval(function() {
+        game.update(ctx);
+        draw(ctx, game);
+    }, 100);
+
 }
 
-function draw() {
-    shapes[shapes.length - 1].pos.y++;
-    drawBackground();
-    for (var i = 0; i < shapes.length; i++) {
-        shapes[i].drawShape();
-    }
-    checkBorder();
-    setTimeout(draw, speed);
+function draw(ctx, game) {
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+    game.draw(ctx);
 }
 
-function drawBackground() {
-    ctx.fillStyle = 'rgb(255,255,255)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
-
-function checkBorder() {
-    shapes[shapes.length - 1].findCornerCoordinates();
-    if (Math.min(shapes[shapes.length - 1].coordinates.top_left_x, shapes[shapes.length - 1].coordinates.bottom_left_x) < 0) {
-        shapes[shapes.length - 1].pos.x = 0;
-    }
-    if (Math.max(shapes[shapes.length - 1].coordinates.top_right_x, shapes[shapes.length - 1].coordinates.bottom_right_x) > canvas.width) {
-        shapes[shapes.length - 1].pos.x = size * Math.floor(canvas.width / size) - size * shapes[shapes.length - 1].shape[0].length;
-    }
-    if (shapes[shapes.length - 1].coordinates.bottom_left_y > canvas.height) {
-        shapes[shapes.length - 1].pos.y = canvas.height - (shapes[shapes.length - 1].coordinates.bottom_left_y - shapes[shapes.length - 1].coordinates.top_left_y);
-        shapes.push(new Shape());
-    }
-}
-
-function keyDownHandler(event) {
-    var x = event.keyCode;
-    //left arrow
-    if (x == 37) {
-        shapes[shapes.length - 1].pos.x -= size;
-    }
-    //right arrow
-    else if (x == 39) {
-        shapes[shapes.length - 1].pos.x += size;
-    }
-    //up arrow
-    else if (x == 38) {
-        shapes[shapes.length - 1].nextShape();
-    }
-    //down arrow
-    else if (x == 40) {
-        shapes[shapes.length - 1].pos.y += size;
-    }
-}
-
-//main
-draw();
+main();
