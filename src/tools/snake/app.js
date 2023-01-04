@@ -281,23 +281,20 @@ function main() {
         const dy = y - snakeY;
 
         // if touch point is on the left side of the shape
-        if (dx < 0) {
-            game.snake.changeDirection("left");
+        if (Math.abs(dx) > Math.abs(dy)) {
+            if (dx < 0) {
+                game.snake.changeDirection("left");
+            } else {
+                game.snake.changeDirection("right");
+            }
         }
 
-        // if touch point is on the right side of the shape
-        if (dx > 0) {
-            game.snake.changeDirection("right");
-        }
-
-        // if touch point is on the top side of the shape
-        if (dy < 0) {
-            game.snake.changeDirection("up");
-        }
-
-        // if touch point is on the bottom side of the shape
-        if (dy > 0) {
-            game.snake.changeDirection("down");
+        else {
+            if (dy < 0) {
+                game.snake.changeDirection("up");
+            } else {
+                game.snake.changeDirection("down");
+            }
         }
 
     });
