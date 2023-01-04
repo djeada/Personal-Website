@@ -398,15 +398,28 @@ function main() {
         const x = event.touches[0].clientX;
         const y = event.touches[0].clientY;
 
-        // use touch point coordinates to move shape
-        if (x < canvas.width / 2) {
-            // move shape left
-            game.currentShape.dx = -SQUARE_SIZE;
+        // get canvas position
+        const canvasRect = canvas.getBoundingClientRect();
+
+        // calculate touch point relative to canvas
+        const touchX = x - canvasRect.left;
+        const touchY = y - canvasRect.top;
+
+        // check if touch point is in the left half of the canvas
+        if (touchX < canvas.width / 2) {
+            if (game.currentShape) {
+                game.currentShape.dx = -SQUARE_SIZE;
+
+            }
+
         } else {
-            // move shape right
-            game.currentShape.dx = SQUARE_SIZE;
+            if (game.currentShape) {
+                game.currentShape.dx = SQUARE_SIZE;
+            }
+
         }
     });
+
 
     let lastTap = null;
 
@@ -414,7 +427,13 @@ function main() {
         const currentTime = new Date().getTime();
         const tapLength = currentTime - lastTap;
         if (lastTap && tapLength < 500 && tapLength > 0) {
-            game.startOver(ctx);
+            if (game.isGameOver) {
+                game.startOver(ctx);
+            } else {
+                if (game.currentShape) {
+                    game.currentShape.rotation += 1;
+                }
+            }
         }
         lastTap = currentTime;
     });
