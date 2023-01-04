@@ -401,23 +401,15 @@ function main() {
         // get canvas position
         const canvasRect = canvas.getBoundingClientRect();
 
-        // calculate touch point relative to canvas
-        const touchX = x - canvasRect.left;
-        const touchY = y - canvasRect.top;
-
-        // check if touch point is in the left half of the canvas
-        if (touchX < canvas.width / 2) {
-            if (game.currentShape) {
+        // check if it is to the left or right of current shape
+        if (game.currentShape) {
+            if (x < game.currentShape.x + canvasRect.left) {
                 game.currentShape.dx = -SQUARE_SIZE;
-
-            }
-
-        } else {
-            if (game.currentShape) {
+            } else if (x > game.currentShape.x + canvasRect.left) {
                 game.currentShape.dx = SQUARE_SIZE;
             }
-
         }
+
     });
 
 
