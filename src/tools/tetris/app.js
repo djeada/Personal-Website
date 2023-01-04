@@ -344,6 +344,9 @@ function main() {
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
+    //  you need to set the scale property to 1 so it doesn't use the devicePixelRatio: html2canvas.hertzen.com/configuration
+    ctx.scale(1, 1);
+
     // set the width of the canvas to match a neat multiple of SQUARE_SIZE
     canvas.width = canvas.width - canvas.width % SQUARE_SIZE;
     canvas.height = canvas.height - canvas.height % SQUARE_SIZE;
@@ -390,7 +393,7 @@ function main() {
 
     canvas.addEventListener('touchmove', function(event) {
         event.preventDefault();
-      });
+    });
 
     // define touch start event listener
     canvas.addEventListener('touchstart', function(event) {
@@ -398,17 +401,25 @@ function main() {
         const x = event.touches[0].clientX;
         const y = event.touches[0].clientY;
 
-        // get canvas position
-        const canvasRect = canvas.getBoundingClientRect();
+        // get current shape coordinates
+        const shapeX = game.currentShape.x;
+        const shapeY = game.currentShape.y;
 
-        // check if it is to the left or right of current shape
-        if (game.currentShape) {
-            if (x < game.currentShape.x + canvasRect.left) {
-                game.currentShape.dx = -SQUARE_SIZE;
-            } else if (x > game.currentShape.x + canvasRect.left) {
-                game.currentShape.dx = SQUARE_SIZE;
-            }
+        // calculate distance between touch point and shape
+        const dx = x - shapeX;
+
+
+        // if touch point is on the left side of the shape, move left
+        if (dx < 0) {
+            game.currentShape.dx = -SQUARE_SIZE;
+
+            // if touch point is on the right side of the shape, move right
+        } else {
+            game.currentShape.dx = SQUARE_SIZE;
+
         }
+
+
 
     });
 

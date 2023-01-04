@@ -254,6 +254,58 @@ function main() {
         }
     });
 
+    // define touch start event listener
+    canvas.addEventListener('touchstart', function(event) {
+        // get touch point coordinates
+        const x = event.touches[0].clientX;
+        const y = event.touches[0].clientY;
+
+        // get current shape coordinates
+        const shapeX = game.currentShape.x;
+        const shapeY = game.currentShape.y;
+
+        // calculate distance between touch point and shape
+        const dx = x - shapeX;
+        const dy = y - shapeY;
+
+        // if touch point is on the left side of the shape
+        if (dx < 0) {
+            game.snake.changeDirection("left");
+        }
+
+        // if touch point is on the right side of the shape
+        if (dx > 0) {
+            game.snake.changeDirection("right");
+        }
+
+        // if touch point is on the top side of the shape
+        if (dy < 0) {
+            game.snake.changeDirection("up");
+        }
+
+        // if touch point is on the bottom side of the shape
+        if (dy > 0) {
+            game.snake.changeDirection("down");
+        }
+
+    });
+
+
+    let lastTap = null;
+
+    canvas.addEventListener('touchend', function(event) {
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap;
+        if (lastTap && tapLength < 500 && tapLength > 0) {
+            if (game.isGameOver) {
+                game.startOver();
+            }
+        } else {
+            lastTap = currentTime;
+        }
+    });
+
+
     // use setInterval to update and draw the game 10 times per second
     setInterval(function() {
         game.update();
