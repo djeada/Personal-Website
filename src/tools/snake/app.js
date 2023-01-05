@@ -107,18 +107,6 @@ class Food extends Square {
         super(x, y, SQUARE_SIZE, COLOR_B);
     }
 
-    /*
-    ctx.beginPath();
-        ctx.arc(75, 75, 50, 0, Math.PI * 2, true); // Outer circle
-        ctx.moveTo(110, 75);
-        ctx.arc(75, 75, 35, 0, Math.PI, false);  // Mouth (clockwise)
-        ctx.moveTo(65, 65);
-        ctx.arc(60, 65, 5, 0, Math.PI * 2, true);  // Left eye
-        ctx.moveTo(95, 65);
-        ctx.arc(90, 65, 5, 0, Math.PI * 2, true);  // Right eye
-        ctx.stroke();
-    */
-
     draw(ctx) {
         // draw a circle
         ctx.beginPath();
@@ -297,37 +285,41 @@ function main() {
         canvas.focus();
     });
 
-    // define touch start event listener
+        /* we want to move the shape when the user moves their finger across the screen */
+
+    let lastX = null;
+    let lastY = null;
+
     canvas.addEventListener('touchstart', function(event) {
-        // get touch point coordinates
-        const x = event.touches[0].clientX;
-        const y = event.touches[0].clientY;
-
-        // get current snake coordinates
-        const snakeX = game.snake.x;
-        const snakeY = game.snake.y;
-
-        // calculate the difference between touch point and snake coordinates
-        const dx = x - snakeX;
-        const dy = y - snakeY;
-
-        // if touch point is on the left side of the shape
-        if (Math.abs(dx) > Math.abs(dy)) {
-            if (dx < 0) {
-                game.snake.changeDirection("left");
-            } else {
-                game.snake.changeDirection("right");
-            }
-        } else {
-            if (dy < 0) {
-                game.snake.changeDirection("up");
-            } else {
-                game.snake.changeDirection("down");
-            }
-        }
+        lastX = event.touches[0].clientX;
+        lastY = event.touches[0].clientY;
 
     });
 
+    canvas.addEventListener('touchmove', function(event) {
+        const currentX = event.touches[0].clientX;
+        const currentY = event.touches[0].clientY;
+
+        const diffX = currentX - lastX;
+        const diffY = currentY - lastY;
+
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+            if (diffX > 0) {
+                game.snake.changeDirection("right");
+            } else {
+                game.snake.changeDirection("left");
+            }
+        } else {
+            if (diffY > 0) {
+                game.snake.changeDirection("down");
+            } else {
+                game.snake.changeDirection("up");
+            }
+        }
+
+        lastX = currentX;
+        lastY = currentY;
+    });
 
     let lastTap = null;
 

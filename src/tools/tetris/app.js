@@ -396,7 +396,6 @@ function main() {
         canvas.focus();
     });
 
-    /* we want to move the shape when the user moves their finger across the screen */
     let lastX = null;
     canvas.addEventListener('touchstart', function(event) {
         lastX = event.touches[0].clientX;
