@@ -11,7 +11,9 @@ ARTICLES_HEADER_SOURCE_PATH = "../src/building_blocks/head_article.html"
 ARTICLES_NAVBAR_SOURCE_PATH = "../src/building_blocks/navbar_article.html"
 TOOL_HEADER_SOURCE_PATH = "../src/building_blocks/head_tool.html"
 TOOL_NAVBAR_SOURCE_PATH = "../src/building_blocks/navbar_tool.html"
-FOOTER_SOURCE_PATH = "../src/building_blocks/footer.html"
+ARTICLES_FOOTER_SOURCE_PATH = "../src/building_blocks/footer_article.html"
+TOOL_FOOTER_SOURCE_PATH = "../src/building_blocks/footer_tool.html"
+
 
 INPUT_ARTICLES_DIR = "../src/articles"
 INPUT_TOOL_DIR = "../src/tools"
@@ -145,14 +147,14 @@ def main():
     articles_paths_filters_pairs = [
         (ARTICLES_HEADER_SOURCE_PATH, replace_head),
         (ARTICLES_NAVBAR_SOURCE_PATH, replace_navbar),
-        (FOOTER_SOURCE_PATH, replace_footer),
+        (ARTICLES_FOOTER_SOURCE_PATH, replace_footer),
     ]
 
 
     tools_paths_filters_pairs = [
         (TOOL_HEADER_SOURCE_PATH, replace_head),
         (TOOL_NAVBAR_SOURCE_PATH, replace_navbar),
-        (FOOTER_SOURCE_PATH, replace_footer),
+        (TOOL_FOOTER_SOURCE_PATH, replace_footer),
     ]
 
 

@@ -59,9 +59,20 @@ class Snake {
 
     draw(ctx) {
         for (let square of this.body) {
-            console.log(square);
             square.draw(ctx);
         }
+
+        // first square should have an eye
+        let eyeX = this.body[0].x + this.size / 4;
+        let eyeY = this.body[0].y + this.size / 4;
+        let eyeSize = this.size / 8;
+
+        // draw eye
+        ctx.beginPath();
+        ctx.arc(eyeX, eyeY, eyeSize, 0, Math.PI * 2, true);
+        ctx.fillStyle = COLOR_D;
+        ctx.fill();
+
     }
 
     changeDirection(direction) {
@@ -285,7 +296,7 @@ function main() {
         canvas.focus();
     });
 
-        /* we want to move the shape when the user moves their finger across the screen */
+    /* we want to move the shape when the user moves their finger across the screen */
 
     let lastX = null;
     let lastY = null;
