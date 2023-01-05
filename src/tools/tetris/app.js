@@ -394,33 +394,27 @@ function main() {
     canvas.addEventListener('touchmove', function(event) {
         event.preventDefault();
         canvas.focus();
-        });
+    });
 
-    // define touch start event listener
+    /* we want to move the shape when the user moves their finger across the screen */
+    let lastX = null;
     canvas.addEventListener('touchstart', function(event) {
-        // get touch point coordinates
-        const x = event.touches[0].clientX;
-        const y = event.touches[0].clientY;
+        lastX = event.touches[0].clientX;
+    });
 
-        // get current shape coordinates
-        const shapeX = game.currentShape.x;
-        const shapeY = game.currentShape.y;
+    canvas.addEventListener('touchmove', function(event) {
+        const currentX = event.touches[0].clientX;
+        const diff = currentX - lastX;
 
-        // calculate distance between touch point and shape
-        const dx = x - shapeX;
-
-
-        // if touch point is on the left side of the shape, move left
-        if (dx < 0) {
-            game.currentShape.dx = -SQUARE_SIZE;
-
-            // if touch point is on the right side of the shape, move right
-        } else {
-            game.currentShape.dx = SQUARE_SIZE;
-
+        if (game.currentShape) {
+            if (diff > 0) {
+                game.currentShape.dx = SQUARE_SIZE;
+            } else if (diff < 0) {
+                game.currentShape.dx = -SQUARE_SIZE;
+            }
         }
 
-
+        lastX = currentX;
 
     });
 

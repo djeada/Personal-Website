@@ -106,6 +106,44 @@ class Food extends Square {
     constructor(x, y) {
         super(x, y, SQUARE_SIZE, COLOR_B);
     }
+
+    /*
+    ctx.beginPath();
+        ctx.arc(75, 75, 50, 0, Math.PI * 2, true); // Outer circle
+        ctx.moveTo(110, 75);
+        ctx.arc(75, 75, 35, 0, Math.PI, false);  // Mouth (clockwise)
+        ctx.moveTo(65, 65);
+        ctx.arc(60, 65, 5, 0, Math.PI * 2, true);  // Left eye
+        ctx.moveTo(95, 65);
+        ctx.arc(90, 65, 5, 0, Math.PI * 2, true);  // Right eye
+        ctx.stroke();
+    */
+
+    draw(ctx) {
+        // draw a circle
+        ctx.beginPath();
+        ctx.arc(this.x + this.size / 2, this.y + this.size / 2, this.size / 2, 0, Math.PI * 2, true);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+
+        // change color to COLOR_E
+        ctx.strokeStyle = COLOR_D;
+        ctx.fillStyle = COLOR_D;
+
+        // draw a smile
+        ctx.beginPath();
+        ctx.arc(this.x + this.size / 2, this.y + this.size / 2, this.size / 4, 0, Math.PI, false);
+        ctx.stroke();
+
+        // draw eyes
+        ctx.beginPath();
+        ctx.arc(this.x + this.size / 4, this.y + this.size / 4, this.size / 8, 0, Math.PI * 2, true);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(this.x + this.size * 3 / 4, this.y + this.size / 4, this.size / 8, 0, Math.PI * 2, true);
+        ctx.fill();
+    }
 }
 
 function randomInt(min, max) {
@@ -138,14 +176,14 @@ class Game {
 
         this.drawGrid();
 
-        this.ctx.fillStyle = COLOR_D;
-        this.ctx.font = "20px Comic Sans MS";
-        this.ctx.fillText("Score: " + this.score, 10, 30);
-
         this.snake.draw(this.ctx);
         for (let food of this.food) {
             food.draw(this.ctx);
         }
+
+        this.ctx.fillStyle = COLOR_D;
+        this.ctx.font = "20px Comic Sans MS";
+        this.ctx.fillText("Score: " + this.score, 10, 30);
     }
 
     drawGrid() {
@@ -280,9 +318,7 @@ function main() {
             } else {
                 game.snake.changeDirection("right");
             }
-        }
-
-        else {
+        } else {
             if (dy < 0) {
                 game.snake.changeDirection("up");
             } else {
