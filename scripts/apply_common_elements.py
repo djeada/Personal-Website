@@ -7,12 +7,14 @@ import re
 from pathlib import Path
 from argparse import ArgumentParser
 
-HEADER_SOURCE_PATH = "../src/building_blocks/head.html"
-NAVBAR_SOURCE_PATH = "../src/building_blocks/navbar.html"
+ARTICLES_HEADER_SOURCE_PATH = "../src/building_blocks/head_article.html"
+ARTICLES_NAVBAR_SOURCE_PATH = "../src/building_blocks/navbar_article.html"
+TOOL_HEADER_SOURCE_PATH = "../src/building_blocks/head_tool.html"
+TOOL_NAVBAR_SOURCE_PATH = "../src/building_blocks/navbar_tool.html"
 FOOTER_SOURCE_PATH = "../src/building_blocks/footer.html"
 
-INPUT_DIR = "../src/tools/matrix_multiplication"
-
+INPUT_ARTICLES_DIR = "../src/articles"
+INPUT_TOOL_DIR = "../src/tools"
 
 def find_common_element(original_html, tag):
     # Find the element in the original HTML
@@ -114,14 +116,10 @@ class Parser(ArgumentParser):
         )
 
 
-def correct_file(file_path):
+def correct_file(file_path , paths_filters_pairs):
     html = Path(file_path).read_text()
 
-    paths_filters_pairs = [
-        (HEADER_SOURCE_PATH, replace_head),
-        (NAVBAR_SOURCE_PATH, replace_navbar),
-        (FOOTER_SOURCE_PATH, replace_footer),
-    ]
+
 
     for path, filter_function in paths_filters_pairs:
         correct_html = Path(path).read_text()
@@ -143,8 +141,29 @@ def main():
 
 
 def main():
-    for file in Path(INPUT_DIR).glob("*.html"):
-        correct_file(file)
+
+    articles_paths_filters_pairs = [
+        (ARTICLES_HEADER_SOURCE_PATH, replace_head),
+        (ARTICLES_NAVBAR_SOURCE_PATH, replace_navbar),
+        (FOOTER_SOURCE_PATH, replace_footer),
+    ]
+
+
+    tools_paths_filters_pairs = [
+        (TOOL_HEADER_SOURCE_PATH, replace_head),
+        (TOOL_NAVBAR_SOURCE_PATH, replace_navbar),
+        (FOOTER_SOURCE_PATH, replace_footer),
+    ]
+
+
+    #for file in Path(INPUT_DIR).glob("*.html"):
+    #    correct_file(file)
+
+    for file in Path(INPUT_ARTICLES_DIR).glob("*.html"):
+        correct_file(file, articles_paths_filters_pairs)
+
+    for file in Path(INPUT_TOOL_DIR).glob("**/*.html"):
+        correct_file(file, tools_paths_filters_pairs)
 
 
 if __name__ == "__main__":

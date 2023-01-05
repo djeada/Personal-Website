@@ -2,7 +2,12 @@ import requests
 from bs4 import BeautifulSoup
 from pathlib import Path
 
-INPUT_URL = "https://github.com/djeada/Linux-Notes/blob/main/notes/"
+INPUT_URLS = ["https://github.com/djeada/Kurs-Podstaw-Pythona/tree/master/notatki/01_podstawy",
+"https://github.com/djeada/Kurs-Podstaw-Pythona/tree/master/notatki/02_sredniozawansowane",
+"https://github.com/djeada/Kurs-Podstaw-Pythona/tree/master/notatki/03_inzynieria_oprogramowania",
+"https://github.com/djeada/Kurs-Podstaw-Pythona/tree/master/notatki/04_python_w_praktyce",
+"https://github.com/djeada/Kurs-Podstaw-Pythona/tree/master/notatki/05_prezentacje",
+]
 OUTPUT_FILE = "input.txt"
 
 
@@ -36,13 +41,15 @@ def get_title_from_link(link):
 
 
 def main():
-    links = get_links(INPUT_URL)
     output = ""
-    for link in links:
-        link = convert_link_to_raw(link)
-        title = get_title_from_link(link)
-        print(f"Processing link: [{title}]({link})")
-        output += f"{link} {title}\n"
+
+    for INPUT_URL in INPUT_URLS:
+        links = get_links(INPUT_URL)
+        for link in links:
+            link = convert_link_to_raw(link)
+            title = get_title_from_link(link)
+            print(f"Processing link: [{title}]({link})")
+            output += f"{link} {title}\n"
 
     Path(OUTPUT_FILE).write_text(output)
 
