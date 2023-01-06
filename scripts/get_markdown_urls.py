@@ -37,7 +37,11 @@ def convert_link_to_raw(link):
 
 
 def get_title_from_link(link):
-    return link.split("/")[-1].replace(".md", "").title()
+    title = link.split("/")[-1].replace(".md", "").title()
+    # remove leading numbers
+    while not title[0].isalpha():
+        title = title[1:]
+    return title.strip()
 
 
 def main():

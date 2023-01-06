@@ -2,9 +2,15 @@ SQUARE_SIZE = 40;
 SPEED = 10;
 COLOR_A = "#f98776";
 COLOR_B = "#eec747";
-COLOR_C = "white";
-COLOR_D = "black";
 
+let COLOR_BACKGROUND = "white";
+let COLOR_FOREGROUND = "black";
+
+
+if (getCookie('darkMode')) {
+    COLOR_BACKGROUND = "black";
+    COLOR_FOREGROUND = "white";
+}
 
 // class square
 class Square {
@@ -70,7 +76,7 @@ class Snake {
         // draw eye
         ctx.beginPath();
         ctx.arc(eyeX, eyeY, eyeSize, 0, Math.PI * 2, true);
-        ctx.fillStyle = COLOR_D;
+        ctx.fillStyle = COLOR_FOREGROUND;
         ctx.fill();
 
     }
@@ -126,8 +132,8 @@ class Food extends Square {
         ctx.fill();
 
         // change color to COLOR_E
-        ctx.strokeStyle = COLOR_D;
-        ctx.fillStyle = COLOR_D;
+        ctx.strokeStyle = COLOR_FOREGROUND;
+        ctx.fillStyle = COLOR_FOREGROUND;
 
         // draw a smile
         ctx.beginPath();
@@ -163,11 +169,11 @@ class Game {
 
     draw() {
         // fill the background white
-        this.ctx.fillStyle = COLOR_C;
+        this.ctx.fillStyle = COLOR_BACKGROUND;
         this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
 
         if (this.isGameOver) {
-            this.ctx.fillStyle = COLOR_D;
+            this.ctx.fillStyle = COLOR_FOREGROUND;
             this.ctx.font = "50px Comic Sans MS";
             this.ctx.fillText("Game Over", this.ctx.canvas.width / 2 - 150, this.ctx.canvas.height / 2);
             return;
@@ -180,7 +186,7 @@ class Game {
             food.draw(this.ctx);
         }
 
-        this.ctx.fillStyle = COLOR_D;
+        this.ctx.fillStyle = COLOR_FOREGROUND;
         this.ctx.font = "20px Comic Sans MS";
         this.ctx.fillText("Score: " + this.score, 10, 30);
     }

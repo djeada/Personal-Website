@@ -6,14 +6,24 @@ COLOR_D = "#b3b3b3";
 COLOR_E = "#4ca394";
 COLOR_F = "#6f292e";
 
+let COLOR_BACKGROUND = "white";
+let COLOR_FOREGROUND = "black";
+
+
+if (getCookie('darkMode')) {
+    COLOR_BACKGROUND = "black";
+    COLOR_FOREGROUND = "white";
+}
+
 class Model {
     constructor(numRows, numCols) {
+        console.log(COLOR_BACKGROUND);
         // grid of colors, initially all white
         this.grid = [];
         for (let i = 0; i < numRows; i++) {
             this.grid.push([]);
             for (let j = 0; j < numCols; j++) {
-                this.grid[i].push("white");
+                this.grid[i].push(COLOR_BACKGROUND);
             }
         }
     }
@@ -33,7 +43,7 @@ class Model {
         for (let i = 0; i < shape.length && y + i < this.grid.length; i++) {
             for (let j = 0; j < shape[i].length && x + j < this.grid[i].length; j++) {
                 if (shape[i][j] === 1) {
-                    this.grid[y + i][x + j] = "white";
+                    this.grid[y + i][x + j] = COLOR_BACKGROUND;
                 }
             }
         }
@@ -47,7 +57,7 @@ class Model {
         for (let i = 0; i < shape.length; i++) {
             for (let j = 0; j < shape[i].length; j++) {
                 if (shape[i][j] === 1) {
-                    if (!this.areCoordinatesInBounds(x + j, y + i) || this.grid[y + i][x + j] !== "white") {
+                    if (!this.areCoordinatesInBounds(x + j, y + i) || this.grid[y + i][x + j] !== COLOR_BACKGROUND) {
                         return false;
                     }
                 }
@@ -71,7 +81,7 @@ class Model {
 
     isRowFull(row) {
         for (let i = 0; i < this.grid[row].length; i++) {
-            if (this.grid[row][i] === "white") {
+            if (this.grid[row][i] === COLOR_BACKGROUND) {
                 return false;
             }
         }
@@ -88,7 +98,7 @@ class Model {
 
         // set row 0 to white
         for (let i = 0; i < this.grid[0].length; i++) {
-            this.grid[0][i] = "white";
+            this.grid[0][i] = COLOR_BACKGROUND;
         }
     }
 
@@ -124,7 +134,6 @@ class Shape {
     }
 
     move(ctx) {
-        console.log("move", this.x, this.y, this.dx, this.dy)
         this.x += this.dx;
         this.y += this.dy;
 
@@ -288,7 +297,7 @@ class Game {
 
         if (this.isGameOver) {
             ctx.font = "30px Arial";
-            ctx.fillStyle = "black";
+            ctx.fillStyle = COLOR_FOREGROUND;
             ctx.fillText("Game Over", ctx.canvas.width / 2 - 100, ctx.canvas.height / 2);
             return;
         }
@@ -315,9 +324,6 @@ class Game {
         var newY = Math.floor(this.currentShape.y / SQUARE_SIZE);
         let newShape = this.currentShape.shape();
 
-        console.log("Old: " + oldX + ", " + oldY + ", " + oldShape);
-        console.log("New: " + newX + ", " + newY + ", " + newShape);
-
         if (this.model.canMoveShape(oldX, oldY, oldShape, newX, newY, newShape, this.currentShape.color)) {
             this.model.moveShape(oldX, oldY, oldShape, newX, newY, newShape, this.currentShape.color);
         } else {
@@ -341,8 +347,8 @@ function main() {
         }
     }, false);
 
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
+    var canvas = document.getElementById('canvas');
+    var ctx = canvas.getContext('2d');
 
     //  you need to set the scale property to 1 so it doesn't use the devicePixelRatio: html2canvas.hertzen.com/configuration
     ctx.scale(1, 1);
@@ -397,20 +403,35 @@ function main() {
     });
 
     let lastX = null;
+    let lastY = null;
     canvas.addEventListener('touchstart', function(event) {
         lastX = event.touches[0].clientX;
+        lastY = event.touches[0].clientY;
     });
 
     canvas.addEventListener('touchmove', function(event) {
         const currentX = event.touches[0].clientX;
-        const diff = currentX - lastX;
+        const currentY = event.touches[0].clientY;
+        const diffX = currentX - lastX;
+        const diffY = currentY - lastY;
 
         if (game.currentShape) {
-            if (diff > 0) {
-                game.currentShape.dx = SQUARE_SIZE;
-            } else if (diff < 0) {
-                game.currentShape.dx = -SQUARE_SIZE;
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+
+                if (diffX > 0) {
+                    game.currentShape.dx = SQUARE_SIZE;
+                } else if (diffX < 0) {
+                    game.currentShape.dx = -SQUARE_SIZE;
+                }
+            } else {
+                if (diffY > 0) {
+                    game.currentShape.dy += SQUARE_SIZE / 4;
+                } else if (diffY < 0) {
+                    game.currentShape.rotation += 1;
+                }
             }
+
+
         }
 
         lastX = currentX;
@@ -426,10 +447,6 @@ function main() {
         if (lastTap && tapLength < 500 && tapLength > 0) {
             if (game.isGameOver) {
                 game.startOver(ctx);
-            } else {
-                if (game.currentShape) {
-                    game.currentShape.rotation += 1;
-                }
             }
         }
         lastTap = currentTime;
@@ -438,16 +455,9 @@ function main() {
     // use setInterval to update and draw the game 10 times per second
     setInterval(function() {
         game.update(ctx);
-        draw(ctx, game);
+        game.draw(ctx, game);
     }, 100);
 
-}
-
-function draw(ctx, game) {
-    ctx.fillStyle = "white";
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
-    game.draw(ctx);
 }
 
 main();

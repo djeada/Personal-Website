@@ -15,7 +15,6 @@ function onMenuClick(e) {
     return /* () */ 0;
 }
 
-const darkModeButton = document.getElementById('dark-mode-button');
 
 function setCookie(name, value, days) {
     let expires = '';
@@ -39,12 +38,31 @@ function getCookie(name) {
     return null;
 }
 
-
-darkModeButton.addEventListener('click', () => {
-    document.body.classList.toggle('dark-mode');
-    setCookie('darkMode', document.body.classList.contains('dark-mode'), 365);
-});
-
-if (getCookie('darkMode') === 'true') {
-    document.body.classList.add('dark-mode');
+function checkLogo() {
+    let logoImage = document.getElementById('logo-image');
+    if (document.body.classList.contains('dark-mode')) {
+        logoImage.src = 'https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo_dark.PNG';
+    } else {
+        logoImage.src = 'https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG';
+    }
 }
+
+
+function main() {
+    const darkModeButton = document.getElementById('dark-mode-button');
+
+    darkModeButton.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        setCookie('darkMode', document.body.classList.contains('dark-mode'), 365);
+        checkLogo();
+    });
+
+
+    if (getCookie('darkMode') === 'true') {
+        document.body.classList.add('dark-mode');
+    }
+
+    checkLogo();
+}
+
+main();
