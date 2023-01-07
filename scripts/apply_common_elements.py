@@ -18,6 +18,7 @@ TOOL_FOOTER_SOURCE_PATH = "../src/building_blocks/footer_tool.html"
 INPUT_ARTICLES_DIR = "../src/articles"
 INPUT_TOOL_DIR = "../src/tools"
 
+
 def find_common_element(original_html, tag):
     # Find the element in the original HTML
     start_pattern = re.compile(rf"<{tag}[^>]*>")
@@ -118,10 +119,8 @@ class Parser(ArgumentParser):
         )
 
 
-def correct_file(file_path , paths_filters_pairs):
+def correct_file(file_path, paths_filters_pairs):
     html = Path(file_path).read_text()
-
-
 
     for path, filter_function in paths_filters_pairs:
         correct_html = Path(path).read_text()
@@ -150,15 +149,13 @@ def main():
         (ARTICLES_FOOTER_SOURCE_PATH, replace_footer),
     ]
 
-
     tools_paths_filters_pairs = [
         (TOOL_HEADER_SOURCE_PATH, replace_head),
         (TOOL_NAVBAR_SOURCE_PATH, replace_navbar),
         (TOOL_FOOTER_SOURCE_PATH, replace_footer),
     ]
 
-
-    #for file in Path(INPUT_DIR).glob("*.html"):
+    # for file in Path(INPUT_DIR).glob("*.html"):
     #    correct_file(file)
 
     for file in Path(INPUT_ARTICLES_DIR).glob("*.html"):

@@ -2,12 +2,21 @@ import requests
 from bs4 import BeautifulSoup
 from pathlib import Path
 
-INPUT_URLS = ["https://github.com/djeada/Kurs-Podstaw-Pythona/tree/master/notatki/01_podstawy",
-"https://github.com/djeada/Kurs-Podstaw-Pythona/tree/master/notatki/02_sredniozawansowane",
-"https://github.com/djeada/Kurs-Podstaw-Pythona/tree/master/notatki/03_inzynieria_oprogramowania",
-"https://github.com/djeada/Kurs-Podstaw-Pythona/tree/master/notatki/04_python_w_praktyce",
-"https://github.com/djeada/Kurs-Podstaw-Pythona/tree/master/notatki/05_prezentacje",
+PL_INPUT_URLS = [
+    "https://github.com/djeada/Kurs-Podstaw-Pythona/tree/master/notatki/01_podstawy",
+    "https://github.com/djeada/Kurs-Podstaw-Pythona/tree/master/notatki/02_sredniozawansowane",
+    "https://github.com/djeada/Kurs-Podstaw-Pythona/tree/master/notatki/03_inzynieria_oprogramowania",
+    "https://github.com/djeada/Kurs-Podstaw-Pythona/tree/master/notatki/04_python_w_praktyce",
+    "https://github.com/djeada/Kurs-Podstaw-Pythona/tree/master/notatki/05_prezentacje",
 ]
+EN_INPUT_URLS = [
+    "https://github.com/djeada/Linux-Notes/tree/main/notes",
+    "https://github.com/djeada/Algorithms-And-Data-Structures/tree/master/notes",
+    "https://github.com/djeada/Git-Notes/tree/main/notes",
+    "https://github.com/djeada/Stanford-Machine-Learning/tree/main/slides",
+]
+EN_LANG = "🇺🇸"
+PL_LANG = "🇵🇱"
 OUTPUT_FILE = "input.txt"
 
 
@@ -47,15 +56,17 @@ def get_title_from_link(link):
 def main():
     output = ""
 
-    for INPUT_URL in INPUT_URLS:
-        links = get_links(INPUT_URL)
-        for link in links:
-            link = convert_link_to_raw(link)
-            title = get_title_from_link(link)
-            print(f"Processing link: [{title}]({link})")
-            output += f"{link} {title}\n"
+    for url_set, lang in zip([PL_INPUT_URLS, EN_INPUT_URLS], [PL_LANG, EN_LANG]):
 
-    Path(OUTPUT_FILE).write_text(output)
+        for url in url_set:
+            links = get_links(url)
+            for link in links:
+                link = convert_link_to_raw(link)
+                title = get_title_from_link(link)
+                print(f"Processing link: [{title}]({link})")
+                output += f"{link} {title} {lang}\n"
+
+        Path(OUTPUT_FILE).write_text(output)
 
 
 if __name__ == "__main__":

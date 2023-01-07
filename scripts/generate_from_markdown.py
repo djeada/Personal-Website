@@ -14,6 +14,12 @@ OUTPUT_DIR = "../src/articles"
 class UrlData:
     url: str
     output_name: str
+    language: str = "🇺🇸"  # "🇵🇱"
+
+    def language_as_string(self):
+        if self.language == "🇵🇱":
+            return "pl"
+        return "en"
 
 
 def read_urls():
@@ -21,7 +27,7 @@ def read_urls():
     input_path = Path(PATH_TO_CONFIG)
     urls = input_path.read_text().splitlines()
     urls = [url.strip() for url in urls]
-    urls = [UrlData(url.split()[0], url.split()[1]) for url in urls]
+    urls = [UrlData(url.split()[0], url.split()[1], url.split()[2]) for url in urls]
     return urls
 
 
@@ -111,7 +117,7 @@ def apply_prism_for_code_samples(html: str) -> str:
     return html
 
 
-def apply_filters(html):
+def apply_filters(html, lang="en"):
 
     # replace all tables
     html = replace_all_tables(html)
@@ -129,7 +135,7 @@ def apply_filters(html):
 
     # if no <!DOCTYPE html> <html lang="en"> add one at the beginning of the file and at the end
     if "<!DOCTYPE html>" not in html:
-        html = '\n<!DOCTYPE html>\n<html lang="en">\n' + html + "\n</html>\n"
+        html = f'\n<!DOCTYPE html>\n<html lang="{lang}">\n' + html + "\n</html>\n"
 
     # put everything inside the body tag in a div in <section id="article"> </section>
     body_start = html.find("<body>")
@@ -143,6 +149,23 @@ def apply_filters(html):
 
     html += '\n<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>'
 
+    # replace <h1> with <header>
+    html = re.sub(r"<h1>", "<header>", html)
+    html = re.sub(r"</h1>", "</header>", html)
+
+    return html
+
+
+def add_language_info(html: str, language: str = "en") -> str:
+    # find first p tag and insert <p><i>Language: English</i></p> before it
+    p_tag_pattern = re.compile(r"<p>")
+    p_tag_match = p_tag_pattern.search(html)
+    if p_tag_match is not None:
+        html = (
+            html[: p_tag_match.start()]
+            + f"<p><i>This article is written in: {language}</i></p>\n"
+            + html[p_tag_match.start() :]
+        )
     return html
 
 
@@ -158,7 +181,8 @@ def main():
 
         # Convert the Markdown to HTML
         html = markdown.markdown(response.text)
-        html = apply_filters(html)
+        html = apply_filters(html, url_data.language_as_string())
+        html = add_language_info(html, url_data.language)
 
         # Create a Path object for the output file
         output_path = Path(OUTPUT_DIR) / f"{output_name.lower()}.html"
