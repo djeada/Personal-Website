@@ -121,13 +121,16 @@ def get_nth_input_file(n):
     return input_file
 
 
-def replace_pagination(html, link_name, n, article_list_len):
+def replace_pagination(html, link_name, current, n, article_list_len):
     """Replace the pagination with the correct one"""
 
     pagination = '<div class="pagination">'
-    pagination += f'<a href="{link_name}.html">1</a>'
+    pagination += f'<a href="{link_name}.html">1</a>' if current != 0 else '<a class="active" href="#"><b>1</b></a>'
     for i in range(1, math.ceil(article_list_len / n)):
-        pagination += f'<a href="{link_name}_{i+1}.html">{i+1}</a>'
+        if i == current:
+            pagination += f'<a class="active" href="{link_name}_{i+1}.html"><b>{i+1}</b></a>'
+        else:
+            pagination += f'<a href="{link_name}_{i+1}.html">{i+1}</a>'
     pagination += "</div>"
     # use beautiful soup to find the pagination
     soup = BeautifulSoup(html, "html.parser")
@@ -155,7 +158,7 @@ def main():
         start, end = find_article_list(html)
         if start != -1 and end != -1:
             html = html[:start] + article_list_as_html + html[end:]
-            html = replace_pagination(html, "blog", n, len(article_list))
+            html = replace_pagination(html, "blog", i, n, len(article_list))
             input_file.write_text(html)
 
 

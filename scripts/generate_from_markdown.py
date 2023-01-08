@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 from dataclasses import dataclass
 
+from bs4 import BeautifulSoup
 
 PATH_TO_CONFIG = "input.txt"
 OUTPUT_DIR = "../src/articles"
@@ -71,22 +72,35 @@ def replace_all_tables(html: str) -> str:
 
 def strip_html(html: str) -> str:
 
-    # convert html to markdown
-    md = markdownify.markdownify(html, heading_style="atx")
+    # strip opening and closing tags
+    html = re.sub(r"<[^>]*>", "", html)
 
-    # remove empty lines
-    md = re.sub(r"\n\s*\n", "\n", md)
-
-    # insert empty line above lines starting with #
-    md = re.sub(r"\n(\s*#+)", r"\n\n\1", md)
-
-    # remove empty lines from the beginning and the end if there are any
-    md = md.strip()
-
-    return md
+    return html
 
 
 def apply_prism_for_code_samples(html: str) -> str:
+
+    # there might be code samples that are not in ``` ``` but in <code>python ... </code>
+    # so we need to replace them with ```python ... ```
+    # but not every <code> ... </code> is a code sample, so we need to check if there is a language specified
+    # if there is no language specified then we assume it is not a code sample
+    soup = BeautifulSoup(html, "html.parser")
+    code_samples = soup.find_all("code")
+    for code_sample in code_samples:
+        inner_body = code_sample.get_text()
+        # check if there is a language specified
+        language = re.match(r"(\w+)", inner_body)
+        if not language:
+            continue
+        language = language.group(1).lower()
+        if language in ["python", "shell", "bash", "js", "javascript"]:
+            new_code_sample = code_sample.get_text()
+            new_code_sample = new_code_sample[len(language) + 1 :]
+            new_code_sample = f"\n```{language}\n{new_code_sample}\n```\n"
+            html = html.replace(str(code_sample), new_code_sample)
+
+
+
     # find where the code samples start and end, they are represented by ``` and ```
     code_start_pattern = re.compile(r"```")
     code_start_match = code_start_pattern.search(html)
@@ -97,17 +111,17 @@ def apply_prism_for_code_samples(html: str) -> str:
         start = code_start_match.start()
         end = code_end_match.end()
         code_sample = html[start:end]
-        code_sample = strip_html(code_sample)
+        # code_sample = strip_html(code_sample)
         # check if there is language specified
         language = re.match(r"```(\w+)", code_sample)
         if language is None:
             language = "shell"
         else:
             language = language.group(1)
-        code_sample = re.sub(r"`{3,}(\w+)?", "", code_sample)
-        # if the first line is empty, remove it
-        if code_sample.startswith("\n"):
-            code_sample = code_sample[1:]
+        code_sample = re.sub(r"`{3,}(\w+)?", "", code_sample).strip()        
+        code_sample = strip_html(code_sample)
+        while "\n\n\n" in code_sample:
+            code_sample = code_sample.replace("\n\n\n", "\n\n")
         html = (
             html[:start]
             + f'<div><pre><code class="language-{language}">{code_sample}</code></pre></div>'
@@ -147,7 +161,8 @@ def apply_filters(html, lang="en"):
         + html[body_end:]
     )
 
-    html += '\n<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>'
+    html += '\n<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>\n'
+    html += '\n<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>\n'
 
     # replace <h1> with <header>
     html = re.sub(r"<h1>", "<header>", html)
@@ -171,7 +186,7 @@ def add_language_info(html: str, language: str = "en") -> str:
 
 def main():
     urls = read_urls()
-
+ 
     for url_data in urls:
 
         url = url_data.url
