@@ -103,7 +103,9 @@ def find_article_list(html):
     soup = BeautifulSoup(html, "html.parser")
     div = soup.find("div", {"class": "article-list"})
     if div:
-        return html.index(str(div)), html.index(str(div)) + len(str(div))
+        start_index = html.find(str(div))
+        end_index = start_index + len(str(div))
+        return start_index, end_index
     return -1, -1
 
 
@@ -125,10 +127,16 @@ def replace_pagination(html, link_name, current, n, article_list_len):
     """Replace the pagination with the correct one"""
 
     pagination = '<div class="pagination">'
-    pagination += f'<a href="{link_name}.html">1</a>' if current != 0 else '<a class="active" href="#"><b>1</b></a>'
+    pagination += (
+        f'<a href="{link_name}.html">1</a>'
+        if current != 0
+        else '<a class="active" href="#"><b>1</b></a>'
+    )
     for i in range(1, math.ceil(article_list_len / n)):
         if i == current:
-            pagination += f'<a class="active" href="{link_name}_{i+1}.html"><b>{i+1}</b></a>'
+            pagination += (
+                f'<a class="active" href="{link_name}_{i+1}.html"><b>{i+1}</b></a>'
+            )
         else:
             pagination += f'<a href="{link_name}_{i+1}.html">{i+1}</a>'
     pagination += "</div>"

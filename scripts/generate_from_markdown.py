@@ -72,6 +72,7 @@ def replace_all_tables(html: str) -> str:
 
 def strip_html(html: str) -> str:
 
+    html = re.sub("<h1>", "# ", html)
     # strip opening and closing tags
     html = re.sub(r"<[^>]*>", "", html)
 
@@ -79,27 +80,6 @@ def strip_html(html: str) -> str:
 
 
 def apply_prism_for_code_samples(html: str) -> str:
-
-    # there might be code samples that are not in ``` ``` but in <code>python ... </code>
-    # so we need to replace them with ```python ... ```
-    # but not every <code> ... </code> is a code sample, so we need to check if there is a language specified
-    # if there is no language specified then we assume it is not a code sample
-    soup = BeautifulSoup(html, "html.parser")
-    code_samples = soup.find_all("code")
-    for code_sample in code_samples:
-        inner_body = code_sample.get_text()
-        # check if there is a language specified
-        language = re.match(r"(\w+)", inner_body)
-        if not language:
-            continue
-        language = language.group(1).lower()
-        if language in ["python", "shell", "bash", "js", "javascript"]:
-            new_code_sample = code_sample.get_text()
-            new_code_sample = new_code_sample[len(language) + 1 :]
-            new_code_sample = f"\n```{language}\n{new_code_sample}\n```\n"
-            html = html.replace(str(code_sample), new_code_sample)
-
-
 
     # find where the code samples start and end, they are represented by ``` and ```
     code_start_pattern = re.compile(r"```")
@@ -118,10 +98,15 @@ def apply_prism_for_code_samples(html: str) -> str:
             language = "shell"
         else:
             language = language.group(1)
-        code_sample = re.sub(r"`{3,}(\w+)?", "", code_sample).strip()        
+        code_sample = re.sub(r"`{3,}(\w+)?", "", code_sample).strip()
         code_sample = strip_html(code_sample)
+        code_sample = re.sub(r"\n@", "\n\n@", code_sample)
+        code_sample = re.sub(r"def init(", "def __init__(", code_sample)
         while "\n\n\n" in code_sample:
             code_sample = code_sample.replace("\n\n\n", "\n\n")
+        # if first line is empty, remove it
+        if code_sample.startswith("\n"):
+            code_sample = code_sample[1:]
         html = (
             html[:start]
             + f'<div><pre><code class="language-{language}">{code_sample}</code></pre></div>'
@@ -131,12 +116,26 @@ def apply_prism_for_code_samples(html: str) -> str:
     return html
 
 
+def replace_code_tags(html):
+    # Find all code tags that span multiple lines there must be at least two time \n in the content
+    regex = r"<code>((?:(?!<code>|</code>).)+\n(?:(?!<code>|</code>).)+)</code>"
+    matches = re.finditer(regex, html, re.DOTALL)
+    for match in matches:
+        # Extract the content between the code tags
+        content = match.group().replace("<code>", "").replace("</code>", "")
+        # Replace the code tags with backticks
+        html = html.replace(match.group(), f"```{content}```")
+    return html
+
+
 def apply_filters(html, lang="en"):
 
     # replace all tables
     html = replace_all_tables(html)
 
     # apply prism for code samples
+    html = apply_prism_for_code_samples(html)
+    html = replace_code_tags(html)
     html = apply_prism_for_code_samples(html)
 
     # if no body tag, add one at the beginning of the file and at the end
@@ -168,6 +167,9 @@ def apply_filters(html, lang="en"):
     html = re.sub(r"<h1>", "<header>", html)
     html = re.sub(r"</h1>", "</header>", html)
 
+    # remove all whitespace after <code> tag
+    html = re.sub(r"<code>\s+", "<code>", html)
+
     return html
 
 
@@ -186,7 +188,7 @@ def add_language_info(html: str, language: str = "en") -> str:
 
 def main():
     urls = read_urls()
- 
+
     for url_data in urls:
 
         url = url_data.url
