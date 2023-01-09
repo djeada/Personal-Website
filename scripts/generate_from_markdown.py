@@ -101,7 +101,7 @@ def apply_prism_for_code_samples(html: str) -> str:
         code_sample = re.sub(r"`{3,}(\w+)?", "", code_sample).strip()
         code_sample = strip_html(code_sample)
         code_sample = re.sub(r"\n@", "\n\n@", code_sample)
-        code_sample = re.sub(r"def init(", "def __init__(", code_sample)
+        code_sample = re.sub(r"def init\(", "def __init__(", code_sample)
         while "\n\n\n" in code_sample:
             code_sample = code_sample.replace("\n\n\n", "\n\n")
         # if first line is empty, remove it
@@ -128,15 +128,55 @@ def replace_code_tags(html):
     return html
 
 
+def correct_image_sources(html: str) -> str:
+
+    # find all images
+    soup = BeautifulSoup(html, "html.parser")
+    images = soup.find_all("img")
+    for image in images:
+        src = image["src"]
+        if src.startswith("https://github.com"):
+            src = src.replace("https://github.com", "https://raw.githubusercontent.com")
+            src = src.replace("/blob/", "/")
+            image["src"] = src
+    return str(soup)
+
+
+def correct_math_blocks(html: str) -> str:
+    # math bloks are defined by $$ and $$,
+    # find the blocks, and then // inside the blocks and replace them with ///
+
+    # find all math blocks
+    math_start_pattern = re.compile(r"\$\$")
+    math_start_match = math_start_pattern.search(html)
+    while math_start_match is not None:
+        math_end_match = math_start_pattern.search(html, math_start_match.end())
+        if math_end_match is None:
+            break
+        start = math_start_match.start()
+        end = math_end_match.end()
+        math_block = html[start:end]
+        math_block = math_block.replace("\\\n", "\\\\\n")
+        html = html[:start] + math_block + html[end:]
+        math_start_match = math_start_pattern.search(html, start + len(math_block) + 1)
+    return html
+
+
 def apply_filters(html, lang="en"):
 
     # replace all tables
     html = replace_all_tables(html)
 
+    # correct image sources
+    html = correct_image_sources(html)
+
     # apply prism for code samples
     html = apply_prism_for_code_samples(html)
     html = replace_code_tags(html)
     html = apply_prism_for_code_samples(html)
+
+    # correct math blocks
+    html = correct_math_blocks(html)
 
     # if no body tag, add one at the beginning of the file and at the end
     if "<body>" not in html:
@@ -163,6 +203,18 @@ def apply_filters(html, lang="en"):
     html += '\n<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>\n'
     html += '\n<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>\n'
 
+    html += '\n<script type="text/x-mathjax-config">\n'
+    html += "MathJax.Hub.Config({\n"
+    html += 'jax: ["input/TeX", "output/HTML-CSS"],\n'
+    html += 'extensions: ["tex2jax.js"],\n'
+    html += '"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },\n'
+    html += 'tex2jax: { inlineMath: [ ["$", "$"], ["\\(","\\)"] ], displayMath: [ ["$$","$$"], ["\\[", "\\]"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },\n'
+    html += 'TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },\n'
+    html += 'messageStyle: "none"\n'
+    html += "});\n"
+    html += "</script>\n"
+    html += '\n<script type="text/javascript" id="MathJax-script" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>\n'
+
     # replace <h1> with <header>
     html = re.sub(r"<h1>", "<header>", html)
     html = re.sub(r"</h1>", "</header>", html)
@@ -175,13 +227,13 @@ def apply_filters(html, lang="en"):
 
 def add_language_info(html: str, language: str = "en") -> str:
     # find first p tag and insert <p><i>Language: English</i></p> before it
-    p_tag_pattern = re.compile(r"<p>")
+    p_tag_pattern = re.compile(r"<section id=\"article-body\">")
     p_tag_match = p_tag_pattern.search(html)
     if p_tag_match is not None:
         html = (
-            html[: p_tag_match.start()]
-            + f"<p><i>This article is written in: {language}</i></p>\n"
-            + html[p_tag_match.start() :]
+            html[: p_tag_match.end() + 1]
+            + f"<p style='text-align: right;'><i>This article is written in: {language}</i></p>\n"
+            + html[p_tag_match.end() + 1 :]
         )
     return html
 
