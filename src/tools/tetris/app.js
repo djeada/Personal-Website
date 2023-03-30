@@ -9,8 +9,7 @@ COLOR_F = "#6f292e";
 let COLOR_BACKGROUND = "white";
 let COLOR_FOREGROUND = "black";
 
-
-if (getCookie('darkMode')) {
+if (getCookie("darkMode")) {
     COLOR_BACKGROUND = "black";
     COLOR_FOREGROUND = "white";
 }
@@ -38,7 +37,6 @@ class Model {
         }
     }
 
-
     removeShape(x, y, shape) {
         for (let i = 0; i < shape.length && y + i < this.grid.length; i++) {
             for (let j = 0; j < shape[i].length && x + j < this.grid[i].length; j++) {
@@ -57,7 +55,10 @@ class Model {
         for (let i = 0; i < shape.length; i++) {
             for (let j = 0; j < shape[i].length; j++) {
                 if (shape[i][j] === 1) {
-                    if (!this.areCoordinatesInBounds(x + j, y + i) || this.grid[y + i][x + j] !== COLOR_BACKGROUND) {
+                    if (
+                        !this.areCoordinatesInBounds(x + j, y + i) ||
+                        this.grid[y + i][x + j] !== COLOR_BACKGROUND
+                    ) {
                         return false;
                     }
                 }
@@ -68,7 +69,7 @@ class Model {
 
     canMoveShape(oldX, oldY, oldShape, newX, newY, newShape, color) {
         this.removeShape(oldX, oldY, oldShape);
-        var flag = this.isAreaFree(newX, newY, newShape)
+        var flag = this.isAreaFree(newX, newY, newShape);
         this.addShape(oldX, oldY, oldShape, color);
         return flag;
     }
@@ -77,7 +78,6 @@ class Model {
         this.removeShape(oldX, oldY, oldShape);
         this.addShape(newX, newY, newShape, color);
     }
-
 
     isRowFull(row) {
         for (let i = 0; i < this.grid[row].length; i++) {
@@ -114,11 +114,15 @@ class Model {
         for (let i = 0; i < this.grid.length; i++) {
             for (let j = 0; j < this.grid[i].length; j++) {
                 ctx.fillStyle = this.grid[i][j];
-                ctx.fillRect(j * SQUARE_SIZE, i * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE);
+                ctx.fillRect(
+                    j * SQUARE_SIZE,
+                    i * SQUARE_SIZE,
+                    SQUARE_SIZE,
+                    SQUARE_SIZE
+                );
             }
         }
     }
-
 }
 
 class Shape {
@@ -146,7 +150,6 @@ class Shape {
         }
 
         if (this.x < 0) {
-
             this.x = 0;
         }
 
@@ -253,15 +256,14 @@ class StraightShape extends Shape {
                 [1],
                 [1],
                 [1],
-                [1],
+                [1]
             ],
             [
-                [1, 1, 1, 1],
-            ],
+                [1, 1, 1, 1]
+            ]
         ];
     }
 }
-
 
 class Game {
     constructor(ctx) {
@@ -294,11 +296,14 @@ class Game {
     }
 
     draw(ctx) {
-
         if (this.isGameOver) {
             ctx.font = "30px Arial";
             ctx.fillStyle = COLOR_FOREGROUND;
-            ctx.fillText("Game Over", ctx.canvas.width / 2 - 100, ctx.canvas.height / 2);
+            ctx.fillText(
+                "Game Over",
+                ctx.canvas.width / 2 - 100,
+                ctx.canvas.height / 2
+            );
             return;
         }
 
@@ -306,14 +311,18 @@ class Game {
     }
 
     update(ctx) {
-
         if (this.isGameOver) {
             return;
         }
 
         if (!this.currentShape) {
             this.generateShape();
-            this.model.addShape(this.currentShape.x, this.currentShape.y, this.currentShape.shape(), this.currentShape.color);
+            this.model.addShape(
+                this.currentShape.x,
+                this.currentShape.y,
+                this.currentShape.shape(),
+                this.currentShape.color
+            );
         }
 
         var oldX = Math.floor(this.currentShape.x / SQUARE_SIZE);
@@ -324,10 +333,27 @@ class Game {
         var newY = Math.floor(this.currentShape.y / SQUARE_SIZE);
         let newShape = this.currentShape.shape();
 
-        if (this.model.canMoveShape(oldX, oldY, oldShape, newX, newY, newShape, this.currentShape.color)) {
-            this.model.moveShape(oldX, oldY, oldShape, newX, newY, newShape, this.currentShape.color);
+        if (
+            this.model.canMoveShape(
+                oldX,
+                oldY,
+                oldShape,
+                newX,
+                newY,
+                newShape,
+                this.currentShape.color
+            )
+        ) {
+            this.model.moveShape(
+                oldX,
+                oldY,
+                oldShape,
+                newX,
+                newY,
+                newShape,
+                this.currentShape.color
+            );
         } else {
-
             if (newY == 0) {
                 this.isGameOver = true;
                 return;
@@ -336,80 +362,87 @@ class Game {
         }
 
         this.model.removeFullRows();
-
     }
 }
 
 function main() {
-    window.addEventListener("keydown", function(e) {
-        if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].indexOf(e.code) > -1) {
-            e.preventDefault();
-        }
-    }, false);
+    window.addEventListener(
+        "keydown",
+        function(e) {
+            if (
+                ["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].indexOf(
+                    e.code
+                ) > -1
+            ) {
+                e.preventDefault();
+            }
+        },
+        false
+    );
 
-    var canvas = document.getElementById('canvas');
-    var ctx = canvas.getContext('2d');
+    const canvas = document.getElementById("canvas");
+    const canvasWidth = Math.floor(window.innerWidth * 0.8);
+    const canvasHeight = Math.floor(window.innerHeight * 0.8);
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    const ctx = canvas.getContext("2d");
 
     //  you need to set the scale property to 1 so it doesn't use the devicePixelRatio: html2canvas.hertzen.com/configuration
     ctx.scale(1, 1);
 
     // set the width of the canvas to match a neat multiple of SQUARE_SIZE
-    canvas.width = canvas.width - canvas.width % SQUARE_SIZE;
-    canvas.height = canvas.height - canvas.height % SQUARE_SIZE;
+    canvas.width = canvas.width - (canvas.width % SQUARE_SIZE);
+    canvas.height = canvas.height - (canvas.height % SQUARE_SIZE);
 
     // focus on the canvas
     canvas.focus();
 
     let game = new Game(ctx);
 
-    document.addEventListener('keydown', function(event) {
+    document.addEventListener("keydown", function(event) {
         const key = event.key;
-        if (key === 'ArrowLeft') {
+        if (key === "ArrowLeft") {
             if (game.currentShape) {
                 game.currentShape.dx = -SQUARE_SIZE;
             }
         }
 
-        if (key === 'ArrowRight') {
+        if (key === "ArrowRight") {
             if (game.currentShape) {
-
                 game.currentShape.dx = SQUARE_SIZE;
             }
         }
 
-        if (key === 'ArrowDown') {
+        if (key === "ArrowDown") {
             if (game.currentShape) {
-
                 game.currentShape.dy += SQUARE_SIZE / 4;
             }
         }
 
-        if (key === ' ') {
+        if (key === " ") {
             if (game.currentShape) {
-
                 game.currentShape.rotation += 1;
             }
         }
 
-        if (key === 'Escape') {
+        if (key === "Escape") {
             game.startOver(ctx);
         }
-
     });
 
-    canvas.addEventListener('touchmove', function(event) {
+    canvas.addEventListener("touchmove", function(event) {
         event.preventDefault();
         canvas.focus();
     });
 
     let lastX = null;
     let lastY = null;
-    canvas.addEventListener('touchstart', function(event) {
+    canvas.addEventListener("touchstart", function(event) {
         lastX = event.touches[0].clientX;
         lastY = event.touches[0].clientY;
     });
 
-    canvas.addEventListener('touchmove', function(event) {
+    canvas.addEventListener("touchmove", function(event) {
         const currentX = event.touches[0].clientX;
         const currentY = event.touches[0].clientY;
         const diffX = currentX - lastX;
@@ -417,7 +450,6 @@ function main() {
 
         if (game.currentShape) {
             if (Math.abs(diffX) > Math.abs(diffY)) {
-
                 if (diffX > 0) {
                     game.currentShape.dx = SQUARE_SIZE;
                 } else if (diffX < 0) {
@@ -430,18 +462,14 @@ function main() {
                     game.currentShape.rotation += 1;
                 }
             }
-
-
         }
 
         lastX = currentX;
-
     });
-
 
     let lastTap = null;
 
-    canvas.addEventListener('touchend', function(event) {
+    canvas.addEventListener("touchend", function(event) {
         const currentTime = new Date().getTime();
         const tapLength = currentTime - lastTap;
         if (lastTap && tapLength < 500 && tapLength > 0) {
@@ -457,7 +485,6 @@ function main() {
         game.update(ctx);
         game.draw(ctx, game);
     }, 100);
-
 }
 
 main();

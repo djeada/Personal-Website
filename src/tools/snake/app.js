@@ -6,8 +6,7 @@ COLOR_B = "#eec747";
 let COLOR_BACKGROUND = "white";
 let COLOR_FOREGROUND = "black";
 
-
-if (getCookie('darkMode')) {
+if (getCookie("darkMode")) {
     COLOR_BACKGROUND = "black";
     COLOR_FOREGROUND = "white";
 }
@@ -28,9 +27,10 @@ class Square {
     //static method are squares colliding
     static areColliding(square1, square2) {
         // checks if the distance between the centers of the squares is less than the sum of the half of the squares
-        let distance = Math.sqrt(Math.pow(square1.x - square2.x, 2) + Math.pow(square1.y - square2.y, 2));
+        let distance = Math.sqrt(
+            Math.pow(square1.x - square2.x, 2) + Math.pow(square1.y - square2.y, 2)
+        );
         return distance < (square1.size + square2.size) / 2;
-
     }
 }
 
@@ -59,7 +59,12 @@ class Snake {
 
     grow() {
         let lastSquare = this.body[this.body.length - 1];
-        let newSquare = new Square(lastSquare.x, lastSquare.y, this.size, this.color);
+        let newSquare = new Square(
+            lastSquare.x,
+            lastSquare.y,
+            this.size,
+            this.color
+        );
         this.body.push(newSquare);
     }
 
@@ -78,11 +83,13 @@ class Snake {
         ctx.arc(eyeX, eyeY, eyeSize, 0, Math.PI * 2, true);
         ctx.fillStyle = COLOR_FOREGROUND;
         ctx.fill();
-
     }
 
     changeDirection(direction) {
-        if (this.directions.indexOf(direction) !== -1 && direction !== this.oppositeDirection()) {
+        if (
+            this.directions.indexOf(direction) !== -1 &&
+            direction !== this.oppositeDirection()
+        ) {
             this.direction = direction;
         }
     }
@@ -100,7 +107,12 @@ class Snake {
     }
 
     update() {
-        let newHead = new Square(this.body[0].x, this.body[0].y, this.size, this.color);
+        let newHead = new Square(
+            this.body[0].x,
+            this.body[0].y,
+            this.size,
+            this.color
+        );
 
         if (this.direction == "right") {
             newHead.x += SPEED;
@@ -117,7 +129,6 @@ class Snake {
     }
 }
 
-
 // class food extends square
 class Food extends Square {
     constructor(x, y) {
@@ -127,7 +138,14 @@ class Food extends Square {
     draw(ctx) {
         // draw a circle
         ctx.beginPath();
-        ctx.arc(this.x + this.size / 2, this.y + this.size / 2, this.size / 2, 0, Math.PI * 2, true);
+        ctx.arc(
+            this.x + this.size / 2,
+            this.y + this.size / 2,
+            this.size / 2,
+            0,
+            Math.PI * 2,
+            true
+        );
         ctx.fillStyle = this.color;
         ctx.fill();
 
@@ -137,16 +155,37 @@ class Food extends Square {
 
         // draw a smile
         ctx.beginPath();
-        ctx.arc(this.x + this.size / 2, this.y + this.size / 2, this.size / 4, 0, Math.PI, false);
+        ctx.arc(
+            this.x + this.size / 2,
+            this.y + this.size / 2,
+            this.size / 4,
+            0,
+            Math.PI,
+            false
+        );
         ctx.stroke();
 
         // draw eyes
         ctx.beginPath();
-        ctx.arc(this.x + this.size / 4, this.y + this.size / 4, this.size / 8, 0, Math.PI * 2, true);
+        ctx.arc(
+            this.x + this.size / 4,
+            this.y + this.size / 4,
+            this.size / 8,
+            0,
+            Math.PI * 2,
+            true
+        );
         ctx.fill();
 
         ctx.beginPath();
-        ctx.arc(this.x + this.size * 3 / 4, this.y + this.size / 4, this.size / 8, 0, Math.PI * 2, true);
+        ctx.arc(
+            this.x + (this.size * 3) / 4,
+            this.y + this.size / 4,
+            this.size / 8,
+            0,
+            Math.PI * 2,
+            true
+        );
         ctx.fill();
     }
 }
@@ -175,7 +214,11 @@ class Game {
         if (this.isGameOver) {
             this.ctx.fillStyle = COLOR_FOREGROUND;
             this.ctx.font = "50px Comic Sans MS";
-            this.ctx.fillText("Game Over", this.ctx.canvas.width / 2 - 150, this.ctx.canvas.height / 2);
+            this.ctx.fillText(
+                "Game Over",
+                this.ctx.canvas.width / 2 - 150,
+                this.ctx.canvas.height / 2
+            );
             return;
         }
 
@@ -210,7 +253,6 @@ class Game {
         }
     }
 
-
     startOver() {
         this.isGameOver = false;
         this.snake = new Snake(randomInt(0, 30) * 20, randomInt(0, 30) * 20);
@@ -222,7 +264,12 @@ class Game {
         this.snake.update();
         // spawn randomly food
         if (Math.random() < 0.03) {
-            this.food.push(new Food(Math.floor(Math.random() * 30) * 20, Math.floor(Math.random() * 30) * 20));
+            this.food.push(
+                new Food(
+                    Math.floor(Math.random() * 30) * 20,
+                    Math.floor(Math.random() * 30) * 20
+                )
+            );
 
             if (this.food.length > 5) {
                 this.food.shift();
@@ -241,35 +288,47 @@ class Game {
             }
         }
         // check collision with wall
-        if (this.snake.x < 0 || this.snake.x >= this.ctx.canvas.width || this.snake.y < 0 || this.snake.y >= this.ctx.canvas.height) {
+        if (
+            this.snake.x < 0 ||
+            this.snake.x >= this.ctx.canvas.width ||
+            this.snake.y < 0 ||
+            this.snake.y >= this.ctx.canvas.height
+        ) {
             this.isGameOver = true;
             return;
         }
         /*
-        // check collision with itself
-        for (let i = 1; i < this.snake.body.length; i++) {
-            if (Square.areColliding(this.snake.head, this.snake.body[i])) {
-                this.isGameOver = true;
-                return;
-            }
-        }*/
+            // check collision with itself
+            for (let i = 1; i < this.snake.body.length; i++) {
+                if (Square.areColliding(this.snake.head, this.snake.body[i])) {
+                    this.isGameOver = true;
+                    return;
+                }
+            }*/
     }
 }
 
-
-
-
-
 function main() {
+    window.addEventListener(
+        "keydown",
+        function(e) {
+            if (
+                ["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].indexOf(
+                    e.code
+                ) > -1
+            ) {
+                e.preventDefault();
+            }
+        },
+        false
+    );
 
-    window.addEventListener("keydown", function(e) {
-        if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].indexOf(e.code) > -1) {
-            e.preventDefault();
-        }
-    }, false);
-
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
+    const canvas = document.getElementById("canvas");
+    const canvasWidth = Math.floor(window.innerWidth * 0.8);
+    const canvasHeight = Math.floor(window.innerHeight * 0.6);
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    const ctx = canvas.getContext("2d");
 
     // focus on the canvas
     canvas.focus();
@@ -277,27 +336,26 @@ function main() {
     // create game
     let game = new Game(ctx);
 
-
-    document.addEventListener('keydown', function(event) {
+    document.addEventListener("keydown", function(event) {
         const key = event.key;
-        if (key === 'ArrowLeft') {
+        if (key === "ArrowLeft") {
             game.snake.changeDirection("left");
         }
-        if (key === 'ArrowRight') {
+        if (key === "ArrowRight") {
             game.snake.changeDirection("right");
         }
-        if (key === 'ArrowUp') {
+        if (key === "ArrowUp") {
             game.snake.changeDirection("up");
         }
-        if (key === 'ArrowDown') {
+        if (key === "ArrowDown") {
             game.snake.changeDirection("down");
         }
-        if (key === 'Escape') {
+        if (key === "Escape") {
             game.startOver();
         }
     });
 
-    canvas.addEventListener('touchmove', function(event) {
+    canvas.addEventListener("touchmove", function(event) {
         event.preventDefault();
         canvas.focus();
     });
@@ -307,13 +365,12 @@ function main() {
     let lastX = null;
     let lastY = null;
 
-    canvas.addEventListener('touchstart', function(event) {
+    canvas.addEventListener("touchstart", function(event) {
         lastX = event.touches[0].clientX;
         lastY = event.touches[0].clientY;
-
     });
 
-    canvas.addEventListener('touchmove', function(event) {
+    canvas.addEventListener("touchmove", function(event) {
         const currentX = event.touches[0].clientX;
         const currentY = event.touches[0].clientY;
 
@@ -340,7 +397,7 @@ function main() {
 
     let lastTap = null;
 
-    canvas.addEventListener('touchend', function(event) {
+    canvas.addEventListener("touchend", function(event) {
         const currentTime = new Date().getTime();
         const tapLength = currentTime - lastTap;
         if (lastTap && tapLength < 500 && tapLength > 0) {
@@ -352,15 +409,11 @@ function main() {
         }
     });
 
-
     // use setInterval to update and draw the game 10 times per second
     setInterval(function() {
         game.update();
         game.draw();
-
     }, 100);
-
-
 }
 
-main()
+main();

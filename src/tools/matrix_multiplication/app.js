@@ -1,33 +1,31 @@
-document.getElementById('reset').addEventListener('click', () => {
+document.getElementById("reset").addEventListener("click", () => {
     // reset the values of the input fields in the tables
     reset();
 });
 
 function reset() {
-    displayMatrix('matrix-a', []);
-    displayMatrix('matrix-b', []);
-    displayMatrix('matrix-result', []);
+    displayMatrix("matrix-a", []);
+    displayMatrix("matrix-b", []);
+    displayMatrix("matrix-result", []);
 }
 
-document.getElementById('submit').addEventListener('click', () => {
-
-
+document.getElementById("submit").addEventListener("click", () => {
     // get the values of the input fields in the tables
-    matrixA = getMatrixValues('matrix-a');
-    matrixB = getMatrixValues('matrix-b');
+    matrixA = getMatrixValues("matrix-a");
+    matrixB = getMatrixValues("matrix-b");
 
     console.log(matrixA);
     console.log(matrixB);
 
     if (!checkIfMatricesCanBeMultiplied(matrixA, matrixB)) {
-        alert('The matrices cannot be multiplied');
+        alert("The matrices cannot be multiplied");
         cleanup(matrixA, matrixB);
         return;
     }
 
     // check if the matrices contain only numeric values
     if (!isNumericMatrix(matrixA) || !isNumericMatrix(matrixB)) {
-        alert('The matrices must contain only numeric values');
+        alert("The matrices must contain only numeric values");
         cleanup(matrixA, matrixB);
         return;
     }
@@ -35,25 +33,20 @@ document.getElementById('submit').addEventListener('click', () => {
     matrixA = convertToInt(matrixA);
     matrixB = convertToInt(matrixB);
 
-
-
     // perform the matrix multiplication and store the result in a variable
     const result = multiply(matrixA, matrixB);
 
     console.log(result);
 
     // update the result element with the result of the multiplication
-    displayMatrix('matrix-result', result);
-
+    displayMatrix("matrix-result", result);
 });
-
 
 function cleanup(matrixA, matrixB) {
     matrixA = fillNonNumericCells(matrixA);
     matrxiB = fillNonNumericCells(matrixB);
-    displayMatrix('matrix-a', matrixA);
-    displayMatrix('matrix-b', matrixB);
-
+    displayMatrix("matrix-a", matrixA);
+    displayMatrix("matrix-b", matrixB);
 }
 
 function fillNonNumericCells(matrix) {
@@ -72,9 +65,8 @@ function fillNonNumericCells(matrix) {
 
             // if the value is not numeric, replace it with "-"
             if (!isNumeric) {
-                row[j] = '-';
+                row[j] = "-";
             }
-
         }
     }
 
@@ -123,7 +115,7 @@ function displayMatrix(id, matrix) {
         // iterate over the cells of the current row
         for (let j = 0; j < cells.length; j++) {
             // get the value of the current cell if it exists
-            value = '';
+            value = "";
             if (i < matrix.length && j < matrix[i].length) {
                 value = matrix[i][j];
             }
@@ -134,7 +126,6 @@ function displayMatrix(id, matrix) {
         }
     }
 }
-
 
 function getMatrixValues(id) {
     // get the table element
@@ -175,7 +166,7 @@ function filterMatrix(matrix) {
     // if a column contains only cell with value "-" remove the column
 
     // create a copy of the matrix
-    const matrixCopy = matrix.map(row => row.slice());
+    const matrixCopy = matrix.map((row) => row.slice());
 
     // iterate over the rows of the matrix
     for (let i = 0; i < matrixCopy.length; i++) {
@@ -183,29 +174,25 @@ function filterMatrix(matrix) {
         const row = matrixCopy[i];
 
         // check if the row contains only cells with value "-" or empty cells
-        const isRowEmpty = row.every(cell => cell === '-' || cell === "");
+        const isRowEmpty = row.every((cell) => cell === "-" || cell === "");
 
         // if the row contains only cells with value "-", remove the row
         if (isRowEmpty) {
-
             // remove the row from the matrix
             matrixCopy.splice(i, 1);
 
             // decrement the index to account for the removed row
             i--;
         }
-
     }
 
     // iterate over the columns of the matrix
     for (let i = 0; i < matrixCopy[0].length; i++) {
-
         // create an array to store the values of the current column
         const column = [];
 
         // iterate over the rows of the matrix
         for (let j = 0; j < matrixCopy.length; j++) {
-
             // get the value of the current cell
             const value = matrixCopy[j][i];
 
@@ -214,18 +201,15 @@ function filterMatrix(matrix) {
         }
 
         // check if the column contains only cells with value "-"
-        const isColumnEmpty = column.every(cell => cell === '-' || cell === "");
+        const isColumnEmpty = column.every((cell) => cell === "-" || cell === "");
 
         // if the column contains only cells with value "-", remove the column
         if (isColumnEmpty) {
-
             // iterate over the rows of the matrix
             for (let j = 0; j < matrixCopy.length; j++) {
-
                 // remove the current cell from the matrix
 
                 matrixCopy[j].splice(i, 1);
-
             }
             // decrement the index to account for the removed column
             i--;
@@ -249,7 +233,7 @@ function fillEmpty(matrix) {
             const value = row[j];
 
             // if the value is "-", replace it with 0
-            if (value === '-' || value === '') {
+            if (value === "-" || value === "") {
                 row[j] = 0;
             }
         }
@@ -276,11 +260,9 @@ function convertToInt(matrix) {
             // replace the value in the matrix with the converted value
             row[j] = valueInt;
         }
-
     }
 
     return matrix;
-
 }
 
 // check if two matrices can be multiplied\
@@ -308,20 +290,20 @@ function multiply(matrixA, matrixB) {
     const matrixBColumns = matrixB[0].length;
 
     // create a new matrix with the correct dimensions
-    const result = new Array(matrixARows).fill(0).map(() => new Array(matrixBColumns).fill(0));
+    const result = new Array(matrixARows)
+        .fill(0)
+        .map(() => new Array(matrixBColumns).fill(0));
 
     // multiply the matrices
     for (let i = 0; i < matrixARows; i++) {
         for (let j = 0; j < matrixBColumns; j++) {
             for (let k = 0; k < matrixB.length; k++) {
                 result[i][j] += matrixA[i][k] * matrixB[k][j];
-
             }
         }
     }
 
     return result;
-
 }
 
 reset();
