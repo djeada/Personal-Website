@@ -233,29 +233,7 @@ function main() {
         touchStartY = event.touches[0].clientY;
     });
 
-    // Add touchmove listener to canvas to change snake direction
-    canvas.addEventListener('touchmove', function(event) {
-        event.preventDefault();
-        const touchEndX = event.touches[0].clientX;
-        const touchEndY = event.touches[0].clientY;
-        const touchDiffX = touchEndX - touchStartX;
-        const touchDiffY = touchEndY - touchStartY;
-        if (Math.abs(touchDiffX) > Math.abs(touchDiffY)) {
-            if (touchDiffX > 0) {
-                snake.changeDirection("right");
-            } else {
-                snake.changeDirection("left");
-            }
-        } else {
-            if (touchDiffY > 0) {
-                snake.changeDirection("down");
-            } else {
-                snake.changeDirection("up");
-            }
-        }
-    });
-
-    // Add touchend listener to canvas for double tap
+    // Add touchend listener to canvas for changing direction and double tap
     canvas.addEventListener('touchend', function(event) {
         const currentTime = new Date().getTime();
         const tapLength = currentTime - lastTap;
@@ -263,6 +241,24 @@ function main() {
             startOver();
         } else {
             lastTap = currentTime;
+
+            const touchEndX = event.changedTouches[0].clientX;
+            const touchEndY = event.changedTouches[0].clientY;
+            const touchDiffX = touchEndX - touchStartX;
+            const touchDiffY = touchEndY - touchStartY;
+            if (Math.abs(touchDiffX) > Math.abs(touchDiffY)) {
+                if (touchDiffX > 0 && snake.direction !== "left") {
+                    snake.pendingDirection = "right";
+                } else if (snake.direction !== "right") {
+                    snake.pendingDirection = "left";
+                }
+            } else {
+                if (touchDiffY > 0 && snake.direction !== "up") {
+                    snake.pendingDirection = "down";
+                } else if (snake.direction !== "down") {
+                    snake.pendingDirection = "up";
+                }
+            }
         }
     });
 
