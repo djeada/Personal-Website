@@ -19,6 +19,7 @@ document.addEventListener("DOMContentLoaded", function() {
     let dataArray = generateSortedRandomArray(arrayLength);
     let searchingInProgress = false;
     let paused = false;
+    let currentSortingPromise = null;
 
     function generateSortedRandomArray(length) {
         const array = Array.from({
@@ -103,16 +104,27 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     startButton.addEventListener("click", async () => {
+        if (currentSortingPromise) {
+            sortingInProgress = false;
+            paused = false;
+            pauseButton.textContent = "Pause";
+            await currentSortingPromise;
+        }
+
+        // Unpause the sorting before starting a new one
         paused = false;
 
         const selectedAlgorithm = getSelectedAlgorithm();
         const searchTarget = parseInt(searchTargetInput.value);
-        if (selectedAlgorithm === "linear") {
-            await linearSearch(dataArray, searchTarget);
-        }
-        if (selectedAlgorithm === "binary") {
-            await binarySearch(dataArray, searchTarget);
-        }
+
+        currentSortingPromise = (async () => {
+            if (selectedAlgorithm === "linear") {
+                await linearSearch(dataArray, searchTarget);
+            }
+            if (selectedAlgorithm === "binary") {
+                await binarySearch(dataArray, searchTarget);
+            }
+        })();
     });
 
     pauseButton.addEventListener("click", () => {

@@ -19,6 +19,7 @@ document.addEventListener("DOMContentLoaded", function() {
     let dataArray = generateRandomArray(arrayLength);
     let sortingInProgress = false;
     let paused = false;
+    let currentSortingPromise = null;
 
     function generateRandomArray(length) {
         return Array.from({
@@ -246,28 +247,36 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     startButton.addEventListener("click", async () => {
+        if (currentSortingPromise) {
+            sortingInProgress = false;
+            paused = false;
+            pauseButton.textContent = "Pause";
+            await currentSortingPromise;
+        }
 
         // Unpause the sorting before starting a new one
         paused = false;
 
         const selectedAlgorithm = getSelectedAlgorithm();
-        if (selectedAlgorithm === "bubble") {
-            await bubbleSort(dataArray);
-        }
-        if (selectedAlgorithm === "selection") {
-            await selectionSort(dataArray);
-        }
-        if (selectedAlgorithm === "insertion") {
-            await insertionSort(dataArray);
-        }
-        if (selectedAlgorithm === "merge") {
-            await mergeSort(dataArray);
-        }
-        if (selectedAlgorithm === "quick") {
-            await quickSort(dataArray);
-        }
-
+        currentSortingPromise = (async () => {
+            if (selectedAlgorithm === "bubble") {
+                await bubbleSort(dataArray);
+            }
+            if (selectedAlgorithm === "selection") {
+                await selectionSort(dataArray);
+            }
+            if (selectedAlgorithm === "insertion") {
+                await insertionSort(dataArray);
+            }
+            if (selectedAlgorithm === "merge") {
+                await mergeSort(dataArray);
+            }
+            if (selectedAlgorithm === "quick") {
+                await quickSort(dataArray);
+            }
+        })();
     });
+
 
     pauseButton.addEventListener("click", () => {
         if (sortingInProgress) {
