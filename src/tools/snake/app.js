@@ -1,24 +1,21 @@
-SQUARE_SIZE = 40;
-SPEED = 10;
-COLOR_A = "#f98776";
-COLOR_B = "#eec747";
+document.addEventListener("DOMContentLoaded", function() {
 
-let COLOR_BACKGROUND = "white";
-let COLOR_FOREGROUND = "black";
-
-if (getCookie("darkMode")) {
-    COLOR_BACKGROUND = "black";
-    COLOR_FOREGROUND = "white";
-}
+const SQUARE_SIZE = 40;
+const MOVE_DELAY = 200;
+const COLOR_A = "#f98776";
+const COLOR_B = "#eec747";
 
 // class square
 class Square {
     constructor(x, y, size, color) {
+        x = Math.floor(x / SQUARE_SIZE) * SQUARE_SIZE;
+        y = Math.floor(y / SQUARE_SIZE) * SQUARE_SIZE;
         this.x = x;
         this.y = y;
         this.size = size;
         this.color = color;
     }
+
     draw(ctx) {
         ctx.fillStyle = this.color;
         ctx.fillRect(this.x, this.y, this.size, this.size);
@@ -73,15 +70,13 @@ class Snake {
             square.draw(ctx);
         }
 
-        // first square should have an eye
         let eyeX = this.body[0].x + this.size / 4;
         let eyeY = this.body[0].y + this.size / 4;
         let eyeSize = this.size / 8;
 
-        // draw eye
         ctx.beginPath();
         ctx.arc(eyeX, eyeY, eyeSize, 0, Math.PI * 2, true);
-        ctx.fillStyle = COLOR_FOREGROUND;
+        ctx.fillStyle = getCookie("darkMode") ? "black" : "white";
         ctx.fill();
     }
 
@@ -115,79 +110,68 @@ class Snake {
         );
 
         if (this.direction == "right") {
-            newHead.x += SPEED;
+            newHead.x += SQUARE_SIZE;
         } else if (this.direction == "left") {
-            newHead.x -= SPEED;
+            newHead.x -= SQUARE_SIZE;
         } else if (this.direction == "up") {
-            newHead.y -= SPEED;
+            newHead.y -= SQUARE_SIZE;
         } else if (this.direction == "down") {
-            newHead.y += SPEED;
+            newHead.y += SQUARE_SIZE;
         }
 
         this.body.unshift(newHead);
         this.body.pop();
     }
+
+    isCollidingWithSelf() {
+        for (let i = 1; i < this.body.length; i++) {
+            if (Square.areColliding(this.head, this.body[i])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    isOutOfBounds(canvasWidth, canvasHeight) {
+        return (
+            this.x < 0 ||
+            this.x + this.size > canvasWidth ||
+            this.y < 0 ||
+            this.y + this.size > canvasHeight
+        );
+    }
+
 }
 
-// class food extends square
-class Food extends Square {
+class Food {
     constructor(x, y) {
-        super(x, y, SQUARE_SIZE, COLOR_B);
+        this.size = SQUARE_SIZE;
+        this.color = COLOR_B;
+        this.square = new Square(x, y, this.size, this.color);
     }
 
     draw(ctx) {
-        // draw a circle
-        ctx.beginPath();
-        ctx.arc(
-            this.x + this.size / 2,
-            this.y + this.size / 2,
-            this.size / 2,
-            0,
-            Math.PI * 2,
-            true
-        );
-        ctx.fillStyle = this.color;
-        ctx.fill();
-
-        // change color to COLOR_E
-        ctx.strokeStyle = COLOR_FOREGROUND;
-        ctx.fillStyle = COLOR_FOREGROUND;
-
-        // draw a smile
-        ctx.beginPath();
-        ctx.arc(
-            this.x + this.size / 2,
-            this.y + this.size / 2,
-            this.size / 4,
-            0,
-            Math.PI,
-            false
-        );
-        ctx.stroke();
-
-        // draw eyes
-        ctx.beginPath();
-        ctx.arc(
-            this.x + this.size / 4,
-            this.y + this.size / 4,
-            this.size / 8,
-            0,
-            Math.PI * 2,
-            true
-        );
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.arc(
-            this.x + (this.size * 3) / 4,
-            this.y + this.size / 4,
-            this.size / 8,
-            0,
-            Math.PI * 2,
-            true
-        );
-        ctx.fill();
+        this.square.draw(ctx);
     }
+    isEatenBy(snake) {
+        return Square.areColliding(this.square, snake.head);
+    }
+
+    static generateRandom(canvasWidth, canvasHeight, snake) {
+        let x = Math.floor(Math.random() * (canvasWidth / SQUARE_SIZE)) * SQUARE_SIZE;
+        let y = Math.floor(Math.random() * (canvasHeight / SQUARE_SIZE)) * SQUARE_SIZE;
+
+        let newFood = new Food(x, y);
+
+        while (snake.body.some((square) => Square.areColliding(square, newFood.square))) {
+            x = Math.floor(Math.random() * (canvasWidth / SQUARE_SIZE)) * SQUARE_SIZE;
+            y = Math.floor(Math.random() * (canvasHeight / SQUARE_SIZE)) * SQUARE_SIZE;
+            newFood = new Food(x, y);
+        }
+
+        return newFood;
+    }
+
 }
 
 function randomInt(min, max) {
@@ -200,19 +184,18 @@ class Game {
     // contains one snake and array of food
     constructor(ctx) {
         this.snake = new Snake(randomInt(0, 30) * 20, randomInt(0, 30) * 20);
-        this.food = [];
+        this.food = [Food.generateRandom(ctx.canvas.width, ctx.canvas.height, this.snake)];
         this.score = 0;
         this.isGameOver = false;
         this.ctx = ctx;
     }
-
     draw() {
-        // fill the background white
-        this.ctx.fillStyle = COLOR_BACKGROUND;
+        // fill the background
+        this.ctx.fillStyle = getCookie("darkMode") ? "black" : "white";
         this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
 
         if (this.isGameOver) {
-            this.ctx.fillStyle = COLOR_FOREGROUND;
+            this.ctx.fillStyle = getCookie("darkMode") ? "white" : "black";
             this.ctx.font = "50px Comic Sans MS";
             this.ctx.fillText(
                 "Game Over",
@@ -229,7 +212,7 @@ class Game {
             food.draw(this.ctx);
         }
 
-        this.ctx.fillStyle = COLOR_FOREGROUND;
+        this.ctx.fillStyle = getCookie("darkMode") ? "white" : "black";
         this.ctx.font = "20px Comic Sans MS";
         this.ctx.fillText("Score: " + this.score, 10, 30);
     }
@@ -238,14 +221,14 @@ class Game {
         this.ctx.strokeStyle = "lightgray";
         this.ctx.lineWidth = 1;
 
-        for (let i = 0; i < this.ctx.canvas.width; i += this.snake.size) {
+        for (let i = 0; i < this.ctx.canvas.width; i += SQUARE_SIZE) {
             this.ctx.beginPath();
             this.ctx.moveTo(i, 0);
             this.ctx.lineTo(i, this.ctx.canvas.height);
             this.ctx.stroke();
         }
 
-        for (let i = 0; i < this.ctx.canvas.height; i += this.snake.size) {
+        for (let i = 0; i < this.ctx.canvas.height; i += SQUARE_SIZE) {
             this.ctx.beginPath();
             this.ctx.moveTo(0, i);
             this.ctx.lineTo(this.ctx.canvas.width, i);
@@ -256,19 +239,16 @@ class Game {
     startOver() {
         this.isGameOver = false;
         this.snake = new Snake(randomInt(0, 30) * 20, randomInt(0, 30) * 20);
-        this.food = [];
+        this.food = [Food.generateRandom(this.ctx.canvas.width, this.ctx.canvas.height, this.snake)];
         this.score = 0;
     }
 
     update() {
         this.snake.update();
         // spawn randomly food
-        if (Math.random() < 0.03) {
+        if (Math.random() < 0.05) {
             this.food.push(
-                new Food(
-                    Math.floor(Math.random() * 30) * 20,
-                    Math.floor(Math.random() * 30) * 20
-                )
+                Food.generateRandom(this.ctx.canvas.width, this.ctx.canvas.height, this.snake)
             );
 
             if (this.food.length > 5) {
@@ -281,7 +261,7 @@ class Game {
     checkCollision() {
         // check collision with food
         for (let food of this.food) {
-            if (Square.areColliding(this.snake.head, food)) {
+            if (food.isEatenBy(this.snake)) {
                 this.snake.grow();
                 this.score++;
                 this.food.splice(this.food.indexOf(food), 1);
@@ -290,130 +270,125 @@ class Game {
         // check collision with wall
         if (
             this.snake.x < 0 ||
-            this.snake.x >= this.ctx.canvas.width ||
+            this.snake.x + this.snake.size > this.ctx.canvas.width ||
             this.snake.y < 0 ||
-            this.snake.y >= this.ctx.canvas.height
+            this.snake.y + this.snake.size > this.ctx.canvas.height
+            //|| this.snake.isCollidingWithSelf()
         ) {
             this.isGameOver = true;
-            return;
         }
-        /*
-            // check collision with itself
-            for (let i = 1; i < this.snake.body.length; i++) {
-                if (Square.areColliding(this.snake.head, this.snake.body[i])) {
-                    this.isGameOver = true;
-                    return;
-                }
-            }*/
     }
+
+
 }
 
-function main() {
-    window.addEventListener(
-        "keydown",
-        function(e) {
-            if (
-                ["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].indexOf(
-                    e.code
-                ) > -1
-            ) {
-                e.preventDefault();
-            }
-        },
-        false
-    );
+let isPaused = false;
+let lastMoveTime = Date.now();
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
 
-    const canvas = document.getElementById("canvas");
-    const canvasWidth = Math.floor(window.innerWidth * 0.8);
-    const canvasHeight = Math.floor(window.innerHeight * 0.6);
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
-    const ctx = canvas.getContext("2d");
+// Limit the maximum size of the canvas
+const maxSize = Math.min(window.innerWidth * 0.8, window.innerHeight * 0.8);
+const canvasWidth = Math.min(window.innerWidth, maxSize);
+const canvasHeight = Math.min(window.innerHeight, maxSize);
 
-    // focus on the canvas
-    canvas.focus();
+// Set the canvas size based on the device's pixel ratio
+canvas.width = canvasWidth * window.devicePixelRatio;
+canvas.height = canvasHeight * window.devicePixelRatio;
 
-    // create game
-    let game = new Game(ctx);
+// Set the canvas style size to the desired size
+canvas.style.width = canvasWidth + "px";
+canvas.style.height = canvasHeight + "px";
 
-    document.addEventListener("keydown", function(event) {
-        const key = event.key;
-        if (key === "ArrowLeft") {
-            game.snake.changeDirection("left");
-        }
-        if (key === "ArrowRight") {
-            game.snake.changeDirection("right");
-        }
-        if (key === "ArrowUp") {
-            game.snake.changeDirection("up");
-        }
-        if (key === "ArrowDown") {
-            game.snake.changeDirection("down");
-        }
-        if (key === "Escape") {
-            game.startOver();
-        }
-    });
+// Scale the context based on the device's pixel ratio
+ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
-    canvas.addEventListener("touchmove", function(event) {
-        event.preventDefault();
-        canvas.focus();
-    });
+document.addEventListener("keydown", (e) => {
+    let newDirection;
+    if (e.key === "Escape") { // listen for the Escape key
+        game.startOver(); // restart the game
+    }
+    if (e.key === "ArrowRight") {
+        newDirection = "right";
+        e.preventDefault(); // prevent scrolling to the right
+    } else if (e.key === "ArrowLeft") {
+        newDirection = "left";
+        e.preventDefault(); // prevent scrolling to the left
+    } else if (e.key === "ArrowUp") {
+        newDirection = "up";
+        e.preventDefault(); // prevent scrolling up
+    } else if (e.key === "ArrowDown") {
+        newDirection = "down";
+        e.preventDefault(); // prevent scrolling down
+    } else if (e.key === " ") {
+        e.preventDefault(); // Prevent default behavior of space bar
+        isPaused = !isPaused;
+    }
+    if (newDirection) {
+        game.snake.changeDirection(newDirection);
+    }
+});
 
-    /* we want to move the shape when the user moves their finger across the screen */
+let touchStartX = null;
+let touchStartY = null;
 
-    let lastX = null;
-    let lastY = null;
+document.addEventListener("touchstart", (e) => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+});
 
-    canvas.addEventListener("touchstart", function(event) {
-        lastX = event.touches[0].clientX;
-        lastY = event.touches[0].clientY;
-    });
-
-    canvas.addEventListener("touchmove", function(event) {
-        const currentX = event.touches[0].clientX;
-        const currentY = event.touches[0].clientY;
-
-        const diffX = currentX - lastX;
-        const diffY = currentY - lastY;
-
-        if (Math.abs(diffX) > Math.abs(diffY)) {
-            if (diffX > 0) {
-                game.snake.changeDirection("right");
-            } else {
-                game.snake.changeDirection("left");
-            }
+document.addEventListener("touchmove", (e) => {
+    if (!touchStartX || !touchStartY) {
+        return;
+    }
+    const touchEndX = e.touches[0].clientX;
+    const touchEndY = e.touches[0].clientY;
+    const touchDiffX = touchEndX - touchStartX;
+    const touchDiffY = touchEndY - touchStartY;
+    if (Math.abs(touchDiffX) > Math.abs(touchDiffY)) {
+        // horizontal swipe
+        if (touchDiffX > 0) {
+            // swipe right
+            snake.changeDirection("right");
         } else {
-            if (diffY > 0) {
-                game.snake.changeDirection("down");
-            } else {
-                game.snake.changeDirection("up");
-            }
+            // swipe left
+            snake.changeDirection("left");
         }
-
-        lastX = currentX;
-        lastY = currentY;
-    });
-
-    let lastTap = null;
-
-    canvas.addEventListener("touchend", function(event) {
-        const currentTime = new Date().getTime();
-        const tapLength = currentTime - lastTap;
-        if (lastTap && tapLength < 500 && tapLength > 0) {
-            if (game.isGameOver) {
-                game.startOver();
-            }
+    } else {
+        // vertical swipe
+        if (touchDiffY > 0) {
+            // swipe down
+            snake.changeDirection("down");
         } else {
-            lastTap = currentTime;
+            // swipe up
+            snake.changeDirection("up");
         }
-    });
+    }
+    touchStartX = null;
+    touchStartY = null;
+});
 
-    // use setInterval to update and draw the game 10 times per second
-    setInterval(function() {
+document.addEventListener("touchend", (e) => {
+    touchStartX = null;
+    touchStartY = null;
+});
+
+
+
+function gameLoop() {
+    if (!isPaused) {
         game.update();
-        game.draw();
-    }, 100);
-}
 
-main();
+        ctx.fillStyle = getCookie("darkMode") ? "black" : "white";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        game.draw();
+    }
+
+    setTimeout(() => requestAnimationFrame(gameLoop), MOVE_DELAY);
+
+}
+let game = new Game(ctx);
+
+gameLoop();
+});
