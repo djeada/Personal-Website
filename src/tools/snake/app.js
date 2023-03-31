@@ -217,59 +217,55 @@ function main() {
 
     let canvasRect = canvas.getBoundingClientRect();
 
+    // Add a touchstart listener to canvas to prevent zooming on double tap
+    canvas.addEventListener('touchstart', function(event) {
+        event.preventDefault();
+    });
+
+    // Define touch variables
+    let touchStartX = null;
+    let touchStartY = null;
+    let lastTap = null;
+
+    // Add touchstart listener to canvas to set touch start position
+    canvas.addEventListener('touchstart', function(event) {
+        touchStartX = event.touches[0].clientX;
+        touchStartY = event.touches[0].clientY;
+    });
+
+    // Add touchmove listener to canvas to change snake direction
     canvas.addEventListener('touchmove', function(event) {
         event.preventDefault();
-        canvas.focus();
-    });
-
-    let lastTapTime = 0;
-
-    document.addEventListener("touchstart", (e) => {
-        if (e.touches[0].target === canvas) {
-            touchStartX = e.touches[0].clientX - canvasRect.left;
-            touchStartY = e.touches[0].clientY - canvasRect.top;
-            let currentTime = new Date().getTime();
-            if (currentTime - lastTapTime < 500) {
-                startOver();
-            }
-            lastTapTime = currentTime;
-        }
-    });
-    document.addEventListener("touchmove", (e) => {
-        if (!touchStartX || !touchStartY) {
-            return;
-        }
-        const touchEndX = e.touches[0].clientX - canvasRect.left;
-        const touchEndY = e.touches[0].clientY - canvasRect.top;
+        const touchEndX = event.touches[0].clientX;
+        const touchEndY = event.touches[0].clientY;
         const touchDiffX = touchEndX - touchStartX;
         const touchDiffY = touchEndY - touchStartY;
         if (Math.abs(touchDiffX) > Math.abs(touchDiffY)) {
-            // horizontal swipe
             if (touchDiffX > 0) {
-                // swipe right
                 snake.changeDirection("right");
             } else {
-                // swipe left
                 snake.changeDirection("left");
             }
         } else {
-            // vertical swipe
             if (touchDiffY > 0) {
-                // swipe down
                 snake.changeDirection("down");
             } else {
-                // swipe up
                 snake.changeDirection("up");
             }
         }
-        touchStartX = null;
-        touchStartY = null;
     });
 
-    document.addEventListener("touchend", (e) => {
-        touchStartX = null;
-        touchStartY = null;
+    // Add touchend listener to canvas for double tap
+    canvas.addEventListener('touchend', function(event) {
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap;
+        if (lastTap && tapLength < 500 && tapLength > 0) {
+            startOver();
+        } else {
+            lastTap = currentTime;
+        }
     });
+
 
 
     let gameOver = false;
