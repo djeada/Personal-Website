@@ -217,6 +217,11 @@ function main() {
 
     let canvasRect = canvas.getBoundingClientRect();
 
+    canvas.addEventListener('touchmove', function(event) {
+        event.preventDefault();
+        canvas.focus();
+    });
+
     let lastTapTime = 0;
 
     document.addEventListener("touchstart", (e) => {
