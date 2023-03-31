@@ -214,27 +214,28 @@ function main() {
         }
     });
 
+
+    let canvasRect = canvas.getBoundingClientRect();
+
     let lastTapTime = 0;
 
     document.addEventListener("touchstart", (e) => {
-        const currentTime = Date.now();
-        const tapLength = currentTime - lastTapTime;
-        lastTapTime = currentTime;
-
-        if (tapLength < 300) {
-            startOver();
-        } else {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
+        if (e.touches[0].target === canvas) {
+            touchStartX = e.touches[0].clientX - canvasRect.left;
+            touchStartY = e.touches[0].clientY - canvasRect.top;
+            let currentTime = new Date().getTime();
+            if (currentTime - lastTapTime < 500) {
+                startOver();
+            }
+            lastTapTime = currentTime;
         }
     });
-
     document.addEventListener("touchmove", (e) => {
         if (!touchStartX || !touchStartY) {
             return;
         }
-        const touchEndX = e.touches[0].clientX;
-        const touchEndY = e.touches[0].clientY;
+        const touchEndX = e.touches[0].clientX - canvasRect.left;
+        const touchEndY = e.touches[0].clientY - canvasRect.top;
         const touchDiffX = touchEndX - touchStartX;
         const touchDiffY = touchEndY - touchStartY;
         if (Math.abs(touchDiffX) > Math.abs(touchDiffY)) {
