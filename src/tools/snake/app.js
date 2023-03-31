@@ -214,15 +214,19 @@ function main() {
         }
     });
 
-    let touchStartX = null;
-    let touchStartY = null;
+    let lastTapTime = 0;
 
     document.addEventListener("touchstart", (e) => {
-        if (touchStartX && touchStartY) {
+        const currentTime = Date.now();
+        const tapLength = currentTime - lastTapTime;
+        lastTapTime = currentTime;
+
+        if (tapLength < 300) {
             startOver();
+        } else {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
         }
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
     });
 
     document.addEventListener("touchmove", (e) => {
