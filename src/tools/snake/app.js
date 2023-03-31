@@ -1,5 +1,5 @@
-const GRID_SIZE = 50;
-const MOVE_DELAY = 150;
+const GRID_SIZE = 30;
+const MOVE_DELAY = 200;
 const COLOR_A = "#3399FF";
 const COLOR_B = "#FFCC00";
 
@@ -218,6 +218,9 @@ function main() {
     let touchStartY = null;
 
     document.addEventListener("touchstart", (e) => {
+        if (touchStartX && touchStartY) {
+            startOver();
+        }
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
     });
