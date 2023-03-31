@@ -280,8 +280,8 @@ function main() {
         if (
             snake.head.x < 0 ||
             snake.head.y < 0 ||
-            snake.head.x >= canvas.width ||
-            snake.head.y >= canvas.height ||
+            snake.head.x >= canvas.width - GRID_SIZE ||
+            snake.head.y >= canvas.height - GRID_SIZE ||
             snake.checkCollision()
         ) {
             gameOver = true;
