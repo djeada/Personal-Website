@@ -119,12 +119,27 @@ class Parser(ArgumentParser):
         )
 
 
+def change_title_in_head(html: str) -> str:
+    # Find the first occurrence of <h1>, <header>, or <h2> in the HTML content
+    first_header_match = re.search(
+        r"<(h1|header|h2)[^>]*>(.+?)<\/(h1|header|h2)>", html
+    )
+    if first_header_match:
+        first_header = first_header_match.group(2)
+        # Replace the title in the head section with the first header
+        html = re.sub(r"<title>.+<\/title>", f"<title>{first_header}</title>", html)
+    return html
+
+
 def correct_file(file_path, paths_filters_pairs):
     html = Path(file_path).read_text()
 
     for path, filter_function in paths_filters_pairs:
         correct_html = Path(path).read_text()
         html = filter_function(html, correct_html)
+
+    # Apply the change_title_in_head function
+    html = change_title_in_head(html)
 
     Path(file_path).write_text(html)
 

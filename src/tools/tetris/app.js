@@ -10,471 +10,481 @@ let COLOR_BACKGROUND = "white";
 let COLOR_FOREGROUND = "black";
 
 if (getCookie("darkMode")) {
-  COLOR_BACKGROUND = "black";
-  COLOR_FOREGROUND = "white";
+    COLOR_BACKGROUND = "black";
+    COLOR_FOREGROUND = "white";
 }
 
 class Model {
-  constructor(numRows, numCols) {
-    console.log(COLOR_BACKGROUND);
-    // grid of colors, initially all white
-    this.grid = [];
-    for (let i = 0; i < numRows; i++) {
-      this.grid.push([]);
-      for (let j = 0; j < numCols; j++) {
-        this.grid[i].push(COLOR_BACKGROUND);
-      }
-    }
-  }
-
-  addShape(x, y, shape, color) {
-    for (let i = 0; i < shape.length && y + i < this.grid.length; i++) {
-      for (let j = 0; j < shape[i].length && x + j < this.grid[i].length; j++) {
-        if (shape[i][j] === 1) {
-          this.grid[y + i][x + j] = color;
+    constructor(numRows, numCols) {
+        console.log(COLOR_BACKGROUND);
+        // grid of colors, initially all white
+        this.grid = [];
+        for (let i = 0; i < numRows; i++) {
+            this.grid.push([]);
+            for (let j = 0; j < numCols; j++) {
+                this.grid[i].push(COLOR_BACKGROUND);
+            }
         }
-      }
     }
-  }
 
-  removeShape(x, y, shape) {
-    for (let i = 0; i < shape.length && y + i < this.grid.length; i++) {
-      for (let j = 0; j < shape[i].length && x + j < this.grid[i].length; j++) {
-        if (shape[i][j] === 1) {
-          this.grid[y + i][x + j] = COLOR_BACKGROUND;
+    addShape(x, y, shape, color) {
+        for (let i = 0; i < shape.length && y + i < this.grid.length; i++) {
+            for (let j = 0; j < shape[i].length && x + j < this.grid[i].length; j++) {
+                if (shape[i][j] === 1) {
+                    this.grid[y + i][x + j] = color;
+                }
+            }
         }
-      }
     }
-  }
 
-  areCoordinatesInBounds(x, y) {
-    return x >= 0 && x < this.grid[0].length && y >= 0 && y < this.grid.length;
-  }
-
-  isAreaFree(x, y, shape) {
-    for (let i = 0; i < shape.length; i++) {
-      for (let j = 0; j < shape[i].length; j++) {
-        if (shape[i][j] === 1) {
-          if (
-            !this.areCoordinatesInBounds(x + j, y + i) ||
-            this.grid[y + i][x + j] !== COLOR_BACKGROUND
-          ) {
-            return false;
-          }
+    removeShape(x, y, shape) {
+        for (let i = 0; i < shape.length && y + i < this.grid.length; i++) {
+            for (let j = 0; j < shape[i].length && x + j < this.grid[i].length; j++) {
+                if (shape[i][j] === 1) {
+                    this.grid[y + i][x + j] = COLOR_BACKGROUND;
+                }
+            }
         }
-      }
-    }
-    return true;
-  }
-
-  canMoveShape(oldX, oldY, oldShape, newX, newY, newShape, color) {
-    this.removeShape(oldX, oldY, oldShape);
-    var flag = this.isAreaFree(newX, newY, newShape);
-    this.addShape(oldX, oldY, oldShape, color);
-    return flag;
-  }
-
-  moveShape(oldX, oldY, oldShape, newX, newY, newShape, color) {
-    this.removeShape(oldX, oldY, oldShape);
-    this.addShape(newX, newY, newShape, color);
-  }
-
-  isRowFull(row) {
-    for (let i = 0; i < this.grid[row].length; i++) {
-      if (this.grid[row][i] === COLOR_BACKGROUND) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  removeRow(row) {
-    // move all rows above down
-    for (let i = row; i > 0; i--) {
-      for (let j = 0; j < this.grid[i].length; j++) {
-        this.grid[i][j] = this.grid[i - 1][j];
-      }
     }
 
-    // set row 0 to white
-    for (let i = 0; i < this.grid[0].length; i++) {
-      this.grid[0][i] = COLOR_BACKGROUND;
+    areCoordinatesInBounds(x, y) {
+        return x >= 0 && x < this.grid[0].length && y >= 0 && y < this.grid.length;
     }
-  }
 
-  removeFullRows() {
-    for (let i = 0; i < this.grid.length; i++) {
-      if (this.isRowFull(i)) {
-        this.removeRow(i);
-      }
+    isAreaFree(x, y, shape) {
+        for (let i = 0; i < shape.length; i++) {
+            for (let j = 0; j < shape[i].length; j++) {
+                if (shape[i][j] === 1) {
+                    if (
+                        !this.areCoordinatesInBounds(x + j, y + i) ||
+                        this.grid[y + i][x + j] !== COLOR_BACKGROUND
+                    ) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
     }
-  }
 
-  draw(ctx) {
-    for (let i = 0; i < this.grid.length; i++) {
-      for (let j = 0; j < this.grid[i].length; j++) {
-        ctx.fillStyle = this.grid[i][j];
-        ctx.fillRect(
-          j * SQUARE_SIZE,
-          i * SQUARE_SIZE,
-          SQUARE_SIZE,
-          SQUARE_SIZE
-        );
-      }
+    canMoveShape(oldX, oldY, oldShape, newX, newY, newShape, color) {
+        this.removeShape(oldX, oldY, oldShape);
+        var flag = this.isAreaFree(newX, newY, newShape);
+        this.addShape(oldX, oldY, oldShape, color);
+        return flag;
     }
-  }
+
+    moveShape(oldX, oldY, oldShape, newX, newY, newShape, color) {
+        this.removeShape(oldX, oldY, oldShape);
+        this.addShape(newX, newY, newShape, color);
+    }
+
+    isRowFull(row) {
+        for (let i = 0; i < this.grid[row].length; i++) {
+            if (this.grid[row][i] === COLOR_BACKGROUND) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    removeRow(row) {
+        // move all rows above down
+        for (let i = row; i > 0; i--) {
+            for (let j = 0; j < this.grid[i].length; j++) {
+                this.grid[i][j] = this.grid[i - 1][j];
+            }
+        }
+
+        // set row 0 to white
+        for (let i = 0; i < this.grid[0].length; i++) {
+            this.grid[0][i] = COLOR_BACKGROUND;
+        }
+    }
+
+    removeFullRows() {
+        for (let i = 0; i < this.grid.length; i++) {
+            if (this.isRowFull(i)) {
+                this.removeRow(i);
+            }
+        }
+    }
+
+    draw(ctx) {
+        for (let i = 0; i < this.grid.length; i++) {
+            for (let j = 0; j < this.grid[i].length; j++) {
+                ctx.fillStyle = this.grid[i][j];
+                ctx.fillRect(
+                    j * SQUARE_SIZE,
+                    i * SQUARE_SIZE,
+                    SQUARE_SIZE,
+                    SQUARE_SIZE
+                );
+            }
+        }
+    }
 }
 
 class Shape {
-  constructor(x, y, color) {
-    this.x = x;
-    this.y = y;
-    this.dx = 0;
-    this.dy = SQUARE_SIZE / 4;
-    this.rotation = 0;
-    this.color = color;
-    this.evolution = [];
-    this.currentIdx = 0;
-  }
-
-  move(ctx) {
-    this.x += this.dx;
-    this.y += this.dy;
-
-    this.dx = 0;
-    this.dy = SQUARE_SIZE / 4;
-
-    while (this.rotation >= 0) {
-      this.rotate();
-      this.rotation -= 1;
+    constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.dx = 0;
+        this.dy = SQUARE_SIZE / 4;
+        this.rotation = 0;
+        this.color = color;
+        this.evolution = [];
+        this.currentIdx = 0;
     }
 
-    if (this.x < 0) {
-      this.x = 0;
+    move(ctx) {
+        this.x += this.dx;
+        this.y += this.dy;
+
+        this.dx = 0;
+        this.dy = SQUARE_SIZE / 4;
+
+        while (this.rotation >= 0) {
+            this.rotate();
+            this.rotation -= 1;
+        }
+
+        if (this.x < 0) {
+            this.x = 0;
+        }
+
+        if (this.x + this.shape()[0].length * SQUARE_SIZE > ctx.canvas.width) {
+            this.x = ctx.canvas.width - this.shape()[0].length * SQUARE_SIZE;
+        }
     }
 
-    if (this.x + this.shape()[0].length * SQUARE_SIZE > ctx.canvas.width) {
-      this.x = ctx.canvas.width - this.shape()[0].length * SQUARE_SIZE;
+    rotate() {
+        this.currentIdx = (this.currentIdx + 1) % this.evolution.length;
     }
-  }
 
-  rotate() {
-    this.currentIdx = (this.currentIdx + 1) % this.evolution.length;
-  }
-
-  shape() {
-    return this.evolution[this.currentIdx];
-  }
+    shape() {
+        return this.evolution[this.currentIdx];
+    }
 }
 
 class TShape extends Shape {
-  constructor(x, y, color) {
-    super(x, y, color);
-    this.evolution = [
-      [
-        [1, 1, 1],
-        [0, 1, 0],
-      ],
-      [
-        [1, 0],
-        [1, 1],
-        [1, 0],
-      ],
-      [
-        [0, 1, 0],
-        [1, 1, 1],
-      ],
-      [
-        [0, 1],
-        [1, 1],
-        [0, 1],
-      ],
-    ];
-  }
+    constructor(x, y, color) {
+        super(x, y, color);
+        this.evolution = [
+            [
+                [1, 1, 1],
+                [0, 1, 0],
+            ],
+            [
+                [1, 0],
+                [1, 1],
+                [1, 0],
+            ],
+            [
+                [0, 1, 0],
+                [1, 1, 1],
+            ],
+            [
+                [0, 1],
+                [1, 1],
+                [0, 1],
+            ],
+        ];
+    }
 }
 
 class LShape extends Shape {
-  constructor(x, y, color) {
-    super(x, y, color);
-    this.evolution = [
-      [
-        [1, 0],
-        [1, 0],
-        [1, 1],
-      ],
-      [
-        [0, 0, 1],
-        [1, 1, 1],
-      ],
-      [
-        [1, 1],
-        [0, 1],
-        [0, 1],
-      ],
-      [
-        [1, 1, 1],
-        [1, 0, 0],
-      ],
-    ];
-  }
+    constructor(x, y, color) {
+        super(x, y, color);
+        this.evolution = [
+            [
+                [1, 0],
+                [1, 0],
+                [1, 1],
+            ],
+            [
+                [0, 0, 1],
+                [1, 1, 1],
+            ],
+            [
+                [1, 1],
+                [0, 1],
+                [0, 1],
+            ],
+            [
+                [1, 1, 1],
+                [1, 0, 0],
+            ],
+        ];
+    }
 }
 
 class SkewShape extends Shape {
-  constructor(x, y, color) {
-    super(x, y, color);
-    this.evolution = [
-      [
-        [1, 0],
-        [1, 1],
-        [0, 1],
-      ],
-      [
-        [0, 1, 1],
-        [1, 1, 0],
-      ],
-    ];
-  }
+    constructor(x, y, color) {
+        super(x, y, color);
+        this.evolution = [
+            [
+                [1, 0],
+                [1, 1],
+                [0, 1],
+            ],
+            [
+                [0, 1, 1],
+                [1, 1, 0],
+            ],
+        ];
+    }
 }
 
 class SquareShape extends Shape {
-  constructor(x, y, color) {
-    super(x, y, color);
-    this.evolution = [
-      [
-        [1, 1],
-        [1, 1],
-      ],
-    ];
-  }
+    constructor(x, y, color) {
+        super(x, y, color);
+        this.evolution = [
+            [
+                [1, 1],
+                [1, 1],
+            ],
+        ];
+    }
 }
 
 class StraightShape extends Shape {
-  constructor(x, y, color) {
-    super(x, y, color);
-    this.evolution = [[[1], [1], [1], [1]], [[1, 1, 1, 1]]];
-  }
+    constructor(x, y, color) {
+        super(x, y, color);
+        this.evolution = [
+            [
+                [1],
+                [1],
+                [1],
+                [1]
+            ],
+            [
+                [1, 1, 1, 1]
+            ]
+        ];
+    }
 }
 
 class Game {
-  constructor(ctx) {
-    this.init(ctx);
-  }
-
-  init(ctx) {
-    this.currentShape = null;
-    this.isGameOver = false;
-
-    let numRows = Math.floor(ctx.canvas.height / SQUARE_SIZE);
-    let numCols = Math.floor(ctx.canvas.width / SQUARE_SIZE);
-    this.model = new Model(numRows, numCols);
-  }
-
-  startOver(ctx) {
-    this.init(ctx);
-  }
-
-  generateShape() {
-    let shape = Math.floor(Math.random() * 5);
-    let color = Math.floor(Math.random() * 6);
-    let x = SQUARE_SIZE * Math.floor(Math.random() * 12);
-    let y = 0;
-
-    let colors = [COLOR_A, COLOR_B, COLOR_C, COLOR_D, COLOR_E, COLOR_F];
-    let shapes = [TShape, LShape, SkewShape, SquareShape, StraightShape];
-
-    this.currentShape = new shapes[shape](x, y, colors[color]);
-  }
-
-  draw(ctx) {
-    if (this.isGameOver) {
-      ctx.font = "30px Arial";
-      ctx.fillStyle = COLOR_FOREGROUND;
-      ctx.fillText(
-        "Game Over",
-        ctx.canvas.width / 2 - 100,
-        ctx.canvas.height / 2
-      );
-      return;
+    constructor(ctx) {
+        this.init(ctx);
     }
 
-    this.model.draw(ctx);
-  }
+    init(ctx) {
+        this.currentShape = null;
+        this.isGameOver = false;
 
-  update(ctx) {
-    if (this.isGameOver) {
-      return;
+        let numRows = Math.floor(ctx.canvas.height / SQUARE_SIZE);
+        let numCols = Math.floor(ctx.canvas.width / SQUARE_SIZE);
+        this.model = new Model(numRows, numCols);
     }
 
-    if (!this.currentShape) {
-      this.generateShape();
-      this.model.addShape(
-        this.currentShape.x,
-        this.currentShape.y,
-        this.currentShape.shape(),
-        this.currentShape.color
-      );
+    startOver(ctx) {
+        this.init(ctx);
     }
 
-    var oldX = Math.floor(this.currentShape.x / SQUARE_SIZE);
-    var oldY = Math.floor(this.currentShape.y / SQUARE_SIZE);
-    let oldShape = this.currentShape.shape();
-    this.currentShape.move(ctx);
-    var newX = Math.floor(this.currentShape.x / SQUARE_SIZE);
-    var newY = Math.floor(this.currentShape.y / SQUARE_SIZE);
-    let newShape = this.currentShape.shape();
+    generateShape() {
+        let shape = Math.floor(Math.random() * 5);
+        let color = Math.floor(Math.random() * 6);
+        let x = SQUARE_SIZE * Math.floor(Math.random() * 12);
+        let y = 0;
 
-    if (
-      this.model.canMoveShape(
-        oldX,
-        oldY,
-        oldShape,
-        newX,
-        newY,
-        newShape,
-        this.currentShape.color
-      )
-    ) {
-      this.model.moveShape(
-        oldX,
-        oldY,
-        oldShape,
-        newX,
-        newY,
-        newShape,
-        this.currentShape.color
-      );
-    } else {
-      if (newY == 0) {
-        this.isGameOver = true;
-        return;
-      }
-      this.currentShape = null;
+        let colors = [COLOR_A, COLOR_B, COLOR_C, COLOR_D, COLOR_E, COLOR_F];
+        let shapes = [TShape, LShape, SkewShape, SquareShape, StraightShape];
+
+        this.currentShape = new shapes[shape](x, y, colors[color]);
     }
 
-    this.model.removeFullRows();
-  }
+    draw(ctx) {
+        if (this.isGameOver) {
+            ctx.font = "30px Arial";
+            ctx.fillStyle = COLOR_FOREGROUND;
+            ctx.fillText(
+                "Game Over",
+                ctx.canvas.width / 2 - 100,
+                ctx.canvas.height / 2
+            );
+            return;
+        }
+
+        this.model.draw(ctx);
+    }
+
+    update(ctx) {
+        if (this.isGameOver) {
+            return;
+        }
+
+        if (!this.currentShape) {
+            this.generateShape();
+            this.model.addShape(
+                this.currentShape.x,
+                this.currentShape.y,
+                this.currentShape.shape(),
+                this.currentShape.color
+            );
+        }
+
+        var oldX = Math.floor(this.currentShape.x / SQUARE_SIZE);
+        var oldY = Math.floor(this.currentShape.y / SQUARE_SIZE);
+        let oldShape = this.currentShape.shape();
+        this.currentShape.move(ctx);
+        var newX = Math.floor(this.currentShape.x / SQUARE_SIZE);
+        var newY = Math.floor(this.currentShape.y / SQUARE_SIZE);
+        let newShape = this.currentShape.shape();
+
+        if (
+            this.model.canMoveShape(
+                oldX,
+                oldY,
+                oldShape,
+                newX,
+                newY,
+                newShape,
+                this.currentShape.color
+            )
+        ) {
+            this.model.moveShape(
+                oldX,
+                oldY,
+                oldShape,
+                newX,
+                newY,
+                newShape,
+                this.currentShape.color
+            );
+        } else {
+            if (newY == 0) {
+                this.isGameOver = true;
+                return;
+            }
+            this.currentShape = null;
+        }
+
+        this.model.removeFullRows();
+    }
 }
 
 function main() {
-  window.addEventListener(
-    "keydown",
-    function (e) {
-      if (
-        ["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].indexOf(
-          e.code
-        ) > -1
-      ) {
-        e.preventDefault();
-      }
-    },
-    false
-  );
+    window.addEventListener(
+        "keydown",
+        function(e) {
+            if (
+                ["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].indexOf(
+                    e.code
+                ) > -1
+            ) {
+                e.preventDefault();
+            }
+        },
+        false
+    );
 
-  const canvas = document.getElementById("canvas");
-  const canvasWidth = Math.floor(window.innerWidth * 0.8);
-  const canvasHeight = Math.floor(window.innerHeight * 0.8);
-  canvas.width = canvasWidth;
-  canvas.height = canvasHeight;
-  const ctx = canvas.getContext("2d");
+    const canvas = document.getElementById("canvas");
+    const canvasWidth = Math.floor(window.innerWidth * 0.8);
+    const canvasHeight = Math.floor(window.innerHeight * 0.8);
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    const ctx = canvas.getContext("2d");
 
-  //  you need to set the scale property to 1 so it doesn't use the devicePixelRatio: html2canvas.hertzen.com/configuration
-  ctx.scale(1, 1);
+    //  you need to set the scale property to 1 so it doesn't use the devicePixelRatio: html2canvas.hertzen.com/configuration
+    ctx.scale(1, 1);
 
-  // set the width of the canvas to match a neat multiple of SQUARE_SIZE
-  canvas.width = canvas.width - (canvas.width % SQUARE_SIZE);
-  canvas.height = canvas.height - (canvas.height % SQUARE_SIZE);
+    // set the width of the canvas to match a neat multiple of SQUARE_SIZE
+    canvas.width = canvas.width - (canvas.width % SQUARE_SIZE);
+    canvas.height = canvas.height - (canvas.height % SQUARE_SIZE);
 
-  // focus on the canvas
-  canvas.focus();
-
-  let game = new Game(ctx);
-
-  document.addEventListener("keydown", function (event) {
-    const key = event.key;
-    if (key === "ArrowLeft") {
-      if (game.currentShape) {
-        game.currentShape.dx = -SQUARE_SIZE;
-      }
-    }
-
-    if (key === "ArrowRight") {
-      if (game.currentShape) {
-        game.currentShape.dx = SQUARE_SIZE;
-      }
-    }
-
-    if (key === "ArrowDown") {
-      if (game.currentShape) {
-        game.currentShape.dy += SQUARE_SIZE / 4;
-      }
-    }
-
-    if (key === " ") {
-      if (game.currentShape) {
-        game.currentShape.rotation += 1;
-      }
-    }
-
-    if (key === "Escape") {
-      game.startOver(ctx);
-    }
-  });
-
-  canvas.addEventListener("touchmove", function (event) {
-    event.preventDefault();
+    // focus on the canvas
     canvas.focus();
-  });
 
-  let lastX = null;
-  let lastY = null;
-  canvas.addEventListener("touchstart", function (event) {
-    lastX = event.touches[0].clientX;
-    lastY = event.touches[0].clientY;
-  });
+    let game = new Game(ctx);
 
-  canvas.addEventListener("touchmove", function (event) {
-    const currentX = event.touches[0].clientX;
-    const currentY = event.touches[0].clientY;
-    const diffX = currentX - lastX;
-    const diffY = currentY - lastY;
-
-    if (game.currentShape) {
-      if (Math.abs(diffX) > Math.abs(diffY)) {
-        if (diffX > 0) {
-          game.currentShape.dx = SQUARE_SIZE;
-        } else if (diffX < 0) {
-          game.currentShape.dx = -SQUARE_SIZE;
+    document.addEventListener("keydown", function(event) {
+        const key = event.key;
+        if (key === "ArrowLeft") {
+            if (game.currentShape) {
+                game.currentShape.dx = -SQUARE_SIZE;
+            }
         }
-      } else {
-        if (diffY > 0) {
-          game.currentShape.dy += SQUARE_SIZE / 4;
-        } else if (diffY < 0) {
-          game.currentShape.rotation += 1;
+
+        if (key === "ArrowRight") {
+            if (game.currentShape) {
+                game.currentShape.dx = SQUARE_SIZE;
+            }
         }
-      }
-    }
 
-    lastX = currentX;
-  });
+        if (key === "ArrowDown") {
+            if (game.currentShape) {
+                game.currentShape.dy += SQUARE_SIZE / 4;
+            }
+        }
 
-  let lastTap = null;
+        if (key === " ") {
+            if (game.currentShape) {
+                game.currentShape.rotation += 1;
+            }
+        }
 
-  canvas.addEventListener("touchend", function (event) {
-    const currentTime = new Date().getTime();
-    const tapLength = currentTime - lastTap;
-    if (lastTap && tapLength < 500 && tapLength > 0) {
-      if (game.isGameOver) {
-        game.startOver(ctx);
-      }
-    }
-    lastTap = currentTime;
-  });
+        if (key === "Escape") {
+            game.startOver(ctx);
+        }
+    });
 
-  // use setInterval to update and draw the game 10 times per second
-  setInterval(function () {
-    game.update(ctx);
-    game.draw(ctx, game);
-  }, 100);
+    canvas.addEventListener("touchmove", function(event) {
+        event.preventDefault();
+        canvas.focus();
+    });
+
+    let lastX = null;
+    let lastY = null;
+    canvas.addEventListener("touchstart", function(event) {
+        lastX = event.touches[0].clientX;
+        lastY = event.touches[0].clientY;
+    });
+
+    canvas.addEventListener("touchmove", function(event) {
+        const currentX = event.touches[0].clientX;
+        const currentY = event.touches[0].clientY;
+        const diffX = currentX - lastX;
+        const diffY = currentY - lastY;
+
+        if (game.currentShape) {
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                if (diffX > 0) {
+                    game.currentShape.dx = SQUARE_SIZE;
+                } else if (diffX < 0) {
+                    game.currentShape.dx = -SQUARE_SIZE;
+                }
+            } else {
+                if (diffY > 0) {
+                    game.currentShape.dy += SQUARE_SIZE / 4;
+                } else if (diffY < 0) {
+                    game.currentShape.rotation += 1;
+                }
+            }
+        }
+
+        lastX = currentX;
+    });
+
+    let lastTap = null;
+
+    canvas.addEventListener("touchend", function(event) {
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap;
+        if (lastTap && tapLength < 500 && tapLength > 0) {
+            if (game.isGameOver) {
+                game.startOver(ctx);
+            }
+        }
+        lastTap = currentTime;
+    });
+
+    // use setInterval to update and draw the game 10 times per second
+    setInterval(function() {
+        game.update(ctx);
+        game.draw(ctx, game);
+    }, 100);
 }
 
 main();

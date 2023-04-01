@@ -8,12 +8,22 @@ PL_INPUT_URLS = [
     "https://github.com/djeada/Kurs-Podstaw-Pythona/tree/master/notatki/03_inzynieria_oprogramowania",
     "https://github.com/djeada/Kurs-Podstaw-Pythona/tree/master/notatki/04_python_w_praktyce",
     "https://github.com/djeada/Kurs-Podstaw-Pythona/tree/master/notatki/05_prezentacje",
+    "https://github.com/djeada/Od-C-do-Cpp/tree/master/notatki",
 ]
 EN_INPUT_URLS = [
     "https://github.com/djeada/Linux-Notes/tree/main/notes",
     "https://github.com/djeada/Algorithms-And-Data-Structures/tree/master/notes",
     "https://github.com/djeada/Git-Notes/tree/main/notes",
     "https://github.com/djeada/Stanford-Machine-Learning/tree/main/slides",
+    "https://github.com/djeada/Frontend-Notes/tree/main/notes",
+    "https://github.com/djeada/Parallel-And-Concurrent-Programming/tree/master/notes",
+    "https://github.com/djeada/Statistics-Notes/tree/main/notes/basic_concepts",
+    "https://github.com/djeada/Statistics-Notes/tree/main/notes/correlation_and_regression",
+    "https://github.com/djeada/Statistics-Notes/tree/main/notes/hypothesis_testing_and_confidence_intervals",
+    "https://github.com/djeada/Statistics-Notes/tree/main/notes/probability_distributions/continuous",
+    "https://github.com/djeada/Statistics-Notes/tree/main/notes/probability_distributions/discrete",
+    "https://github.com/djeada/Statistics-Notes/tree/main/notes/time_series_analysis",
+    "https://github.com/djeada/NumPy-Tutorials/tree/main/notes",
 ]
 EN_LANG = "🇺🇸"
 PL_LANG = "🇵🇱"

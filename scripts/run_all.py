@@ -10,6 +10,7 @@ SCRIPTS_TO_ARGS = {
     "python apply_common_elements.py": [],
     "python generate_article_list.py": [],
     "python bundle_css.py": [],
+    "python generate_table_of_contents.py": [],
 }
 
 
