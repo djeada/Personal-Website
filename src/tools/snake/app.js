@@ -1,5 +1,5 @@
 const NUM_BLOCKS = 20;
-const MOVE_DELAY = 200;
+const MOVE_DELAY = 250;
 const MAIN_COLOR = "#3399FF";
 
 function calculateGridSize() {
@@ -195,8 +195,10 @@ function drawScore(score, ctx) {
   ctx.fillStyle = getCookie("darkMode") === "true" ? "white" : "black";
   ctx.font = "24px Arial";
   ctx.textAlign = "left";
-  ctx.fillText("Score: " + score, GRID_SIZE, GRID_SIZE * 0.75);
+  const margin = 10; // You can adjust this value to your preference
+  ctx.fillText("Score: " + score, margin, (GRID_SIZE * 0.75) + margin);
 }
+
 
 function main() {
   const canvas = document.getElementById("canvas");
@@ -215,6 +217,7 @@ function main() {
     );
     isPaused = false;
     gameOver = false;
+    score = 0;
   }
 
   window.addEventListener("resize", () => {
