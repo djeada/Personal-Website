@@ -38,12 +38,23 @@ def get_article_list(dir_path):
     ]
 
 
-def get_article_title(file_path):
+def get_article_title(file_path: Path) -> str:
     """Get the title of the article"""
-    title = file_path.stem.replace("_", " ").title()
+    title = file_path.stem.replace("_", " ")
+    title_words = title.split()
+
+    capitalized_title = []
+    for word in title_words:
+        if len(word) <= 2:
+            capitalized_title.append(word.lower())
+        else:
+            capitalized_title.append(word.title())
+
+    title = " ".join(capitalized_title)
+
     html = file_path.read_text()
     soup = BeautifulSoup(html, "html.parser")
-    #'<p><i>This article is written in: {language}</i></p>'
+
     try:
         language = soup.find("p").text.split(":")[1].strip()
         return f"{title} {language}"

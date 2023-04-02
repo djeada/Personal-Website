@@ -131,6 +131,34 @@ def change_title_in_head(html: str) -> str:
     return html
 
 
+def change_meta_description_in_head(html: str) -> str:
+    # Find the first occurrence of <h1>, <header>, or <h2> in the HTML content
+    first_header_match = re.search(
+        r"<(h1|header|h2)[^>]*>(.+?)<\/(h1|header|h2)>", html
+    )
+    if first_header_match:
+        # Find the first sentence after the header
+        content_after_header = html[first_header_match.end() :]
+        first_sentence_match = re.search(r"([^.!?]*[.!?])", content_after_header)
+
+        if first_sentence_match:
+            first_sentence = first_sentence_match.group(1).strip()
+            escaped_first_sentence = re.escape(first_sentence)
+            # remove all the HTML tags from the first sentence
+            escaped_first_sentence = re.sub(r"<[^>]*>", "", escaped_first_sentence)
+            # remove all \ from the first sentence
+            escaped_first_sentence = re.sub(r"\\", "", escaped_first_sentence)
+
+            # Replace the meta description in the head section with the first sentence
+            html = re.sub(
+                r"<meta\s+name=['\"]description['\"]\s+content=['\"].+?['\"]",
+                f'<meta name="description" content="{escaped_first_sentence}"',
+                html,
+                flags=re.IGNORECASE,
+            )
+    return html
+
+
 def correct_file(file_path, paths_filters_pairs):
     html = Path(file_path).read_text()
 
@@ -140,6 +168,9 @@ def correct_file(file_path, paths_filters_pairs):
 
     # Apply the change_title_in_head function
     html = change_title_in_head(html)
+
+    # Apply the change_meta_description_in_head function
+    html = change_meta_description_in_head(html)
 
     Path(file_path).write_text(html)
 
