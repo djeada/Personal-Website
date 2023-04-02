@@ -80,8 +80,6 @@ def strip_html(html: str) -> str:
 
 
 def apply_prism_for_code_samples(html: str) -> str:
-
-    # find where the code samples start and end, they are represented by ``` and ```
     code_start_pattern = re.compile(r"```")
     code_start_match = code_start_pattern.search(html)
     while code_start_match is not None:
@@ -91,28 +89,57 @@ def apply_prism_for_code_samples(html: str) -> str:
         start = code_start_match.start()
         end = code_end_match.end()
         code_sample = html[start:end]
-        # code_sample = strip_html(code_sample)
-        # check if there is language specified
-        language = re.match(r"```(\w+)", code_sample)
+
+        language = re.match(r"```([\w+]+)", code_sample)
         if language is None:
             language = "shell"
         else:
             language = language.group(1)
-        code_sample = re.sub(r"`{3,}(\w+)?", "", code_sample).strip()
-        code_sample = strip_html(code_sample)
-        code_sample = re.sub(r"\n@", "\n\n@", code_sample)
-        code_sample = re.sub(r"def init\(", "def __init__(", code_sample)
+            language = language.lower()
+
+        code_sample = re.sub(r"`{3,}([\w+]+)?", "", code_sample).strip()
+
+        # Escape '<' and '>' characters using regex
+        code_sample = re.sub(r"<", "&lt;", code_sample)
+        code_sample = re.sub(r">", "&gt;", code_sample)
+        code_sample = re.sub(r"&lt;p&gt;", "", code_sample)
+        code_sample = re.sub(r"&lt;\/p&gt;", "", code_sample)
+
+        # If the language is not 'css' or 'html', replace or remove specified tags
+        if language not in ["html"]:
+            code_sample = re.sub(r"&lt;strong&gt;", "__", code_sample)
+            code_sample = re.sub(r"&lt;\/strong&gt;", "__", code_sample)
+            code_sample = re.sub(r"&lt;h1&gt;", "# ", code_sample)
+            # replace <pre><code> with \n
+            code_sample = re.sub(r"&lt;pre&gt;&lt;code&gt;", "\n", code_sample)
+            # remove all substrings matching </ something >
+            code_sample = re.sub(r"&lt;\/.*?&gt;", "", code_sample)
+
+        if language == "c++" or language == "cpp" or language == "c":
+            language = "clike"
+            # remplace <em> with *
+            code_sample = re.sub(r"&lt;em&gt;", "*", code_sample)
+
+        if language == "python":
+
+            # insert \n before @
+            code_sample = re.sub(r"@", "\n@", code_sample)
+            code_sample = re.sub(r"def init\(", "def __init__(", code_sample)
+
         while "\n\n\n" in code_sample:
             code_sample = code_sample.replace("\n\n\n", "\n\n")
-        # if first line is empty, remove it
+
         if code_sample.startswith("\n"):
             code_sample = code_sample[1:]
+
         html = (
             html[:start]
             + f'<div><pre><code class="language-{language}">{code_sample}</code></pre></div>'
             + html[end:]
         )
+
         code_start_match = code_start_pattern.search(html, code_end_match.end())
+
     return html
 
 
@@ -202,6 +229,9 @@ def apply_filters(html, lang="en"):
 
     html += '\n<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>\n'
     html += '\n<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>\n'
+    html += '\n<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>\n'
+    html += '\n<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>\n'
+    html += '\n<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>\n'
 
     html += '\n<script type="text/x-mathjax-config">\n'
     html += "MathJax.Hub.Config({\n"
