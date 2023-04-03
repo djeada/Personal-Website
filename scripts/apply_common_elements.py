@@ -196,7 +196,7 @@ def main():
     ]
 
     tools_paths_filters_pairs = [
-        (TOOL_HEADER_SOURCE_PATH, replace_head),
+        # (TOOL_HEADER_SOURCE_PATH, replace_head),
         (TOOL_NAVBAR_SOURCE_PATH, replace_navbar),
         (TOOL_FOOTER_SOURCE_PATH, replace_footer),
     ]
