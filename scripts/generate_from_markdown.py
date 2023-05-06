@@ -70,15 +70,6 @@ def replace_all_tables(html: str) -> str:
     return html
 
 
-def strip_html(html: str) -> str:
-
-    html = re.sub("<h1>", "# ", html)
-    # strip opening and closing tags
-    html = re.sub(r"<[^>]*>", "", html)
-
-    return html
-
-
 def apply_prism_for_code_samples(html: str) -> str:
     code_start_pattern = re.compile(r"```")
     code_start_match = code_start_pattern.search(html)
@@ -104,33 +95,6 @@ def apply_prism_for_code_samples(html: str) -> str:
         code_sample = re.sub(r">", "&gt;", code_sample)
         code_sample = re.sub(r"&lt;p&gt;", "", code_sample)
         code_sample = re.sub(r"&lt;\/p&gt;", "", code_sample)
-
-        # If the language is not 'css' or 'html', replace or remove specified tags
-        if language not in ["html"]:
-            code_sample = re.sub(r"&lt;strong&gt;", "__", code_sample)
-            code_sample = re.sub(r"&lt;\/strong&gt;", "__", code_sample)
-            code_sample = re.sub(r"&lt;h1&gt;", "# ", code_sample)
-            # replace <pre><code> with \n
-            code_sample = re.sub(r"&lt;pre&gt;&lt;code&gt;", "\n", code_sample)
-            # remove all substrings matching </ something >
-            code_sample = re.sub(r"&lt;\/.*?&gt;", "", code_sample)
-
-        if language == "c++" or language == "cpp" or language == "c":
-            language = "clike"
-            # remplace <em> with *
-            code_sample = re.sub(r"&lt;em&gt;", "*", code_sample)
-
-        if language == "python":
-
-            # insert \n before @
-            code_sample = re.sub(r"@", "\n@", code_sample)
-            code_sample = re.sub(r"def init\(", "def __init__(", code_sample)
-
-        while "\n\n\n" in code_sample:
-            code_sample = code_sample.replace("\n\n\n", "\n\n")
-
-        if code_sample.startswith("\n"):
-            code_sample = code_sample[1:]
 
         html = (
             html[:start]
@@ -170,7 +134,7 @@ def correct_image_sources(html: str) -> str:
 
 
 def correct_math_blocks(html: str) -> str:
-    # math bloks are defined by $$ and $$,
+    # math blocks are defined by $$ and $$,
     # find the blocks, and then // inside the blocks and replace them with ///
 
     # find all math blocks
@@ -198,7 +162,6 @@ def apply_filters(html, lang="en"):
     html = correct_image_sources(html)
 
     # apply prism for code samples
-    html = apply_prism_for_code_samples(html)
     html = replace_code_tags(html)
     html = apply_prism_for_code_samples(html)
 
@@ -268,6 +231,33 @@ def add_language_info(html: str, language: str = "en") -> str:
     return html
 
 
+def convert_markdown_to_html(markdown_text):
+    html = markdown.markdown(markdown_text)
+    return html
+
+
+def extract_code_blocks(markdown_text):
+    code_blocks = re.findall(r"```.*?```", markdown_text, re.DOTALL)
+    return code_blocks
+
+
+def remove_code_blocks(markdown_text):
+    no_code_blocks_text = re.sub(
+        r"```.*?```", "CODE_BLOCK_PLACEHOLDER", markdown_text, flags=re.DOTALL
+    )
+    return no_code_blocks_text
+
+
+def insert_code_blocks(html, code_blocks):
+    soup = BeautifulSoup(html, "html.parser")
+    placeholders = soup.find_all(string="CODE_BLOCK_PLACEHOLDER")
+
+    for idx, placeholder in enumerate(placeholders):
+        placeholder.replace_with(BeautifulSoup(code_blocks[idx], "html.parser"))
+
+    return str(soup)
+
+
 def main():
     urls = read_urls()
 
@@ -279,7 +269,12 @@ def main():
         response = requests.get(url)
 
         # Convert the Markdown to HTML
-        html = markdown.markdown(response.text)
+        code_blocks = extract_code_blocks(response.text)
+        no_code_blocks_text = remove_code_blocks(response.text)
+
+        html = convert_markdown_to_html(no_code_blocks_text)
+        html = insert_code_blocks(html, code_blocks)
+
         html = apply_filters(html, url_data.language_as_string())
         html = add_language_info(html, url_data.language)
 
