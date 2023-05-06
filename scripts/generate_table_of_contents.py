@@ -9,19 +9,13 @@ def slugify(text: str) -> str:
     return re.sub(r"\W+", "-", text.lower().strip())
 
 
-def move_specific_section(html: str) -> str:
+def move_specific_section(soup: BeautifulSoup) -> None:
 
-    # we want to match the following string <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
-    # and move it just before the <div id="article-wrapper">
-
-    soup = BeautifulSoup(html, "html.parser")
     language_section = soup.find("p", style="text-align: right;")
-    article_wrapper = soup.find("div", id="article-wrapper")
+    toc_wrapper = soup.find("div", id="table-of-contents")
 
-    if language_section and article_wrapper:
-        article_wrapper.insert_before(language_section)
-
-    return str(soup)
+    if language_section and toc_wrapper:
+        toc_wrapper.insert(0, language_section)
 
 
 def generate_table_of_contents(html: str) -> str:
@@ -51,6 +45,10 @@ def generate_table_of_contents(html: str) -> str:
     toc_wrapper.append(toc)
     toc_wrapper.append(ol)
 
+    move_specific_section(
+        soup
+    )  # Move the language section before generating the article wrapper
+
     article_wrapper = soup.new_tag("div", id="article-wrapper")
 
     # Create a copy of the original article body
@@ -68,7 +66,7 @@ def generate_table_of_contents(html: str) -> str:
     except:
         pass
 
-    return str(move_specific_section(str(soup)))
+    return str(soup)
 
 
 def main():

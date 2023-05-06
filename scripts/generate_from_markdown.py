@@ -1,6 +1,5 @@
 import requests
 import markdown
-import markdownify
 import re
 from pathlib import Path
 from dataclasses import dataclass
@@ -87,6 +86,9 @@ def apply_prism_for_code_samples(html: str) -> str:
         else:
             language = language.group(1)
             language = language.lower()
+
+        if language == "c++" or language == "cpp" or language == "c":
+            language = "clike"
 
         code_sample = re.sub(r"`{3,}([\w+]+)?", "", code_sample).strip()
 
@@ -243,7 +245,7 @@ def extract_code_blocks(markdown_text):
 
 def remove_code_blocks(markdown_text):
     no_code_blocks_text = re.sub(
-        r"```.*?```", "CODE_BLOCK_PLACEHOLDER", markdown_text, flags=re.DOTALL
+        r"```.*?```", "\nCODE_BLOCK_PLACEHOLDER", markdown_text, flags=re.DOTALL
     )
     return no_code_blocks_text
 
