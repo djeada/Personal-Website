@@ -27,7 +27,7 @@ def generate_table_of_contents(html: str) -> str:
         return html
 
     toc = soup.new_tag("h2")
-    toc.string = "Table of Contents"
+    toc.string = "Table of Contents" if "🇵🇱" not in html else "Spis Treści"
 
     ol = soup.new_tag("ol")
 
