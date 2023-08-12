@@ -1,3 +1,8 @@
+"""
+Downloads markdown files.
+"""
+import json
+
 import requests
 from bs4 import BeautifulSoup
 from pathlib import Path
@@ -25,58 +30,89 @@ EN_INPUT_URLS = [
     "https://github.com/djeada/Statistics-Notes/tree/main/notes/time_series_analysis",
     "https://github.com/djeada/NumPy-Tutorials/tree/main/notes",
 ]
+
 EN_LANG = "🇺🇸"
 PL_LANG = "🇵🇱"
 OUTPUT_FILE = "input.txt"
+RAW_PREFIX = "https://raw.githubusercontent.com"
+BLOB_STRING = "/blob/"
 
 
-def get_links(url):
-    # Make a GET request to the website
+def fetch_website_content(url):
     response = requests.get(url)
+    response.raise_for_status()
+    return response.content
 
-    # Parse the HTML content of the page
-    soup = BeautifulSoup(response.content, "html.parser")
 
-    # Find all the links in the page
-    links = soup.find_all("a")
+def extract_links_from_content(content):
+    if isinstance(content, bytes):
+        content = content.decode("utf-8")
+    data = json.loads(content)
+    items = data.get("payload", {}).get("tree", {}).get("items", [])
 
-    # get only the relevant part
-    links = [link.get("href") for link in links]
-
-    # we care only about the links that have the .md extension
-    links = [link for link in links if link.endswith(".md")]
+    links = [item["path"] for item in items if item.get("contentType") == "file"]
     return links
 
 
-def convert_link_to_raw(link):
-    prefix = "https://raw.githubusercontent.com"
-    link = prefix + link
-    link = link.replace("/blob/", "/")
-    return link
+def convert_link_to_raw_github(base_url, link):
+    # Replace the standard GitHub URL prefix with the raw content prefix
+    raw_base_url = base_url.replace(
+        "https://github.com/", "https://raw.githubusercontent.com/"
+    )
+
+    # Split on "/tree/"
+    parts = raw_base_url.split("/tree/")
+
+    # Extract the branch name by splitting on the first "/"
+    branch_name = parts[1].split("/")[0]
+
+    # Recombine to get the new raw base URL
+    raw_base_url = f"{parts[0]}/{branch_name}"
+
+    # Combine the modified base URL with the link
+    raw_url = f"{raw_base_url}/{link}"
+
+    return raw_url
 
 
-def get_title_from_link(link):
-    title = link.split("/")[-1].replace(".md", "").title()
-    # remove leading numbers
-    while not title[0].isalpha():
-        title = title[1:]
-    return title.strip()
+def extract_title_from_link(link):
+    title = (
+        link.split("/")[-1]
+        .replace(".md", "")
+        .replace("_", " ")
+        .title()
+        .replace(" ", "")
+    )
+    return title
+
+
+def extract_category_from_link(base_url, link):
+    category = base_url.split("/tree")[0].split("/")[-1] + "::" + link.split("/")[-2]
+    return category
+
+
+def process_links_for_language(url_set, lang):
+    output = []
+    for url in url_set:
+        content = fetch_website_content(url)
+        links = extract_links_from_content(content)
+        for link in links:
+            raw_link = convert_link_to_raw_github(url, link)
+            title = extract_title_from_link(link)
+            category = extract_category_from_link(url, link)
+            print(f"Processing link: [{title}]({raw_link})")
+            output.append(f"{raw_link} {title} CATEGORY:{category} {lang}")
+    return output
 
 
 def main():
-    output = ""
 
+    output_list = []
     for url_set, lang in zip([PL_INPUT_URLS, EN_INPUT_URLS], [PL_LANG, EN_LANG]):
+        output_list.extend(process_links_for_language(url_set, lang))
 
-        for url in url_set:
-            links = get_links(url)
-            for link in links:
-                link = convert_link_to_raw(link)
-                title = get_title_from_link(link)
-                print(f"Processing link: [{title}]({link})")
-                output += f"{link} {title} {lang}\n"
-
-        Path(OUTPUT_FILE).write_text(output)
+    with Path(OUTPUT_FILE).open("w") as file:
+        file.write("\n".join(output_list))
 
 
 if __name__ == "__main__":

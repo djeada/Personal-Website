@@ -1,3 +1,7 @@
+"""
+Generates table of contents for each article post.
+"""
+
 import re
 from bs4 import BeautifulSoup
 from pathlib import Path
@@ -70,7 +74,7 @@ def generate_table_of_contents(html: str) -> str:
 
 
 def main():
-    for file in Path(INPUT_ARTICLES_DIR).glob("*.html"):
+    for file in Path(INPUT_ARTICLES_DIR).rglob("**/*.html"):
         html = Path(file).read_text()
         html_with_toc = generate_table_of_contents(html)
         Path(file).write_text(html_with_toc)

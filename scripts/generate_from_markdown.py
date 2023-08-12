@@ -1,8 +1,13 @@
+"""
+Transforms Markdown to HTML.
+"""
+from typing import List, ClassVar, Dict
+
 import requests
 import markdown
-import re
 from pathlib import Path
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 
 from bs4 import BeautifulSoup
 
@@ -13,277 +18,340 @@ OUTPUT_DIR = "../src/articles"
 @dataclass
 class UrlData:
     url: str
-    output_name: str
-    language: str = "🇺🇸"  # "🇵🇱"
+    _output_name: str = field(default="")
+    _category: str = "tech"
+    language: str = "🇺🇸"  # Default is English
 
-    def language_as_string(self):
-        if self.language == "🇵🇱":
-            return "pl"
-        return "en"
+    LANGUAGE_MAP: ClassVar[Dict[str, str]] = {"🇵🇱": "pl", "🇺🇸": "en"}
 
+    @property
+    def category(self) -> str:
+        val = self._category
+        val = val.replace("-", "_")
+        val = val.replace("CATEGORY:", "")
+        val = val.replace("::", "_")
+        return val
 
-def read_urls():
-    # Open the input file
-    input_path = Path(PATH_TO_CONFIG)
-    urls = input_path.read_text().splitlines()
-    urls = [url.strip() for url in urls]
-    urls = [UrlData(url.split()[0], url.split()[1], url.split()[2]) for url in urls]
-    return urls
+    @property
+    def output_name(self) -> str:
+        def process(string: str) -> str:
+            # Insert underscore before uppercase letters that are preceded by a lowercase letter or a digit
+            s1 = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", string)
+            # Convert the entire string to lowercase
+            return s1.lower()
 
+        category = process(self.category)
+        snake_case_name = process(self._output_name)
+        return str(Path(category) / snake_case_name)
 
-def markdown_to_html_table(markdown_table: str) -> str:
-    rows = markdown_table.split("\n")
-    rows = [row[1:] if row.startswith("|") else row for row in rows]
-    rows = [row[:-1] if row.endswith("|") else row for row in rows]
-    rows = [row.split("|") for row in rows]
-    # if there is a row that mathces ' -- | -- ' then it should be removed
-    rows = [
-        row
-        for row in rows
-        if not all([re.match(r"\s*-+\s*", cell) or not cell.strip() for cell in row])
-    ]
-    rows = [[cell.strip() for cell in row] for row in rows]
-    html_table = "<table>"
-    for row in rows:
-        html_table += "<tr>"
-        for cell in row:
-            html_table += f"<td>{cell}</td>"
-        html_table += "</tr>"
-    html_table += "</table>"
-    html_table = "\n" + html_table + "\n"
-    return html_table
+    def language_as_string(self) -> str:
+        """Return the language code as a string."""
+        return self.LANGUAGE_MAP.get(self.language, "en")
 
-
-def replace_all_tables(html: str) -> str:
-    # find all tables, every table starts with <p>| (there could be a space before the |) and ends with </p>
-    table_start_pattern = re.compile(r"<p>\s*\|")
-    table_end_pattern = re.compile(r"</p>")
-    table_start_match = table_start_pattern.search(html)
-    while table_start_match is not None:
-        table_end_match = table_end_pattern.search(html, table_start_match.end())
-        start = table_start_match.start() + len("<p>")
-        end = table_end_match.start()
-        table = html[start:end]
-        html = html[:start] + markdown_to_html_table(table) + html[end:]
-        table_start_match = table_start_pattern.search(html, table_end_match.end())
-    return html
-
-
-def apply_prism_for_code_samples(html: str) -> str:
-    code_start_pattern = re.compile(r"```")
-    code_start_match = code_start_pattern.search(html)
-    while code_start_match is not None:
-        code_end_match = code_start_pattern.search(html, code_start_match.end())
-        if code_end_match is None:
-            break
-        start = code_start_match.start()
-        end = code_end_match.end()
-        code_sample = html[start:end]
-
-        language = re.match(r"```([\w+]+)", code_sample)
-        if language is None:
-            language = "shell"
-        else:
-            language = language.group(1)
-            language = language.lower()
-
-        if language == "c++" or language == "cpp" or language == "c":
-            language = "clike"
-
-        code_sample = re.sub(r"`{3,}([\w+]+)?", "", code_sample).strip()
-
-        # Escape '<' and '>' characters using regex
-        code_sample = re.sub(r"<", "&lt;", code_sample)
-        code_sample = re.sub(r">", "&gt;", code_sample)
-        code_sample = re.sub(r"&lt;p&gt;", "", code_sample)
-        code_sample = re.sub(r"&lt;\/p&gt;", "", code_sample)
-
-        html = (
-            html[:start]
-            + f'<div><pre><code class="language-{language}">{code_sample}</code></pre></div>'
-            + html[end:]
+    def __repr__(self) -> str:
+        return (
+            f"<UrlData(url='{self.url}', output_name='{self.output_name}', "
+            f"category='{self.category}', language='{self.language_as_string()}')>"
         )
 
-        code_start_match = code_start_pattern.search(html, code_end_match.end())
 
-    return html
+class MarkdownProcessor:
+    @staticmethod
+    def extract_code_blocks(markdown_text: str) -> List[str]:
+        return re.findall(r"```.*?```", markdown_text, re.DOTALL)
 
-
-def replace_code_tags(html):
-    # Find all code tags that span multiple lines there must be at least two time \n in the content
-    regex = r"<code>((?:(?!<code>|</code>).)+\n(?:(?!<code>|</code>).)+)</code>"
-    matches = re.finditer(regex, html, re.DOTALL)
-    for match in matches:
-        # Extract the content between the code tags
-        content = match.group().replace("<code>", "").replace("</code>", "")
-        # Replace the code tags with backticks
-        html = html.replace(match.group(), f"```{content}```")
-    return html
-
-
-def correct_image_sources(html: str) -> str:
-
-    # find all images
-    soup = BeautifulSoup(html, "html.parser")
-    images = soup.find_all("img")
-    for image in images:
-        src = image["src"]
-        if src.startswith("https://github.com"):
-            src = src.replace("https://github.com", "https://raw.githubusercontent.com")
-            src = src.replace("/blob/", "/")
-            image["src"] = src
-    return str(soup)
-
-
-def correct_math_blocks(html: str) -> str:
-    # math blocks are defined by $$ and $$,
-    # find the blocks, and then // inside the blocks and replace them with ///
-
-    # find all math blocks
-    math_start_pattern = re.compile(r"\$\$")
-    math_start_match = math_start_pattern.search(html)
-    while math_start_match is not None:
-        math_end_match = math_start_pattern.search(html, math_start_match.end())
-        if math_end_match is None:
-            break
-        start = math_start_match.start()
-        end = math_end_match.end()
-        math_block = html[start:end]
-        math_block = math_block.replace("\\\n", "\\\\\n")
-        html = html[:start] + math_block + html[end:]
-        math_start_match = math_start_pattern.search(html, start + len(math_block) + 1)
-    return html
-
-
-def apply_filters(html, lang="en"):
-
-    # replace all tables
-    html = replace_all_tables(html)
-
-    # correct image sources
-    html = correct_image_sources(html)
-
-    # apply prism for code samples
-    html = replace_code_tags(html)
-    html = apply_prism_for_code_samples(html)
-
-    # correct math blocks
-    html = correct_math_blocks(html)
-
-    # if no body tag, add one at the beginning of the file and at the end
-    if "<body>" not in html:
-        html = "\n<body>\n" + html + "\n</body>\n"
-
-    # if no head tag, add one at the beginning of the file and at the end
-    if "<head>" not in html:
-        html = "\n<head>\n\n</head>\n" + html
-
-    # if no <!DOCTYPE html> <html lang="en"> add one at the beginning of the file and at the end
-    if "<!DOCTYPE html>" not in html:
-        html = f'\n<!DOCTYPE html>\n<html lang="{lang}">\n' + html + "\n</html>\n"
-
-    # put everything inside the body tag in a div in <section id="article"> </section>
-    body_start = html.find("<body>")
-    body_end = html.find("</body>")
-    body = html[body_start + 6 : body_end]
-    html = (
-        html[: body_start + 6]
-        + f'\n<section id="article-body">\n{body}\n</section>\n'
-        + html[body_end:]
-    )
-
-    html += '\n<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>\n'
-    html += '\n<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>\n'
-    html += '\n<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>\n'
-    html += '\n<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>\n'
-    html += '\n<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>\n'
-
-    html += '\n<script type="text/x-mathjax-config">\n'
-    html += "MathJax.Hub.Config({\n"
-    html += 'jax: ["input/TeX", "output/HTML-CSS"],\n'
-    html += 'extensions: ["tex2jax.js"],\n'
-    html += '"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },\n'
-    html += 'tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },\n'
-    html += 'TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },\n'
-    html += 'messageStyle: "none"\n'
-    html += "});\n"
-    html += "</script>\n"
-    html += '\n<script type="text/javascript" id="MathJax-script" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>\n'
-
-    # replace <h1> with <header>
-    html = re.sub(r"<h1>", "<header>", html)
-    html = re.sub(r"</h1>", "</header>", html)
-
-    # remove all whitespace after <code> tag
-    html = re.sub(r"<code>\s+", "<code>", html)
-
-    return html
-
-
-def add_language_info(html: str, language: str = "en") -> str:
-    # find first p tag and insert <p><i>Language: English</i></p> before it
-    p_tag_pattern = re.compile(r"<section id=\"article-body\">")
-    p_tag_match = p_tag_pattern.search(html)
-    if p_tag_match is not None:
-        html = (
-            html[: p_tag_match.end() + 1]
-            + f"<p style='text-align: right;'><i>This article is written in: {language}</i></p>\n"
-            + html[p_tag_match.end() + 1 :]
+    @classmethod
+    def remove_code_blocks(cls, markdown_text: str) -> str:
+        return re.sub(
+            r"```.*?```", "\nCODE_BLOCK_PLACEHOLDER", markdown_text, flags=re.DOTALL
         )
-    return html
+
+    @classmethod
+    def convert_markdown_to_html(cls, markdown_text: str) -> str:
+        return markdown.markdown(markdown_text)
+
+    @classmethod
+    def insert_code_blocks(cls, html: str, code_blocks: List[str]) -> str:
+        soup = BeautifulSoup(html, "html.parser")
+        placeholders = soup.find_all(string="CODE_BLOCK_PLACEHOLDER")
+
+        for idx, placeholder in enumerate(placeholders):
+            placeholder.replace_with(BeautifulSoup(code_blocks[idx], "html.parser"))
+
+        return str(soup)
+
+    @classmethod
+    def run(cls, text: str) -> str:
+        code_blocks = cls.extract_code_blocks(text)
+        text_without_code_blocks = cls.remove_code_blocks(text)
+
+        html = cls.convert_markdown_to_html(text_without_code_blocks)
+        enhanced_html = cls.insert_code_blocks(html, code_blocks)
+
+        return enhanced_html
 
 
-def convert_markdown_to_html(markdown_text):
-    html = markdown.markdown(markdown_text)
-    return html
+class HtmlEnhancer:
+    def run(self, html: str, url_data) -> str:
+        """Main method to enhance the provided HTML content."""
+        html = self.apply_filters(html, url_data.language_as_string())
+        html = self.add_language_info(html, url_data.language)
+        return html
+
+    @classmethod
+    def apply_filters(cls, html: str, lang: str = "en") -> str:
+        """Applies a series of filters to enhance the provided HTML content."""
+        html = cls.replace_all_tables(html)
+        html = cls.correct_image_sources(html)
+        html = cls.handle_code_blocks(html)
+        html = cls.correct_math_blocks(html)
+        html = cls.apply_prism_for_code_samples(html)
+        html = cls.ensure_structure(html, lang)
+        return html
+
+    @classmethod
+    def replace_all_tables(cls, html: str) -> str:
+        # find all tables, every table starts with <p>| (there could be a space before the |) and ends with </p>
+        table_start_pattern = re.compile(r"<p>\s*\|")
+        table_end_pattern = re.compile(r"</p>")
+        table_start_match = table_start_pattern.search(html)
+        while table_start_match is not None:
+            table_end_match = table_end_pattern.search(html, table_start_match.end())
+            start = table_start_match.start() + len("<p>")
+            end = table_end_match.start()
+            table = html[start:end]
+            html = html[:start] + cls.markdown_to_html_table(table) + html[end:]
+            table_start_match = table_start_pattern.search(html, table_end_match.end())
+        return html
+
+    @classmethod
+    def correct_image_sources(cls, html: str) -> str:
+        # find all images
+        soup = BeautifulSoup(html, "html.parser")
+        images = soup.find_all("img")
+        for image in images:
+            src = image["src"]
+            if src.startswith("https://github.com"):
+                src = src.replace(
+                    "https://github.com", "https://raw.githubusercontent.com"
+                )
+                src = src.replace("/blob/", "/")
+                image["src"] = src
+        return str(soup)
+
+    @staticmethod
+    def handle_code_blocks(html: str) -> str:
+        # Find all code tags that span multiple lines there must be at least two time \n in the content
+        regex = r"<code>((?:(?!<code>|</code>).)+\n(?:(?!<code>|</code>).)+)</code>"
+        matches = re.finditer(regex, html, re.DOTALL)
+        for match in matches:
+            # Extract the content between the code tags
+            content = match.group().replace("<code>", "").replace("</code>", "")
+            # Replace the code tags with backticks
+            html = html.replace(match.group(), f"```{content}```")
+        return html
+
+    @classmethod
+    def correct_math_blocks(cls, html: str) -> str:
+        # math blocks are defined by $$ and $$,
+        # find the blocks, and then // inside the blocks and replace them with ///
+
+        # find all math blocks
+        math_start_pattern = re.compile(r"\$\$")
+        math_start_match = math_start_pattern.search(html)
+        while math_start_match is not None:
+            math_end_match = math_start_pattern.search(html, math_start_match.end())
+            if math_end_match is None:
+                break
+            start = math_start_match.start()
+            end = math_end_match.end()
+            math_block = html[start:end]
+            math_block = math_block.replace("\\\n", "\\\\\n")
+            html = html[:start] + math_block + html[end:]
+            math_start_match = math_start_pattern.search(
+                html, start + len(math_block) + 1
+            )
+        return html
+
+    @classmethod
+    def apply_prism_for_code_samples(cls, html: str) -> str:
+        code_start_pattern = re.compile(r"```")
+        code_start_match = code_start_pattern.search(html)
+        while code_start_match is not None:
+            code_end_match = code_start_pattern.search(html, code_start_match.end())
+            if code_end_match is None:
+                break
+            start = code_start_match.start()
+            end = code_end_match.end()
+            code_sample = html[start:end]
+
+            language = re.match(r"```([\w+]+)", code_sample)
+            if language is None:
+                language = "shell"
+            else:
+                language = language.group(1)
+                language = language.lower()
+
+            if language == "c++" or language == "cpp" or language == "c":
+                language = "clike"
+
+            code_sample = re.sub(r"`{3,}([\w+]+)?", "", code_sample).strip()
+
+            # Escape '<' and '>' characters using regex
+            code_sample = re.sub(r"<", "&lt;", code_sample)
+            code_sample = re.sub(r">", "&gt;", code_sample)
+            code_sample = re.sub(r"&lt;p&gt;", "", code_sample)
+            code_sample = re.sub(r"&lt;\/p&gt;", "", code_sample)
+
+            html = (
+                html[:start]
+                + f'<div><pre><code class="language-{language}">{code_sample}</code></pre></div>'
+                + html[end:]
+            )
+
+            code_start_match = code_start_pattern.search(html, code_end_match.end())
+
+        return html
+
+    @classmethod
+    def ensure_structure(cls, html: str, lang: str) -> str:
+        """Ensures a standard structure for the provided HTML."""
+        html = cls.add_missing_tags(html, lang)
+        html = cls.wrap_content(html)
+        html = cls.add_scripts(html)
+        html = cls.replace_header_tags(html)
+        html = cls.clean_whitespace(html)
+        return html
+
+    @staticmethod
+    def add_missing_tags(html: str, lang: str) -> str:
+        """Adds missing essential HTML tags."""
+        if "<body>" not in html:
+            html = "<body>\n" + html + "\n</body>"
+        if "<head>" not in html:
+            html = "<head></head>\n" + html
+        if "<!DOCTYPE html>" not in html:
+            html = f'<!DOCTYPE html>\n<html lang="{lang}">\n' + html + "\n</html>"
+        return html
+
+    @staticmethod
+    def wrap_content(html: str) -> str:
+        """Wraps the content inside the body tag in a section."""
+        body_start = html.find("<body>")
+        body_end = html.find("</body>")
+        body_content = html[body_start + 6 : body_end]
+        html = (
+            html[: body_start + 6]
+            + f'\n<section id="article-body">\n{body_content}\n</section>\n'
+            + html[body_end:]
+        )
+        return html
+
+    @staticmethod
+    def add_scripts(html: str) -> str:
+        """Adds necessary scripts to the provided HTML."""
+        prism_scripts = "\n".join(
+            [
+                '<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>',
+                '<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>',
+                '<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>',
+                '<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>',
+                '<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>',
+            ]
+        )
+        mathjax_config = "\n".join(
+            [
+                '<script type="text/x-mathjax-config">',
+                "MathJax.Hub.Config({",
+                'jax: ["input/TeX", "output/HTML-CSS"],',
+                'extensions: ["tex2jax.js"],',
+                '"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },',
+                'tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },',
+                'TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },',
+                'messageStyle: "none"',
+                "});",
+                "</script>",
+                '<script type="text/javascript" id="MathJax-script" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>',
+            ]
+        )
+        html += prism_scripts + mathjax_config
+        return html
+
+    @staticmethod
+    def replace_header_tags(html: str) -> str:
+        """Replaces h1 tags with header tags."""
+        html = html.replace("<h1>", "<header>").replace("</h1>", "</header>")
+        return html
+
+    @staticmethod
+    def clean_whitespace(html: str) -> str:
+        """Cleans unnecessary whitespace, especially after code tags."""
+        return re.sub(r"<code>\s+", "<code>", html)
+
+    @classmethod
+    def add_language_info(cls, html: str, language: str = "en") -> str:
+        """Adds a language information paragraph."""
+        insertion_point = re.search(r"<section id=\"article-body\">", html)
+        if insertion_point:
+            insert_at = insertion_point.end()
+            info_paragraph = f"\n<p style='text-align: right;'><i>This article is written in: {language}</i></p>\n"
+            html = html[:insert_at] + info_paragraph + html[insert_at:]
+        return html
+
+    @classmethod
+    def markdown_to_html_table(cls, markdown_table: str) -> str:
+        rows = markdown_table.split("\n")
+        rows = [row[1:] if row.startswith("|") else row for row in rows]
+        rows = [row[:-1] if row.endswith("|") else row for row in rows]
+        rows = [row.split("|") for row in rows]
+        # if there is a row that mathces ' -- | -- ' then it should be removed
+        rows = [
+            row
+            for row in rows
+            if not all(
+                [re.match(r"\s*-+\s*", cell) or not cell.strip() for cell in row]
+            )
+        ]
+        rows = [[cell.strip() for cell in row] for row in rows]
+        html_table = "<table>"
+        for row in rows:
+            html_table += "<tr>"
+            for cell in row:
+                html_table += f"<td>{cell}</td>"
+            html_table += "</tr>"
+        html_table += "</table>"
+        html_table = "\n" + html_table + "\n"
+        return html_table
 
 
-def extract_code_blocks(markdown_text):
-    code_blocks = re.findall(r"```.*?```", markdown_text, re.DOTALL)
-    return code_blocks
-
-
-def remove_code_blocks(markdown_text):
-    no_code_blocks_text = re.sub(
-        r"```.*?```", "\nCODE_BLOCK_PLACEHOLDER", markdown_text, flags=re.DOTALL
-    )
-    return no_code_blocks_text
-
-
-def insert_code_blocks(html, code_blocks):
-    soup = BeautifulSoup(html, "html.parser")
-    placeholders = soup.find_all(string="CODE_BLOCK_PLACEHOLDER")
-
-    for idx, placeholder in enumerate(placeholders):
-        placeholder.replace_with(BeautifulSoup(code_blocks[idx], "html.parser"))
-
-    return str(soup)
+def read_urls() -> List[UrlData]:
+    """Read and parse URL data from a file."""
+    raw_urls = Path(PATH_TO_CONFIG).read_text().splitlines()
+    return [UrlData(*url.split()) for url in raw_urls]
 
 
 def main():
     urls = read_urls()
 
     for url_data in urls:
-
-        url = url_data.url
-        output_name = url_data.output_name
         # Download the Markdown file from the URL
-        response = requests.get(url)
+        response = requests.get(url_data.url)
 
-        # Convert the Markdown to HTML
-        code_blocks = extract_code_blocks(response.text)
-        no_code_blocks_text = remove_code_blocks(response.text)
+        code_blocks = MarkdownProcessor.extract_code_blocks(response.text)
 
-        html = convert_markdown_to_html(no_code_blocks_text)
-        html = insert_code_blocks(html, code_blocks)
+        # Process markdown
+        md_processor = MarkdownProcessor()
+        html = md_processor.run(response.text)
 
-        html = apply_filters(html, url_data.language_as_string())
-        html = add_language_info(html, url_data.language)
+        html = MarkdownProcessor.insert_code_blocks(html, code_blocks)
 
-        # Create a Path object for the output file
-        output_path = Path(OUTPUT_DIR) / f"{output_name.lower()}.html"
+        # Enhance HTML
+        enhancer = HtmlEnhancer()
+        html = enhancer.run(html, url_data)
 
-        # Save the HTML to the output file
+        # Save the processed HTML
+        output_path = Path(OUTPUT_DIR) / f"{url_data.output_name}.html"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(html)
 
 
