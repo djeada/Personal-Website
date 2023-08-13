@@ -27,7 +27,7 @@ EN_INPUT_URLS = [
     "https://github.com/djeada/Statistics-Notes/tree/main/notes/probability_distributions/continuous_distributions",
     "https://github.com/djeada/Statistics-Notes/tree/main/notes/probability_distributions/discrete_distributions",
     "https://github.com/djeada/Statistics-Notes/tree/main/notes/time_series_analysis",
-    "https://github.com/djeada/NumPy-Tutorials/tree/main/notes",
+    "https://github.com/djeada/Numpy-Tutorials/tree/main/notes",
 ]
 
 EN_LANG = "🇺🇸"

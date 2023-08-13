@@ -20,6 +20,10 @@ def get_article_list(dir_path: Path) -> list:
 def get_article_title(file_path: Path) -> str:
     title = file_path.stem.replace("_", " ").title()
     title = re.sub(r"^\d+", "", title)  # remove leading digits
+    title = re.sub(
+        r"\b([A-Z])\b", lambda m: m.group(1).lower(), title
+    )  # make single-letter words lowercase
+
     with file_path.open() as file:
         soup = BeautifulSoup(file, "html.parser")
         language = soup.find("p").text.split(":")[1].strip()

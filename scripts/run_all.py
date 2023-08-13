@@ -11,6 +11,7 @@ SCRIPTS_TO_ARGS = {
     "python generate_article_list.py": [],
     "python bundle_css.py": [],
     "python generate_table_of_contents.py": [],
+    "python generate_related_articles_section.py": [],
 }
 
 
