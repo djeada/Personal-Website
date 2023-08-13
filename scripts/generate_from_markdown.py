@@ -29,16 +29,14 @@ class UrlData:
         val = self._category
         val = val.replace("-", "_")
         val = val.replace("CATEGORY:", "")
-        val = val.replace("::", "_")
+        val = val.split("::", 1)[0]
         return val
 
     @property
     def output_name(self) -> str:
         def process(string: str) -> str:
-            # Insert underscore before uppercase letters that are preceded by a lowercase letter or a digit
-            s1 = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", string)
-            # Convert the entire string to lowercase
-            return s1.lower()
+            string = re.sub(r"(?<=[a-z0-9A-Z])[A-Z]", r"_\g<0>", string)
+            return string.lower()
 
         category = process(self.category)
         snake_case_name = process(self._output_name)

@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from bs4 import BeautifulSoup
 import string
@@ -18,6 +19,7 @@ def get_article_list(dir_path: Path) -> list:
 
 def get_article_title(file_path: Path) -> str:
     title = file_path.stem.replace("_", " ").title()
+    title = re.sub(r"^\d+", "", title)  # remove leading digits
     with file_path.open() as file:
         soup = BeautifulSoup(file, "html.parser")
         language = soup.find("p").text.split(":")[1].strip()
@@ -35,19 +37,28 @@ def get_article_description(file_path: Path) -> str:
         return description or "Description not found..."
 
 
+def get_article_category(file_path: Path) -> str:
+    return file_path.parent.stem.title().replace("_", " ")
+
+
+def get_category_url(file_path: Path) -> str:
+    return f"{file_path.parent.stem}.html"
+
+
 def convert_articles_to_html(article_paths: list) -> str:
     html = ""
     for article in article_paths:
         title = get_article_title(article)
         description = get_article_description(article)
+        category = get_article_category(article)
         url = "../articles" + str(article).split("/articles")[-1]
+        category_url = get_category_url(article)
         html += f"""
-            <a href="{url}">
-                <div class="article-list-element">
-                    <h2>{title}</h2>
-                    <p>{description}...</p>
-                </div>
-            </a>
+        <div class="article-list-element">
+            <h2><a href="{url}">{title}</a></h2>
+            <div class="article-category">Category: <a href="{category_url}">{category}</a></div>
+            <p><a href="{url}">{description}...</a></p>
+        </div>
         """
     return f'<div class="article-list"><h1>Articles</h1>{html}</div>'
 
@@ -126,6 +137,7 @@ def generate_pages_for_articles(
 
 def generate_pages_for_subdir(subdir: Path, output_file: Path):
     articles = get_article_list(subdir)
+    articles = sorted(articles, key=lambda x: x.name)
 
     # Just one page for each subdir, so no need for pagination
     html_content = convert_articles_to_html(articles)

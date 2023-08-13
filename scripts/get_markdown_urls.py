@@ -4,7 +4,6 @@ Downloads markdown files.
 import json
 
 import requests
-from bs4 import BeautifulSoup
 from pathlib import Path
 
 PL_INPUT_URLS = [
@@ -25,8 +24,8 @@ EN_INPUT_URLS = [
     "https://github.com/djeada/Statistics-Notes/tree/main/notes/basic_concepts",
     "https://github.com/djeada/Statistics-Notes/tree/main/notes/correlation_and_regression",
     "https://github.com/djeada/Statistics-Notes/tree/main/notes/hypothesis_testing_and_confidence_intervals",
-    "https://github.com/djeada/Statistics-Notes/tree/main/notes/probability_distributions/continuous",
-    "https://github.com/djeada/Statistics-Notes/tree/main/notes/probability_distributions/discrete",
+    "https://github.com/djeada/Statistics-Notes/tree/main/notes/probability_distributions/continuous_distributions",
+    "https://github.com/djeada/Statistics-Notes/tree/main/notes/probability_distributions/discrete_distributions",
     "https://github.com/djeada/Statistics-Notes/tree/main/notes/time_series_analysis",
     "https://github.com/djeada/NumPy-Tutorials/tree/main/notes",
 ]

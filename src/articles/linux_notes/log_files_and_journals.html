@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <title>Understanding Log Files, Journals, and Logging Systems</title>
+    <meta charset="utf-8" />
+    <meta content="Logging is an essential part of system administration." name="description" />
+    <meta content="Adam Djellouli" name="keywords" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../resources/style.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta content="ie-edge" http-equiv="X-UA-Compatible">
+    </meta>
+    </meta>
+</head>
+
+<body>
+    <nav>
+        <a class="logo" href="../index.html" title="Adam Djellouli - Home">
+            <img alt="Adam Djellouli Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul>
+            <li> <a href="../../index.html" title="Home"> Home </a> </li>
+            <li> <a class="active" href="../../core/blog.html" title="Adam Djellouli's Blog - Programming, technology and more"> Blog </a> </li>
+            <li> <a href="../../core/tools.html" title="Useful Tools by Adam Djellouli"> Tools </a> </li>
+            <li> <a href="../../core/projects.html" title="Projects by Adam Djellouli"> Projects </a> </li>
+            <li> <a href="../../core/resume.html" title="Adam Djellouli's Resume"> Resume </a> </li>
+            <li> <a href="../../core/about.html" title="About Adam Djellouli"> About </a> </li>
+            <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+        </ul>
+    </nav>
+    <section id="article-body"></section>
+    <div id="article-wrapper">
+        <section id="article-body">
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <header>Understanding Log Files, Journals, and Logging Systems</header>
+            <p>Logging is an essential part of system administration. It provides crucial insights into the system's operation by keeping a record of significant events. System logs are valuable resources for troubleshooting issues, auditing security, and optimizing system performance. Linux utilizes various logging methods, including plain text files, <code>journald</code>, and <code>rsyslog</code>, each with its unique advantages and limitations.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+-----------------------------------------------------------+
+| LOG FILE                                                  |
+|-----------------------------------------------------------|
+| TIMESTAMP        | SEVERITY  | SERVICE   | MESSAGE        |
+|-----------------------------------------------------------|
+| 2023-08-01 09:00 | INFO      | myapp     | Server started |
+| 2023-08-01 09:01 | WARNING   | myapp     | High CPU usage |
+| 2023-08-01 09:02 | ERROR     | myapp     | Server crashed |
++-----------------------------------------------------------+</code></pre>
+            </div>
+            </p>
+            <h2 id="overview-of-logging-methods">Overview of Logging Methods</h2>
+            <p>Here are the most common logging methods used in Linux systems:</p>
+            <ul>
+                <li>
+                    <p><strong>Text files</strong>: The simplest form of logging involves storing log data in plain text files. These log files can contain any data that system administrators choose to record, providing them full control over what is logged. This method is simple and universal, allowing for easy reading and processing with common command-line tools.</p>
+                </li>
+                <li>
+                    <p><strong>Journald</strong>: <code>journald</code> is a logging system utilized by Linux distributions that use systemd as their init system. It stores logs related to the boot process, services, and the kernel in binary files. Unlike traditional text files, <code>journald</code> logs include metadata that can facilitate more sophisticated log queries. These binary logs are not meant for long-term storage as they are designed to be rotated and deleted when they are no longer needed or when the log storage limit is reached.</p>
+                </li>
+                <li>
+                    <p><strong>Rsyslog</strong>: <code>rsyslog</code> is a powerful, open-source log processor and forwarder which provides features such as TCP syslog transport, content-based filtering, and high-precision timestamps. It is capable of handling logs from different sources and forwarding them to different destinations. By default, <code>rsyslog</code> writes log files to the <code>/var/log</code> directory, where they can be kept for longer periods, providing a more persistent log storage solution.</p>
+                </li>
+            </ul>
+            <h2 id="common-system-log-files">Common System Log Files</h2>
+            <p>Log files are typically stored in the <code>/var/log</code> directory. Below are some of the common log files you'll find:</p>
+            <ul>
+                <li>
+                    <p><strong>syslog</strong>: This is a catch-all log file containing messages from the kernel and various applications and services. It's a centralized place to look for system activity.</p>
+                </li>
+                <li>
+                    <p><strong>kern.log</strong>: This log file is dedicated to kernel-related messages. It includes logs related to hardware events, driver issues, and system errors. It's especially useful when you're troubleshooting hardware or driver problems.</p>
+                </li>
+                <li>
+                    <p><strong>auth.log</strong>: This log file keeps track of authentication and authorization events. This includes user logins, password changes, privilege escalations, and more, making it an important resource for security audits.</p>
+                </li>
+                <li>
+                    <p><strong>dmesg</strong>: This file contains messages related to the kernel ring buffer. These are particularly useful for diagnosing hardware and driver issues during the system startup process.</p>
+                </li>
+            </ul>
+            <p>The specific logs available and their locations can vary between distributions.</p>
+            <h2 id="journal-files-in-systemd">Journal Files in systemd</h2>
+            <p><code>systemd</code> is the default system and service manager for many popular distributions. It comes with a robust and centralized logging system called the journal. Unlike traditional text-based logs, the journal stores log data in binary format, providing several advantages such as metadata support, data integrity through hashing, compression for efficient storage, and indexing for quick searching.</p>
+            <h3 id="viewing-journal-entries-with-journalctl">Viewing Journal Entries with journalctl</h3>
+            <p>The <code>journalctl</code> command is used to query and display entries from the systemd journal. By default, it lists all the journal entries in chronological order, starting from the oldest:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">journalctl</code></pre>
+            </div>
+            </p>
+            <p>This command displays a comprehensive list of system logs, including those from the kernel, systemd services, and other system components.</p>
+            <h3 id="filtering-and-manipulating-journal-entries">Filtering and Manipulating Journal Entries</h3>
+            <p><code>journalctl</code> supports various options for filtering and displaying journal entries to make it easier to find relevant logs. Here are some commonly used options:</p>
+            <ul>
+                <li><code>-u, --unit</code>: This option allows you to show log entries for a specific systemd unit, such as a service. For example, to view logs related to the ssh.service unit, you would use:</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-bash">journalctl -u ssh.service</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><code>-b, --boot</code>: This option is used to show log entries from the current boot session or a specific boot session. By default, it displays logs from the current boot. However, you can specify a particular boot session like this:</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-bash">journalctl -b -1  # Logs from the previous boot
+journalctl -b 0  # Logs from the current boot</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><code>--since, --until</code>: These options are used to display log entries between specific dates and times. The format for the date is 'YYYY-MM-DD HH:MM:SS'. For example:</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-bash">journalctl --since "2023-01-01 00:00:00" --until "2023-01-02 00:00:00"</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><code>-f, --follow</code>: Similar to the tail -f command, this option allows you to follow the journal in real time. It continuously displays new log entries as they are added to the journal:</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-bash">journalctl -f</code></pre>
+            </div>
+            </p>
+            <h2 id="rsyslog-for-log-processing">Rsyslog for Log Processing</h2>
+            <p>Rsyslog is an enhanced syslogd supporting a range of input and output methods, and numerous advanced configurations. It is an efficient and robust system for log processing, offering high performance, modularity, and extensive security features.</p>
+            <p>Initially developed as an extension of syslogd, rsyslog has evolved into a sophisticated logging system capable of receiving input from a multitude of sources, processing logs, and outputting the information to a wide array of destinations.</p>
+            <p>For instance, rsyslog can collect logs from multiple machines across a network, funnel them to a centralized location, and store them for later analysis. This feature is particularly beneficial in large-scale deployments, where managing logs from individual machines can be daunting.</p>
+            <p>The main configuration file for rsyslog is located at <code>/etc/rsyslog.conf</code>. Editing this file requires a good understanding of its scripting language syntax. It allows the definition of rulesets for different log sources, configuration of input and output modules, and application of filters based on severity levels or various other criteria.</p>
+            <h3 id="understanding-severity-levels-in-rsyslog">Understanding Severity Levels in Rsyslog</h3>
+            <p>Severity levels in rsyslog provide a mechanism to categorize log messages according to their importance. These severity levels range from 0 (emergency) to 7 (debug). Here is a quick overview:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Level</td>
+                    <td>Keyword</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td>0</td>
+                    <td>emerg</td>
+                    <td>System is unusable.</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>alert</td>
+                    <td>Action must be taken immediately.</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>crit</td>
+                    <td>Critical conditions.</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>err</td>
+                    <td>Error conditions.</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>warning</td>
+                    <td>Warning conditions.</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>notice</td>
+                    <td>Normal but significant condition.</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>info</td>
+                    <td>Informational messages.</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>debug</td>
+                    <td>Debug-level messages.</td>
+                </tr>
+            </table>
+            </p>
+            <p>These severity levels facilitate filtering log messages to display only the relevant information or to route certain messages to specific destinations. For example, critical messages (levels 0 to 2) might be sent to an email alert system, while informational messages could be directed to a general log server.</p>
+            <h3 id="managing-rsyslog-services">Managing Rsyslog Services</h3>
+            <p>You can start, stop, restart, and check the status of the rsyslog service using <code>systemctl</code>:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl start rsyslog      # Starts the service
+sudo systemctl stop rsyslog       # Stops the service
+sudo systemctl restart rsyslog    # Restarts the service
+sudo systemctl status rsyslog     # Checks the status of the service</code></pre>
+            </div>
+            </p>
+            <h3 id="scenario-centralized-log-management-with-rsyslog">Scenario: Centralized Log Management with Rsyslog</h3>
+            <p>Suppose you have a network with multiple servers, and you want to consolidate all logs in a central location for streamlined monitoring and analysis. This can be achieved using rsyslog on both the centralized log server (also known as the log collector) and the client machines that generate the logs.</p>
+            <h4>Setting up the Rsyslog Server</h4>
+            <p>Firstly, ensure rsyslog is installed on the server machine. If not, use the following command to install it:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">sudo apt-get install rsyslog</code></pre>
+            </div>
+            </p>
+            <p>Next, edit the rsyslog configuration file located at <code>/etc/rsyslog.conf</code>. Uncomment or add the following lines to enable the server to receive incoming logs on UDP port 514:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">module(load="imudp")
+input(type="imudp" port="514")</code></pre>
+            </div>
+            </p>
+            <p>Apply the changes by restarting rsyslog:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl restart rsyslog</code></pre>
+            </div>
+            </p>
+            <p>Optionally, if you have a firewall configured, allow incoming connections on UDP port 514:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">sudo ufw allow 514/udp</code></pre>
+            </div>
+            </p>
+            <h4>Setting up the Rsyslog Client</h4>
+            <p>On the client machines that generate logs, install rsyslog if it's not already installed:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">sudo apt-get install rsyslog</code></pre>
+            </div>
+            </p>
+            <p>Next, edit the rsyslog configuration file located at <code>/etc/rsyslog.conf</code>. Add the following line at the end of the file, replacing <code>&lt;SERVER_IP&gt;</code> with the IP address of the rsyslog server:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">*.* @&lt;server_ip&gt;:514</code></pre>
+            </div>
+            </p>
+            <p>This configuration instructs the client to forward all log messages (<em>.</em>) to the rsyslog server via UDP.</p>
+            <p>Apply the changes by restarting rsyslog:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl restart rsyslog</code></pre>
+            </div>
+            </p>
+            <p>Now, the client machines will forward their log messages to the centralized rsyslog server. The server stores the received logs in the <code>/var/log</code> directory. These logs can be analyzed using various log analysis tools or further processed using rsyslog's scripting language for better organization and easy retrieval of logs.</p>
+            <h2 id="logger-utility">Logger Utility</h2>
+            <p>Logger is a command-line utility in Linux used for generating log messages from the terminal. These messages are added to the local <code>/var/log/syslog</code> file or can be directed to a remote syslog server. Logger provides several options for specifying the priority of messages, defining the syslog port, or indicating a remote system, making it an adaptable tool for various logging needs.</p>
+            <p>The usage and options of logger can be understood in more detail through the manual pages:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">man logger</code></pre>
+            </div>
+            </p>
+            <h3 id="basic-usage-of-logger">Basic Usage of Logger</h3>
+            <p>A simple example of using logger to generate a log message:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">logger "This is a sample log message"</code></pre>
+            </div>
+            </p>
+            <p>This command will append the text "This is a sample log message" to the <code>/var/log/syslog</code> file.</p>
+            <h3 id="sending-log-message-to-remote-server-with-logger">Sending Log Message to Remote Server with Logger</h3>
+            <p>Logger can also be used to send log messages to a remote syslog server. Here is an example:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">logger -n 192.168.10.27 -P 514 "This is a sample log message for remote server"</code></pre>
+            </div>
+            </p>
+            <p>In this command:</p>
+            <ul>
+                <li><code>-n</code> flag is used to specify the IP address of the remote syslog server.</li>
+                <li><code>-P</code> flag is used to specify the port number on which the remote syslog server is listening. The default syslog port is 514.</li>
+            </ul>
+            <p>Adjusting Log Message Severity</p>
+            <p>Logger allows us to adjust the severity of a log message using the -p option followed by the desired facility and priority level. For example:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">logger -p auth.info "User John logged in successfully"</code></pre>
+            </div>
+            </p>
+            <p>In this command:</p>
+            <ul>
+                <li><code>auth</code> is the facility (representing the source of the message).</li>
+                <li><code>info</code> is the priority (representing the severity of the message).</li>
+            </ul>
+            <p>The auth.info message would thus indicate an informational message from the authentication and authorization system (e.g., a successful user login).</p>
+            <p>Logger, being a flexible tool, fits perfectly into scripts or automated tasks where logging is required for monitoring or troubleshooting purposes.</p>
+            <h2 id="logrotate">Logrotate</h2>
+            <p>Logrotate is an essential utility for managing log files. It is designed to automate the process of rotating, compressing, and deleting log files to prevent them from consuming all available disk space on a system. The unchecked growth of log files can lead to performance issues and can even make a system unusable.</p>
+            <p>Logrotate maintains system health and efficient disk space usage by rotating log files based on configurations specified by the user. It compresses old logs, deletes logs older than a certain threshold, and facilitates the creation of new logs for ongoing tracking. </p>
+            <p>To check the installed version of logrotate, use:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">logrotate --version</code></pre>
+            </div>
+            </p>
+            <h3 id="configuration-of-logrotate">Configuration of Logrotate</h3>
+            <p>Logrotate uses configuration files to manage log files. The main configuration file is located at /etc/logrotate.conf, and it allows for additional, application-specific configuration files in the <code>/etc/logrotate.d/</code> directory.</p>
+            <p>These configuration files dictate how and when logrotate performs actions on specific log files or sets of log files. For instance, you may have a web server generating access and error logs daily. These logs can rapidly increase in size, causing them to be challenging to manage. With logrotate, you can automate the rotation of these logs daily, compress logs older than a week, and delete logs older than a month. This approach ensures efficient disk usage and readily accessible recent logs.</p>
+            <p>Here's an example of a logrotate configuration for a web server:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">/var/log/httpd/*log {
+    daily
+    compress
+    missingok
+    notifempty
+    rotate 30
+    create 0640 root adm
+    postrotate
+    /sbin/service httpd reload &gt; /dev/null 2&gt;/dev/null || true
+    endscript
+}</code></pre>
+            </div>
+            </p>
+            <p>In this configuration:</p>
+            <ul>
+                <li>The <code>/var/log/httpd/*log</code> line specifies the logs to be managed by this configuration.</li>
+                <li><code>daily</code> means the logs will be rotated every day.</li>
+                <li><code>compress</code> tells logrotate to compress the log files when they are rotated.</li>
+                <li><code>missingok</code> instructs logrotate to continue without error if a log file is missing.</li>
+                <li><code>notifempty</code> ensures that log files are not rotated if they are empty.</li>
+                <li><code>rotate 30</code> retains 30 days' worth of logs.</li>
+                <li><code>create 0640 root adm</code> sets the owner and group of the new log file and sets the permissions to 0640.</li>
+                <li>The <code>postrotate/endscript</code> section specifies commands to be executed after the log file is rotated. In this case, it reloads the web server.</li>
+            </ul>
+            <h2 id="challenges">Challenges</h2>
+            <ol>
+                <li>Detail the reasons why logging is crucial in system administration. Discuss its role in maintaining system health, identifying issues, and aiding in security auditing.</li>
+                <li>Provide an in-depth description of <code>Journald</code>, its functions, advantages, and how it is different from traditional text-file-based logging systems. Discuss its relationship with <code>systemd</code>.</li>
+                <li>Explain how <code>Rsyslog</code> operates. Discuss its configuration, its use in centralized logging, and the use of severity levels in filtering and categorizing log messages.</li>
+                <li>Use the <code>logger</code> command to create and send messages to system logs. Explain the role and usage of different flags that can be used with this command.</li>
+                <li>Explain how to configure and use <code>logrotate</code> to manage log files' sizes. Discuss how it can help automate the process of rotating, compressing, and deleting log files.</li>
+                <li>Discuss common log file formats and their differences. Consider elements like structure, readability, and compatibility with different log analysis tools.</li>
+                <li>Show how to use log filters to selectively include or exclude log messages based on certain criteria. Use <code>Rsyslog</code> or <code>Journald</code> as an example.</li>
+                <li>Explain how to use log analysis tools to extract useful information from log files. This could include searching for specific events, identifying trends, or generating reports.</li>
+                <li>Describe best practices for managing and maintaining logs in a production environment. Discuss strategies for retaining logs, securing log data, and ensuring the reliability and availability of log files.</li>
+                <li>Discuss common logging-related problems in a Linux environment, such as missing logs, log corruption, or full disk space due to log files. Explain how to diagnose and resolve these issues.</li>
+            </ol>
+        </section>
+        <div id="table-of-contents">
+            <h2>Table of Contents</h2>
+            <ol>
+                <li><a href="#overview-of-logging-methods">Overview of Logging Methods</a></li>
+                <li><a href="#common-system-log-files">Common System Log Files</a></li>
+                <li><a href="#journal-files-in-systemd">Journal Files in systemd</a></li>
+                <li><a href="#viewing-journal-entries-with-journalctl">Viewing Journal Entries with journalctl</a></li>
+                <li><a href="#filtering-and-manipulating-journal-entries">Filtering and Manipulating Journal Entries</a></li>
+                <li><a href="#rsyslog-for-log-processing">Rsyslog for Log Processing</a></li>
+                <li><a href="#understanding-severity-levels-in-rsyslog">Understanding Severity Levels in Rsyslog</a></li>
+                <li><a href="#managing-rsyslog-services">Managing Rsyslog Services</a></li>
+                <li><a href="#scenario-centralized-log-management-with-rsyslog">Scenario: Centralized Log Management with Rsyslog</a></li>
+                <li><a href="#logger-utility">Logger Utility</a></li>
+                <li><a href="#basic-usage-of-logger">Basic Usage of Logger</a></li>
+                <li><a href="#sending-log-message-to-remote-server-with-logger">Sending Log Message to Remote Server with Logger</a></li>
+                <li><a href="#logrotate">Logrotate</a></li>
+                <li><a href="#configuration-of-logrotate">Configuration of Logrotate</a></li>
+                <li><a href="#challenges">Challenges</a></li>
+            </ol>
+        </div>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column">
+                <img alt="Adam Djellouli Symbol" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+            <div class="footer-column">
+                <h2><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Our Privacy Policy</a></h2>
+                <p>
+                    Thank you for visiting my personal website. All of the <br />
+                    content on this site is free to use, but please remember <br />
+                    to be a good human being and refrain from any abuse<br />
+                    of the site. If you would like to contact me, please use <br />
+                    my <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn profile</a> or my <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a> if you have any technical <br />
+                    issues or ideas to share. I wish you the best and hope you <br />
+                    have a fantastic life. <br />
+                </p>
+            </div>
+            <div class="footer-column">
+                <h2>Follow me</h2>
+                <ul class="social-media">
+                    <li>
+                        <a class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" target="_blank" title="YouTube">
+                        </a>YouTube
+                    </li>
+                    <li>
+                        <a class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" target="_blank" title="LinkedIn">
+                        </a>LinkedIn
+                    </li>
+                    <li>
+                        <a class="fa fa-instagram" href="https://www.instagram.com/addjellouli/" target="_blank" title="Instagram">
+                        </a>Instagram
+                    </li>
+                    <li>
+                        <a class="fa fa-github" href="https://github.com/djeada" title="GitHub">
+                        </a>Github
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div>
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="../app.js"></script>
+    </footer>
+</body>
+
+</html>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
