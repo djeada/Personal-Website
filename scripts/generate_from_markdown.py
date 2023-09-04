@@ -29,7 +29,6 @@ class UrlData:
         val = self._category
         val = val.replace("-", "_")
         val = val.replace("CATEGORY:", "")
-        val = val.split("::", 1)[0]
         return val
 
     @property
@@ -38,9 +37,9 @@ class UrlData:
             string = re.sub(r"(?<=[a-z0-9A-Z])[A-Z]", r"_\g<0>", string)
             return string.lower()
 
-        category = process(self.category)
+        category = process(self.category).split("::")
         snake_case_name = process(self._output_name)
-        return str(Path(category) / snake_case_name)
+        return str(Path(*[process(cat) for cat in category]) / snake_case_name)
 
     def language_as_string(self) -> str:
         """Return the language code as a string."""

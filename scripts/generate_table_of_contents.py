@@ -26,7 +26,7 @@ def move_specific_section(soup: BeautifulSoup) -> None:
 def create_toc_entries(soup: BeautifulSoup) -> Tag:
     """Generate ordered list of table of contents based on headers."""
     body = soup.find("section", {"id": "article-body"})
-    headers = body.find_all(["h1", "h2", "h3"])
+    headers = body.find_all(["h1", "h2", "h3", "h4"])
 
     # Initial root ordered list
     root_ol = soup.new_tag("ol")
@@ -69,6 +69,21 @@ def create_toc_entries(soup: BeautifulSoup) -> Tag:
     return root_ol
 
 
+def process_nested_list(tag):
+    """
+    Check a bs4 Tag (expected to be an ol or ul) for nested lists.
+    If the outer list has only one item, the outer list tags are removed.
+    """
+    # Check if tag is an ordered or unordered list with a single list item
+    if tag.name in ["ol", "ul"] and len(tag.find_all("li", recursive=False)) == 1:
+        inner_contents = tag.li.contents
+        tag.clear()
+        for content in reversed(inner_contents):
+            tag.append(content)
+
+    return tag
+
+
 def create_toc_wrapper(soup: BeautifulSoup, html: str) -> Tag:
     """Create a wrapper for the table of contents."""
     toc_title = "Table of Contents" if "🇵🇱" not in html else "Spis Treści"
@@ -77,7 +92,10 @@ def create_toc_wrapper(soup: BeautifulSoup, html: str) -> Tag:
     toc_header.string = toc_title
 
     toc_wrapper = soup.new_tag("div", id="table-of-contents")
-    toc_wrapper.extend([toc_header, create_toc_entries(soup)])
+    try:
+        toc_wrapper.extend([toc_header, process_nested_list(create_toc_entries(soup))])
+    except Exception as e:
+        pass
     return toc_wrapper
 
 

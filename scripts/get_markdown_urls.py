@@ -86,7 +86,10 @@ def extract_title_from_link(link):
 
 
 def extract_category_from_link(base_url, link):
-    category = base_url.split("/tree")[0].split("/")[-1] + "::" + link.split("/")[-2]
+    category = base_url.split("/tree")[0].split("/")[-1]
+    subcategory = link.split("/")[-2]
+    if subcategory.lower() not in ["notes", "notatki", "slides"]:
+        category += "::" + subcategory
     return category
 
 
@@ -105,7 +108,6 @@ def process_links_for_language(url_set, lang):
 
 
 def main():
-
     output_list = []
     for url_set, lang in zip([PL_INPUT_URLS, EN_INPUT_URLS], [PL_LANG, EN_LANG]):
         output_list.extend(process_links_for_language(url_set, lang))

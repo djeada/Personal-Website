@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+
+<html lang="pl">
+<head>
+<script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+<title>Procesy</title>
+<meta charset="utf-8"/>
+<meta content="Procesy to samodzielne jednostki wykonywane w systemie operacyjnym, każdy z własną przestrzenią adresową i zasobami." name="description"/>
+<meta content="Adam Djellouli" name="keywords"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet"/>
+<link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon"/>
+<link href="../../../resources/style.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="ie-edge" http-equiv="X-UA-Compatible"/>
+</head>
+<body><nav>
+<a class="logo" href="../index.html" title="Adam Djellouli - Home">
+<img alt="Adam Djellouli Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG"/>
+</a>
+<input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox"/>
+<ul>
+<li> <a href="../../../index.html" title="Home"> Home </a> </li>
+<li> <a class="active" href="../../../core/blog.html" title="Adam Djellouli's Blog - Programming, technology and more"> Blog </a> </li>
+<li> <a href="../../../core/tools.html" title="Useful Tools by Adam Djellouli"> Tools </a> </li>
+<li> <a href="../../../core/projects.html" title="Projects by Adam Djellouli"> Projects </a> </li>
+<li> <a href="../../../core/resume.html" title="Adam Djellouli's Resume"> Resume </a> </li>
+<li> <a href="../../../core/about.html" title="About Adam Djellouli"> About </a> </li>
+<button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+</ul>
+</nav>
+<section id="article-body"></section>
+<div id="article-wrapper"><section id="article-body">
+<p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
+<h2 id="procesy">Procesy</h2>
+<p>Procesy to samodzielne jednostki wykonywane w systemie operacyjnym, każdy z własną przestrzenią adresową i zasobami. Każdy proces działa niezależnie i jest izolowany od innych procesów. W związku z tym, komunikacja między procesami wymaga specjalnych mechanizmów, takich jak kolejki czy potoki. Procesy są z reguły cięższe niż wątki pod względem zużycia zasobów, ale mają zaletę lepszej izolacji, co sprawia, że są bardziej odporne na błędy i interferencje.</p>
+<p>W Pythonie, dzięki modułowi <code>multiprocessing</code>, można łatwo tworzyć i zarządzać procesami:</p>
+<p><div><pre><code class="language-python">import multiprocessing
+import time
+
+def pracownik():
+    print("Rozpoczynam pracę")
+    time.sleep(2)
+    print("Kończę pracę")
+
+proces = multiprocessing.Process(target=pracownik)
+proces.start()
+proces.join()  # Oczekuje na zakończenie procesu</code></pre></div></p>
+<p>Aby zatrzymać proces przed jego naturalnym zakończeniem, można użyć metody terminate():</p>
+<p><div><pre><code class="language-python">p.terminate()</code></pre></div></p>
+<p>Jednak korzystanie z terminate() powinno być ostrożne, ponieważ może prowadzić do nieprzewidywalnych skutków, takich jak niedokończone operacje czy utrata danych.</p>
+<h3 id="kiedy-używać-procesów-">Kiedy używać procesów?</h3>
+<ul>
+<li>Gdy chcemy osiągnąć równoległość w obliczeniach intensywnie korzystających z CPU, omijając ograniczenia GIL w Pythonie.</li>
+<li>Gdy potrzebujemy izolacji, aby uniknąć zakłóceń pomiędzy różnymi częściami kodu.</li>
+<li>Gdy chcemy równolegle przetwarzać niezależne zadania bez potrzeby dzielenia się stanem.</li>
+</ul>
+<p>Pomimo zalet procesów, tworzenie nowego procesu jest bardziej kosztowne niż wątku. Dlatego też, w zastosowaniach wymagających dużej ilości lekkich, krótkotrwałych zadań, wątki mogą być bardziej efektywne.</p>
+<p>Dodatkowo, komunikacja międzyprocesowa (Inter-Process Communication, IPC) może być bardziej skomplikowana i mniej wydajna niż komunikacja międzywątkowa. </p>
+<h3 id="komunikacja-międzyprocesowa-ipc-">Komunikacja międzyprocesowa (IPC)</h3>
+<p>Jak wcześniej wspomniano, jednym z wyzwań związanych z procesami jest ich izolacja, co oznacza, że nie mogą one bezpośrednio dzielić się swoim stanem ani zasobami. W związku z tym konieczne jest korzystanie z mechanizmów IPC, aby umożliwić procesom współpracę.</p>
+<h4 id="kolejki-multiprocessing-queue-">Kolejki (multiprocessing.Queue)</h4>
+<p>Kolejki w module <code>multiprocessing</code> działają podobnie jak wątkowe kolejki w module <code>queue</code>. Pozwalają one na przesyłanie i odbieranie komunikatów między procesami:</p>
+<p><div><pre><code class="language-python">import multiprocessing
+
+def pracownik(kolejka):
+    kolejka.put("Proces pozdrawia serdecznie!")
+
+if __name__ == "__main__":
+    kolejka = multiprocessing.Queue()
+    proces = multiprocessing.Process(target=pracownik, args=(kolejka,))
+    proces.start()
+    print(kolejka.get())  # Odbieramy komunikat od procesu
+    proces.join()</code></pre></div></p>
+<p>W tym przykładzie proces potomny wysyła komunikat do procesu głównego za pomocą kolejki.</p>
+<h4 id="potoki-multiprocessing-pipe-">Potoki (multiprocessing.Pipe)</h4>
+<p>Potoki to kolejny sposób komunikacji między procesami. Składają się z dwóch połączonych końcówek: jednej do wysyłania, a drugiej do odbierania danych.</p>
+<p><div><pre><code class="language-python">import multiprocessing
+
+def pracownik(polaczenie):
+    polaczenie.send("Proces pozdrawia serdecznie!")
+    polaczenie.close()
+
+if __name__ == "__main__":
+    polaczenie_rodzica, polaczenie_dziecka = multiprocessing.Pipe()
+    proces = multiprocessing.Process(target=pracownik, args=(polaczenie_dziecka,))
+    proces.start()
+    print(polaczenie_rodzica.recv())  # Odbieramy komunikat od procesu
+    proces.join()</code></pre></div></p>
+<p>Warto zaznaczyć, że obie metody – zarówno kolejki, jak i potoki – powinny być używane z uwagą. Należy pamiętać o możliwych zakleszczeniach (deadlocks) i zapewnić odpowiednie zabezpieczenia, by je unikać.</p>
+<h3 id="użycie-procesów-do-równoległego-obliczenia-kwadratów-liczb">Użycie procesów do równoległego obliczenia kwadratów liczb</h3>
+<p><div><pre><code class="language-python">import multiprocessing
+
+def oblicz_kwadraty(liczby, wynik, indeks):
+    print(f"Proces {indeks+1} pracuje z {liczby}")
+    for i, liczba in enumerate(liczby):
+        wynik[i] = liczba * liczba
+    print(f"Proces {indeks+1} zakończony!")
+
+if __name__ == "__main__":
+    liczby = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    liczba_procesow = 3
+    rozmiar = len(liczby) // liczba_procesow
+    procesy = []
+    wynik = multiprocessing.Array('i', len(liczby))
+
+    for i in range(liczba_procesow):
+        indeks_startowy = rozmiar * i
+        indeks_koncowy = None if i == liczba_procesow - 1 else indeks_startowy + rozmiar
+        p = multiprocessing.Process(target=oblicz_kwadraty, args=(liczby[indeks_startowy:indeks_koncowy], wynik[indeks_startowy:indeks_koncowy], i))
+        procesy.append(p)
+        p.start()
+
+    for p in procesy:
+        p.join()
+
+    print(f"Kwadraty: {list(wynik)}")</code></pre></div></p>
+<p>W tym kodzie dzielimy listę liczb na mniejsze fragmenty i przekazujemy je do różnych procesów. Każdy proces oblicza kwadraty liczb równolegle z innymi procesami. Używamy wspólnej pamięci (w postaci <code>multiprocessing.Array</code>) do przechowywania wyników, więc po zakończeniu wszystkich procesów możemy odczytać wyniki.</p>
+<p>W rzeczywistych zastosowaniach warto zwrócić uwagę na wybór odpowiedniej liczby procesów. Najczęściej korzystna liczba to liczba rdzeni dostępnych w systemie (chociaż nie zawsze). Zbyt duża liczba procesów może prowadzić do nadmiernego przełączania kontekstu i spowolnienia obliczeń.</p>
+</section><div id="table-of-contents"><h2>Spis Treści</h2><ol><ol><li><a href="#kiedy-używać-procesów-">Kiedy używać procesów?</a></li><li><a href="#komunikacja-międzyprocesowa-ipc-">Komunikacja międzyprocesowa (IPC)</a><ol><li><a href="#kolejki-multiprocessing-queue-">Kolejki (multiprocessing.Queue)</a></li><li><a href="#potoki-multiprocessing-pipe-">Potoki (multiprocessing.Pipe)</a></li></ol></li><li><a href="#użycie-procesów-do-równoległego-obliczenia-kwadratów-liczb">Użycie procesów do równoległego obliczenia kwadratów liczb</a></li></ol><a href="#procesy">Procesy</a></ol><div id="related-articles"><h2>Related Articles</h2><ol><li> Podstawy<ol><li><a href="../01_podstawy/01_instalacja_w_systemie_windows.html"> Instalacja w Systemie Windows</a></li><li><a href="../01_podstawy/02_interaktywna_konsola.html"> Interaktywna Konsola</a></li><li><a href="../01_podstawy/03_zmienne.html"> Zmienne</a></li><li><a href="../01_podstawy/04_warunki.html"> Warunki</a></li><li><a href="../01_podstawy/05_petle.html"> Petle</a></li><li><a href="../01_podstawy/06_funkcje_python.html"> Funkcje Python</a></li><li><a href="../01_podstawy/07_napisy_python.html"> Napisy Python</a></li><li><a href="../01_podstawy/08_struktury_danych.html"> Struktury Danych</a></li><li><a href="../01_podstawy/09_enum.html"> Enum</a></li><li><a href="../01_podstawy/10_liczby_losowe.html"> Liczby Losowe</a></li></ol></li><li> Sredniozawansowane<ol><li><a href="../02_sredniozawansowane/01_klasy_i_obiekty.html"> Klasy i Obiekty</a></li><li><a href="../02_sredniozawansowane/02_referencje_i_kopiowanie.html"> Referencje i Kopiowanie</a></li><li><a href="../02_sredniozawansowane/03_czyste_funkcje_i_skutki_uboczne.html"> Czyste Funkcje i Skutki Uboczne</a></li><li><a href="../02_sredniozawansowane/04_dziedziczenie_i_kompozycja.html"> Dziedziczenie i Kompozycja</a></li><li><a href="../02_sredniozawansowane/05_wyrazenia_regularne.html"> Wyrazenia Regularne</a></li><li><a href="../02_sredniozawansowane/06_wyjatki.html"> Wyjatki</a></li><li><a href="../02_sredniozawansowane/07_watki.html"> Watki</a></li><li><a href="../02_sredniozawansowane/08_procesy.html"> Procesy</a></li><li><a href="../02_sredniozawansowane/09_asyncio.html"> Asyncio</a></li><li><a href="../02_sredniozawansowane/10_lambdy.html"> Lambdy</a></li><li><a href="../02_sredniozawansowane/11_programowanie_funkcyjne.html"> Programowanie Funkcyjne</a></li><li><a href="../02_sredniozawansowane/12_klasy_danych.html"> Klasy Danych</a></li><li><a href="../02_sredniozawansowane/13_generatory.html"> Generatory</a></li><li><a href="../02_sredniozawansowane/14_iteratory.html"> Iteratory</a></li><li><a href="../02_sredniozawansowane/15_dekoratory.html"> Dekoratory</a></li><li><a href="../02_sredniozawansowane/16_serializacja.html"> Serializacja</a></li></ol></li><li> Inzynieria Oprogramowania<ol><li><a href="../03_inzynieria_oprogramowania/01_moduly_i_pakiety.html"> Moduly i Pakiety</a></li><li><a href="../03_inzynieria_oprogramowania/02_wersje_pythona.html"> Wersje Pythona</a></li><li><a href="../03_inzynieria_oprogramowania/03_pip_i_pypi.html"> Pip i Pypi</a></li><li><a href="../03_inzynieria_oprogramowania/04_srodowisko_wirtualne.html"> Srodowisko Wirtualne</a></li><li><a href="../03_inzynieria_oprogramowania/05_dbanie_o_jakosc_kodu.html"> Dbanie o Jakosc Kodu</a></li><li><a href="../03_inzynieria_oprogramowania/06_debugowanie.html"> Debugowanie</a></li><li><a href="../03_inzynieria_oprogramowania/07_testy_jednostkowe.html"> Testy Jednostkowe</a></li><li><a href="../03_inzynieria_oprogramowania/08_dokumentacja.html"> Dokumentacja</a></li><li><a href="../03_inzynieria_oprogramowania/09_pliki_wykonywalne_i_pyinstaller.html"> Pliki Wykonywalne i Pyinstaller</a></li><li><a href="../03_inzynieria_oprogramowania/10_kod_bajtowy.html"> Kod Bajtowy</a></li></ol></li><li> Python w Praktyce<ol><li><a href="../04_python_w_praktyce/01_argumenty_linii_polecen.html"> Argumenty Linii Polecen</a></li><li><a href="../04_python_w_praktyce/02_praca_z_plikami_i_folderami.html"> Praca z Plikami i Folderami</a></li><li><a href="../04_python_w_praktyce/03_pandas_i_csv.html"> Pandas i Csv</a></li><li><a href="../04_python_w_praktyce/04_praca_z_plikami_pdf.html"> Praca z Plikami Pdf</a></li><li><a href="../04_python_w_praktyce/05_informacje_o_systemie_operacyjnym.html"> Informacje o Systemie Operacyjnym</a></li><li><a href="../04_python_w_praktyce/06_http_i_prosty_serwer.html"> Http i Prosty Serwer</a></li><li><a href="../04_python_w_praktyce/07_api_wraz_z_fastapi.html"> Api Wraz z Fastapi</a></li><li><a href="../04_python_w_praktyce/08_bazy_danych_z_sqlite.html"> Bazy Danych z Sqlite</a></li><li><a href="../04_python_w_praktyce/09_tkinter.html"> Tkinter</a></li><li><a href="../04_python_w_praktyce/10_logi.html"> Logi</a></li></ol></li><li> Prezentacje<ol><li><a href="../05_prezentacje/git.html">Git</a></li><li><a href="../05_prezentacje/inspekcja_kodu.html">Inspekcja Kodu</a></li><li><a href="../05_prezentacje/jupyter_notebooks.html">Jupyter Notebooks</a></li><li><a href="../05_prezentacje/paradygmaty_programowania.html">Paradygmaty Programowania</a></li><li><a href="../05_prezentacje/programowanie_wstep.html">Programowanie Wstep</a></li><li><a href="../05_prezentacje/testy.html">Testy</a></li><li><a href="../05_prezentacje/wprowadzenie_do_kursu.html">Wprowadzenie Do Kursu</a></li></ol></li></ol></div></div></div><footer>
+<div class="footer-columns">
+<div class="footer-column">
+<img alt="Adam Djellouli Symbol" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png"/>
+</div>
+<div class="footer-column">
+<h2><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Our Privacy Policy</a></h2>
+<p>
+                Thank you for visiting my personal website. All of the <br/>
+                content on this site is free to use, but please remember <br/>
+                to be a good human being and refrain from any abuse<br/>
+                of the site. If you would like to contact me, please use <br/>
+                my <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn profile</a> or my <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a> if you have any technical <br/>
+                issues or ideas to share. I wish you the best and hope you <br/>
+                have a fantastic life. <br/>
+</p>
+</div>
+<div class="footer-column">
+<h2>Follow me</h2>
+<ul class="social-media">
+<li>
+<a class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" target="_blank" title="YouTube">
+</a>YouTube
+                </li>
+<li>
+<a class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" target="_blank" title="LinkedIn">
+</a>LinkedIn
+                </li>
+<li>
+<a class="fa fa-instagram" href="https://www.instagram.com/addjellouli/" target="_blank" title="Instagram">
+</a>Instagram
+                </li>
+<li>
+<a class="fa fa-github" href="https://github.com/djeada" title="GitHub">
+</a>Github
+                </li>
+</ul>
+</div>
+</div>
+<div>
+<p id="copyright">
+            © Adam Djellouli. All rights reserved.
+        </p>
+</div>
+<script>
+        document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+    </script>
+<script src="../../../app.js"></script>
+</footer></body>
+</html><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script><script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>

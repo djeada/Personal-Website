@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <title>Konwersje</title>
     <meta charset="utf-8" />
-    <meta content="Zarówno w języku C, jak i w języku C++ istnieją mechanizmy umożliwiające konwersje wartości z jednego typu na inny." name="description" />
+    <meta content="Zarówno w języku C, jak i w języku C++ istnieją mechanizmy umożliwiające konwersję wartości z jednego typu na inny." name="description" />
     <meta content="Adam Djellouli" name="keywords" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
     <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
@@ -39,54 +39,61 @@
         <section id="article-body">
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="konwersje">Konwersje</h2>
-            <p>Zarówno w języku C, jak i w języku C++ istnieją mechanizmy umożliwiające konwersje wartości z jednego typu na inny.</p>
-            <h3 id="rzutowanie">Rzutowanie</h3>
-            <p>W języku C możemy jawnie dokonać konwersji wartości z jednego typu na inny za pomocą rzutowania. Ogólny schemat to:</p>
+            <p>Zarówno w języku C, jak i w języku C++ istnieją mechanizmy umożliwiające konwersję wartości z jednego typu na inny. Chociaż niektóre z tych mechanizmów są wspólne dla obu języków, różnice w podejściu oraz dostępne narzędzia czynią konwersję w C++ bardziej złożoną i wszechstronną.</p>
+            <h3 id="rzutowanie-w-c">Rzutowanie w C</h3>
+            <p>Rzutowanie w języku C pozwala jawnie konwertować wartość jednego typu na inny. Choć czasami jest to niezbędne, rzutowanie może prowadzić do nieoczekiwanych i niejednoznacznych wyników, jeśli nie jest używane ostrożnie.</p>
+            <h4 id="podstawowe-rzutowanie">Podstawowe rzutowanie</h4>
+            <p>Ogólny schemat rzutowania wygląda następująco:</p>
             <p>
             <div>
-                <pre><code class="language-clike">(typ) wartość;</code></pre>
+                <pre><code class="language-clike">(typ)wartość;</code></pre>
             </div>
             </p>
-            <p>Przykład:</p>
+            <p>Przykład rzutowania zmiennej typu int na double:</p>
             <p>
             <div>
                 <pre><code class="language-clike">int a = 10;
 double b = (double)a;</code></pre>
             </div>
             </p>
-            <p>W powyższym przykładzie wszystko działa jak należy. Nie ma problemu z konwersją z typu int na typ double. W wielu innych przypadkach taki zabieg może okazać się niebezpieczny. W szczególności, gdy bawimy się wskaźnikami na void. Czasami musimy ich użyć, jest to jedyny sposób na osiągnięcie polimorfizmu w języku C. Przykładowo funkcje <code>qsort()</code> i <code>bsearch()</code> pracują z wskaźnikami na void, dzięki temu możemy przekazać do nich tablice dowolnego typu. Niebezpieczeństwo pojawia się, gdy chcemy rzutować wskaźnik na void z powrotem na inny typ. Nic nie powstrzymuje nas przed konwersją na zły typ i nieoczekiwanymi rezultatami.</p>
+            <p>W tym przypadku rzutowanie z typu int na double jest bezpieczne i nie prowadzi do utraty danych.</p>
+            <h4 id="rzutowanie-wskaźników">Rzutowanie wskaźników</h4>
+            <p>Kiedy pracujemy z wskaźnikami, rzutowanie może stać się bardziej skomplikowane. Wskaźnik typu void jest ogólnym wskaźnikiem, który może wskazywać obiekt dowolnego typu. Często używane jest w funkcjach biblioteki standardowej, takich jak <code>qsort()</code> i <code>bsearch()</code>, aby umożliwić przechowywanie wskaźników do dowolnych danych.</p>
+            <p>Niebezpieczeństwo pojawia się, gdy próbujemy rzutować wskaźnik na <code>void</code> z powrotem na inny, konkretny typ. Jeśli wskaźnik zostanie niepoprawnie zrzutowany, może to prowadzić do niezdefiniowanego zachowania.</p>
+            <p>Oto przykład, który ilustruje rzutowanie wskaźnika na <code>void</code>:</p>
             <p>
             <div>
-                <pre><code class="language-clike">void *ptr = malloc(sizeof(int)); // zaalokowanie pamięci dla typu int
-char *ptr2 = (char *)ptr;        // rzutowanie na inny typ
-*ptr2 = 'a';
-printf("%c\n", *ptr2);           // wyświetlenie znaku 'a'
+                <pre><code class="language-clike">void *ptr = malloc(sizeof(int));  // zaalokowanie pamięci dla typu int
+char *ptr2 = (char *)ptr;         // rzutowanie na typ char *
+*ptr2 = 'a';                      
+printf("%c\n", *ptr2);            // wyświetlenie znaku 'a'
 free(ptr);</code></pre>
             </div>
             </p>
-            <h3 id="konwersja-statyczna">Konwersja statyczna</h3>
-            <p>Konwersja statyczna <code>static_cast</code> jest bardzo podobna do rzutowania, z tym że jej poprawność jest sprawdzana na etapie kompilacji. Jeśli konwersja nie jest możliwa, kompilator wygeneruje błąd.</p>
+            <p>Chociaż powyższy kod jest technicznie poprawny, jego celem jest jedynie ilustracja. W praktyce rzutowanie wskaźników powinno być wykonywane z dużą ostrożnością. Przed przekształceniem wskaźnika na void na wskaźnik innego typu, należy upewnić się, że pierwotnie wskaźnik ten wskazywał na odpowiedni typ danych.</p>
+            <h3 id="konwersja-statyczna-w-c-">Konwersja statyczna w C++</h3>
+            <p><code>static_cast</code> jest jednym z operatorów konwersji w C++ służącym do przeprowadzania konwersji między typami, których konwersja jest znana i sprawdzana w czasie kompilacji. Jest to najbardziej ogólny operator konwersji w C++.</p>
             <p>
             <div>
                 <pre><code class="language-clike">int a = 10;
 double b = static_cast&lt;double&gt;(a);</code></pre>
             </div>
             </p>
-            <h3 id="konwersja-dynamiczna">Konwersja dynamiczna</h3>
-            <p>Konwersje dynamiczne <code>dynamic_cast</code> są bardziej ograniczone niż konwersje statyczne, a ich poprawność jest sprawdzana na etapie wykonania. Dynamicznie możemy konwertować jedynie wskaźniki i referencje do obiektów klas polimorficznych.</p>
-            <p>Popularnym zastosowaniem dynamicznego rzutowania jest sprawdzenie, czy dany obiekt jest instancją jednej z klas pochodnych. Przykład:</p>
+            <p>static_cast może być stosowany do konwersji między podstawowymi typami danych oraz do konwersji między wskaźnikami na klasy w ramach drzewa dziedziczenia, ale tylko w jednym kierunku (z bazowego do pochodnego lub odwrotnie).</p>
+            <h3 id="konwersja-dynamiczna-w-c-">Konwersja dynamiczna w C++</h3>
+            <p>dynamic_cast to operator konwersji, który służy do konwersji wskaźników i referencji w hierarchii dziedziczenia klas. Poprawność tej konwersji jest sprawdzana w czasie działania programu, co oznacza, że program sprawdzi w trakcie wykonania, czy rzutowanie jest właściwe.</p>
             <p>
             <div>
                 <pre><code class="language-clike">#include &lt;iostream&gt;
 #include &lt;vector&gt;
 
 class A {
-  virtual void vf() {}
+  virtual void vf() {}  // wirtualna funkcja umożliwiająca polimorfizm
 };
 class B : public A {};
 class C : public A {};
-int main() {
 
+int main() {
   std::vector&lt;a *=""&gt; v{new B, new C};
 
   for (auto a : v) {
@@ -96,19 +103,24 @@ int main() {
       std::cout &lt;&lt; "C" &lt;&lt; std::endl;
     }
   }
+
+  // Oczyszczanie pamięci
+  for (auto a : v) {
+    delete a;
+  }
+
   return 0;
 }</code></pre>
             </div>
             </p>
-            <p>Rzutowanie dynamiczne jest związane z wykorzystaniem RTTI (Run-Time Type Identification) i jego użycie jest związane z dodatkowymi kosztami wydajnościowymi.</p>
-            <h3 id="konwersja-wymuszona">Konwersja wymuszona</h3>
-            <p>Konwersja wymuszona <code>reinterpret_cast</code> ma dość niszowe zastosowania i nie jest powszechnie zalecana. Służy do zmiany interpretacji bajtów danych bez zmiany ich wartości. Oznacza to, że po reinterpretacji dane mogą zostać odczytane jako inny typ niż oryginalnie zapisane.</p>
-            <p>Ogólny schemat to:</p>
+            <p>Jak widać w powyższym przykładzie, dynamic_cast pozwala na sprawdzenie, czy dany obiekt jest instancją określonej klasy pochodnej w hierarchii dziedziczenia. Warto zwrócić uwagę na obecność wirtualnej funkcji w klasie bazowej - jest ona niezbędna do umożliwienia rzutowania dynamicznego.</p>
+            <p>Używanie dynamic_cast jest związane z dodatkowymi kosztami wydajnościowymi ze względu na sprawdzanie typu w trakcie działania programu. Włącza to mechanizm RTTI (Run-Time Type Identification), który pozwala na identyfikację typu obiektu w czasie wykonania.</p>
+            <h3 id="konwersja-reinterpret_cast-w-c-">Konwersja <code>reinterpret_cast</code> w C++</h3>
+            <p><code>reinterpret_cast</code> to jedno z narzędzi do wymuszania konwersji w C++. Jest to najbardziej "brutalny" sposób konwersji, pozwalający programiście na wymuszenie konwersji między dowolnymi typami. Oznacza to, że nie dokonuje ona rzeczywistej konwersji wartości, ale jedynie traktuje dane w pamięci jako inny typ.</p>
+            <p>Ogólna składnia:</p>
             <p>
             <div>
-                <pre><code class="language-clike">void convert(ObscureType *obscure, FamiliarType *familiar) {
-    familiar = reinterpret_cast&lt;familiartype *=""&gt;(obscure);
-}</code></pre>
+                <pre><code class="language-clike">typ_docelowy = reinterpret_cast&lt;typ_docelowy&gt;(obiekt_źródłowy);</code></pre>
             </div>
             </p>
             <p>Przykład:</p>
@@ -119,54 +131,55 @@ int* b = &amp;a
 char* c = reinterpret_cast&lt;char*&gt;(b);</code></pre>
             </div>
             </p>
-            <p>W powyższym przykładzie, b jest wskaźnikiem na int, a c jest wskaźnikiem na char. Po reinterpretacji, bajty przechowywane przez b są interpretowane jako bajty przechowywane przez c.</p>
-            <p>Reinterpretacja jest niebezpieczna, ponieważ może spowodować utratę danych lub błędy, jeśli konwersja nie jest poprawna. Dlatego też powinna być stosowana tylko w specjalnych przypadkach, gdy jest absolutnie konieczna.</p>
+            <p>W powyższym kodzie wskaźnik b wskazuje na int, natomiast c po operacji <code>reinterpret_cast</code> wskazuje na te same bajty w pamięci, ale traktuje je jako char.</p>
+            <p>Użycie <code>reinterpret_cast</code> może być przydatne w niskopoziomowym programowaniu, gdy potrzebujemy bezpośredniego dostępu do surowych bajtów danych. Może być też niezbędne w przypadku interakcji z bibliotekami napisanymi w innych językach lub przy operacjach na sprzęcie.</p>
+            <p>Jednak należy pamiętać, że <code>reinterpret_cast</code> jest niebezpieczny. Łatwo można uzyskać nieprzewidywalne wyniki, jeśli dane nie są odpowiednio interpretowane. Ponadto, użycie tego operatora często wskazuje na to, że struktura programu nie jest optymalna lub że programista boryka się z problemem, który mógłby zostać rozwiązany w bardziej elegancki sposób. Dlatego zaleca się ostrożność i stosowanie reinterpret_cast tylko wtedy, gdy jest to absolutnie konieczne.</p>
         </section>
         <div id="table-of-contents">
             <h2>Spis Treści</h2>
             <ol>
-                <li><a href="#konwersje">Konwersje</a>
-                    <ol>
-                        <li><a href="#rzutowanie">Rzutowanie</a></li>
-                        <li><a href="#konwersja-statyczna">Konwersja statyczna</a></li>
-                        <li><a href="#konwersja-dynamiczna">Konwersja dynamiczna</a></li>
-                        <li><a href="#konwersja-wymuszona">Konwersja wymuszona</a></li>
-                    </ol>
-                </li>
+                <ol>
+                    <li><a href="#rzutowanie-w-c">Rzutowanie w C</a>
+                        <ol>
+                            <li><a href="#podstawowe-rzutowanie">Podstawowe rzutowanie</a></li>
+                            <li><a href="#rzutowanie-wskaźników">Rzutowanie wskaźników</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#konwersja-statyczna-w-c-">Konwersja statyczna w C++</a></li>
+                    <li><a href="#konwersja-dynamiczna-w-c-">Konwersja dynamiczna w C++</a></li>
+                    <li><a href="#konwersja-reinterpret_cast-w-c-">Konwersja reinterpret_cast w C++</a></li>
+                </ol><a href="#konwersje">Konwersje</a>
             </ol>
-        </div>
-    </div>
-    <div id="article-wrapper">
-        <section id="article-body"></section>
-        <div id="related-articles">
-            <h2>Related Articles</h2>
-            <ol>
-                <li><a href="./25_c_vs_cpp.html"> c Vs Cpp</a></li>
-                <li><a href="./08_typ_wyliczeniowy.html"> Typ Wyliczeniowy</a></li>
-                <li><a href="./01_proces_kompilacji.html"> Proces Kompilacji</a></li>
-                <li><a href="./11_wskazniki.html"> Wskazniki</a></li>
-                <li><a href="./21_szablony.html"> Szablony</a></li>
-                <li><a href="./14_operacje_bitowe.html"> Operacje Bitowe</a></li>
-                <li><a href="./05_instrukcja_warunkowa.html"> Instrukcja Warunkowa</a></li>
-                <li><a href="./19_konwersje.html"> Konwersje</a></li>
-                <li><a href="./15_programowanie_obietkowe.html"> Programowanie Obietkowe</a></li>
-                <li><a href="./02_preprocesor.html"> Preprocesor</a></li>
-                <li><a href="./17_zaawansowane_wskazniki.html"> Zaawansowane Wskazniki</a></li>
-                <li><a href="./09_funkcje.html"> Funkcje</a></li>
-                <li><a href="./07_liczby_losowe.html"> Liczby Losowe</a></li>
-                <li><a href="./24_praca_z_plikami.html"> Praca z Plikami</a></li>
-                <li><a href="./13_napisy.html"> Napisy</a></li>
-                <li><a href="./16_dziedziczenie.html"> Dziedziczenie</a></li>
-                <li><a href="./10_l_wartosci_r_wartosci.html"> l Wartosci r Wartosci</a></li>
-                <li><a href="./04_interakcja_z_konsola.html"> Interakcja z Konsola</a></li>
-                <li><a href="./12_tablice.html"> Tablice</a></li>
-                <li><a href="./06_petle.html"> Petle</a></li>
-                <li><a href="./18_przeciazanie.html"> Przeciazanie</a></li>
-                <li><a href="./23_stl.html"> Stl</a></li>
-                <li><a href="./22_wyjatki.html"> Wyjatki</a></li>
-                <li><a href="./03_zmienne_i_typy_danych.html"> Zmienne i Typy Danych</a></li>
-                <li><a href="./20_lambdy.html"> Lambdy</a></li>
-            </ol>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="./01_proces_kompilacji.html"> Proces Kompilacji</a></li>
+                    <li><a href="./02_preprocesor.html"> Preprocesor</a></li>
+                    <li><a href="./03_zmienne_i_typy_danych.html"> Zmienne i Typy Danych</a></li>
+                    <li><a href="./04_interakcja_z_konsola.html"> Interakcja z Konsola</a></li>
+                    <li><a href="./05_instrukcja_warunkowa.html"> Instrukcja Warunkowa</a></li>
+                    <li><a href="./06_petle.html"> Petle</a></li>
+                    <li><a href="./07_liczby_losowe.html"> Liczby Losowe</a></li>
+                    <li><a href="./08_typ_wyliczeniowy.html"> Typ Wyliczeniowy</a></li>
+                    <li><a href="./09_funkcje.html"> Funkcje</a></li>
+                    <li><a href="./10_l_wartosci_r_wartosci.html"> l Wartosci r Wartosci</a></li>
+                    <li><a href="./11_wskazniki.html"> Wskazniki</a></li>
+                    <li><a href="./12_tablice.html"> Tablice</a></li>
+                    <li><a href="./13_napisy.html"> Napisy</a></li>
+                    <li><a href="./14_operacje_bitowe.html"> Operacje Bitowe</a></li>
+                    <li><a href="./15_programowanie_obietkowe.html"> Programowanie Obietkowe</a></li>
+                    <li><a href="./16_dziedziczenie.html"> Dziedziczenie</a></li>
+                    <li><a href="./17_zaawansowane_wskazniki.html"> Zaawansowane Wskazniki</a></li>
+                    <li><a href="./18_przeciazanie.html"> Przeciazanie</a></li>
+                    <li><a href="./19_konwersje.html"> Konwersje</a></li>
+                    <li><a href="./20_lambdy.html"> Lambdy</a></li>
+                    <li><a href="./21_szablony.html"> Szablony</a></li>
+                    <li><a href="./22_wyjatki.html"> Wyjatki</a></li>
+                    <li><a href="./23_stl.html"> Stl</a></li>
+                    <li><a href="./24_praca_z_plikami.html"> Praca z Plikami</a></li>
+                    <li><a href="./25_c_vs_cpp.html"> c Vs Cpp</a></li>
+                </ol>
+            </div>
         </div>
     </div>
     <footer>

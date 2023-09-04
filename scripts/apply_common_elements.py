@@ -110,12 +110,14 @@ def change_meta_description_in_head(html):
     return html
 
 
-def process_file(file_path, category, configurations):
+def process_file(file_path, category, configurations, depth=1):
     """Read an HTML file, apply corrections and save it."""
     html = file_path.read_text()
+    depth_prefix = "../" * (1 + depth)
 
     for config_key, replace_func in configurations.items():
         element_html = Path(CONFIG[category][config_key]).read_text()
+        element_html = element_html.replace("../../", f"{depth_prefix}")
         html = replace_func(html, element_html)
 
     html = change_title_in_head(html)
@@ -135,7 +137,8 @@ def main():
 
     article_dir = Path(CONFIG["ARTICLES"]["INPUT_DIR"])
     for file in article_dir.rglob("**/*.html"):
-        process_file(file, "ARTICLES", article_configurations)
+        depth = len(file.relative_to(article_dir).parts) - 1
+        process_file(file, "ARTICLES", article_configurations, depth=depth)
 
     tool_dir = Path(CONFIG["TOOLS"]["INPUT_DIR"])
     for file in tool_dir.rglob("**/*.html"):

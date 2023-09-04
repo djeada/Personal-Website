@@ -5,24 +5,68 @@ from pathlib import Path
 
 INPUT_ARTICLES_DIR = Path("../src/articles")
 
+from collections import defaultdict
 
-def create_article_links(soup: BeautifulSoup, articles_in_dir) -> Tag:
+
+def create_article_links(
+    soup: BeautifulSoup, articles_in_dir, root=INPUT_ARTICLES_DIR
+) -> Tag:
     """Generate ordered list of article links in the directory."""
     root_ol = soup.new_tag("ol")
+    articles_tree = build_articles_tree(articles_in_dir, root)
 
-    for article in articles_in_dir:
-        li = soup.new_tag("li")
-        a = soup.new_tag("a", href=f"./{article.name}")
-        title = article.stem.replace("_", " ").title()
-        title = re.sub(r"^\d+", "", title)  # remove leading digits
-        title = re.sub(
-            r"\b([A-Z])\b", lambda m: m.group(1).lower(), title
-        )  # make single-letter words lowercase
-        a.string = title
-        li.append(a)
-        root_ol.append(li)
+    populate_ol_with_tree(soup, root_ol, articles_tree)
 
     return root_ol
+
+
+def build_articles_tree(articles_in_dir, root):
+    def recursive_defaultdict():
+        return defaultdict(recursive_defaultdict, __files__=[])
+
+    articles_tree = recursive_defaultdict()
+
+    for article in articles_in_dir:
+        relative_path = article.relative_to(root)
+        current_node = articles_tree
+        for part in relative_path.parts[1:-1]:
+            current_node = current_node[part]
+        current_node["__files__"].append(article)
+
+    return articles_tree
+
+
+def populate_ol_with_tree(soup, ol_tag, articles_tree, path_parts=[]):
+    def beautify(string: str) -> str:
+        string = string.replace("_", " ").title()
+        string = re.sub(r"^\d+", "", string)  # remove leading digits
+        string = re.sub(
+            r"\b([A-Z])\b", lambda m: m.group(1).lower(), string
+        )  # make single-letter words lowercase
+        return string
+
+    for key, value in articles_tree.items():
+        li = soup.new_tag("li")
+
+        if key == "__files__":
+            for file in value:
+                file_li = soup.new_tag("li")
+                relative_path_parts = path_parts + [file.name]
+                relative_path = "/".join(relative_path_parts)
+                a = soup.new_tag(
+                    "a", href=f"{'.'*len(relative_path_parts)}/{relative_path}"
+                )
+                a.string = beautify(file.stem)
+                file_li.append(a)
+                ol_tag.append(file_li)
+        else:
+
+            li.string = beautify(key)
+            sub_ol = soup.new_tag("ol")
+            new_path_parts = path_parts + [key]
+            populate_ol_with_tree(soup, sub_ol, value, path_parts=new_path_parts)
+            li.append(sub_ol)
+            ol_tag.append(li)
 
 
 def create_articles_wrapper(soup: BeautifulSoup, articles_in_dir) -> Tag:
@@ -42,17 +86,14 @@ def create_articles_wrapper(soup: BeautifulSoup, articles_in_dir) -> Tag:
 def wrap_article_and_related_articles(
     soup: BeautifulSoup, articles_wrapper: Tag
 ) -> None:
-    """Wrap the article and related articles in a common wrapper."""
-    article_wrapper = soup.new_tag("div", id="article-wrapper")
-
-    article_body_copy = soup.new_tag("section", id="article-body")
-    article_body_copy.extend(soup.find("section", {"id": "article-body"}).contents)
-
-    article_wrapper.extend([article_body_copy, articles_wrapper])
-
-    footer = soup.find("footer")
-    if footer:
-        footer.insert_before(article_wrapper)
+    """Insert the related articles into the existing table-of-contents div."""
+    table_of_contents = soup.find("div", {"id": "table-of-contents"})
+    if table_of_contents:
+        table_of_contents.append(articles_wrapper)
+    else:
+        print(
+            "Warning: 'table-of-contents' div not found. No changes made to the HTML."
+        )
 
 
 def generate_related_articles(html: str, articles_in_dir) -> str:
@@ -68,11 +109,17 @@ def generate_related_articles(html: str, articles_in_dir) -> str:
 
 def main():
     """Main function to process all articles."""
-    for file in INPUT_ARTICLES_DIR.rglob("*.html"):
-        articles_in_dir = list(file.parent.glob("*.html"))
-        html = file.read_text()
-        html_with_related_articles = generate_related_articles(html, articles_in_dir)
-        file.write_text(html_with_related_articles)
+    for subdir in INPUT_ARTICLES_DIR.iterdir():
+        if subdir.is_dir():
+            articles_in_dir = sorted(
+                list(subdir.rglob("*.html")), key=lambda x: x.parent.name + x.name
+            )
+            for file in articles_in_dir:
+                html = file.read_text()
+                html_with_related_articles = generate_related_articles(
+                    html, articles_in_dir
+                )
+                file.write_text(html_with_related_articles)
 
 
 if __name__ == "__main__":

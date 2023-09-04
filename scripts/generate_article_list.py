@@ -42,11 +42,41 @@ def get_article_description(file_path: Path) -> str:
 
 
 def get_article_category(file_path: Path) -> str:
-    return file_path.parent.stem.title().replace("_", " ")
+    # Get the absolute path of the file
+    absolute_path = file_path.absolute()
+
+    # Get the absolute path of the input directory
+    input_dir_absolute = Path(INPUT_DIR).absolute()
+
+    # Get the relative path from the input directory to the file
+    relative_path = absolute_path.relative_to(input_dir_absolute)
+
+    while relative_path.parent.parent != Path():
+        relative_path = relative_path.parent
+
+    # Extract the parent directory's name
+    category_name = relative_path.parent.stem
+
+    # Convert to title case and replace underscores with spaces
+    formatted_category_name = category_name.title().replace("_", " ")
+
+    return formatted_category_name
 
 
 def get_category_url(file_path: Path) -> str:
-    return f"{file_path.parent.stem}.html"
+    # Get the absolute path of the file
+    absolute_path = file_path.absolute()
+
+    # Get the absolute path of the input directory
+    input_dir_absolute = Path(INPUT_DIR).absolute()
+
+    # Get the relative path from the input directory to the file
+    relative_path = absolute_path.relative_to(input_dir_absolute)
+
+    while relative_path.parent.parent != Path():
+        relative_path = relative_path.parent
+
+    return f"{relative_path.parent.stem}.html"
 
 
 def convert_articles_to_html(article_paths: list) -> str:
