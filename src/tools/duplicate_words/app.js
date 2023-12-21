@@ -1,16 +1,19 @@
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function() {
     const textInput = document.getElementById('textInput');
     const textDisplay = document.getElementById('textDisplay');
     const duplicateTable = document.getElementById('duplicateTable');
-    const minLengthInput = document.getElementById('minLength'); // Add reference to minLength input
+    const minLengthInput = document.getElementById('minLength');
+    const minOccurrencesInput = document.getElementById('minOccurrences'); 
+    const prefixTrackingInput = document.getElementById('matchPrefixes');
+
     let checkboxStates = {};
 
-    // Event listener for text input
     textInput.addEventListener('input', updateContent);
+    minLengthInput.addEventListener('input', updateContent);
+    minOccurrencesInput.addEventListener('input', updateContent);
+    prefixTrackingInput.addEventListener('change', updateContent);
 
-    // Event listener for minimum length input
-    minLengthInput.addEventListener('input', updateContent); // Add this line
-
+    window.onload = updateContent;
 
     function updateContent() {
         const text = textInput.value;
@@ -21,56 +24,95 @@ document.addEventListener('DOMContentLoaded', function () {
         updateDuplicateTable(wordCounts, duplicates);
         highlightText(normalizedText, duplicates);
     }
-function normalizeText(text) {
-    // Normalize to NFD (decomposing diacritics)
-    let normalized = text.normalize("NFD");
 
-    // Custom replacements for specific cases
-    const customReplacements = {
-        'ł': 'l',
-        'ø': 'o',
-        'ğ': 'g',
-        // Add other specific replacements as needed
-    };
+    function normalizeText(text) {
+        // Normalize to NFD (decomposing diacritics)
+        let normalized = text.normalize("NFD");
 
-    // Apply custom replacements
-    Object.keys(customReplacements).forEach(char => {
-        normalized = normalized.replace(new RegExp(char, 'g'), customReplacements[char]);
-    });
+        const customReplacements = {
+            'ł': 'l',
+            'ø': 'o',
+            'ğ': 'g',
+            'ß': 'ss',
+            'ñ': 'n',
+            'ç': 'c',
+            // ... add more replacements as needed
+        };
 
-    // Remove diacritics not covered by NFD normalization
-    normalized = normalized.replace(/[\u0300-\u036f]/g, '');
+        normalized = Array.from(normalized).map(char =>
+            customReplacements[char] || char
+        ).join('');
 
-    // Convert to lowercase
-    return normalized.toLowerCase();
-}
+        // Remove diacritics not covered by NFD normalization using a more concise regex
+        normalized = normalized.replace(/\p{M}/gu, '');
 
-function getWordCounts(text) {
-    const minWordLength = parseInt(document.getElementById('minLength').value, 10) || 3;
-    const words = text.match(/\w+/g) || [];
-    return words.reduce((counts, word) => {
-        if (word.length >= minWordLength) {
-            counts[word] = (counts[word] || 0) + 1;
-        }
-        return counts;
-    }, {});
-}
+        // Convert to lowercase
+        return normalized.toLowerCase();
+    }
+
+    function getWordCounts(text) {
+        const minWordLength = parseInt(document.getElementById('minLength').value, 10) || 3;
+        const words = text.match(/\w+/g) || [];
+        const trackPrefixes = prefixTrackingInput.checked;
+
+        return words.reduce((counts, word) => {
+            if (word.length >= minWordLength) {
+                counts[word] = (counts[word] || 0) + 1;
+
+                // Count prefixes if prefix tracking is enabled
+                if (trackPrefixes) {
+                    for (let i = minWordLength; i < word.length; i++) {
+                        const prefix = word.substring(0, i);
+                        counts[prefix] = (counts[prefix] || 0) + 1;
+                    }
+                }
+            }
+            return counts;
+        }, {});
+    }
 
 
     function getDuplicates(wordCounts) {
-        return Object.keys(wordCounts).filter(word => wordCounts[word] > 1);
+        const minOccurrences = parseInt(minOccurrencesInput.value, 10) || 2; // Use the minOccurrences value
+        return Object.keys(wordCounts).filter(word => wordCounts[word] >= minOccurrences);
     }
 
     function highlightText(normalizedText, duplicates) {
-        const originalText = normalizedText;
-        let highlightedText = originalText.replace(/\b\w+\b/g, match => {
-            const normalizedMatch = normalizeText(match);
-            if (duplicates.includes(normalizedMatch) && (checkboxStates[normalizedMatch] !== false)) {
-                return `<span class="highlight">${match}</span>`;
-            }
-            return match;
-        });
-        textDisplay.innerHTML = highlightedText;
+        if (!prefixTrackingInput.checked) {
+            // Highlight only full words
+            const originalText = normalizedText;
+            let highlightedText = originalText.replace(/\b\w+\b/g, match => {
+                const normalizedMatch = normalizeText(match);
+                if (duplicates.includes(normalizedMatch) && (checkboxStates[normalizedMatch] !== false)) {
+                    return `<span class="highlight">${match}</span>`;
+                }
+                return match;
+            });
+            textDisplay.innerHTML = highlightedText;
+        } else {
+
+            let highlightedText = normalizedText.split(/\b/).map(word => {
+                if (!/\w+/.test(word)) {
+                    return word; // Return non-word parts as is
+                }
+
+                let applicableDuplicates = duplicates.filter(dup =>
+                    word.startsWith(dup) && checkboxStates[dup] !== false
+                );
+                // Sort the applicable duplicates by length in descending order
+                applicableDuplicates.sort((a, b) => b.length - a.length);
+
+                // Check if we have any applicable duplicates
+                if (applicableDuplicates.length > 0) {
+                    let longestDuplicate = applicableDuplicates[0]; // The first one is the longest due to sorting
+                    return `<span class="highlight">${longestDuplicate}</span>${word.substring(longestDuplicate.length)}`;
+                }
+
+                return word; // No duplicated prefix found, return the word as is
+            });
+
+            textDisplay.innerHTML = highlightedText.join('');
+        }
     }
 
     function updateDuplicateTable(wordCounts, duplicates) {
@@ -84,7 +126,7 @@ function getWordCounts(text) {
         duplicateTable.innerHTML = html;
     }
 
-    window.updateCheckboxState = function (word) {
+    window.updateCheckboxState = function(word) {
         const checkbox = document.getElementById(`checkbox-${word}`);
         checkboxStates[word] = checkbox.checked;
         highlightText(normalizeText(textInput.value), getDuplicates(getWordCounts(normalizeText(textInput.value))));
