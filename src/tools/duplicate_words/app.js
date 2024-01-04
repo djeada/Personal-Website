@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const textDisplay = document.getElementById('textDisplay');
     const duplicateTable = document.getElementById('duplicateTable');
     const minLengthInput = document.getElementById('minLength');
-    const minOccurrencesInput = document.getElementById('minOccurrences'); 
+    const minOccurrencesInput = document.getElementById('minOccurrences');
     const prefixTrackingInput = document.getElementById('matchPrefixes');
 
     let checkboxStates = {};
@@ -132,4 +132,3 @@ document.addEventListener('DOMContentLoaded', function() {
         highlightText(normalizeText(textInput.value), getDuplicates(getWordCounts(normalizeText(textInput.value))));
     };
 });
-
