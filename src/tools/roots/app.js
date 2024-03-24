@@ -126,8 +126,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
-
-
     const formatPolynomial = (coefficients) => {
         return coefficients.map((coeff, index) => {
             let term = coeff.toFixed(2);
@@ -173,8 +171,6 @@ document.addEventListener("DOMContentLoaded", () => {
         drawFunction(coefficients, scaleX, scaleY);
         drawRoots(roots, scaleX, scaleY, min);
     });
-
-
 
     clearButton.addEventListener("click", () => {
         coefficientsInput.value = "";

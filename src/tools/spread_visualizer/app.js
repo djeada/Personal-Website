@@ -1,24 +1,33 @@
+const getColorForMode = (colorLight, colorDark) => {
+    return getCookie("darkMode") === "true" ? colorDark : colorLight;
+};
+
 function gaussian(x, mean, std) {
     return (1 / (std * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mean) / std, 2));
 }
 
 function drawAxis(ctx, canvasWidth, canvasHeight) {
     const axisCenterY = canvasHeight * 0.95;
-    const range = 20; // Maximum value on the axis
-    const scale = canvasWidth / (2 * range); // New scale calculation
+    const range = 20;
+    const scale = canvasWidth / (2 * range);
+
+    // Choose colors for dark mode
+    const axisColor = getColorForMode('black', 'white');
+    const textColor = getColorForMode('black', 'white');
 
     // Draw X axis
     ctx.beginPath();
+    ctx.strokeStyle = axisColor;
     ctx.moveTo(0, axisCenterY);
     ctx.lineTo(canvasWidth, axisCenterY);
     ctx.stroke();
 
     // Draw labels and ticks
+    ctx.fillStyle = textColor;
     for (let i = -range; i <= range; i++) {
         const x = i * scale + canvasWidth / 2;
         ctx.fillText(i.toString(), x, axisCenterY + 20);
 
-        // Draw tick
         ctx.beginPath();
         ctx.moveTo(x, axisCenterY - 5);
         ctx.lineTo(x, axisCenterY + 5);
@@ -26,16 +35,18 @@ function drawAxis(ctx, canvasWidth, canvasHeight) {
     }
 }
 
-
-function drawBellCurve(ctx, mean, std, color, canvasWidth, canvasHeight) {
+function drawBellCurve(ctx, mean, std, colorLight, colorDark, canvasWidth, canvasHeight) {
     const axisCenterY = canvasHeight / 2;
     const range = 20;
-    const xScale = canvasWidth / (2 * range); // New xScale calculation
-    const yScale = 5000; // Adjust as needed
+    const xScale = canvasWidth / (2 * range);
+    const yScale = 5000;
     const yOffset = canvasHeight * 0.95;
 
+    // Choose colors for dark mode
+    const curveColor = getColorForMode(colorLight, colorDark);
+
     ctx.beginPath();
-    ctx.strokeStyle = color;
+    ctx.strokeStyle = curveColor;
     for (let x = -3 * std + mean; x <= 3 * std + mean; x += 0.01) {
         let plotX = x * xScale + (canvasWidth / 2);
         let plotY = yOffset - gaussian(x, mean, std) * yScale;
@@ -55,9 +66,9 @@ function draw() {
     var std2 = parseFloat(document.getElementById('std2').value);
 
     drawAxis(ctx, canvas.width, canvas.height);
-    drawBellCurve(ctx, mean1, std1, 'blue', canvas.width, canvas.height);
-    drawBellCurve(ctx, mean2, std2, 'red', canvas.width, canvas.height);
+    drawBellCurve(ctx, mean1, std1, 'blue', 'cyan', canvas.width, canvas.height);
+    drawBellCurve(ctx, mean2, std2, 'red', 'magenta', canvas.width, canvas.height);
 }
 
-window.onresize = draw; // Redraw when the window is resized
-draw(); // Initial draw
+window.onresize = draw;
+draw();
