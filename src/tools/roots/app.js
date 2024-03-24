@@ -65,9 +65,13 @@ document.addEventListener("DOMContentLoaded", () => {
         };
     };
 
+    const getColorForMode = (colorLight, colorDark) => {
+        return getCookie("darkMode") === "true" ? colorDark : colorLight;
+    };
+
     const drawAxis = () => {
         ctx.beginPath();
-        ctx.strokeStyle = "black";
+        ctx.strokeStyle = getColorForMode("black", "white");
         ctx.lineWidth = 1;
         ctx.moveTo(0, canvas.height / 2);
         ctx.lineTo(canvas.width, canvas.height / 2);
@@ -78,11 +82,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     drawAxis();
 
+
     const drawScale = (min, max, scaleX) => {
         ctx.font = "10px Arial";
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-        ctx.fillStyle = "black";
+        ctx.fillStyle = getColorForMode("black", "white");
 
         const xAxisScale = (max - min) / 10;
         for (let i = 0; i <= 10; i++) {
@@ -93,7 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const drawFunction = (coefficients, scaleX, scaleY) => {
         ctx.beginPath();
-        ctx.strokeStyle = "red";
+        ctx.strokeStyle = getColorForMode("red", "yellow");
         ctx.lineWidth = 2;
 
         const step = 0.1;
@@ -110,8 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const drawRoots = (roots, scaleX, scaleY, min) => {
-        console.log(roots, scaleX, scaleY, min)
-        ctx.fillStyle = "blue";
+        ctx.fillStyle = getColorForMode("blue", "lightblue");
         roots.forEach(root => {
             const x = (root - min) * scaleX; // Adjust root position based on min
             const y = canvas.height / 2; // Center on the y-axis
