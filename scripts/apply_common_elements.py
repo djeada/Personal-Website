@@ -1,6 +1,8 @@
 import re
 from pathlib import Path
 
+from bs4 import BeautifulSoup
+
 # Configuration settings
 CONFIG = {
     "ARTICLES": {
@@ -82,32 +84,40 @@ def change_title_in_head(html):
     return html
 
 
-def change_meta_description_in_head(html):
-    """Update the meta description based on the content after the first header."""
-    first_header_match = re.search(
-        r"<(h1|header|h2)[^>]*>(.+?)<\/(h1|header|h2)>", html
-    )
-    if first_header_match:
-        # Find the first sentence after the header
-        content_after_header = html[first_header_match.end() :]
-        first_sentence_match = re.search(r"([^.!?]*[.!?])", content_after_header)
+def change_meta_description_in_head(html_content):
+    soup = BeautifulSoup(html_content, "html.parser")
 
-        if first_sentence_match:
-            first_sentence = first_sentence_match.group(1).strip()
-            escaped_first_sentence = re.escape(first_sentence)
-            # remove all the HTML tags from the first sentence
-            escaped_first_sentence = re.sub(r"<[^>]*>", "", escaped_first_sentence)
-            # remove all \ from the first sentence
-            escaped_first_sentence = re.sub(r"\\", "", escaped_first_sentence)
+    # Check if <meta name="description"> already exists
+    if soup.find("meta", attrs={"name": "description"}):
+        return str(soup)
 
-            # Replace the meta description in the head section with the first sentence
-            html = re.sub(
-                r"<meta\s+name=['\"]description['\"]\s+content=['\"].+?['\"]",
-                f'<meta name="description" content="{escaped_first_sentence}"',
-                html,
-                flags=re.IGNORECASE,
-            )
-    return html
+    # Search for <h1>, <h2>, or <header> tags
+    header = soup.find(["h1", "h2", "header"])
+    if not header:
+        return str(soup)
+
+    # Find the first sentence after the header
+    next_siblings = header.find_all_next(string=True)
+    first_sentence = ""
+    for sib in next_siblings:
+        if sib.strip():
+            first_sentence = re.split(r"(?<=[.!?]) +", sib)[0]
+            break
+
+    # Create and insert the meta description tag
+    if first_sentence:
+        meta_tag = soup.new_tag(
+            "meta", attrs={"name": "description", "content": first_sentence}
+        )
+        if soup.head:
+            soup.head.insert(0, meta_tag)
+        else:
+            # If there's no <head> tag, create one and insert the meta tag
+            head_tag = soup.new_tag("head")
+            soup.insert(0, head_tag)
+            head_tag.insert(0, meta_tag)
+
+    return str(soup)
 
 
 def process_file(file_path, category, configurations, depth=1):
