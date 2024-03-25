@@ -1,55 +1,54 @@
 """
 Transforms Markdown to HTML.
 """
-from typing import List, ClassVar, Dict
+import json
+from typing import List, Dict
 
 import requests
 import markdown
 from pathlib import Path
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from multiprocessing import Pool
 
 from bs4 import BeautifulSoup
 
-PATH_TO_CONFIG = "input.txt"
-OUTPUT_DIR = "../src/articles"
+PATH_TO_CONFIG = "input.json"
+OUTPUT_DIR = Path("../src/articles")
+
+LANGUAGE_MAP: Dict[str, str] = {"🇵🇱": "pl", "🇺🇸": "en", "pl": "🇵🇱", "en": "🇺🇸"}
 
 
 @dataclass
 class UrlData:
     url: str
-    _output_name: str = field(default="")
-    _category: str = "tech"
-    language: str = "🇺🇸"  # Default is English
-
-    LANGUAGE_MAP: ClassVar[Dict[str, str]] = {"🇵🇱": "pl", "🇺🇸": "en"}
+    title: str
+    category: List[str]
+    language: str
 
     @property
-    def category(self) -> str:
-        val = self._category
-        val = val.replace("-", "_")
-        val = val.replace("CATEGORY:", "")
-        return val
-
-    @property
-    def output_name(self) -> str:
+    def output_path(self) -> Path:
         def process(string: str) -> str:
             string = re.sub(r"(?<=[a-z0-9A-Z])[A-Z]", r"_\g<0>", string)
+            string = re.sub(r"\s+", "_", string)
             return string.lower()
 
-        category = process(self.category).split("::")
-        snake_case_name = process(self._output_name)
-        return str(Path(*[process(cat) for cat in category]) / snake_case_name)
-
-    def language_as_string(self) -> str:
-        """Return the language code as a string."""
-        return self.LANGUAGE_MAP.get(self.language, "en")
+        categories = "/".join(process(cat) for cat in self.category)
+        title = process(self.title)
+        return OUTPUT_DIR / f"{categories}/{title}.html"
 
     def __repr__(self) -> str:
         return (
-            f"<UrlData(url='{self.url}', output_name='{self.output_name}', "
-            f"category='{self.category}', language='{self.language_as_string()}')>"
+            f"<UrlData(url='{self.url}', output_name='{self.output_path.stem}', "
+            f"category='{self.category}', language='{LANGUAGE_MAP[self.language.lower()]}')>"
         )
+
+    @classmethod
+    def from_json(cls, json_data):
+        """
+        Creates an instance of MarkdownFile from a JSON object.
+        """
+        return cls(**json_data)
 
 
 class MarkdownProcessor:
@@ -91,8 +90,8 @@ class MarkdownProcessor:
 class HtmlEnhancer:
     def run(self, html: str, url_data) -> str:
         """Main method to enhance the provided HTML content."""
-        html = self.apply_filters(html, url_data.language_as_string())
-        html = self.add_language_info(html, url_data.language)
+        html = self.apply_filters(html, url_data.language.lower())
+        html = self.add_language_info(html, LANGUAGE_MAP[url_data.language.lower()])
         return html
 
     @classmethod
@@ -323,33 +322,43 @@ class HtmlEnhancer:
 
 def read_urls() -> List[UrlData]:
     """Read and parse URL data from a file."""
-    raw_urls = Path(PATH_TO_CONFIG).read_text().splitlines()
-    return [UrlData(*url.split()) for url in raw_urls]
+    file = Path(PATH_TO_CONFIG).read_text()
+    data = json.loads(file)
+    return [UrlData.from_json(item) for item in data]
+
+
+def process_url(url_data):
+    # This function will be executed by each worker.
+    # Download the Markdown file from the URL
+    website_text = requests.get(url_data.url).text
+
+    code_blocks = MarkdownProcessor.extract_code_blocks(website_text)
+
+    # Process markdown
+    md_processor = MarkdownProcessor()
+    html = md_processor.run(website_text)
+
+    html = MarkdownProcessor.insert_code_blocks(html, code_blocks)
+
+    # Enhance HTML
+    enhancer = HtmlEnhancer()
+    html = enhancer.run(html, url_data)
+
+    # Save the processed HTML
+    url_data.output_path.parent.mkdir(parents=True, exist_ok=True)
+    url_data.output_path.write_text(html)
 
 
 def main():
     urls = read_urls()
 
-    for url_data in urls:
-        # Download the Markdown file from the URL
-        response = requests.get(url_data.url)
+    # Using multiprocessing
+    with Pool() as pool:
+        pool.map(process_url, urls)
 
-        code_blocks = MarkdownProcessor.extract_code_blocks(response.text)
 
-        # Process markdown
-        md_processor = MarkdownProcessor()
-        html = md_processor.run(response.text)
-
-        html = MarkdownProcessor.insert_code_blocks(html, code_blocks)
-
-        # Enhance HTML
-        enhancer = HtmlEnhancer()
-        html = enhancer.run(html, url_data)
-
-        # Save the processed HTML
-        output_path = Path(OUTPUT_DIR) / f"{url_data.output_name}.html"
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(html)
+if __name__ == "__main__":
+    main()
 
 
 if __name__ == "__main__":

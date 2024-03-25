@@ -2,9 +2,12 @@
 Downloads markdown files.
 """
 import json
+from urllib.parse import urlparse, unquote
+from concurrent.futures import ThreadPoolExecutor
 
 import requests
 from pathlib import Path
+
 
 PL_INPUT_URLS = [
     "https://github.com/djeada/Kurs-Podstaw-Pythona/tree/master/notatki/01_podstawy",
@@ -30,90 +33,108 @@ EN_INPUT_URLS = [
     "https://github.com/djeada/Numpy-Tutorials/tree/main/notes",
 ]
 
-EN_LANG = "🇺🇸"
-PL_LANG = "🇵🇱"
-OUTPUT_FILE = "input.txt"
-RAW_PREFIX = "https://raw.githubusercontent.com"
-BLOB_STRING = "/blob/"
+EN_LANG = "EN"
+PL_LANG = "PL"
+OUTPUT_FILE = "input.json"
+GITHUB_API_BASE = "https://api.github.com/repos"
 
 
-def fetch_website_content(url):
-    response = requests.get(url)
-    response.raise_for_status()
-    return response.content
+def get_github_api_url(web_url):
+    """
+    Converts a GitHub repository web URL to the GitHub API URL for the contents of the directory.
+    """
+    parts = web_url.split("/")
+    user = parts[3]
+    repo = parts[4]
+    path = "/".join(parts[7:])
+    return f"{GITHUB_API_BASE}/{user}/{repo}/contents/{path}"
 
 
-def extract_links_from_content(content):
-    if isinstance(content, bytes):
-        content = content.decode("utf-8")
-    data = json.loads(content)
-    items = data.get("payload", {}).get("tree", {}).get("items", [])
+def fetch_github_contents_recursive(url, lang, repo_name, base_path=""):
+    """
+    Recursively fetches contents of a GitHub directory and its subdirectories.
+    """
+    markdown_files = []
 
-    links = [item["path"] for item in items if item.get("contentType") == "file"]
-    return links
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        contents = response.json()
 
+        for item in contents:
+            if item["type"] == "file" and item["name"].endswith(".md"):
+                raw_url = item["download_url"]
+                title = Path(item["path"]).stem.replace("_", " ").title()
+                category_parts = Path(base_path, item["path"]).parts[:-1]
+                markdown_files.append(
+                    {
+                        "url": raw_url,
+                        "title": title,
+                        "category": [repo_name] + list(category_parts)[1:],
+                        "language": lang,
+                    }
+                )
+            elif item["type"] == "dir":
+                markdown_files.extend(
+                    fetch_github_contents_recursive(
+                        item["url"],
+                        lang,
+                        repo_name,
+                        base_path=Path(base_path, item["name"]),
+                    )
+                )
+    except requests.HTTPError:
+        pass
 
-def convert_link_to_raw_github(base_url, link):
-    # Replace the standard GitHub URL prefix with the raw content prefix
-    raw_base_url = base_url.replace(
-        "https://github.com/", "https://raw.githubusercontent.com/"
-    )
-
-    # Split on "/tree/"
-    parts = raw_base_url.split("/tree/")
-
-    # Extract the branch name by splitting on the first "/"
-    branch_name = parts[1].split("/")[0]
-
-    # Recombine to get the new raw base URL
-    raw_base_url = f"{parts[0]}/{branch_name}"
-
-    # Combine the modified base URL with the link
-    raw_url = f"{raw_base_url}/{link}"
-
-    return raw_url
-
-
-def extract_title_from_link(link):
-    title = (
-        link.split("/")[-1]
-        .replace(".md", "")
-        .replace("_", " ")
-        .title()
-        .replace(" ", "")
-    )
-    return title
+    return markdown_files
 
 
-def extract_category_from_link(base_url, link):
-    category = base_url.split("/tree")[0].split("/")[-1]
-    subcategory = link.split("/")[-2]
-    if subcategory.lower() not in ["notes", "notatki", "slides"]:
-        category += "::" + subcategory
-    return category
+def get_repository_name_from_url(url):
+    """
+    Extracts the repository name from the GitHub URL.
+    """
+    try:
+        path = urlparse(unquote(url)).path
+        parts = path.split("/")
+        if len(parts) >= 3 and parts[1] != "repos":
+            # Typically the pattern is /username/repository/
+            return parts[2]
+        return None
+    except Exception as e:
+        print(f"Error extracting repository name: {e}")
+        return None
 
 
 def process_links_for_language(url_set, lang):
     output = []
-    for url in url_set:
-        content = fetch_website_content(url)
-        links = extract_links_from_content(content)
-        for link in links:
-            raw_link = convert_link_to_raw_github(url, link)
-            title = extract_title_from_link(link)
-            category = extract_category_from_link(url, link)
-            print(f"Processing link: [{title}]({raw_link})")
-            output.append(f"{raw_link} {title} CATEGORY:{category} {lang}")
+    for web_url in url_set:
+        api_url = get_github_api_url(web_url)
+        repo_name = get_repository_name_from_url(web_url)
+        if repo_name:
+            output.extend(fetch_github_contents_recursive(api_url, lang, repo_name))
     return output
 
 
 def main():
     output_list = []
-    for url_set, lang in zip([PL_INPUT_URLS, EN_INPUT_URLS], [PL_LANG, EN_LANG]):
-        output_list.extend(process_links_for_language(url_set, lang))
 
+    # Create a list of tuples for the map function
+    language_url_pairs = zip([PL_INPUT_URLS, EN_INPUT_URLS], [PL_LANG, EN_LANG])
+
+    # Using ThreadPoolExecutor for multithreading
+    with ThreadPoolExecutor() as executor:
+        # Map the function to the url-language pairs
+        results = executor.map(
+            lambda pair: process_links_for_language(*pair), language_url_pairs
+        )
+
+        # Extend output list with results
+        for result in results:
+            output_list.extend(result)
+
+    # Write to the output file
     with Path(OUTPUT_FILE).open("w") as file:
-        file.write("\n".join(output_list))
+        json.dump(output_list, file, indent=4)
 
 
 if __name__ == "__main__":

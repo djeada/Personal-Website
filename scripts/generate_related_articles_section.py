@@ -1,4 +1,5 @@
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 from bs4 import BeautifulSoup, Tag
 from pathlib import Path
@@ -107,19 +108,25 @@ def generate_related_articles(html: str, articles_in_dir) -> str:
     return str(soup)
 
 
+def process_file(file, articles_in_dir):
+    html = file.read_text()
+    html_with_related_articles = generate_related_articles(html, articles_in_dir)
+    file.write_text(html_with_related_articles)
+
+
 def main():
-    """Main function to process all articles."""
     for subdir in INPUT_ARTICLES_DIR.iterdir():
         if subdir.is_dir():
             articles_in_dir = sorted(
                 list(subdir.rglob("*.html")), key=lambda x: x.parent.name + x.name
             )
-            for file in articles_in_dir:
-                html = file.read_text()
-                html_with_related_articles = generate_related_articles(
-                    html, articles_in_dir
+            with ThreadPoolExecutor() as executor:
+                # Use map or submit each file processing as a separate task
+                executor.map(
+                    process_file,
+                    articles_in_dir,
+                    [articles_in_dir] * len(articles_in_dir),
                 )
-                file.write_text(html_with_related_articles)
 
 
 if __name__ == "__main__":

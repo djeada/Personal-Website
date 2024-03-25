@@ -1,8 +1,10 @@
 """
 Generates a table of contents for each article post.
 """
-
+import copy
 import re
+from concurrent.futures import ThreadPoolExecutor
+
 from bs4 import BeautifulSoup, Tag
 from pathlib import Path
 
@@ -74,12 +76,8 @@ def process_nested_list(tag):
     Check a bs4 Tag (expected to be an ol or ul) for nested lists.
     If the outer list has only one item, the outer list tags are removed.
     """
-    # Check if tag is an ordered or unordered list with a single list item
     if tag.name in ["ol", "ul"] and len(tag.find_all("li", recursive=False)) == 1:
-        inner_contents = tag.li.contents
-        tag.clear()
-        for content in reversed(inner_contents):
-            tag.append(content)
+        tag.li.unwrap()  # Removes the surrounding <ol> or <ul> tags, leaving the <li> contents
 
     return tag
 
@@ -130,12 +128,16 @@ def generate_table_of_contents(html: str) -> str:
     return str(soup)
 
 
+def process_html_file(file):
+    html = file.read_text()
+    html_with_toc = generate_table_of_contents(html)
+    file.write_text(html_with_toc)
+
+
 def main():
-    """Main function to process all articles."""
-    for file in INPUT_ARTICLES_DIR.rglob("*.html"):
-        html = file.read_text()
-        html_with_toc = generate_table_of_contents(html)
-        file.write_text(html_with_toc)
+    with ThreadPoolExecutor() as executor:
+        files = list(INPUT_ARTICLES_DIR.rglob("*.html"))
+        executor.map(process_html_file, files)
 
 
 if __name__ == "__main__":

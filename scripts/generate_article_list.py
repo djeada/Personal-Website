@@ -7,6 +7,28 @@ import math
 INPUT_DIR = "../src/articles"
 INPUT_FILE = "../src/pages/blog_1.html"
 ARTICLE_PER_PAGE = 35
+LOWERCASE_WORDS = [
+    "a",
+    "vs",
+    "of",
+    "to",
+    "an",
+    "the",
+    "and",
+    "or",
+    "in",
+    "on",
+    "at",
+    "for",
+    "with",
+    "z",
+    "i",
+    "o",
+    "do",
+    "oraz",
+    "wraz",
+    "w",
+]
 
 
 def get_subdirs(dir_path: Path) -> list:
@@ -20,9 +42,13 @@ def get_article_list(dir_path: Path) -> list:
 def get_article_title(file_path: Path) -> str:
     title = file_path.stem.replace("_", " ").title()
     title = re.sub(r"^\d+", "", title)  # remove leading digits
-    title = re.sub(
-        r"\b([A-Z])\b", lambda m: m.group(1).lower(), title
-    )  # make single-letter words lowercase
+
+    # Make specific words lowercase
+    def lowercase_match(match):
+        word = match.group(0)
+        return word.lower() if word.lower() in LOWERCASE_WORDS else word
+
+    title = re.sub(r"\b[A-Za-z]+\b", lowercase_match, title)
 
     with file_path.open() as file:
         soup = BeautifulSoup(file, "html.parser")

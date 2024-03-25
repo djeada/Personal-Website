@@ -1,4 +1,5 @@
 import re
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from bs4 import BeautifulSoup
@@ -88,7 +89,11 @@ def change_meta_description_in_head(html_content):
     soup = BeautifulSoup(html_content, "html.parser")
 
     # Check if <meta name="description"> already exists
-    if soup.find("meta", attrs={"name": "description"}):
+    if (
+        soup.find("meta", attrs={"name": "description"})
+        and soup.find("meta", attrs={"name": "description"}).attrs["content"].lower()
+        != "xxx"
+    ):
         return str(soup)
 
     # Search for <h1>, <h2>, or <header> tags
@@ -137,7 +142,6 @@ def process_file(file_path, category, configurations, depth=1):
 
 
 def main():
-    """Entry function: Process each HTML file in the articles and tools directories."""
     article_configurations = {
         "HEADER": replace_header,
         "NAVBAR": replace_navbar,
@@ -145,14 +149,20 @@ def main():
     }
     tool_configurations = {"NAVBAR": replace_navbar, "FOOTER": replace_footer}
 
+    # Process articles
     article_dir = Path(CONFIG["ARTICLES"]["INPUT_DIR"])
-    for file in article_dir.rglob("**/*.html"):
-        depth = len(file.relative_to(article_dir).parts) - 1
-        process_file(file, "ARTICLES", article_configurations, depth=depth)
+    with ThreadPoolExecutor() as executor:
+        for file in article_dir.rglob("**/*.html"):
+            depth = len(file.relative_to(article_dir).parts) - 1
+            executor.submit(
+                process_file, file, "ARTICLES", article_configurations, depth
+            )
 
+    # Process tools
     tool_dir = Path(CONFIG["TOOLS"]["INPUT_DIR"])
-    for file in tool_dir.rglob("**/*.html"):
-        process_file(file, "TOOLS", tool_configurations)
+    with ThreadPoolExecutor() as executor:
+        for file in tool_dir.rglob("**/*.html"):
+            executor.submit(process_file, file, "TOOLS", tool_configurations)
 
 
 if __name__ == "__main__":
