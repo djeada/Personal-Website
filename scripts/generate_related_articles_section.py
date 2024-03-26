@@ -1,11 +1,33 @@
 import re
 from concurrent.futures import ThreadPoolExecutor
+from math import log2
 
 from bs4 import BeautifulSoup, Tag
 from pathlib import Path
 
 INPUT_ARTICLES_DIR = Path("../src/articles")
-
+LOWERCASE_WORDS = [
+    "a",
+    "vs",
+    "of",
+    "to",
+    "an",
+    "the",
+    "and",
+    "or",
+    "in",
+    "on",
+    "at",
+    "for",
+    "with",
+    "z",
+    "i",
+    "o",
+    "do",
+    "oraz",
+    "wraz",
+    "w",
+]
 from collections import defaultdict
 
 
@@ -41,9 +63,12 @@ def populate_ol_with_tree(soup, ol_tag, articles_tree, path_parts=[]):
     def beautify(string: str) -> str:
         string = string.replace("_", " ").title()
         string = re.sub(r"^\d+", "", string)  # remove leading digits
-        string = re.sub(
-            r"\b([A-Z])\b", lambda m: m.group(1).lower(), string
-        )  # make single-letter words lowercase
+
+        def lowercase_match(match):
+            word = match.group(0)
+            return word.lower() if word.lower() in LOWERCASE_WORDS else word
+
+        string = re.sub(r"\b[A-Za-z]+\b", lowercase_match, string)
         return string
 
     for key, value in articles_tree.items():
@@ -54,9 +79,8 @@ def populate_ol_with_tree(soup, ol_tag, articles_tree, path_parts=[]):
                 file_li = soup.new_tag("li")
                 relative_path_parts = path_parts + [file.name]
                 relative_path = "/".join(relative_path_parts)
-                a = soup.new_tag(
-                    "a", href=f"{'.'*len(relative_path_parts)}/{relative_path}"
-                )
+                href = f"https://adamdjellouli.com/articles/{value[0].parts[3]}/{relative_path}"
+                a = soup.new_tag("a", href=href)
                 a.string = beautify(file.stem)
                 file_li.append(a)
                 ol_tag.append(file_li)

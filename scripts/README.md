@@ -1,4 +1,4 @@
-## Scripts
+6+## Scripts
 
 This directory contains various Python scripts that are used to build and maintain the personal website.
 
