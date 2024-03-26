@@ -127,6 +127,8 @@ class HtmlEnhancer:
         images = soup.find_all("img")
         for image in images:
             src = image["src"]
+            if not src.endswith(".png"):
+                continue
             if src.startswith("https://github.com"):
                 src = src.replace(
                     "https://github.com", "https://raw.githubusercontent.com"

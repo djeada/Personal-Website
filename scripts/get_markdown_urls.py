@@ -29,6 +29,7 @@ EN_INPUT_URLS = [
     "https://github.com/djeada/Statistics-Notes/tree/main/notes/hypothesis_testing_and_confidence_intervals",
     "https://github.com/djeada/Statistics-Notes/tree/main/notes/probability_distributions/continuous_distributions",
     "https://github.com/djeada/Statistics-Notes/tree/main/notes/probability_distributions/discrete_distributions",
+    "https://github.com/djeada/Statistics-Notes/tree/main/notes/probability_distributions/intro",
     "https://github.com/djeada/Statistics-Notes/tree/main/notes/time_series_analysis",
     "https://github.com/djeada/Numpy-Tutorials/tree/main/notes",
 ]
