@@ -186,6 +186,8 @@ def change_meta_description_in_head(html_content):
             if first_ascii_sentence:
                 meta_desc_tag.attrs["content"] = first_ascii_sentence
                 return str(soup)
+        else:
+            return str(soup)
 
     # If meta description tag doesn't exist or no suitable paragraph found
     header = soup.find(["h1", "h2", "header"])
