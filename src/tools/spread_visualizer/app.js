@@ -1,9 +1,20 @@
-const getColorForMode = (colorLight, colorDark) => {
-    return getCookie("darkMode") === "true" ? colorDark : colorLight;
-};
-
 function gaussian(x, mean, std) {
     return (1 / (std * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mean) / std, 2));
+}
+
+function draw() {
+    var canvas = document.getElementById('canvas');
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    var mean1 = parseFloat(document.getElementById('mean1').value);
+    var std1 = parseFloat(document.getElementById('std1').value);
+    var mean2 = parseFloat(document.getElementById('mean2').value);
+    var std2 = parseFloat(document.getElementById('std2').value);
+
+    drawAxis(ctx, canvas.width, canvas.height);
+    drawBellCurve(ctx, mean1, std1, 'blue', 'cyan', canvas.width, canvas.height);
+    drawBellCurve(ctx, mean2, std2, 'red', 'magenta', canvas.width, canvas.height);
 }
 
 function drawAxis(ctx, canvasWidth, canvasHeight) {
@@ -55,20 +66,12 @@ function drawBellCurve(ctx, mean, std, colorLight, colorDark, canvasWidth, canva
     ctx.stroke();
 }
 
-function draw() {
-    var canvas = document.getElementById('canvas');
-    var ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+document.addEventListener('DOMContentLoaded', function() {
+    var drawButton = document.querySelector('.draw-button');
+    if (drawButton) {
+        drawButton.addEventListener('click', draw);
+    }
+});
 
-    var mean1 = parseFloat(document.getElementById('mean1').value);
-    var std1 = parseFloat(document.getElementById('std1').value);
-    var mean2 = parseFloat(document.getElementById('mean2').value);
-    var std2 = parseFloat(document.getElementById('std2').value);
-
-    drawAxis(ctx, canvas.width, canvas.height);
-    drawBellCurve(ctx, mean1, std1, 'blue', 'cyan', canvas.width, canvas.height);
-    drawBellCurve(ctx, mean2, std2, 'red', 'magenta', canvas.width, canvas.height);
-}
 
 window.onresize = draw;
-draw();
