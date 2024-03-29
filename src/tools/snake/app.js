@@ -68,7 +68,7 @@ function render() {
     // Display Score
     ctx.fillStyle = getColorForMode('black', 'white');
     ctx.font = '20px Arial';
-    ctx.fillText(`Score: ${score}`, 10, 30);
+    ctx.fillText(`Score: ${score}`, 30, 30);
 
     // Game Over Screen
     if (gameOver) {
@@ -82,7 +82,18 @@ function render() {
         ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2);
     }
 }
+// Function to render pause overlay
+function renderPauseOverlay() {
 
+    ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = getColorForMode('black', 'white');
+    ctx.font = '20px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Double tap to unlock', canvas.width / 2, canvas.height / 2);
+
+}
 // Game Loop
 function gameLoop() {
     if (gameOver || isPaused) {
@@ -146,6 +157,7 @@ window.addEventListener('keydown', e => {
     } else if (e.key === ' ') {
         isPaused = !isPaused; // Toggle pause
         if (isPaused) {
+            renderPauseOverlay();
             enableScrolling();
         }
         e.preventDefault(); // Prevent scrolling for space bar
@@ -193,18 +205,28 @@ canvas.addEventListener('touchmove', e => {
 });
 
 canvas.addEventListener('touchstart', function(e) {
-    // Current time in milliseconds
     const currentTime = new Date().getTime();
     const tapLength = currentTime - lastTapTime;
 
     if (tapLength < 300 && tapLength > 0) {
-        // Detected a double tap
         isPaused = !isPaused; // Toggle pause state
 
-        // Prevent further processing for this tap
+        // Check if the game is paused or unpaused
+        if (isPaused) {
+            renderPauseOverlay(); // Render pause overlay if paused
+        } else {
+            // Clear the overlay if unpaused
+            render();
+        }
+
+        if (gameOver) {
+            window.location.reload();
+        }
+
         e.preventDefault();
         return;
     }
+
 
     // Not a double tap, process as a single tap
     // Your existing touch handling code goes here
@@ -241,8 +263,22 @@ function enableScrolling() {
     document.body.classList.remove('no-scroll');
 }
 
+function centerScreenOnCanvas() {
+    // Calculate the position to scroll to
+    const canvasX = canvas.offsetLeft;
+    const canvasY = canvas.offsetTop;
+    const canvasWidth = canvas.offsetWidth;
+    const canvasHeight = canvas.offsetHeight;
+
+    const centerX = canvasX + canvasWidth / 2 - window.innerWidth / 2;
+    const centerY = canvasY + canvasHeight / 2 - window.innerHeight / 2;
+
+    // Scroll to the calculated position
+    window.scrollTo(centerX, centerY);
+}
 
 
 // Start Game
 setInterval(gameLoop, 200);
 disableScrolling();
+centerScreenOnCanvas(); // Center after resizing
