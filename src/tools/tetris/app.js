@@ -14,9 +14,9 @@ function calculateCellSize() {
     let cellSize = 50; // Default size for large screens
 
     if (screenWidth <= 600) { // Considered as a mobile device
-        cellSize = 25; 
+        cellSize = 25;
     } else if (screenWidth <= 1024) { // Considered as a tablet or small desktop
-        cellSize = 35; 
+        cellSize = 35;
     }
 
     return cellSize;

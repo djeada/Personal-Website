@@ -4,6 +4,7 @@ const ctx = canvas.getContext('2d');
 const gridSize = 20;
 const cellSize = canvas.width / gridSize;
 let isPaused = false;
+let lastTapTime = 0;
 
 // Enum for cell states
 const CellState = {
@@ -71,6 +72,7 @@ function render() {
 
     // Game Over Screen
     if (gameOver) {
+        enableScrolling()
         ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -143,6 +145,9 @@ window.addEventListener('keydown', e => {
         window.location.reload();
     } else if (e.key === ' ') {
         isPaused = !isPaused; // Toggle pause
+        if (isPaused) {
+            enableScrolling();
+        }
         e.preventDefault(); // Prevent scrolling for space bar
     }
 });
@@ -187,5 +192,57 @@ canvas.addEventListener('touchmove', e => {
     e.preventDefault();
 });
 
+canvas.addEventListener('touchstart', function(e) {
+    // Current time in milliseconds
+    const currentTime = new Date().getTime();
+    const tapLength = currentTime - lastTapTime;
+
+    if (tapLength < 300 && tapLength > 0) {
+        // Detected a double tap
+        isPaused = !isPaused; // Toggle pause state
+
+        // Prevent further processing for this tap
+        e.preventDefault();
+        return;
+    }
+
+    // Not a double tap, process as a single tap
+    // Your existing touch handling code goes here
+    touchStartPos = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY
+    };
+
+    // Update the lastTapTime for the next tap
+    lastTapTime = currentTime;
+});
+
+
+// Function to prevent default behavior
+function preventDefaultTouch(e) {
+    e.preventDefault();
+}
+
+// Disable scrolling on the entire document
+function disableScrolling() {
+    document.addEventListener('touchstart', preventDefaultTouch, {
+        passive: false
+    });
+    document.addEventListener('touchmove', preventDefaultTouch, {
+        passive: false
+    });
+    document.body.classList.add('no-scroll');
+}
+
+// Enable scrolling again
+function enableScrolling() {
+    document.removeEventListener('touchstart', preventDefaultTouch);
+    document.removeEventListener('touchmove', preventDefaultTouch);
+    document.body.classList.remove('no-scroll');
+}
+
+
+
 // Start Game
 setInterval(gameLoop, 200);
+disableScrolling();
