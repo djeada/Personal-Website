@@ -14,7 +14,7 @@ This dir contains a set of Python scripts designed to build and maintain a perso
 
 - `format.sh`: A shell script to format and lint code, maintaining code quality and consistency throughout the project.
 
-- `generate_article_list.py`: Compiles a list of all articles or blog posts, usually for rendering on a specific section of the website or for an index page.
+- `generate_article_list.py`: Compiles a list of all articles or blog posts rendered on a specific section of the website (blog).
 
 - `generate_from_markdown.py`: Converts Markdown files, primarily used for the blog section, into HTML format for web presentation.
 
@@ -22,7 +22,7 @@ This dir contains a set of Python scripts designed to build and maintain a perso
 
 - `generate_table_of_contents.py`: Produces a table of contents for articles, making longer content more navigable.
 
-- `get_markdown_urls.py`: Extracts and lists URLs from Markdown files, useful for link verification and cross-referencing.
+- `get_markdown_urls.py`: Extracts and lists URLs from Markdown files, those are source from which the articles will be generated.
 
 - `run_all.py`: A comprehensive script that executes all the above scripts in the required sequence. It acts as a one-click solution to rebuild or update the entire website.
 
