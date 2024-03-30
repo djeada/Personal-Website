@@ -1,14 +1,19 @@
 let renderer; // Make renderer globally accessible
 
 // Utility Functions
-function setCookie(name, value, days) {
+function setCookie(name, value, days, sameSite = 'Lax') {
     let expires = "";
     if (days) {
         const date = new Date();
         date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
         expires = "; expires=" + date.toUTCString();
     }
-    document.cookie = name + "=" + (value || "") + expires + "; path=/";
+    let cookieString = name + "=" + (value || "") + expires + "; path=/";
+    cookieString += "; SameSite=" + sameSite;
+    if (sameSite === 'None') {
+        cookieString += "; Secure";
+    }
+    document.cookie = cookieString;
 }
 
 function getCookie(name) {
@@ -23,7 +28,8 @@ function getCookie(name) {
 }
 
 function getColorForMode(colorLight, colorDark) {
-    return getCookie("darkMode") === "true" ? colorDark : colorLight;
+    const darkModeValue = getCookie("darkMode");
+    return darkModeValue && darkModeValue.toLowerCase() === "true" ? colorDark : colorLight;
 }
 
 // Ripple Effect for Menu Click
@@ -65,7 +71,7 @@ function main() {
 
     darkModeButton.addEventListener("click", () => {
         document.body.classList.toggle("dark-mode");
-        setCookie("darkMode", document.body.classList.contains("dark-mode"), 365);
+        setCookie("darkMode", document.body.classList.contains("dark-mode"), 365, "Lax");
         checkLogo();
         updateThreeJSBackground(); // Update Three.js background color
 

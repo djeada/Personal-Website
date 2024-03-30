@@ -123,7 +123,7 @@ function drawANDGate(ctx) {
     const endY = startY + gateHeight;
 
     ctx.lineWidth = lineWidth;
-    getColorForMode('black', 'white'); // Gate color
+    ctx.strokeStyle = getColorForMode('black', 'white'); // Gate color
     ctx.fillStyle = '#FFF'; // Fill color
 
     // Clear the canvas
@@ -169,7 +169,7 @@ function drawORGate(ctx) {
     const endY = startY + gateHeight;
 
     ctx.lineWidth = lineWidth;
-    getColorForMode('black', 'white'); // Gate color
+    ctx.strokeStyle = getColorForMode('black', 'white'); // Gate color
     ctx.fillStyle = '#FFF'; // Fill color
 
     // Clear the canvas
@@ -217,7 +217,7 @@ function drawNOTGate(ctx) {
     const endY = startY + gateHeight;
 
     ctx.lineWidth = lineWidth;
-    getColorForMode('black', 'white'); // Gate color
+    ctx.strokeStyle = getColorForMode('black', 'white'); // Gate color
     ctx.fillStyle = '#FFF'; // Fill color
 
     // Clear the canvas
@@ -267,7 +267,7 @@ function drawNANDGate(ctx) {
     const endY = startY + gateHeight;
 
     ctx.lineWidth = lineWidth;
-    getColorForMode('black', 'white'); // Gate color
+    ctx.strokeStyle = getColorForMode('black', 'white'); // Gate color
     ctx.fillStyle = '#FFF'; // Fill color
 
     // Clear the canvas
@@ -372,7 +372,7 @@ function drawXORGate(ctx) {
     const endY = startY + gateHeight;
 
     ctx.lineWidth = lineWidth;
-    getColorForMode('black', 'white'); // Gate color
+    ctx.strokeStyle = getColorForMode('black', 'white'); // Gate color
     ctx.fillStyle = '#FFF'; // Fill color
 
     // Clear the canvas
@@ -426,7 +426,7 @@ function drawXNORGate(ctx) {
     const endY = startY + gateHeight;
 
     ctx.lineWidth = lineWidth;
-    getColorForMode('black', 'white'); // Gate color
+    ctx.strokeStyle = getColorForMode('black', 'white'); // Gate color
     ctx.fillStyle = '#FFF'; // Fill color
 
     // Clear the canvas
