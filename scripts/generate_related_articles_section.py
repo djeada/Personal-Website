@@ -63,6 +63,7 @@ def populate_ol_with_tree(soup, ol_tag, articles_tree, path_parts=[]):
     def beautify(string: str) -> str:
         string = string.replace("_", " ").title()
         string = re.sub(r"^\d+", "", string)  # remove leading digits
+        string = re.sub(r"[^a-zA-Z0-9./\s+]", "_", string.strip())
 
         def lowercase_match(match):
             word = match.group(0)

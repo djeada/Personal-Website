@@ -31,6 +31,7 @@ class UrlData:
         def process(string: str) -> str:
             string = re.sub(r"(?<=[a-z0-9A-Z])[A-Z]", r"_\g<0>", string)
             string = re.sub(r"\s+", "_", string)
+            string = re.sub(r"[^a-zA-Z0-9./]", "_", string.strip())
             return string.lower()
 
         categories = "/".join(process(cat) for cat in self.category)

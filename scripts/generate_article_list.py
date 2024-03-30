@@ -42,6 +42,7 @@ def get_article_list(dir_path: Path) -> list:
 def get_article_title(file_path: Path) -> str:
     title = file_path.stem.replace("_", " ").title()
     title = re.sub(r"^\d+", "", title)  # remove leading digits
+    title = re.sub(r"[^a-zA-Z0-9./\s+]", "_", title.strip())
 
     # Make specific words lowercase
     def lowercase_match(match):

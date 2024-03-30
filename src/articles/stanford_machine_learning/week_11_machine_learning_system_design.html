@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <title>Machine Learning System Design: Building a Spam Classifier</title>
+    <meta charset="utf-8" />
+    <meta content="These notes outline the key strategies and considerations for developing a spam classification system." name="description" />
+    <meta content="Adam Djellouli" name="keywords" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../resources/style.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="ie-edge" http-equiv="X-UA-Compatible" />
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="https://adamdjellouli.com">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul role="menu">
+            <li role="menuitem"> <a href="../../index.html" title="Go to Home Page"> Home </a> </li>
+            <li role="menuitem"> <a class="active" href="../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a> </li>
+            <li role="menuitem"> <a href="../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a> </li>
+            <li role="menuitem"> <a href="../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a> </li>
+            <li role="menuitem"> <a href="../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a> </li>
+            <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+        </ul>
+    </nav>
+    <section id="article-body"></section>
+    <div id="article-wrapper">
+        <section id="article-body">
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="machine-learning-system-design-building-a-spam-classifier">Machine Learning System Design: Building a Spam Classifier</h2>
+            <p>These notes outline the key strategies and considerations for developing a spam classification system. This process involves several steps, from feature selection to error analysis, and addresses the challenges of working with skewed datasets.</p>
+            <h3 id="prioritizing-work-in-spam-classification">Prioritizing Work in Spam Classification</h3>
+            <p>When building a spam classifier, a critical step is to select and utilize features effectively. Let's break down the process and include an example of how inputs might look.</p>
+            <p><img alt="Spam Classifier Visualization" src="https://raw.githubusercontent.com/djeada/Stanford-Machine-Learning/main/slides/resources/spam.png" /></p>
+            <h4 id="feature-selection">Feature Selection</h4>
+            <p>The first step involves choosing words that are strongly indicative of whether an email is spam. This is based on the assumption that certain words appear more frequently in spam emails than in non-spam emails.</p>
+            <ul>
+                <li><strong>Spam Indicators:</strong> Words like "buy", "discount", and "deal" are often used in promotional or spam emails.</li>
+                <li><strong>Non-Spam Indicators:</strong> Words like "Andrew" (a common name) or "now" might be more frequent in regular, non-spam emails.</li>
+            </ul>
+            <h4 id="vector-representation-of-emails">Vector Representation of Emails</h4>
+            <p>Each email is represented as a vector, where each element corresponds to one of the selected features (words).</p>
+            <ul>
+                <li><strong>Binary Encoding:</strong> For each word in our feature set, if the word is present in the email, that feature is marked with a 1; if it's absent, it's marked with a 0.</li>
+            </ul>
+            <h4 id="example-of-input-representation">Example of Input Representation</h4>
+            <p>Consider an example where our feature set consists of words: <code>["buy", "discount", "deal", "Andrew", "now"]</code>. An email's content will be transformed into a vector based on the presence or absence of these words.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Email Content</td>
+                    <td>buy</td>
+                    <td>discount</td>
+                    <td>deal</td>
+                    <td>Andrew</td>
+                    <td>now</td>
+                </tr>
+                <tr>
+                    <td>"Buy now at a great discount"</td>
+                    <td>1</td>
+                    <td>1</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>1</td>
+                </tr>
+                <tr>
+                    <td>"Meeting Andrew now"</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>1</td>
+                    <td>1</td>
+                </tr>
+                <tr>
+                    <td>"Deal of the century"</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>1</td>
+                    <td>0</td>
+                    <td>0</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="word-occurrences-analysis">Word Occurrences Analysis</h4>
+            <p>The next step involves analyzing the frequency of each category of words (spam or non-spam) in your training dataset. This analysis can reveal:</p>
+            <ul>
+                <li><strong>Commonalities in Spam:</strong> If certain words are predominantly present in spam emails.</li>
+                <li><strong>Differentiators for Non-Spam:</strong> Words that are usually absent in spam but present in non-spam emails.</li>
+            </ul>
+            <h4 id="model-selection">Model Selection</h4>
+            <p>Based on this vector representation, a classification model like logistic regression or a naive Bayes classifier can be employed. The choice of model might depend on:</p>
+            <ul>
+                <li><strong>Dataset Size:</strong> Larger datasets might benefit from more complex models.</li>
+                <li><strong>Feature Interpretability:</strong> If understanding why an email is classified as spam is important, a model that offers interpretability (like decision trees) might be preferable.</li>
+                <li><strong>Performance Metrics:</strong> Based on the desired balance between precision and recall (as spam classification often deals with imbalanced datasets).</li>
+            </ul>
+            <h4 id="why-this-approach-">Why This Approach?</h4>
+            <p>This method of feature selection and vector representation is effective for several reasons:</p>
+            <ul>
+                <li><strong>Simplicity:</strong> It’s straightforward to implement and understand.</li>
+                <li><strong>Scalability:</strong> Can easily handle large volumes of data typical for email.</li>
+                <li><strong>Adaptability:</strong> The model can be updated as new spam trends emerge by adjusting the feature set.</li>
+            </ul>
+            <h3 id="improving-system-accuracy">Improving System Accuracy</h3>
+            <ul>
+                <li><strong>Collect More Data:</strong> More data can help the system better learn the distinction between spam and non-spam.</li>
+                <li><strong>Develop Sophisticated Features:</strong> Include features based on email routing data or develop algorithms to detect common misspellings in spam.</li>
+                <li><strong>Learning Curves:</strong> Plot learning curves to assess whether additional data or features will benefit the system.</li>
+            </ul>
+            <h3 id="error-analysis">Error Analysis</h3>
+            <ul>
+                <li><strong>Manual Review of Errors:</strong> Examine instances where the algorithm erred, particularly on the cross-validation set, to understand the nature of these errors.</li>
+                <li><strong>Feature Analysis:</strong> Determine what additional features could have helped correctly classify the challenging cases.</li>
+            </ul>
+            <h3 id="error-metrics-for-skewed-classes">Error Metrics for Skewed Classes</h3>
+            <p>In cases where one class (e.g., non-spam) significantly outnumbers the other (e.g., spam), standard error metrics can be misleading.</p>
+            <h4 id="cancer-classification-example">Cancer Classification Example</h4>
+            <ul>
+                <li><strong>Error Rate Deception:</strong> An error rate of 1% might seem low, but if only 0.5% of the samples are cancer-positive, this error rate is not as impressive.</li>
+                <li><strong>Importance of Precision and Recall:</strong> In skewed datasets, precision and recall become critical metrics for assessing performance.</li>
+            </ul>
+            <h4 id="f-score-computation">F-Score Computation</h4>
+            <p>The F-Score is a way to combine precision and recall into a single metric, often used to choose the threshold that maximizes this score in cross-validation.</p>
+            <h3 id="understanding-precision-and-recall">Understanding Precision and Recall</h3>
+            <p>Precision and recall are two critical metrics in classification tasks, especially when dealing with imbalanced datasets.</p>
+            <h4 id="definition-of-terms">Definition of Terms</h4>
+            <ul>
+                <li><strong>True Positive (TP):</strong> Correctly identified positive.</li>
+                <li><strong>False Positive (FP):</strong> Incorrectly identified positive.</li>
+                <li><strong>True Negative (TN):</strong> Correctly identified negative.</li>
+                <li><strong>False Negative (FN):</strong> Incorrectly identified negative.</li>
+            </ul>
+            <h4 id="precision">Precision</h4>
+            <p>Precision measures the accuracy of the positive predictions. It is defined as:</p>
+            <p>$$\text{Precision} = \frac{\text{True Positives}}{\text{True Positives} + \text{False Positives}}$$</p>
+            <h4 id="recall">Recall</h4>
+            <p>Recall measures how well the model identifies actual positives. It is defined as:</p>
+            <p>$$\text{Recall} = \frac{\text{True Positives}}{\text{True Positives} + \text{False Negatives}}$$</p>
+            <h3 id="trading-off-precision-and-recall">Trading off Precision and Recall</h3>
+            <p>In many applications, there is a trade-off between precision and recall. Adjusting the threshold in a classifier can shift the balance between these two metrics.</p>
+            <h4 id="logistic-regression-classifier-example">Logistic Regression Classifier Example</h4>
+            <ul>
+                <li><strong>Standard Threshold ($h_{\theta}(x) \geq 0.5$):</strong> The default threshold for binary classification.</li>
+                <li><strong>Modified Threshold ($h_{\theta}(x) \geq 0.8$):</strong> Increases precision but may reduce recall, leading to fewer overall positive predictions.</li>
+            </ul>
+            <p><img alt="Precision-Recall Trade-off" src="https://raw.githubusercontent.com/djeada/Stanford-Machine-Learning/main/slides/resources/precission_recall.png" /></p>
+            <h3 id="calculating-the-f-score">Calculating the F-Score</h3>
+            <p>The $F_{score}$ is a metric that combines precision and recall into a single number, often used to find a balance between these two measures:</p>
+            <p>$$F_{score} = 2 \frac{\text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}}$$</p>
+            <ul>
+                <li><strong>Balanced Measure:</strong> It harmonizes the precision and recall, especially useful when one is significantly lower than the other.</li>
+                <li><strong>Threshold Selection:</strong> One approach to finding the optimal threshold is to test various values and select the one that maximizes the $F_{score}$ on a cross-validation set.</li>
+            </ul>
+        </section>
+        <div id="table-of-contents">
+            <h2>Table of Contents</h2>
+            <ol><a href="#machine-learning-system-design-building-a-spam-classifier">Machine Learning System Design: Building a Spam Classifier</a>
+                <ol>
+                    <li><a href="#prioritizing-work-in-spam-classification">Prioritizing Work in Spam Classification</a>
+                        <ol>
+                            <li><a href="#feature-selection">Feature Selection</a></li>
+                            <li><a href="#vector-representation-of-emails">Vector Representation of Emails</a></li>
+                            <li><a href="#example-of-input-representation">Example of Input Representation</a></li>
+                            <li><a href="#word-occurrences-analysis">Word Occurrences Analysis</a></li>
+                            <li><a href="#model-selection">Model Selection</a></li>
+                            <li><a href="#why-this-approach-">Why This Approach?</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#improving-system-accuracy">Improving System Accuracy</a></li>
+                    <li><a href="#error-analysis">Error Analysis</a></li>
+                    <li><a href="#error-metrics-for-skewed-classes">Error Metrics for Skewed Classes</a>
+                        <ol>
+                            <li><a href="#cancer-classification-example">Cancer Classification Example</a></li>
+                            <li><a href="#f-score-computation">F-Score Computation</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#understanding-precision-and-recall">Understanding Precision and Recall</a>
+                        <ol>
+                            <li><a href="#definition-of-terms">Definition of Terms</a></li>
+                            <li><a href="#precision">Precision</a></li>
+                            <li><a href="#recall">Recall</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#trading-off-precision-and-recall">Trading off Precision and Recall</a>
+                        <ol>
+                            <li><a href="#logistic-regression-classifier-example">Logistic Regression Classifier Example</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#calculating-the-f-score">Calculating the F-Score</a></li>
+                </ol>
+            </ol>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/stanford_machine_learning/week_01_introduction_to_machine_learning.html">Week 01 Introduction to Machine Learning</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/stanford_machine_learning/week_02_linear_regression.html">Week 02 Linear Regression</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/stanford_machine_learning/week_03_review_of_linear_algebra.html">Week 03 Review of Linear Algebra</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/stanford_machine_learning/week_04_linear_regression_multiple_variables.html">Week 04 Linear Regression Multiple Variables</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/stanford_machine_learning/week_06_logistic_regression.html">Week 06 Logistic Regression</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/stanford_machine_learning/week_07_regularization.html">Week 07 Regularization</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/stanford_machine_learning/week_08_neural_networks_representation.html">Week 08 Neural Networks Representation</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/stanford_machine_learning/week_09_neural_networks_learning.html">Week 09 Neural Networks Learning</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/stanford_machine_learning/week_10_applying_machine_learning_advice.html">Week 10 Applying Machine Learning Advice</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/stanford_machine_learning/week_11_machine_learning_system_design.html">Week 11 Machine Learning System Design</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/stanford_machine_learning/week_12_support_vector_machines.html">Week 12 Support Vector Machines</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/stanford_machine_learning/week_13_clustering.html">Week 13 Clustering</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/stanford_machine_learning/week_14_dimensionality_reduction.html">Week 14 Dimensionality Reduction</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/stanford_machine_learning/week_15_anomaly_detection.html">Week 15 Anomaly Detection</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/stanford_machine_learning/week_16_recommendation_systems.html">Week 16 Recommendation Systems</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/stanford_machine_learning/week_17_large_scale_machine_learning.html">Week 17 Large Scale Machine Learning</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/stanford_machine_learning/week_18_photo_ocr.html">Week 18 Photo Ocr</a></li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column">
+                <img alt="Adam Djellouli Symbol" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+            <div class="footer-column">
+                <h2><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Our Privacy Policy</a></h2>
+                <p>
+                    Thank you for visiting my personal website. All of the <br />
+                    content on this site is free to use, but please remember <br />
+                    to be a good human being and refrain from any abuse<br />
+                    of the site. If you would like to contact me, please use <br />
+                    my <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn profile</a> or my <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a> if you have any technical <br />
+                    issues or ideas to share. I wish you the best and hope you <br />
+                    have a fantastic life. <br />
+                </p>
+            </div>
+            <div class="footer-column">
+                <h2>Follow me</h2>
+                <ul class="social-media">
+                    <li>
+                        <a class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" target="_blank" title="YouTube">
+                        </a>YouTube
+                    </li>
+                    <li>
+                        <a class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" target="_blank" title="LinkedIn">
+                        </a>LinkedIn
+                    </li>
+                    <li>
+                        <a class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" target="_blank" title="Instagram">
+                        </a>Instagram
+                    </li>
+                    <li>
+                        <a class="fa fa-github" href="https://github.com/djeada" title="GitHub">
+                        </a>Github
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div>
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="../../app.js"></script>
+    </footer>
+</body>
+
+</html>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
