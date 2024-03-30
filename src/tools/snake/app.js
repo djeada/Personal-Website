@@ -130,27 +130,19 @@ function gameLoop() {
 
 // Input Handling
 window.addEventListener('keydown', e => {
-    const direction = {
-        ArrowUp: {
-            x: 0,
-            y: -1
-        },
-        ArrowDown: {
-            x: 0,
-            y: 1
-        },
-        ArrowLeft: {
-            x: -1,
-            y: 0
-        },
-        ArrowRight: {
-            x: 1,
-            y: 0
+    const newDirection = {
+        ArrowUp: { x: 0, y: -1 },
+        ArrowDown: { x: 0, y: 1 },
+        ArrowLeft: { x: -1, y: 0 },
+        ArrowRight: { x: 1, y: 0 }
+    }[e.key];
+
+    if (newDirection) {
+        const oppositeDirection = snake.direction.x === -newDirection.x && snake.direction.y === -newDirection.y;
+        if (!oppositeDirection) {
+            snake.direction = newDirection;
         }
-    } [e.key];
-    if (direction) {
-        snake.direction = direction;
-        e.preventDefault(); // Prevent scrolling for arrow keys
+        e.preventDefault();
     } else if (e.key === 'Escape' && gameOver) {
         // Restart game
         window.location.reload();
@@ -158,9 +150,8 @@ window.addEventListener('keydown', e => {
         isPaused = !isPaused; // Toggle pause
         if (isPaused) {
             renderPauseOverlay();
-            enableScrolling();
         }
-        e.preventDefault(); // Prevent scrolling for space bar
+        e.preventDefault();
     }
 });
 
@@ -182,23 +173,20 @@ canvas.addEventListener('touchmove', e => {
     const dx = e.touches[0].clientX - touchStartPos.x;
     const dy = e.touches[0].clientY - touchStartPos.y;
 
-    if (Math.abs(dx) > Math.abs(dy)) {
-        snake.direction = dx > 0 ? {
-            x: 1,
-            y: 0
-        } : {
-            x: -1,
-            y: 0
-        };
-    } else {
-        snake.direction = dy > 0 ? {
-            x: 0,
-            y: 1
-        } : {
-            x: 0,
-            y: -1
-        };
+    // Inside the touchmove event listener
+if (Math.abs(dx) > Math.abs(dy)) {
+    const newDirection = dx > 0 ? { x: 1, y: 0 } : { x: -1, y: 0 };
+    const oppositeDirection = snake.direction.x === -newDirection.x && snake.direction.y === -newDirection.y;
+    if (!oppositeDirection) {
+        snake.direction = newDirection;
     }
+} else {
+    const newDirection = dy > 0 ? { x: 0, y: 1 } : { x: 0, y: -1 };
+    const oppositeDirection = snake.direction.x === -newDirection.x && snake.direction.y === -newDirection.y;
+    if (!oppositeDirection) {
+        snake.direction = newDirection;
+    }
+}
 
     touchStartPos = null;
     e.preventDefault();
