@@ -1,78 +1,48 @@
 # Personal Website 
-[adamdjellouli.com](https://adamdjellouli.com) - Leave comments and propose improvements. Your support means a great deal to me.
+Welcome to the GitHub repository for [adamdjellouli.com](https://adamdjellouli.com). Your feedback, comments, and suggestions for improvements are highly appreciated. Your support is invaluable to me.
 
 ## Overview
 
-This is the repository for my personal website, which serves as a platform to share my thoughts, projects, and other topics that interest me. The site is built from scratch using HTML, CSS, and JavaScript (TypeScript), and all common elements across the pages are being updated through custom Python scripts.
+This repository hosts the code for my personal website. It's a space where I share my thoughts, projects, and various topics that spark my interest. The site is meticulously crafted using HTML, CSS, and JavaScript (TypeScript), augmented with custom Python scripts for updating common elements across pages.
 
 ## Screenshot
 
-![Screenshot](https://user-images.githubusercontent.com/37275728/185813314-328d17a4-df7c-4156-8bf0-0fb211d055eb.PNG)
+![A glimpse of adamdjellouli.com](https://user-images.githubusercontent.com/37275728/185813314-328d17a4-df7c-4156-8bf0-0fb211d055eb.PNG)
 
-## 📑 Table of contents
-* [Building blocks](#🛠-Building-blocks)
-* [Technologies](#ℹ-Technologies)
-* [Formatting and Linting](#Formatting-and-Linting)
-* [Contributing](#Contributing)
-* [License](#License)
+## 📑 Table of Contents
+- [Building Blocks](#building-blocks)
+- [Technologies](#technologies)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Philosophy
 
-* No boilerplates, templates or frameworks used.
-* Everything we need we can built from scratch using HTML, CSS and JavaScript (TypeScript).
-* All common elements across the pages are being updated trough custom Python scripts. 
+- Dedication to originality: no use of boilerplates, templates, or frameworks.
+- Emphasis on building everything from scratch with HTML, CSS, and JavaScript (TypeScript).
+- Regular updates to all common page elements through custom Python scripts for consistency and efficiency.
 
-## 🛠 Building blocks
+## 🛠 Building Blocks
 
-The website is composed of the following main building blocks:
+The website consists of these fundamental components:
 
-HTML elements:
+**HTML Elements:**
+- Header
+- Navigation Bar
+- Footer
+- Main Content Section
+- Individual Article Pages
 
-* header
-* navbar section
-* footer section
-* content section
-* article page
-
-CSS files:
-
-* general components
-* navbar
-* footer
+**CSS Files:**
+- General Components
+- Navigation Bar Styling
+- Footer Styling
 
 ## ℹ Technologies
 
-The following technologies are used in this project:
-
-- [HTML5]()
-- [CSS3]()
-- [TypeScript]()
-
-## Formatting and linting
-We use 'js-beautify' to format our code. You can install it with npm:
-
-```bash
-npm install js-beautify -g
-```
-
-For html files, we use the following command:
-
-```bash
-js-beautify --type html -r src/**/*.html
-```
-
-For css files, we use the following command:
-
-```bash
-js-beautify --type css -r src/**/*.css
-```
-
-For js files, we use the following command:
-
-```bash
-js-beautify --type js -r src/**/*.js
-```
-
+This project employs the following technologies:
+- [HTML5](#)
+- [CSS3](#)
+- [TypeScript](#)
 
 ## How to Contribute
 
