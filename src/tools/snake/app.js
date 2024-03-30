@@ -6,6 +6,7 @@ const cellSize = canvas.width / gridSize;
 let isPaused = false;
 let lastTapTime = 0;
 
+
 // Enum for cell states
 const CellState = {
     EMPTY: 'empty',
@@ -34,6 +35,21 @@ let food = {
     y: Math.floor(Math.random() * gridSize)
 };
 
+function isCellOnSnake(x, y) {
+    return snake.body.some(segment => segment.x === x && segment.y === y);
+}
+
+function placeFood() {
+    let foodPlaced = false;
+    while (!foodPlaced) {
+        food.x = Math.floor(Math.random() * gridSize);
+        food.y = Math.floor(Math.random() * gridSize);
+        if (!isCellOnSnake(food.x, food.y)) {
+            foodPlaced = true;
+        }
+    }
+}
+
 // Game State
 let gameOver = false;
 let score = 0;
@@ -44,24 +60,40 @@ function render() {
     grid.forEach(row => row.fill(CellState.EMPTY));
 
     // Render snake
-    snake.body.forEach(segment => {
+    snake.body.forEach((segment, index) => {
         grid[segment.y][segment.x] = CellState.SNAKE;
+
+        // Differentiate between the head and the body of the snake
+        if (index === 0) { // Head of the snake
+            ctx.fillStyle = 'darkgreen';
+            // Draw head
+            ctx.fillRect(segment.x * cellSize, segment.y * cellSize, cellSize, cellSize);
+            // Draw an eye (white dot)
+            const eyeSize = cellSize / 6;
+            const eyeX = segment.x * cellSize + 3 * cellSize / 4 - eyeSize / 2;
+            const eyeY = segment.y * cellSize + cellSize / 4;
+            ctx.fillStyle = 'white';
+            ctx.fillRect(eyeX, eyeY, eyeSize, eyeSize);
+        } else {
+            ctx.fillStyle = 'green'; // Body of the snake
+            ctx.fillRect(segment.x * cellSize, segment.y * cellSize, cellSize, cellSize);
+        }
     });
 
     // Render food
-    grid[food.y][food.x] = CellState.FOOD;
+    if (grid[food.y][food.x] !== CellState.SNAKE) {
+        grid[food.y][food.x] = CellState.FOOD;
+        ctx.fillStyle = 'red';
+        ctx.fillRect(food.x * cellSize, food.y * cellSize, cellSize, cellSize);
+    }
 
     // Draw on canvas
     grid.forEach((row, y) => {
         row.forEach((cell, x) => {
-            if (cell === CellState.SNAKE) {
-                ctx.fillStyle = 'green';
-            } else if (cell === CellState.FOOD) {
-                ctx.fillStyle = 'red';
-            } else {
+            if (cell === CellState.EMPTY) {
                 ctx.fillStyle = getColorForMode('white', 'black');
+                ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
             }
-            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
         });
     });
 
@@ -69,21 +101,13 @@ function render() {
     ctx.fillStyle = getColorForMode('black', 'white');
     ctx.font = '20px Arial';
     ctx.fillText(`Score: ${score}`, 30, 30);
-
-    // Game Over Screen
-    if (gameOver) {
-        enableScrolling()
-        ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = getColorForMode('black', 'white');
-        ctx.font = '30px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2);
-    }
 }
+
 // Function to render pause overlay
 function renderPauseOverlay() {
+    if (gameOver) {
+        return;
+    }
 
     ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -94,11 +118,25 @@ function renderPauseOverlay() {
     ctx.fillText('Double tap to unlock', canvas.width / 2, canvas.height / 2);
 
 }
+
+function renderGameOver() {
+    enableScrolling()
+    ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = getColorForMode('black', 'white');
+    ctx.font = '30px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2);
+}
+
 // Game Loop
 function gameLoop() {
     if (gameOver || isPaused) {
         return;
     }
+
+
 
     // Move snake
     let head = {
@@ -108,22 +146,21 @@ function gameLoop() {
     };
     snake.body.unshift(head);
 
+    // Check for game over
+    if (head.x < 0 || head.x >= gridSize || head.y < 0 || head.y >= gridSize ||
+        snake.body.slice(1).some(segment => segment.x === head.x && segment.y === head.y)) {
+        gameOver = true;
+        renderGameOver();
+        return;
+    }
     // Check for collision with food
     if (head.x === food.x && head.y === food.y) {
         score++;
-        food = {
-            x: Math.floor(Math.random() * gridSize),
-            y: Math.floor(Math.random() * gridSize)
-        };
+        placeFood();
     } else {
         snake.body.pop(); // Remove tail segment
     }
 
-    // Check for game over
-    if (head.x < 0 || head.y < 0 || head.x >= gridSize || head.y >= gridSize ||
-        snake.body.slice(1).some(segment => segment.x === head.x && segment.y === head.y)) {
-        gameOver = true;
-    }
 
     render();
 }
@@ -131,11 +168,23 @@ function gameLoop() {
 // Input Handling
 window.addEventListener('keydown', e => {
     const newDirection = {
-        ArrowUp: { x: 0, y: -1 },
-        ArrowDown: { x: 0, y: 1 },
-        ArrowLeft: { x: -1, y: 0 },
-        ArrowRight: { x: 1, y: 0 }
-    }[e.key];
+        ArrowUp: {
+            x: 0,
+            y: -1
+        },
+        ArrowDown: {
+            x: 0,
+            y: 1
+        },
+        ArrowLeft: {
+            x: -1,
+            y: 0
+        },
+        ArrowRight: {
+            x: 1,
+            y: 0
+        }
+    } [e.key];
 
     if (newDirection) {
         const oppositeDirection = snake.direction.x === -newDirection.x && snake.direction.y === -newDirection.y;
@@ -174,19 +223,31 @@ canvas.addEventListener('touchmove', e => {
     const dy = e.touches[0].clientY - touchStartPos.y;
 
     // Inside the touchmove event listener
-if (Math.abs(dx) > Math.abs(dy)) {
-    const newDirection = dx > 0 ? { x: 1, y: 0 } : { x: -1, y: 0 };
-    const oppositeDirection = snake.direction.x === -newDirection.x && snake.direction.y === -newDirection.y;
-    if (!oppositeDirection) {
-        snake.direction = newDirection;
+    if (Math.abs(dx) > Math.abs(dy)) {
+        const newDirection = dx > 0 ? {
+            x: 1,
+            y: 0
+        } : {
+            x: -1,
+            y: 0
+        };
+        const oppositeDirection = snake.direction.x === -newDirection.x && snake.direction.y === -newDirection.y;
+        if (!oppositeDirection) {
+            snake.direction = newDirection;
+        }
+    } else {
+        const newDirection = dy > 0 ? {
+            x: 0,
+            y: 1
+        } : {
+            x: 0,
+            y: -1
+        };
+        const oppositeDirection = snake.direction.x === -newDirection.x && snake.direction.y === -newDirection.y;
+        if (!oppositeDirection) {
+            snake.direction = newDirection;
+        }
     }
-} else {
-    const newDirection = dy > 0 ? { x: 0, y: 1 } : { x: 0, y: -1 };
-    const oppositeDirection = snake.direction.x === -newDirection.x && snake.direction.y === -newDirection.y;
-    if (!oppositeDirection) {
-        snake.direction = newDirection;
-    }
-}
 
     touchStartPos = null;
     e.preventDefault();
@@ -197,6 +258,11 @@ canvas.addEventListener('touchstart', function(e) {
     const tapLength = currentTime - lastTapTime;
 
     if (tapLength < 300 && tapLength > 0) {
+        if (gameOver) {
+            window.location.reload();
+            return;
+        }
+
         isPaused = !isPaused; // Toggle pause state
 
         // Check if the game is paused or unpaused
@@ -205,10 +271,6 @@ canvas.addEventListener('touchstart', function(e) {
         } else {
             // Clear the overlay if unpaused
             render();
-        }
-
-        if (gameOver) {
-            window.location.reload();
         }
 
         e.preventDefault();

@@ -159,10 +159,10 @@ class LineShape extends Shape {
 class LShape extends Shape {
     constructor(startX = 0, startY = 0) {
         super(startX, startY, [
-            new Position(0, 0),  // Center block (pivot)
+            new Position(0, 0), // Center block (pivot)
             new Position(-1, 0), // Tail of the 'L'
-            new Position(1, 0),  // End of the line
-            new Position(1, -1)  // Head of the 'L'
+            new Position(1, 0), // End of the line
+            new Position(1, -1) // Head of the 'L'
         ]);
         this.rotationState = 0;
         this.color = "#d3d3d3";
@@ -177,13 +177,13 @@ class LShape extends Shape {
             [new Position(0, -1), new Position(0, 1), new Position(-1, 1)], // State 0 to 1
             [new Position(1, 0), new Position(-1, 0), new Position(-1, -1)], // State 1 to 2
             [new Position(0, 1), new Position(0, -1), new Position(1, -1)], // State 2 to 3
-            [new Position(-1, 0), new Position(1, 0), new Position(1, 1)]  // State 3 to 0
+            [new Position(-1, 0), new Position(1, 0), new Position(1, 1)] // State 3 to 0
         ];
 
         // Update positions based on rotation state
         for (let i = 1; i < this.positions.length; i++) {
-            this.positions[i].update(pivot.x + rotationStates[this.rotationState][i - 1].x, 
-                                     pivot.y + rotationStates[this.rotationState][i - 1].y);
+            this.positions[i].update(pivot.x + rotationStates[this.rotationState][i - 1].x,
+                pivot.y + rotationStates[this.rotationState][i - 1].y);
         }
 
         // Update rotation state
@@ -194,9 +194,9 @@ class LShape extends Shape {
 class ReversedLShape extends Shape {
     constructor(startX = 0, startY = 0) {
         super(startX, startY, [
-            new Position(0, 0),  // Center block (pivot)
+            new Position(0, 0), // Center block (pivot)
             new Position(-1, 0), // Left block
-            new Position(1, 0),  // Right block
+            new Position(1, 0), // Right block
             new Position(-1, -1) // Top left block
         ]);
         this.rotationState = 0;
@@ -210,15 +210,15 @@ class ReversedLShape extends Shape {
         // Define rotation states for the reversed L shape
         const rotationStates = [
             [new Position(0, -1), new Position(0, 1), new Position(-1, -1)], // State 0 to 1
-            [new Position(-1, 0), new Position(1, 0), new Position(1, -1)],  // State 1 to 2
-            [new Position(0, 1), new Position(0, -1), new Position(1, 1)],   // State 2 to 3
-            [new Position(1, 0), new Position(-1, 0), new Position(-1, 1)]   // State 3 to 0
+            [new Position(-1, 0), new Position(1, 0), new Position(1, -1)], // State 1 to 2
+            [new Position(0, 1), new Position(0, -1), new Position(1, 1)], // State 2 to 3
+            [new Position(1, 0), new Position(-1, 0), new Position(-1, 1)] // State 3 to 0
         ];
 
         // Update positions based on rotation state
         for (let i = 1; i < this.positions.length; i++) {
-            this.positions[i].update(pivot.x + rotationStates[this.rotationState][i - 1].x, 
-                                     pivot.y + rotationStates[this.rotationState][i - 1].y);
+            this.positions[i].update(pivot.x + rotationStates[this.rotationState][i - 1].x,
+                pivot.y + rotationStates[this.rotationState][i - 1].y);
         }
 
         // Update rotation state
