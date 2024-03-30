@@ -14,9 +14,9 @@ function calculateCellSize() {
     let cellSize = 50; // Default size for large screens
 
     if (screenWidth <= 600) { // Considered as a mobile device
-        cellSize = 25;
+        cellSize = 30;
     } else if (screenWidth <= 1024) { // Considered as a tablet or small desktop
-        cellSize = 35;
+        cellSize = 40;
     }
 
     return cellSize;
@@ -137,7 +137,7 @@ class LineShape extends Shape {
             new Position(1, 0),
             new Position(2, 0)
         ]);
-        this.color = "#eec747";
+        this.color = "#ADD8E6";
     }
 
     rotate() {
@@ -159,10 +159,10 @@ class LineShape extends Shape {
 class LShape extends Shape {
     constructor(startX = 0, startY = 0) {
         super(startX, startY, [
-            new Position(0, 0), // Center block (pivot)
+            new Position(0, 0),  // Center block (pivot)
             new Position(-1, 0), // Tail of the 'L'
-            new Position(1, 0), // End of the line
-            new Position(1, -1) // Head of the 'L'
+            new Position(1, 0),  // End of the line
+            new Position(1, -1)  // Head of the 'L'
         ]);
         this.rotationState = 0;
         this.color = "#d3d3d3";
@@ -174,24 +174,61 @@ class LShape extends Shape {
 
         // Define rotation states
         const rotationStates = [
-            [new Position(0, -1), new Position(0, 1), new Position(1, 1)], // State 0 to 1
+            [new Position(0, -1), new Position(0, 1), new Position(-1, 1)], // State 0 to 1
             [new Position(1, 0), new Position(-1, 0), new Position(-1, -1)], // State 1 to 2
-            [new Position(0, 1), new Position(0, -1), new Position(-1, -1)], // State 2 to 3
-            [new Position(-1, 0), new Position(1, 0), new Position(1, 1)] // State 3 to 0
+            [new Position(0, 1), new Position(0, -1), new Position(1, -1)], // State 2 to 3
+            [new Position(-1, 0), new Position(1, 0), new Position(1, 1)]  // State 3 to 0
         ];
 
         // Update positions based on rotation state
-        this.positions[1].update(pivot.x + rotationStates[this.rotationState][0].x, pivot.y + rotationStates[this.rotationState][0].y);
-        this.positions[2].update(pivot.x + rotationStates[this.rotationState][1].x, pivot.y + rotationStates[this.rotationState][1].y);
-        this.positions[3].update(pivot.x + rotationStates[this.rotationState][2].x, pivot.y + rotationStates[this.rotationState][2].y);
+        for (let i = 1; i < this.positions.length; i++) {
+            this.positions[i].update(pivot.x + rotationStates[this.rotationState][i - 1].x, 
+                                     pivot.y + rotationStates[this.rotationState][i - 1].y);
+        }
 
         // Update rotation state
         this.rotationState = (this.rotationState + 1) % 4;
     }
 }
 
+class ReversedLShape extends Shape {
+    constructor(startX = 0, startY = 0) {
+        super(startX, startY, [
+            new Position(0, 0),  // Center block (pivot)
+            new Position(-1, 0), // Left block
+            new Position(1, 0),  // Right block
+            new Position(-1, -1) // Top left block
+        ]);
+        this.rotationState = 0;
+        this.color = "#f0a500"; // Choose a different color from LShape
+    }
+
+    rotate() {
+        // Rotate around the center block
+        const pivot = this.positions[0];
+
+        // Define rotation states for the reversed L shape
+        const rotationStates = [
+            [new Position(0, -1), new Position(0, 1), new Position(-1, -1)], // State 0 to 1
+            [new Position(-1, 0), new Position(1, 0), new Position(1, -1)],  // State 1 to 2
+            [new Position(0, 1), new Position(0, -1), new Position(1, 1)],   // State 2 to 3
+            [new Position(1, 0), new Position(-1, 0), new Position(-1, 1)]   // State 3 to 0
+        ];
+
+        // Update positions based on rotation state
+        for (let i = 1; i < this.positions.length; i++) {
+            this.positions[i].update(pivot.x + rotationStates[this.rotationState][i - 1].x, 
+                                     pivot.y + rotationStates[this.rotationState][i - 1].y);
+        }
+
+        // Update rotation state
+        this.rotationState = (this.rotationState + 1) % 4;
+    }
+}
+
+
 function createNewShape() {
-    const shapeTypes = [TShape, SquareShape, LineShape, LShape];
+    const shapeTypes = [TShape, SquareShape, LineShape, LShape, ReversedLShape];
     const randomIndex = Math.floor(Math.random() * shapeTypes.length);
     const shapeType = shapeTypes[randomIndex];
     // Assuming the grid is wide enough, start in the middle at the top
