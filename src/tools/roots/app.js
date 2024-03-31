@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
 
-    const parseCoefficients = (input) => input.split(",").map(s => parseFloat(s.trim()));
+    const parseCoefficients = (input) => input.split(",").map(s => parseFloat(s.trim())).reverse();
     const polynomial = (coefficients, x) => coefficients.reduce((sum, coeff, i) => sum + coeff * Math.pow(x, i), 0);
     const polynomialDerivative = (coefficients, x) => coefficients.slice(1).reduce((sum, coeff, i) => sum + (i + 1) * coeff * Math.pow(x, i), 0);
 
