@@ -16,23 +16,58 @@ let highlightDuration = 500;
 let highlightStartTime = 0;
 const articles = ['der', 'die', 'das'];
 let highlightColor;
-let wordLists = {
-    'der': [],
-    'die': [],
-    'das': []
-};
+wordLists = {
+    'der': [
+        'Baum', 'Stuhl', 'Tisch', 'Apfel', 'Berg', 'Wagen', 'Zug', 'Hund', 'Vogel', 'Fluss',
+        'Mond', 'Stern', 'Garten', 'Schuh', 'Schlüssel', 'Stift', 'Boden', 'See', 'Wald', 'Himmel',
+        'Strom', 'Zweig', 'Vorhang', 'Bürgersteig', 'Hut', 'Löffel', 'Pfirsich', 'Vulkan', 'Ring', 'Teller',
+        'Turm', 'Ball', 'Schrank', 'Computer', 'Kuchen'
+    ],
+    'die': [
+        'Frau', 'Katze', 'Blume', 'Tür', 'Nacht', 'Straße', 'Wiese', 'Lampe', 'Uhr', 'Karte',
+        'Tasche', 'Brücke', 'Wand', 'Zeitung', 'Wolke', 'Flasche', 'Gabel', 'Schere', 'Kerze', 'Taste',
+        'Küche', 'Treppe', 'Decke', 'Brille', 'Giraffe', 'Pflanze', 'Sonne', 'Bank', 'Schrift', 'Farbe',
+        'Jacke', 'Maus', 'Tafel', 'Bluse', 'Kamera'
+    ],
+    'das': [
+        'Buch', 'Bild', 'Fenster', 'Haus', 'Bett', 'Kind', 'Spiel', 'Lied', 'Licht', 'Radio',
+        'Auto', 'Schiff', 'Pferd', 'Flugzeug', 'Telefon', 'Zimmer', 'Büro', 'Restaurant', 'Theater', 'Fahrrad',
+        'Sofa', 'Schloss', 'Hotel', 'Programm', 'Papier', 'Instrument', 'Projekt', 'Frühstück', 'Badezimmer', 'Geschenk',
+        'Handy', 'Konto', 'Bücherregal', 'Motorrad', 'Messer'
+    ]
+}
+
 
 function loadWords() {
+    const fetchWordList = (url, article) =>
+        fetch(url)
+        .then(response => {
+            if (response.ok) {
+                return response.text();
+            } else {
+                throw new Error(`Failed to load ${article} words from server.`);
+            }
+        })
+        .catch(error => {
+            console.error(`Error fetching ${article} words: ${error.message}`);
+            // Here we do not set any default values, just handle the error.
+        });
+
     return Promise.all([
-        fetch('der.txt').then(response => response.text()),
-        fetch('die.txt').then(response => response.text()),
-        fetch('das.txt').then(response => response.text())
+        fetchWordList('https://adamdjellouli.com/tools/der_die_das/der.txt', 'der'),
+        fetchWordList('https://adamdjellouli.com/tools/der_die_das/die.txt', 'die'),
+        fetchWordList('https://adamdjellouli.com/tools/der_die_das/das.txt', 'das')
     ]).then(([derWords, dieWords, dasWords]) => {
-        wordLists['der'] = derWords.split('\n');
-        wordLists['die'] = dieWords.split('\n');
-        wordLists['das'] = dasWords.split('\n');
+        // Only update wordLists if the fetch was successful
+        if (derWords) wordLists['der'] = derWords.split('\n');
+        if (dieWords) wordLists['die'] = dieWords.split('\n');
+        if (dasWords) wordLists['das'] = dasWords.split('\n');
     });
 }
+
+
+
+
 
 function resizeCanvas() {
     const styles = window.getComputedStyle(gameCanvas);
@@ -213,6 +248,7 @@ function initGame() {
     scoreDisplay.textContent = score;
     livesDisplay.textContent = lives;
     lastWordTime = 0;
+    loadWords();
     requestAnimationFrame(gameLoop);
 }
 
