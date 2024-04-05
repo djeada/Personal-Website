@@ -16,6 +16,9 @@ let highlightDuration = 500;
 let highlightStartTime = 0;
 const articles = ['der', 'die', 'das'];
 let highlightColor;
+let isGameOver = false;
+const moveAmount = 30;
+
 wordLists = {
     'der': [
         'Baum', 'Stuhl', 'Tisch', 'Apfel', 'Berg', 'Wagen', 'Zug', 'Hund', 'Vogel', 'Fluss',
@@ -65,24 +68,15 @@ function loadWords() {
     });
 }
 
-
-
-
-
 function resizeCanvas() {
     const styles = window.getComputedStyle(gameCanvas);
     gameCanvas.width = parseInt(styles.width, 10);
     gameCanvas.height = parseInt(styles.height, 10);
 
-    // Update gameWidth and gameHeight after resizing
     gameWidth = gameCanvas.width;
     gameHeight = gameCanvas.height;
-}
 
-// Set canvas font
-function setCanvasFont() {
-    ctx.font = '20px Arial';
-    ctx.fillStyle = 'black'; // Text color
+    ctx.font = (gameCanvas.width <= 767) ? '15px Arial' : '20px Arial';
 }
 
 function measureWordWidth(word) {
@@ -105,7 +99,7 @@ function generateWord(timestamp) {
     currentWord = {
         text: wordText,
         article: randomArticle,
-        x: randomX,
+        x: Math.max(wordWidth / 2, randomX),
         y: 0,
         width: wordWidth
     };
@@ -113,11 +107,12 @@ function generateWord(timestamp) {
 }
 
 function moveWords(deltaTime) {
-    if (currentWord) {
-        currentWord.y += fallingSpeed * deltaTime;
-        if (currentWord.y > gameHeight) {
-            currentWord = null; // Reset currentWord after it falls off the screen
-        }
+    if (!currentWord) {
+        return;
+    }
+    currentWord.y += fallingSpeed * deltaTime;
+    if (currentWord.y > gameHeight) {
+        currentWord = null; // Reset currentWord after it falls off the screen
     }
 }
 
@@ -129,35 +124,39 @@ function getHitContainerIndex(wordX) {
 
 
 function checkCollisions() {
-    if (currentWord && currentWord.y > gameHeight - wordHeight) {
-        // Determine which container was hit
-        highlightContainerIndex = getHitContainerIndex(currentWord.x);
-
-        if (highlightContainerIndex !== -1) {
-            highlightStartTime = Date.now();
-            // Assuming articles is a global array like ['der', 'die', 'das']
-            // and currentWord has a property 'article' like 'der', 'die', or 'das'
-            const expectedArticle = articles[highlightContainerIndex];
-
-            if (currentWord.article === expectedArticle) {
-                score += 1; // Increase score if the article matches
-                highlightColor = 'rgba(0, 255, 0, INTENSITY)'
-            } else {
-                lives -= 1; // Decrease lives if the article doesn't match
-                highlightColor = 'rgba(255, 0, 0, INTENSITY)'
-            }
-            scoreDisplay.textContent = score;
-            livesDisplay.textContent = lives;
-        }
-
-        currentWord = null; // Reset currentWord after it falls
+    if (!currentWord || currentWord.y <= gameHeight - wordHeight) {
+        return;
     }
+    highlightContainerIndex = getHitContainerIndex(currentWord.x);
+
+    if (highlightContainerIndex !== -1) {
+        highlightStartTime = Date.now();
+        const expectedArticle = articles[highlightContainerIndex];
+
+        if (currentWord.article === expectedArticle) {
+            score += 1; // Increase score if the article matches
+            highlightColor = 'rgba(0, 255, 0, INTENSITY)'
+        } else {
+            lives -= 1; // Decrease lives if the article doesn't match
+            highlightColor = 'rgba(255, 0, 0, INTENSITY)'
+            if (lives <= 0) {
+                isGameOver = true;
+            }
+        }
+        scoreDisplay.textContent = score;
+        livesDisplay.textContent = lives;
+    }
+    currentWord = null; // Reset currentWord after it falls
 }
 
 
 function updateCanvas() {
     ctx.clearRect(0, 0, gameWidth, gameHeight);
+    ctx.fillStyle = getColorForMode('#f0f0f0', 'black');
+    ctx.fillRect(0, 0, gameWidth, gameHeight);
     if (currentWord) {
+        ctx.fillStyle = getColorForMode('black', 'white');
+
         ctx.fillText(currentWord.text, currentWord.x, currentWord.y);
     }
     drawContainers();
@@ -165,13 +164,17 @@ function updateCanvas() {
 
 function drawContainers() {
     const containerWidth = gameWidth / 3;
-    const containerHeight = 50; // Adjust as needed
+    const containerHeight = 50;
     const labels = ['der', 'die', 'das'];
-    const containerColors = ['lightblue', 'lightgreen', 'lightcoral']; // Different colors for each container
+    const containerColors = [
+        getColorForMode('#add8e6', '#191970'), // Light Blue / Midnight Blue
+        getColorForMode('#ffdab9', '#6b8e23'), // Peach Puff / Olive Drab
+        getColorForMode('#e6e6fa', '#483d8b') // Lavender / Dark Slate Blue
+    ];
 
-    ctx.textAlign = 'center'; // Center align text
-    ctx.textBaseline = 'middle'; // Align text in the middle vertically
-    ctx.font = '18px Arial'; // Font for container label
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
 
     labels.forEach((label, index) => {
         const x = index * containerWidth;
@@ -210,7 +213,7 @@ function drawContainers() {
         }
 
         // Draw label
-        ctx.fillStyle = 'black'; // Text color
+        ctx.fillStyle = getColorForMode('black', 'white');
         ctx.fillText(label, x + containerWidth / 2, y + containerHeight / 2);
     });
 
@@ -221,6 +224,10 @@ function drawContainers() {
 }
 
 function gameLoop(timestamp) {
+    if (isGameOver) {
+        gameOver();
+        return;
+    }
     if (!lastFrameTime) lastFrameTime = timestamp;
     while (timestamp - lastFrameTime > fixedTimeStep) {
         moveWords(fixedTimeStep);
@@ -234,37 +241,49 @@ function gameLoop(timestamp) {
 }
 
 
-// Game over
 function gameOver() {
-    cancelAnimationFrame(gameLoop);
-    // Additional game over logic here
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)'; // Semi-transparent black overlay
+    ctx.fillRect(0, 0, gameWidth, gameHeight);
+
+    ctx.fillStyle = 'white';
+    ctx.font = '36px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Game Over', gameWidth / 2, gameHeight / 2);
+    ctx.font = '24px Arial';
+    ctx.fillText('Press R to Restart', gameWidth / 2, gameHeight / 2 + 40);
 }
+
 
 // Initialize game
 function initGame() {
+    isGameOver = false;
     score = 0;
     lives = 3;
     words = [];
     scoreDisplay.textContent = score;
     livesDisplay.textContent = lives;
     lastWordTime = 0;
-    loadWords();
     requestAnimationFrame(gameLoop);
 }
 
+function moveLeft() { // Ensure the word doesn't move beyond the left boundary
+    currentWord.x = Math.max(currentWord.width / 2, currentWord.x - moveAmount);
+
+}
+
+function moveRight() { // Ensure the word doesn't move beyond the right boundary
+    currentWord.x = Math.min(gameWidth - currentWord.width / 2, currentWord.x + moveAmount);
+
+}
 
 function handleKeyDown(event) {
-    const moveAmount = 30;
-    if (!currentWord) return;
 
     switch (event.key) {
         case 'ArrowLeft':
-            // Ensure the word doesn't move beyond the left boundary
-            currentWord.x = Math.max(currentWord.width / 2, currentWord.x - moveAmount);
+            moveLeft();
             break;
         case 'ArrowRight':
-            // Ensure the word doesn't move beyond the right boundary
-            currentWord.x = Math.min(gameWidth - currentWord.width / 2, currentWord.x + moveAmount);
+            moveRight();
             break;
         case 'ArrowUp':
         case 'ArrowDown':
@@ -272,14 +291,30 @@ function handleKeyDown(event) {
             event.preventDefault();
             break;
             // Include other cases here if needed
+        case 'r':
+        case 'R':
+            initGame();
+            break;
     }
 }
 
+document.getElementById('leftButton').addEventListener('touchstart', function() {
+    moveLeft();
+});
+
+document.getElementById('rightButton').addEventListener('touchstart', function() {
+    moveRight();
+});
+gameCanvas.addEventListener('touchstart', e => {
+    if (isGameOver) {
+        initGame();
+    }
+});
 window.addEventListener('keydown', handleKeyDown);
 window.addEventListener('resize', resizeCanvas);
 
 window.onload = function() {
     resizeCanvas();
-    setCanvasFont();
+    loadWords();
     initGame();
 };
