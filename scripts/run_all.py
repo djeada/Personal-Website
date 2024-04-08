@@ -4,7 +4,7 @@ import logging
 # Dictionary mapping scripts to their respective command line arguments
 SCRIPTS_TO_ARGS = {
     "python clean_output_dirs.py": [],
-    # "python get_markdown_urls.py": [],
+    "python get_markdown_urls.py": [],
     "python generate_from_markdown.py": [],
     "python apply_common_elements.py": [],
     "python generate_article_list.py": [],

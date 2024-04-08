@@ -305,11 +305,14 @@ document.getElementById('leftButton').addEventListener('touchstart', function() 
 document.getElementById('rightButton').addEventListener('touchstart', function() {
     moveRight();
 });
+
 gameCanvas.addEventListener('touchstart', e => {
     if (isGameOver) {
+        resizeCanvas();
         initGame();
     }
 });
+
 window.addEventListener('keydown', handleKeyDown);
 window.addEventListener('resize', resizeCanvas);
 
