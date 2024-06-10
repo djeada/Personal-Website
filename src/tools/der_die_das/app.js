@@ -167,9 +167,9 @@ function drawContainers() {
     const containerHeight = 50;
     const labels = ['der', 'die', 'das'];
     const containerColors = [
-        getColorForMode('#add8e6', '#191970'), // Light Blue / Midnight Blue
-        getColorForMode('#ffdab9', '#6b8e23'), // Peach Puff / Olive Drab
-        getColorForMode('#e6e6fa', '#483d8b') // Lavender / Dark Slate Blue
+        getColorForMode('#E6E6FA', '#6A5ACD'), // Light Lilac / Slate Blue
+        getColorForMode('#FAFAD2', '#996515'), // Light Gold / Golden Brown
+        getColorForMode('#E0FFFF', '#008080') // Light Aqua / Deep Teal
     ];
 
 

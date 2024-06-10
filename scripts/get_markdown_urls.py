@@ -4,10 +4,14 @@ Downloads markdown files.
 import json
 from urllib.parse import urlparse, unquote
 from concurrent.futures import ThreadPoolExecutor
-
+import logging
 import requests
 from pathlib import Path
 
+# Initialize logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 PL_INPUT_URLS = [
     "https://github.com/djeada/Kurs-Podstaw-Pythona/tree/master/notatki/01_podstawy",
@@ -38,6 +42,7 @@ EN_INPUT_URLS = [
 EN_LANG = "EN"
 PL_LANG = "PL"
 OUTPUT_FILE = "input.json"
+FAILED_FILE = "failed.json"
 GITHUB_API_BASE = "https://api.github.com/repos"
 
 
@@ -49,16 +54,21 @@ def get_github_api_url(web_url):
     user = parts[3]
     repo = parts[4]
     path = "/".join(parts[7:])
-    return f"{GITHUB_API_BASE}/{user}/{repo}/contents/{path}"
+    api_url = f"{GITHUB_API_BASE}/{user}/{repo}/contents/{path}"
+    logging.info(f"Converted {web_url} to API URL: {api_url}")
+    return api_url
 
 
-def fetch_github_contents_recursive(url, lang, repo_name, base_path=""):
+def fetch_github_contents_recursive(
+    url, lang, repo_name, base_path="", failed_repos=None
+):
     """
     Recursively fetches contents of a GitHub directory and its subdirectories.
     """
     markdown_files = []
 
     try:
+        logging.info(f"Fetching URL: {url}")
         response = requests.get(url)
         response.raise_for_status()
         contents = response.json()
@@ -76,6 +86,7 @@ def fetch_github_contents_recursive(url, lang, repo_name, base_path=""):
                         "language": lang,
                     }
                 )
+                logging.info(f"Added file: {title}")
             elif item["type"] == "dir":
                 markdown_files.extend(
                     fetch_github_contents_recursive(
@@ -83,10 +94,17 @@ def fetch_github_contents_recursive(url, lang, repo_name, base_path=""):
                         lang,
                         repo_name,
                         base_path=Path(base_path, item["name"]),
+                        failed_repos=failed_repos,
                     )
                 )
-    except requests.HTTPError:
-        pass
+    except requests.HTTPError as e:
+        logging.error(f"HTTPError for URL {url}: {e}")
+        if failed_repos is not None:
+            failed_repos.append(url)
+    except Exception as e:
+        logging.error(f"Error fetching contents from {url}: {e}")
+        if failed_repos is not None:
+            failed_repos.append(url)
 
     return markdown_files
 
@@ -100,34 +118,51 @@ def get_repository_name_from_url(url):
         parts = path.split("/")
         if len(parts) >= 3 and parts[1] != "repos":
             # Typically the pattern is /username/repository/
-            return parts[2]
+            repo_name = parts[2]
+            logging.info(f"Extracted repository name: {repo_name} from URL: {url}")
+            return repo_name
         return None
     except Exception as e:
-        print(f"Error extracting repository name: {e}")
+        logging.error(f"Error extracting repository name: {e}")
         return None
 
 
-def process_links_for_language(url_set, lang):
+def process_links_for_language(url_set, lang, failed_repos):
     output = []
     for web_url in url_set:
         api_url = get_github_api_url(web_url)
         repo_name = get_repository_name_from_url(web_url)
         if repo_name:
-            output.extend(fetch_github_contents_recursive(api_url, lang, repo_name))
+            output.extend(
+                fetch_github_contents_recursive(
+                    api_url, lang, repo_name, failed_repos=failed_repos
+                )
+            )
     return output
 
 
-def main():
+def main(run_failed=False):
     output_list = []
+    failed_repos = []
 
-    # Create a list of tuples for the map function
-    language_url_pairs = zip([PL_INPUT_URLS, EN_INPUT_URLS], [PL_LANG, EN_LANG])
+    if run_failed and Path(FAILED_FILE).exists():
+        logging.info("Running previously failed URLs.")
+        with Path(FAILED_FILE).open() as file:
+            failed_repos = json.load(file)
+        urls_to_process = [
+            (failed_repos, PL_LANG if "PL" in repo else EN_LANG)
+            for repo in failed_repos
+        ]
+    else:
+        logging.info("Running all URLs.")
+        urls_to_process = zip([PL_INPUT_URLS, EN_INPUT_URLS], [PL_LANG, EN_LANG])
 
     # Using ThreadPoolExecutor for multithreading
     with ThreadPoolExecutor() as executor:
         # Map the function to the url-language pairs
         results = executor.map(
-            lambda pair: process_links_for_language(*pair), language_url_pairs
+            lambda pair: process_links_for_language(*pair, failed_repos),
+            urls_to_process,
         )
 
         # Extend output list with results
@@ -137,7 +172,23 @@ def main():
     # Write to the output file
     with Path(OUTPUT_FILE).open("w") as file:
         json.dump(output_list, file, indent=4)
+    logging.info(f"Successfully wrote output to {OUTPUT_FILE}")
+
+    if failed_repos:
+        with Path(FAILED_FILE).open("w") as file:
+            json.dump(failed_repos, file, indent=4)
+        logging.info(f"Failed URLs written to {FAILED_FILE}")
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Download markdown files from GitHub repositories."
+    )
+    parser.add_argument(
+        "--run-failed", action="store_true", help="Run only previously failed URLs."
+    )
+    args = parser.parse_args()
+
+    main(run_failed=args.run_failed)

@@ -2,6 +2,7 @@
 Transforms Markdown to HTML.
 """
 import json
+from datetime import datetime
 from typing import List, Dict
 
 import requests
@@ -93,6 +94,7 @@ class HtmlEnhancer:
         """Main method to enhance the provided HTML content."""
         html = self.apply_filters(html, url_data.language.lower())
         html = self.add_language_info(html, LANGUAGE_MAP[url_data.language.lower()])
+        html = self.add_date_info(html)
         return html
 
     @classmethod
@@ -295,6 +297,17 @@ class HtmlEnhancer:
             insert_at = insertion_point.end()
             info_paragraph = f"\n<p style='text-align: right;'><i>This article is written in: {language}</i></p>\n"
             html = html[:insert_at] + info_paragraph + html[insert_at:]
+        return html
+
+    @classmethod
+    def add_date_info(cls, html: str) -> str:
+        """Adds a date information paragraph."""
+        insertion_point = re.search(r"<section id=\"article-body\">", html)
+        if insertion_point:
+            insert_at = insertion_point.end()
+            current_date = datetime.now().strftime("%B %d, %Y")
+            date_paragraph = f"\n<p style='text-align: right;'><i>Last modified: {current_date}</i></p>\n"
+            html = html[:insert_at] + date_paragraph + html[insert_at:]
         return html
 
     @classmethod

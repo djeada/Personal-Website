@@ -1,5 +1,11 @@
+import datetime
+import logging
+import multiprocessing
 import re
 from pathlib import Path
+from typing import List
+
+import requests
 from bs4 import BeautifulSoup
 import string
 import math
@@ -106,21 +112,98 @@ def get_category_url(file_path: Path) -> str:
     return f"{relative_path.parent.stem}.html"
 
 
-def convert_articles_to_html(article_paths: list) -> str:
-    html = ""
-    for article in article_paths:
-        title = get_article_title(article)
-        description = get_article_description(article)
-        category = get_article_category(article)
-        url = "../articles" + str(article).split("/articles")[-1]
-        category_url = get_category_url(article)
-        html += f"""
+def get_current_date(file_path: Path) -> datetime:
+    try:
+        # Calculate the relative path and remove the file extension
+        relative_path = file_path.relative_to("../src").with_suffix("")
+
+        # Construct the URL
+        base_url = "https://adamdjellouli.com/"
+        url = base_url + str(relative_path)
+
+        # Download the URL content
+        response = requests.get(url)
+        response.raise_for_status()  # Raise an error for bad status codes
+
+        # Parse the HTML content
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # Find the paragraph with the specific style
+        paragraph = soup.find("p", style="text-align: right;")
+        if paragraph:
+            # Extract the text and search for the date
+            date_text = paragraph.get_text()
+            match = re.search(r"Last modified: (\w+ \d+, \d+)", date_text)
+            if match:
+                # Convert to datetime
+                date_str = match.group(1)
+                date_from_url = datetime.datetime.strptime(date_str, "%B %d, %Y")
+
+                # Fetch the HTML content of the file
+                with file_path.open("r", encoding="utf-8") as file:
+                    file_html = file.read()
+
+                # Remove the line containing the date in URL HTML
+                url_html_lines = response.text.split("\n")
+                url_html_sanitized = "\n".join(
+                    line for line in url_html_lines if "Last modified:" not in line
+                )
+
+                # Remove the line containing the date in file HTML
+                file_html_lines = file_html.split("\n")
+                file_html_sanitized = "\n".join(
+                    line for line in file_html_lines if "Last modified:" not in line
+                )
+
+                # Compare the sanitized HTML contents
+                if url_html_sanitized.strip() == file_html_sanitized.strip():
+                    # Replace the date in the file with the date from the URL
+                    updated_file_html = re.sub(
+                        r"Last modified: \w+ \d+, \d+",
+                        f"Last modified: {date_str}",
+                        file_html,
+                    )
+                    with file_path.open("w", encoding="utf-8") as file:
+                        file.write(updated_file_html)
+
+                    return date_from_url
+
+        # If date is not found in the content or HTML does not match
+        logging.error(
+            f"{url}: Date not found in the HTML content or HTML does not match."
+        )
+        return datetime.datetime.now()
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error fetching the URL {url}: {e}")
+        return datetime.datetime.now()
+    except Exception as e:
+        logging.error(f"An error occurred {file_path}: {e}")
+        return datetime.datetime.now()
+
+
+def _process_article(article: str) -> str:
+    current_date = get_current_date(article).strftime("%B %d, %Y")
+    title = get_article_title(article)
+    description = get_article_description(article)
+    category = get_article_category(article)
+    url = "../articles" + str(article).split("/articles")[-1]
+    category_url = get_category_url(article)
+    return f"""
         <div class="article-list-element">
             <h2><a href="{url}">{title}</a></h2>
+            <div class="article-date">{current_date}</div>
             <div class="article-category">Category: <a href="{category_url}">{category}</a></div>
             <p><a href="{url}">{description}...</a></p>
         </div>
         """
+
+
+def convert_articles_to_html(article_paths: List[str]) -> str:
+
+    with multiprocessing.Pool() as pool:
+        articles_html = pool.map(_process_article, article_paths)
+
+    html = "".join(articles_html)
     return f'<div class="article-list"><h1>Articles</h1>{html}</div>'
 
 

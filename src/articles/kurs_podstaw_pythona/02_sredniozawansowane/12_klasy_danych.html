@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <title>Klasy danych</title>
     <meta charset="utf-8" />
-    <meta content="Klasy danych w Pythonie ułatwiają tworzenie klas, które mają głównie służyć do przechowywania danych." name="description" />
+    <meta content="Last modified: June 10, 2024" name="description" />
     <meta content="Adam Djellouli" name="keywords" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
     <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
@@ -36,11 +36,12 @@
     <section id="article-body"></section>
     <div id="article-wrapper">
         <section id="article-body">
+            <p style="text-align: right;"><i>Last modified: June 10, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="klasy-danych">Klasy danych</h2>
-            <p>Klasy danych w Pythonie ułatwiają tworzenie klas, które mają głównie służyć do przechowywania danych. Automatyzują one powtarzalne fragmenty kodu, takie jak inicjalizacja atrybutów czy implementacja operatorów porównania. Używanie klas danych może znacząco upraszczać kod, szczególnie w sytuacjach, kiedy klasy służą głównie jako struktury danych.</p>
+            <p>Klasy danych w Pythonie (data classes) ułatwiają tworzenie klas, które mają głównie służyć do przechowywania danych. Automatyzują one powtarzalne fragmenty kodu, takie jak inicjalizacja atrybutów, implementacja operatorów porównania, a także generowanie metod takich jak <code>__repr__</code> i <code>__eq__</code>. Używanie klas danych może znacząco upraszczać kod, szczególnie w sytuacjach, kiedy klasy służą głównie jako struktury danych.</p>
             <h3 id="definiowanie-klasy-danych">Definiowanie klasy danych</h3>
-            <p>Aby zdefiniować klasę danych, używamy dekoratora <code>@dataclass</code>. W obrębie takiej klasy definiujemy atrybuty, które mają być przechowywane:</p>
+            <p>Aby zdefiniować klasę danych, używamy dekoratora <code>@dataclass</code> z modułu <code>dataclasses</code>. W obrębie takiej klasy definiujemy atrybuty, które mają być przechowywane:</p>
             <p>
             <div>
                 <pre><code class="language-python">from dataclasses import dataclass
@@ -55,16 +56,66 @@ class RGB:
             <h3 id="dodatkowe-opcje-dla-klasy-danych">Dodatkowe opcje dla klasy danych</h3>
             <p>Dekorator <code>@dataclass</code> oferuje kilka opcjonalnych argumentów do dostosowywania zachowania klasy danych:</p>
             <ul>
-                <li><code>unsafe_hash</code>: Określa, czy klasy danych mogą być używane jako klucze w słownikach czy elementy zbiorów.</li>
+                <li><code>unsafe_hash</code>: Określa, czy klasy danych mogą być używane jako klucze w słownikach lub elementy zbiorów.</li>
                 <li><code>order</code>: Włącza automatyczne generowanie metod porównawczych, takich jak <code>__lt__</code>, <code>__le__</code>, <code>__gt__</code>, i <code>__ge__</code>.</li>
+                <li><code>frozen</code>: Sprawia, że instancje klasy danych stają się niemutowalne (read-only).</li>
+                <li><code>init</code>: Pozwala wyłączyć automatyczne generowanie metody <code>__init__</code>.</li>
+                <li><code>repr</code>: Pozwala wyłączyć automatyczne generowanie metody <code>__repr__</code>.</li>
             </ul>
             <p>
             <div>
-                <pre><code class="language-python">@dataclass(unsafe_hash=True, order=True)
+                <pre><code class="language-python">@dataclass(unsafe_hash=True, order=True, frozen=True)
 class RGB:
     czerwony: int
     zielony: int
     niebieski: int</code></pre>
+            </div>
+            </p>
+            <h3 id="przykłady-zastosowań">Przykłady zastosowań</h3>
+            <h4 id="automatyczne-generowanie-metod">Automatyczne generowanie metod</h4>
+            <p>Dzięki dekoratorowi <code>@dataclass</code>, metody takie jak <code>__init__</code>, <code>__repr__</code>, <code>__eq__</code>, oraz metody porównawcze są automatycznie generowane. </p>
+            <p>
+            <div>
+                <pre><code class="language-python">kolor1 = RGB(255, 0, 0)
+kolor2 = RGB(0, 255, 0)
+
+# Porównywanie obiektów
+print(kolor1 &lt; kolor2)  # False (bo czerwony &gt; zielony w porządku leksykograficznym)
+print(kolor1 == RGB(255, 0, 0))  # True
+
+# Wypisywanie obiektu
+print(kolor1)  # RGB(czerwony=255, zielony=0, niebieski=0)</code></pre>
+            </div>
+            </p>
+            <h4 id="niemutowalność">Niemutowalność</h4>
+            <p>Użycie argumentu <code>frozen=True</code> sprawia, że instancje klasy danych stają się niemutowalne. Przykład:</p>
+            <p>
+            <div>
+                <pre><code class="language-python">@dataclass(frozen=True)
+class Point:
+    x: int
+    y: int
+
+p = Point(10, 20)
+# p.x = 15  # To spowoduje błąd: dataclasses.FrozenInstanceError</code></pre>
+            </div>
+            </p>
+            <h4 id="niestandardowe-inicjalizacje">Niestandardowe inicjalizacje</h4>
+            <p>Czasami chcemy dodać dodatkową logikę inicjalizacji, mimo automatycznego generowania metody <code>__init__</code>.</p>
+            <p>
+            <div>
+                <pre><code class="language-python">from dataclasses import dataclass, field
+
+@dataclass
+class Circle:
+    radius: float
+    area: float = field(init=False)
+
+    def __post_init__(self):
+        self.area = 3.14159 * (self.radius ** 2)
+
+circle = Circle(5)
+print(circle.area)  # 78.53975</code></pre>
             </div>
             </p>
             <h3 id="funkcjonalności-dostępne-w-klasach-danych">Funkcjonalności dostępne w klasach danych</h3>
@@ -112,6 +163,13 @@ class RGB:
                 <ol>
                     <li><a href="#definiowanie-klasy-danych">Definiowanie klasy danych</a></li>
                     <li><a href="#dodatkowe-opcje-dla-klasy-danych">Dodatkowe opcje dla klasy danych</a></li>
+                    <li><a href="#przykłady-zastosowań">Przykłady zastosowań</a>
+                        <ol>
+                            <li><a href="#automatyczne-generowanie-metod">Automatyczne generowanie metod</a></li>
+                            <li><a href="#niemutowalność">Niemutowalność</a></li>
+                            <li><a href="#niestandardowe-inicjalizacje">Niestandardowe inicjalizacje</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#funkcjonalności-dostępne-w-klasach-danych">Funkcjonalności dostępne w klasach danych</a></li>
                 </ol>
             </ol>
