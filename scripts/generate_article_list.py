@@ -59,7 +59,11 @@ def get_article_title(file_path: Path) -> str:
 
     with file_path.open() as file:
         soup = BeautifulSoup(file, "html.parser")
-        language = soup.find("p").text.split(":")[1].strip()
+        paragraphs = soup.find_all("p")
+        if len(paragraphs) > 1:
+            language = paragraphs[1].text.split(":")[1].strip()
+        else:
+            language = ""
         return f"{title} {language}" if language else title
 
 
