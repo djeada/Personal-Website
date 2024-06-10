@@ -70,12 +70,19 @@ def get_article_title(file_path: Path) -> str:
 def get_article_description(file_path: Path) -> str:
     with file_path.open() as file:
         soup = BeautifulSoup(file, "html.parser")
-        description = soup.find("p").text[:300]
-        if "This article is written in:" in description:
-            description = soup.find_all("p")[1].text[:300]
-        if description and description[-1] in string.punctuation:
-            description = description[:-1]
-        return description or "Description not found..."
+        paragraphs = soup.find_all("p")
+
+        for paragraph in paragraphs:
+            description = paragraph.text[:300]
+            if (
+                "This article is written in:" not in description
+                and "Last modified:" not in description
+            ):
+                if description and description[-1] in string.punctuation:
+                    description = description[:-1]
+                return description
+
+        return "Description not found..."
 
 
 def get_article_category(file_path: Path) -> str:
