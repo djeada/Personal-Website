@@ -179,19 +179,33 @@ def get_current_date(file_path: Path) -> datetime.datetime:
         remote_section_content = remote_section.decode_contents()
         local_section_content = local_section.decode_contents()
 
-        # Compare the full HTML contents of the specific section
-        if remote_section_content.strip() == local_section_content.strip():
-            # Find the paragraph with the specific style for date extraction
-            paragraph = soup.find("p", style="text-align: right;")
-            if paragraph:
-                # Extract the text and search for the date
-                date_text = paragraph.get_text()
-                match = re.search(r"Last modified: (\w+ \d+, \d+)", date_text)
-                if match:
-                    # Convert to datetime
-                    date_str = match.group(1)
-                    date_from_url = datetime.datetime.strptime(date_str, "%B %d, %Y")
+        # Find the paragraph with the specific style for date extraction in remote content
+        paragraph = soup.find("p", style="text-align: right;")
+        if paragraph:
+            # Extract the text and search for the date
+            date_text = paragraph.get_text()
+            match = re.search(r"Last modified: (\w+ \d+, \d+)", date_text)
+            if match:
+                # Convert to datetime
+                date_str = match.group(1)
+                date_from_url = datetime.datetime.strptime(date_str, "%B %d, %Y")
 
+                # Find the local date
+                local_paragraph = local_soup.find("p", style="text-align: right;")
+                local_date_from_html = None
+                if local_paragraph:
+                    local_date_text = local_paragraph.get_text()
+                    local_match = re.search(
+                        r"Last modified: (\w+ \d+, \d+)", local_date_text
+                    )
+                    if local_match:
+                        local_date_str = local_match.group(1)
+                        local_date_from_html = datetime.datetime.strptime(
+                            local_date_str, "%B %d, %Y"
+                        )
+
+                # Compare the full HTML contents of the specific section
+                if remote_section_content.strip() == local_section_content.strip():
                     # Replace the date in the local file with the date from the URL
                     updated_file_html = re.sub(
                         r"Last modified: \w+ \d+, \d+",
@@ -203,6 +217,10 @@ def get_current_date(file_path: Path) -> datetime.datetime:
 
                     logging.info(f"Everything ok for {file_path}")
                     return date_from_url
+                else:
+                    # Return the local date if available
+                    if local_date_from_html:
+                        return local_date_from_html
 
         # If date is not found in the content or HTML does not match
         logging.error(
@@ -394,5 +412,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # main()
-    get_current_date(file_path=Path("../src/articles/git_notes/06_tags.html"))
+    main()

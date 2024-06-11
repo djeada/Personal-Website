@@ -166,7 +166,10 @@ def is_ascii(s):
 
 
 def find_first_ascii_sentence(paragraphs):
-    for paragraph in paragraphs:
+    filtered_paragraphs = [
+        p for p in paragraphs if p.get("style") != "text-align: right;"
+    ]
+    for paragraph in filtered_paragraphs:
         sentences = re.split(r"(?<=[.!?]) +", paragraph.get_text())
         for sentence in sentences:
             if is_ascii(sentence):

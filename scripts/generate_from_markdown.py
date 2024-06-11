@@ -275,8 +275,14 @@ class HtmlEnhancer:
                 '<script type="text/javascript" id="MathJax-script" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>',
             ]
         )
-        html += prism_scripts + mathjax_config
-        return html
+        combined_scripts = prism_scripts + mathjax_config
+        soup = BeautifulSoup(html, "html.parser")
+        body_tag = soup.find("html")
+        if body_tag:
+            # Append the scripts just before the closing </body> tag
+            body_tag.append(BeautifulSoup(combined_scripts, "html.parser"))
+
+        return str(soup)
 
     @staticmethod
     def replace_header_tags(html: str) -> str:
