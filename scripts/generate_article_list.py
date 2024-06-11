@@ -3,12 +3,17 @@ import logging
 import multiprocessing
 import re
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 import requests
 from bs4 import BeautifulSoup
 import string
 import math
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 INPUT_DIR = "../src/articles"
 INPUT_FILE = "../src/pages/blog_1.html"
@@ -46,25 +51,37 @@ def get_article_list(dir_path: Path) -> list:
 
 
 def get_article_title(file_path: Path) -> str:
+    # Extract the title from the file name
     title = file_path.stem.replace("_", " ").title()
-    title = re.sub(r"^\d+", "", title)  # remove leading digits
+    title = re.sub(r"^\d+", "", title)  # Remove leading digits
     title = re.sub(r"[^a-zA-Z0-9./\s+]", "_", title.strip())
 
-    # Make specific words lowercase
+    # Function to make specific words lowercase
     def lowercase_match(match):
         word = match.group(0)
         return word.lower() if word.lower() in LOWERCASE_WORDS else word
 
     title = re.sub(r"\b[A-Za-z]+\b", lowercase_match, title)
 
-    with file_path.open() as file:
-        soup = BeautifulSoup(file, "html.parser")
-        paragraphs = soup.find_all("p")
-        if len(paragraphs) > 1:
-            language = paragraphs[1].text.split(":")[1].strip()
-        else:
-            language = ""
-        return f"{title} {language}" if language else title
+    # Read and parse the file to extract the language
+    try:
+        with file_path.open() as file:
+            soup = BeautifulSoup(file, "html.parser")
+            paragraphs = soup.find_all("p")
+            if len(paragraphs) > 1:
+                try:
+                    language = paragraphs[1].text.split(":")[1].strip()
+                except (IndexError, AttributeError):
+                    logging.exception("Error processing file: %s", file_path)
+                    language = ""
+            else:
+                language = ""
+    except Exception as e:
+        logging.exception("Error opening or parsing file: %s", file_path)
+        language = ""
+
+    # Append the language to the title if it exists
+    return f"{title} {language}" if language else title
 
 
 def get_article_description(file_path: Path) -> str:
@@ -123,7 +140,7 @@ def get_category_url(file_path: Path) -> str:
     return f"{relative_path.parent.stem}.html"
 
 
-def get_current_date(file_path: Path) -> datetime:
+def get_current_date(file_path: Path) -> datetime.datetime:
     try:
         # Calculate the relative path and remove the file extension
         relative_path = file_path.relative_to("../src").with_suffix("")
@@ -136,39 +153,46 @@ def get_current_date(file_path: Path) -> datetime:
         response = requests.get(url)
         response.raise_for_status()  # Raise an error for bad status codes
 
-        # Parse the HTML content
+        # Parse the HTML content from the URL
         soup = BeautifulSoup(response.text, "html.parser")
+        remote_section = soup.find(id="article-body")
+        if not remote_section:
+            logging.error(
+                f"{url}: 'article-body' section not found in the HTML content."
+            )
+            return datetime.datetime.now()
 
-        # Find the paragraph with the specific style
-        paragraph = soup.find("p", style="text-align: right;")
-        if paragraph:
-            # Extract the text and search for the date
-            date_text = paragraph.get_text()
-            match = re.search(r"Last modified: (\w+ \d+, \d+)", date_text)
-            if match:
-                # Convert to datetime
-                date_str = match.group(1)
-                date_from_url = datetime.datetime.strptime(date_str, "%B %d, %Y")
+        # Fetch the HTML content of the local file
+        with file_path.open("r", encoding="utf-8") as file:
+            file_html = file.read()
 
-                # Fetch the HTML content of the file
-                with file_path.open("r", encoding="utf-8") as file:
-                    file_html = file.read()
+        # Parse the local HTML content
+        local_soup = BeautifulSoup(file_html, "html.parser")
+        local_section = local_soup.find(id="article-body")
+        if not local_section:
+            logging.error(
+                f"{file_path}: 'article-body' section not found in the local HTML content."
+            )
+            return datetime.datetime.now()
 
-                # Remove the line containing the date in URL HTML
-                url_html_lines = response.text.split("\n")
-                url_html_sanitized = "\n".join(
-                    line for line in url_html_lines if "Last modified:" not in line
-                )
+        # Get the complete HTML content of the sections
+        remote_section_content = remote_section.decode_contents()
+        local_section_content = local_section.decode_contents()
 
-                # Remove the line containing the date in file HTML
-                file_html_lines = file_html.split("\n")
-                file_html_sanitized = "\n".join(
-                    line for line in file_html_lines if "Last modified:" not in line
-                )
+        # Compare the full HTML contents of the specific section
+        if remote_section_content.strip() == local_section_content.strip():
+            # Find the paragraph with the specific style for date extraction
+            paragraph = soup.find("p", style="text-align: right;")
+            if paragraph:
+                # Extract the text and search for the date
+                date_text = paragraph.get_text()
+                match = re.search(r"Last modified: (\w+ \d+, \d+)", date_text)
+                if match:
+                    # Convert to datetime
+                    date_str = match.group(1)
+                    date_from_url = datetime.datetime.strptime(date_str, "%B %d, %Y")
 
-                # Compare the sanitized HTML contents
-                if url_html_sanitized.strip() == file_html_sanitized.strip():
-                    # Replace the date in the file with the date from the URL
+                    # Replace the date in the local file with the date from the URL
                     updated_file_html = re.sub(
                         r"Last modified: \w+ \d+, \d+",
                         f"Last modified: {date_str}",
@@ -177,6 +201,7 @@ def get_current_date(file_path: Path) -> datetime:
                     with file_path.open("w", encoding="utf-8") as file:
                         file.write(updated_file_html)
 
+                    logging.info(f"Everything ok for {file_path}")
                     return date_from_url
 
         # If date is not found in the content or HTML does not match
@@ -192,8 +217,43 @@ def get_current_date(file_path: Path) -> datetime:
         return datetime.datetime.now()
 
 
-def _process_article(article: str) -> str:
-    current_date = get_current_date(article).strftime("%B %d, %Y")
+def generate_pages_for_articles(
+    articles: List[str], base_input_file: Path, link_name: str
+) -> None:
+    """
+    Generates pages for the provided list of articles.
+    """
+    # Extract information (including date) for each article
+    with multiprocessing.Pool() as pool:
+        articles_info = pool.map(_extract_article_info, articles)
+
+    # Sort articles by date
+    sorted_articles_info = sorted(articles_info, key=lambda x: x[1], reverse=True)
+
+    for i in range(math.ceil(len(sorted_articles_info) / ARTICLE_PER_PAGE)):
+        page_articles_info = sorted_articles_info[
+            i * ARTICLE_PER_PAGE : (i + 1) * ARTICLE_PER_PAGE
+        ]
+        html_content = convert_articles_to_html(page_articles_info)
+        input_file = get_next_input_file(base_input_file, i)
+        pagination_content = get_pagination_html(
+            link_name, i, len(sorted_articles_info)
+        )
+        update_html_content(input_file, html_content, pagination_content)
+
+
+def _extract_article_info(article: str) -> Tuple[str, str]:
+    """
+    Extracts the necessary information from an article, including the date.
+    Returns a tuple containing the article path and its date.
+    """
+    current_date = get_current_date(article)
+    return (article, current_date)
+
+
+def _process_article(article_info: Tuple[str, str]) -> str:
+    article, current_date = article_info
+    formatted_date = current_date.strftime("%B %d, %Y")
     title = get_article_title(article)
     description = get_article_description(article)
     category = get_article_category(article)
@@ -202,17 +262,16 @@ def _process_article(article: str) -> str:
     return f"""
         <div class="article-list-element">
             <h2><a href="{url}">{title}</a></h2>
-            <div class="article-date">{current_date}</div>
+            <div class="article-date">{formatted_date}</div>
             <div class="article-category">Category: <a href="{category_url}">{category}</a></div>
             <p><a href="{url}">{description}...</a></p>
         </div>
         """
 
 
-def convert_articles_to_html(article_paths: List[str]) -> str:
-
+def convert_articles_to_html(article_infos: List[Tuple[str, str]]) -> str:
     with multiprocessing.Pool() as pool:
-        articles_html = pool.map(_process_article, article_paths)
+        articles_html = pool.map(_process_article, article_infos)
 
     html = "".join(articles_html)
     return f'<div class="article-list"><h1>Articles</h1>{html}</div>'
@@ -275,24 +334,27 @@ def update_html_content(
     file.write_text(html)
 
 
-def generate_pages_for_articles(
-    articles: list, base_input_file: Path, link_name: str
-) -> None:
-    """
-    Generates pages for the provided list of articles.
-    """
-    for i in range(math.ceil(len(articles) / ARTICLE_PER_PAGE)):
-        html_content = convert_articles_to_html(
-            articles[i * ARTICLE_PER_PAGE : (i + 1) * ARTICLE_PER_PAGE]
-        )
-        input_file = get_next_input_file(base_input_file, i)
-        pagination_content = get_pagination_html(link_name, i, len(articles))
-        update_html_content(input_file, html_content, pagination_content)
-
-
 def generate_pages_for_subdir(subdir: Path, output_file: Path):
-    articles = get_article_list(subdir)
-    articles = sorted(articles, key=lambda x: x.name)
+    articles = []
+    date_pattern = re.compile(
+        r'<p style="text-align: right;"><i>Last modified: (.*?)</i></p>'
+    )
+
+    for file in subdir.rglob("*.html"):
+        if file.is_file():
+            with file.open("r", encoding="utf-8") as f:
+                content = f.read()
+                match = date_pattern.search(content)
+                if match:
+                    last_modified_date = match.group(1)
+                    articles.append(
+                        (
+                            file,
+                            datetime.datetime.strptime(last_modified_date, "%B %d, %Y"),
+                        )
+                    )
+
+    articles = sorted(articles, key=lambda x: x[1])
 
     # Just one page for each subdir, so no need for pagination
     html_content = convert_articles_to_html(articles)
@@ -332,4 +394,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    get_current_date(file_path=Path("../src/articles/git_notes/06_tags.html"))

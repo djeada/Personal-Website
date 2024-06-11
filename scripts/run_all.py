@@ -1,24 +1,24 @@
 import subprocess
 import logging
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 # Dictionary mapping scripts to their respective command line arguments
 SCRIPTS_TO_ARGS = {
     "python clean_output_dirs.py": [],
     # "python get_markdown_urls.py": [],
     "python generate_from_markdown.py": [],
     "python apply_common_elements.py": [],
-    "python generate_article_list.py": [],
     "python bundle_css.py": [],
     "python generate_table_of_contents.py": [],
     "python generate_related_articles_section.py": [],
+    "python generate_article_list.py": [],
     "python create_site_map.py": [],
     "./format.sh": [],
 }
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
 
 
 def run_script(script, args_list):

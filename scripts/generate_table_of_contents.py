@@ -128,10 +128,17 @@ def generate_table_of_contents(html: str) -> str:
     return str(soup)
 
 
+def remove_empty_tags(html: str) -> str:
+    soup = BeautifulSoup(html, "html.parser")
+    section = soup.find("section", id="article-body")
+    section.decompose()
+    return str(soup)
+
+
 def process_html_file(file):
     html = file.read_text()
     html_with_toc = generate_table_of_contents(html)
-    file.write_text(html_with_toc)
+    file.write_text(remove_empty_tags(html_with_toc))
 
 
 def main():
