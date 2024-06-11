@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 
 INPUT_DIRS = [Path("../src/articles"), Path("../src/pages")]
-SPARED_FILE = Path("../src/pages/blog_1.html")
+SPARED_FILE = Path("../src/articles/blog_1.html")
 
 
 def clear_directory(directory: Path, spared_file: Path):

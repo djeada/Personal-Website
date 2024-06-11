@@ -16,7 +16,7 @@ logging.basicConfig(
 )
 
 INPUT_DIR = "../src/articles"
-INPUT_FILE = "../src/pages/blog_1.html"
+INPUT_FILE = "../src/articles/blog_1.html"
 ARTICLE_PER_PAGE = 35
 LOWERCASE_WORDS = [
     "a",
@@ -47,7 +47,11 @@ def get_subdirs(dir_path: Path) -> list:
 
 
 def get_article_list(dir_path: Path) -> list:
-    return [file for file in dir_path.rglob("*.html") if file.is_file()]
+    return [
+        file
+        for file in dir_path.rglob("*.html")
+        if file.is_file() and not file.name.lower().startswith("blog_")
+    ]
 
 
 def get_article_title(file_path: Path) -> str:
