@@ -1,3 +1,4 @@
+import logging
 import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -19,7 +20,6 @@ CONFIG = {
         "INPUT_DIR": "../src/tools",
     },
 }
-
 
 def extract_element_from_html(original_html, tag):
     """Extract content between a given HTML tag from original HTML."""
@@ -80,90 +80,9 @@ def change_title_in_head(html):
     """Update the title tag based on the first header tag content."""
     header_content = re.search(r"<(h1|header|h2)[^>]*>(.+?)<\/(h1|header|h2)>", html)
     if header_content:
-        title_content = header_content.group(2)
+        title_content = BeautifulSoup(header_content.group(2), "html.parser").get_text()
         html = update_meta_content(html, title_content, "title")
     return html
-
-
-def is_ascii(s):
-    mapping = {
-        "ą": "a",
-        "ā": "a",
-        "á": "a",
-        "ǎ": "a",
-        "à": "a",
-        "ć": "c",
-        "č": "c",
-        "ĉ": "c",
-        "ċ": "c",
-        "ę": "e",
-        "ē": "e",
-        "ė": "e",
-        "ě": "e",
-        "ī": "i",
-        "į": "i",
-        "ĩ": "i",
-        "ĭ": "i",
-        "ł": "l",
-        "ń": "n",
-        "ň": "n",
-        "ņ": "n",
-        "ō": "o",
-        "ŏ": "o",
-        "ó": "o",
-        "ő": "o",
-        "ś": "s",
-        "ŝ": "s",
-        "š": "s",
-        "ŭ": "u",
-        "ų": "u",
-        "ű": "u",
-        "ũ": "u",
-        "ů": "u",
-        "ź": "z",
-        "ż": "z",
-        "Ą": "A",
-        "Ā": "A",
-        "Á": "A",
-        "Ǎ": "A",
-        "À": "A",
-        "Ć": "C",
-        "Č": "C",
-        "Ĉ": "C",
-        "Ċ": "C",
-        "Ę": "E",
-        "Ē": "E",
-        "Ė": "E",
-        "Ě": "E",
-        "Ī": "I",
-        "Į": "I",
-        "Ĩ": "I",
-        "Ĭ": "I",
-        "Ł": "L",
-        "Ń": "N",
-        "Ň": "N",
-        "Ņ": "N",
-        "Ō": "O",
-        "Ŏ": "O",
-        "Ó": "O",
-        "Ő": "O",
-        "Ś": "S",
-        "Ŝ": "S",
-        "Š": "S",
-        "Ŭ": "U",
-        "Ų": "U",
-        "Ű": "U",
-        "Ũ": "U",
-        "Ů": "U",
-        "Ź": "Z",
-        "Ż": "Z",
-    }
-
-    for old_value, new_value in mapping.items():
-        s = s.replace(old_value, new_value)
-
-    return all(ord(c) < 128 for c in s)
-
 
 def find_first_ascii_sentence(paragraphs):
     filtered_paragraphs = [
@@ -172,50 +91,34 @@ def find_first_ascii_sentence(paragraphs):
     for paragraph in filtered_paragraphs:
         sentences = re.split(r"(?<=[.!?]) +", paragraph.get_text())
         for sentence in sentences:
-            if is_ascii(sentence):
-                return sentence
+            # Strip HTML tags using BeautifulSoup
+            stripped_sentence = BeautifulSoup(sentence, "html.parser").get_text()
+            return stripped_sentence
     return None
 
 
 def change_meta_description_in_head(html_content):
     soup = BeautifulSoup(html_content, "html.parser")
 
-    # Check for existing meta description tag
-    meta_desc_tag = soup.find("meta", attrs={"name": "description"})
-    if meta_desc_tag:
-        if meta_desc_tag.attrs.get("content", "").lower() == "xxx":
-            paragraphs = soup.find_all("p")
-            first_ascii_sentence = find_first_ascii_sentence(paragraphs)
-            if first_ascii_sentence:
-                meta_desc_tag.attrs["content"] = first_ascii_sentence
-                return str(soup)
-        else:
-            return str(soup)
-
-    # If meta description tag doesn't exist or no suitable paragraph found
-    header = soup.find(["h1", "h2", "header"])
-    if not header:
+    paragraphs = soup.find_all("p")
+    first_ascii_sentence = find_first_ascii_sentence(paragraphs)
+    if not first_ascii_sentence:
+        logging.error(f"No suitable description found!")
         return str(soup)
 
-    # Find the first sentence after the header
-    next_siblings = header.find_all_next(string=True)
-    first_sentence = ""
-    for sib in next_siblings:
-        if sib.strip():
-            first_sentence = re.split(r"(?<=[.!?]) +", sib)[0]
-            break
+    # Check for existing meta description tag
+    meta_desc_tag = soup.find("meta", attrs={"name": "description"})
 
-    # Create and insert the meta description tag
-    if first_sentence:
-        meta_tag = soup.new_tag(
-            "meta", attrs={"name": "description", "content": first_sentence}
-        )
-        if soup.head:
-            soup.head.insert(0, meta_tag)
-        else:
-            head_tag = soup.new_tag("head")
-            soup.insert(0, head_tag)
-            head_tag.insert(0, meta_tag)
+    if meta_desc_tag:
+        current_description = meta_desc_tag.get("content", "").strip()
+        if current_description.lower() == "xxx":
+            meta_desc_tag["content"] = first_ascii_sentence
+    else:
+        # Create a new meta description tag if it doesn't exist
+        new_meta_tag = soup.new_tag("meta")
+        new_meta_tag.attrs["name"] = "description"
+        new_meta_tag.attrs["content"] = first_ascii_sentence
+        soup.head.append(new_meta_tag)
 
     return str(soup)
 
@@ -262,3 +165,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # change_meta_description_in_head(
+    #   Path(
+    #       "/home/adam/Personal-Website/src/articles/od_c_do_cpp/08_typ_wyliczeniowy.html"
+    #    ).read_text()
+    # )
