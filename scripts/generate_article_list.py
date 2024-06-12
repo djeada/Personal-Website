@@ -50,7 +50,9 @@ def get_article_list(dir_path: Path) -> list:
     return [
         file
         for file in dir_path.rglob("*.html")
-        if file.is_file() and not file.name.lower().startswith("blog_")
+        if file.is_file()
+        and not file.name.lower().startswith("blog_")
+        and file.parent != dir_path
     ]
 
 
@@ -209,7 +211,20 @@ def get_current_date(file_path: Path) -> datetime.datetime:
                         )
 
                 # Compare the full HTML contents of the specific section
-                if remote_section_content.strip() == local_section_content.strip():
+                cleaned_remote_section_content = re.sub(
+                    r'<p style="text-align: right;"><i>Last modified:.*?</i></p>',
+                    "",
+                    remote_section_content,
+                    flags=re.DOTALL,
+                ).strip()
+                cleaned_local_section_content = re.sub(
+                    r'<p style="text-align: right;"><i>Last modified:.*?</i></p>',
+                    "",
+                    local_section_content,
+                    flags=re.DOTALL,
+                ).strip()
+
+                if cleaned_remote_section_content == cleaned_local_section_content:
                     # Replace the date in the local file with the date from the URL
                     updated_file_html = re.sub(
                         r"Last modified: \w+ \d+, \d+",
@@ -417,3 +432,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # print('result',
+    #   get_current_date(
+    #       file_path=Path("../src/articles/git_notes/07_stashing_files.html")
+    #   )
+    # )

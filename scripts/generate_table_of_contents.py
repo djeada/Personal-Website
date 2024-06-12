@@ -114,9 +114,14 @@ def wrap_article_and_toc(soup: BeautifulSoup, toc_wrapper: Tag) -> None:
 def generate_table_of_contents(html: str) -> str:
     """Generate the table of contents for a given HTML."""
     soup = BeautifulSoup(html, "html.parser")
+    article_body = soup.find("section", {"id": "article-body"})
 
-    # If no headers, return the original html
-    if not soup.find("section", {"id": "article-body"}).find_all(["h1", "h2", "h3"]):
+    if not article_body:
+        return html
+    headers = article_body.find_all(["h1", "h2", "h3"])
+
+    # If no headers or only a single header, return the original HTML
+    if len(headers) < 2:
         return html
 
     toc_wrapper = create_toc_wrapper(soup, html)
@@ -131,7 +136,8 @@ def generate_table_of_contents(html: str) -> str:
 def remove_empty_tags(html: str) -> str:
     soup = BeautifulSoup(html, "html.parser")
     section = soup.find("section", id="article-body")
-    section.decompose()
+    if len(list(section.children)) == 0:
+        section.decompose()
     return str(soup)
 
 
