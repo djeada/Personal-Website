@@ -33,8 +33,73 @@ def run_script(script, args_list):
     subprocess.CalledProcessError: If the script execution fails.
     """
     args = " ".join(args_list)
-    logging.info(f"Running {script} {args}")
-    subprocess.run(f"{script} {args}", shell=True, check=True)
+    log_message = (
+        "\n"
+        "----------------------------------------\n"
+        f"Running script: {script}\n"
+        f"With arguments: {args}\n"
+        "----------------------------------------"
+    )
+    logging.info(log_message)
+
+    process = subprocess.Popen(
+        f"{script} {args}",
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+    stdout_lines = []
+    stderr_lines = []
+
+    def log_stream(stream, logger, storage):
+        for line in iter(stream.readline, ""):
+            logger(line.strip())
+            storage.append(line)
+        stream.close()
+
+    import threading
+
+    stdout_thread = threading.Thread(
+        target=log_stream, args=(process.stdout, logging.info, stdout_lines)
+    )
+    stderr_thread = threading.Thread(
+        target=log_stream, args=(process.stderr, logging.error, stderr_lines)
+    )
+
+    stdout_thread.start()
+    stderr_thread.start()
+
+    stdout_thread.join()
+    stderr_thread.join()
+
+    process.wait()
+
+    if process.returncode == 0:
+        logging.info(
+            "\n"
+            "----------------------------------------\n"
+            "Script execution completed successfully.\n"
+            "----------------------------------------\n"
+            f"Output:\n{''.join(stdout_lines)}\n"
+            "----------------------------------------"
+        )
+    else:
+        logging.error(
+            "\n"
+            "----------------------------------------\n"
+            "Script execution failed.\n"
+            "----------------------------------------\n"
+            f"Error:\n{''.join(stderr_lines)}\n"
+            "----------------------------------------"
+        )
+        raise subprocess.CalledProcessError(
+            process.returncode,
+            script,
+            output="".join(stdout_lines),
+            stderr="".join(stderr_lines),
+        )
 
 
 def run_all():
@@ -44,6 +109,7 @@ def run_all():
     logging.info("Initiating the execution of all scripts...")
     for script, args_list in SCRIPTS_TO_ARGS.items():
         run_script(script, args_list)
+    run_script("python apply_common_elements.py", [])
     run_script("./format.sh", [])
     logging.info("All scripts executed successfully.")
 

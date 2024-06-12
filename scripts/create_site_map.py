@@ -11,8 +11,20 @@ EXCLUDE_PATTERN = re.compile(r"building_blocks")
 
 def get_last_modified_date(path: Path) -> str:
     """Get the last modified date of a file."""
-    timestamp = path.stat().st_mtime
-    return datetime.utcfromtimestamp(timestamp).strftime("%Y-%m-%d")
+    try:
+        with path.open("r", encoding="utf-8") as file:
+            content = file.read()
+
+        # Look for the line containing the last modified date
+        match = re.search(
+            r'<p style="text-align: right;"><i>Last modified: (.*?)</i></p>', content
+        )
+        if match:
+            # Extract the date
+            date_str = match.group(1)
+            return date_str
+    except Exception as e:
+        print(f"Error reading file: {e}")
 
 
 def generate_sitemap(startpath: Path, domain: str) -> None:
