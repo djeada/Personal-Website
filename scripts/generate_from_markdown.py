@@ -106,7 +106,14 @@ class HtmlEnhancer:
         html = cls.correct_math_blocks(html)
         html = cls.apply_prism_for_code_samples(html)
         html = cls.ensure_structure(html, lang)
+        html = cls.replace_backticks_with_code_tags(html)
         return html
+
+    @classmethod
+    def replace_backticks_with_code_tags(cls, text: str) -> str:
+        pattern = r"`([^`]+)`"
+        replaced_text = re.sub(pattern, r"<code>\1</code>", text)
+        return replaced_text
 
     @classmethod
     def replace_all_tables(cls, html: str) -> str:

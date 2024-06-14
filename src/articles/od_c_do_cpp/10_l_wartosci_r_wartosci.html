@@ -47,12 +47,13 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: June 11, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: June 14, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="l-wartości-i-r-wartości">L-wartości i R-wartości</h2>
-            <p>W kontekście języka C++, istotne jest rozróżnienie między L-wartościami (ang. l-value) i R-wartościami (ang. r-value).</p>
+            <p>W kontekście języka C++, istotne jest rozróżnienie między L-wartościami (ang. l-value) i R-wartościami (ang. r-value). Zrozumienie tego podziału jest kluczowe dla efektywnego zarządzania zasobami i optymalizacji kodu.</p>
             <h3 id="l-wartości">L-wartości</h3>
             <p>L-wartości (l-value) to wartości, które posiadają <strong>stałe miejsce</strong> w pamięci, co oznacza, że posiadają adres. Możemy myśleć o nich jako o obiektach, które istnieją "na lewo od znaku przypisania" (choć to uproszczenie). Przykłady L-wartości to zmienne, elementy tablicy, wskaźniki oraz referencje.</p>
+            <h4 id="przykłady-l-wartości">Przykłady L-wartości</h4>
             <p>
             <div>
                 <pre><code class="language-clike">int main() {
@@ -67,6 +68,7 @@
             </p>
             <h3 id="r-wartości">R-wartości</h3>
             <p>R-wartości (r-value) to tymczasowe wartości, które <strong>nie posiadają stałego miejsca</strong> w pamięci. Są to wartości, które zazwyczaj występują po prawej stronie operacji przypisania. Przykłady R-wartości to literały, wyniki wyrażeń oraz tymczasowe wartości zwracane przez funkcje.</p>
+            <h4 id="przykłady-r-wartości">Przykłady R-wartości</h4>
             <p>
             <div>
                 <pre><code class="language-clike">int main() {
@@ -80,15 +82,116 @@
 }</code></pre>
             </div>
             </p>
-            <p>Uwaga: Współczesne kompilatory C++ wprowadzają koncepcję przenoszenia R-wartości, co pozwala na efektywne przenoszenie zasobów bez konieczności kopiowania, co jest szczególnie przydatne w kontekście dynamicznie alokowanych zasobów, jak np. <code>std::vector</code>.</p>
-            <p>Jest pewne uproszczenie w stwierdzeniu, że wszystkie L-wartości są R-wartościami. Dokładniej rzecz biorąc, możemy uzyskać R-wartość z L-wartości (na przykład poprzez konwersję na tymczasowy obiekt), ale samo stwierdzenie może prowadzić do pewnych nieporozumień w bardziej zaawansowanych kontekstach.</p>
+            <h3 id="l-wartości-vs-r-wartości">L-wartości vs R-wartości</h3>
+            <h4 id="l-wartości">L-wartości</h4>
+            <p>L-wartości są odniesieniami do pamięci i mogą być zmieniane. Mają trwałe adresy i mogą być używane po lewej stronie operacji przypisania.</p>
+            <h4 id="r-wartości">R-wartości</h4>
+            <p>R-wartości są tymczasowymi wartościami, które nie mają trwałych adresów pamięci. Nie mogą być używane po lewej stronie operacji przypisania, ponieważ nie mają miejsca w pamięci, do którego można by przypisać wartość.</p>
+            <h3 id="r-wartości-i-l-wartości-w-kontekście-funkcji">R-wartości i L-wartości w kontekście funkcji</h3>
+            <h4 id="przekazywanie-argumentów-przez-wartość">Przekazywanie argumentów przez wartość</h4>
+            <p>Przekazywanie argumentów przez wartość oznacza, że do funkcji przekazywana jest kopia argumentu.</p>
+            <p>
+            <div>
+                <pre><code class="language-clike">void f(int x) { /* ... */ }
+int main() {
+    int a = 10;
+    f(a);  // a jest L-wartością
+    f(20); // 20 jest R-wartością
+}</code></pre>
+            </div>
+            </p>
+            <h4 id="przekazywanie-argumentów-przez-referencję">Przekazywanie argumentów przez referencję</h4>
+            <p>Przekazywanie argumentów przez referencję oznacza, że do funkcji przekazywana jest referencja do argumentu.</p>
+            <p>
+            <div>
+                <pre><code class="language-clike">void g(int &amp;x) { /* ... */ }
+int main() {
+    int a = 10;
+    g(a);  // a jest L-wartością
+    // g(20); // Błąd! 20 jest R-wartością
+}</code></pre>
+            </div>
+            </p>
+            <h4 id="r-wartościowe-referencje-c-11-i-nowsze-">R-wartościowe referencje (C++11 i nowsze)</h4>
+            <p>R-wartościowe referencje (<code>&amp;&amp;</code>) umożliwiają przechwytywanie R-wartości. Są szczególnie przydatne w kontekście semantyki przenoszenia (move semantics), która pozwala na optymalizację kopiowania zasobów.</p>
+            <p>
+            <div>
+                <pre><code class="language-clike">void h(int &amp;&amp;x) { /* ... */ }
+int main() {
+    int a = 10;
+    // h(a); // Błąd! a jest L-wartością
+    h(20); // 20 jest R-wartością
+    h(std::move(a)); // std::move(a) jest R-wartością
+}</code></pre>
+            </div>
+            </p>
+            <h3 id="semantyka-przenoszenia-move-semantics-">Semantyka przenoszenia (Move Semantics)</h3>
+            <p>Semantyka przenoszenia pozwala na "przenoszenie" zasobów z jednego obiektu do drugiego zamiast ich kopiowania. Jest to możliwe dzięki r-wartościowym referencjom.</p>
+            <h4 id="przykład-klasy-z-konstruktorem-przenoszącym">Przykład klasy z konstruktorem przenoszącym</h4>
+            <p>
+            <div>
+                <pre><code class="language-clike">#include &lt;iostream&gt;
+#include &lt;vector&gt;
+
+class MoveExample {
+public:
+    std::vector&lt;int&gt; data;
+
+    // Konstruktor przenoszący
+    MoveExample(std::vector&lt;int&gt; &amp;&amp;vec) : data(std::move(vec)) {}
+
+    // Funkcja do wyświetlania zawartości
+    void display() {
+        for (int i : data) {
+            std::cout &lt;&lt; i &lt;&lt; " ";
+        }
+        std::cout &lt;&lt; std::endl;
+    }
+};
+
+int main() {
+    std::vector&lt;int&gt; vec = {1, 2, 3, 4, 5};
+    MoveExample me(std::move(vec)); // vec jest przenoszone do me
+
+    me.display();
+    // vec jest teraz w stanie "moved-from"
+    return 0;
+}</code></pre>
+            </div>
+            </p>
         </section>
         <div id="table-of-contents">
             <h2>Spis Treści</h2>
             <ol><a href="#l-wartości-i-r-wartości">L-wartości i R-wartości</a>
                 <ol>
-                    <li><a href="#l-wartości">L-wartości</a></li>
-                    <li><a href="#r-wartości">R-wartości</a></li>
+                    <li><a href="#l-wartości">L-wartości</a>
+                        <ol>
+                            <li><a href="#przykłady-l-wartości">Przykłady L-wartości</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#r-wartości">R-wartości</a>
+                        <ol>
+                            <li><a href="#przykłady-r-wartości">Przykłady R-wartości</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#l-wartości-vs-r-wartości">L-wartości vs R-wartości</a>
+                        <ol>
+                            <li><a href="#l-wartości">L-wartości</a></li>
+                            <li><a href="#r-wartości">R-wartości</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#r-wartości-i-l-wartości-w-kontekście-funkcji">R-wartości i L-wartości w kontekście funkcji</a>
+                        <ol>
+                            <li><a href="#przekazywanie-argumentów-przez-wartość">Przekazywanie argumentów przez wartość</a></li>
+                            <li><a href="#przekazywanie-argumentów-przez-referencję">Przekazywanie argumentów przez referencję</a></li>
+                            <li><a href="#r-wartościowe-referencje-c-11-i-nowsze-">R-wartościowe referencje (C++11 i nowsze)</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#semantyka-przenoszenia-move-semantics-">Semantyka przenoszenia (Move Semantics)</a>
+                        <ol>
+                            <li><a href="#przykład-klasy-z-konstruktorem-przenoszącym">Przykład klasy z konstruktorem przenoszącym</a></li>
+                        </ol>
+                    </li>
                 </ol>
             </ol>
             <div id="related-articles">
