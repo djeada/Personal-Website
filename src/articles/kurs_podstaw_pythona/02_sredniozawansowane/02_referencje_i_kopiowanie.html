@@ -51,7 +51,7 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: June 14, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: June 19, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="referencje-i-kopiowanie">Referencje i kopiowanie</h2>
             <p>W Pythonie rozróżniamy dwa kluczowe pojęcia: "referencję" oraz "kopiowanie".</p>
@@ -112,10 +112,7 @@ print(lista)  # pokaże oryginalną listę, bez zmian</code></pre>
                 <tr>
                     <td>Referencja</td>
                     <td>Odwołanie się do tego samego obiektu w pamięci. Zmiany w obiekcie są widoczne w każdej referencji.</td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td>CODE_BLOCK_PLACEHOLDER</td>
+                    <td><code>a = [1, 2, 3]; b = a</code></td>
                 </tr>
                 <tr>
                     <td>Kopiowanie</td>
@@ -125,18 +122,12 @@ print(lista)  # pokaże oryginalną listę, bez zmian</code></pre>
                 <tr>
                     <td>Płytkie</td>
                     <td>Kopiowanie tylko najbliższego poziomu struktury. Zagnieżdżone obiekty pozostają współdzielone.</td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td>CODE_BLOCK_PLACEHOLDER</td>
+                    <td><code>import copy; b = copy.copy(a)</code></td>
                 </tr>
                 <tr>
                     <td>Głębokie</td>
                     <td>Rekurencyjne kopiowanie całej struktury, włącznie z zagnieżdżonymi obiektami.</td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td>CODE_BLOCK_PLACEHOLDER</td>
+                    <td><code>import copy; b = copy.deepcopy(a)</code></td>
                 </tr>
             </table>
             </p>
@@ -146,7 +137,12 @@ print(lista)  # pokaże oryginalną listę, bez zmian</code></pre>
             <h4 id="przykład-niepożądanego-zachowania-z-domyślnymi-wartościami-parametrów">Przykład niepożądanego zachowania z domyślnymi wartościami parametrów</h4>
             <p>
             <div>
-                <pre><code class="language-python">a = [1, 2, 3]; b = a</code></pre>
+                <pre><code class="language-python">def dodaj_element(element, lista=[]):
+    lista.append(element)
+    return lista
+
+print(dodaj_element(1))        # [1]
+print(dodaj_element(2))        # [1, 2] - a oczekiwaliśmy [2]</code></pre>
             </div>
             </p>
             <p>W powyższym przykładzie, za drugim razem zamiast uzyskać listę zawierającą tylko 2, otrzymujemy listę z 1 i 2, ponieważ domyślna lista została zmodyfikowana podczas pierwszego wywołania.</p>
@@ -154,7 +150,14 @@ print(lista)  # pokaże oryginalną listę, bez zmian</code></pre>
             <h4 id="przykład-poprawnego-podejścia-z-użyciem-none">Przykład poprawnego podejścia z użyciem None</h4>
             <p>
             <div>
-                <pre><code class="language-python">import copy; b = copy.copy(a)</code></pre>
+                <pre><code class="language-python">def dodaj_element(element, lista=None):
+    if lista is None:
+        lista = []
+    lista.append(element)
+    return lista
+
+print(dodaj_element(1))        # [1]
+print(dodaj_element(2))        # [2] - wynik zgodny z oczekiwaniami</code></pre>
             </div>
             </p>
             <p>Korzystając z tego podejścia, unikamy nieoczekiwanych efektów ubocznych związanych z mutowalnymi wartościami domyślnymi.</p>
@@ -163,7 +166,26 @@ print(lista)  # pokaże oryginalną listę, bez zmian</code></pre>
             <p>W przypadku bardziej skomplikowanych struktur danych, które zawierają zagnieżdżone obiekty lub instancje klas, kopiowanie głębokie jest zazwyczaj niezbędne. Rozważmy przykład klasy zagnieżdżającej inne obiekty.</p>
             <p>
             <div>
-                <pre><code class="language-python">import copy; b = copy.deepcopy(a)</code></pre>
+                <pre><code class="language-python">class Node:
+    def __init__(self, value, children=None):
+        self.value = value
+        self.children = children if children is not None else []
+
+# Tworzenie oryginalnego węzła z dziećmi
+original_node = Node(1, [Node(2), Node(3)])
+
+# Kopiowanie płytkie
+shallow_copied_node = copy.copy(original_node)
+shallow_copied_node.children.append(Node(4))
+
+print([child.value for child in original_node.children])  # [2, 3, 4] - zmienione przez shallow_copied_node
+
+# Kopiowanie głębokie
+deep_copied_node = copy.deepcopy(original_node)
+deep_copied_node.children.append(Node(5))
+
+print([child.value for child in original_node.children])  # [2, 3, 4] - bez zmian
+print([child.value for child in deep_copied_node.children])  # [2, 3, 4, 5] - zmienione tylko przez deep_copied_node</code></pre>
             </div>
             </p>
             <p>W tym przykładzie, kopiowanie płytkie <code>shallow_copy</code> zmienia dzieci w oryginalnym węźle, ponieważ lista <code>children</code> jest tylko referencją. Kopiowanie głębokie <code>deep_copy</code> zapewnia, że każda część struktury danych jest niezależna.</p>
@@ -178,12 +200,34 @@ print(lista)  # pokaże oryginalną listę, bez zmian</code></pre>
             <p>W kontekście dziedziczenia, kopiowanie może być bardziej skomplikowane. Rozważmy przykład klas dziedziczących, gdzie musimy kopiować zarówno obiekty bazowe, jak i obiekty pochodne.</p>
             <p>
             <div>
-                <pre><code class="language-python">def dodaj_element(element, lista=[]):
-    lista.append(element)
-    return lista
+                <pre><code class="language-python">class Base:
+    def __init__(self, base_attr):
+        self.base_attr = base_attr
 
-print(dodaj_element(1))        # [1]
-print(dodaj_element(2))        # [1, 2] - a oczekiwaliśmy [2]</code></pre>
+class Derived(Base):
+    def __init__(self, base_attr, derived_attr):
+        super().__init__(base_attr)
+        self.derived_attr = derived_attr
+
+original_obj = Derived(1, 2)
+
+# Kopiowanie płytkie
+shallow_copied_obj = copy.copy(original_obj)
+shallow_copied_obj.base_attr = 10
+shallow_copied_obj.derived_attr = 20
+
+print(original_obj.base_attr)  # 1 - bez zmian, bo to wartość podstawowa
+print(original_obj.derived_attr)  # 2
+
+- bez zmian, bo to wartość podstawowa
+
+# Kopiowanie głębokie
+deep_copied_obj = copy.deepcopy(original_obj)
+deep_copied_obj.base_attr = 100
+deep_copied_obj.derived_attr = 200
+
+print(original_obj.base_attr)  # 1 - bez zmian
+print(original_obj.derived_attr)  # 2 - bez zmian</code></pre>
             </div>
             </p>
             <p>W kontekście dziedziczenia, zarówno płytkie, jak i głębokie kopiowanie zachowują struktury obiektów bazowych i pochodnych, ale głębokie kopiowanie zapewnia, że wszystkie atrybuty są całkowicie niezależne.</p>
