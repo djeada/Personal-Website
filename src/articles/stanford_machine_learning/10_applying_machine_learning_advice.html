@@ -51,7 +51,7 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: June 15, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: June 23, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="advice-for-applying-machine-learning-techniques-and-debugging-learning-algorithms">Advice for Applying Machine Learning Techniques and Debugging Learning Algorithms</h2>
             <h3 id="troubleshooting-high-error-rates">Troubleshooting High Error Rates</h3>
@@ -69,8 +69,10 @@
             <h3 id="debugging-a-learning-algorithm">Debugging a Learning Algorithm</h3>
             <p>Consider a scenario where you have used regularized linear regression to predict home prices, but the model yields high errors on new data.</p>
             <h4 id="cost-function">Cost Function</h4>
-            <p>The cost function for the regularized linear regression:</p>
-            <p>$$J(\theta) = \frac{1}{2m} \left[ \sum_{i=1}^{m}(h_{\theta}(x^{(i)} - y^{(i)})^2 + \lambda \sum_{j=1}^{m} \theta_j^2 \right]$$</p>
+            <p>Use the cost function for the regularized linear regression:</p>
+            <p>$$
+                J(\theta) = \frac{1}{2m} \left[ \sum_{i=1}^{m}(h_{\theta}(x^{(i)} - y^{(i)})^2 + \lambda \sum_{j=1}^{m} \theta_j^2 \right]
+                $$</p>
             <h4 id="next-steps-for-improvement">Next Steps for Improvement</h4>
             <ol>
                 <li><strong>Obtain More Training Data:</strong> Helps the algorithm to better generalize.</li>
@@ -86,10 +88,111 @@
                 <li><strong>Training Set:</strong> Used to learn the parameters, $\theta$.</li>
                 <li><strong>Test Set:</strong> Used to compute the test error.</li>
             </ul>
+            <p>Here is a simple implementation to split the data into a training set and a test set, train a logistic regression model on the training set, and evaluate it on the test set:</p>
+            <p>
+            <div>
+                <pre><code class="language-python">import numpy as np
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
+
+# Mock data
+X = np.array([[0.5, 1.5],
+              [1.5, 0.5],
+              [3, 3.5],
+              [2, 2.5],
+              [1, 1],
+              [3.5, 4],
+              [2.5, 3],
+              [1, 0.5]])
+y = np.array([0, 0, 1, 1, 2, 2, 1, 0])  # 0: Triangle, 1: Cross, 2: Square
+
+# Binary classification for simplicity (convert multi-class to binary problem)
+y_binary = (y == 1).astype(int)
+
+# Split data into training and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y_binary, test_size=0.3, random_state=42)
+
+# Initialize the logistic regression model
+model = LogisticRegression()
+
+# Train the model on the training set
+model.fit(X_train, y_train)
+
+# Make predictions on the test set
+y_test_pred = model.predict(X_test)
+
+# Evaluate the model
+test_accuracy = accuracy_score(y_test, y_test_pred)
+
+print("Test Accuracy:", test_accuracy)
+print("Test Predictions:", y_test_pred)
+print("Actual Labels:", y_test)</code></pre>
+            </div>
+            </p>
             <h4 id="test-error-calculation">Test Error Calculation</h4>
             <p>Compute the test error using the learned parameters:</p>
             <p>$$J_{test}(\theta) = \frac{1}{2m_{test}} \sum_{i=1}^{m_{test}}(h_{\theta}(x^{(i)}<em>{test} - y^{(i)}</em>{test})^2$$</p>
             <p>This step helps to evaluate how well the model generalizes to new, unseen data.</p>
+            <p>To compute the test error for a logistic regression model using the mean squared error (MSE) formula provided, you can follow these steps:</p>
+            <p>
+            <div>
+                <pre><code class="language-python">import numpy as np
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+
+# Sigmoid function
+def sigmoid(z):
+    return 1 / (1 + np.exp(-z))
+
+# Hypothesis function
+def hypothesis(theta, X):
+    return sigmoid(np.dot(X, theta))
+
+# Test error function
+def compute_test_error(theta, X_test, y_test):
+    m_test = len(y_test)
+    h = hypothesis(theta, X_test)
+    error = (1 / (2 * m_test)) * np.sum((h - y_test) ** 2)
+    return error
+
+# Example usage
+if __name__ == "__main__":
+    # Sample data
+    X = np.array([[0.5, 1.5],
+                  [1.5, 0.5],
+                  [3, 3.5],
+                  [2, 2.5],
+                  [1, 1],
+                  [3.5, 4],
+                  [2.5, 3],
+                  [1, 0.5]])
+    y = np.array([0, 0, 1, 1, 2, 2, 1, 0])  # 0: Triangle, 1: Cross, 2: Square
+
+    # Binary classification for simplicity (convert multi-class to binary problem)
+    y_binary = (y == 1).astype(int)
+
+    # Split data into training and test sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y_binary, test_size=0.3, random_state=42)
+
+    # Initialize the logistic regression model
+    model = LogisticRegression()
+
+    # Train the model on the training set
+    model.fit(X_train, y_train)
+
+    # Get the learned parameters
+    theta = np.hstack([model.intercept_, model.coef_[0]])
+
+    # Add intercept term to test set
+    X_test = np.hstack([np.ones((X_test.shape[0], 1)), X_test])
+
+    # Compute the test error
+    test_error = compute_test_error(theta, X_test, y_test)
+
+    print("Test Error:", test_error)</code></pre>
+            </div>
+            </p>
             <h3 id="model-selection-process">Model Selection Process</h3>
             <p>When applying machine learning algorithms, selecting the right model and parameters is crucial. This includes choosing the regularization parameter or the polynomial degree for regression models. The challenge is to balance between underfitting (high bias) and overfitting (high variance).</p>
             <ol>
@@ -112,11 +215,57 @@
             </ol>
             <h3 id="error-metrics">Error Metrics</h3>
             <p>I. Training Error:</p>
-            <p>$$J_{train}(\theta) = \frac{1}{2m} \sum_{i=1}^{m}(h_{\theta}(x^{(i)} - y^{(i)})^2$$</p>
+            <p>$$
+                J_{train}(\theta) = \frac{1}{2m} \sum_{i=1}^{m}(h_{\theta}(x^{(i)} - y^{(i)})^2
+                $$</p>
             <p>II. Cross-Validation Error:</p>
-            <p>$$J_{cv}(\theta) = \frac{1}{2m_{cv}} \sum_{i=1}^{m_{cv}}(h_{\theta}(x^{(i)}<em>{cv} - y^{(i)}</em>{cv})^2$$</p>
+            <p>$$
+                J_{cv}(\theta) = \frac{1}{2m_{cv}} \sum_{i=1}^{m_{cv}}(h_{\theta}(x^{(i)}<em>{cv} - y^{(i)}</em>{cv})^2
+                $$</p>
             <p>III. Test Error:</p>
-            <p>$$J_{test}(\theta) = \frac{1}{2m_{test}} \sum_{i=1}^{m_{test}}(h_{\theta}(x^{(i)}<em>{test} - y^{(i)}</em>{test})^2$$</p>
+            <p>$$
+                J_{test}(\theta) = \frac{1}{2m_{test}} \sum_{i=1}^{m_{test}}(h_{\theta}(x^{(i)}<em>{test} - y^{(i)}</em>{test})^2
+                $$</p>
+            <p>Let's create a mock example in Python to demonstrate these error metrics. We'll use synthetic data for simplicity:</p>
+            <p>
+            <div>
+                <pre><code class="language-python">import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+
+# Generate synthetic data
+np.random.seed(42)
+X = 2 * np.random.rand(100, 1)
+y = 4 + 3 * X + np.random.randn(100, 1)
+
+# Split the data into training, cross-validation, and test sets
+X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=0.4, random_state=42)
+X_cv, X_test, y_cv, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
+
+# Define a simple linear regression model
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+# Predict on training, cross-validation, and test sets
+y_train_pred = model.predict(X_train)
+y_cv_pred = model.predict(X_cv)
+y_test_pred = model.predict(X_test)
+
+# Calculate the error metrics
+def calculate_error(y_true, y_pred):
+    m = len(y_true)
+    return (1/(2*m)) * np.sum((y_pred - y_true)**2)
+
+J_train = calculate_error(y_train, y_train_pred)
+J_cv = calculate_error(y_cv, y_cv_pred)
+J_test = calculate_error(y_test, y_test_pred)
+
+print(f'Training Error: {J_train}')
+print(f'Cross-Validation Error: {J_cv}')
+print(f'Test Error: {J_test}')</code></pre>
+            </div>
+            </p>
+            <p>This example demonstrates how to compute and compare the training, cross-validation, and test errors for a machine learning model.</p>
             <h3 id="diagnosing-bias-vs-variance">Diagnosing Bias vs. Variance</h3>
             <p>Diagnosing the nature of the error (high bias or high variance) can guide you in improving your model.</p>
             <h4 id="visual-representation">Visual Representation</h4>
@@ -170,6 +319,78 @@
                 <li><strong>High Bias (Underfitting):</strong> Both $J_{train}$ and $J_{cv}$ are high, and adding more training data does not significantly improve performance.</li>
                 <li><strong>High Variance (Overfitting):</strong> $J_{train}$ is low, but $J_{cv}$ is much higher. Increasing the training set size can help the model generalize better.</li>
             </ul>
+            <p>We'll use linear regression for simplicity, but the process can be adapted to other models, including logistic regression.</p>
+            <p>Here's the implementation:</p>
+            <p>
+            <div>
+                <pre><code class="language-python">import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import log_loss
+from sklearn.model_selection import train_test_split
+
+# Function to compute training and cross-validation errors
+def learning_curves(X, y, X_val, y_val, model):
+    m = len(y)
+    train_errors = []
+    val_errors = []
+    
+    for i in range(1, m + 1):
+        # Train the model on the first i training examples
+        model.fit(X[:i], y[:i])
+        
+        # Compute training error
+        y_train_predict = model.predict_proba(X[:i])[:, 1]
+        train_error = log_loss(y[:i], y_train_predict)
+        train_errors.append(train_error)
+        
+        # Compute cross-validation error
+        y_val_predict = model.predict_proba(X_val)[:, 1]
+        val_error = log_loss(y_val, y_val_predict)
+        val_errors.append(val_error)
+    
+    return train_errors, val_errors
+
+# Plotting function
+def plot_learning_curves(train_errors, val_errors):
+    plt.plot(np.arange(1, len(train_errors) + 1), train_errors, label='Training Error')
+    plt.plot(np.arange(1, len(train_errors) + 1), val_errors, label='Cross-Validation Error')
+    plt.xlabel('Number of Training Examples')
+    plt.ylabel('Error')
+    plt.title('Learning Curves')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+# Example usage
+if __name__ == "__main__":
+    # Sample data (features and labels)
+    X = np.array([[0.5, 1.5],
+                  [1.5, 0.5],
+                  [3, 3.5],
+                  [2, 2.5],
+                  [1, 1],
+                  [3.5, 4],
+                  [2.5, 3],
+                  [1, 0.5]])
+    y = np.array([0, 0, 1, 1, 2, 2, 1, 0])  # 0: Triangle, 1: Cross, 2: Square
+    
+    # Binary classification for simplicity (convert multi-class to binary problem)
+    y_binary = (y == 1).astype(int)
+    
+    # Split data into training and cross-validation sets
+    X_train, X_val, y_train, y_val = train_test_split(X, y_binary, test_size=0.3, random_state=42)
+    
+    # Initialize the logistic regression model
+    model = LogisticRegression()
+    
+    # Compute learning curves
+    train_errors, val_errors = learning_curves(X_train, y_train, X_val, y_val, model)
+    
+    # Plot learning curves
+    plot_learning_curves(train_errors, val_errors)</code></pre>
+            </div>
+            </p>
             <h2 id="reference">Reference</h2>
             <p>These notes are based on the free video lectures offered by Stanford University, led by Professor Andrew Ng. These lectures are part of the renowned Machine Learning course available on Coursera. For more information and to access the full course, visit the <a href="https://www.coursera.org/learn/machine-learning">Coursera course page</a>.</p>
         </section>

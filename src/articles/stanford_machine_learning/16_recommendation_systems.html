@@ -51,7 +51,7 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: June 15, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: June 23, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="recommendation-systems">Recommendation Systems</h2>
             <p>Recommendation systems are a fundamental component in the interface between users and large-scale content providers like Amazon, eBay, and iTunes. These systems personalize user experiences by suggesting products, movies, or content based on past interactions and preferences.</p>
@@ -99,12 +99,151 @@
                 0
                 \end{bmatrix}
                 $$</p>
+            <h3 id="example-scenario-movie-rating-prediction">Example Scenario: Movie Rating Prediction</h3>
+            <p>Imagine a company that sells movies and allows users to rate them. Consider the following setup:</p>
+            <ul>
+                <li><strong>Movies</strong>: A catalog of five movies.</li>
+                <li><strong>Users</strong>: A database of four users.</li>
+                <li><strong>User Ratings</strong>: Users rate movies on a scale of 1 to 5.</li>
+            </ul>
+            <p><img alt="Movie Recommendation Example" src="https://raw.githubusercontent.com/djeada/Stanford-Machine-Learning/main/slides/resources/movie_recommendation.png" /></p>
+            <p>Notations:</p>
+            <ul>
+                <li>$n_u$: Number of users.</li>
+                <li>$n_m$: Number of movies.</li>
+                <li>$r(i, j)$: Indicator (1 or 0) if user $j$ has rated movie $i$.</li>
+                <li>$y^{(i, j)}$: Rating given by user $j$ to movie $i$.</li>
+            </ul>
+            <h3 id="feature-vectors-and-parameter-vectors">Feature Vectors and Parameter Vectors</h3>
+            <ul>
+                <li><strong>Movie Features</strong>: Each movie can have a feature vector representing various attributes or genres.</li>
+                <li><strong>Additional Feature ($x_0 = 1$)</strong>: For computational convenience, an additional feature is added to each movie's feature vector.</li>
+            </ul>
+            <p>Example for "Cute Puppies of Love":</p>
+            <p>$$
+                x^{(3)} = \begin{bmatrix}
+                1 \\
+                0.99 \\
+                0
+                \end{bmatrix}
+                $$</p>
+            <ul>
+                <li><strong>User Parameters</strong>: Each user has a parameter vector representing their preferences.</li>
+            </ul>
+            <p>Example for user 1 (Alice) and her preference for "Cute Puppies of Love":</p>
+            <p>$$
+                \theta^{(1)} = \begin{bmatrix}
+                0 \\
+                5 \\
+                0
+                \end{bmatrix}
+                $$</p>
+            <h3 id="mock-implementation-in-python">Mock Implementation in Python</h3>
+            <p>This implementation demonstrates how to set up a basic collaborative filtering model for movie rating prediction using Python.</p>
+            <h4 id="step-1-data-setup">Step 1: Data Setup</h4>
+            <p>
+            <div>
+                <pre><code class="language-python">import numpy as np
+
+# Number of users and movies
+n_u = 4
+n_m = 5
+
+# User ratings matrix (0 if not rated)
+ratings = np.array([
+    [5, 4, 0, 0, 3],
+    [0, 0, 4, 0, 4],
+    [0, 0, 5, 3, 3],
+    [3, 4, 0, 0, 5]
+])
+
+# Indicator matrix r(i, j) = 1 if rated, 0 otherwise
+R = (ratings != 0).astype(int)</code></pre>
+            </div>
+            </p>
+            <h4 id="step-2-feature-and-parameter-initialization">Step 2: Feature and Parameter Initialization</h4>
+            <p>
+            <div>
+                <pre><code class="language-python"># Initialize random movie feature vectors (3 features per movie)
+X = np.random.rand(n_m, 3)
+
+# Initialize random user parameter vectors (3 parameters per user)
+Theta = np.random.rand(n_u, 3)</code></pre>
+            </div>
+            </p>
+            <h4 id="step-3-collaborative-filtering-cost-function">Step 3: Collaborative Filtering Cost Function</h4>
+            <p>
+            <div>
+                <pre><code class="language-python">def collaborative_filtering_cost(X, Theta, ratings, R, lambda_ = 0.1):
+    predictions = X.dot(Theta.T)
+    error = (predictions - ratings) * R
+    cost = 0.5 * np.sum(error**2)
+    
+    # Regularization
+    cost += (lambda_ / 2) * (np.sum(Theta**2) + np.sum(X**2))
+    
+    return cost
+
+cost = collaborative_filtering_cost(X, Theta, ratings, R)
+print(f'Initial cost: {cost}')</code></pre>
+            </div>
+            </p>
+            <h4 id="step-4-gradient-descent-for-optimization">Step 4: Gradient Descent for Optimization</h4>
+            <p>
+            <div>
+                <pre><code class="language-python">def collaborative_filtering_gradient(X, Theta, ratings, R, alpha=0.01, lambda_ = 0.1, iterations=1000):
+    X_grad = np.zeros(X.shape)
+    Theta_grad = np.zeros(Theta.shape)
+    
+    for _ in range(iterations):
+        predictions = X.dot(Theta.T)
+        error = (predictions - ratings) * R
+        
+        X_grad = error.dot(Theta) + lambda_ * X
+        Theta_grad = error.T.dot(X) + lambda_ * Theta
+        
+        X -= alpha * X_grad
+        Theta -= alpha * Theta_grad
+        
+        cost = collaborative_filtering_cost(X, Theta, ratings, R, lambda_)
+        if _ % 100 == 0:
+            print(f'Iteration {_}: cost = {cost}')
+    
+    return X, Theta
+
+X, Theta = collaborative_filtering_gradient(X, Theta, ratings, R)</code></pre>
+            </div>
+            </p>
             <h3 id="making-predictions">Making Predictions</h3>
             <p>To predict how much Alice might like "Cute Puppies of Love", we compute:</p>
             <p>$$
                 (\theta^{(1)})^T x^{(3)} = (0 \cdot 1) + (5 \cdot 0.99) + (0 \cdot 0) = 4.95
                 $$</p>
             <p>This predicts a high rating of 4.95 out of 5 for Alice for this movie, based on her preference parameters and the movie's features.</p>
+            <p>Here is an example implementation in Python: </p>
+            <p>
+            <div>
+                <pre><code class="language-python">import numpy as np
+
+# Feature vector for the movie "Cute Puppies of Love"
+x_cute_puppies = np.array([1, 0.99, 0])
+
+# Parameter vector for Alice
+theta_alice = np.array([0, 5, 0])
+
+# Compute the dot product
+predicted_rating = np.dot(theta_alice, x_cute_puppies)
+
+# Print the predicted rating
+print(f"Predicted rating for Alice for 'Cute Puppies of Love': {predicted_rating}")</code></pre>
+            </div>
+            </p>
+            <p>When you run this code, it will output:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Predicted rating for Alice for 'Cute Puppies of Love': 4.95</code></pre>
+            </div>
+            </p>
             <h3 id="collaborative-filtering">Collaborative Filtering</h3>
             <ul>
                 <li><strong>Method</strong>: Collaborative filtering is often used in recommender systems. It involves learning either user preferences or item features, depending on the data available.</li>
@@ -149,6 +288,95 @@
             <ul>
                 <li><strong>Iterative Process</strong>: The algorithm typically involves an iterative process, alternating between optimizing for movie features and user preferences.</li>
             </ul>
+            <h3 id="collaborative-filtering-implementation">Collaborative Filtering Implementation</h3>
+            <p>Here, we'll implement a basic collaborative filtering model using gradient descent to predict user ratings for movies.</p>
+            <h4 id="step-1-data-setup">Step 1: Data Setup</h4>
+            <p>First, we need to set up our data, including user ratings and an indicator matrix showing which movies have been rated by which users.</p>
+            <p>
+            <div>
+                <pre><code class="language-python">import numpy as np
+
+# Number of users and movies
+n_u = 4
+n_m = 5
+
+# User ratings matrix (0 if not rated)
+ratings = np.array([
+    [5, 4, 0, 0, 3],
+    [0, 0, 4, 0, 4],
+    [0, 0, 5, 3, 3],
+    [3, 4, 0, 0, 5]
+])
+
+# Indicator matrix r(i, j) = 1 if rated, 0 otherwise
+R = (ratings != 0).astype(int)</code></pre>
+            </div>
+            </p>
+            <h4 id="step-2-feature-and-parameter-initialization">Step 2: Feature and Parameter Initialization</h4>
+            <p>We initialize random feature vectors for movies and parameter vectors for users.</p>
+            <p>
+            <div>
+                <pre><code class="language-python"># Initialize random movie feature vectors (3 features per movie)
+X = np.random.rand(n_m, 3)
+
+# Initialize random user parameter vectors (3 parameters per user)
+Theta = np.random.rand(n_u, 3)</code></pre>
+            </div>
+            </p>
+            <h4 id="step-3-collaborative-filtering-cost-function">Step 3: Collaborative Filtering Cost Function</h4>
+            <p>We define the cost function for collaborative filtering, including regularization.</p>
+            <p>
+            <div>
+                <pre><code class="language-python">def collaborative_filtering_cost(X, Theta, ratings, R, lambda_=0.1):
+    predictions = X.dot(Theta.T)
+    error = (predictions - ratings) * R
+    cost = 0.5 * np.sum(error ** 2)
+    
+    # Regularization
+    cost += (lambda_ / 2) * (np.sum(Theta ** 2) + np.sum(X ** 2))
+    
+    return cost
+
+cost = collaborative_filtering_cost(X, Theta, ratings, R)
+print(f'Initial cost: {cost}')</code></pre>
+            </div>
+            </p>
+            <h4 id="step-4-gradient-descent-for-optimization">Step 4: Gradient Descent for Optimization</h4>
+            <p>We implement gradient descent to optimize the feature and parameter vectors.</p>
+            <p>
+            <div>
+                <pre><code class="language-python">def collaborative_filtering_gradient(X, Theta, ratings, R, alpha=0.01, lambda_=0.1, iterations=1000):
+    for _ in range(iterations):
+        predictions = X.dot(Theta.T)
+        error = (predictions - ratings) * R
+        
+        X_grad = error.dot(Theta) + lambda_ * X
+        Theta_grad = error.T.dot(X) + lambda_ * Theta
+        
+        X -= alpha * X_grad
+        Theta -= alpha * Theta_grad
+        
+        if _ % 100 == 0:
+            cost = collaborative_filtering_cost(X, Theta, ratings, R, lambda_)
+            print(f'Iteration {_}: cost = {cost}')
+    
+    return X, Theta
+
+X, Theta = collaborative_filtering_gradient(X, Theta, ratings, R)</code></pre>
+            </div>
+            </p>
+            <h4 id="step-5-prediction">Step 5: Prediction</h4>
+            <p>Finally, we use the optimized feature and parameter vectors to predict ratings for all users and movies.</p>
+            <p>
+            <div>
+                <pre><code class="language-python"># Predict ratings for all users and movies
+predictions = X.dot(Theta.T)
+
+# Print predictions
+print("Predicted ratings:")
+print(predictions)</code></pre>
+            </div>
+            </p>
             <h3 id="vectorization-low-rank-matrix-factorization">Vectorization: Low Rank Matrix Factorization</h3>
             <ul>
                 <li><strong>Matrix Y</strong>: Organize all user ratings into a matrix Y, which represents the interactions between users and movies.</li>
@@ -177,6 +405,60 @@
                 <li><strong>Matrix X</strong>: Contains the features for each movie, stacked in rows.</li>
                 <li><strong>Matrix $\Theta$</strong>: Contains the user preferences, also stacked in rows.</li>
             </ul>
+            <h3 id="low-rank-matrix-factorization-example-implementation">Low Rank Matrix Factorization Example Implementation</h3>
+            <p>To implement the low-rank matrix factorization for collaborative filtering, we need to set up the necessary matrices and perform the matrix multiplication to predict ratings. Here's how to do it in Python.</p>
+            <h4 id="step-1-define-the-matrix-y">Step 1: Define the Matrix Y</h4>
+            <p>Organize all user ratings into a matrix $Y$, which represents the interactions between users and movies.</p>
+            <p>
+            <div>
+                <pre><code class="language-python">import numpy as np
+
+# Example [5 x 4] Matrix Y for 5 movies and 4 users
+Y = np.array([
+    [5, 5, 0, 0],
+    [5, 0, 0, 0],
+    [0, 4, 0, 0],
+    [0, 0, 5, 4],
+    [0, 0, 5, 0]
+])
+
+print("Matrix Y:")
+print(Y)</code></pre>
+            </div>
+            </p>
+            <h4 id="step-2-initialize-matrices-x-and-θ">Step 2: Initialize Matrices X and Θ</h4>
+            <p>Matrix $X$ contains the features for each movie, and matrix $\Theta$ contains the user preferences.</p>
+            <p>
+            <div>
+                <pre><code class="language-python"># Number of movies (n_m) and users (n_u)
+n_m, n_u = Y.shape
+
+# Number of features
+n_features = 3
+
+# Initialize movie feature matrix X and user preference matrix Theta with random values
+X = np.random.rand(n_m, n_features)
+Theta = np.random.rand(n_u, n_features)
+
+print("\nInitial Matrix X (Movie Features):")
+print(X)
+
+print("\nInitial Matrix Θ (User Preferences):")
+print(Theta)</code></pre>
+            </div>
+            </p>
+            <h4 id="step-3-compute-the-predicted-ratings-matrix">Step 3: Compute the Predicted Ratings Matrix</h4>
+            <p>The predicted ratings matrix can be expressed as the product of matrices $X$ and $\Theta^T$.</p>
+            <p>
+            <div>
+                <pre><code class="language-python"># Compute the predicted ratings
+predicted_ratings = X.dot(Theta.T)
+
+print("\nPredicted Ratings Matrix XΘ^T:")
+print(predicted_ratings)</code></pre>
+            </div>
+            </p>
+            <p>This Python code demonstrates the setup of matrices $Y$, $X$, and $\Theta$, and the calculation of the predicted ratings matrix using matrix multiplication. The matrix $X$ contains the features for each movie, and $\Theta$ contains the user preferences. The predicted ratings matrix is obtained by multiplying $X$ with the transpose of $\Theta$.</p>
             <h3 id="scenario-a-user-with-no-ratings">Scenario: A User with No Ratings</h3>
             <p>Imagine a user in a movie recommendation system who hasn't rated any movies. This scenario presents a challenge for typical collaborative filtering algorithms.</p>
             <p><img alt="User with No Ratings" src="https://raw.githubusercontent.com/djeada/Stanford-Machine-Learning/main/slides/resources/no_ratings.png" /></p>
@@ -214,6 +496,84 @@
             <ol>
                 <li><strong>Adjust for Users with No Ratings</strong>: For a new user with no ratings, their predicted rating for each movie can be initialized to the mean rating of that movie. This provides a baseline from which personalized recommendations can evolve as the user starts rating movies.</li>
             </ol>
+            <h3 id="scenario-a-user-with-no-ratings">Scenario: A User with No Ratings</h3>
+            <p>Imagine a user in a movie recommendation system who hasn't rated any movies. This scenario presents a challenge for typical collaborative filtering algorithms.</p>
+            <p>For such a user, there are no movies for which $r(i, j) = 1$. As a result, the algorithm ends up minimizing only the regularization term for this user, which doesn't provide meaningful insight for recommendations.</p>
+            <h3 id="mean-normalization-approach">Mean Normalization Approach</h3>
+            <ol>
+                <li><strong>Compute the Mean Rating</strong>: Calculate the average rating for each movie and store these in a vector $\mu$.</li>
+            </ol>
+            <p>Example $\mu$ vector for a system with 5 movies:</p>
+            <p>$$
+                \mu = \begin{bmatrix}
+                2.5 \\
+                2.5 \\
+                2 \\
+                2.25 \\
+                1.25
+                \end{bmatrix}
+                $$</p>
+            <ol>
+                <li><strong>Normalize the Ratings Matrix</strong>: Subtract the mean rating for each movie from all its ratings in the matrix $Y$.</li>
+            </ol>
+            <p>Normalized Ratings Matrix $Y$:</p>
+            <p>$$
+                Y = \begin{pmatrix}
+                2.5 &amp; 2.5 &amp; -2.5 &amp; -2.5 &amp; ? \\
+                2.5 &amp; ? &amp; ? &amp; -2.5 &amp; ? \\
+                ? &amp; 2 &amp; -2 &amp; ? &amp; ? \\
+                -2.25 &amp; -2.25 &amp; 2.75 &amp; 1.75 &amp; ? \\
+                -1.25 &amp; -1.25 &amp; 3.75 &amp; -1.25 &amp; ?
+                \end{pmatrix}
+                $$</p>
+            <ol>
+                <li><strong>Adjust for Users with No Ratings</strong>: For a new user with no ratings, their predicted rating for each movie can be initialized to the mean rating of that movie. This provides a baseline from which personalized recommendations can evolve as the user starts rating movies.</li>
+            </ol>
+            <h3 id="implementation-in-python">Implementation in Python</h3>
+            <h4 id="step-1-define-the-matrix-y-and-compute-mean-ratings">Step 1: Define the Matrix Y and Compute Mean Ratings</h4>
+            <p>
+            <div>
+                <pre><code class="language-python">import numpy as np
+
+# Example [5 x 4] Matrix Y for 5 movies and 4 users
+Y = np.array([
+    [5, 5, 0, 0],
+    [5, 0, 0, 0],
+    [0, 4, 0, 0],
+    [0, 0, 5, 4],
+    [0, 0, 5, 0]
+])
+
+# Compute the mean rating for each movie, ignoring zeros
+mean_ratings = np.true_divide(Y.sum(1), (Y != 0).sum(1))
+
+print("Mean Ratings Vector μ:")
+print(mean_ratings)</code></pre>
+            </div>
+            </p>
+            <h4 id="step-2-normalize-the-ratings-matrix">Step 2: Normalize the Ratings Matrix</h4>
+            <p>
+            <div>
+                <pre><code class="language-python"># Subtract the mean rating for each movie from all its ratings
+Y_normalized = Y - mean_ratings[:, np.newaxis]
+# Ensure we do not subtract from places where rating was 0
+Y_normalized[Y == 0] = 0
+
+print("\nNormalized Ratings Matrix Y:")
+print(Y_normalized)</code></pre>
+            </div>
+            </p>
+            <h4 id="step-3-adjust-for-users-with-no-ratings">Step 3: Adjust for Users with No Ratings</h4>
+            <p>For a new user with no ratings, their predicted rating for each movie can be initialized to the mean rating of that movie.</p>
+            <p>
+            <div>
+                <pre><code class="language-python"># Predicted ratings for a new user with no ratings
+new_user_ratings = mean_ratings.copy()
+
+print("\nPredicted Ratings for New User with No Ratings:")
+print(new_user_ratings)</code></pre>
+            </div>
+            </p>
             <h3 id="benefits-of-mean-normalization">Benefits of Mean Normalization</h3>
             <ul>
                 <li><strong>Handling New Users</strong>: Provides a starting point for recommendations for users who have not yet provided any ratings.</li>
@@ -231,6 +591,16 @@
                         <li><a href="#concept-of-recommender-systems">Concept of Recommender Systems</a></li>
                         <li><a href="#example-scenario-movie-rating-prediction">Example Scenario: Movie Rating Prediction</a></li>
                         <li><a href="#feature-vectors-and-parameter-vectors">Feature Vectors and Parameter Vectors</a></li>
+                        <li><a href="#example-scenario-movie-rating-prediction">Example Scenario: Movie Rating Prediction</a></li>
+                        <li><a href="#feature-vectors-and-parameter-vectors">Feature Vectors and Parameter Vectors</a></li>
+                        <li><a href="#mock-implementation-in-python">Mock Implementation in Python</a>
+                            <ol>
+                                <li><a href="#step-1-data-setup">Step 1: Data Setup</a></li>
+                                <li><a href="#step-2-feature-and-parameter-initialization">Step 2: Feature and Parameter Initialization</a></li>
+                                <li><a href="#step-3-collaborative-filtering-cost-function">Step 3: Collaborative Filtering Cost Function</a></li>
+                                <li><a href="#step-4-gradient-descent-for-optimization">Step 4: Gradient Descent for Optimization</a></li>
+                            </ol>
+                        </li>
                         <li><a href="#making-predictions">Making Predictions</a></li>
                         <li><a href="#collaborative-filtering">Collaborative Filtering</a></li>
                     </ol>
@@ -240,9 +610,34 @@
                         <li><a href="#minimizing-cost-function-for-user-preferences">Minimizing Cost Function for User Preferences</a></li>
                         <li><a href="#gradient-descent-for-optimization">Gradient Descent for Optimization</a></li>
                         <li><a href="#collaborative-filtering-algorithm">Collaborative Filtering Algorithm</a></li>
+                        <li><a href="#collaborative-filtering-implementation">Collaborative Filtering Implementation</a>
+                            <ol>
+                                <li><a href="#step-1-data-setup">Step 1: Data Setup</a></li>
+                                <li><a href="#step-2-feature-and-parameter-initialization">Step 2: Feature and Parameter Initialization</a></li>
+                                <li><a href="#step-3-collaborative-filtering-cost-function">Step 3: Collaborative Filtering Cost Function</a></li>
+                                <li><a href="#step-4-gradient-descent-for-optimization">Step 4: Gradient Descent for Optimization</a></li>
+                                <li><a href="#step-5-prediction">Step 5: Prediction</a></li>
+                            </ol>
+                        </li>
                         <li><a href="#vectorization-low-rank-matrix-factorization">Vectorization: Low Rank Matrix Factorization</a></li>
+                        <li><a href="#low-rank-matrix-factorization-example-implementation">Low Rank Matrix Factorization Example Implementation</a>
+                            <ol>
+                                <li><a href="#step-1-define-the-matrix-y">Step 1: Define the Matrix Y</a></li>
+                                <li><a href="#step-2-initialize-matrices-x-and-θ">Step 2: Initialize Matrices X and Θ</a></li>
+                                <li><a href="#step-3-compute-the-predicted-ratings-matrix">Step 3: Compute the Predicted Ratings Matrix</a></li>
+                            </ol>
+                        </li>
                         <li><a href="#scenario-a-user-with-no-ratings">Scenario: A User with No Ratings</a></li>
                         <li><a href="#mean-normalization-approach">Mean Normalization Approach</a></li>
+                        <li><a href="#scenario-a-user-with-no-ratings">Scenario: A User with No Ratings</a></li>
+                        <li><a href="#mean-normalization-approach">Mean Normalization Approach</a></li>
+                        <li><a href="#implementation-in-python">Implementation in Python</a>
+                            <ol>
+                                <li><a href="#step-1-define-the-matrix-y-and-compute-mean-ratings">Step 1: Define the Matrix Y and Compute Mean Ratings</a></li>
+                                <li><a href="#step-2-normalize-the-ratings-matrix">Step 2: Normalize the Ratings Matrix</a></li>
+                                <li><a href="#step-3-adjust-for-users-with-no-ratings">Step 3: Adjust for Users with No Ratings</a></li>
+                            </ol>
+                        </li>
                         <li><a href="#benefits-of-mean-normalization">Benefits of Mean Normalization</a></li>
                     </ol>
                 </li>
