@@ -1,25 +1,20 @@
 document.addEventListener('DOMContentLoaded', () => {
     const categorySelect = document.getElementById('categorySelect');
-    const subcategoriesDiv = document.getElementById('subcategories');
-    const flashcard = document.getElementById('flashcard');
-    const flashcardFront = document.getElementById('flashcardFront');
-    const flashcardBack = document.getElementById('flashcardBack');
-    const flipButton = document.getElementById('flipButton');
-    const knowButton = document.getElementById('knowButton');
-    const nextButton = document.getElementById('nextButton');
-    const questionsTableBody = document.getElementById('questionsTable').querySelector('tbody');
+    const quizContainer = document.getElementById('quizContainer');
+    const submitButton = document.getElementById('submitButton');
 
     let currentCategory = null;
-    let currentSubcategories = new Set();
-    let cards = [];
-    let currentCardIndex = 0;
-    let cardStatus = [];
+    let questions = [];
+    let userAnswers = [];
 
     const proxyUrl = 'https://api.allorigins.win/get?url=';
 
     const fetchJson = async (url) => {
         try {
             const response = await fetch(proxyUrl + encodeURIComponent(url));
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
             const data = await response.json();
             const parsedData = JSON.parse(data.contents);
             return parsedData;
@@ -30,19 +25,19 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const loadCategories = async () => {
-        const categoriesUrl = 'https://adamdjellouli.com/tools/flash_cards/categories.json';
+        const categoriesUrl = 'https://adamdjellouli.com/tools/quiz_app/categories.json';
         const categories = await fetchJson(categoriesUrl);
 
         if (categories && Array.isArray(categories)) {
             categories.forEach((category, index) => {
                 const option = document.createElement('option');
-                option.value = category;
-                option.textContent = category;
+                option.value = category.name;
+                option.textContent = category.name;
                 categorySelect.appendChild(option);
 
                 if (index === 0) {
                     option.selected = true;
-                    loadCategoryData(category);
+                    loadCategoryData(category.name);
                 }
             });
         } else {
@@ -50,138 +45,78 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const loadCategoryData = async (category) => {
-        const categoryUrl = `https://adamdjellouli.com/tools/flash_cards/${category}.json`;
+    const loadCategoryData = async (categoryName) => {
+        const categoryUrl = `https://adamdjellouli.com/tools/quiz_app/${categoryName}.json`;
         const data = await fetchJson(categoryUrl);
 
         if (data) {
             currentCategory = data;
-            populateSubcategories();
-            selectAllSubcategories();
-            filterCards();
+            questions = currentCategory.questions;
+            userAnswers = Array(questions.length).fill(null);
+            displayQuestions();
         } else {
             console.error('Invalid category data:', data);
         }
     };
 
-    const populateSubcategories = () => {
-        subcategoriesDiv.innerHTML = '';
-        currentCategory.subcategories.forEach(subcategory => {
-            const label = document.createElement('label');
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.value = subcategory.name;
-            checkbox.addEventListener('change', handleSubcategoryChange);
-            label.appendChild(checkbox);
-            label.appendChild(document.createTextNode(subcategory.name));
-            subcategoriesDiv.appendChild(label);
-        });
-    };
+    const displayQuestions = () => {
+        quizContainer.innerHTML = '';
+        questions.forEach((question, index) => {
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'question';
+            const questionText = document.createElement('div');
+            questionText.textContent = question.text;
+            questionDiv.appendChild(questionText);
 
-    const selectAllSubcategories = () => {
-        const checkboxes = subcategoriesDiv.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = true;
-            currentSubcategories.add(checkbox.value);
-        });
-    };
-
-    const handleSubcategoryChange = (event) => {
-        const subcategory = event.target.value;
-        if (event.target.checked) {
-            currentSubcategories.add(subcategory);
-        } else {
-            currentSubcategories.delete(subcategory);
-        }
-        filterCards();
-    };
-
-    const filterCards = () => {
-        cards = [];
-        currentCategory.subcategories.forEach(subcategory => {
-            if (currentSubcategories.has(subcategory.name)) {
-                cards = cards.concat(subcategory.cards.map(card => ({ ...card, subcategory: subcategory.name })));
-            }
-        });
-        cardStatus = Array(cards.length).fill(true); // Initialize all statuses to true (unchecked)
-        currentCardIndex = 0;
-        showCard();
-        populateQuestionsTable();
-    };
-
-    const showCard = () => {
-        let cardFound = false;
-        let checkedCards = cards.length;
-
-        while (checkedCards > 0) {
-            if (cardStatus[currentCardIndex]) {
-                cardFound = true;
-                break;
-            }
-            currentCardIndex = (currentCardIndex + 1) % cards.length;
-            checkedCards--;
-        }
-
-        if (!cardFound) {
-            flashcardFront.textContent = 'No cards available';
-            flashcardBack.textContent = '';
-        } else {
-            flashcardFront.textContent = cards[currentCardIndex].front;
-            flashcardBack.textContent = cards[currentCardIndex].back;
-        }
-        flashcard.classList.remove('flipped');
-    };
-
-    const populateQuestionsTable = () => {
-        questionsTableBody.innerHTML = '';
-        cards.forEach((card, index) => {
-            const row = document.createElement('tr');
-            const indexCell = document.createElement('td');
-            const questionCell = document.createElement('td');
-            const subcategoryCell = document.createElement('td');
-            const statusCell = document.createElement('td');
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.checked = cardStatus[index];
-            checkbox.addEventListener('change', () => {
-                cardStatus[index] = checkbox.checked;
-                showCard();
+            const optionsList = document.createElement('ul');
+            optionsList.className = 'options';
+            question.options.forEach((option, optionIndex) => {
+                const li = document.createElement('li');
+                const radio = document.createElement('input');
+                radio.type = 'radio';
+                radio.name = `question-${index}`;
+                radio.value = optionIndex;
+                radio.addEventListener('change', () => {
+                    userAnswers[index] = optionIndex;
+                });
+                li.appendChild(radio);
+                li.appendChild(document.createTextNode(option));
+                optionsList.appendChild(li);
             });
-
-            indexCell.textContent = index + 1;
-            questionCell.textContent = card.front;
-            subcategoryCell.textContent = card.subcategory;
-            statusCell.appendChild(checkbox);
-            row.appendChild(indexCell);
-            row.appendChild(questionCell);
-            row.appendChild(subcategoryCell);
-            row.appendChild(statusCell);
-            questionsTableBody.appendChild(row);
+            questionDiv.appendChild(optionsList);
+            quizContainer.appendChild(questionDiv);
         });
+    };
+
+    const submitAnswers = () => {
+        let score = 0;
+        questions.forEach((question, index) => {
+            const questionDiv = quizContainer.children[index];
+            const optionsList = questionDiv.querySelector('.options');
+            const selectedOptionIndex = userAnswers[index];
+            optionsList.querySelectorAll('li').forEach((li, optionIndex) => {
+                li.classList.remove('correct', 'incorrect');
+                if (selectedOptionIndex === optionIndex) {
+                    if (optionIndex === question.correctOptionIndex) {
+                        li.classList.add('correct');
+                        score++;
+                    } else {
+                        li.classList.add('incorrect');
+                    }
+                }
+                if (optionIndex === question.correctOptionIndex) {
+                    li.classList.add('correct');
+                }
+            });
+        });
+        alert(`Quiz submitted! Your score is ${score}/${questions.length}. Check the answers marked in green and red.`);
     };
 
     categorySelect.addEventListener('change', (event) => {
         loadCategoryData(event.target.value);
     });
 
-    flipButton.addEventListener('click', () => {
-        flashcard.classList.toggle('flipped');
-    });
-
-    knowButton.addEventListener('click', () => {
-        if (cards.length > 0) {
-            cardStatus[currentCardIndex] = false; // Mark current card as known
-            populateQuestionsTable();
-            showCard();
-        }
-    });
-
-    nextButton.addEventListener('click', () => {
-        if (cards.length > 0) {
-            currentCardIndex = (currentCardIndex + 1) % cards.length;
-            showCard();
-        }
-    });
+    submitButton.addEventListener('click', submitAnswers);
 
     loadCategories();
 });

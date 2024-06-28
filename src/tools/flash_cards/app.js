@@ -100,7 +100,10 @@ document.addEventListener('DOMContentLoaded', () => {
         cards = [];
         currentCategory.subcategories.forEach(subcategory => {
             if (currentSubcategories.has(subcategory.name)) {
-                cards = cards.concat(subcategory.cards.map(card => ({ ...card, subcategory: subcategory.name })));
+                cards = cards.concat(subcategory.cards.map(card => ({
+                    ...card,
+                    subcategory: subcategory.name
+                })));
             }
         });
         cardStatus = Array(cards.length).fill(true); // Initialize all statuses to true (unchecked)
