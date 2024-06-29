@@ -2,6 +2,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const categorySelect = document.getElementById('categorySelect');
     const quizContainer = document.getElementById('quizContainer');
     const submitButton = document.getElementById('submitButton');
+    const loadingMessage = document.createElement('div');
+    loadingMessage.id = 'loadingMessage';
+    loadingMessage.textContent = 'Loading...';
+    quizContainer.appendChild(loadingMessage);
 
     let currentCategory = null;
     let questions = [];
@@ -46,8 +50,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const loadCategoryData = async (categoryName) => {
+        showLoadingMessage();
         const categoryUrl = `https://adamdjellouli.com/tools/quiz_app/${categoryName}.json`;
         const data = await fetchJson(categoryUrl);
+        hideLoadingMessage();
 
         if (data) {
             currentCategory = data;
@@ -57,6 +63,14 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             console.error('Invalid category data:', data);
         }
+    };
+
+    const showLoadingMessage = () => {
+        loadingMessage.style.display = 'block';
+    };
+
+    const hideLoadingMessage = () => {
+        loadingMessage.style.display = 'none';
     };
 
     const displayQuestions = () => {
