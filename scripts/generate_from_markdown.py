@@ -120,15 +120,34 @@ class HtmlEnhancer:
         # find all tables, every table starts with <p>| (there could be a space before the |) and ends with </p>
         table_start_pattern = re.compile(r"<p>\s*\|")
         table_end_pattern = re.compile(r"</p>")
-        table_start_match = table_start_pattern.search(html)
-        while table_start_match is not None:
+        output_html = ""
+        last_end = 0
+
+        while True:
+            table_start_match = table_start_pattern.search(html, last_end)
+            if not table_start_match:
+                break
             table_end_match = table_end_pattern.search(html, table_start_match.end())
-            start = table_start_match.start() + len("<p>")
-            end = table_end_match.start()
-            table = html[start:end]
-            html = html[:start] + cls.markdown_to_html_table(table) + html[end:]
-            table_start_match = table_start_pattern.search(html, table_end_match.end())
-        return html
+            if not table_end_match:
+                break
+
+            start = table_start_match.start()
+            end = table_end_match.end()
+            table = html[table_start_match.end() : table_end_match.start()]
+
+            # Append the part of the HTML before the table and the converted table
+            output_html += (
+                html[last_end:start]
+                + "<p>"
+                + cls.markdown_to_html_table(table)
+                + "</p>"
+            )
+            last_end = table_end_match.end()
+
+        # Append the remainder of the HTML after the last table
+        output_html += html[last_end:]
+
+        return output_html
 
     @classmethod
     def correct_image_sources(cls, html: str) -> str:
