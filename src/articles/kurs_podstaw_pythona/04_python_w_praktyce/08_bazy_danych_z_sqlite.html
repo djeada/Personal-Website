@@ -51,7 +51,7 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: July 05, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: July 07, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="bazy-danych-z-sqlite">Bazy danych z SQLite</h2>
             <p>Na rynku dostępnych jest wiele różnorodnych systemów zarządzania bazami danych (DBMS). Każdy z nich posiada specyficzne wady i zalety. Jednym z popularnych, lekkich DBMS jest SQLite. Kluczowe cechy SQLite to:</p>
@@ -93,7 +93,7 @@ connection = sqlite3.connect("baza_danych.db")</code></pre>
             </p>
             <h3 id="tworzenie-tabel">Tworzenie tabel</h3>
             <p>Aby zdefiniować strukturę bazy, można utworzyć odpowiednie tabele za pomocą języka SQL. Tworzenie tabeli polega na zdefiniowaniu jej nazwy oraz kolumn, które będą się w niej znajdować, wraz z odpowiednimi typami danych i opcjonalnymi ograniczeniami.</p>
-            <h4 id="przykład-tworzenia-tabeli-users">Przykład tworzenia tabeli <code>users</code></h4>
+            <h3 id="tworzenie-tabeli-users">Tworzenie tabeli <code>users</code></h3>
             <p>
             <div>
                 <pre><code class="language-python">import sqlite3
@@ -111,22 +111,46 @@ CREATE TABLE users (
 """
 
 # Wykonanie polecenia SQL
-connection.execute(sql_create_table)</code></pre>
+connection.execute(sql_create_table)
+connection.commit()</code></pre>
             </div>
             </p>
-            <p>Powyższy kod tworzy tabelę <code>users</code> z trzema kolumnami:
-                - <code>id</code>: Klucz główny tabeli, wartość unikalna dla każdego rekordu, automatycznie zwiększana.
-                - <code>username</code>: Nazwa użytkownika, pole tekstowe, wartość nie może być pusta.
-                - <code>password</code>: Hasło użytkownika, pole tekstowe, wartość nie może być pusta.</p>
-            <h3 id="dodawanie-rekordów">Dodawanie rekordów</h3>
-            <p>Wprowadzanie danych do tabeli realizowane jest przez polecenie <code>INSERT INTO</code>. Możemy wprowadzać pojedyncze rekordy lub wiele rekordów naraz.</p>
-            <h4 id="przykład-dodawania-rekordów-do-tabeli-users">Przykład dodawania rekordów do tabeli <code>users</code></h4>
+            <p>Powyższy kod tworzy tabelę <code>users</code> z trzema kolumnami:</p>
+            <ul>
+                <li><code>id</code>: Klucz główny tabeli, wartość unikalna dla każdego rekordu, automatycznie zwiększana.</li>
+                <li><code>username</code>: Nazwa użytkownika, pole tekstowe, wartość nie może być pusta.</li>
+                <li><code>password</code>: Hasło użytkownika, pole tekstowe, wartość nie może być pusta.</li>
+            </ul>
+            <h3 id="tworzenie-tabeli-orders">Tworzenie tabeli <code>orders</code></h3>
             <p>
             <div>
-                <pre><code class="language-python"># Połączenie z bazą danych
-connection = sqlite3.connect('example.db')
+                <pre><code class="language-python"># Definicja polecenia SQL do utworzenia tabeli
+sql_create_orders_table = """
+CREATE TABLE orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    amount REAL,
+    order_date TEXT,
+    FOREIGN KEY (user_id) REFERENCES users (id)
+)
+"""
 
-# Dane do wprowadzenia
+# Wykonanie polecenia SQL
+connection.execute(sql_create_orders_table)
+connection.commit()</code></pre>
+            </div>
+            </p>
+            <p>Powyższy kod tworzy tabelę <code>orders</code> z czterema kolumnami:</p>
+            <ul>
+                <li><code>id</code>: Klucz główny tabeli, wartość unikalna dla każdego rekordu, automatycznie zwiększana.</li>
+                <li><code>user_id</code>: Id użytkownika, klucz obcy odnoszący się do <code>id</code> w tabeli <code>users</code>.</li>
+                <li><code>amount</code>: Kwota zamówienia, pole numeryczne.</li>
+                <li><code>order_date</code>: Data zamówienia, pole tekstowe.</li>
+            </ul>
+            <h3 id="dodawanie-rekordów-do-tabeli-users">Dodawanie rekordów do tabeli <code>users</code></h3>
+            <p>
+            <div>
+                <pre><code class="language-python"># Dane do wprowadzenia
 data_users = [
     ("user1", "pass1"),
     ("user2", "pass2")
@@ -137,19 +161,53 @@ for user in data_users:
     connection.execute("INSERT INTO users (username, password) VALUES (?, ?)", user)
 
 # Zatwierdzenie zmian
-connection.commit()</code></pre>
+connection.commit()
+
+# Sprawdzenie wyników
+cursor = connection.execute("SELECT * FROM users")
+print(cursor.fetchall())</code></pre>
             </div>
             </p>
             <p>Powyższy kod dodaje dwa rekordy do tabeli <code>users</code>. Wartości dla <code>username</code> i <code>password</code> są pobierane z listy <code>data_users</code>, a następnie wstawiane do tabeli za pomocą zapytania <code>INSERT INTO</code>.</p>
-            <h3 id="pobieranie-danych">Pobieranie danych</h3>
-            <p>Do zapytań o dane z tabeli wykorzystuje się polecenie <code>SELECT</code>. Możemy pobierać wszystkie kolumny, wybrane kolumny lub filtrować dane za pomocą klauzuli <code>WHERE</code>.</p>
-            <h4 id="przykład-pobierania-wszystkich-rekordów-z-tabeli-users">Przykład pobierania wszystkich rekordów z tabeli <code>users</code></h4>
+            <p>Wynik:</p>
             <p>
             <div>
-                <pre><code class="language-python"># Połączenie z bazą danych
-connection = sqlite3.connect('example.db')
+                <pre><code class="language-shell">[(1, 'user1', 'pass1'), (2, 'user2', 'pass2')]</code></pre>
+            </div>
+            </p>
+            <h3 id="dodawanie-rekordów-do-tabeli-orders">Dodawanie rekordów do tabeli <code>orders</code></h3>
+            <p>
+            <div>
+                <pre><code class="language-python"># Dane do wprowadzenia
+data_orders = [
+    (1, 250.5, '2023-01-01'),
+    (1, 300.75, '2023-01-02'),
+    (2, 450.0, '2023-01-03')
+]
 
-# Wykonanie zapytania SELECT
+# Wprowadzanie danych
+for order in data_orders:
+    connection.execute("INSERT INTO orders (user_id, amount, order_date) VALUES (?, ?, ?)", order)
+
+# Zatwierdzenie zmian
+connection.commit()
+
+# Sprawdzenie wyników
+cursor = connection.execute("SELECT * FROM orders")
+print(cursor.fetchall())</code></pre>
+            </div>
+            </p>
+            <p>Powyższy kod dodaje trzy rekordy do tabeli <code>orders</code>. Wartości dla <code>user_id</code>, <code>amount</code> i <code>order_date</code> są pobierane z listy <code>data_orders</code>, a następnie wstawiane do tabeli za pomocą zapytania <code>INSERT INTO</code>.</p>
+            <p>Wynik:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">[(1, 1, 250.5, '2023-01-01'), (2, 1, 300.75, '2023-01-02'), (3, 2, 450.0, '2023-01-03')]</code></pre>
+            </div>
+            </p>
+            <h3 id="pobieranie-wszystkich-rekordów-z-tabeli-users">Pobieranie wszystkich rekordów z tabeli <code>users</code></h3>
+            <p>
+            <div>
+                <pre><code class="language-python"># Wykonanie zapytania SELECT
 cursor = connection.execute("SELECT * FROM users")
 users = cursor.fetchall()
 
@@ -158,14 +216,23 @@ for user in users:
     print(user)</code></pre>
             </div>
             </p>
-            <p>Powyższy kod pobiera wszystkie rekordy z tabeli <code>users</code> i wyświetla je. Funkcja <code>fetchall()</code> zwraca wszystkie wyniki zapytania jako listę krotek, gdzie każda krotka reprezentuje jeden rekord z bazy danych.</p>
-            <h4 id="przykład-pobierania-wybranych-kolumn-i-filtrowania-danych">Przykład pobierania wybranych kolumn i filtrowania danych</h4>
+            <p>Wyjaśnienie:</p>
+            <ul>
+                <li><code>SELECT * FROM users</code>: Pobiera wszystkie kolumny i wiersze z tabeli <code>users</code>.</li>
+                <li><code>cursor.fetchall()</code>: Pobiera wszystkie wyniki zapytania i zwraca je jako listę krotek.</li>
+                <li><code>for user in users</code>: Iteruje przez listę użytkowników i drukuje każdą krotkę.</li>
+            </ul>
+            <p>Wynik:</p>
             <p>
             <div>
-                <pre><code class="language-python"># Połączenie z bazą danych
-connection = sqlite3.connect('example.db')
-
-# Wykonanie zapytania SELECT z filtrowaniem
+                <pre><code class="language-shell">(1, 'user1', 'pass1')
+(2, 'user2', 'pass2')</code></pre>
+            </div>
+            </p>
+            <h3 id="pobieranie-wybranych-kolumn-i-filtrowanie-danych">Pobieranie wybranych kolumn i filtrowanie danych</h3>
+            <p>
+            <div>
+                <pre><code class="language-python"># Wykonanie zapytania SELECT z filtrowaniem
 cursor = connection.execute("SELECT username FROM users WHERE id = ?", (1,))
 user = cursor.fetchone()
 
@@ -174,17 +241,23 @@ if user:
     print(user)</code></pre>
             </div>
             </p>
-            <p>Powyższy kod pobiera nazwę użytkownika dla rekordu, który ma <code>id</code> równe 1. Funkcja <code>fetchone()</code> zwraca pierwszy wynik zapytania jako krotkę. Jeśli wyników brak, zwraca <code>None</code>.</p>
-            <h3 id="łączenie-tabel-join-">Łączenie tabel (JOIN)</h3>
-            <p>Do łączenia danych z różnych tabel wykorzystujemy polecenie <code>JOIN</code>.</p>
-            <h4 id="przykład-inner-join">Przykład: Inner Join</h4>
-            <p>Aby pobrać dane użytkowników wraz z ich zamówieniami, możemy użyć INNER JOIN:</p>
+            <p>Wyjaśnienie:</p>
+            <ul>
+                <li><code>SELECT username FROM users WHERE id = ?</code>: Pobiera kolumnę <code>username</code> z tabeli <code>users</code>, gdzie <code>id</code> jest równe 1.</li>
+                <li><code>cursor.fetchone()</code>: Pobiera pierwszy wynik zapytania.</li>
+                <li><code>if user</code>: Sprawdza, czy wynik nie jest pusty i drukuje nazwę użytkownika.</li>
+            </ul>
+            <p>Wynik:</p>
             <p>
             <div>
-                <pre><code class="language-python"># Połączenie z bazą danych
-connection = sqlite3.connect('example.db')
-
-# Wykonanie zapytania INNER JOIN
+                <pre><code class="language-shell">('user1',)</code></pre>
+            </div>
+            </p>
+            <h3 id="łączenie-tabel-join-">Łączenie tabel (JOIN)</h3>
+            <h4 id="przykład-inner-join">Przykład: Inner Join</h4>
+            <p>
+            <div>
+                <pre><code class="language-python"># Wykonanie zapytania INNER JOIN
 sql = """
 SELECT users.username, orders.amount, orders.order_date
 FROM users
@@ -198,6 +271,11 @@ for row in results:
     print(row)</code></pre>
             </div>
             </p>
+            <p>Wyjaśnienie:</p>
+            <ul>
+                <li><code>INNER JOIN</code>: Łączy wiersze z dwóch tabel, gdzie istnieje dopasowanie w obu tabelach.</li>
+                <li><code>ON users.id = orders.user_id</code>: Warunek łączenia, gdzie <code>id</code> z tabeli <code>users</code> musi być równe <code>user_id</code> z tabeli <code>orders</code>.</li>
+            </ul>
             <p>Wynik:</p>
             <p>
             <div>
@@ -207,13 +285,9 @@ for row in results:
             </div>
             </p>
             <h4 id="przykład-left-join">Przykład: Left Join</h4>
-            <p>Aby pobrać wszystkie dane użytkowników, niezależnie od tego, czy mają zamówienia, możemy użyć LEFT JOIN:</p>
             <p>
             <div>
-                <pre><code class="language-python"># Połączenie z bazą danych
-connection = sqlite3.connect('example.db')
-
-# Wykonanie zapytania LEFT JOIN
+                <pre><code class="language-python"># Wykonanie zapytania LEFT JOIN
 sql = """
 SELECT users.username, orders.amount, orders.order_date
 FROM users
@@ -227,6 +301,10 @@ for row in results:
     print(row)</code></pre>
             </div>
             </p>
+            <p>Wyjaśnienie:</p>
+            <ul>
+                <li><code>LEFT JOIN</code>: Łączy wszystkie wiersze z tabeli <code>users</code> i dopasowane wiersze z tabeli <code>orders</code>. Jeśli nie ma dopasowania, wynikiem są wartości NULL w kolumnach tabeli <code>orders</code>.</li>
+            </ul>
             <p>Wynik:</p>
             <p>
             <div>
@@ -236,14 +314,10 @@ for row in results:
             </div>
             </p>
             <h3 id="grupowanie-danych-group-by-">Grupowanie danych (GROUP BY)</h3>
-            <p>Grupowanie danych pozwala na agregowanie wyników według określonego kryterium.</p>
             <h4 id="przykład-grupowanie-według-użytkownika-i-sumowanie-zamówień">Przykład: Grupowanie według użytkownika i sumowanie zamówień</h4>
             <p>
             <div>
-                <pre><code class="language-python"># Połączenie z bazą danych
-connection = sqlite3.connect('example.db')
-
-# Wykonanie zapytania GROUP BY
+                <pre><code class="language-python"># Wykonanie zapytania GROUP BY
 sql = """
 SELECT users.username, SUM(orders.amount) as total_amount
 FROM users
@@ -258,6 +332,11 @@ for row in results:
     print(row)</code></pre>
             </div>
             </p>
+            <p>Wyjaśnienie:</p>
+            <ul>
+                <li><code>GROUP BY users.username</code>: Grupuje wyniki według nazwy użytkownika.</li>
+                <li><code>SUM(orders.amount) as total_amount</code>: Oblicza sumę zamówień dla każdego użytkownika.</li>
+            </ul>
             <p>Wynik:</p>
             <p>
             <div>
@@ -266,14 +345,10 @@ for row in results:
             </div>
             </p>
             <h3 id="sortowanie-danych-order-by-">Sortowanie danych (ORDER BY)</h3>
-            <p>Sortowanie wyników zapytań SQL realizowane jest przez polecenie <code>ORDER BY</code>.</p>
             <h4 id="przykład-sortowanie-wyników-według-daty-zamówienia">Przykład: Sortowanie wyników według daty zamówienia</h4>
             <p>
             <div>
-                <pre><code class="language-python"># Połączenie z bazą danych
-connection = sqlite3.connect('example.db')
-
-# Wykonanie zapytania ORDER BY
+                <pre><code class="language-python"># Wykonanie zapytania ORDER BY
 sql = """
 SELECT users.username, orders.amount, orders.order_date
 FROM users
@@ -288,6 +363,10 @@ for row in results:
     print(row)</code></pre>
             </div>
             </p>
+            <p>Wyjaśnienie:</p>
+            <ul>
+                <li><code>ORDER BY orders.order_date DESC</code>: Sortuje wyniki według daty zamówienia w kolejności malejącej.</li>
+            </ul>
             <p>Wynik:</p>
             <p>
             <div>
@@ -311,22 +390,13 @@ for row in results:
                     <li><a href="#połączenie-connection-">Połączenie (Connection)</a></li>
                     <li><a href="#kursor">Kursor</a></li>
                     <li><a href="#otwarcie-połączenia-z-bazą-danych">Otwarcie połączenia z bazą danych</a></li>
-                    <li><a href="#tworzenie-tabel">Tworzenie tabel</a>
-                        <ol>
-                            <li><a href="#przykład-tworzenia-tabeli-users">Przykład tworzenia tabeli users</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#dodawanie-rekordów">Dodawanie rekordów</a>
-                        <ol>
-                            <li><a href="#przykład-dodawania-rekordów-do-tabeli-users">Przykład dodawania rekordów do tabeli users</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#pobieranie-danych">Pobieranie danych</a>
-                        <ol>
-                            <li><a href="#przykład-pobierania-wszystkich-rekordów-z-tabeli-users">Przykład pobierania wszystkich rekordów z tabeli users</a></li>
-                            <li><a href="#przykład-pobierania-wybranych-kolumn-i-filtrowania-danych">Przykład pobierania wybranych kolumn i filtrowania danych</a></li>
-                        </ol>
-                    </li>
+                    <li><a href="#tworzenie-tabel">Tworzenie tabel</a></li>
+                    <li><a href="#tworzenie-tabeli-users">Tworzenie tabeli users</a></li>
+                    <li><a href="#tworzenie-tabeli-orders">Tworzenie tabeli orders</a></li>
+                    <li><a href="#dodawanie-rekordów-do-tabeli-users">Dodawanie rekordów do tabeli users</a></li>
+                    <li><a href="#dodawanie-rekordów-do-tabeli-orders">Dodawanie rekordów do tabeli orders</a></li>
+                    <li><a href="#pobieranie-wszystkich-rekordów-z-tabeli-users">Pobieranie wszystkich rekordów z tabeli users</a></li>
+                    <li><a href="#pobieranie-wybranych-kolumn-i-filtrowanie-danych">Pobieranie wybranych kolumn i filtrowanie danych</a></li>
                     <li><a href="#łączenie-tabel-join-">Łączenie tabel (JOIN)</a>
                         <ol>
                             <li><a href="#przykład-inner-join">Przykład: Inner Join</a></li>

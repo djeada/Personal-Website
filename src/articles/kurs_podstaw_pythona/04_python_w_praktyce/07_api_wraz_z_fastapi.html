@@ -51,7 +51,7 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: June 11, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: July 07, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="tworzenie-api-przy-użyciu-fastapi">Tworzenie API przy użyciu FastAPI</h2>
             <p>FastAPI to nowoczesne, wydajne i łatwe w użyciu narzędzie do tworzenia API w Pythonie. Za jego popularność odpowiada prostota tworzenia aplikacji, wbudowana walidacja danych oraz automatyczne generowanie dokumentacji.</p>
@@ -158,45 +158,150 @@ def delete_item(item_id: int):
     return {"status": "success"}</code></pre>
             </div>
             </p>
-            <h3 id="korzystanie-z-api-przy-użyciu-requests">Korzystanie z API przy użyciu requests</h3>
-            <p>Do komunikacji z API, instalujemy bibliotekę <code>requests</code> za pomocą komendy: <code>pip install requests</code>.</p>
-            <h4 id="tworzenie-przedmiotu-post-">Tworzenie przedmiotu (POST)</h4>
+            <h3 id="pełny-kod-api-do-zarządzania-przedmiotami">Pełny kod API do zarządzania przedmiotami</h3>
+            <p>Poniżej znajduje się pełny, wykonywalny przykład API do zarządzania przedmiotami, wykorzystujący biblioteki FastAPI oraz Pydantic do definicji modelu danych. Zawiera definicję modelu oraz funkcje do tworzenia, odczytywania i usuwania przedmiotów przechowywanych w prostym słowniku.</p>
+            <p>
+            <div>
+                <pre><code class="language-python">from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import uvicorn
+
+app = FastAPI()
+
+# Przechowywanie danych w słowniku
+items = {}
+
+# Definicja modelu danych przy użyciu Pydantic
+class Item(BaseModel):
+    name: str
+    description: str = None
+    price: float
+    tax: float = None
+
+# Endpoint do tworzenia przedmiotu (POST)
+@app.post("/items/")
+def create_item(item: Item):
+    item_id = len(items) + 1
+    items[item_id] = item
+    return {"id": item_id, **item.dict()}
+
+# Endpoint do odczytywania przedmiotu (GET)
+@app.get("/items/{item_id}")
+def read_item(item_id: int):
+    item = items.get(item_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return item
+
+# Endpoint do usuwania przedmiotu (DELETE)
+@app.delete("/items/{item_id}")
+def delete_item(item_id: int):
+    if item_id not in items:
+        raise HTTPException(status_code=404, detail="Item not found")
+    del items[item_id]
+    return {"status": "success"}
+
+# Uruchomienie serwera
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000)</code></pre>
+            </div>
+            </p>
+            <h3 id="uruchomienie-serwera">Uruchomienie serwera</h3>
+            <p>Funkcja <code>uvicorn.run(app, host="127.0.0.1", port=8000)</code> określa, że aplikacja ma być dostępna pod adresem localhost (127.0.0.1) na porcie 8000.</p>
+            <p>Aby uruchomić ten serwer, wystarczy, że uruchomisz ten plik bezpośrednio z Pythona, używając polecenia:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">python nazwa_pliku.py</code></pre>
+            </div>
+            </p>
+            <p>Gdzie <code>nazwa_pliku.py</code> to nazwa pliku, w którym umieściłeś powyższy kod.</p>
+            <h3 id="swagger-ui">Swagger UI</h3>
+            <p>Swagger UI jest automatycznie generowanym interfejsem użytkownika dla dokumentacji API, dostępnym w FastAPI dzięki integracji z OpenAPI. Dostarcza on przeglądarkę dokumentacji, która pozwala na interaktywne eksplorowanie API, wykonywanie żądań i przeglądanie odpowiedzi bezpośrednio z przeglądarki internetowej.</p>
             <ul>
-                <li>Używając metody <code>requests.post</code>, wysyłamy dane w formacie JSON do endpointu <code>/items/</code>.</li>
-                <li>Przykład: <code>response = requests.post(url + '/items/', json=item_data)</code></li>
+                <li>Po uruchomieniu serwera (jak opisano wcześniej), Swagger UI jest dostępny pod adresem: <a href="http://127.0.0.1:8000/docs">http://127.0.0.1:8000/docs</a>.</li>
+                <li>Strona będzie zawierać interfejs z wszystkimi zdefiniowanymi endpointami, jak na poniższym zrzucie ekranu:</li>
             </ul>
+            <p><img alt="Swagger UI Example" src="https://github.com/djeada/Kurs-Podstaw-Pythona/assets/37275728/c3b57b80-b724-4f3b-ad51-566d465eda62" /></p>
+            <h4 id="funkcjonalności-swagger-ui">Funkcjonalności Swagger UI</h4>
+            <ul>
+                <li>Możesz wysyłać żądania do swojego API bezpośrednio z Swagger UI, co ułatwia testowanie i debugowanie.</li>
+                <li>Dla każdego endpointu, możesz zobaczyć oczekiwane parametry, odpowiedzi oraz statusy HTTP.</li>
+                <li>Swagger UI generuje dokumentację na podstawie kodu źródłowego i komentarzy, więc jest zawsze aktualna z najnowszymi zmianami w API.</li>
+            </ul>
+            <h4 id="korzyści-z-używania-swagger-ui">Korzyści z używania Swagger UI</h4>
+            <ul>
+                <li>Swagger UI jest wbudowany w FastAPI i nie wymaga dodatkowej konfiguracji poza standardowym uruchomieniem aplikacji.</li>
+                <li>Dzięki czytelnej dokumentacji, inni programiści mogą łatwiej korzystać z Twojego API i integrować je z własnymi aplikacjami.</li>
+            </ul>
+            <h3 id="korzystanie-z-api-przy-użyciu-requests">Korzystanie z API przy użyciu requests</h3>
+            <p>Aby komunikować się z API w Pythonie, potrzebujemy biblioteki <code>requests</code>, którą możemy zainstalować za pomocą poniższej komendy:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">pip install requests</code></pre>
+            </div>
+            </p>
+            <p>Poniżej znajdują się przykłady jak używać tej biblioteki do tworzenia, pobierania i usuwania przedmiotów za pomocą API.</p>
+            <h4 id="tworzenie-przedmiotu-post-">Tworzenie przedmiotu (POST)</h4>
+            <p>Używając metody <code>requests.post</code>, możemy wysłać dane w formacie JSON do endpointu <code>/items/</code>, aby utworzyć nowy przedmiot. Poniżej znajduje się przykład kodu:</p>
             <p>
             <div>
                 <pre><code class="language-python">import requests
 
-# Tworzenie (POST)
-item_data = {"name": "example", "price": 10.0}
-response = requests.post("http://127.0.0.1:8000/items/", json=item_data)
-print(response.json())</code></pre>
+# URL API
+url = "http://127.0.0.1:8000/items/"
+
+# Dane przedmiotu
+item_data = {
+    "name": "example",
+    "description": "This is an example item",
+    "price": 10.0,
+    "tax": 2.0
+}
+
+# Wysłanie żądania POST
+response = requests.post(url, json=item_data)
+
+# Wyświetlenie odpowiedzi
+print(response.status_code)  # Sprawdzenie statusu odpowiedzi
+print(response.json())  # Wyświetlenie odpowiedzi w formacie JSON</code></pre>
             </div>
             </p>
             <h4 id="pobieranie-przedmiotu-get-">Pobieranie przedmiotu (GET)</h4>
-            <ul>
-                <li>Korzystając z metody <code>requests.get</code>, możemy pobrać dane przedmiotu.</li>
-                <li>Przykład: <code>response = requests.get(url + f'/items/{item_id}')</code></li>
-            </ul>
+            <p>Aby pobrać dane konkretnego przedmiotu, możemy użyć metody <code>requests.get</code> z odpowiednim <code>item_id</code>. Poniżej znajduje się przykład kodu:</p>
             <p>
             <div>
-                <pre><code class="language-python"># Pobieranie (GET)
-response = requests.get("http://127.0.0.1:8000/items/1")
-print(response.json())</code></pre>
+                <pre><code class="language-python">import requests
+
+# URL API z dodanym item_id
+url = "http://127.0.0.1:8000/items/1"
+
+# Wysłanie żądania GET
+response = requests.get(url)
+
+# Wyświetlenie odpowiedzi
+if response.status_code == 200:
+    print(response.json())  # Wyświetlenie danych przedmiotu
+else:
+    print("Item not found")  # Wyświetlenie informacji, jeśli przedmiot nie został znaleziony</code></pre>
             </div>
             </p>
             <h4 id="usuwanie-przedmiotu-delete-">Usuwanie przedmiotu (DELETE)</h4>
-            <ul>
-                <li>Metoda <code>requests.delete</code> pozwala usunąć przedmiot na podstawie <code>item_id</code>.</li>
-                <li>Przykład: <code>response = requests.delete(url + f'/items/{item_id}')</code></li>
-            </ul>
+            <p>Aby usunąć przedmiot na podstawie <code>item_id</code>, możemy użyć metody <code>requests.delete</code>. Poniżej znajduje się przykład kodu:</p>
             <p>
             <div>
-                <pre><code class="language-python"># Usuwanie (DELETE)
-response = requests.delete("http://127.0.0.1:8000/items/1")
-print(response.json())</code></pre>
+                <pre><code class="language-python">import requests
+
+# URL API z dodanym item_id
+url = "http://127.0.0.1:8000/items/1"
+
+# Wysłanie żądania DELETE
+response = requests.delete(url)
+
+# Wyświetlenie odpowiedzi
+if response.status_code == 200:
+    print(response.json())  # Wyświetlenie statusu usunięcia
+else:
+    print("Item not found")  # Wyświetlenie informacji, jeśli przedmiot nie został znaleziony</code></pre>
             </div>
             </p>
         </section>
@@ -212,6 +317,14 @@ print(response.json())</code></pre>
                             <li><a href="#tworzenie-przedmiotu-post-">Tworzenie przedmiotu (POST)</a></li>
                             <li><a href="#pobieranie-przedmiotu-get-">Pobieranie przedmiotu (GET)</a></li>
                             <li><a href="#usuwanie-przedmiotu-delete-">Usuwanie przedmiotu (DELETE)</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#pełny-kod-api-do-zarządzania-przedmiotami">Pełny kod API do zarządzania przedmiotami</a></li>
+                    <li><a href="#uruchomienie-serwera">Uruchomienie serwera</a></li>
+                    <li><a href="#swagger-ui">Swagger UI</a>
+                        <ol>
+                            <li><a href="#funkcjonalności-swagger-ui">Funkcjonalności Swagger UI</a></li>
+                            <li><a href="#korzyści-z-używania-swagger-ui">Korzyści z używania Swagger UI</a></li>
                         </ol>
                     </li>
                     <li><a href="#korzystanie-z-api-przy-użyciu-requests">Korzystanie z API przy użyciu requests</a>
