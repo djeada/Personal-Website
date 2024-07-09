@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Developing Custom Filters and Algorithms</title>
-    <meta content="Custom filters must comply with the VTK pipeline structure and inherit from relevant classes." name="description" />
+    <meta content="Developing custom filters and algorithms in the Visualization Toolkit (VTK) allows for the extension of VTK's capabilities beyond its built-in functionality." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -51,36 +51,53 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: June 11, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: July 09, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="developing-custom-filters-and-algorithms">Developing Custom Filters and Algorithms</h2>
+            <p>Developing custom filters and algorithms in the Visualization Toolkit (VTK) allows for the extension of VTK's capabilities beyond its built-in functionality. This enables the implementation of novel data processing or visualization techniques tailored to specific requirements.</p>
+            <h3 id="integration-with-the-vtk-pipeline">Integration with the VTK Pipeline</h3>
+            <p>Custom filters can be seamlessly integrated into the VTK pipeline and used alongside built-in filters. This integration provides a wide scope for implementing unique data processing methods and advanced visualization techniques.</p>
+            <h3 id="steps-to-create-a-custom-filter">Steps to Create a Custom Filter</h3>
+            <p>I. To create a custom filter, you need to subclass a suitable VTK filter base class. Some common base classes include:</p>
             <ul>
-                <li>Custom filters can be seamlessly integrated into the VTK pipeline and used alongside built-in filters, offering a wide scope for implementing novel data processing or visualization techniques.</li>
-                <li>To create a custom filter, subclass an appropriate VTK filter base class, like <code>vtkAlgorithm</code>, <code>vtkPolyDataAlgorithm</code>, or <code>vtkImageDataAlgorithm</code>.</li>
-                <li>You will need to implement required methods, the most critical being <code>RequestData()</code>, which performs the actual data processing.</li>
+                <li>The most general-purpose base class is <code>vtkAlgorithm</code>, which can be used for any custom algorithm.</li>
+                <li>When working with <code>vtkPolyData</code> objects, which are used for representing geometric shapes, you should use <code>vtkPolyDataAlgorithm</code>.</li>
+                <li>For processing <code>vtkImageData</code> objects, typically used for image processing tasks, the suitable base class is <code>vtkImageDataAlgorithm</code>.</li>
+            </ul>
+            <p>II. Implementing required methods is crucial for the custom filter.</p>
+            <ul>
+                <li>The most critical method to implement is <code>RequestData()</code>, where the actual data processing occurs. This method takes inputs, processes the data, and generates the output.</li>
+                <li>Additional methods that might need implementation include <code>RequestInformation()</code>, which provides information about the input and output data types, and <code>RequestUpdateExtent()</code>, which determines which portions of the input data are required for the output.</li>
+            </ul>
+            <p>III. Ensure that the custom filter complies with the VTK pipeline structure.</p>
+            <ul>
+                <li>This includes correctly managing the input and output ports and handling data flow efficiently within the pipeline.</li>
+                <li>Additionally, it is important to properly handle memory management to avoid leaks and ensure the stability of the pipeline.</li>
             </ul>
             <h3 id="inheritance-and-vtk-pipeline-integration">Inheritance and VTK Pipeline Integration</h3>
-            <p>Custom filters must comply with the VTK pipeline structure and inherit from relevant classes. Common base classes for custom filters include:</p>
+            <p>Custom filters must adhere to the VTK pipeline architecture and inherit from relevant base classes to ensure compatibility. Here’s a closer look at some common base classes:</p>
             <ul>
-                <li><code>vtkAlgorithm</code>: A general-purpose base class for all VTK algorithms.</li>
-                <li><code>vtkPolyDataAlgorithm</code>: A base class for filters that process <code>vtkPolyData</code> objects.</li>
-                <li><code>vtkImageDataAlgorithm</code>: A base class for filters that process <code>vtkImageData</code> objects.</li>
+                <li>The foundational class for all VTK algorithms is <code>vtkAlgorithm</code>. It provides a framework for executing a sequence of operations, managing input and output ports, and defining data flow.</li>
+                <li>Specifically designed for filters that process <code>vtkPolyData</code>, the <code>vtkPolyDataAlgorithm</code> class handles geometric and topological data such as vertices, lines, polygons, and polyhedra. This class simplifies the creation of algorithms that manipulate 3D models.</li>
+                <li>Used for processing <code>vtkImageData</code> objects, the <code>vtkImageDataAlgorithm</code> class is ideal for image processing tasks. It includes functionalities for filtering, transforming, and analyzing 2D and 3D image data.</li>
             </ul>
-            <p>Integrating custom filters with the VTK pipeline ensures their compatibility with other VTK filters and components, providing a smooth and unified workflow.</p>
             <h3 id="applications-and-use-cases">Applications and Use Cases</h3>
-            <p>Custom filters can serve a multitude of purposes, from implementing new visualization techniques to processing specific data types. Some example use cases might be:</p>
+            <p>Custom filters can be designed to meet various specific needs in data processing and visualization. Some practical applications include:</p>
             <ul>
-                <li>Designing a custom mesh smoothing algorithm.</li>
-                <li>Creating a filter to compute the distance between two datasets.</li>
-                <li>Developing an innovative volume rendering technique.</li>
+                <li><strong>Custom Mesh Smoothing Algorithm:</strong> Develop a filter that applies advanced smoothing techniques to 3D meshes, improving their appearance or preparing them for further analysis.</li>
+                <li><strong>Computing Distances Between Datasets:</strong> Create a filter that calculates the distances between corresponding points in two different datasets. This is particularly useful in comparing deformations or changes over time.</li>
+                <li><strong>Innovative Volume Rendering Techniques:</strong> Design a new volume rendering algorithm that offers better performance or visual quality for specific types of volumetric data, such as medical imaging or scientific simulations.</li>
             </ul>
-            <h2 id="example">Example</h2>
-            <p>Here's an example of creating a custom filter that inherits from <code>vtkPolyDataAlgorithm</code>:</p>
+            <h2 id="example-creating-a-custom-filter-for-point-displacement">Example: Creating a Custom Filter for Point Displacement</h2>
+            <p>To better illustrate the creation of a custom filter in VTK, let's consider an example where we develop a custom filter that displaces the points of a <code>vtkPolyData</code> object based on a sine function. This example demonstrates how to subclass <code>vtkPolyDataAlgorithm</code>, access input and output data, and perform custom data processing.</p>
+            <h3 id="custom-filter-for-point-displacement">Custom Filter for Point Displacement</h3>
+            <p>Here's the implementation of the custom filter:</p>
             <p>
             <div>
                 <pre><code class="language-python">import vtk
+import numpy as np
 
-class MyCustomFilter(vtk.vtkPolyDataAlgorithm):
+class SineDisplacementFilter(vtk.vtkPolyDataAlgorithm):
     def __init__(self):
         super().__init__()
 
@@ -89,31 +106,81 @@ class MyCustomFilter(vtk.vtkPolyDataAlgorithm):
         input_data = vtk.vtkPolyData.GetData(inInfo[0])
         output_data = vtk.vtkPolyData.GetData(outInfo)
 
-        # Perform custom processing on the input_data
-        # For example, let's just copy the input to the output
+        # Copy input to output to preserve topology
         output_data.ShallowCopy(input_data)
+        
+        # Access the points of the input data
+        points = input_data.GetPoints()
+        num_points = points.GetNumberOfPoints()
+
+        # Create a new vtkPoints object for the displaced points
+        new_points = vtk.vtkPoints()
+        new_points.SetNumberOfPoints(num_points)
+
+        # Displace each point using a sine function
+        for i in range(num_points):
+            x, y, z = points.GetPoint(i)
+            displacement = np.sin(x) * 0.1  # Sine displacement in the z-direction
+            new_points.SetPoint(i, x, y, z + displacement)
+
+        # Set the new points to the output data
+        output_data.SetPoints(new_points)
         
         # Returning 1 indicates successful execution
         return 1
 
 # Example usage:
 sphere_source = vtk.vtkSphereSource()
-custom_filter = MyCustomFilter()
-custom_filter.SetInputConnection(sphere_source.GetOutputPort())
-custom_filter.Update()</code></pre>
+sine_displacement_filter = SineDisplacementFilter()
+sine_displacement_filter.SetInputConnection(sphere_source.GetOutputPort())
+sine_displacement_filter.Update()
+
+# Visualize the result
+mapper = vtk.vtkPolyDataMapper()
+mapper.SetInputConnection(sine_displacement_filter.GetOutputPort())
+
+actor = vtk.vtkActor()
+actor.SetMapper(mapper)
+
+renderer = vtk.vtkRenderer()
+render_window = vtk.vtkRenderWindow()
+render_window.AddRenderer(renderer)
+render_window_interactor = vtk.vtkRenderWindowInteractor()
+render_window_interactor.SetRenderWindow(render_window)
+
+renderer.AddActor(actor)
+renderer.SetBackground(0.1, 0.2, 0.4)
+
+render_window.Render()
+render_window_interactor.Start()</code></pre>
             </div>
             </p>
+            <h3 id="explanation">Explanation</h3>
+            <ul>
+                <li>To set up the filter to process <code>vtkPolyData</code> objects, we create a class <code>SineDisplacementFilter</code> that inherits from <code>vtkPolyDataAlgorithm</code>.</li>
+                <li>Inside the <code>RequestData</code> method, we access the input data using <code>vtkPolyData.GetData(inInfo[0])</code> and the output data using <code>vtkPolyData.GetData(outInfo)</code>. To preserve the topology, we copy the input data to the output using <code>ShallowCopy</code>.</li>
+                <li>For custom processing, we access the points of the input data and create a new <code>vtkPoints</code> object for the displaced points. By iterating over each point, we apply a sine-based displacement to the z-coordinate and set the displaced point in the new <code>vtkPoints</code> object.</li>
+                <li>We set the new displaced points to the output data using <code>output_data.SetPoints(new_points)</code>.</li>
+                <li>For example usage, we create a <code>vtkSphereSource</code> to generate a sphere and set it as the input to our custom filter. After updating the filter, we visualize the result using <code>vtkPolyDataMapper</code>, <code>vtkActor</code>, and VTK rendering classes.</li>
+            </ul>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
             <ol>
                 <li><a href="#developing-custom-filters-and-algorithms">Developing Custom Filters and Algorithms</a>
                     <ol>
+                        <li><a href="#integration-with-the-vtk-pipeline">Integration with the VTK Pipeline</a></li>
+                        <li><a href="#steps-to-create-a-custom-filter">Steps to Create a Custom Filter</a></li>
                         <li><a href="#inheritance-and-vtk-pipeline-integration">Inheritance and VTK Pipeline Integration</a></li>
                         <li><a href="#applications-and-use-cases">Applications and Use Cases</a></li>
                     </ol>
                 </li>
-                <li><a href="#example">Example</a></li>
+                <li><a href="#example-creating-a-custom-filter-for-point-displacement">Example: Creating a Custom Filter for Point Displacement</a>
+                    <ol>
+                        <li><a href="#custom-filter-for-point-displacement">Custom Filter for Point Displacement</a></li>
+                        <li><a href="#explanation">Explanation</a></li>
+                    </ol>
+                </li>
             </ol>
             <div id="related-articles">
                 <h2>Related Articles</h2>
