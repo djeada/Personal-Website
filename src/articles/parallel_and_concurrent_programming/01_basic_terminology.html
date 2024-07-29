@@ -51,7 +51,7 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: July 10, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: July 29, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="basic-terminology">Basic terminology</h2>
             <p>Let's start by defining some key terms and emphasizing the distinctions between related concepts. In general those concepts are universal and may be applied to any programming language. The differences between the languages will be discussed in greater detail later, when we attempt to explain the specific approach in implementing concurrency.</p>
@@ -119,6 +119,74 @@
                 <li>The <strong>complexity</strong> of asynchronous tasks arises from the need for mechanisms to manage tasks and handle completion callbacks or events.</li>
                 <li>An <strong>analogy</strong> for asynchronous tasks is cooking multiple dishes simultaneously. For instance, while one dish is baking in the oven, you can chop vegetables for another, thereby making the overall cooking process more efficient.</li>
             </ul>
+            <h3 id="comparison-of-execution-paradigms">Comparison of Execution Paradigms</h3>
+            <p>
+            <table>
+                <tr>
+                    <td><strong>Characteristic</strong></td>
+                    <td><strong>Sequential</strong></td>
+                    <td><strong>Non-Sequential</strong></td>
+                    <td><strong>Concurrent</strong></td>
+                    <td><strong>Parallel</strong></td>
+                    <td><strong>Asynchronous</strong></td>
+                    <td><strong>Synchronous</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Definition</strong></td>
+                    <td>Tasks are executed one after another in a specific order.</td>
+                    <td>Tasks do not follow a strict order of execution.</td>
+                    <td>Multiple tasks make progress within overlapping time periods.</td>
+                    <td>Multiple tasks are executed simultaneously on multiple processors.</td>
+                    <td>Tasks are initiated and proceed independently of other tasks, often with callbacks or promises to handle completion.</td>
+                    <td>Tasks are executed one after another, where each task waits for the previous one to complete.</td>
+                </tr>
+                <tr>
+                    <td><strong>Order of Execution</strong></td>
+                    <td>Strict and predictable order.</td>
+                    <td>Flexible order.</td>
+                    <td>Overlapping time periods, but not necessarily simultaneous.</td>
+                    <td>Simultaneously on different processors.</td>
+                    <td>Initiated independently, can complete at any time.</td>
+                    <td>Strict and predictable order, waiting for each task to complete before starting the next.</td>
+                </tr>
+                <tr>
+                    <td><strong>Task Scheduling</strong></td>
+                    <td>Simple and straightforward.</td>
+                    <td>Flexible, can change dynamically.</td>
+                    <td>Managed by the scheduler to ensure progress of all tasks.</td>
+                    <td>Managed by the system, often requires multiple processors.</td>
+                    <td>Can be scheduled to run at any time, often managed by event-driven programming models.</td>
+                    <td>Requires each task to wait for the previous one to finish.</td>
+                </tr>
+                <tr>
+                    <td><strong>Complexity</strong></td>
+                    <td>Low complexity, easy to design and debug.</td>
+                    <td>More complex due to flexibility.</td>
+                    <td>Moderate complexity, requires careful management of resources.</td>
+                    <td>High complexity, requires handling of synchronization and resource sharing.</td>
+                    <td>Moderate to high complexity, requires handling of callbacks, promises, or other mechanisms to manage independent tasks.</td>
+                    <td>Low complexity, but can lead to inefficiencies if tasks have to wait for long periods.</td>
+                </tr>
+                <tr>
+                    <td><strong>Performance</strong></td>
+                    <td>Can be slower due to waiting for each task to complete before starting the next.</td>
+                    <td>Can be efficient if tasks are independent and do not need a specific order.</td>
+                    <td>Can improve performance by overlapping tasks, but may involve context switching overhead.</td>
+                    <td>Can significantly improve performance for CPU-bound tasks by using multiple processors.</td>
+                    <td>Can improve responsiveness and resource utilization, especially in I/O-bound tasks.</td>
+                    <td>Can lead to inefficiencies if tasks involve a lot of waiting, as each task has to wait for the previous one to complete.</td>
+                </tr>
+                <tr>
+                    <td><strong>Use Cases</strong></td>
+                    <td>Simple scripts, batch processing where order is crucial.</td>
+                    <td>Event-driven systems, where tasks can be handled as they come.</td>
+                    <td>Multithreading applications, GUI applications where multiple tasks need to be handled concurrently.</td>
+                    <td>High-performance computing, data processing tasks that can be divided into smaller, independent tasks.</td>
+                    <td>Web servers handling multiple requests, applications with I/O operations where waiting for responses would be inefficient.</td>
+                    <td>Systems where order of operations is crucial and tasks are dependent on the completion of previous tasks, such as transaction systems.</td>
+                </tr>
+            </table>
+            </p>
             <h2 id="process">Process</h2>
             <p>A process is an instance of a program that is currently executing on a computer. It represents a program in action, containing the program code and its current activity. When you use any application on your computer, such as a web browser, text editor, or video player, it runs as a process. In some cases, a single application can have multiple processes running simultaneously to handle different tasks more efficiently. Additionally, the operating system uses processes to perform tasks in the background while you work, such as managing system resources, running scheduled tasks, or handling network communications.</p>
             <h3 id="characteristics-of-a-process">Characteristics of a Process</h3>
@@ -193,39 +261,89 @@
                     <td>Thread</td>
                 </tr>
                 <tr>
-                    <td>Independence</td>
-                    <td>Independent instance</td>
-                    <td>Subset of a process</td>
+                    <td><strong>Independence</strong></td>
+                    <td>Processes are independent instances that run in separate address spaces.</td>
+                    <td>Threads are subsets of a process and run within the same address space as the process.</td>
                 </tr>
                 <tr>
-                    <td>Memory</td>
-                    <td>Separate address space</td>
-                    <td>Shared address space within the process</td>
+                    <td><strong>Memory</strong></td>
+                    <td>Processes have separate address spaces, meaning each process has its own memory area.</td>
+                    <td>Threads share the address space of their parent process, allowing them to access the same memory and data.</td>
                 </tr>
                 <tr>
-                    <td>Communication</td>
-                    <td>Inter-Process Communication required</td>
-                    <td>Direct memory access within the process</td>
+                    <td><strong>Communication</strong></td>
+                    <td>Processes require Inter-Process Communication (IPC) mechanisms like pipes, message queues, or shared memory to communicate with each other.</td>
+                    <td>Threads can communicate directly by accessing shared memory within the process.</td>
                 </tr>
                 <tr>
-                    <td>State Information</td>
-                    <td>Carries considerable state information</td>
-                    <td>Minimal state information</td>
+                    <td><strong>State Information</strong></td>
+                    <td>Processes carry considerable state information, including process ID, process state, memory information, and more.</td>
+                    <td>Threads maintain minimal state information, typically just a thread ID, program counter, register set, and stack.</td>
                 </tr>
                 <tr>
-                    <td>Resource Sharing</td>
-                    <td>Does not share resources directly</td>
-                    <td>Shares resources and data with other threads</td>
+                    <td><strong>Resource Sharing</strong></td>
+                    <td>Processes do not share resources directly with each other; each process has its own resources.</td>
+                    <td>Threads share resources such as code, data, and open files with other threads within the same process.</td>
                 </tr>
                 <tr>
-                    <td>Creation Overhead</td>
-                    <td>Higher (requires more resources)</td>
-                    <td>Lower (less resource-intensive)</td>
+                    <td><strong>Creation Overhead</strong></td>
+                    <td>Process creation has higher overhead because it involves allocating a separate memory space and other resources.</td>
+                    <td>Thread creation has lower overhead since threads share resources and memory with the parent process.</td>
                 </tr>
                 <tr>
-                    <td>Context Switching</td>
-                    <td>More overhead (due to separate memory)</td>
-                    <td>Less overhead (shared memory space)</td>
+                    <td><strong>Context Switching</strong></td>
+                    <td>Context switching between processes involves more overhead due to switching separate memory spaces and state information.</td>
+                    <td>Context switching between threads is faster and involves less overhead because they share the same memory space and resources.</td>
+                </tr>
+            </table>
+            </p>
+            <p>Here's a table comparing the life cycle stages of threads and processes:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Life Cycle Stage</td>
+                    <td>Thread Life Cycle</td>
+                    <td>Process Life Cycle</td>
+                </tr>
+                <tr>
+                    <td><strong>New</strong></td>
+                    <td>Thread is in the process of being created.</td>
+                    <td>Process is in the process of being created.</td>
+                </tr>
+                <tr>
+                    <td><strong>Ready</strong></td>
+                    <td>Thread is ready to run when CPU is available.</td>
+                    <td>Process is ready to execute when CPU is available.</td>
+                </tr>
+                <tr>
+                    <td><strong>Running</strong></td>
+                    <td>Thread is actively executing instructions.</td>
+                    <td>Process is actively executing instructions.</td>
+                </tr>
+                <tr>
+                    <td><strong>Waiting/Blocked</strong></td>
+                    <td>Thread is waiting for resources or I/O.</td>
+                    <td>Process is waiting for resources or I/O.</td>
+                </tr>
+                <tr>
+                    <td><strong>Timed Waiting</strong></td>
+                    <td>Thread is waiting for a specified time.</td>
+                    <td>(Not typically a separate state, but can be considered under waiting)</td>
+                </tr>
+                <tr>
+                    <td><strong>Terminated</strong></td>
+                    <td>Thread has completed execution or is aborted.</td>
+                    <td>Process has completed execution or is terminated.</td>
+                </tr>
+                <tr>
+                    <td><strong>Ready Suspended</strong></td>
+                    <td>(Not typically a separate state, but can be inferred from 'Ready' and 'Blocked')</td>
+                    <td>Process is in secondary storage and ready to execute when moved to main memory.</td>
+                </tr>
+                <tr>
+                    <td><strong>Blocked Suspended</strong></td>
+                    <td>(Not typically a separate state, but can be inferred from 'Blocked')</td>
+                    <td>Process is in secondary storage and waiting for an event before moving to main memory.</td>
                 </tr>
             </table>
             </p>
@@ -303,6 +421,7 @@ CPU Processing  ---&gt;                  ----&gt;                    ----&gt;</c
                                 <li><a href="#asynchronous-execution">Asynchronous Execution</a></li>
                             </ol>
                         </li>
+                        <li><a href="#comparison-of-execution-paradigms">Comparison of Execution Paradigms</a></li>
                     </ol>
                 </li>
                 <li><a href="#process">Process</a>
