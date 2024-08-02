@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Designing Parallel Programs</title>
+    <meta content="Designing parallel programs involves breaking down computational tasks into smaller, concurrent units to be executed simultaneously." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="https://adamdjellouli.com">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a class="active" href="../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <section id="article-body">
+            <p style="text-align: right;"><i>Last modified: August 02, 2024</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <header>Designing Parallel Programs</header>
+            <p>Designing parallel programs involves breaking down computational tasks into smaller, concurrent units to be executed simultaneously. This approach leverages the power of multiple processors to enhance performance and efficiency. Key steps in this process include partitioning, communication, agglomeration, and mapping.</p>
+            <h2 id="partitioning">Partitioning</h2>
+            <p>Partitioning is a fundamental concept in computational problem-solving, where a large problem is divided into smaller, more manageable tasks. This approach allows tasks to be executed concurrently, improving efficiency and performance. In essence, partitioning is about breaking a problem into smaller pieces.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">#
+      +-----------------------+
+      |     Big Problem       |
+      +-----------------------+
+                 |
+     +-----------+-----------+
+     |           |           |
++---------+ +---------+ +---------+
+| Part 1  | | Part 2  | | Part 3  |
++---------+ +---------+ +---------+</code></pre>
+            </div>
+            </p>
+            <h3 id="goals">Goals</h3>
+            <p>I. Balance the Workload Among Tasks</p>
+            <ul>
+                <li>Ensure that each task receives an approximately equal amount of work to avoid bottlenecks.</li>
+                <li>This balance is crucial for maximizing the efficiency and utilization of computational resources.</li>
+            </ul>
+            <p>II. Minimize Dependencies Between Tasks</p>
+            <ul>
+                <li>Reduce the communication and synchronization overhead between tasks.</li>
+                <li>Independent tasks can be processed in parallel without frequent data exchange, improving overall performance.</li>
+            </ul>
+            <h3 id="types-of-decomposition">Types of Decomposition</h3>
+            <p>I. Domain Decomposition</p>
+            <p>Domain decomposition involves splitting the data into partitions, with each partition processed by a separate task. This method is highly effective in scenarios where the data can be naturally divided into distinct segments.</p>
+            <p>Example:</p>
+            <p>In a weather simulation, the geographical area can be divided into smaller regions, with each region processed independently.</p>
+            <p>II. Functional Decomposition</p>
+            <p>Functional decomposition divides the computation into separate functional tasks, each performing a distinct part of the overall computation. This method focuses on breaking down the operations rather than the data.</p>
+            <p>Example:</p>
+            <p>In a web application, different tasks such as user authentication, data retrieval, and UI rendering can be handled by separate services.</p>
+            <p>IIII. Cyclic Decomposition</p>
+            <p>Cyclic decomposition is primarily used in the context of permutations and group theory. It breaks down a permutation into a collection of disjoint cycles, where each cycle represents a sequence of elements that are permuted among themselves.</p>
+            <p>Example:</p>
+            <p>Consider the permutation of the set ${1, 2, 3, 4}$ given by:</p>
+            <p>$$
+                \sigma = \begin{pmatrix}
+                1 &amp; 2 &amp; 3 &amp; 4 \\
+                2 &amp; 3 &amp; 1 &amp; 4
+                \end{pmatrix}
+                $$</p>
+            <p>This permutation can be decomposed into disjoint cycles as follows:</p>
+            <p>$$
+                \sigma = (1 \to 2 \to 3 \to 1)(4)
+                $$</p>
+            <p>Here, the cycle $(1 → 2 → 3 → 1)$ indicates that 1 is sent to 2, 2 is sent to 3, and 3 is sent back to 1. The cycle $(4)$ indicates that 4 remains fixed.</p>
+            <p>IV. Block Decomposition</p>
+            <p>Block decomposition is a technique used in matrix theory and linear algebra. It involves partitioning a matrix into smaller submatrices (blocks). This can simplify computations and is useful for analyzing the structure of the matrix.</p>
+            <p>Example:</p>
+            <p>Consider a matrix ( A ) of size ( 4 \times 4 ):</p>
+            <p>$$
+                A = \begin{pmatrix}
+                a_{11} &amp; a_{12} &amp; a_{13} &amp; a_{14} \\
+                a_{21} &amp; a_{22} &amp; a_{23} &amp; a_{24} \\
+                a_{31} &amp; a_{32} &amp; a_{33} &amp; a_{34} \\
+                a_{41} &amp; a_{42} &amp; a_{43} &amp; a_{44}
+                \end{pmatrix}
+                $$</p>
+            <p>This matrix can be decomposed into blocks:</p>
+            <p>$$
+                A = \begin{pmatrix}
+                A_{11} &amp; A_{12} \\
+                A_{21} &amp; A_{22}
+                \end{pmatrix}
+                $$</p>
+            <p>where each block is a submatrix:</p>
+            <p>$$
+                A_{11} = \begin{pmatrix}
+                a_{11} &amp; a_{12} \\
+                a_{21} &amp; a_{22}
+                \end{pmatrix}, \quad A_{12} = \begin{pmatrix}
+                a_{13} &amp; a_{14} \\
+                a_{23} &amp; a_{24}
+                \end{pmatrix}, \quad A_{21} = \begin{pmatrix}
+                a_{31} &amp; a_{32} \\
+                a_{41} &amp; a_{42}
+                \end{pmatrix}, \quad A_{22} = \begin{pmatrix}
+                a_{33} &amp; a_{34} \\
+                a_{43} &amp; a_{44}
+                \end{pmatrix}
+                $$</p>
+            <p>Block decomposition helps in performing matrix operations more efficiently by working with smaller submatrices.</p>
+            <h2 id="communication">Communication</h2>
+            <p>Communication in parallel computing involves the exchange of data between tasks. This process is essential when tasks depend on each other's results to proceed. Efficient communication is crucial for maintaining performance and minimizing delays.</p>
+            <h3 id="goals">Goals</h3>
+            <p>I. Minimize the Volume and Frequency of Communication</p>
+            <ul>
+                <li>Reducing the amount of data exchanged and the number of communications can significantly decrease overhead and improve overall performance.</li>
+            </ul>
+            <p>II. Optimize the Use of Network Resources:</p>
+            <ul>
+                <li>Efficient use of network bandwidth and minimizing latency ensures faster data transfer and better utilization of computational resources.</li>
+            </ul>
+            <p>I apologize for the omission. Here is the full text with ASCII graphics and examples for each type of communication, including the example for point-to-point communication.</p>
+            <h3 id="types-of-communication">Types of Communication</h3>
+            <p>I. Local Communication</p>
+            <p>Local communication refers to data exchange between tasks that reside on the same physical processor. This type of communication is generally faster due to lower latency and higher bandwidth within a single processor.</p>
+            <p><strong>Example:</strong></p>
+            <p>In a multi-core processor, tasks running on different cores can share data through shared memory.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+-----------+     +-----------+
+| Core 1    | &lt;-&gt; | Core 2    |
+| Task A    |     | Task B    |
++-----------+     +-----------+
+      |               |
+      +-------+-------+
+              |
+       Shared Memory</code></pre>
+            </div>
+            </p>
+            <p>II. Global Communication</p>
+            <p>Global communication involves data exchange between tasks located on different physical processors. This type of communication often involves higher latency and lower bandwidth due to the physical distance and network constraints.</p>
+            <p><strong>Example:</strong></p>
+            <p>In a distributed computing system, tasks running on separate machines need to communicate over a network.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+-------------+       +-------------+
+| Processor 1 | &lt;----&gt; | Processor 2 |
+| Task A      |       | Task B      |
++-------------+       +-------------+
+      |                     |
+      +---------------------+
+             Network</code></pre>
+            </div>
+            </p>
+            <p>III. Point-to-Point Communication</p>
+            <p>Point-to-point communication is direct data exchange between pairs of tasks. It is the simplest form of communication, where one task (sender) sends data directly to another task (receiver).</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+---------+     +---------+
+| Sender  | --&gt; | Receiver |
++---------+     +---------+</code></pre>
+            </div>
+            </p>
+            <p>IV. Collective Communication</p>
+            <p>Collective communication involves multiple tasks and includes operations such as broadcast, scatter, and gather.</p>
+            <p><strong>Scatter Communication</strong></p>
+            <p>In scatter communication, a single process sends different pieces of data to multiple processes. Each process receives a unique piece of the data.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+-----------------------+
+      |         ABC           |
+      +-----------------------+
+                 |
+     +-----------+-----------+
+     |           |           |
++---------+ +---------+ +---------+
+|    A    | |    B    | |    C    |
++---------+ +---------+ +---------+</code></pre>
+            </div>
+            </p>
+            <p><strong>Broadcast Communication</strong></p>
+            <p>In broadcast communication, a single process sends the same piece of data to all other processes.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+-----------------------+
+      |         ABC           |
+      +-----------------------+
+                 |
+     +-----------+-----------+
+     |           |           |
++---------+ +---------+ +---------+
+|   ABC   | |   ABC   | |   ABC   |
++---------+ +---------+ +---------+</code></pre>
+            </div>
+            </p>
+            <h3 id="communication-modes">Communication Modes</h3>
+            <p>I. Synchronous Blocking Communication</p>
+            <ul>
+                <li>Tasks wait until the entire communication process is complete before proceeding.</li>
+                <li>Tasks cannot perform other work while waiting for the communication to finish.</li>
+                <li>Ensures data integrity but can lead to idle times.</li>
+            </ul>
+            <p>II. Asynchronous Nonblocking Communication</p>
+            <ul>
+                <li>Tasks initiate communication and then proceed with other work without waiting for the communication to complete.</li>
+                <li>Allows for overlapping communication with computation, potentially improving efficiency.</li>
+            </ul>
+            <h3 id="key-concepts-in-communication">Key Concepts in Communication</h3>
+            <p>I. Overhead</p>
+            <ul>
+                <li>The computational time and resources spent on communication.</li>
+                <li>High overhead can reduce the efficiency of parallel programs. Optimizing communication patterns and reducing overhead is essential for performance.</li>
+            </ul>
+            <p>II. Latency</p>
+            <ul>
+                <li>The time it takes for a message to travel from the sender to the receiver, typically measured in microseconds.</li>
+                <li>High latency can delay the execution of dependent tasks. Minimizing latency is critical for improving the speed of data exchange.</li>
+            </ul>
+            <p>III. Bandwidth</p>
+            <ul>
+                <li>The amount of data that can be communicated per second, typically measured in gigabytes per second (GB/s).</li>
+                <li>Higher bandwidth allows more data to be transferred in less time, enhancing the overall performance of communication-intensive applications.</li>
+            </ul>
+            <h2 id="agglomeration">Agglomeration</h2>
+            <p>Agglomeration is the process of combining smaller tasks and data partitions into larger tasks. This technique aims to reduce communication overhead and improve overall efficiency by grouping tasks that frequently interact and ensuring the aggregated tasks fit within the processor’s memory.</p>
+            <h3 id="goals">Goals</h3>
+            <p>I. Improve Computational Granularity:</p>
+            <ul>
+                <li>By reducing the number of tasks, agglomeration increases the computation-to-communication ratio, leading to more efficient execution.</li>
+                <li>Larger tasks mean fewer context switches and less communication overhead.</li>
+            </ul>
+            <p>II. Minimize Communication:</p>
+            <ul>
+                <li>Localizing data and computation within agglomerated tasks decreases the need for frequent data exchanges between tasks.</li>
+                <li>This reduction in communication can significantly enhance performance, especially in distributed computing environments.</li>
+            </ul>
+            <h3 id="granularity">Granularity</h3>
+            <p>Granularity in parallel computing refers to the ratio of computation to communication in a task or set of tasks. It indicates the amount of work done between communication events.</p>
+            <p>$$
+                \text{Granularity} = \frac{\text{computation}}{\text{communication}}
+                $$</p>
+            <ul>
+                <li><strong>Fine-grained parallelism</strong> is characterized by a high frequency of communication compared to computation, which results in low granularity.</li>
+                <li><strong>Coarse-grained parallelism</strong>, on the other hand, is characterized by a low frequency of communication compared to computation, which results in high granularity.</li>
+            </ul>
+            <h3 id="types-of-parallelism">Types of Parallelism</h3>
+            <p>I. Fine-Grained Parallelism</p>
+            <ul>
+                <li>Fine-grained parallelism involves a large number of small tasks.</li>
+                <li>These tasks perform relatively small amounts of computation before needing to communicate with other tasks.</li>
+                <li>One of the key advantages of fine-grained parallelism is its excellent load balancing due to the fine distribution of tasks across processors.</li>
+                <li>Each processor is given an equal share of the workload, which helps prevent bottlenecks.</li>
+                <li>However, fine-grained parallelism has notable disadvantages, including a low computation-to-communication ratio, which leads to high communication overhead.</li>
+                <li>The frequent need for communication between tasks can cause delays and reduce the overall efficiency of the system.</li>
+            </ul>
+            <p>II. Coarse-Grained Parallelism</p>
+            <ul>
+                <li>Coarse-grained parallelism involves a small number of large tasks.</li>
+                <li>These tasks perform substantial amounts of computation with only infrequent communication.</li>
+                <li>The primary advantage of coarse-grained parallelism is its high computation-to-communication ratio, which results in reduced communication overhead.</li>
+                <li>As tasks spend more time on computation, the overall process becomes more efficient.</li>
+                <li>Despite these advantages, coarse-grained parallelism also has its drawbacks, such as poor load balancing because the workload is divided into fewer, larger tasks.</li>
+                <li>This can lead to situations where some processors are idle while others are overloaded, resulting in inefficiencies.</li>
+            </ul>
+            <h3 id="practical-considerations">Practical Considerations</h3>
+            <p>I. Task Grouping</p>
+            <ul>
+                <li>Identify and group smaller tasks that frequently communicate to form larger tasks.</li>
+                <li>Ensure that these agglomerated tasks fit well within the processor’s memory to avoid excessive swapping and paging.</li>
+            </ul>
+            <p>II. Memory Management</p>
+            <ul>
+                <li>Agglomerated tasks should be designed to make efficient use of available memory.</li>
+                <li>Proper memory management ensures that tasks run smoothly without causing memory bottlenecks.</li>
+            </ul>
+            <p>III. Optimization Balance</p>
+            <ul>
+                <li>Striking a balance between fine-grained and coarse-grained parallelism is crucial.</li>
+                <li>The ideal granularity depends on the specific application and the architecture of the computing system.</li>
+            </ul>
+            <h2 id="mapping">Mapping</h2>
+            <p>Mapping is the process of assigning agglomerated tasks to specific processors in a parallel computing environment. Effective mapping is crucial for balancing the computational load and minimizing communication overhead.</p>
+            <h3 id="goals">Goals</h3>
+            <p>I. Balance the Computational Load Across Processors</p>
+            <ul>
+                <li>Distribute tasks evenly to ensure that no single processor is overloaded while others are underutilized.</li>
+                <li>Balanced load distribution maximizes the utilization of available computational resources.</li>
+            </ul>
+            <p>II. Minimize Communication Overhead</p>
+            <ul>
+                <li>Assign tasks that frequently communicate with each other to the same processor or to nearby processors.</li>
+                <li>Reducing the distance and frequency of data exchanges can significantly decrease communication delays and overhead.</li>
+            </ul>
+            <p>III. Minimize the Total Execution Time</p>
+            <ul>
+                <li>Optimize the assignment of tasks to reduce the overall time required for computation and communication.</li>
+                <li>Efficient mapping leads to faster completion of the entire workload.</li>
+            </ul>
+            <h3 id="strategies">Strategies</h3>
+            <p>I. Static Mapping</p>
+            <ul>
+                <li>Tasks are assigned to processors before execution begins and remain fixed throughout.</li>
+                <li>Suitable for problems where the workload is predictable and uniform.</li>
+            </ul>
+            <p>II. Dynamic Mapping</p>
+            <ul>
+                <li>Tasks are assigned to processors during execution based on current load and availability.</li>
+                <li>Ideal for applications with unpredictable workloads or where tasks vary significantly in size.</li>
+            </ul>
+            <p>III. Hierarchical Mapping</p>
+            <ul>
+                <li>Combines static and dynamic approaches by dividing tasks into groups that are statically assigned to clusters of processors.</li>
+                <li>Within each cluster, tasks can be dynamically mapped to balance the load.</li>
+            </ul>
+            <p>IV. Task Clustering</p>
+            <ul>
+                <li>Group tasks with high inter-task communication into clusters and assign each cluster to a single processor or a set of closely located processors.</li>
+                <li>Reduces the communication overhead and improves overall efficiency.</li>
+            </ul>
+            <p>V. Graph Partitioning</p>
+            <ul>
+                <li>Represent tasks and their communication as a graph, where nodes represent tasks and edges represent communication.</li>
+                <li>Use graph partitioning algorithms to divide the graph into subgraphs with minimal edge cuts, ensuring tasks with high communication needs are grouped together.</li>
+            </ul>
+            <h3 id="practical-considerations">Practical Considerations</h3>
+            <p>I. Task Placement</p>
+            <ul>
+                <li>Specify where each task will execute, considering factors like processor capabilities, memory hierarchy, and network topology.</li>
+                <li>Placement decisions impact both computational performance and communication efficiency.</li>
+            </ul>
+            <p>II. Load Balancing</p>
+            <ul>
+                <li>Continuously monitor and adjust the load distribution to prevent any processor from becoming a bottleneck.</li>
+                <li>Dynamic load balancing techniques can help in maintaining an even distribution of work.</li>
+            </ul>
+            <p>III. Communication Patterns</p>
+            <ul>
+                <li>Analyze the communication patterns of tasks to identify high-communication pairs or groups.</li>
+                <li>Optimize mapping to localize these communication patterns as much as possible.</li>
+            </ul>
+            <h3 id="does-not-apply-to">Does Not Apply To</h3>
+            <ul>
+                <li>In the context of <strong>single-core processors</strong>, mapping is irrelevant since all tasks are executed on the same processor.</li>
+                <li>Systems equipped with <strong>automated task scheduling</strong> manage task assignment internally, rendering manual mapping unnecessary.</li>
+            </ul>
+            <h2 id="example-workflow-in-designing-parallel-programs">Example Workflow in Designing Parallel Programs</h2>
+            <p>I. Partitioning</p>
+            <ul>
+                <li>Analyze the problem to identify independent tasks.</li>
+                <li>Choose between domain decomposition and functional decomposition based on the nature of the problem.</li>
+                <li>Ensure the tasks are roughly equal in computational load.</li>
+            </ul>
+            <p>II. Communication</p>
+            <ul>
+                <li>Determine the data dependencies between tasks.</li>
+                <li>Plan the communication strategy (point-to-point or collective).</li>
+                <li>Optimize the communication pattern to minimize overhead.</li>
+            </ul>
+            <p>III. Agglomeration</p>
+            <ul>
+                <li>Combine smaller tasks to form larger ones, reducing the total number of tasks.</li>
+                <li>Balance the trade-off between computational granularity and communication overhead.</li>
+                <li>Ensure the combined tasks fit within the memory limits of a processor.</li>
+            </ul>
+            <p>IV. Mapping</p>
+            <ul>
+                <li>Assign agglomerated tasks to processors.</li>
+                <li>Use static mapping if the workload is predictable; otherwise, opt for dynamic mapping.</li>
+                <li>Consider the network topology to minimize communication delays.</li>
+            </ul>
+            <h2 id="key-principles">Key Principles</h2>
+            <ul>
+                <li>Effective <strong>load balancing</strong> aims to distribute work evenly across processors to avoid idle times.</li>
+                <li><strong>Minimizing communication</strong> is essential to reduce the amount and frequency of data exchange between tasks.</li>
+                <li><strong>Scalability</strong> is crucial, ensuring the system can handle increasing problem sizes and processor counts efficiently.</li>
+                <li>Maintaining <strong>locality</strong> by keeping frequently communicating tasks close to each other helps reduce communication delays.</li>
+            </ul>
+            <h2 id="tools-and-techniques">Tools and Techniques</h2>
+            <ul>
+                <li>The <strong>Message Passing Interface</strong> (MPI) is used for communication in distributed memory systems.</li>
+                <li><strong>OpenMP</strong> is employed for parallel programming in shared memory systems.</li>
+                <li><strong>Profiling</strong> tools, such as Intel VTune and GNU gprof, are utilized to analyze performance and identify bottlenecks.</li>
+            </ul>
+        </section>
+        <div id="table-of-contents">
+            <h2>Table of Contents</h2>
+            <ol>
+                <li><a href="#partitioning">Partitioning</a>
+                    <ol>
+                        <li><a href="#goals">Goals</a></li>
+                        <li><a href="#types-of-decomposition">Types of Decomposition</a></li>
+                    </ol>
+                </li>
+                <li><a href="#communication">Communication</a>
+                    <ol>
+                        <li><a href="#goals">Goals</a></li>
+                        <li><a href="#types-of-communication">Types of Communication</a></li>
+                        <li><a href="#communication-modes">Communication Modes</a></li>
+                        <li><a href="#key-concepts-in-communication">Key Concepts in Communication</a></li>
+                    </ol>
+                </li>
+                <li><a href="#agglomeration">Agglomeration</a>
+                    <ol>
+                        <li><a href="#goals">Goals</a></li>
+                        <li><a href="#granularity">Granularity</a></li>
+                        <li><a href="#types-of-parallelism">Types of Parallelism</a></li>
+                        <li><a href="#practical-considerations">Practical Considerations</a></li>
+                    </ol>
+                </li>
+                <li><a href="#mapping">Mapping</a>
+                    <ol>
+                        <li><a href="#goals">Goals</a></li>
+                        <li><a href="#strategies">Strategies</a></li>
+                        <li><a href="#practical-considerations">Practical Considerations</a></li>
+                        <li><a href="#does-not-apply-to">Does Not Apply To</a></li>
+                    </ol>
+                </li>
+                <li><a href="#example-workflow-in-designing-parallel-programs">Example Workflow in Designing Parallel Programs</a></li>
+                <li><a href="#key-principles">Key Principles</a></li>
+                <li><a href="#tools-and-techniques">Tools and Techniques</a></li>
+            </ol>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/01_basic_terminology.html">Basic Terminology</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/02_multithreading.html">Multithreading</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/03_multiprocessing.html">Multiprocessing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/04_asynchronous_programming.html">Asynchronous Programming</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/05_mpi.html">Mpi</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/06_hardware.html">Hardware</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/07_evaluating_performance.html">Evaluating Performance</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/08_designing_parallel_programs.html">Designing Parallel Programs</a></li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column">
+                <img alt="Adam Djellouli Symbol" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+            <div class="footer-column">
+                <h2><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Our Privacy Policy</a></h2>
+                <p>
+                    Thank you for visiting my personal website. All of the <br />
+                    content on this site is free to use, but please remember <br />
+                    to be a good human being and refrain from any abuse<br />
+                    of the site. If you would like to contact me, please use <br />
+                    my <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn profile</a> or my <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a> if you have any technical <br />
+                    issues or ideas to share. I wish you the best and hope you <br />
+                    have a fantastic life. <br />
+                </p>
+            </div>
+            <div class="footer-column">
+                <h2>Follow me</h2>
+                <ul class="social-media">
+                    <li>
+                        <a class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" target="_blank" title="YouTube">
+                        </a>YouTube
+                    </li>
+                    <li>
+                        <a class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" target="_blank" title="LinkedIn">
+                        </a>LinkedIn
+                    </li>
+                    <li>
+                        <a class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" target="_blank" title="Instagram">
+                        </a>Instagram
+                    </li>
+                    <li>
+                        <a class="fa fa-github" href="https://github.com/djeada" title="GitHub">
+                        </a>Github
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div>
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="../../app.js"></script>
+    </footer>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>
