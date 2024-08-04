@@ -12,7 +12,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentCategory = null;
     let questions = [];
     let userAnswers = [];
-    let maxQuestions = null;
+    let maxQuestions = 20; // Default value set to 20
+
+    maxQuestionsInput.value = 20; // Set default input value to 20
 
     const proxyUrl = 'https://api.allorigins.win/get?url=';
 
@@ -23,8 +25,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
             const data = await response.json();
-            const parsedData = JSON.parse(data.contents);
-            return parsedData;
+            console.log("Raw data contents:", data.contents); // Log raw data
+            if (!data.contents) {
+                throw new Error("No data received or empty response.");
+            }
+            try {
+                const parsedData = JSON.parse(data.contents);
+                return parsedData;
+            } catch (parseError) {
+                console.error("Error parsing JSON data:", parseError);
+                throw parseError;
+            }
         } catch (error) {
             console.error('Error fetching JSON data:', error);
             return null;
@@ -59,16 +70,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-
     const loadCategoryData = async (categoryName) => {
         showLoadingMessage();
-        const categoryUrl = `https://adamdjellouli.com/tools/quiz_app/${categoryName}.json`;
-        const data = await fetchJson(toSnakeCase(categoryUrl));
+        const categoryNameFormatted = toSnakeCase(categoryName);
+        const categoryUrl = `https://adamdjellouli.com/tools/quiz_app/${categoryNameFormatted}.json`;
+        const data = await fetchJson(categoryUrl);
         hideLoadingMessage();
 
         if (data) {
             currentCategory = data;
-            maxQuestions = parseInt(maxQuestionsInput.value) || data.questions.length;
+            maxQuestions = parseInt(maxQuestionsInput.value) || 20; // Default to 20 if input is empty or not defined
             questions = getRandomQuestions(data.questions, maxQuestions);
             userAnswers = Array(questions.length).fill(null);
             displayQuestions();
@@ -148,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     maxQuestionsInput.addEventListener('input', () => {
-        maxQuestions = parseInt(maxQuestionsInput.value) || questions.length;
+        maxQuestions = parseInt(maxQuestionsInput.value) || 20;
     });
 
     reloadQuestionsButton.addEventListener('click', () => {
