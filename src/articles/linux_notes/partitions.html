@@ -51,7 +51,7 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: August 03, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: August 04, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="partitioning-disks">Partitioning disks</h2>
             <p>Partitioning a disk means dividing the disk into smaller areas called partitions. Each partition can store different types of data or provide extra storage. There are two main partition tables: MBR (Master Boot Record) and GPT (GUID Partition Table).</p>
@@ -68,10 +68,121 @@
 +------------------+------------------+------------------+-----------------+-----------------+</code></pre>
             </div>
             </p>
-            <h3 id="mbr-master-boot-record-">MBR (Master Boot Record)</h3>
-            <p>MBR is the older partition table format, used on most computers. It started in March 1983 with IBM PC DOS 2.0. MBR has three parts: the main boot code, a partition table for the disk, and a disk signature. MBR stores its data in the first sector of the disk. It supports disks up to 2TB and can have up to four primary partitions.</p>
-            <h3 id="gpt-guid-partition-table-">GPT (GUID Partition Table)</h3>
-            <p>GPT is a newer and better partition table format than MBR. It supports disks larger than 2TB and up to 128 partitions. GPT has a Protective MBR and also checks (CRC) values to make sure its data is correct. To use GPT, you must enable UEFI in your computer's BIOS settings.</p>
+            <p>You can perform the following operations with partitions:</p>
+            <ul>
+                <li>You can <strong>create</strong> new partitions if there is sufficient physical space available on the disk.</li>
+                <li><strong>Deleting</strong> a partition will remove all data stored within that partition, so it is important to back up any important information before performing this operation.</li>
+                <li><strong>Resizing</strong> a partition involves either <strong>shrinking</strong> or <strong>growing</strong> it, depending on your needs and available unallocated space on the disk.</li>
+                <li>When resizing partitions, be aware that the <strong>file system</strong> may need to be adjusted to match the new partition size, and this operation may require additional tools or steps to complete successfully.</li>
+            </ul>
+            <h3 id="relationship-between-physical-disks-and-partitions">Relationship between Physical Disks and Partitions</h3>
+            <p>The relationship between physical disks (like hard drives or SSDs) and partitions is managed through a device naming convention and a series of abstractions that allow the operating system to handle storage efficiently. Physical disks are the actual hardware components where data is stored. They can be hard disk drives (HDDs), solid-state drives (SSDs), or other storage devices. These disks are identified by device names such as <code>/dev/sda</code>, <code>/dev/sdb</code>, etc.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+-------------------+
+| Physical Disk 1  |
+|    (/dev/sda)     |
+|                   |
+|  +-------------+  |
+|  | Partition 1 |  |
+|  | (/dev/sda1) |  |
+|  +-------------+  |
+|  | Partition 2 |  |
+|  | (/dev/sda2) |  |
+|  +-------------+  |
++-------------------+
+
++-------------------+
+| Physical Disk 2  |
+|    (/dev/sdb)     |
+|                   |
+|  +-------------+  |
+|  | Partition 1 |  |
+|  | (/dev/sdb1) |  |
+|  +-------------+  |
+|  | Partition 2 |  |
+|  | (/dev/sdb2) |  |
+|  +-------------+  |
++-------------------+
+
++-------------------+
+| Physical Disk 3  |
+|    (/dev/sdc)     |
+|                   |
+|  +-------------+  |
+|  | Partition 1 |  |
+|  | (/dev/sdc1) |  |
+|  +-------------+  |
+|  | Partition 2 |  |
+|  | (/dev/sdc2) |  |
+|  +-------------+  |
++-------------------+</code></pre>
+            </div>
+            </p>
+            <p>Partitions are divisions of a physical disk, each of which can be formatted with a file system and used for different purposes. Each partition is also represented as a device file but with an additional number indicating the partition:</p>
+            <ul>
+                <li><code>/dev/sda1</code> refers to the first partition on the first disk (<code>/dev/sda</code>).</li>
+                <li><code>/dev/sda2</code> refers to the second partition on the first disk, and so forth.</li>
+            </ul>
+            <h3 id="common-disk-naming-conventions">Common Disk Naming Conventions</h3>
+            <p>Disk names typically follow a specific naming pattern to indicate the type of device, its order, and its partitions. Here's a breakdown:</p>
+            <h4 id="i-device-type-indicators">I Device Type Indicators</h4>
+            <p>The first few letters of the disk name indicate the type of device:</p>
+            <ul>
+                <li><strong><code>/dev/sdX</code></strong>: Represents a hard drive using the SCSI or SATA interface. Commonly used in physical servers and virtual machines.</li>
+                <li><strong><code>/dev/hdX</code></strong>: Refers to an older IDE disk. This type is less common in modern systems.</li>
+                <li><strong><code>/dev/vdX</code></strong>: Indicates a disk in a KVM (Kernel-based Virtual Machine) using the virtio disk driver.</li>
+                <li><strong><code>/dev/xvdX</code></strong>: Represents a disk in a Xen virtual machine using the Xen virtual disk driver.</li>
+            </ul>
+            <h4 id="ii-device-order">II Device Order</h4>
+            <p>The last letter before any numbers denotes the order of the device:</p>
+            <ul>
+                <li><strong><code>/dev/sda</code></strong>: The first SCSI/SATA disk.</li>
+                <li><strong><code>/dev/sdb</code></strong>: The second SCSI/SATA disk.</li>
+                <li><strong><code>/dev/hda</code></strong>: The first IDE disk.</li>
+                <li><strong><code>/dev/hdb</code></strong>: The second IDE disk.</li>
+            </ul>
+            <h4 id="iii-partition-number">III Partition Number</h4>
+            <p>Numbers following the device identifier indicate the partition index:</p>
+            <ul>
+                <li><strong><code>/dev/sda1</code></strong>: The first partition on the first SATA disk.</li>
+                <li><strong><code>/dev/sdc2</code></strong>: The second partition on the third SATA disk.</li>
+                <li><strong><code>/dev/hdb3</code></strong>: The third partition on the second IDE disk.</li>
+            </ul>
+            <h4 id="additional-remarks">Additional Remarks</h4>
+            <ul>
+                <li>Modern systems predominantly use the <code>/dev/sdX</code> naming convention due to the widespread adoption of SATA interfaces.</li>
+                <li>In virtualized environments, <code>/dev/vdX</code> and <code>/dev/xvdX</code> are commonly used, depending on the virtualization technology.</li>
+            </ul>
+            <p>This naming convention helps to identify and manage disks and partitions in various systems and environments efficiently.</p>
+            <h3 id="partition-types">Partition Types</h3>
+            <h3 id="primary-partitions">Primary Partitions</h3>
+            <ul>
+                <li><strong>Primary</strong> partitions are one of the basic types of partitions on a hard drive. They are used to store <strong>data</strong> and can be directly accessed by the system.</li>
+                <li>When a <strong>primary partition</strong> is created, it is given a specific portion of the hard drive's <strong>storage space</strong> and can be formatted with a file system such as <strong>NTFS</strong>, <strong>FAT32</strong>, or <strong>ext4</strong>. This process involves initializing the partition, setting a file system, and making it ready for data storage.</li>
+                <li>Upon creation, one of the primary partitions can be marked as "<strong>active</strong>," indicating that it contains the operating system that the computer should <strong>boot</strong> from.</li>
+                <li>If a primary partition is <strong>removed</strong>, the data within that partition is typically lost unless <strong>backed up</strong>. The space occupied by the partition becomes <strong>unallocated</strong>, and it can be reused to create a new partition. The removal process involves deleting the partition table entry and possibly wiping the data, depending on the tools and methods used.</li>
+            </ul>
+            <h4 id="extended-partitions">Extended Partitions</h4>
+            <ul>
+                <li>An <strong>extended partition</strong> is a special type of partition that acts as a <strong>container</strong> for logical partitions, used when more than four partitions are needed on a system.</li>
+                <li>When an extended partition is created, it occupies one of the four primary partition slots but does not directly hold <strong>data</strong>. Instead, it provides a framework within which <strong>logical partitions</strong> can be created. The creation process involves defining the size and boundaries of the extended partition, which can then be subdivided into logical partitions.</li>
+                <li>The creation of an extended partition allows for greater <strong>flexibility</strong> in partitioning schemes, as multiple logical partitions can be set up within it, effectively bypassing the limit of four primary partitions.</li>
+                <li>Removing an extended partition results in the loss of all <strong>logical partitions</strong> contained within it. The process of removal includes deleting the partition table entry for the extended partition and all its associated logical partitions. The freed space becomes <strong>unallocated</strong> and available for new partitions.</li>
+            </ul>
+            <h4 id="logical-partitions">Logical Partitions</h4>
+            <ul>
+                <li><strong>Logical partitions</strong> are subdivisions within an extended partition. They function similarly to primary partitions in that they can store <strong>data</strong> and be formatted with a file system.</li>
+                <li>When a logical partition is created, it is defined within the space of an extended partition. The process involves setting up a specific area within the extended partition, formatting it with a file system, and preparing it for <strong>data storage</strong>.</li>
+                <li>Logical partitions allow users to create more than four partitions on a system, providing additional <strong>organizational</strong> options for different types of data or multiple <strong>operating systems</strong>.</li>
+                <li>Removing a logical partition involves deleting its partition table entry within the extended partition. The data in the logical partition is lost unless <strong>backed up</strong>. The space occupied by the deleted logical partition becomes <strong>unallocated</strong> within the extended partition and can be reused for new logical partitions.</li>
+            </ul>
+            <h3 id="mbr-and-gpt">MBR and GPT</h3>
+            <ul>
+                <li><strong>MBR</strong> is the older partition table format, used on most computers. It started in March 1983 with IBM PC DOS 2.0. MBR has three parts: the main boot code, a partition table for the disk, and a disk signature. MBR stores its data in the first sector of the disk. It supports disks up to 2TB and can have up to four primary partitions.</li>
+                <li><strong>GPT</strong> is a newer and better partition table format than MBR. It supports disks larger than 2TB and up to 128 partitions. GPT has a Protective MBR and also checks (CRC) values to make sure its data is correct. To use GPT, you must enable UEFI in your computer's BIOS settings.</li>
+            </ul>
+            <p>Below is a table comparing both formats:</p>
             <p>
             <table>
                 <tr>
@@ -121,39 +232,8 @@
                 </tr>
             </table>
             </p>
-            <h3 id="common-disk-naming-conventions">Common Disk Naming Conventions</h3>
-            <p>Disk names in Linux typically follow a specific naming pattern to indicate the type of device, its order, and its partitions. Here's a breakdown:</p>
-            <h4 id="i-device-type-indicators">I Device Type Indicators</h4>
-            <p>The first few letters of the disk name indicate the type of device:</p>
-            <ul>
-                <li><strong><code>/dev/sdX</code></strong>: Represents a hard drive using the SCSI or SATA interface. Commonly used in physical servers and virtual machines.</li>
-                <li><strong><code>/dev/hdX</code></strong>: Refers to an older IDE disk. This type is less common in modern systems.</li>
-                <li><strong><code>/dev/vdX</code></strong>: Indicates a disk in a KVM (Kernel-based Virtual Machine) using the virtio disk driver.</li>
-                <li><strong><code>/dev/xvdX</code></strong>: Represents a disk in a Xen virtual machine using the Xen virtual disk driver.</li>
-            </ul>
-            <h4 id="ii-device-order">II Device Order</h4>
-            <p>The last letter before any numbers denotes the order of the device:</p>
-            <ul>
-                <li><strong><code>/dev/sda</code></strong>: The first SCSI/SATA disk.</li>
-                <li><strong><code>/dev/sdb</code></strong>: The second SCSI/SATA disk.</li>
-                <li><strong><code>/dev/hda</code></strong>: The first IDE disk.</li>
-                <li><strong><code>/dev/hdb</code></strong>: The second IDE disk.</li>
-            </ul>
-            <h4 id="iii-partition-number">III Partition Number</h4>
-            <p>Numbers following the device identifier indicate the partition index:</p>
-            <ul>
-                <li><strong><code>/dev/sda1</code></strong>: The first partition on the first SATA disk.</li>
-                <li><strong><code>/dev/sdc2</code></strong>: The second partition on the third SATA disk.</li>
-                <li><strong><code>/dev/hdb3</code></strong>: The third partition on the second IDE disk.</li>
-            </ul>
-            <h4 id="additional-remarks">Additional Remarks</h4>
-            <ul>
-                <li>Modern systems predominantly use the <code>/dev/sdX</code> naming convention due to the widespread adoption of SATA interfaces.</li>
-                <li>In virtualized environments, <code>/dev/vdX</code> and <code>/dev/xvdX</code> are commonly used, depending on the virtualization technology.</li>
-            </ul>
-            <p>This naming convention helps to identify and manage disks and partitions in various systems and environments efficiently.</p>
             <h3 id="looking-at-partition-tables">Looking at partition tables</h3>
-            <p>To look at a disk's partition table, use the gdisk or fdisk command. The gdisk command is for GPT partitions, while fdisk can be used for MBR and GPT partitions. To see all disk partitions, use:</p>
+            <p>To look at a disk's partition table, use the gdisk or <code>fdisk</code> command. The <code>gdisk</code> command is for GPT partitions, while <code>fdisk</code> can be used for both MBR and GPT partitions. To see all disk partitions, use:</p>
             <p>
             <div>
                 <pre><code class="language-shell">fdisk -l</code></pre>
@@ -162,75 +242,659 @@
             <p>Here's an example of what this output might look like:</p>
             <p>
             <div>
-                <pre><code class="language-shell">Disk /dev/sda: 240.0 GB, 240057409536 bytes, 468862128 sectors
+                <pre><code class="language-shell">Disk /dev/sda: 500 GiB, 536870912000 bytes, 1048576000 sectors
+Disk model: Samsung SSD 860
 Units: sectors of 1 * 512 = 512 bytes
 Sector size (logical/physical): 512 bytes / 512 bytes
 I/O size (minimum/optimal): 512 bytes / 512 bytes
-Disk label type: gpt
+Disklabel type: gpt
+Disk identifier: 2F3C4D5E-6F7A-4B8B-9C7D-2E1F12345678
 
-Device       Start       End   Sectors  Size Type
-/dev/sda1     2048   1050623   1048576  512M EFI System
-/dev/sda2  1050624 468862127 467811504  223G Linux filesystem
-
-Disk /dev/sdb: 1.0 TB, 1000204886016 bytes, 1953525168 sectors
-Units: sectors of 1 * 512 = 512 bytes
-Sector size (logical/physical): 512 bytes / 4096 bytes
-I/O size (minimum/optimal): 4096 bytes / 4096 bytes
-Disk label type: mbr
-
-Device       Start       End   Sectors  Size Type
-/dev/sdb1     2048 1953525167 1953523120 931.5G Linux filesystem</code></pre>
+Device        Start        End   Sectors   Size Type
+/dev/sda1      2048     534527    532480   260M EFI System
+/dev/sda2    534528    1050623    515096   251M Linux filesystem
+/dev/sda3   1050624  209715199 208664576  99.5G Linux filesystem
+/dev/sda4 209715200  419430399 209715200   100G Linux filesystem
+/dev/sda5 419430400 1048575967 628145568 299.5G Linux filesystem</code></pre>
             </div>
             </p>
             <p>Explanation:</p>
             <ul>
-                <li><em>Disk Information</em>: Provides details about each disk (<code>/dev/sda</code>, <code>/dev/sdb</code>, etc.), including size, sector information, and disk label type (GPT or MBR).</li>
-                <li><em>Partition Information</em>: For each disk, it lists all partitions, their start and end sectors, total sectors, size, and type (e.g., EFI System, Linux filesystem).</li>
+                <li>The system currently has five partitions, which are labeled as <code>/dev/sda1</code> through <code>/dev/sda5</code>.</li>
+                <li>The disk uses the GPT partitioning scheme, which supports more than four primary partitions and is suitable for disks larger than <strong>2 TB</strong>.</li>
+                <li>The first partition, <code>/dev/sda1</code>, is an EFI System Partition and is <strong>260M</strong> in size. This partition is typically used to store the bootloader and related files necessary for booting the operating system.</li>
+                <li>The second partition, <code>/dev/sda2</code>, is a Linux filesystem partition with a size of <strong>251M</strong>. This might be used for a small dedicated function, such as a <code>/boot</code> partition.</li>
+                <li>The third partition, <code>/dev/sda3</code>, is also a Linux filesystem partition and has a size of <strong>99.5G</strong>. This could be the primary partition used for the operating system and user data.</li>
+                <li>The fourth partition, <code>/dev/sda4</code>, is another Linux filesystem partition with a size of <strong>100G</strong>. It might be used for storing additional data or another operating system.</li>
+                <li>The fifth partition, <code>/dev/sda5</code>, is the largest, with a size of <strong>299.5G</strong>, and is also a Linux filesystem. This partition could be used for extensive data storage or other applications.</li>
+                <li>The total size of all the partitions combined is approximately <strong>499.511 GiB</strong>. This value is slightly less than the total physical disk size due to the space reserved for partition tables and alignment overhead.</li>
+                <li>The physical disk, identified as <code>/dev/sda</code>, has a total size of <strong>500 GiB</strong>, which corresponds to <strong>536870912000</strong> bytes.</li>
+                <li>The difference between the total physical disk size and the sum of all partition sizes is minimal, indicating efficient use of disk space with only minor overhead.</li>
+                <li>Since the disk uses GPT, it supports creating additional partitions beyond the existing five. GPT allows for up to <strong>128 partitions</strong> on most systems, far exceeding the four primary partitions limitation of MBR.</li>
+                <li>Options for managing partitions include resizing existing partitions if there is unallocated space or if certain partitions can be shrunk to make room for others.</li>
+                <li>New partitions can be created using the unallocated space on the disk, if available, using command-line tools like <code>fdisk</code>, <code>gdisk</code>, or graphical utilities such as <code>GParted</code>.</li>
+                <li>It is possible to change the type of an existing partition, for example, converting a Linux filesystem partition to a swap partition, depending on system requirements.</li>
             </ul>
-            <h3 id="making-partitions-on-a-disk">Making Partitions on a Disk</h3>
-            <p>Creating partitions on a disk allows you to logically divide it into segments, each of which can be used independently. This can be done using either the <code>fdisk</code> or <code>gdisk</code> command in Linux, depending on whether your disk uses MBR (Master Boot Record) or GPT (GUID Partition Table) partitioning scheme, respectively.</p>
-            <h4 id="mbr-partitioning">MBR Partitioning</h4>
-            <p>To partition a disk (e.g., <code>/dev/sda</code>) with <code>fdisk</code>:
-                1. Start <code>fdisk</code>: <code>fdisk /dev/sda</code>.
-                2. To create a new partition, press <code>n</code>. You'll then be prompted to choose between creating a primary (<code>p</code>) or an extended (<code>e</code>) partition. Most use cases will require a primary partition.
-                3. Specify the partition size by entering the starting and ending sectors. You can press Enter to accept the default values.
-                4. Optionally, set the partition type by pressing <code>t</code> and entering the type code.
-                5. To save the changes and exit <code>fdisk</code>, press <code>w</code>.</p>
-            <h4 id="gpt-partitioning">GPT Partitioning</h4>
-            <p>For disks with GPT, use <code>gdisk</code>:
-                1. Open <code>gdisk</code> on your target disk: <code>gdisk /dev/sda</code>.
-                2. Create a new partition by pressing <code>n</code>.
-                3. Choose the partition number (1 to 128).
-                4. Enter the starting and ending sectors, or press Enter to use defaults.
-                5. Set the partition type by pressing <code>t</code> and entering the type code or name.
-                6. Write the changes to disk and exit by pressing <code>w</code>.</p>
+            <h3 id="managing-disk-partitions">Managing Disk Partitions</h3>
+            <p>To manage disk partitions in Linux, you can use tools like <code>fdisk</code>, <code>parted</code>, or <code>lsblk</code>. Here's a guide on how to handle the tasks you've mentioned, with examples and explanations:</p>
+            <h4 id="checking-partition-types">Checking Partition Types</h4>
+            <p>To differentiate between primary, extended, and logical partitions, we need to check for the partition number and consider that extended partitions are typically numbered within 1-4 but are treated separately from primary partitions. Here's a command that will list all the partitions on your system along with their types:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">lsblk -o NAME,TYPE | awk '
+$2 == "part" {
+    if ($1 ~ /[1-4]$/) {
+        if ($1 ~ /[0-9]p[0-9]$/) {
+            part_type = "primary"
+        } else {
+            part_type = "extended"
+        }
+    } else {
+        part_type = "logical"
+    }
+    print "/dev/" $1, part_type
+}'</code></pre>
+            </div>
+            </p>
+            <p>Example output:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">/dev/├─sda1 primary
+/dev/└─sda2 primary</code></pre>
+            </div>
+            </p>
+            <p>To determine whether a specific partition is primary, extended, or logical, you can use the following script. This script takes a partition path (like <code>/dev/sda1</code>) and outputs its type:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">partition_path="/dev/sda1"  # Replace with user-provided partition path
+lsblk -no TYPE $partition_path | awk '
+/part/ {
+    if ("'"$partition_path"'" ~ /[0-9]p?[1-4]$/) {
+        if ("'"$partition_path"'" ~ /[0-9]p[1-4]$/) {
+            print "primary"
+        } else {
+            print "extended"
+        }
+    } else if ("'"$partition_path"'" ~ /[0-9]p?[5-9][0-9]*$/) {
+        print "logical"
+    } else {
+        print "unknown"
+    }
+}'</code></pre>
+            </div>
+            </p>
+            <p>Replace <code>/dev/sda1</code> with the specific partition path the user provides. The script will output "primary," "extended," or "logical" accordingly.</p>
+            <h4 id="checking-free-space">Checking Free Space</h4>
+            <p>To check how much free space is available on the disk run <code>sudo parted /dev/sda print free</code>.</p>
+            <p>Example output:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Model: ATA Disk (scsi)
+Disk /dev/sda: 500GB
+Sector size (logical/physical): 512B/4096B
+Partition Table: gpt
+Disk Flags: 
+
+Number  Start   End     Size    File system  Name                  Flags
+        17,4kB  1049kB  1031kB  Free Space
+ 1      1049kB  538MB   537MB   fat32        EFI System Partition  boot, esp
+ 2      538MB   500GB   500GB   ext4
+        500GB   500GB   1056kB  Free Space</code></pre>
+            </div>
+            </p>
+            <p>The <code>Free Space</code> line indicates unallocated space. In this case <strong>1056kB</strong>.</p>
+            <h4 id="creating-a-new-partition">Creating a New Partition</h4>
+            <p>Let's assume we currently have the following primary partitions: <code>/dev/sda1</code> and <code>/dev/sda2</code>. We want to create a new partition layout with /dev/sda3 as a primary partition, <code>/dev/sda4</code> as an extended partition, and <code>/dev/sda5</code> through <code>/dev/sda7</code> as logical partitions within the extended partition. To accomplish this, you can use partitioning tools such as <code>parted</code>, <code>fdisk</code>, or <code>gdisk</code>. Below are the steps for each tool:</p>
+            <h5>Using <code>parted</code></h5>
+            <p>I. Start <code>parted</code></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">sudo parted /dev/sda</code></pre>
+            </div>
+            </p>
+            <p>II. Create the Third Primary Partition (<code>/dev/sda3</code>)**</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">(parted) mkpart primary ext4 40GiB 60GiB</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>This creates <code>/dev/sda3</code> as a primary partition of type ext4, starting at 40GiB and ending at 60GiB. Adjust the sizes as needed.</li>
+                <li>There should be confirmation of the partition creation.</li>
+            </ul>
+            <p>III. Create the Extended Partition (<code>/dev/sda4</code>)</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">(parted) mkpart extended 60GiB 100%</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>This creates <code>/dev/sda4</code> as an extended partition, starting at 60GiB and occupying the rest of the disk.</li>
+                <li>There should be confirmation of the extended partition creation.</li>
+            </ul>
+            <p>IV. Create Logical Partitions (<code>/dev/sda5</code>, <code>/dev/sda6</code>, <code>/dev/sda7</code>)</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">(parted) mkpart logical ext4 60GiB 70GiB
+(parted) mkpart logical ext4 70GiB 80GiB
+(parted) mkpart logical ext4 80GiB 90GiB</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>This creates logical partitions <code>/dev/sda5</code>, <code>/dev/sda6</code>, and <code>/dev/sda7</code> within the extended partition, each with 10GiB of space.</li>
+                <li>There should be confirmation for each logical partition creation.</li>
+            </ul>
+            <p>V. Exit <code>parted</code></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">(parted) quit</code></pre>
+            </div>
+            </p>
+            <h5>Using <code>fdisk</code></h5>
+            <p>I. Start <code>fdisk</code></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">sudo fdisk /dev/sda</code></pre>
+            </div>
+            </p>
+            <p>II. Create the Third Primary Partition (<code>/dev/sda3</code>)</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (m for help): n</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Select <code>primary</code> and choose partition number <code>3</code>.</li>
+                <li>There should be a prompt to enter the start and end sectors.</li>
+                <li>Define Start and End for <code>/dev/sda3</code></li>
+                <li>Start: +40G</li>
+                <li>End: +60G</li>
+                <li>There should be confirmation of <code>/dev/sda3</code> creation.</li>
+            </ul>
+            <p>III. Create the Extended Partition (<code>/dev/sda4</code>)**</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (m for help): n</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Select <code>extended</code> and choose partition number <code>4</code>.</li>
+                <li>
+                    <p>There should be a prompt to enter the start and end sectors.</p>
+                </li>
+                <li>
+                    <p>Define Start and End for <code>/dev/sda4</code></p>
+                </li>
+                <li>Start: +60G</li>
+                <li>End: (use default or specify end manually, e.g., 100G for the entire disk)</li>
+                <li>There should be confirmation of <code>/dev/sda4</code> creation.</li>
+            </ul>
+            <p>IV. Create Logical Partitions (<code>/dev/sda5</code>, <code>/dev/sda6</code>, <code>/dev/sda7</code>)</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (m for help): n</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Select <code>logical</code> and create each partition one by one.</li>
+                <li>Define Start and End for <code>/dev/sda5</code></li>
+                <li>Start: +60G</li>
+                <li>End: +70G</li>
+                <li>Define Start and End for <code>/dev/sda6</code></li>
+                <li>Start: +70G</li>
+                <li>End: +80G</li>
+                <li>Define Start and End for <code>/dev/sda7</code></li>
+                <li>Start: +80G</li>
+                <li>End: +90G</li>
+                <li>There should be confirmation of each logical partition creation.</li>
+            </ul>
+            <p>V. Write Changes</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (m for help): w</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Writes the changes to the disk and exits <code>fdisk</code>.</li>
+            </ul>
+            <h5>Using <code>gdisk</code></h5>
+            <p>I. Start <code>gdisk</code></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">sudo gdisk /dev/sda</code></pre>
+            </div>
+            </p>
+            <p>II. Create the Third Primary Partition (<code>/dev/sda3</code>)</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (? for help): n</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Follow prompts to set partition number <code>3</code>, starting sector, and ending sector.</li>
+                <li>Example Input:</li>
+                <li>Partition number: 3</li>
+                <li>First sector: +40G</li>
+                <li>Last sector: +60G</li>
+                <li>There should be confirmation of <code>/dev/sda3</code> creation.</li>
+            </ul>
+            <p>III. Create the Extended Partition (<code>/dev/sda4</code>)**</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (? for help): n</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Follow prompts to set partition number <code>4</code>, starting sector, and ending sector.</li>
+                <li>Example Input:</li>
+                <li>Partition number: 4</li>
+                <li>First sector: +60G</li>
+                <li>Last sector: +100G (or end of disk)</li>
+                <li>There should be confirmation of <code>/dev/sda4</code> creation.</li>
+            </ul>
+            <p>IV. Create Logical Partitions (<code>/dev/sda5</code>, <code>/dev/sda6</code>, <code>/dev/sda7</code>)</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (? for help): n</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Follow prompts to create logical partitions within the extended partition.</li>
+                <li>Example Input:</li>
+                <li><code>/dev/sda5</code>: +60G to +70G</li>
+                <li><code>/dev/sda6</code>: +70G to +80G</li>
+                <li><code>/dev/sda7</code>: +80G to +90G</li>
+                <li>There should be confirmation of each logical partition creation.</li>
+            </ul>
+            <p>V. Write Changes</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (? for help): w</code></pre>
+            </div>
+            </p>
+            <p>This writes changes to disk and exits <code>gdisk</code>.</p>
+            <h4 id="resizing-partitions">Resizing Partitions</h4>
+            <p>Resizing partitions involves either expanding or shrinking an existing partition. This can be done using tools like <code>parted</code>, <code>fdisk</code>, and <code>gdisk</code>, though some tools are better suited for certain tasks. Here are the detailed steps and considerations for each tool:</p>
+            <h5>Using <code>parted</code></h5>
+            <p>I. Start <code>parted</code></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">sudo parted /dev/sda</code></pre>
+            </div>
+            </p>
+            <p>II. Check Partition Table</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">(parted) print</code></pre>
+            </div>
+            </p>
+            <p>This lists all partitions and their details.</p>
+            <p>III. Resize Partition</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">(parted) resizepart PARTITION_NUMBER END</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><code>PARTITION_NUMBER</code> is the number of the partition to resize, and <code>END</code> specifies the new end point (e.g., <code>50GiB</code>).</li>
+                <li>To resize <code>/dev/sda3</code> to end at 50GiB: <code>(parted) resizepart 3 50GiB</code></li>
+                <li>Confirm the resizing action. If the new size is smaller than the used space, <code>parted</code> will issue a warning or error.</li>
+            </ul>
+            <p>IV. Exit <code>parted</code></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">(parted) quit</code></pre>
+            </div>
+            </p>
+            <h5>Using <code>fdisk</code></h5>
+            <p><strong>Note:</strong> <code>fdisk</code> does not support resizing partitions directly. You need to delete the partition and recreate it with the new size. This can be risky and should be done with caution.</p>
+            <p>I. Start <code>fdisk</code></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">sudo fdisk /dev/sda</code></pre>
+            </div>
+            </p>
+            <p>II. List Partitions</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (m for help): p</code></pre>
+            </div>
+            </p>
+            <p>This displays the current partition table.</p>
+            <p>III. Delete the Partition</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (m for help): d</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Enter the number of the partition you want to delete.</li>
+                <li>This deletes the specified partition. This action does not delete the data but removes the partition table entry.</li>
+            </ul>
+            <p>IV. Recreate the Partition with New Size</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (m for help): n</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Follow prompts to create a new partition, specifying the new start and end sectors.</li>
+                <li>If recreating <code>/dev/sda3</code>:</li>
+                <li>Start: Same as the previous start sector</li>
+                <li>End: New desired end sector</li>
+            </ul>
+            <p>V. Write Changes</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (m for help): w</code></pre>
+            </div>
+            </p>
+            <p>This writes the new partition table and exits <code>fdisk</code>.</p>
+            <p>VI. Resize Filesystem (if needed)</p>
+            <p>After resizing the partition, you may need to resize the filesystem to fill the new partition size using tools like <code>resize2fs</code> for ext4 filesystems.</p>
+            <h5>Using <code>gdisk</code></h5>
+            <p>I. Start <code>gdisk</code>**</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">sudo gdisk /dev/sda</code></pre>
+            </div>
+            </p>
+            <p>II. List Partitions</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (? for help): p</code></pre>
+            </div>
+            </p>
+            <p>This lists current partitions.</p>
+            <p>III. Delete the Partition</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (? for help): d</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Enter the partition number to delete.</li>
+                <li>This deletes the specified partition entry.</li>
+            </ul>
+            <p>IV. Recreate the Partition with New Size</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (? for help): n</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Follow prompts to recreate the partition with the desired new size.</li>
+                <li>Recreate <code>/dev/sda3</code> with a different end sector.</li>
+                <li>Confirm the creation of the new partition.</li>
+            </ul>
+            <p>V. Write Changes</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (? for help): w</code></pre>
+            </div>
+            </p>
+            <p>This writes changes to disk and exits <code>gdisk</code>.</p>
+            <p>VI. Resize Filesystem (if needed)</p>
+            <p>Use appropriate filesystem tools (e.g., <code>resize2fs</code>) to resize the filesystem to fit the new partition size.</p>
+            <h4 id="removing-partitions">Removing Partitions</h4>
+            <p>Removing partitions is a critical task that should be done carefully to avoid data loss. The process varies slightly depending on the tool you use (<code>parted</code>, <code>fdisk</code>, or <code>gdisk</code>). Below are the instructions for each tool, along with notes on the expected outputs.</p>
+            <h5>Using <code>parted</code></h5>
+            <p>I. Start <code>parted</code></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">sudo parted /dev/sda</code></pre>
+            </div>
+            </p>
+            <p>II. Check Partition Table</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">(parted) print</code></pre>
+            </div>
+            </p>
+            <p>This lists all partitions and their details.</p>
+            <p>III. Remove Partition</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">(parted) rm PARTITION_NUMBER</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Replace <code>PARTITION_NUMBER</code> with the number of the partition you want to delete (e.g., <code>3</code> for <code>/dev/sda3</code>).</li>
+                <li>To remove <code>/dev/sda3</code>: <code>(parted) rm 3</code></li>
+                <li>There should be confirmation that the partition has been removed.</li>
+            </ul>
+            <p>IV. Exit <code>parted</code></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">(parted) quit</code></pre>
+            </div>
+            </p>
+            <h5>Using <code>fdisk</code></h5>
+            <p>I. Start <code>fdisk</code></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">sudo fdisk /dev/sda</code></pre>
+            </div>
+            </p>
+            <p>II. List Partitions</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (m for help): p</code></pre>
+            </div>
+            </p>
+            <p>This displays the current partition table.</p>
+            <p>III. Delete Partition</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (m for help): d</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Enter the number of the partition you want to delete.</li>
+                <li>To delete <code>/dev/sda3</code>, use <code>Partition number: 3</code></li>
+                <li>Confirm the deletion of the partition.</li>
+            </ul>
+            <p>IV. Write Changes</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (m for help): w</code></pre>
+            </div>
+            </p>
+            <p>This writes the changes to the partition table and exits <code>fdisk</code>.</p>
+            <h5>Using <code>gdisk</code></h5>
+            <p>I. Start <code>gdisk</code></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">sudo gdisk /dev/sda</code></pre>
+            </div>
+            </p>
+            <p>II. List Partitions</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (? for help): p</code></pre>
+            </div>
+            </p>
+            <p>This lists the current partitions.</p>
+            <p>III. Delete Partition</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (? for help): d</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Enter the partition number to delete.</li>
+                <li>To delete <code>/dev/sda3</code>, use <code>Partition number: 3</code></li>
+                <li>There should be confirmation of the partition deletion.</li>
+            </ul>
+            <p>IV. Write Changes</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Command (? for help): w</code></pre>
+            </div>
+            </p>
+            <p>This writes the changes to the disk and exits <code>gdisk</code>.</p>
+            <h4 id="changing-mbr-to-gpt-using-gdisk">Changing MBR to GPT using gdisk</h4>
+            <p>Sometimes, there's a need to change a disk from one partition table format to another. For instance, converting an MBR disk to a GPT format can be done using tools like <code>gdisk</code> or <code>parted</code>. Here's how to do it with <code>gdisk</code>:</p>
+            <h3 id="steps-to-repartition-a-disk-using-gdisk-with-expected-outputs">Steps to Repartition a Disk Using gdisk with Expected Outputs</h3>
+            <ul>
+                <li>To <strong>check the current partition table</strong>, use the command <code>gdisk -l /dev/sda</code>. The expected output will list the current partitions, including details such as partition number, start and end sectors, size, and type. For example:</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-shell">GPT fdisk (gdisk) version 1.0.6
+
+Partition table scan:
+MBR: protective
+BSD: not present
+APM: not present
+GPT: present
+
+Found valid GPT with protective MBR; using GPT.
+Disk /dev/sda: 20971520 sectors, 10.0 GiB
+Logical sector size: 512 bytes
+Disk identifier (GUID): B7D5F9E3-3A74-4F56-B0D7-FB65DE571EC7
+Partition table holds up to 128 entries
+First usable sector is 34, last usable sector is 20971486
+Partitions will be aligned on 2048-sector boundaries
+Total free space is 10265 sectors (5.0 MiB)
+
+Number  Start (sector)    End (sector)  Size       Code  Name
+ 1          2048         20951039   10.0 GiB    8300  Linux filesystem</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>
+                    <p><strong>Backing up the current partition table</strong> is essential and can be done with <code>sgdisk -b /backup/path/partition-table-backup /dev/sda</code>. A backup file should be created at the specified path, like <code>/backup/path/partition-table-backup</code>. This action does not produce a direct console output but ensures a backup is available for recovery.</p>
+                </li>
+                <li>
+                    <p>To <strong>start gdisk for disk management</strong>, execute <code>gdisk /dev/sda</code>. The initial prompt will indicate readiness for commands:</p>
+                </li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-shell">GPT fdisk (gdisk) version 1.0.6
+
+Type device filename, or press &lt;enter&gt; to exit: /dev/sda
+Command (? for help):</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Access the <strong>experts menu</strong> by pressing 'x' at the prompt, which changes to:</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-shell">Expert command (? for help):</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><strong>Removing the GPT data structures</strong> involves pressing 'z' in the experts menu. This action prompts:</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-shell">About to wipe out GPT on /dev/sda. Proceed? (Y/N):</code></pre>
+            </div>
+            </p>
+            <p>Confirm with 'y', then decide on blanking out the MBR:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Blank out MBR? (Y/N):</code></pre>
+            </div>
+            </p>
+            <p>After confirming with 'y', the result will be:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">GPT data structures destroyed! You may now partition the disk using the 'n' command.</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><strong>Creating a new GPT data structure</strong> requires pressing 'n' and confirming the action:</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-shell">Expert command (? for help): n
+
+Creating new GPT data structure
+Confirm creation of a new GPT by pressing 'y': Y</code></pre>
+            </div>
+            </p>
+            <p>The system will acknowledge:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">GPT data structures created successfully.</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>During <strong>partition creation</strong>, use the 'n' command to define each partition. The prompt guides through the process:</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-shell">Command (? for help): n
+Partition number (1-128, default 1): 1
+First sector (34-20971486, default = 2048) or {+-}size{KMGTP}:
+Last sector (2048-20971486, default = 20971486) or {+-}size{KMGTP}: +1G
+Current type is 'Linux filesystem'
+Hex code or GUID (L to show codes, Enter = 8300):</code></pre>
+            </div>
+            </p>
+            <p>After defining the partitions, the prompt returns to:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Command (? for help):</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>To <strong>save changes and exit gdisk</strong>, press 'w'. The command confirms the write operation:</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-shell">Do you want to proceed? (Y/N): Y
+Final checks complete. About to write GPT data. THIS WILL OVERWRITE EXISTING PARTITIONS!!
+
+Do you want to proceed? (Y/N): Y
+
+OK; writing new GUID partition table (GPT) to /dev/sda.
+The operation has completed successfully.</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><strong>Verifying the new partition table</strong> after a system restart can be done with <code>gdisk -l /dev/sda</code>. The output should reflect the newly created partitions, similar to:</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-shell">GPT fdisk (gdisk) version 1.0.6
+
+Partition table scan:
+MBR: protective
+BSD: not present
+APM: not present
+GPT: present
+
+Found valid GPT with protective MBR; using GPT.
+Disk /dev/sda: 20971520 sectors, 10.0 GiB
+Logical sector size: 512 bytes
+Disk identifier (GUID): 12345678-1234-1234-1234-1234567890AB
+Partition table holds up to 128 entries
+First usable sector is 34, last usable sector is 20971486
+Partitions will be aligned on 2048-sector boundaries
+Total free space is 1048576 sectors (512.0 MiB)
+
+Number  Start (sector)    End (sector)  Size       Code  Name
+ 1          2048           2099199   1.0 GiB    8300  Linux filesystem
+ 2       2099200          20971519   9.0 GiB    8300  Linux filesystem</code></pre>
+            </div>
+            </p>
+            <p>This output confirms that the new partitions are correctly set up.</p>
+            <p>🔴 Caution:</p>
+            <ul>
+                <li>It's crucial to back up any important data before proceeding with this operation, as changing the partition table format can lead to data loss.</li>
+                <li>Ensure that your system supports GPT and UEFI (if you're planning to boot from the disk), as older systems with BIOS may not support GPT.</li>
+            </ul>
             <h4 id="important-notes">Important Notes</h4>
             <ul>
                 <li><strong>Backup Data</strong> before modifying disk partitions to prevent data loss, as altering partitions can sometimes lead to accidental loss of important information.</li>
                 <li>When managing disk partitions, <strong>Resizing and Deleting Partitions</strong> may be necessary if existing partitions occupy the space needed for new ones. To delete a partition, use the <code>d</code> command in tools like <code>gdisk</code> or <code>fdisk</code>. For resizing, you might need to create a new partition with the desired size using the <code>n</code> command and then delete the old partition.</li>
                 <li>The <strong>Partition Types</strong> you select depend on specific needs, such as using a Linux filesystem or creating a swap space. Each partition type is identified by a unique code or identifier that defines its purpose and structure.</li>
                 <li><strong>Administrative Privileges</strong> are typically required when using partitioning tools, as these actions need root access. Therefore, commands are often prefixed with <code>sudo</code> to grant the necessary permissions.</li>
-            </ul>
-            <h3 id="changing-mbr-to-gpt-using-gdisk">Changing MBR to GPT using gdisk</h3>
-            <p>Sometimes, there's a need to change a disk from one partition table format to another. For instance, converting an MBR disk to a GPT format can be done using tools like <code>gdisk</code> or <code>parted</code>. Here's how to do it with <code>gdisk</code>:</p>
-            <ol>
-                <li>First, check the current partition table of the disk: <code>gdisk -l /dev/sda</code>.</li>
-                <li>Backup the current partition table: <code>sgdisk -b /dev/sda</code>.</li>
-                <li>Run <code>gdisk</code> for the disk: <code>gdisk /dev/sda</code>.</li>
-                <li>In <code>gdisk</code>, press <code>x</code> to enter the experts menu.</li>
-                <li>Then, press <code>z</code> to zap (remove) the GPT data structures on the disk.</li>
-                <li>Confirm the action by pressing <code>y</code> when prompted about destroying the GPT data structures.</li>
-                <li>Press <code>n</code> to create a new GPT data structure on the disk.</li>
-                <li>Confirm the creation of a new empty GPT by pressing <code>y</code>.</li>
-                <li>Create the required partitions by using the <code>n</code> command in the main menu.</li>
-                <li>After partitioning, save the changes and exit <code>gdisk</code> by pressing <code>w</code>.</li>
-                <li>Restart the system to ensure all changes take effect.</li>
-                <li>Verify the new partition table: <code>gdisk -l /dev/sda</code>.</li>
-            </ol>
-            <p>🔴 Caution:</p>
-            <ul>
-                <li>It's crucial to back up any important data before proceeding with this operation, as changing the partition table format can lead to data loss.</li>
-                <li>Ensure that your system supports GPT and UEFI (if you're planning to boot from the disk), as older systems with BIOS may not support GPT.</li>
             </ul>
             <h3 id="challenges">Challenges</h3>
             <ol>
@@ -250,8 +914,7 @@ Device       Start       End   Sectors  Size Type
             <h2>Table of Contents</h2>
             <ol><a href="#partitioning-disks">Partitioning disks</a>
                 <ol>
-                    <li><a href="#mbr-master-boot-record-">MBR (Master Boot Record)</a></li>
-                    <li><a href="#gpt-guid-partition-table-">GPT (GUID Partition Table)</a></li>
+                    <li><a href="#relationship-between-physical-disks-and-partitions">Relationship between Physical Disks and Partitions</a></li>
                     <li><a href="#common-disk-naming-conventions">Common Disk Naming Conventions</a>
                         <ol>
                             <li><a href="#i-device-type-indicators">I Device Type Indicators</a></li>
@@ -260,15 +923,30 @@ Device       Start       End   Sectors  Size Type
                             <li><a href="#additional-remarks">Additional Remarks</a></li>
                         </ol>
                     </li>
-                    <li><a href="#looking-at-partition-tables">Looking at partition tables</a></li>
-                    <li><a href="#making-partitions-on-a-disk">Making Partitions on a Disk</a>
+                    <li><a href="#partition-types">Partition Types</a></li>
+                    <li><a href="#primary-partitions">Primary Partitions</a>
                         <ol>
-                            <li><a href="#mbr-partitioning">MBR Partitioning</a></li>
-                            <li><a href="#gpt-partitioning">GPT Partitioning</a></li>
+                            <li><a href="#extended-partitions">Extended Partitions</a></li>
+                            <li><a href="#logical-partitions">Logical Partitions</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#mbr-and-gpt">MBR and GPT</a></li>
+                    <li><a href="#looking-at-partition-tables">Looking at partition tables</a></li>
+                    <li><a href="#managing-disk-partitions">Managing Disk Partitions</a>
+                        <ol>
+                            <li><a href="#checking-partition-types">Checking Partition Types</a></li>
+                            <li><a href="#checking-free-space">Checking Free Space</a></li>
+                            <li><a href="#creating-a-new-partition">Creating a New Partition</a></li>
+                            <li><a href="#resizing-partitions">Resizing Partitions</a></li>
+                            <li><a href="#removing-partitions">Removing Partitions</a></li>
+                            <li><a href="#changing-mbr-to-gpt-using-gdisk">Changing MBR to GPT using gdisk</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#steps-to-repartition-a-disk-using-gdisk-with-expected-outputs">Steps to Repartition a Disk Using gdisk with Expected Outputs</a>
+                        <ol>
                             <li><a href="#important-notes">Important Notes</a></li>
                         </ol>
                     </li>
-                    <li><a href="#changing-mbr-to-gpt-using-gdisk">Changing MBR to GPT using gdisk</a></li>
                     <li><a href="#challenges">Challenges</a></li>
                 </ol>
             </ol>

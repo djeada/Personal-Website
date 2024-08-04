@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const categorySelect = document.getElementById('categorySelect');
+    const maxQuestionsInput = document.getElementById('maxQuestionsInput');
+    const reloadQuestionsButton = document.getElementById('reloadQuestionsButton');
     const quizContainer = document.getElementById('quizContainer');
     const submitButton = document.getElementById('submitButton');
     const loadingMessage = document.createElement('div');
@@ -10,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentCategory = null;
     let questions = [];
     let userAnswers = [];
+    let maxQuestions = null;
 
     const proxyUrl = 'https://api.allorigins.win/get?url=';
 
@@ -27,6 +30,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return null;
         }
     };
+
+    const toSnakeCase = (str) => {
+        return str
+            .toLowerCase() // Convert to lowercase
+            .replace(/\s+/g, '_') // Replace spaces with underscores
+            .replace(/[^\w]/g, '_'); // Replace non-alphanumeric characters with underscores
+    }
 
     const loadCategories = async () => {
         const categoriesUrl = 'https://adamdjellouli.com/tools/quiz_app/categories.json';
@@ -49,20 +59,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+
     const loadCategoryData = async (categoryName) => {
         showLoadingMessage();
         const categoryUrl = `https://adamdjellouli.com/tools/quiz_app/${categoryName}.json`;
-        const data = await fetchJson(categoryUrl);
+        const data = await fetchJson(toSnakeCase(categoryUrl));
         hideLoadingMessage();
 
         if (data) {
             currentCategory = data;
-            questions = currentCategory.questions;
+            maxQuestions = parseInt(maxQuestionsInput.value) || data.questions.length;
+            questions = getRandomQuestions(data.questions, maxQuestions);
             userAnswers = Array(questions.length).fill(null);
             displayQuestions();
         } else {
             console.error('Invalid category data:', data);
         }
+    };
+
+    const getRandomQuestions = (questions, maxQuestions) => {
+        const shuffled = questions.sort(() => 0.5 - Math.random());
+        return shuffled.slice(0, maxQuestions);
     };
 
     const showLoadingMessage = () => {
@@ -128,6 +145,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     categorySelect.addEventListener('change', (event) => {
         loadCategoryData(event.target.value);
+    });
+
+    maxQuestionsInput.addEventListener('input', () => {
+        maxQuestions = parseInt(maxQuestionsInput.value) || questions.length;
+    });
+
+    reloadQuestionsButton.addEventListener('click', () => {
+        questions = getRandomQuestions(currentCategory.questions, maxQuestions);
+        displayQuestions();
     });
 
     submitButton.addEventListener('click', submitAnswers);
