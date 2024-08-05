@@ -192,4 +192,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadCategories();
 });
-

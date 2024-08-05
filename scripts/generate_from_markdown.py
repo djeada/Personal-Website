@@ -345,27 +345,66 @@ class HtmlEnhancer:
     @classmethod
     def markdown_to_html_table(cls, markdown_table: str) -> str:
         rows = markdown_table.split("\n")
-        rows = [row[1:] if row.startswith("|") else row for row in rows]
-        rows = [row[:-1] if row.endswith("|") else row for row in rows]
-        rows = [row.split("|") for row in rows]
-        # if there is a row that mathces ' -- | -- ' then it should be removed
-        rows = [
-            row
-            for row in rows
-            if not all(
-                [re.match(r"\s*-+\s*", cell) or not cell.strip() for cell in row]
-            )
-        ]
-        rows = [[cell.strip() for cell in row] for row in rows]
-        html_table = "<table>"
+
+        # Initialize processed rows list
+        processed_rows = []
         for row in rows:
+            # Remove leading and trailing pipes
+            row = row.strip("|")
+
+            cells = []
+            current_cell = ""
+            inside_backticks = False
+            inside_code_tags = False
+            i = 0
+
+            while i < len(row):
+                char = row[i]
+
+                # Check for backtick blocks
+                if char == "`":
+                    inside_backticks = not inside_backticks
+                    current_cell += char
+                # Check for <code> blocks
+                elif row[i : i + 6] == "<code>":
+                    inside_code_tags = True
+                    current_cell += "<code>"
+                    i += 5  # Skip the rest of '<code>'
+                elif row[i : i + 7] == "</code>":
+                    inside_code_tags = False
+                    current_cell += "</code>"
+                    i += 6  # Skip the rest of '</code>'
+                elif char == "|" and not inside_backticks and not inside_code_tags:
+                    cells.append(current_cell.strip())
+                    current_cell = ""
+                else:
+                    current_cell += char
+
+                i += 1
+
+            # Add the last cell
+            if current_cell:
+                cells.append(current_cell.strip())
+
+            processed_rows.append(cells)
+
+        # Remove separator row, if present
+        processed_rows = [
+            row
+            for row in processed_rows
+            if not all(re.match(r"\s*-+\s*", cell) or not cell.strip() for cell in row)
+        ]
+
+        # Convert rows to HTML table
+        html_table = "<table>"
+        for row in processed_rows:
             html_table += "<tr>"
             for cell in row:
                 html_table += f"<td>{cell}</td>"
             html_table += "</tr>"
         html_table += "</table>"
-        html_table = "\n" + html_table + "\n"
-        return html_table
+
+        return "\n" + html_table + "\n"
 
 
 def read_urls() -> List[UrlData]:
