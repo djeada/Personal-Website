@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let questions = [];
     let userAnswers = [];
     let maxQuestions = 20; // Default value set to 20
+    let categoryCache = {}; // Cache to store category data
 
     maxQuestionsInput.value = 20; // Set default input value to 20
 
@@ -59,12 +60,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 option.value = category.name;
                 option.textContent = category.name;
                 categorySelect.appendChild(option);
-
-                if (index === 0) {
-                    option.selected = true;
-                    loadCategoryData(category.name);
-                }
             });
+
+            // Check URL for category path
+            const defaultCategory = categories[0].name;
+            const path = window.location.pathname.split('/').filter(Boolean);
+            const urlCategory = path[path.length - 1];
+            const matchedCategory = categories.find(category => toSnakeCase(category.name) === toSnakeCase(urlCategory));
+            const initialCategory = matchedCategory ? matchedCategory.name : defaultCategory;
+
+            // Set the category select value and load the initial category
+            categorySelect.value = initialCategory;
+            loadCategoryData(initialCategory);
         } else {
             console.error('Invalid categories data:', categories);
         }
@@ -72,20 +79,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const loadCategoryData = async (categoryName) => {
         showLoadingMessage();
-        const categoryNameFormatted = toSnakeCase(categoryName);
-        const categoryUrl = `https://adamdjellouli.com/tools/quiz_app/${categoryNameFormatted}.json`;
-        const data = await fetchJson(categoryUrl);
-        hideLoadingMessage();
 
-        if (data) {
-            currentCategory = data;
-            maxQuestions = parseInt(maxQuestionsInput.value) || 20; // Default to 20 if input is empty or not defined
-            questions = getRandomQuestions(data.questions, maxQuestions);
-            userAnswers = Array(questions.length).fill(null);
-            displayQuestions();
+        if (categoryCache[categoryName]) {
+            // Use cached data if available
+            const data = categoryCache[categoryName];
+            processCategoryData(data);
         } else {
-            console.error('Invalid category data:', data);
+            // Fetch data if not in cache
+            const categoryNameFormatted = toSnakeCase(categoryName);
+            const categoryUrl = `https://adamdjellouli.com/tools/quiz_app/${categoryNameFormatted}.json`;
+            const data = await fetchJson(categoryUrl);
+            hideLoadingMessage();
+
+            if (data) {
+                categoryCache[categoryName] = data; // Cache the data
+                processCategoryData(data);
+            } else {
+                console.error('Invalid category data:', data);
+            }
         }
+    };
+
+    const processCategoryData = (data) => {
+        currentCategory = data;
+        maxQuestions = parseInt(maxQuestionsInput.value) || 20; // Default to 20 if input is empty or not defined
+        questions = getRandomQuestions(data.questions, maxQuestions);
+        userAnswers = Array(questions.length).fill(null);
+        displayQuestions();
+        hideLoadingMessage();
     };
 
     const getRandomQuestions = (questions, maxQuestions) => {
@@ -171,3 +192,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadCategories();
 });
+
