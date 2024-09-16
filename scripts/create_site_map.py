@@ -9,7 +9,6 @@ INPUT_DIR = Path("../src/")
 OUTPUT_FILE = Path("../src/sitemap.xml")
 EXCLUDE_PATTERN = re.compile(r"building_blocks")
 
-
 def get_last_modified_date(path: Path) -> Optional[str]:
     """Get the last modified date of a file."""
     try:
@@ -49,6 +48,10 @@ def create_url_element(file_path: Path, domain: str) -> Optional[ET.Element]:
     )
     if EXCLUDE_PATTERN.search(relative_path):
         return None
+
+    # Handle index.html specifically by removing "index" from the URL
+    if relative_path.endswith("/index"):
+        relative_path = relative_path[:-6]  # Remove the "/index" part
 
     url = ET.Element("url")
     loc = ET.SubElement(url, "loc")

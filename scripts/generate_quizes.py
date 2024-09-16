@@ -4,7 +4,6 @@ from pathlib import Path
 import json
 import re
 from multiprocessing import Pool
-from urllib.parse import urlparse, unquote
 
 import requests
 
@@ -15,12 +14,10 @@ URLS = [
 URLS_TO_NAMES = {
     "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/notes/quiz.md": "parallel_programming"
 }
-OUTPUT_DIR = Path("../src/tools/quiz_app")  # Replace with actual output directory path
+OUTPUT_DIR = Path("../src/tools/quiz_app")
 
 
 def parse_markdown_question(md_content):
-    """Parse a single markdown question block and extract the question text, options, and correct option index."""
-    # Define the pattern for question and options
     question_pattern = r"Q\. (.+?)\n\n"
     options_pattern = r"- \[( |x)\] (.+)"
 
@@ -54,11 +51,6 @@ def parse_markdown_question(md_content):
 
 
 def process_file(url):
-    """Process a single markdown file and convert it to JSON."""
-
-    # Parse the URL to extract the last part of the path
-
-    # Create a temporary directory
     with tempfile.TemporaryDirectory() as tmp_dir:
         # Define the path to save the HTML file
         html_file_path = os.path.join(tmp_dir, URLS_TO_NAMES[url])
@@ -91,7 +83,6 @@ def process_file(url):
 
 
 def convert_markdown_to_json():
-    """Convert multiple markdown files to JSON format using multiprocessing."""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     with Pool() as pool:
         pool.map(process_file, URLS)
