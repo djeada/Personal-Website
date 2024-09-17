@@ -9,6 +9,7 @@ INPUT_DIR = Path("../src/")
 OUTPUT_FILE = Path("../src/sitemap.xml")
 EXCLUDE_PATTERN = re.compile(r"building_blocks")
 
+
 def get_last_modified_date(path: Path) -> Optional[str]:
     """Get the last modified date of a file."""
     try:
