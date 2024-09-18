@@ -12,10 +12,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentCategory = null;
     let questions = [];
     let userAnswers = [];
-    let maxQuestions = 20; // Default value set to 20
-    let categoryCache = {}; // Cache to store category data
+    let maxQuestions = 12;
+    let categoryCache = {};
 
-    maxQuestionsInput.value = 20; // Set default input value to 20
+    maxQuestionsInput.value = 12;
 
     const proxyUrl = 'https://api.allorigins.win/get?url=';
 
