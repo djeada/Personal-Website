@@ -23,7 +23,7 @@ function draw() {
     drawAxis(ctx, canvas.width, canvas.height, xRange);
     drawBellCurve(ctx, mean1, std1, 'blue', 'cyan', canvas.width, canvas.height, xRange);
     drawBellCurve(ctx, mean2, std2, 'red', 'magenta', canvas.width, canvas.height, xRange);
-    displayLegend(mean1, std1, curve1Area, mean2, std2, curve2Area);
+    drawLegendOnCanvas(ctx, canvas.width, canvas.height, mean1, std1, curve1Area, mean2, std2, curve2Area);
 }
 
 function drawAxis(ctx, canvasWidth, canvasHeight, xRange) {
@@ -67,6 +67,26 @@ function drawBellCurve(ctx, mean, std, colorLight, colorDark, canvasWidth, canva
     ctx.stroke();
 }
 
+function drawLegendOnCanvas(ctx, canvasWidth, canvasHeight, mean1, std1, area1, mean2, std2, area2) {
+    const legendX = canvasWidth - 200;
+    const legendY = 30;
+    const boxWidth = 180;
+    const boxHeight = 60;
+    const textColor = getColorForMode('black', 'white');
+
+    ctx.fillStyle = getColorForMode('#f0f0f0', '#333');
+    ctx.fillRect(legendX, legendY, boxWidth, boxHeight);
+
+    ctx.strokeStyle = textColor;
+    ctx.strokeRect(legendX, legendY, boxWidth, boxHeight);
+
+    ctx.fillStyle = textColor;
+    ctx.font = '12px Arial';
+    ctx.fillText(`Curve 1: μ=${mean1}, σ=${std1}, Area=${area1.toFixed(2)}`, legendX + 10, legendY + 20);
+    ctx.fillStyle = getColorForMode('blue', 'cyan');
+    ctx.fillText(`Curve 2: μ=${mean2}, σ=${std2}, Area=${area2.toFixed(2)}`, legendX + 10, legendY + 40);
+}
+
 function calculateArea(mean, std) {
     let totalArea = 0;
     const step = 0.01;
@@ -84,14 +104,6 @@ function calculateXRange(means, stds) {
         max = Math.max(max, means[i] + 3 * stds[i]);
     }
     return { min, max };
-}
-
-function displayLegend(mean1, std1, area1, mean2, std2, area2) {
-    const legend = document.getElementById('legend');
-    legend.innerHTML = `
-        <div style="color: ${getColorForMode('blue', 'cyan')}">Curve 1: μ=${mean1}, σ=${std1}, Area=${area1.toFixed(2)}</div>
-        <div style="color: ${getColorForMode('red', 'magenta')}">Curve 2: μ=${mean2}, σ=${std2}, Area=${area2.toFixed(2)}</div>
-    `;
 }
 
 function getColorForMode(colorLight, colorDark) {
