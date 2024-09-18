@@ -12,22 +12,26 @@ function draw() {
     var mean2 = parseFloat(document.getElementById('mean2').value);
     var std2 = parseFloat(document.getElementById('std2').value);
 
-    var curve1Area = calculateArea(mean1, std1);
-    var curve2Area = calculateArea(mean2, std2);
+    if (isNaN(mean1) || isNaN(std1) || isNaN(mean2) || isNaN(std2)) {
+        return; // Avoid drawing if any of the inputs are invalid.
+    }
 
-    drawAxis(ctx, canvas.width, canvas.height);
-    drawBellCurve(ctx, mean1, std1, 'blue', 'cyan', canvas.width, canvas.height, 'Curve 1: μ=' + mean1 + ', σ=' + std1 + ' Area=' + curve1Area.toFixed(2));
-    drawBellCurve(ctx, mean2, std2, 'red', 'magenta', canvas.width, canvas.height, 'Curve 2: μ=' + mean2 + ', σ=' + std2 + ' Area=' + curve2Area.toFixed(2));
-    displaySummary(mean1, std1, mean2, std2, curve1Area, curve2Area);
+    const xRange = calculateXRange([mean1, mean2], [std1, std2]);
+    const curve1Area = calculateArea(mean1, std1);
+    const curve2Area = calculateArea(mean2, std2);
+
+    drawAxis(ctx, canvas.width, canvas.height, xRange);
+    drawBellCurve(ctx, mean1, std1, 'blue', 'cyan', canvas.width, canvas.height, xRange);
+    drawBellCurve(ctx, mean2, std2, 'red', 'magenta', canvas.width, canvas.height, xRange);
+    displayLegend(mean1, std1, curve1Area, mean2, std2, curve2Area);
 }
 
-function drawAxis(ctx, canvasWidth, canvasHeight) {
+function drawAxis(ctx, canvasWidth, canvasHeight, xRange) {
     const axisCenterY = canvasHeight * 0.95;
-    const range = 20;
-    const scale = canvasWidth / (2 * range);
+    const scale = canvasWidth / (xRange.max - xRange.min);
     const axisColor = getColorForMode('black', 'white');
     const textColor = getColorForMode('black', 'white');
-    const tickInterval = Math.floor(range / 2);
+    const tickInterval = Math.floor((xRange.max - xRange.min) / 10);
 
     ctx.beginPath();
     ctx.strokeStyle = axisColor;
@@ -36,11 +40,9 @@ function drawAxis(ctx, canvasWidth, canvasHeight) {
     ctx.stroke();
 
     ctx.fillStyle = textColor;
-    for (let i = -range; i <= range; i++) {
-        const x = i * scale + canvasWidth / 2;
-        if (i % tickInterval === 0) {
-            ctx.fillText(i.toString(), x, axisCenterY + 20);
-        }
+    for (let i = Math.floor(xRange.min); i <= Math.ceil(xRange.max); i += tickInterval) {
+        const x = (i - xRange.min) * scale;
+        ctx.fillText(i.toString(), x, axisCenterY + 20);
         ctx.beginPath();
         ctx.moveTo(x, axisCenterY - 5);
         ctx.lineTo(x, axisCenterY + 5);
@@ -48,34 +50,21 @@ function drawAxis(ctx, canvasWidth, canvasHeight) {
     }
 }
 
-function drawBellCurve(ctx, mean, std, colorLight, colorDark, canvasWidth, canvasHeight, label) {
-    const range = 20;
-    const xScale = canvasWidth / (2 * range);
+function drawBellCurve(ctx, mean, std, colorLight, colorDark, canvasWidth, canvasHeight, xRange) {
+    const axisCenterY = canvasHeight / 2;
+    const xScale = canvasWidth / (xRange.max - xRange.min);
     const yScale = 5000;
     const yOffset = canvasHeight * 0.95;
     const curveColor = getColorForMode(colorLight, colorDark);
 
     ctx.beginPath();
     ctx.strokeStyle = curveColor;
-    let maxVal = -Infinity;
     for (let x = -3 * std + mean; x <= 3 * std + mean; x += 0.01) {
-        let plotX = x * xScale + (canvasWidth / 2);
+        let plotX = (x - xRange.min) * xScale;
         let plotY = yOffset - gaussian(x, mean, std) * yScale;
-        maxVal = Math.max(maxVal, plotY);
         ctx.lineTo(plotX, plotY);
     }
     ctx.stroke();
-
-    ctx.beginPath();
-    ctx.setLineDash([5, 3]);
-    ctx.strokeStyle = curveColor;
-    ctx.moveTo(canvasWidth / 2, maxVal);
-    ctx.lineTo(canvasWidth / 2, yOffset);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    ctx.fillStyle = curveColor;
-    ctx.fillText(label, canvasWidth / 2 - 100, yOffset - 40);
 }
 
 function calculateArea(mean, std) {
@@ -87,36 +76,42 @@ function calculateArea(mean, std) {
     return totalArea;
 }
 
-function displaySummary(mean1, std1, mean2, std2, area1, area2) {
-    const summary = document.getElementById('summary');
-    summary.innerHTML = `
-        <p>Curve 1: μ=${mean1}, σ=${std1}, Area=${area1.toFixed(2)}</p>
-        <p>Curve 2: μ=${mean2}, σ=${std2}, Area=${area2.toFixed(2)}</p>
-        <p>Difference in Areas: ${(Math.abs(area1 - area2)).toFixed(2)}</p>
-        <p>Overlap: ${(calculateOverlap(mean1, std1, mean2, std2)).toFixed(2)}%</p>
+function calculateXRange(means, stds) {
+    let min = Infinity;
+    let max = -Infinity;
+    for (let i = 0; i < means.length; i++) {
+        min = Math.min(min, means[i] - 3 * stds[i]);
+        max = Math.max(max, means[i] + 3 * stds[i]);
+    }
+    return { min, max };
+}
+
+function displayLegend(mean1, std1, area1, mean2, std2, area2) {
+    const legend = document.getElementById('legend');
+    legend.innerHTML = `
+        <div style="color: ${getColorForMode('blue', 'cyan')}">Curve 1: μ=${mean1}, σ=${std1}, Area=${area1.toFixed(2)}</div>
+        <div style="color: ${getColorForMode('red', 'magenta')}">Curve 2: μ=${mean2}, σ=${std2}, Area=${area2.toFixed(2)}</div>
     `;
 }
 
-function calculateOverlap(mean1, std1, mean2, std2) {
-    const range = 20;
-    let overlapArea = 0;
-    const step = 0.01;
-    for (let x = -range; x <= range; x += step) {
-        const y1 = gaussian(x, mean1, std1);
-        const y2 = gaussian(x, mean2, std2);
-        overlapArea += Math.min(y1, y2) * step;
-    }
-    return overlapArea * 100;
+function getColorForMode(colorLight, colorDark) {
+    const darkModeValue = getCookie("darkMode");
+    return darkModeValue && darkModeValue.toLowerCase() === "true" ? colorDark : colorLight;
 }
 
-function getColorForMode(lightModeColor, darkModeColor) {
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? darkModeColor
-        : lightModeColor;
+function getCookie(name) {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        let [key, value] = cookie.trim().split('=');
+        if (key === name) return value;
+    }
+    return null;
 }
 
 function toggleDarkMode() {
-    document.body.classList.toggle('dark-mode');
+    const darkModeValue = getCookie("darkMode");
+    const newMode = darkModeValue === "true" ? "false" : "true";
+    document.cookie = `darkMode=${newMode}; path=/;`;
     draw();
 }
 
