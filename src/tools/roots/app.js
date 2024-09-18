@@ -6,6 +6,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
 
+    const getColorForMode = (colorLight, colorDark) => {
+        const darkModeValue = getCookie("darkMode");
+        return darkModeValue && darkModeValue.toLowerCase() === "true" ? colorDark : colorLight;
+    };
+
     class Complex {
         constructor(real, imag) {
             this.real = real;
@@ -161,7 +166,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const drawAxis = (xMin, xMax, yMin, yMax) => {
         ctx.beginPath();
-        ctx.strokeStyle = "#000000";
+        ctx.strokeStyle = getColorForMode("#000000", "#FFFFFF");
         ctx.lineWidth = 1;
 
         const x0 = mapXToCanvas(0, xMin, xMax);
@@ -182,7 +187,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const drawGrid = (xMin, xMax, yMin, yMax) => {
         ctx.beginPath();
-        ctx.strokeStyle = "#e0e0e0";
+        ctx.strokeStyle = getColorForMode("#e0e0e0", "#555555");
         ctx.lineWidth = 1;
 
         const numXTicks = 10;
@@ -209,7 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.font = "10px Arial";
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-        ctx.fillStyle = "#000000";
+        ctx.fillStyle = getColorForMode("#000000", "#FFFFFF");
 
         const numXTicks = 10;
         for (let i = 0; i <= numXTicks; i++) {
@@ -233,7 +238,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const drawFunction = (coefficients, xMin, xMax, yMin, yMax) => {
         ctx.beginPath();
-        ctx.strokeStyle = "#FF0000";
+        ctx.strokeStyle = getColorForMode("#FF0000", "#FF5555");
         ctx.lineWidth = 2;
         const numPoints = canvas.width;
 
@@ -254,7 +259,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const drawRoots = (roots, xMin, xMax, yMin, yMax) => {
         roots.forEach((root) => {
             if (Math.abs(root.imag) < 1e-6) {
-                ctx.fillStyle = "#0000FF";
+                ctx.fillStyle = getColorForMode("#0000FF", "#00FFFF");
                 const xPos = mapXToCanvas(root.real, xMin, xMax);
                 const yPos = mapYToCanvas(0, yMin, yMax);
                 ctx.beginPath();
