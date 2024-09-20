@@ -77,15 +77,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const evaluatePolynomial = (coefficients, x) =>
         coefficients.reduce(
             (sum, coeff, i) =>
-                sum
-                    .mul(x)
-                    .add(Complex.from(coeff)),
+            sum
+            .mul(x)
+            .add(Complex.from(coeff)),
             new Complex(0, 0)
         );
 
     const durandKerner = (coefficients, maxIterations = 1000, tolerance = 1e-6) => {
         const n = coefficients.length - 1;
-        let roots = Array.from({ length: n }, (_, k) => {
+        let roots = Array.from({
+            length: n
+        }, (_, k) => {
             const angle = (2 * Math.PI * k) / n;
             return new Complex(Math.cos(angle), Math.sin(angle));
         });
@@ -111,21 +113,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const formatPolynomial = (coefficients) =>
         coefficients
-            .map((coeff, index) => {
-                const power = coefficients.length - 1 - index;
-                let term = "";
-                if (coeff === 0) return "";
-                if (coeff > 0 && index > 0) term += "+";
-                if (coeff < 0) term += "-";
-                const absCoeff = Math.abs(coeff);
-                if (absCoeff !== 1 || power === 0) term += absCoeff.toFixed(2);
-                if (power > 0) term += "x";
-                if (power > 1) term += `^${power}`;
-                return term;
-            })
-            .join(" ")
-            .replace(/\s+/g, " ")
-            .trim();
+        .map((coeff, index) => {
+            const power = coefficients.length - 1 - index;
+            let term = "";
+            if (coeff === 0) return "";
+            if (coeff > 0 && index > 0) term += "+";
+            if (coeff < 0) term += "-";
+            const absCoeff = Math.abs(coeff);
+            if (absCoeff !== 1 || power === 0) term += absCoeff.toFixed(2);
+            if (power > 0) term += "x";
+            if (power > 1) term += `^${power}`;
+            return term;
+        })
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim();
 
     const getMinMax = (coefficients) => {
         const numPoints = 1000;
@@ -282,7 +284,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
         outputRoots.value = `Polynomial Equation:\n${polynomialStr}\n\nRoots:\n${rootsDisplay}`;
 
-        const { xMin, xMax, yMin, yMax } = getMinMax(coefficients);
+        const {
+            xMin,
+            xMax,
+            yMin,
+            yMax
+        } = getMinMax(coefficients);
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawGrid(xMin, xMax, yMin, yMax);

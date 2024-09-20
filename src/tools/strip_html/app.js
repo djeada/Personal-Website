@@ -31,7 +31,9 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     downloadButton.addEventListener("click", () => {
-        const blob = new Blob([outputText.value], { type: "text/plain" });
+        const blob = new Blob([outputText.value], {
+            type: "text/plain"
+        });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
         link.download = "stripped_text.txt";

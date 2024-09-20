@@ -103,7 +103,10 @@ function calculateXRange(means, stds) {
         min = Math.min(min, means[i] - 3 * stds[i]);
         max = Math.max(max, means[i] + 3 * stds[i]);
     }
-    return { min, max };
+    return {
+        min,
+        max
+    };
 }
 
 function getColorForMode(colorLight, colorDark) {
@@ -127,7 +130,7 @@ function toggleDarkMode() {
     draw();
 }
 
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function() {
     var drawButton = document.querySelector('.draw-button');
     if (drawButton) {
         drawButton.addEventListener('click', draw);
