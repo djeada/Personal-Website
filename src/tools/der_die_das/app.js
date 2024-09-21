@@ -44,15 +44,15 @@ wordLists = {
 const proxyUrl = 'https://api.allorigins.win/get?url=';
 
 const fetchWordList = (url, article) =>
-    fetch(proxyUrl + encodeURIComponent(url))  // Use proxy URL here
+    fetch(proxyUrl + encodeURIComponent(url)) // Use proxy URL here
     .then(response => {
         if (response.ok) {
-            return response.json();  // Fetch the response as JSON since allorigins wraps it
+            return response.json(); // Fetch the response as JSON since allorigins wraps it
         } else {
             throw new Error(`Failed to load ${article} words from server.`);
         }
     })
-    .then(data => data.contents)  // Get the actual content from the JSON response
+    .then(data => data.contents) // Get the actual content from the JSON response
     .catch(error => {
         console.error(`Error fetching ${article} words: ${error.message}`);
         // Handle the error, but do not set default values
