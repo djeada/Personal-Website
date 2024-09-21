@@ -41,21 +41,24 @@ wordLists = {
 }
 
 
-function loadWords() {
-    const fetchWordList = (url, article) =>
-        fetch(url)
-        .then(response => {
-            if (response.ok) {
-                return response.text();
-            } else {
-                throw new Error(`Failed to load ${article} words from server.`);
-            }
-        })
-        .catch(error => {
-            console.error(`Error fetching ${article} words: ${error.message}`);
-            // Here we do not set any default values, just handle the error.
-        });
+const proxyUrl = 'https://api.allorigins.win/get?url=';
 
+const fetchWordList = (url, article) =>
+    fetch(proxyUrl + encodeURIComponent(url))  // Use proxy URL here
+    .then(response => {
+        if (response.ok) {
+            return response.json();  // Fetch the response as JSON since allorigins wraps it
+        } else {
+            throw new Error(`Failed to load ${article} words from server.`);
+        }
+    })
+    .then(data => data.contents)  // Get the actual content from the JSON response
+    .catch(error => {
+        console.error(`Error fetching ${article} words: ${error.message}`);
+        // Handle the error, but do not set default values
+    });
+
+function loadWords() {
     return Promise.all([
         fetchWordList('https://adamdjellouli.com/tools/der_die_das/der.txt', 'der'),
         fetchWordList('https://adamdjellouli.com/tools/der_die_das/die.txt', 'die'),
@@ -68,6 +71,8 @@ function loadWords() {
     });
 }
 
+let baseSpeed = 0.0001; // Base speed factor
+
 function resizeCanvas() {
     const styles = window.getComputedStyle(gameCanvas);
     gameCanvas.width = parseInt(styles.width, 10);
@@ -77,6 +82,8 @@ function resizeCanvas() {
     gameHeight = gameCanvas.height;
 
     ctx.font = (gameCanvas.width <= 767) ? '15px Arial' : '20px Arial';
+
+    fallingSpeed = baseSpeed * gameHeight; // Scale falling speed based on canvas height
 }
 
 function measureWordWidth(word) {
