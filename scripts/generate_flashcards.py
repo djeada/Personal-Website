@@ -105,10 +105,15 @@ def process_url(url_info: Dict[str, str]) -> None:
         output_filename = generate_filename_from_category(category)
         save_to_json(cards_by_subcategory, category, OUTPUT_DIR / output_filename)
 
-
 def update_categories(categories: set) -> None:
-    categories_list = list(categories)
+    def to_snake_case(s: str) -> str:
+        return re.sub(r'\W+', '_', s).strip('_').lower()
+    # Convert categories to lowercase and snake case
+    categories_list = [to_snake_case(category) for category in categories]
+
     logging.info(f"Updating categories in {CATEGORIES}")
+
+    # Write the updated categories to the file
     with open(CATEGORIES, "w", encoding="utf-8") as f:
         json.dump(categories_list, f, indent=4, ensure_ascii=False)
 
