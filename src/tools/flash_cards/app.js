@@ -1,3 +1,23 @@
+function resizeText(cardElement) {
+    let textElement = cardElement.querySelector('p');
+
+    // Ensure the text element exists before resizing
+    if (!textElement) {
+        console.error('Text element not found inside card:', cardElement);
+        return;
+    }
+
+    // Get the initial font size
+    let fontSize = parseFloat(window.getComputedStyle(textElement, null).getPropertyValue('font-size'));
+
+    // Reduce font size if the text exceeds the available height of the card
+    while (textElement.scrollHeight > cardElement.clientHeight && fontSize > 10) {
+        fontSize -= 1;
+        textElement.style.fontSize = fontSize + 'px';
+    }
+}
+
+
 document.addEventListener('DOMContentLoaded', () => {
     const categorySelect = document.getElementById('categorySelect');
     const subcategoriesDiv = document.getElementById('subcategories');
@@ -114,27 +134,33 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const showCard = () => {
-        let cardFound = false;
-        let checkedCards = cards.length;
+    let cardFound = false;
+    let checkedCards = cards.length;
 
-        while (checkedCards > 0) {
-            if (cardStatus[currentCardIndex]) {
-                cardFound = true;
-                break;
-            }
-            currentCardIndex = (currentCardIndex + 1) % cards.length;
-            checkedCards--;
+    while (checkedCards > 0) {
+        if (cardStatus[currentCardIndex]) {
+            cardFound = true;
+            break;
         }
+        currentCardIndex = (currentCardIndex + 1) % cards.length;
+        checkedCards--;
+    }
 
-        if (!cardFound) {
-            flashcardFront.textContent = 'No cards available';
-            flashcardBack.textContent = '';
-        } else {
-            flashcardFront.textContent = cards[currentCardIndex].front;
-            flashcardBack.textContent = cards[currentCardIndex].back;
-        }
-        flashcard.classList.remove('flipped');
-    };
+    if (!cardFound) {
+        flashcardFront.innerHTML = '<p>No cards available</p>';
+        flashcardBack.innerHTML = '';
+    } else {
+        flashcardFront.innerHTML = `<p>${cards[currentCardIndex].front}</p>`;
+        flashcardBack.innerHTML = `<p>${cards[currentCardIndex].back}</p>`;
+    }
+
+    flashcard.classList.remove('flipped');
+
+    // Apply resize after the text is added to the cards
+    resizeText(flashcardFront);
+    resizeText(flashcardBack);
+};
+
 
     const populateQuestionsTable = () => {
         questionsTableBody.innerHTML = '';
@@ -168,8 +194,17 @@ document.addEventListener('DOMContentLoaded', () => {
         loadCategoryData(event.target.value);
     });
 
+
+// Apply resize on card load and when flipping
+    resizeText(flashcardFront);
+    resizeText(flashcardBack);
+
     flipButton.addEventListener('click', () => {
+        const flashcard = document.getElementById('flashcard');
         flashcard.classList.toggle('flipped');
+        // Resize text on both sides after flipping
+        resizeText(flashcardFront);
+        resizeText(flashcardBack);
     });
 
     knowButton.addEventListener('click', () => {
