@@ -1,11 +1,14 @@
 document.addEventListener("DOMContentLoaded", function() {
     const algorithmSelect = document.getElementById("algorithm");
-    algorithmSelect.addEventListener("change", handleAlgorithmChange);
+    const arraySizeInput = document.getElementById("array-size");
+    const speedInput = document.getElementById("speed");
     const arrayState = document.getElementById("array-state");
     const sortingCanvas = document.getElementById("sorting-canvas");
     const startButton = document.getElementById("start");
     const pauseButton = document.getElementById("pause");
     const resetButton = document.getElementById("reset");
+    const stepButton = document.getElementById("step");
+
 
     const canvasWidth = Math.floor(window.innerWidth * 0.8);
     const canvasHeight = Math.floor(window.innerHeight * 0.6);
@@ -14,284 +17,360 @@ document.addEventListener("DOMContentLoaded", function() {
     sortingCanvas.height = canvasHeight;
 
     const ctx = sortingCanvas.getContext("2d");
-    ctx.imageSmoothingEnabled = false; // Disable image smoothing
-    const arrayLength = 50;
-    let dataArray = generateRandomArray(arrayLength);
-    let sortingInProgress = false;
-    let paused = false;
-    let currentSortingPromise = null;
+    ctx.imageSmoothingEnabled = false;
 
-    function generateRandomArray(length) {
-        return Array.from({
-                length,
-            },
-            () => Math.floor(Math.random() * sortingCanvas.height)
-        );
-    }
-
-    function drawArray(array, highlightedIndex1 = -1, highlightedIndex2 = -1) {
-        ctx.clearRect(0, 0, sortingCanvas.width, sortingCanvas.height);
-        const barWidth = Math.floor(sortingCanvas.width / array.length);
-        for (let i = 0; i < array.length; i++) {
-            const height = array[i];
-            if (i === highlightedIndex1 || i === highlightedIndex2) {
-                ctx.fillStyle = "red";
-            } else {
-                ctx.fillStyle = "#eec747";
-            }
-            ctx.fillRect(
-                i * barWidth,
-                sortingCanvas.height - height,
-                barWidth,
-                height
-            );
+    class SortingVisualizer {
+        constructor() {
+            this.array = [];
+            this.arrayLength = parseInt(arraySizeInput.value) || 50;
+            this.speed = parseInt(speedInput.value) || 50;
+            this.sortingInProgress = false;
+            this.paused = false;
+            this.stepMode = false;
+            this.currentAlgorithm = this.getSelectedAlgorithm();
+            this.generateRandomArray();
+            this.drawArray();
+            this.updateArrayState();
+            this.bindEvents();
         }
-    }
 
-    function updateArrayState(array) {
-        arrayState.value = array.join(", ");
-    }
+        bindEvents() {
+            startButton.addEventListener("click", () => this.startSorting());
+            pauseButton.addEventListener("click", () => this.togglePause());
+            resetButton.addEventListener("click", () => this.resetArray());
+            stepButton.addEventListener("click", () => this.stepSorting());
+            algorithmSelect.addEventListener("change", () => this.handleAlgorithmChange());
+            arraySizeInput.addEventListener("input", () => this.handleArraySizeChange());
+            speedInput.addEventListener("input", () => this.handleSpeedChange());
+        }
 
-    async function bubbleSort(array) {
-        sortingInProgress = true;
-        for (let i = 0; i < array.length; i++) {
-            for (let j = 0; j < array.length - i - 1; j++) {
-                if (!sortingInProgress) return;
-                if (array[j] > array[j + 1]) {
-                    const temp = array[j];
-                    array[j] = array[j + 1];
-                    array[j + 1] = temp;
-                    updateArrayState(array); // Update array-state input
+        generateRandomArray() {
+            this.array = Array.from({
+                length: this.arrayLength
+            }, () => Math.floor(Math.random() * sortingCanvas.height));
+        }
+
+        drawArray(highlightedIndices = []) {
+            ctx.clearRect(0, 0, sortingCanvas.width, sortingCanvas.height);
+            const barWidth = Math.floor(sortingCanvas.width / this.array.length);
+            for (let i = 0; i < this.array.length; i++) {
+                const height = this.array[i];
+                if (highlightedIndices.includes(i)) {
+                    ctx.fillStyle = "red";
+                } else {
+                    ctx.fillStyle = "#eec747";
                 }
-                drawArray(array, j, j + 1);
-                await new Promise((resolve) => setTimeout(resolve, 50));
-                while (paused) {
-                    await new Promise((resolve) => setTimeout(resolve, 50));
-                }
-            }
-        }
-        sortingInProgress = false;
-    }
-
-    async function selectionSort(array) {
-        sortingInProgress = true;
-        for (let i = 0; i < array.length; i++) {
-            let minIndex = i;
-            for (let j = i + 1; j < array.length; j++) {
-                if (!sortingInProgress) return;
-                if (array[j] < array[minIndex]) {
-                    minIndex = j;
-                }
-                drawArray(array, i, minIndex);
-                await new Promise((resolve) => setTimeout(resolve, 50));
-                while (paused) {
-                    await new Promise((resolve) => setTimeout(resolve, 50));
-                }
-            }
-            const temp = array[i];
-            array[i] = array[minIndex];
-            array[minIndex] = temp;
-            updateArrayState(array); // Update array-state input
-        }
-        sortingInProgress = false;
-    }
-
-    async function insertionSort(array) {
-        sortingInProgress = true;
-        for (let i = 1; i < array.length; i++) {
-            let j = i - 1;
-            const key = array[i];
-            while (j >= 0 && array[j] > key) {
-                if (!sortingInProgress) return;
-                array[j + 1] = array[j];
-                j--;
-                updateArrayState(array); // Update array-state input
-                drawArray(array, j, j + 1);
-                await new Promise((resolve) => setTimeout(resolve, 50));
-                while (paused) {
-                    await new Promise((resolve) => setTimeout(resolve, 50));
-                }
-            }
-            array[j + 1] = key;
-        }
-        sortingInProgress = false;
-    }
-
-    async function mergeSort(array) {
-        sortingInProgress = true;
-        const sortedArray = await mergeSortHelper(array, 0, array.length - 1);
-        sortingInProgress = false;
-        return sortedArray;
-    }
-
-    async function mergeSortHelper(array, start, end) {
-        if (start >= end) {
-            return;
-        }
-
-        const middleIndex = Math.floor((start + end) / 2);
-
-        await mergeSortHelper(array, start, middleIndex);
-        await mergeSortHelper(array, middleIndex + 1, end);
-        await merge(array, start, middleIndex, end);
-    }
-
-    async function merge(array, start, middle, end) {
-        const leftArray = array.slice(start, middle + 1);
-        const rightArray = array.slice(middle + 1, end + 1);
-
-        let leftIndex = 0;
-        let rightIndex = 0;
-        let mergeIndex = start;
-
-        while (leftIndex < leftArray.length && rightIndex < rightArray.length) {
-            if (!sortingInProgress) return;
-            if (leftArray[leftIndex] <= rightArray[rightIndex]) {
-                array[mergeIndex] = leftArray[leftIndex];
-                leftIndex++;
-            } else {
-                array[mergeIndex] = rightArray[rightIndex];
-                rightIndex++;
-            }
-
-            drawArray(array, mergeIndex, mergeIndex);
-            mergeIndex++;
-
-            updateArrayState(array); // Update array-state input
-            await new Promise((resolve) => setTimeout(resolve, 50));
-            while (paused) {
-                await new Promise((resolve) => setTimeout(resolve, 50));
+                ctx.fillRect(
+                    i * barWidth,
+                    sortingCanvas.height - height,
+                    barWidth,
+                    height
+                );
             }
         }
 
-        while (leftIndex < leftArray.length) {
-            array[mergeIndex] = leftArray[leftIndex];
-            drawArray(array, mergeIndex, mergeIndex);
-            mergeIndex++;
-            leftIndex++;
+        updateArrayState() {
+            arrayState.value = this.array.join(", ");
         }
 
-        while (rightIndex < rightArray.length) {
-            array[mergeIndex] = rightArray[rightIndex];
-            drawArray(array, mergeIndex, mergeIndex);
-            mergeIndex++;
-            rightIndex++;
-        }
-    }
-
-    async function quickSort(array) {
-        sortingInProgress = true;
-        await quickSortHelper(array, 0, array.length - 1);
-        sortingInProgress = false;
-    }
-
-    async function quickSortHelper(array, start, end) {
-        if (start >= end) {
-            return;
-        }
-
-        const pivotIndex = start;
-        let leftIndex = start + 1;
-        let rightIndex = end;
-        while (rightIndex >= leftIndex) {
-            if (!sortingInProgress) return; // change this line
-            if (
-                array[leftIndex] > array[pivotIndex] &&
-                array[rightIndex] < array[pivotIndex]
-            ) {
-                const temp = array[leftIndex];
-                array[leftIndex] = array[rightIndex];
-                array[rightIndex] = temp;
-                updateArrayState(array); // Update array-state input
-            }
-            if (array[leftIndex] <= array[pivotIndex]) {
-                leftIndex++;
-            }
-            if (array[rightIndex] >= array[pivotIndex]) {
-                rightIndex--;
-            }
-            drawArray(array, leftIndex, rightIndex);
-            await new Promise((resolve) => setTimeout(resolve, 50));
-            while (paused) {
-                await new Promise((resolve) => setTimeout(resolve, 50));
-            }
-        }
-        if (sortingInProgress) {
-            const temp = array[pivotIndex];
-            array[pivotIndex] = array[rightIndex];
-            array[rightIndex] = temp;
-            updateArrayState(array); // Update array-state input
-        }
-
-        const leftSubarrayIsSmaller =
-            rightIndex - 1 - start < end - (rightIndex + 1);
-        if (leftSubarrayIsSmaller) {
-            await quickSortHelper(array, start, rightIndex - 1);
-            await quickSortHelper(array, rightIndex + 1, end);
-        } else {
-            await quickSortHelper(array, rightIndex + 1, end);
-            await quickSortHelper(array, start, rightIndex - 1);
-        }
-    }
-
-    function getSelectedAlgorithm() {
-        return algorithmSelect.options[algorithmSelect.selectedIndex].value;
-    }
-
-    function handleAlgorithmChange() {
-        sortingInProgress = false;
-        dataArray = generateRandomArray(dataArray.length);
-        drawArray(dataArray);
-    }
-
-    startButton.addEventListener("click", async () => {
-        if (currentSortingPromise) {
-            sortingInProgress = false;
-            paused = false;
+        async startSorting() {
+            if (this.sortingInProgress) return;
+            this.sortingInProgress = true;
+            this.paused = false;
+            this.stepMode = false;
             pauseButton.textContent = "Pause";
-            await currentSortingPromise;
+            this.currentAlgorithm = this.getSelectedAlgorithm();
+            switch (this.currentAlgorithm) {
+                case "bubble":
+                    await this.bubbleSort();
+                    break;
+                case "selection":
+                    await this.selectionSort();
+                    break;
+                case "insertion":
+                    await this.insertionSort();
+                    break;
+                case "merge":
+                    await this.mergeSort(0, this.array.length - 1);
+                    break;
+                case "quick":
+                    await this.quickSort(0, this.array.length - 1);
+                    break;
+                case "heap":
+                    await this.heapSort();
+                    break;
+                case "radix":
+                    await this.radixSort();
+                    break;
+                default:
+                    break;
+            }
+            this.sortingInProgress = false;
         }
 
-        // Unpause the sorting before starting a new one
-        paused = false;
-
-        const selectedAlgorithm = getSelectedAlgorithm();
-        currentSortingPromise = (async () => {
-            if (selectedAlgorithm === "bubble") {
-                await bubbleSort(dataArray);
+        togglePause() {
+            if (this.sortingInProgress) {
+                this.paused = !this.paused;
+                pauseButton.textContent = this.paused ? "Resume" : "Pause";
             }
-            if (selectedAlgorithm === "selection") {
-                await selectionSort(dataArray);
-            }
-            if (selectedAlgorithm === "insertion") {
-                await insertionSort(dataArray);
-            }
-            if (selectedAlgorithm === "merge") {
-                await mergeSort(dataArray);
-            }
-            if (selectedAlgorithm === "quick") {
-                await quickSort(dataArray);
-            }
-        })();
-    });
-
-    pauseButton.addEventListener("click", () => {
-        if (sortingInProgress) {
-            paused = !paused;
-            pauseButton.textContent = paused ? "Resume" : "Pause";
         }
-    });
 
-    resetButton.addEventListener("click", () => {
-        if (sortingInProgress) {
-            sortingInProgress = false;
-            paused = false;
-            pauseButton.textContent = "Pause";
+        resetArray() {
+            if (this.sortingInProgress) {
+                this.sortingInProgress = false;
+                this.paused = false;
+                pauseButton.textContent = "Pause";
+            }
+            this.generateRandomArray();
+            this.drawArray();
+            this.updateArrayState();
         }
-        dataArray = generateRandomArray(arrayLength);
-        drawArray(dataArray);
-    });
 
-    drawArray(dataArray);
-    updateArrayState(dataArray);
+        stepSorting() {
+            if (this.sortingInProgress) {
+                this.stepMode = true;
+                this.paused = false;
+            } else {
+                this.startSorting();
+                this.stepMode = true;
+            }
+        }
+
+        handleAlgorithmChange() {
+            if (this.sortingInProgress) {
+                this.sortingInProgress = false;
+                this.paused = false;
+                pauseButton.textContent = "Pause";
+            }
+            this.generateRandomArray();
+            this.drawArray();
+            this.updateArrayState();
+        }
+
+        handleArraySizeChange() {
+            this.arrayLength = parseInt(arraySizeInput.value) || 50;
+            this.resetArray();
+        }
+
+        handleSpeedChange() {
+            this.speed = parseInt(speedInput.value) || 50;
+        }
+
+
+        getSelectedAlgorithm() {
+            return algorithmSelect.options[algorithmSelect.selectedIndex].value;
+        }
+
+        async delay() {
+            if (this.stepMode) {
+                this.paused = true;
+                while (this.paused) {
+                    await new Promise((resolve) => setTimeout(resolve, 50));
+                }
+            } else {
+                await new Promise((resolve) => setTimeout(resolve, this.speed));
+                while (this.paused) {
+                    await new Promise((resolve) => setTimeout(resolve, 50));
+                }
+            }
+        }
+
+        async bubbleSort() {
+            for (let i = 0; i < this.array.length; i++) {
+                for (let j = 0; j < this.array.length - i - 1; j++) {
+                    if (!this.sortingInProgress) return;
+                    if (this.array[j] > this.array[j + 1]) {
+                        [this.array[j], this.array[j + 1]] = [this.array[j + 1], this.array[j]];
+                        this.updateArrayState();
+                    }
+                    this.drawArray([j, j + 1]);
+                    await this.delay();
+                }
+            }
+        }
+
+        async selectionSort() {
+            for (let i = 0; i < this.array.length; i++) {
+                let minIndex = i;
+                for (let j = i + 1; j < this.array.length; j++) {
+                    if (!this.sortingInProgress) return;
+                    if (this.array[j] < this.array[minIndex]) {
+                        minIndex = j;
+                    }
+                    this.drawArray([i, minIndex]);
+                    await this.delay();
+                }
+                if (minIndex !== i) {
+                    [this.array[i], this.array[minIndex]] = [this.array[minIndex], this.array[i]];
+                    this.updateArrayState();
+                }
+            }
+        }
+
+        async insertionSort() {
+            for (let i = 1; i < this.array.length; i++) {
+                let key = this.array[i];
+                let j = i - 1;
+                while (j >= 0 && this.array[j] > key) {
+                    if (!this.sortingInProgress) return;
+                    this.array[j + 1] = this.array[j];
+                    j--;
+                    this.drawArray([j, j + 1]);
+                    this.updateArrayState();
+                    await this.delay();
+                }
+                this.array[j + 1] = key;
+                this.updateArrayState();
+                this.drawArray([j + 1]);
+            }
+        }
+
+        async mergeSort(start, end) {
+            if (start >= end || !this.sortingInProgress) return;
+            const mid = Math.floor((start + end) / 2);
+            await this.mergeSort(start, mid);
+            await this.mergeSort(mid + 1, end);
+            await this.merge(start, mid, end);
+        }
+
+        async merge(start, mid, end) {
+            let left = this.array.slice(start, mid + 1);
+            let right = this.array.slice(mid + 1, end + 1);
+            let i = 0,
+                j = 0,
+                k = start;
+            while (i < left.length && j < right.length) {
+                if (!this.sortingInProgress) return;
+                if (left[i] <= right[j]) {
+                    this.array[k] = left[i];
+                    i++;
+                } else {
+                    this.array[k] = right[j];
+                    j++;
+                }
+                this.drawArray([k]);
+                this.updateArrayState();
+                await this.delay();
+                k++;
+            }
+            while (i < left.length) {
+                if (!this.sortingInProgress) return;
+                this.array[k] = left[i];
+                i++;
+                k++;
+                this.drawArray([k]);
+                this.updateArrayState();
+                await this.delay();
+            }
+            while (j < right.length) {
+                if (!this.sortingInProgress) return;
+                this.array[k] = right[j];
+                j++;
+                k++;
+                this.drawArray([k]);
+                this.updateArrayState();
+                await this.delay();
+            }
+        }
+
+        async quickSort(start, end) {
+            if (start >= end || !this.sortingInProgress) return;
+            let index = await this.partition(start, end);
+            await this.quickSort(start, index - 1);
+            await this.quickSort(index + 1, end);
+        }
+
+        async partition(start, end) {
+            let pivotIndex = end;
+            let pivotValue = this.array[pivotIndex];
+            let i = start;
+            for (let j = start; j < end; j++) {
+                if (!this.sortingInProgress) return;
+                if (this.array[j] < pivotValue) {
+                    [this.array[i], this.array[j]] = [this.array[j], this.array[i]];
+                    this.updateArrayState();
+                    i++;
+                }
+                this.drawArray([i, j, pivotIndex]);
+                await this.delay();
+            }
+            [this.array[i], this.array[pivotIndex]] = [this.array[pivotIndex], this.array[i]];
+            this.updateArrayState();
+            this.drawArray([i, pivotIndex]);
+            await this.delay();
+            return i;
+        }
+
+        async heapSort() {
+            let n = this.array.length;
+            for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
+                if (!this.sortingInProgress) return;
+                await this.heapify(n, i);
+            }
+            for (let i = n - 1; i > 0; i--) {
+                if (!this.sortingInProgress) return;
+                [this.array[0], this.array[i]] = [this.array[i], this.array[0]];
+                this.updateArrayState();
+                this.drawArray([0, i]);
+                await this.delay();
+                await this.heapify(i, 0);
+            }
+        }
+
+        async heapify(n, i) {
+            let largest = i;
+            let left = 2 * i + 1;
+            let right = 2 * i + 2;
+            if (left < n && this.array[left] > this.array[largest]) {
+                largest = left;
+            }
+            if (right < n && this.array[right] > this.array[largest]) {
+                largest = right;
+            }
+            if (largest !== i) {
+                [this.array[i], this.array[largest]] = [this.array[largest], this.array[i]];
+                this.updateArrayState();
+                this.drawArray([i, largest]);
+                await this.delay();
+                await this.heapify(n, largest);
+            }
+        }
+
+        async radixSort() {
+            let max = Math.max(...this.array);
+            let exp = 1;
+            while (Math.floor(max / exp) > 0) {
+                if (!this.sortingInProgress) return;
+                await this.countingSort(exp);
+                exp *= 10;
+            }
+        }
+
+        async countingSort(exp) {
+            let output = new Array(this.array.length).fill(0);
+            let count = new Array(10).fill(0);
+            for (let i = 0; i < this.array.length; i++) {
+                let index = Math.floor(this.array[i] / exp) % 10;
+                count[index]++;
+            }
+            for (let i = 1; i < 10; i++) {
+                count[i] += count[i - 1];
+            }
+            for (let i = this.array.length - 1; i >= 0; i--) {
+                let index = Math.floor(this.array[i] / exp) % 10;
+                output[count[index] - 1] = this.array[i];
+                count[index]--;
+            }
+            for (let i = 0; i < this.array.length; i++) {
+                if (!this.sortingInProgress) return;
+                this.array[i] = output[i];
+                this.updateArrayState();
+                this.drawArray([i]);
+                await this.delay();
+            }
+        }
+    }
+
+    const visualizer = new SortingVisualizer();
+
 });
