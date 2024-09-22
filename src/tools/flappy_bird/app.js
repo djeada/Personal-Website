@@ -110,10 +110,19 @@ class Game {
         const topHeight = Math.floor(Math.random() * (maxHeight - minHeight + 1) + minHeight);
         const bottomY = topHeight + gapHeight;
 
-        const pipeX = canvas.width + 100;
-        this.pipes.push(new Pipe(pipeX, 0, topHeight, true));
-        this.pipes.push(new Pipe(pipeX, bottomY, canvas.height - bottomY, false));
+        // Determine pipeX value
+        let pipeX;
+        if (this.pipes.length === 0) {
+            pipeX = canvas.width;
+        } else {
+            const lastPipeX = this.pipes[this.pipes.length - 2].x;
+            pipeX = lastPipeX + Math.floor(Math.random() * (800 - 150 + 1)) + 100;
+        }
+        // Add new pipes to the array
+        this.pipes.push(new Pipe(pipeX, 0, topHeight, true)); // Top pipe
+        this.pipes.push(new Pipe(pipeX, bottomY, canvas.height - bottomY, false)); // Bottom pipe
     }
+
 
     levelUp() {
         this.level++;
