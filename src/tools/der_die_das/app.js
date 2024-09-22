@@ -2,11 +2,13 @@ const gameCanvas = document.getElementById('gameCanvas');
 const ctx = gameCanvas.getContext('2d');
 const scoreDisplay = document.getElementById('score');
 const livesDisplay = document.getElementById('lives');
+const correctWordsTable = document.getElementById('correctWordsTable');
+const incorrectWordsTable = document.getElementById('incorrectWordsTable');
 let gameWidth, gameHeight;
 let wordHeight = 30;
 let score = 0;
 let lives = 3;
-let fallingSpeed = 0.1;
+let fallingSpeed = 0.5;
 let lastWordTime = 0;
 let lastFrameTime = 0;
 const fixedTimeStep = 16;
@@ -15,48 +17,47 @@ let highlightContainerIndex = -1;
 let highlightDuration = 500;
 let highlightStartTime = 0;
 const articles = ['der', 'die', 'das'];
-let highlightColor;
-let isGameOver = false;
-const moveAmount = 30;
 
-wordLists = {
-    'der': [
-        'Baum', 'Stuhl', 'Tisch', 'Apfel', 'Berg', 'Wagen', 'Zug', 'Hund', 'Vogel', 'Fluss',
-        'Mond', 'Stern', 'Garten', 'Schuh', 'Schlüssel', 'Stift', 'Boden', 'See', 'Wald', 'Himmel',
-        'Strom', 'Zweig', 'Vorhang', 'Bürgersteig', 'Hut', 'Löffel', 'Pfirsich', 'Vulkan', 'Ring', 'Teller',
-        'Turm', 'Ball', 'Schrank', 'Computer', 'Kuchen'
-    ],
-    'die': [
-        'Frau', 'Katze', 'Blume', 'Tür', 'Nacht', 'Straße', 'Wiese', 'Lampe', 'Uhr', 'Karte',
-        'Tasche', 'Brücke', 'Wand', 'Zeitung', 'Wolke', 'Flasche', 'Gabel', 'Schere', 'Kerze', 'Taste',
-        'Küche', 'Treppe', 'Decke', 'Brille', 'Giraffe', 'Pflanze', 'Sonne', 'Bank', 'Schrift', 'Farbe',
-        'Jacke', 'Maus', 'Tafel', 'Bluse', 'Kamera'
-    ],
-    'das': [
-        'Buch', 'Bild', 'Fenster', 'Haus', 'Bett', 'Kind', 'Spiel', 'Lied', 'Licht', 'Radio',
-        'Auto', 'Schiff', 'Pferd', 'Flugzeug', 'Telefon', 'Zimmer', 'Büro', 'Restaurant', 'Theater', 'Fahrrad',
-        'Sofa', 'Schloss', 'Hotel', 'Programm', 'Papier', 'Instrument', 'Projekt', 'Frühstück', 'Badezimmer', 'Geschenk',
-        'Handy', 'Konto', 'Bücherregal', 'Motorrad', 'Messer'
-    ]
+function getColorForMode(colorLight, colorDark) {
+    const darkModeValue = getCookie("darkMode");
+    return darkModeValue && darkModeValue.toLowerCase() === "true" ? colorDark : colorLight;
 }
 
+// Define color variables based on mode
+const backgroundColorStart = getColorForMode('#a1c4fd', '#1e1e1e'); // Light blue vs. Dark gray
+const backgroundColorEnd = getColorForMode('#c2e9fb', '#121212'); // Light cyan vs. Darker gray
+const wordColor = getColorForMode('#333', '#ddd'); // Dark text vs. Light text
+const containerColors = [
+    getColorForMode('#ff9999', '#b56565'), // Softer red for dark mode
+    getColorForMode('#99ff99', '#65b565'), // Softer green for dark mode
+    getColorForMode('#9999ff', '#6565b5') // Softer blue for dark mode
+];
+const labelColor = getColorForMode('#000', '#e0e0e0');
+const containerStrokeColor = getColorForMode('#fff', '#ccc'); // White vs. Light gray
+const highlightColorCorrect = getColorForMode('rgba(0, 255, 0, 1)', 'rgba(0, 200, 0, 1)'); // Green vs. Darker green
+const highlightColorIncorrect = getColorForMode('rgba(255, 0, 0, 1)', 'rgba(200, 0, 0, 1)'); // Red vs. Darker red
+const gameOverBackground = getColorForMode('rgba(0, 0, 0, 0.75)', 'rgba(255, 255, 255, 0.75)');
+const gameOverTextColor = getColorForMode('white', 'black');
+const gameOverSubTextColor = getColorForMode('white', 'black');
 
+let highlightColor = highlightColorCorrect; // Initialize with correct highlight color
+let isGameOver = false;
+const moveAmount = 30;
+const wordLists = {
+    'der': ['Baum', 'Stuhl', 'Tisch', 'Apfel', 'Berg', 'Wagen', 'Zug', 'Hund', 'Vogel', 'Fluss', 'Mond', 'Stern', 'Garten', 'Schuh', 'Schlüssel', 'Stift', 'Boden', 'See', 'Wald', 'Himmel', 'Strom', 'Zweig', 'Vorhang', 'Bürgersteig', 'Hut', 'Löffel', 'Pfirsich', 'Vulkan', 'Ring', 'Teller', 'Turm', 'Ball', 'Schrank', 'Computer', 'Kuchen'],
+    'die': ['Frau', 'Katze', 'Blume', 'Tür', 'Nacht', 'Straße', 'Wiese', 'Lampe', 'Uhr', 'Karte', 'Tasche', 'Brücke', 'Wand', 'Zeitung', 'Wolke', 'Flasche', 'Gabel', 'Schere', 'Kerze', 'Taste', 'Küche', 'Treppe', 'Decke', 'Brille', 'Giraffe', 'Pflanze', 'Sonne', 'Bank', 'Schrift', 'Farbe', 'Jacke', 'Maus', 'Tafel', 'Bluse', 'Kamera'],
+    'das': ['Buch', 'Bild', 'Fenster', 'Haus', 'Bett', 'Kind', 'Spiel', 'Lied', 'Licht', 'Radio', 'Auto', 'Schiff', 'Pferd', 'Flugzeug', 'Telefon', 'Zimmer', 'Büro', 'Restaurant', 'Theater', 'Fahrrad', 'Sofa', 'Schloss', 'Hotel', 'Programm', 'Papier', 'Instrument', 'Projekt', 'Frühstück', 'Badezimmer', 'Geschenk', 'Handy', 'Konto', 'Bücherregal', 'Motorrad', 'Messer']
+};
 const proxyUrl = 'https://api.allorigins.win/get?url=';
-
-const fetchWordList = (url, article) =>
-    fetch(proxyUrl + encodeURIComponent(url)) // Use proxy URL here
-    .then(response => {
-        if (response.ok) {
-            return response.json(); // Fetch the response as JSON since allorigins wraps it
-        } else {
-            throw new Error(`Failed to load ${article} words from server.`);
-        }
-    })
-    .then(data => data.contents) // Get the actual content from the JSON response
-    .catch(error => {
-        console.error(`Error fetching ${article} words: ${error.message}`);
-        // Handle the error, but do not set default values
-    });
+const fetchWordList = (url, article) => fetch(proxyUrl + encodeURIComponent(url)).then(response => {
+    if (response.ok) {
+        return response.json();
+    } else {
+        throw new Error(`Failed to load ${article} words from server.`);
+    }
+}).then(data => data.contents).catch(error => {
+    console.error(`Error fetching ${article} words: ${error.message}`);
+});
 
 function loadWords() {
     return Promise.all([
@@ -64,26 +65,28 @@ function loadWords() {
         fetchWordList('https://adamdjellouli.com/tools/der_die_das/die.txt', 'die'),
         fetchWordList('https://adamdjellouli.com/tools/der_die_das/das.txt', 'das')
     ]).then(([derWords, dieWords, dasWords]) => {
-        // Only update wordLists if the fetch was successful
         if (derWords) wordLists['der'] = derWords.split('\n');
         if (dieWords) wordLists['die'] = dieWords.split('\n');
         if (dasWords) wordLists['das'] = dasWords.split('\n');
     });
 }
-
-let baseSpeed = 0.0001; // Base speed factor
+let baseSpeed = 0.0001;
 
 function resizeCanvas() {
-    const styles = window.getComputedStyle(gameCanvas);
-    gameCanvas.width = parseInt(styles.width, 10);
-    gameCanvas.height = parseInt(styles.height, 10);
+    const parent = gameCanvas.parentNode;
+    const width = parent.clientWidth;
+    const height = parent.clientHeight;
+
+    gameCanvas.width = width;
+    gameCanvas.height = height;
 
     gameWidth = gameCanvas.width;
     gameHeight = gameCanvas.height;
 
-    ctx.font = (gameCanvas.width <= 767) ? '15px Arial' : '20px Arial';
-
-    fallingSpeed = baseSpeed * gameHeight; // Scale falling speed based on canvas height
+    fallingSpeed = baseSpeed * gameHeight;
+    console.log(fallingSpeed)
+    let fontSize = gameCanvas.width <= 767 ? 18 : 24;
+    ctx.font = `${fontSize}px 'Helvetica Neue', Helvetica, Arial, sans-serif`;
 }
 
 function measureWordWidth(word) {
@@ -94,15 +97,12 @@ function generateWord(timestamp) {
     if (currentWord) {
         return;
     }
-
     const randomArticle = articles[Math.floor(Math.random() * articles.length)];
     const words = wordLists[randomArticle];
-    const wordText = words[Math.floor(Math.random() * words.length)]; // Pick a random word
-
+    const wordText = words[Math.floor(Math.random() * words.length)];
     const wordWidth = measureWordWidth(wordText);
     const maxPositionX = gameWidth - wordWidth;
     const randomX = Math.random() * maxPositionX;
-
     currentWord = {
         text: wordText,
         article: randomArticle,
@@ -117,6 +117,7 @@ function moveWords(deltaTime) {
     if (!currentWord) {
         return;
     }
+    // Use fallingSpeed adjusted for canvas size
     currentWord.y += fallingSpeed * deltaTime;
     if (currentWord.y > gameHeight) {
         currentWord = null; // Reset currentWord after it falls off the screen
@@ -124,28 +125,41 @@ function moveWords(deltaTime) {
 }
 
 function getHitContainerIndex(wordX) {
-    const containerWidth = gameWidth / 3; // Since there are 3 containers
+    const containerWidth = gameWidth / 3;
     const containerIndex = Math.floor(wordX / containerWidth);
     return containerIndex >= 0 && containerIndex < 3 ? containerIndex : -1;
 }
 
+function addWordToTable(table, wordText, userArticle, correctArticle) {
+    const row = table.insertRow();
+    const wordCell = row.insertCell(0);
+    const userArticleCell = row.insertCell(1);
+    const correctArticleCell = row.insertCell(2);
+    wordCell.textContent = wordText;
+    userArticleCell.textContent = userArticle;
+    correctArticleCell.textContent = correctArticle;
+}
 
 function checkCollisions() {
     if (!currentWord || currentWord.y <= gameHeight - wordHeight) {
         return;
     }
+
     highlightContainerIndex = getHitContainerIndex(currentWord.x);
 
     if (highlightContainerIndex !== -1) {
         highlightStartTime = Date.now();
-        const expectedArticle = articles[highlightContainerIndex];
+        const userArticle = articles[highlightContainerIndex];
+        const correctArticle = currentWord.article;
 
-        if (currentWord.article === expectedArticle) {
-            score += 1; // Increase score if the article matches
-            highlightColor = 'rgba(0, 255, 0, INTENSITY)'
+        if (userArticle === correctArticle) {
+            score += 1;
+            highlightColor = highlightColorCorrect; // Use dynamic color
+            addWordToTable(correctWordsTable, currentWord.text, userArticle, correctArticle);
         } else {
-            lives -= 1; // Decrease lives if the article doesn't match
-            highlightColor = 'rgba(255, 0, 0, INTENSITY)'
+            lives -= 1;
+            highlightColor = highlightColorIncorrect; // Use dynamic color
+            addWordToTable(incorrectWordsTable, currentWord.text, userArticle, correctArticle);
             if (lives <= 0) {
                 isGameOver = true;
             }
@@ -153,19 +167,29 @@ function checkCollisions() {
         scoreDisplay.textContent = score;
         livesDisplay.textContent = lives;
     }
-    currentWord = null; // Reset currentWord after it falls
+    currentWord = null;
 }
-
 
 function updateCanvas() {
     ctx.clearRect(0, 0, gameWidth, gameHeight);
-    ctx.fillStyle = getColorForMode('#f0f0f0', 'black');
-    ctx.fillRect(0, 0, gameWidth, gameHeight);
-    if (currentWord) {
-        ctx.fillStyle = getColorForMode('black', 'white');
 
+    // Create a gradient background based on mode
+    let gradient = ctx.createLinearGradient(0, 0, 0, gameHeight);
+    gradient.addColorStop(0, backgroundColorStart);
+    gradient.addColorStop(1, backgroundColorEnd);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, gameWidth, gameHeight);
+
+    if (currentWord) {
+        ctx.fillStyle = wordColor; // Use dynamic word color
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
         ctx.fillText(currentWord.text, currentWord.x, currentWord.y);
+        ctx.shadowColor = 'transparent'; // Reset shadow
     }
+
     drawContainers();
 }
 
@@ -173,12 +197,6 @@ function drawContainers() {
     const containerWidth = gameWidth / 3;
     const containerHeight = 50;
     const labels = ['der', 'die', 'das'];
-    const containerColors = [
-        getColorForMode('#E6E6FA', '#6A5ACD'), // Light Lilac / Slate Blue
-        getColorForMode('#FAFAD2', '#996515'), // Light Gold / Golden Brown
-        getColorForMode('#E0FFFF', '#008080') // Light Aqua / Deep Teal
-    ];
-
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -186,49 +204,66 @@ function drawContainers() {
     labels.forEach((label, index) => {
         const x = index * containerWidth;
         const y = gameHeight - containerHeight;
-        let highlightWidth = containerWidth;
-        let highlightHeight = containerHeight;
-        let highlightX = x;
-        let highlightY = y;
 
-        // Check if this container should be highlighted
+        // Set shadow for containers (optional for aesthetic improvement)
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 5;
+
+        // Determine fill color based on mode and highlight state
+        let fillColor = containerColors[index];
         if (index === highlightContainerIndex) {
-            const elapsed = Date.now() - highlightStartTime;
-            if (elapsed < highlightDuration) {
-                highlightIntensity = 0.5 * (1 + Math.sin(2 * Math.PI * elapsed / highlightDuration));
-                increaseBy = 3 * highlightIntensity; // Adjust size increase
-
-                highlightWidth = containerWidth + increaseBy * 2;
-                highlightHeight = containerHeight + increaseBy;
-                highlightX = x - increaseBy;
-                highlightY = y - increaseBy / 2;
-
-                ctx.fillStyle = highlightColor.replace('INTENSITY', highlightIntensity); // Color intensity changes with highlight
-                ctx.fillRect(highlightX, highlightY, highlightWidth, highlightHeight);
+            const elapsedTime = Date.now() - highlightStartTime;
+            if (elapsedTime < highlightDuration) {
+                fillColor = highlightColor;
             } else {
-                highlightContainerIndex = -1; // Reset highlight
+                highlightContainerIndex = -1;
             }
-        } else {
-            // Draw container with normal settings
-            ctx.fillStyle = containerColors[index]; // Set container color
-            ctx.fillRect(x, y, containerWidth, containerHeight);
-
-            // Draw container border
-            ctx.strokeStyle = 'black';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x, y, containerWidth, containerHeight);
         }
 
-        // Draw label
-        ctx.fillStyle = getColorForMode('black', 'white');
+        // Draw rounded rectangle with dynamic fill color (no stroke)
+        ctx.fillStyle = fillColor;
+        roundRect(ctx, x + 10, y + 10, containerWidth - 20, containerHeight - 20, 10, true, false); // Only fill, no stroke
+
+        // Remove shadow for text to ensure clarity
+        ctx.shadowColor = 'transparent';
+
+        // Draw label with dynamic color
+        ctx.fillStyle = labelColor;
         ctx.fillText(label, x + containerWidth / 2, y + containerHeight / 2);
     });
+}
 
-    // Reset highlight if duration has passed
-    if (Date.now() - highlightStartTime >= highlightDuration) {
-        highlightContainerIndex = -1;
+
+
+// Helper function to draw rounded rectangles
+function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+    if (typeof stroke === 'undefined') {
+        stroke = true;
+    }
+    if (typeof radius === 'undefined') {
+        radius = 5;
+    }
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+    if (fill) {
+        ctx.fill();
+    }
+    if (stroke) {
+        ctx.stroke();
     }
 }
+
 
 function gameLoop(timestamp) {
     if (isGameOver) {
@@ -240,51 +275,50 @@ function gameLoop(timestamp) {
         moveWords(fixedTimeStep);
         lastFrameTime += fixedTimeStep;
     }
-
-    generateWord(timestamp); // Generate a new word if needed
+    generateWord(timestamp);
     checkCollisions();
     updateCanvas();
     requestAnimationFrame(gameLoop);
 }
 
-
 function gameOver() {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)'; // Semi-transparent black overlay
+    ctx.fillStyle = gameOverBackground; // Dynamic background
     ctx.fillRect(0, 0, gameWidth, gameHeight);
-
-    ctx.fillStyle = 'white';
+    ctx.fillStyle = gameOverTextColor; // Dynamic text color
     ctx.font = '36px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('Game Over', gameWidth / 2, gameHeight / 2);
     ctx.font = '24px Arial';
+    ctx.fillStyle = gameOverSubTextColor; // Dynamic subtext color
     ctx.fillText('Press R to Restart', gameWidth / 2, gameHeight / 2 + 40);
 }
 
-
-// Initialize game
 function initGame() {
     isGameOver = false;
     score = 0;
     lives = 3;
-    words = [];
+    currentWord = null;
     scoreDisplay.textContent = score;
     livesDisplay.textContent = lives;
     lastWordTime = 0;
+    correctWordsTable.innerHTML = '';
+    incorrectWordsTable.innerHTML = '';
     requestAnimationFrame(gameLoop);
 }
 
-function moveLeft() { // Ensure the word doesn't move beyond the left boundary
-    currentWord.x = Math.max(currentWord.width / 2, currentWord.x - moveAmount);
-
+function moveLeft() {
+    if (currentWord) {
+        currentWord.x = Math.max(currentWord.width / 2, currentWord.x - moveAmount);
+    }
 }
 
-function moveRight() { // Ensure the word doesn't move beyond the right boundary
-    currentWord.x = Math.min(gameWidth - currentWord.width / 2, currentWord.x + moveAmount);
-
+function moveRight() {
+    if (currentWord) {
+        currentWord.x = Math.min(gameWidth - currentWord.width / 2, currentWord.x + moveAmount);
+    }
 }
 
 function handleKeyDown(event) {
-
     switch (event.key) {
         case 'ArrowLeft':
             moveLeft();
@@ -294,10 +328,8 @@ function handleKeyDown(event) {
             break;
         case 'ArrowUp':
         case 'ArrowDown':
-            // Prevent default behavior for arrow up and down keys
             event.preventDefault();
             break;
-            // Include other cases here if needed
         case 'r':
         case 'R':
             initGame();
@@ -308,7 +340,6 @@ function handleKeyDown(event) {
 document.getElementById('leftButton').addEventListener('touchstart', function() {
     moveLeft();
 });
-
 document.getElementById('rightButton').addEventListener('touchstart', function() {
     moveRight();
 });
@@ -322,9 +353,26 @@ gameCanvas.addEventListener('touchstart', e => {
 
 window.addEventListener('keydown', handleKeyDown);
 window.addEventListener('resize', resizeCanvas);
-
 window.onload = function() {
     resizeCanvas();
     loadWords();
     initGame();
+
+    // Update DOM element styles based on mode
+    const darkMode = getColorForMode(false, true); // Assuming false for light, true for dark
+    if (darkMode) {
+        scoreDisplay.style.color = '#ddd';
+        livesDisplay.style.color = '#ddd';
+        correctWordsTable.style.backgroundColor = '#333';
+        incorrectWordsTable.style.backgroundColor = '#333';
+        correctWordsTable.style.color = '#fff';
+        incorrectWordsTable.style.color = '#fff';
+    } else {
+        scoreDisplay.style.color = '#333';
+        livesDisplay.style.color = '#333';
+        correctWordsTable.style.backgroundColor = '#fff';
+        incorrectWordsTable.style.backgroundColor = '#fff';
+        correctWordsTable.style.color = '#000';
+        incorrectWordsTable.style.color = '#000';
+    }
 };

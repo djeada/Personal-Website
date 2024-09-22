@@ -9,25 +9,29 @@ import logging
 from typing import List, Dict, Tuple, Optional
 
 # Setup logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 
 URLS = [
     {
         "url": "https://raw.githubusercontent.com/djeada/Frontend-Notes/main/notes/12_quizes.md",
-        "category": "Web Development"
+        "category": "Web Development",
     },
     {
         "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/flashcards/probability.md",
-        "category": "Statistics"
-    }
+        "category": "Statistics",
+    },
 ]
 
 OUTPUT_DIR = Path("../src/tools/flash_cards")
 CATEGORIES = Path("../src/tools/flash_cards/categories.json")
 RETRY_LIMIT = 3
 TIMEOUT = 10
-FLASHCARD_PATTERN = re.compile(r"<details>\s*<summary>(.*?)</summary><br>\s*(.*?)\s*</details>", re.DOTALL)
+FLASHCARD_PATTERN = re.compile(
+    r"<details>\s*<summary>(.*?)</summary><br>\s*(.*?)\s*</details>", re.DOTALL
+)
 HEADER_PATTERN = re.compile(r"^(#{2,6})\s*(.+)$", re.MULTILINE)
 
 
@@ -46,7 +50,10 @@ def download_flashcards(url: str, retries: int = RETRY_LIMIT) -> Optional[str]:
 
 
 def parse_flashcards(content: str) -> List[Dict[str, str]]:
-    return [{"front": front.strip(), "back": re.sub(r'\s+', ' ', back.strip())} for front, back in FLASHCARD_PATTERN.findall(content)]
+    return [
+        {"front": front.strip(), "back": re.sub(r"\s+", " ", back.strip())}
+        for front, back in FLASHCARD_PATTERN.findall(content)
+    ]
 
 
 def extract_subcategories_and_sections(content: str) -> List[Tuple[str, str]]:
@@ -74,18 +81,27 @@ def generate_filename_from_category(category: str) -> str:
     return f"{category.replace(' ', '_').lower()}.json"
 
 
-def save_to_json(cards_by_subcategory: Dict[str, List[Dict[str, str]]], category: str, output_path: Path) -> None:
+def save_to_json(
+    cards_by_subcategory: Dict[str, List[Dict[str, str]]],
+    category: str,
+    output_path: Path,
+) -> None:
     data = {
         "category": category,
         "subcategories": [
-            {"name": subcategory, "cards": cards} for subcategory, cards in cards_by_subcategory.items()
+            {"name": subcategory, "cards": cards}
+            for subcategory, cards in cards_by_subcategory.items()
         ],
     }
     logging.info(f"Saving flashcards to {output_path}")
-    output_path.write_text(json.dumps(data, indent=4, ensure_ascii=False), encoding="utf-8")
+    output_path.write_text(
+        json.dumps(data, indent=4, ensure_ascii=False), encoding="utf-8"
+    )
 
 
-def group_cards_by_subcategory(content: str, fallback_subcategory: str) -> Dict[str, List[Dict[str, str]]]:
+def group_cards_by_subcategory(
+    content: str, fallback_subcategory: str
+) -> Dict[str, List[Dict[str, str]]]:
     sections = extract_subcategories_and_sections(content)
     cards_by_subcategory = {}
     for subcategory, section_content in sections:
@@ -105,9 +121,11 @@ def process_url(url_info: Dict[str, str]) -> None:
         output_filename = generate_filename_from_category(category)
         save_to_json(cards_by_subcategory, category, OUTPUT_DIR / output_filename)
 
+
 def update_categories(categories: set) -> None:
     def to_snake_case(s: str) -> str:
-        return re.sub(r'\W+', '_', s).strip('_').lower()
+        return re.sub(r"\W+", "_", s).strip("_").lower()
+
     # Convert categories to lowercase and snake case
     categories_list = [to_snake_case(category) for category in categories]
 

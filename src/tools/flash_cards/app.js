@@ -36,8 +36,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (categories && Array.isArray(categories)) {
             categories.forEach((category, index) => {
                 const option = document.createElement('option');
-                option.value = category;
-                option.textContent = category;
+                option.value = category; // Keep the original category as the value
+                option.textContent = category.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()); // Convert to title case for display
                 categorySelect.appendChild(option);
 
                 if (index === 0) {
@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     loadCategoryData(category);
                 }
             });
+
         } else {
             console.error('Invalid categories data:', categories);
         }
