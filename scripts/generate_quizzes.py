@@ -9,10 +9,10 @@ import requests
 
 # Global variables for input paths and output directory
 URLS = [
-    "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/notes/quiz.md",
+    "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/quizzes/intro.md",
 ]
 URLS_TO_NAMES = {
-    "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/notes/quiz.md": "parallel_programming"
+    "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/quizzes/intro.md": "parallel_programming"
 }
 OUTPUT_DIR = Path("../src/tools/quiz_app")
 

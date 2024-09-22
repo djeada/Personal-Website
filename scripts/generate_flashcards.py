@@ -13,7 +13,6 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-
 URLS = [
     {
         "url": "https://raw.githubusercontent.com/djeada/Frontend-Notes/main/notes/12_quizes.md",
@@ -21,6 +20,22 @@ URLS = [
     },
     {
         "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/flashcards/probability.md",
+        "category": "Statistics",
+    },
+    {
+        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/notes/correlation_and_regression.md",
+        "category": "Statistics",
+    },
+    {
+        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/notes/descriptive_statistics.md",
+        "category": "Statistics",
+    },
+    {
+        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/notes/statistical_inference.md",
+        "category": "Statistics",
+    },
+    {
+        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/notes/time_series_analysis.md",
         "category": "Statistics",
     },
 ]
@@ -110,11 +125,30 @@ def generate_filename_from_category(category: str) -> str:
     return f"{category.replace(' ', '_').lower()}.json"
 
 
+def merge_flashcards(existing_data: Dict, new_data: Dict) -> Dict:
+    # Merge new flashcards into existing subcategories
+    for subcategory, new_cards in new_data.items():
+        if subcategory in existing_data:
+            existing_data[subcategory].extend(new_cards)
+        else:
+            existing_data[subcategory] = new_cards
+    return existing_data
+
+
 def save_to_json(
     cards_by_subcategory: Dict[str, List[Dict[str, str]]],
     category: str,
     output_path: Path,
 ) -> None:
+    if output_path.exists():
+        # Load existing data if the file already exists
+        logging.info(f"Loading existing data from {output_path}")
+        existing_data = json.loads(output_path.read_text(encoding="utf-8"))
+        # Merge new cards with existing ones
+        cards_by_subcategory = merge_flashcards(
+            existing_data.get("subcategories", {}), cards_by_subcategory
+        )
+
     data = {
         "category": category,
         "subcategories": [
@@ -168,12 +202,25 @@ def update_categories(categories: set) -> None:
 def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     categories = set()
+    # Remove old category files before processing
+    processed_files = set()
+
     with Pool() as pool:
         for url_info in URLS:
-            categories.add(url_info["category"])
+            category = url_info["category"]
+            output_filename = generate_filename_from_category(category)
+            output_path = OUTPUT_DIR / output_filename
+            # Only remove the old file once for each category
+            if output_filename not in processed_files:
+                if output_path.exists():
+                    logging.info(f"Removing old file: {output_path}")
+                    output_path.unlink()  # Remove the old file
+                processed_files.add(output_filename)
+            categories.add(category)
             pool.apply_async(process_url, (url_info,))
         pool.close()
         pool.join()
+
     update_categories(categories)
 
 
