@@ -16,7 +16,7 @@ class Game {
         this.score = 0;
         this.level = 1;
         this.speed = 2;
-        this.pipeInterval = 1500;
+        this.pipeInterval = 4000;
         this.gameOver = false;
         this.gravity = 0.5;
         this.spawnTimer = null;
@@ -90,10 +90,11 @@ class Game {
     renderScore() {
         ctx.fillStyle = 'white';
         ctx.font = '30px Arial';
-        ctx.fillText(`Score: ${this.score}`, 20, 40);
-        ctx.fillText(`Level: ${this.level}`, 20, 80);
-        ctx.fillText(`High Score: ${highScore}`, 20, 120);
+        ctx.fillText(`Score: ${this.score}`, 100, 40);
+        ctx.fillText(`Level: ${this.level}`, 100, 80);
+        ctx.fillText(`High Score: ${highScore}`, 100, 120);
     }
+
 
     checkCollision() {
         if (this.bird.y + this.bird.height >= canvas.height || this.bird.y <= 0) {
@@ -150,7 +151,7 @@ class Bird {
         this.x = 100;
         this.y = canvas.height / 2 - this.height / 2;
         this.velocity = 0;
-        this.jumpStrength = -10;
+        this.jumpStrength = -5;
         this.color = 'yellow';
     }
 

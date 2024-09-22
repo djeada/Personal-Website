@@ -11,7 +11,7 @@ function resizeText(cardElement) {
     let fontSize = parseFloat(window.getComputedStyle(textElement, null).getPropertyValue('font-size'));
 
     // Reduce font size if the text exceeds the available height of the card
-    while (textElement.scrollHeight > cardElement.clientHeight && fontSize > 10) {
+    while (textElement.scrollHeight > cardElement.clientHeight && fontSize > 8) {
         fontSize -= 1;
         textElement.style.fontSize = fontSize + 'px';
     }
@@ -134,33 +134,32 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const showCard = () => {
-    let cardFound = false;
-    let checkedCards = cards.length;
+        let cardFound = false;
+        let checkedCards = cards.length;
 
-    while (checkedCards > 0) {
-        if (cardStatus[currentCardIndex]) {
-            cardFound = true;
-            break;
+        while (checkedCards > 0) {
+            if (cardStatus[currentCardIndex]) {
+                cardFound = true;
+                break;
+            }
+            currentCardIndex = (currentCardIndex + 1) % cards.length;
+            checkedCards--;
         }
-        currentCardIndex = (currentCardIndex + 1) % cards.length;
-        checkedCards--;
-    }
 
-    if (!cardFound) {
-        flashcardFront.innerHTML = '<p>No cards available</p>';
-        flashcardBack.innerHTML = '';
-    } else {
-        flashcardFront.innerHTML = `<p>${cards[currentCardIndex].front}</p>`;
-        flashcardBack.innerHTML = `<p>${cards[currentCardIndex].back}</p>`;
-    }
+        if (!cardFound) {
+            flashcardFront.innerHTML = '<p>No cards available</p>';
+            flashcardBack.innerHTML = '';
+        } else {
+            flashcardFront.innerHTML = `<p>${cards[currentCardIndex].front}</p>`;
+            flashcardBack.innerHTML = `<p>${cards[currentCardIndex].back}</p>`;
+        }
 
-    flashcard.classList.remove('flipped');
+        flashcard.classList.remove('flipped');
 
-    // Apply resize after the text is added to the cards
-    resizeText(flashcardFront);
-    resizeText(flashcardBack);
-};
-
+        // Apply resize after the text is added to the cards
+        resizeText(flashcardFront);
+        resizeText(flashcardBack);
+    };
 
     const populateQuestionsTable = () => {
         questionsTableBody.innerHTML = '';
@@ -195,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-// Apply resize on card load and when flipping
+    // Apply resize on card load and when flipping
     resizeText(flashcardFront);
     resizeText(flashcardBack);
 

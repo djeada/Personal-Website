@@ -96,50 +96,50 @@ class Game {
         }
     }
 
-render() {
-    // Clear the canvas for the next frame
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    render() {
+        // Clear the canvas for the next frame
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Render grid background
-    for (let y = 0; y < gridSize; y++) {
-        for (let x = 0; x < gridSize; x++) {
-            ctx.fillStyle = (x + y) % 2 === 0 ? '#AAD751' : '#A2D149';
-            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+        // Render grid background
+        for (let y = 0; y < gridSize; y++) {
+            for (let x = 0; x < gridSize; x++) {
+                ctx.fillStyle = (x + y) % 2 === 0 ? '#AAD751' : '#A2D149';
+                ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+            }
         }
+
+        // Render obstacles
+        ctx.fillStyle = '#8B4513';
+        this.obstacles.forEach(obs => {
+            ctx.fillRect(obs.x * cellSize, obs.y * cellSize, cellSize, cellSize);
+        });
+
+        // Render food
+        this.food.render();
+
+        // Render snake
+        this.snake.render();
+
+        // Display Score and Level
+        ctx.fillStyle = 'black';
+        ctx.font = '20px Arial';
+
+        // Ensure enough padding for the text to prevent overflow
+        const padding = 100;
+
+        // Display score
+        ctx.fillText(`Score: ${this.score}`, padding, 30);
+
+        // Display high score
+        ctx.fillText(`High Score: ${highScore}`, padding, 60);
+
+        // Calculate the width of the level text and position it accordingly
+        const levelText = `Level: ${this.level}`;
+        const levelTextWidth = ctx.measureText(levelText).width;
+
+        // Ensure the level text doesn't overflow on the left
+        ctx.fillText(levelText, canvas.width - levelTextWidth - padding, 30);
     }
-
-    // Render obstacles
-    ctx.fillStyle = '#8B4513';
-    this.obstacles.forEach(obs => {
-        ctx.fillRect(obs.x * cellSize, obs.y * cellSize, cellSize, cellSize);
-    });
-
-    // Render food
-    this.food.render();
-
-    // Render snake
-    this.snake.render();
-
-    // Display Score and Level
-    ctx.fillStyle = 'black';
-    ctx.font = '20px Arial';
-
-    // Ensure enough padding for the text to prevent overflow
-    const padding = 100;
-
-    // Display score
-    ctx.fillText(`Score: ${this.score}`, padding, 30);
-
-    // Display high score
-    ctx.fillText(`High Score: ${highScore}`, padding, 60);
-
-    // Calculate the width of the level text and position it accordingly
-    const levelText = `Level: ${this.level}`;
-    const levelTextWidth = ctx.measureText(levelText).width;
-
-    // Ensure the level text doesn't overflow on the left
-    ctx.fillText(levelText, canvas.width - levelTextWidth - padding, 30);
-}
 
     renderGameOver() {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
