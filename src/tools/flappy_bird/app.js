@@ -110,8 +110,9 @@ class Game {
         const topHeight = Math.floor(Math.random() * (maxHeight - minHeight + 1) + minHeight);
         const bottomY = topHeight + gapHeight;
 
-        this.pipes.push(new Pipe(canvas.width, 0, topHeight, true));
-        this.pipes.push(new Pipe(canvas.width, bottomY, canvas.height - bottomY, false));
+        const pipeX = canvas.width + 100;
+        this.pipes.push(new Pipe(pipeX, 0, topHeight, true));
+        this.pipes.push(new Pipe(pipeX, bottomY, canvas.height - bottomY, false));
     }
 
     levelUp() {
@@ -151,7 +152,7 @@ class Bird {
         this.x = 100;
         this.y = canvas.height / 2 - this.height / 2;
         this.velocity = 0;
-        this.jumpStrength = -5;
+        this.jumpStrength = -7;
         this.color = 'yellow';
     }
 
