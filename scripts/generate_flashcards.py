@@ -49,9 +49,38 @@ def download_flashcards(url: str, retries: int = RETRY_LIMIT) -> Optional[str]:
     return None
 
 
+def markdown_to_html(text: str) -> str:
+    # Bold **text**
+    text = re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", text)
+
+    # Italics *text*
+    text = re.sub(r"\*(.*?)\*", r"<i>\1</i>", text)
+
+    # Code `code`
+    text = re.sub(r"`(.*?)`", r"<code>\1</code>", text)
+
+    # Headers # H1, ## H2, ### H3 (for simplicity, up to H3)
+    text = re.sub(r"### (.*)", r"<h3>\1</h3>", text)
+    text = re.sub(r"## (.*)", r"<h2>\1</h2>", text)
+    text = re.sub(r"# (.*)", r"<h1>\1</h1>", text)
+
+    # Links [text](url)
+    text = re.sub(r"\[(.*?)\]\((.*?)\)", r'<a href="\2">\1</a>', text)
+
+    # Lists - item or * item
+    text = re.sub(r"\n\s*-\s*(.*)", r"<li>\1</li>", text)
+    text = re.sub(r"\n\s*\*\s*(.*)", r"<li>\1</li>", text)
+    text = re.sub(r"(<li>.*?</li>)", r"<ul>\1</ul>", text, flags=re.S)
+
+    return text
+
+
 def parse_flashcards(content: str) -> List[Dict[str, str]]:
     return [
-        {"front": front.strip(), "back": re.sub(r"\s+", " ", back.strip())}
+        {
+            "front": markdown_to_html(front.strip()),
+            "back": markdown_to_html(re.sub(r"\s+", " ", back.strip())),
+        }
         for front, back in FLASHCARD_PATTERN.findall(content)
     ]
 

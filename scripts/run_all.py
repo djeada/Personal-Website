@@ -15,6 +15,8 @@ SCRIPTS_TO_ARGS = {
     "python bundle_css.py": [],
     "python generate_table_of_contents.py": [],
     "python generate_related_articles_section.py": [],
+    "python generate_quizzes.py": [],
+    "python generate_flashcards.py": [],
     "./format.sh": [],
     "python generate_article_list.py": [],
     "python create_site_map.py": [],
