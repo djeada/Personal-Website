@@ -23,19 +23,19 @@ URLS = [
         "category": "Statistics",
     },
     {
-        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/notes/correlation_and_regression.md",
+        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/flashcards/correlation_and_regression.md",
         "category": "Statistics",
     },
     {
-        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/notes/descriptive_statistics.md",
+        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/flashcards/descriptive_statistics.md",
         "category": "Statistics",
     },
     {
-        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/notes/statistical_inference.md",
+        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/flashcards/statistical_inference.md",
         "category": "Statistics",
     },
     {
-        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/notes/time_series_analysis.md",
+        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/flashcards/time_series_analysis.md",
         "category": "Statistics",
     },
 ]
