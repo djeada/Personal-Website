@@ -125,7 +125,7 @@ def generate_filename_from_category(category: str) -> str:
     return f"{category.replace(' ', '_').lower()}.json"
 
 
-def merge_flashcards(existing_data: Dict, new_data: Dict) -> Dict:
+def merge_flashcards(existing_data: Dict[str, List[Dict[str, str]]], new_data: Dict[str, List[Dict[str, str]]]) -> Dict:
     # Merge new flashcards into existing subcategories
     for subcategory, new_cards in new_data.items():
         if subcategory in existing_data:
@@ -144,11 +144,19 @@ def save_to_json(
         # Load existing data if the file already exists
         logging.info(f"Loading existing data from {output_path}")
         existing_data = json.loads(output_path.read_text(encoding="utf-8"))
+
+        # Convert the subcategories list back into a dictionary for easier merging
+        existing_subcategories = {
+            subcategory["name"]: subcategory["cards"]
+            for subcategory in existing_data.get("subcategories", [])
+        }
+
         # Merge new cards with existing ones
         cards_by_subcategory = merge_flashcards(
-            existing_data.get("subcategories", {}), cards_by_subcategory
+            existing_subcategories, cards_by_subcategory
         )
 
+    # Convert the dictionary back into the format for saving
     data = {
         "category": category,
         "subcategories": [
@@ -156,11 +164,11 @@ def save_to_json(
             for subcategory, cards in cards_by_subcategory.items()
         ],
     }
+
     logging.info(f"Saving flashcards to {output_path}")
     output_path.write_text(
         json.dumps(data, indent=4, ensure_ascii=False), encoding="utf-8"
     )
-
 
 def group_cards_by_subcategory(
     content: str, fallback_subcategory: str
@@ -199,29 +207,52 @@ def update_categories(categories: set) -> None:
         json.dump(categories_list, f, indent=4, ensure_ascii=False)
 
 
+def process_category(urls_info: List[Dict[str, str]]) -> None:
+    """Process all URLs for a single category."""
+    if not urls_info:
+        return
+
+    category = urls_info[0]["category"]  # All URLs in this list belong to the same category
+    logging.info(f"Processing category {category} with {len(urls_info)} URLs")
+
+    output_filename = generate_filename_from_category(category)
+    output_path = OUTPUT_DIR / output_filename
+
+    # Download and process flashcards for all URLs in this category
+    all_cards_by_subcategory = {}
+
+    for url_info in urls_info:
+        url = url_info["url"]
+        content = download_flashcards(url)
+        if content:
+            fallback_subcategory = Path(unquote(urlparse(url).path)).stem.replace("_", " ")
+            cards_by_subcategory = group_cards_by_subcategory(content, fallback_subcategory)
+            # Merge cards from different URLs under the same category
+            all_cards_by_subcategory = merge_flashcards(all_cards_by_subcategory, cards_by_subcategory)
+
+    # Save the accumulated flashcards to the JSON file
+    save_to_json(all_cards_by_subcategory, category, output_path)
+
+
 def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     categories = set()
-    # Remove old category files before processing
-    processed_files = set()
 
+    # Group URLs by category
+    category_url_map = {}
+    for url_info in URLS:
+        category = url_info["category"]
+        if category not in category_url_map:
+            category_url_map[category] = []
+        category_url_map[category].append(url_info)
+
+    # Prepare category processing tasks for the pool
     with Pool() as pool:
-        for url_info in URLS:
-            category = url_info["category"]
-            output_filename = generate_filename_from_category(category)
-            output_path = OUTPUT_DIR / output_filename
-            # Only remove the old file once for each category
-            if output_filename not in processed_files:
-                if output_path.exists():
-                    logging.info(f"Removing old file: {output_path}")
-                    output_path.unlink()  # Remove the old file
-                processed_files.add(output_filename)
-            categories.add(category)
-            pool.apply_async(process_url, (url_info,))
-        pool.close()
-        pool.join()
+        pool.map(process_category, category_url_map.values())
 
-    update_categories(categories)
+    # Update categories in categories.json
+    update_categories(set(category_url_map.keys()))
+
 
 
 if __name__ == "__main__":
