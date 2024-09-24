@@ -12,13 +12,12 @@ document.addEventListener("DOMContentLoaded", function() {
         const availableWidth = window.innerWidth * 0.95; // 95% of viewport width
         const availableHeight = window.innerHeight * 0.8; // 80% of viewport height
 
-        // Set canvas size to the smaller of the two to keep the maze proportional
         const size = Math.min(availableWidth, availableHeight);
 
         mazeCanvas.width = size;
         mazeCanvas.height = size;
 
-        // Redraw the maze with the updated canvas size
+        // Update cell size based on the new canvas size and gridSize
         visualizer.cellSize = Math.floor(size / visualizer.gridSize);
         visualizer.drawMaze();
     }
@@ -165,9 +164,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
         handleGridSizeChange() {
             this.gridSize = parseInt(gridSizeInput.value) || 20;
-            this.cellSize = Math.floor(canvasWidth / this.gridSize);
+            this.cellSize = Math.floor(mazeCanvas.width / this.gridSize); // Use mazeCanvas.width
             this.resetMaze();
         }
+
 
         handleCanvasClick(e) {
             const rect = mazeCanvas.getBoundingClientRect();
@@ -334,9 +334,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 this.path.push(current.previous);
                 current = current.previous;
             }
+            this.drawMaze();
         }
-
-
 
         drawMaze() {
             ctx.clearRect(0, 0, mazeCanvas.width, mazeCanvas.height);
