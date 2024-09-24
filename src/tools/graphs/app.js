@@ -1,13 +1,3 @@
-window.addEventListener("resize", () => {
-    const canvasWidth = Math.floor(window.innerWidth * 0.8);
-    const canvasHeight = Math.floor(window.innerHeight * 0.8);
-    mazeCanvas.width = canvasWidth;
-    mazeCanvas.height = canvasHeight;
-
-    visualizer.cellSize = Math.floor(canvasWidth / visualizer.gridSize);
-    visualizer.drawMaze();  // Redraw the maze with the updated sizes
-});
-
 document.addEventListener("DOMContentLoaded", function() {
     const algorithmSelect = document.getElementById("algorithm");
     const mazeCanvas = document.getElementById("maze-canvas");
@@ -18,11 +8,20 @@ document.addEventListener("DOMContentLoaded", function() {
     const speedInput = document.getElementById("speed");
     const gridSizeInput = document.getElementById("grid-size");
 
-    const canvasWidth = Math.floor(window.innerWidth * 0.8);
-    const canvasHeight = Math.floor(window.innerHeight * 0.8);
+    function setCanvasSize() {
+        const availableWidth = window.innerWidth * 0.95; // 95% of viewport width
+        const availableHeight = window.innerHeight * 0.8; // 80% of viewport height
 
-    mazeCanvas.width = canvasWidth;
-    mazeCanvas.height = canvasHeight;
+        // Set canvas size to the smaller of the two to keep the maze proportional
+        const size = Math.min(availableWidth, availableHeight);
+
+        mazeCanvas.width = size;
+        mazeCanvas.height = size;
+
+        // Redraw the maze with the updated canvas size
+        visualizer.cellSize = Math.floor(size / visualizer.gridSize);
+        visualizer.drawMaze();
+    }
 
     const ctx = mazeCanvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
@@ -30,7 +29,7 @@ document.addEventListener("DOMContentLoaded", function() {
     class MazeVisualizer {
         constructor() {
             this.gridSize = parseInt(gridSizeInput.value) || 20;
-            this.cellSize = Math.floor(canvasWidth / this.gridSize);
+            this.cellSize = Math.floor(mazeCanvas.width / this.gridSize);
             this.maze = [];
             this.speed = parseInt(speedInput.value) || 50;
             this.paused = false;
@@ -46,6 +45,7 @@ document.addEventListener("DOMContentLoaded", function() {
             this.bindEvents();
             this.drawMaze();
         }
+
 
         bindEvents() {
             startButton.addEventListener("click", () => this.startSearch());
@@ -81,41 +81,6 @@ document.addEventListener("DOMContentLoaded", function() {
             this.endNode.wall = false;
         }
 
-        drawMaze() {
-            ctx.clearRect(0, 0, mazeCanvas.width, mazeCanvas.height);
-            for (let i = 0; i < this.gridSize; i++) {
-                for (let j = 0; j < this.gridSize; j++) {
-                    const cell = this.maze[i][j];
-                    if (cell.wall) {
-                        ctx.fillStyle = "#000000";
-                    } else if (cell === this.startNode) {
-                        ctx.fillStyle = "#00FF00";
-                    } else if (cell === this.endNode) {
-                        ctx.fillStyle = "#FF0000";
-                    } else if (this.path.includes(cell)) {
-                        ctx.fillStyle = "#FFFF00";
-                    } else if (this.closedSet.includes(cell)) {
-                        ctx.fillStyle = "#FFA500";
-                    } else if (this.openSet.includes(cell)) {
-                        ctx.fillStyle = "#87CEEB";
-                    } else {
-                        ctx.fillStyle = "#FFFFFF";
-                    }
-                    ctx.fillRect(
-                        cell.x * this.cellSize,
-                        cell.y * this.cellSize,
-                        this.cellSize,
-                        this.cellSize
-                    );
-                    ctx.strokeRect(
-                        cell.x * this.cellSize,
-                        cell.y * this.cellSize,
-                        this.cellSize,
-                        this.cellSize
-                    );
-                }
-            }
-        }
 
         getSelectedAlgorithm() {
             return algorithmSelect.options[algorithmSelect.selectedIndex].value;
@@ -370,8 +335,49 @@ document.addEventListener("DOMContentLoaded", function() {
                 current = current.previous;
             }
         }
+
+
+
+        drawMaze() {
+            ctx.clearRect(0, 0, mazeCanvas.width, mazeCanvas.height);
+            for (let i = 0; i < this.gridSize; i++) {
+                for (let j = 0; j < this.gridSize; j++) {
+                    const cell = this.maze[i][j];
+                    if (cell.wall) {
+                        ctx.fillStyle = "#000000";
+                    } else if (cell === this.startNode) {
+                        ctx.fillStyle = "#00FF00";
+                    } else if (cell === this.endNode) {
+                        ctx.fillStyle = "#FF0000";
+                    } else if (this.path.includes(cell)) {
+                        ctx.fillStyle = "#FFFF00";
+                    } else if (this.closedSet.includes(cell)) {
+                        ctx.fillStyle = "#FFA500";
+                    } else if (this.openSet.includes(cell)) {
+                        ctx.fillStyle = "#87CEEB";
+                    } else {
+                        ctx.fillStyle = "#FFFFFF";
+                    }
+                    ctx.fillRect(
+                        cell.x * this.cellSize,
+                        cell.y * this.cellSize,
+                        this.cellSize,
+                        this.cellSize
+                    );
+                    ctx.strokeRect(
+                        cell.x * this.cellSize,
+                        cell.y * this.cellSize,
+                        this.cellSize,
+                        this.cellSize
+                    );
+                }
+            }
+        }
     }
 
     const visualizer = new MazeVisualizer();
 
+    window.addEventListener("resize", setCanvasSize);
+
+    setCanvasSize(); // Set canvas size on page load
 });
