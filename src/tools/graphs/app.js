@@ -45,7 +45,6 @@ document.addEventListener("DOMContentLoaded", function() {
             this.drawMaze();
         }
 
-
         bindEvents() {
             startButton.addEventListener("click", () => this.startSearch());
             pauseButton.addEventListener("click", () => this.togglePause());
@@ -79,7 +78,6 @@ document.addEventListener("DOMContentLoaded", function() {
             this.startNode.wall = false;
             this.endNode.wall = false;
         }
-
 
         getSelectedAlgorithm() {
             return algorithmSelect.options[algorithmSelect.selectedIndex].value;
@@ -167,7 +165,6 @@ document.addEventListener("DOMContentLoaded", function() {
             this.cellSize = Math.floor(mazeCanvas.width / this.gridSize); // Use mazeCanvas.width
             this.resetMaze();
         }
-
 
         handleCanvasClick(e) {
             const rect = mazeCanvas.getBoundingClientRect();
@@ -342,21 +339,24 @@ document.addEventListener("DOMContentLoaded", function() {
             for (let i = 0; i < this.gridSize; i++) {
                 for (let j = 0; j < this.gridSize; j++) {
                     const cell = this.maze[i][j];
+
+                    // Determine colors based on dark mode
                     if (cell.wall) {
-                        ctx.fillStyle = "#000000";
+                        ctx.fillStyle = getColorForMode("#000000", "#555555");
                     } else if (cell === this.startNode) {
-                        ctx.fillStyle = "#00FF00";
+                        ctx.fillStyle = getColorForMode("#00FF00", "#00AA00");
                     } else if (cell === this.endNode) {
-                        ctx.fillStyle = "#FF0000";
+                        ctx.fillStyle = getColorForMode("#FF0000", "#AA0000");
                     } else if (this.path.includes(cell)) {
-                        ctx.fillStyle = "#FFFF00";
+                        ctx.fillStyle = getColorForMode("#FFFF00", "#AAAA00");
                     } else if (this.closedSet.includes(cell)) {
-                        ctx.fillStyle = "#FFA500";
+                        ctx.fillStyle = getColorForMode("#FFA500", "#AA5500");
                     } else if (this.openSet.includes(cell)) {
-                        ctx.fillStyle = "#87CEEB";
+                        ctx.fillStyle = getColorForMode("#87CEEB", "#5577AA");
                     } else {
-                        ctx.fillStyle = "#FFFFFF";
+                        ctx.fillStyle = getColorForMode("#FFFFFF", "#333333");
                     }
+
                     ctx.fillRect(
                         cell.x * this.cellSize,
                         cell.y * this.cellSize,
