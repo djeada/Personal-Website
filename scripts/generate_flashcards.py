@@ -125,7 +125,10 @@ def generate_filename_from_category(category: str) -> str:
     return f"{category.replace(' ', '_').lower()}.json"
 
 
-def merge_flashcards(existing_data: Dict[str, List[Dict[str, str]]], new_data: Dict[str, List[Dict[str, str]]]) -> Dict:
+def merge_flashcards(
+    existing_data: Dict[str, List[Dict[str, str]]],
+    new_data: Dict[str, List[Dict[str, str]]],
+) -> Dict:
     # Merge new flashcards into existing subcategories
     for subcategory, new_cards in new_data.items():
         if subcategory in existing_data:
@@ -170,6 +173,7 @@ def save_to_json(
         json.dumps(data, indent=4, ensure_ascii=False), encoding="utf-8"
     )
 
+
 def group_cards_by_subcategory(
     content: str, fallback_subcategory: str
 ) -> Dict[str, List[Dict[str, str]]]:
@@ -212,7 +216,9 @@ def process_category(urls_info: List[Dict[str, str]]) -> None:
     if not urls_info:
         return
 
-    category = urls_info[0]["category"]  # All URLs in this list belong to the same category
+    category = urls_info[0][
+        "category"
+    ]  # All URLs in this list belong to the same category
     logging.info(f"Processing category {category} with {len(urls_info)} URLs")
 
     output_filename = generate_filename_from_category(category)
@@ -225,10 +231,16 @@ def process_category(urls_info: List[Dict[str, str]]) -> None:
         url = url_info["url"]
         content = download_flashcards(url)
         if content:
-            fallback_subcategory = Path(unquote(urlparse(url).path)).stem.replace("_", " ")
-            cards_by_subcategory = group_cards_by_subcategory(content, fallback_subcategory)
+            fallback_subcategory = Path(unquote(urlparse(url).path)).stem.replace(
+                "_", " "
+            )
+            cards_by_subcategory = group_cards_by_subcategory(
+                content, fallback_subcategory
+            )
             # Merge cards from different URLs under the same category
-            all_cards_by_subcategory = merge_flashcards(all_cards_by_subcategory, cards_by_subcategory)
+            all_cards_by_subcategory = merge_flashcards(
+                all_cards_by_subcategory, cards_by_subcategory
+            )
 
     # Save the accumulated flashcards to the JSON file
     save_to_json(all_cards_by_subcategory, category, output_path)
@@ -252,7 +264,6 @@ def main() -> None:
 
     # Update categories in categories.json
     update_categories(set(category_url_map.keys()))
-
 
 
 if __name__ == "__main__":

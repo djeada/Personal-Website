@@ -9,14 +9,14 @@ function resizeText(cardElement) {
 
     // Get the initial font size
     let fontSize = parseFloat(window.getComputedStyle(textElement, null).getPropertyValue('font-size'));
+    let targetFontSize = fontSize;
 
-    // Reduce font size if the text exceeds the available height of the card
-    while (textElement.scrollHeight > cardElement.clientHeight && fontSize > 8) {
-        fontSize -= 1;
-        textElement.style.fontSize = fontSize + 'px';
+    // Apply resizing logic
+    while (textElement.scrollHeight > cardElement.clientHeight * 0.8 && targetFontSize > 2) {
+        targetFontSize -= 1;
+        textElement.style.fontSize = targetFontSize + 'px';
     }
 }
-
 
 document.addEventListener('DOMContentLoaded', () => {
     const categorySelect = document.getElementById('categorySelect');
