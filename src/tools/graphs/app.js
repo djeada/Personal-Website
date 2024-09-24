@@ -1,3 +1,13 @@
+window.addEventListener("resize", () => {
+    const canvasWidth = Math.floor(window.innerWidth * 0.8);
+    const canvasHeight = Math.floor(window.innerHeight * 0.8);
+    mazeCanvas.width = canvasWidth;
+    mazeCanvas.height = canvasHeight;
+
+    visualizer.cellSize = Math.floor(canvasWidth / visualizer.gridSize);
+    visualizer.drawMaze();  // Redraw the maze with the updated sizes
+});
+
 document.addEventListener("DOMContentLoaded", function() {
     const algorithmSelect = document.getElementById("algorithm");
     const mazeCanvas = document.getElementById("maze-canvas");
