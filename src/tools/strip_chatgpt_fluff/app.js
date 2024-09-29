@@ -11,6 +11,9 @@ document.addEventListener("DOMContentLoaded", function() {
     const removeAllStars = document.getElementById("remove-all-stars");
     const confirmStep = document.getElementById("confirm-step");
     const removeBetween = document.getElementById("remove-between");
+    const lineCorrectionCheckbox = document.getElementById("line-correction");
+    const listCorrectionCheckbox = document.getElementById("list-correction");
+    const listCorrectionCheckbox = document.getElementById("roman-list-conversion");
 
     const searchText = document.getElementById("search-text");
     const replaceText = document.getElementById("replace-text");
@@ -63,6 +66,125 @@ document.addEventListener("DOMContentLoaded", function() {
             removeAllStars.checked = false;
         }
     });
+
+
+    function correctLists() {
+        if (!listCorrectionCheckbox.checked) return;
+
+        saveState();
+
+        let lines = editorText.value.split("\n");
+        let newLines = [];
+        let inList = false;
+
+        lines.forEach((line) => {
+            const isListItem = /^\s*[-*]\s|^\s*\d+\.\s/.test(line);
+
+            if (isListItem) {
+                if (!inList) {
+                    inList = true;
+                }
+                newLines.push(line);
+            } else {
+                if (inList && line.trim() === "") {
+                    // Skip empty lines between list items
+                    return;
+                } else {
+                    inList = false;
+                    newLines.push(line);
+                }
+            }
+        });
+
+        editorText.value = newLines.join("\n");
+    }
+
+    function replaceNumericalListsWithRoman() {
+        if (!document.getElementById("roman-list-conversion").checked) return;
+
+        saveState();
+
+        let lines = editorText.value.split("\n");
+        let newLines = [];
+        let inList = false;
+        let listIndex = 1;
+
+        function toRoman(num) {
+            const romanNumerals = [
+                ["M", 1000],
+                ["CM", 900],
+                ["D", 500],
+                ["CD", 400],
+                ["C", 100],
+                ["XC", 90],
+                ["L", 50],
+                ["XL", 40],
+                ["X", 10],
+                ["IX", 9],
+                ["V", 5],
+                ["IV", 4],
+                ["I", 1]
+            ];
+            let result = "";
+            romanNumerals.forEach(([roman, value]) => {
+                while (num >= value) {
+                    result += roman;
+                    num -= value;
+                }
+            });
+            return result;
+        }
+
+        lines.forEach((line) => {
+            const numericalListItem = /^\s*(\d+)\.\s/.exec(line);
+
+            if (numericalListItem) {
+                const romanIndex = toRoman(parseInt(numericalListItem[1]));
+                const romanListItem = line.replace(numericalListItem[0], `${romanIndex}. `);
+                newLines.push(romanListItem);
+            } else {
+                newLines.push(line);
+            }
+        });
+
+        editorText.value = newLines.join("\n");
+    }
+
+    function correctLines() {
+        if (!lineCorrectionCheckbox.checked) return;
+
+        saveState();
+
+        let lines = editorText.value.split("\n");
+        let newLines = [];
+        let lastLineWasEmpty = false;
+
+        lines.forEach((line, index) => {
+            if (line.trim() === "") {
+                if (!lastLineWasEmpty) {
+                    newLines.push("");
+                    lastLineWasEmpty = true;
+                }
+            } else {
+                if (index > 0 && lines[index - 1].trim().endsWith(":")) {
+                    newLines.push("");
+                }
+
+                if ((line.trim().startsWith("#") || line.trim().startsWith("```")) && index > 0 && lines[index - 1].trim() !== "") {
+                    newLines.push("");
+                }
+
+                newLines.push(line);
+                lastLineWasEmpty = false;
+            }
+        });
+
+        if (newLines[newLines.length - 1].trim() !== "") {
+            newLines.push("");
+        }
+
+        editorText.value = newLines.join("\n");
+    }
 
     // Utility function to convert normal text to bold UTF-8 characters for popup
     function toBoldUTF8(text) {
@@ -198,10 +320,6 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
 
-
-
-
-
     function replaceTextFunction() {
         const searchValue = searchText.value;
         const replaceValue = replaceText.value;
@@ -217,7 +335,12 @@ document.addEventListener("DOMContentLoaded", function() {
         editorText.value = editorText.value.replace(regex, replaceValue);
     }
 
-    processButton.addEventListener("click", processText);
+    processButton.addEventListener("click", () => {
+        processText();
+        replaceNumericalListsWithRoman();
+        correctLists();
+        correctLines();
+    });
     replaceButton.addEventListener("click", replaceTextFunction);
     undoButton.addEventListener("click", undo);
     redoButton.addEventListener("click", redo);
