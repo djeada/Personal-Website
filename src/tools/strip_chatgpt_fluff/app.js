@@ -13,7 +13,8 @@ document.addEventListener("DOMContentLoaded", function() {
     const removeBetween = document.getElementById("remove-between");
     const lineCorrectionCheckbox = document.getElementById("line-correction");
     const listCorrectionCheckbox = document.getElementById("list-correction");
-    const listCorrectionCheckbox = document.getElementById("roman-list-conversion");
+    const romanListCheckbox = document.getElementById("roman-list-conversion");
+    const tabCorrectionCheckbox = document.getElementById("tab-correction");
 
     const searchText = document.getElementById("search-text");
     const replaceText = document.getElementById("replace-text");
@@ -100,7 +101,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function replaceNumericalListsWithRoman() {
-        if (!document.getElementById("roman-list-conversion").checked) return;
+        if (!romanListCheckbox.checked) return;
 
         saveState();
 
@@ -166,22 +167,109 @@ document.addEventListener("DOMContentLoaded", function() {
                     lastLineWasEmpty = true;
                 }
             } else {
-                if (index > 0 && lines[index - 1].trim().endsWith(":")) {
-                    newLines.push("");
-                }
+                const isListItem = line.trim().startsWith("-") ||
+                    line.trim().startsWith("*") ||
+                    /^\d+\.\s/.test(line.trim()); // Check for numbered lists like 1., 2., etc.
 
-                if ((line.trim().startsWith("#") || line.trim().startsWith("```")) && index > 0 && lines[index - 1].trim() !== "") {
-                    newLines.push("");
-                }
+                const nextIsListItem = index + 1 < lines.length && (
+                    lines[index + 1].trim().startsWith("-") ||
+                    lines[index + 1].trim().startsWith("*") ||
+                    /^\d+\.\s/.test(lines[index + 1].trim())
+                );
 
-                newLines.push(line);
-                lastLineWasEmpty = false;
+                const startsWithUppercase = line.trim().charAt(0) === line.trim().charAt(0).toUpperCase();
+                const isHeaderOrCodeBlock = line.trim().startsWith("#") || line.trim().startsWith("```");
+
+                // Check if the current or previous line is part of a table (lines start and end with "|")
+                const isTableRow = line.trim().startsWith("|") && line.trim().endsWith("|");
+                const prevIsTableRow = index > 0 && lines[index - 1].trim().startsWith("|") && lines[index - 1].trim().endsWith("|");
+
+                // If it's part of a table, don't insert new lines between rows
+                if (isTableRow || prevIsTableRow) {
+                    newLines.push(line);
+                    lastLineWasEmpty = false;
+                } else if (isListItem) {
+                    // If the current line is a list item, don't insert a new line between list items
+                    newLines.push(line);
+                    lastLineWasEmpty = false;
+                } else {
+                    // If the previous line was a list item and this line isn't, insert a new line
+                    if (index > 0 && lines[index - 1].trim() !== "" && !nextIsListItem &&
+                        (startsWithUppercase || isHeaderOrCodeBlock)) {
+                        newLines.push("");
+                    }
+                    newLines.push(line);
+                    lastLineWasEmpty = false;
+                }
             }
         });
 
+        // Ensure the last line is empty, if needed
         if (newLines[newLines.length - 1].trim() !== "") {
             newLines.push("");
         }
+
+        editorText.value = newLines.join("\n");
+
+
+    }
+
+
+    function removeTabIndent() {
+        // Check if tab correction is enabled
+        if (!tabCorrectionCheckbox.checked) return;
+
+        saveState();
+
+        let lines = editorText.value.split("\n");
+        let newLines = [];
+
+        lines.forEach(line => {
+            // Check if the line starts with a tab or 4 spaces and remove the first instance
+            if (line.startsWith("\t")) {
+                newLines.push(line.substring(1)); // Remove one tab
+            } else if (line.startsWith("    ")) {
+                newLines.push(line.substring(4)); // Remove 4 spaces (a tab equivalent)
+            } else {
+                newLines.push(line); // If no tab or 4 spaces, keep the line as it is
+            }
+        });
+
+        editorText.value = newLines.join("\n");
+    }
+
+    function trimListItemsBeforeColon() {
+        // Get the checkbox element
+        const trimListsCheckbox = document.getElementById('trim-lists-before-colon');
+
+        // Check if trimming is enabled
+        if (!trimListsCheckbox.checked) return;
+
+        saveState();
+
+        let lines = editorText.value.split("\n");
+        let newLines = [];
+
+        lines.forEach(line => {
+            let trimmedLine = line.trim();
+
+            // Check if the line starts with a numeral, hyphen, or star and contains a colon
+            let listStartRegex = /^(\d+\.|\*|-)/; // Regex for numbers followed by a dot, star, or hyphen
+
+            if (listStartRegex.test(trimmedLine) && trimmedLine.includes(":")) {
+                // Find the position of the first colon
+                let colonIndex = trimmedLine.indexOf(":");
+
+                // Get only the part after the colon, while keeping the list symbol at the beginning
+                let listSymbolMatch = trimmedLine.match(listStartRegex)[0]; // Extract the list symbol (e.g., '- ', '1. ', '* ')
+                let newText = listSymbolMatch + " " + trimmedLine.slice(colonIndex + 1).trim();
+
+                newLines.push(newText);
+            } else {
+                // If no colon or does not match list pattern, leave it unchanged
+                newLines.push(line);
+            }
+        });
 
         editorText.value = newLines.join("\n");
     }
@@ -338,7 +426,9 @@ document.addEventListener("DOMContentLoaded", function() {
     processButton.addEventListener("click", () => {
         processText();
         replaceNumericalListsWithRoman();
+        trimListItemsBeforeColon();
         correctLists();
+        removeTabIndent();
         correctLines();
     });
     replaceButton.addEventListener("click", replaceTextFunction);
