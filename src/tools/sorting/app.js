@@ -371,6 +371,24 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
+    function setCanvasDimensions() {
+        let canvasWidth, canvasHeight;
+        if (window.innerWidth <= 480) {
+            // For phones or small screens
+            canvasWidth = Math.floor(window.innerWidth * 0.8); // 80% of screen width for mobile
+            canvasHeight = Math.floor(window.innerHeight * 0.6); // 60% height for mobile
+        } else {
+            // For larger screens (tablets, desktops)
+            canvasWidth = Math.floor(window.innerWidth * 0.6); // 60% of width for larger screens
+            canvasHeight = Math.floor(window.innerHeight * 0.8); // 80% height for larger screens
+        }
+        sortingCanvas.width = canvasWidth;
+        sortingCanvas.height = canvasHeight;
+    }
+
+    // Set initial dimensions and listen for window resize
+    setCanvasDimensions();
+    window.addEventListener("resize", setCanvasDimensions);
     const visualizer = new SortingVisualizer();
 
 });
