@@ -27,6 +27,7 @@ document.addEventListener("DOMContentLoaded", function() {
             this.searchingInProgress = false;
             this.paused = false;
             this.stepMode = false;
+            this.found = false;
             this.currentAlgorithm = this.getSelectedAlgorithm();
             this.generateSortedRandomArray();
             this.drawArray();
@@ -45,27 +46,47 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         generateSortedRandomArray() {
+            // Scale the heights to ensure they cover the full canvas height range
+            const minHeight = Math.floor(searchingCanvas.height * 0.05); // Minimum height as 5% of canvas height
+            const maxHeight = Math.floor(searchingCanvas.height * 0.95); // Maximum height as 95% of canvas height
+
+            // Generate sorted heights with proportional distribution
             this.array = Array.from({
                 length: this.arrayLength
-            }, () => Math.floor(Math.random() * searchingCanvas.height));
-            this.array.sort((a, b) => a - b);
+            }, (_, i) => {
+                // Generate heights based on normalized index for even distribution
+                const normalizedValue = i / this.arrayLength; // Scale index between 0 and 1
+                return Math.floor(minHeight + normalizedValue * (maxHeight - minHeight)); // Map to canvas height range
+            });
+
+            this.array.sort((a, b) => a - b); // Sort array for algorithms like binary search
         }
 
-        drawArray(highlightedIndices = []) {
+
+        drawArray(highlightedIndices = [], searchComplete = false, found = false) {
             ctx.clearRect(0, 0, searchingCanvas.width, searchingCanvas.height);
-            const barWidth = Math.floor(searchingCanvas.width / this.array.length);
+
+            // Bar width based on canvas width and array length
+            const barWidth = searchingCanvas.width / this.array.length;
+
+            // Loop through the array and draw each bar
             for (let i = 0; i < this.array.length; i++) {
                 const height = this.array[i];
+
                 if (highlightedIndices.includes(i)) {
-                    ctx.fillStyle = "red";
+                    ctx.fillStyle = found ? "green" : "red"; // Color the highlighted bar
+                } else if (searchComplete && !found) {
+                    ctx.fillStyle = "gray"; // Color bars gray if the search is complete but the target isn't found
                 } else {
-                    ctx.fillStyle = "#eec747";
+                    ctx.fillStyle = "#eec747"; // Normal bar color
                 }
+
+                // Ensure the bars are visible and do not exceed canvas bounds
                 ctx.fillRect(
-                    i * barWidth,
-                    searchingCanvas.height - height,
-                    barWidth,
-                    height
+                    i * barWidth, // X position based on index and barWidth
+                    searchingCanvas.height - height, // Y position (height from the bottom)
+                    Math.max(barWidth - 1, 1), // Bar width with 1px spacing between bars
+                    height // Bar height
                 );
             }
         }
@@ -169,79 +190,121 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         async linearSearch(target) {
+            this.found = false;
             for (let i = 0; i < this.array.length; i++) {
                 if (!this.searchingInProgress) return;
+
                 this.drawArray([i]);
+
                 if (this.array[i] === target) {
-                    this.drawArray([i]);
+                    this.found = true;
+                    this.drawArray([i], true, true); // Highlight found element in green
                     break;
                 }
                 await this.delay();
             }
+
+            if (!this.found) {
+                this.drawArray([], true, false); // Change color to gray if not found, after search is done
+            }
         }
 
         async binarySearch(target) {
+            this.found = false;
             let left = 0;
             let right = this.array.length - 1;
+
             while (left <= right) {
                 if (!this.searchingInProgress) return;
                 const middle = Math.floor((left + right) / 2);
                 this.drawArray([middle]);
+
                 if (this.array[middle] === target) {
-                    this.drawArray([middle]);
+                    this.found = true;
+                    this.drawArray([middle], true, true); // Highlight found element in green
                     break;
                 } else if (this.array[middle] < target) {
                     left = middle + 1;
                 } else {
                     right = middle - 1;
                 }
+
                 await this.delay();
+            }
+
+            if (!this.found) {
+                this.drawArray([], true, false); // Change color to gray if not found, after search is done
             }
         }
 
         async jumpSearch(target) {
+            this.found = false;
             let n = this.array.length;
             let step = Math.floor(Math.sqrt(n));
             let prev = 0;
+
             while (this.array[Math.min(step, n) - 1] < target) {
                 if (!this.searchingInProgress) return;
+
                 this.drawArray([Math.min(step, n) - 1]);
                 prev = step;
                 step += Math.floor(Math.sqrt(n));
+
                 if (prev >= n) return;
                 await this.delay();
             }
+
             while (this.array[prev] < target) {
                 if (!this.searchingInProgress) return;
+
                 this.drawArray([prev]);
                 prev++;
+
                 if (prev === Math.min(step, n)) return;
                 await this.delay();
             }
+
             if (this.array[prev] === target) {
-                this.drawArray([prev]);
+                this.found = true;
+                this.drawArray([prev], true, true); // Highlight found element in green
+            }
+
+            if (!this.found) {
+                this.drawArray([], true, false); // Change color to gray if not found, after search is done
             }
         }
 
         async interpolationSearch(target) {
+            this.found = false;
             let low = 0;
             let high = this.array.length - 1;
+
             while (low <= high && target >= this.array[low] && target <= this.array[high]) {
                 if (!this.searchingInProgress) return;
+
                 let pos = low + Math.floor(((high - low) / (this.array[high] - this.array[low])) * (target - this.array[low]));
                 this.drawArray([pos]);
+
                 if (this.array[pos] === target) {
-                    this.drawArray([pos]);
+                    this.found = true;
+                    this.drawArray([pos], true, true); // Highlight found element in green
                     break;
                 }
+
                 if (this.array[pos] < target) {
                     low = pos + 1;
                 } else {
                     high = pos - 1;
                 }
+
                 await this.delay();
             }
+
+            if (!this.found) {
+                this.drawArray([], true, false); // Change color to gray if not found, after search is done
+            }
         }
+
     }
 
     function setCanvasDimensions() {

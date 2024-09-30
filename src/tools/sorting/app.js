@@ -45,26 +45,42 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         generateRandomArray() {
+            // Scale the heights to cover a good portion of the canvas height
+            const minHeight = Math.floor(sortingCanvas.height * 0.05); // 5% of canvas height
+            const maxHeight = Math.floor(sortingCanvas.height * 0.95); // 95% of canvas height
+
+            // Generate random heights for the array
             this.array = Array.from({
                 length: this.arrayLength
-            }, () => Math.floor(Math.random() * sortingCanvas.height));
+            }, () => {
+                // Generate random heights between the min and max values
+                return Math.floor(minHeight + Math.random() * (maxHeight - minHeight));
+            });
         }
 
         drawArray(highlightedIndices = []) {
             ctx.clearRect(0, 0, sortingCanvas.width, sortingCanvas.height);
-            const barWidth = Math.floor(sortingCanvas.width / this.array.length);
+
+            // Calculate the width of each bar based on the canvas width and array length
+            const barWidth = sortingCanvas.width / this.array.length;
+
+            // Loop through the array and draw each bar
             for (let i = 0; i < this.array.length; i++) {
                 const height = this.array[i];
+
+                // Highlight selected indices (e.g., comparing elements)
                 if (highlightedIndices.includes(i)) {
                     ctx.fillStyle = "red";
                 } else {
                     ctx.fillStyle = "#eec747";
                 }
+
+                // Draw the bar with calculated height and width
                 ctx.fillRect(
-                    i * barWidth,
-                    sortingCanvas.height - height,
-                    barWidth,
-                    height
+                    i * barWidth, // X position of the bar
+                    sortingCanvas.height - height, // Y position (bottom minus height)
+                    Math.max(barWidth - 1, 1), // Bar width with a small gap
+                    height // Bar height
                 );
             }
         }
