@@ -229,8 +229,8 @@ document.addEventListener("DOMContentLoaded", function() {
             // Check if the line starts with a tab or 4 spaces and remove the first instance
             if (line.startsWith("\t")) {
                 newLines.push(line.substring(1)); // Remove one tab
-            } else if (line.startsWith("    ")) {
-                newLines.push(line.substring(4)); // Remove 4 spaces (a tab equivalent)
+            } else if (line.startsWith("  ")) {
+                newLines.push(line.substring(2)); // Remove 2 spaces (a tab equivalent)
             } else {
                 newLines.push(line); // If no tab or 4 spaces, keep the line as it is
             }
@@ -239,7 +239,7 @@ document.addEventListener("DOMContentLoaded", function() {
         editorText.value = newLines.join("\n");
     }
 
-    function correctLatexDelimiters() {
+    function correctLatex() {
         // Check if LaTeX correction is enabled (assuming you have a checkbox for this feature)
         if (!latexCorrectionCheckbox.checked) return;
 
@@ -451,6 +451,7 @@ document.addEventListener("DOMContentLoaded", function() {
         correctLists();
         removeTabIndent();
         correctLines();
+         correctLatex() ;
     });
     replaceButton.addEventListener("click", replaceTextFunction);
     undoButton.addEventListener("click", undo);
