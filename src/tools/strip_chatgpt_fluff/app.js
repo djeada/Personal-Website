@@ -226,8 +226,8 @@ document.addEventListener("DOMContentLoaded", function() {
         let newLines = [];
 
 lines.forEach(line => {
-    // Regex to match tabs or up to 8 leading spaces
-    const match = line.match(/^(\t| {1,8})/);
+    // Regex to match tabs or up to 4 leading spaces
+    const match = line.match(/^(\t| {1,4})/);
 
     if (match) {
         newLines.push(line.substring(match[0].length)); // Remove the matched tab or spaces
@@ -241,24 +241,65 @@ lines.forEach(line => {
     }
 
 function correctLatexDelimiters() {
-    // Check if LaTeX correction is enabled (assuming you have a checkbox for this feature)
+    // Check if LaTeX correction is enabled
     if (!latexCorrectionCheckbox.checked) return;
 
     saveState(); // Save current editor state
 
     let text = editorText.value;
+    let result = '';
+    let i = 0;
 
-    // Replace LaTeX block math delimiters, allowing optional empty lines
-    text = text.replace(/\\\[\s*\n*/g, '$$'); // Replace '\[' (allowing for empty line after it) with '$$'
-    text = text.replace(/\n*\s*\\\]/g, '$$'); // Replace '\]' (allowing for empty line before it) with '$$'
+    // Helper function to check if the character at position i is escaped
+    function isEscaped(text, index) {
+        let backslashCount = 0;
+        index--;
+        while (index >= 0 && text[index] === '\\') {
+            backslashCount++;
+            index--;
+        }
+        return backslashCount % 2 === 1;
+    }
 
-    // Replace LaTeX inline math delimiters, allowing optional spaces inside
-    text = text.replace(/\\\(\s*/g, '$'); // Replace '\(' with optional spaces after it with '$'
-    text = text.replace(/\s*\\\)/g, '$'); // Replace '\)' with optional spaces before it with '$'
+    while (i < text.length) {
+        // Check for unescaped \[ or \(
+        if (text[i] === '\\' && (text[i + 1] === '[' || text[i + 1] === '(') && !isEscaped(text, i)) {
+            const startDelimiter = text.substr(i, 2);
+            const endDelimiter = startDelimiter === '\\[' ? '\\]' : '\\)';
+            const replacementDelimiter = startDelimiter === '\\[' ? '$$' : '$';
+            let j = i + 2;
+            let content = '';
+
+            // Find the closing delimiter
+            while (j < text.length) {
+                // Check for unescaped closing delimiter
+                if (text.substr(j, endDelimiter.length) === endDelimiter && !isEscaped(text, j)) {
+                    break;
+                } else {
+                    content += text[j];
+                    j++;
+                }
+            }
+
+            if (j < text.length) {
+                // Found matching end delimiter
+                result += replacementDelimiter + content + replacementDelimiter;
+                i = j + endDelimiter.length;
+            } else {
+                // No matching end delimiter, copy the rest
+                result += text[i];
+                i++;
+            }
+        } else {
+            result += text[i];
+            i++;
+        }
+    }
 
     // Set the corrected text back to the editor
-    editorText.value = text;
+    editorText.value = result;
 }
+
 
 
     function trimListItemsBeforeColon() {
