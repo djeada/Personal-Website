@@ -225,16 +225,17 @@ document.addEventListener("DOMContentLoaded", function() {
         let lines = editorText.value.split("\n");
         let newLines = [];
 
-        lines.forEach(line => {
-            // Check if the line starts with a tab or 4 spaces and remove the first instance
-            if (line.startsWith("\t")) {
-                newLines.push(line.substring(1)); // Remove one tab
-            } else if (line.startsWith("  ")) {
-                newLines.push(line.substring(2)); // Remove 2 spaces (a tab equivalent)
-            } else {
-                newLines.push(line); // If no tab or 4 spaces, keep the line as it is
-            }
-        });
+lines.forEach(line => {
+    // Regex to match tabs or up to 8 leading spaces
+    const match = line.match(/^(\t| {1,8})/);
+
+    if (match) {
+        newLines.push(line.substring(match[0].length)); // Remove the matched tab or spaces
+    } else {
+        newLines.push(line); // If no tab or leading spaces, keep the line as it is
+    }
+});
+
 
         editorText.value = newLines.join("\n");
     }
