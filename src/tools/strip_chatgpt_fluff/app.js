@@ -284,8 +284,9 @@ function correctLatex() {
 
             // Search for the closing delimiter
             let contentEnd = null;
+            let k;  // Declare k here
             while (j < text.length) {
-                let k = j;
+                k = j;  // Assign to k inside the loop
 
                 // Before checking for endDelimiter, skip optional whitespace/newlines before it
                 if (endDelimiter === '\\]') {
@@ -327,6 +328,7 @@ function correctLatex() {
     // Set the corrected text back to the editor
     editorText.value = result;
 }
+
 
 
 
