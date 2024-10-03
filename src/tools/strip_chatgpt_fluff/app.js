@@ -239,25 +239,26 @@ document.addEventListener("DOMContentLoaded", function() {
         editorText.value = newLines.join("\n");
     }
 
-    function correctLatex() {
-        // Check if LaTeX correction is enabled (assuming you have a checkbox for this feature)
-        if (!latexCorrectionCheckbox.checked) return;
+function correctLatexDelimiters() {
+    // Check if LaTeX correction is enabled (assuming you have a checkbox for this feature)
+    if (!latexCorrectionCheckbox.checked) return;
 
-        saveState(); // Save current editor state
+    saveState(); // Save current editor state
 
-        let text = editorText.value;
+    let text = editorText.value;
 
-        // Replace LaTeX inline math delimiters
-        text = text.replace(/\\\(/g, '$'); // Replace '\(' with '$'
-        text = text.replace(/\\\)/g, '$'); // Replace '\)' with '$'
+    // Replace LaTeX block math delimiters, allowing optional empty lines
+    text = text.replace(/\\\[\s*\n*/g, '$$'); // Replace '\[' (allowing for empty line after it) with '$$'
+    text = text.replace(/\n*\s*\\\]/g, '$$'); // Replace '\]' (allowing for empty line before it) with '$$'
 
-        // Replace LaTeX block math delimiters
-        text = text.replace(/\\\[/g, '$$'); // Replace '\[' with '$$'
-        text = text.replace(/\\\]/g, '$$'); // Replace '\]' with '$$'
+    // Replace LaTeX inline math delimiters, allowing optional spaces inside
+    text = text.replace(/\\\(\s*/g, '$'); // Replace '\(' with optional spaces after it with '$'
+    text = text.replace(/\s*\\\)/g, '$'); // Replace '\)' with optional spaces before it with '$'
 
-        // Set the corrected text back to the editor
-        editorText.value = text;
-    }
+    // Set the corrected text back to the editor
+    editorText.value = text;
+}
+
 
     function trimListItemsBeforeColon() {
         // Get the checkbox element
