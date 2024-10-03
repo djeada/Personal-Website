@@ -52,7 +52,7 @@ def create_url_element(file_path: Path, domain: str) -> Optional[ET.Element]:
 
     # Handle index.html specifically by removing "index" from the URL
     if relative_path.endswith("/index"):
-        relative_path = relative_path[:-6]  # Remove the "/index" part
+        relative_path = relative_path[:-5]  # Remove the "/index" part
 
     url = ET.Element("url")
     loc = ET.SubElement(url, "loc")

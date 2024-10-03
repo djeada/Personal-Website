@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const listCorrectionCheckbox = document.getElementById("list-correction");
     const romanListCheckbox = document.getElementById("roman-list-conversion");
     const tabCorrectionCheckbox = document.getElementById("tab-correction");
+    const latexCorrectionCheckbox = document.getElementById("latex-correction");
 
     const searchText = document.getElementById("search-text");
     const replaceText = document.getElementById("replace-text");
@@ -236,6 +237,26 @@ document.addEventListener("DOMContentLoaded", function() {
         });
 
         editorText.value = newLines.join("\n");
+    }
+
+    function correctLatexDelimiters() {
+        // Check if LaTeX correction is enabled (assuming you have a checkbox for this feature)
+        if (!latexCorrectionCheckbox.checked) return;
+
+        saveState(); // Save current editor state
+
+        let text = editorText.value;
+
+        // Replace LaTeX inline math delimiters
+        text = text.replace(/\\\(/g, '$'); // Replace '\(' with '$'
+        text = text.replace(/\\\)/g, '$'); // Replace '\)' with '$'
+
+        // Replace LaTeX block math delimiters
+        text = text.replace(/\\\[/g, '$$'); // Replace '\[' with '$$'
+        text = text.replace(/\\\]/g, '$$'); // Replace '\]' with '$$'
+
+        // Set the corrected text back to the editor
+        editorText.value = text;
     }
 
     function trimListItemsBeforeColon() {
