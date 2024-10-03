@@ -9,7 +9,6 @@ document.addEventListener("DOMContentLoaded", function() {
     const resetButton = document.getElementById("reset");
     const stepButton = document.getElementById("step");
 
-
     const canvasWidth = Math.floor(window.innerWidth * 0.8);
     const canvasHeight = Math.floor(window.innerHeight * 0.6);
 
@@ -27,6 +26,7 @@ document.addEventListener("DOMContentLoaded", function() {
             this.sortingInProgress = false;
             this.paused = false;
             this.stepMode = false;
+            this.sortingCompleted = false;
             this.currentAlgorithm = this.getSelectedAlgorithm();
             this.generateRandomArray();
             this.drawArray();
@@ -45,15 +45,12 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         generateRandomArray() {
-            // Scale the heights to cover a good portion of the canvas height
-            const minHeight = Math.floor(sortingCanvas.height * 0.05); // 5% of canvas height
-            const maxHeight = Math.floor(sortingCanvas.height * 0.95); // 95% of canvas height
+            const minHeight = Math.floor(sortingCanvas.height * 0.05);
+            const maxHeight = Math.floor(sortingCanvas.height * 0.95);
 
-            // Generate random heights for the array
             this.array = Array.from({
                 length: this.arrayLength
             }, () => {
-                // Generate random heights between the min and max values
                 return Math.floor(minHeight + Math.random() * (maxHeight - minHeight));
             });
         }
@@ -61,26 +58,22 @@ document.addEventListener("DOMContentLoaded", function() {
         drawArray(highlightedIndices = []) {
             ctx.clearRect(0, 0, sortingCanvas.width, sortingCanvas.height);
 
-            // Calculate the width of each bar based on the canvas width and array length
             const barWidth = sortingCanvas.width / this.array.length;
 
-            // Loop through the array and draw each bar
             for (let i = 0; i < this.array.length; i++) {
                 const height = this.array[i];
 
-                // Highlight selected indices (e.g., comparing elements)
                 if (highlightedIndices.includes(i)) {
                     ctx.fillStyle = "red";
                 } else {
                     ctx.fillStyle = "#eec747";
                 }
 
-                // Draw the bar with calculated height and width
                 ctx.fillRect(
-                    i * barWidth, // X position of the bar
-                    sortingCanvas.height - height, // Y position (bottom minus height)
-                    Math.max(barWidth - 1, 1), // Bar width with a small gap
-                    height // Bar height
+                    i * barWidth,
+                    sortingCanvas.height - height,
+                    Math.max(barWidth - 1, 1),
+                    height
                 );
             }
         }
@@ -122,6 +115,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     break;
             }
             this.sortingInProgress = false;
+            this.sortingCompleted = true;
         }
 
         togglePause() {
@@ -137,12 +131,14 @@ document.addEventListener("DOMContentLoaded", function() {
                 this.paused = false;
                 pauseButton.textContent = "Pause";
             }
+            this.sortingCompleted = false;
             this.generateRandomArray();
             this.drawArray();
             this.updateArrayState();
         }
 
         stepSorting() {
+            if (this.sortingCompleted) return;
             if (this.sortingInProgress) {
                 this.stepMode = true;
                 this.paused = false;
@@ -158,6 +154,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 this.paused = false;
                 pauseButton.textContent = "Pause";
             }
+            this.sortingCompleted = false;
             this.generateRandomArray();
             this.drawArray();
             this.updateArrayState();
@@ -172,7 +169,6 @@ document.addEventListener("DOMContentLoaded", function() {
             this.speed = parseInt(speedInput.value) || 50;
         }
 
-
         getSelectedAlgorithm() {
             return algorithmSelect.options[algorithmSelect.selectedIndex].value;
         }
@@ -180,12 +176,12 @@ document.addEventListener("DOMContentLoaded", function() {
         async delay() {
             if (this.stepMode) {
                 this.paused = true;
-                while (this.paused) {
+                while (this.paused && this.sortingInProgress) {
                     await new Promise((resolve) => setTimeout(resolve, 50));
                 }
             } else {
                 await new Promise((resolve) => setTimeout(resolve, this.speed));
-                while (this.paused) {
+                while (this.paused && this.sortingInProgress) {
                     await new Promise((resolve) => setTimeout(resolve, 50));
                 }
             }
@@ -193,15 +189,18 @@ document.addEventListener("DOMContentLoaded", function() {
 
         async bubbleSort() {
             for (let i = 0; i < this.array.length; i++) {
+                let swapped = false;
                 for (let j = 0; j < this.array.length - i - 1; j++) {
                     if (!this.sortingInProgress) return;
                     if (this.array[j] > this.array[j + 1]) {
                         [this.array[j], this.array[j + 1]] = [this.array[j + 1], this.array[j]];
+                        swapped = true;
                         this.updateArrayState();
                     }
                     this.drawArray([j, j + 1]);
                     await this.delay();
                 }
+                if (!swapped) break;
             }
         }
 
@@ -390,19 +389,16 @@ document.addEventListener("DOMContentLoaded", function() {
     function setCanvasDimensions() {
         let canvasWidth, canvasHeight;
         if (window.innerWidth <= 480) {
-            // For phones or small screens
-            canvasWidth = Math.floor(window.innerWidth * 0.8); // 80% of screen width for mobile
-            canvasHeight = Math.floor(window.innerHeight * 0.6); // 60% height for mobile
+            canvasWidth = Math.floor(window.innerWidth * 0.8);
+            canvasHeight = Math.floor(window.innerHeight * 0.6);
         } else {
-            // For larger screens (tablets, desktops)
-            canvasWidth = Math.floor(window.innerWidth * 0.6); // 60% of width for larger screens
-            canvasHeight = Math.floor(window.innerHeight * 0.8); // 80% height for larger screens
+            canvasWidth = Math.floor(window.innerWidth * 0.6);
+            canvasHeight = Math.floor(window.innerHeight * 0.8);
         }
         sortingCanvas.width = canvasWidth;
         sortingCanvas.height = canvasHeight;
     }
 
-    // Set initial dimensions and listen for window resize
     setCanvasDimensions();
     window.addEventListener("resize", setCanvasDimensions);
     const visualizer = new SortingVisualizer();

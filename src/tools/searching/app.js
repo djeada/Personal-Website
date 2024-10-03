@@ -28,6 +28,7 @@ document.addEventListener("DOMContentLoaded", function() {
             this.paused = false;
             this.stepMode = false;
             this.found = false;
+            this.searchCompleted = false;
             this.currentAlgorithm = this.getSelectedAlgorithm();
             this.generateSortedRandomArray();
             this.drawArray();
@@ -46,47 +47,38 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         generateSortedRandomArray() {
-            // Scale the heights to ensure they cover the full canvas height range
-            const minHeight = Math.floor(searchingCanvas.height * 0.05); // Minimum height as 5% of canvas height
-            const maxHeight = Math.floor(searchingCanvas.height * 0.95); // Maximum height as 95% of canvas height
+            const minHeight = Math.floor(searchingCanvas.height * 0.05);
+            const maxHeight = Math.floor(searchingCanvas.height * 0.95);
 
-            // Generate sorted heights with proportional distribution
             this.array = Array.from({
                 length: this.arrayLength
             }, (_, i) => {
-                // Generate heights based on normalized index for even distribution
-                const normalizedValue = i / this.arrayLength; // Scale index between 0 and 1
-                return Math.floor(minHeight + normalizedValue * (maxHeight - minHeight)); // Map to canvas height range
+                const normalizedValue = i / this.arrayLength;
+                return Math.floor(minHeight + normalizedValue * (maxHeight - minHeight));
             });
 
-            this.array.sort((a, b) => a - b); // Sort array for algorithms like binary search
+            this.array.sort((a, b) => a - b);
         }
-
 
         drawArray(highlightedIndices = [], searchComplete = false, found = false) {
             ctx.clearRect(0, 0, searchingCanvas.width, searchingCanvas.height);
-
-            // Bar width based on canvas width and array length
             const barWidth = searchingCanvas.width / this.array.length;
-
-            // Loop through the array and draw each bar
             for (let i = 0; i < this.array.length; i++) {
                 const height = this.array[i];
 
                 if (highlightedIndices.includes(i)) {
-                    ctx.fillStyle = found ? "green" : "red"; // Color the highlighted bar
+                    ctx.fillStyle = found ? "green" : "red";
                 } else if (searchComplete && !found) {
-                    ctx.fillStyle = "gray"; // Color bars gray if the search is complete but the target isn't found
+                    ctx.fillStyle = "gray";
                 } else {
-                    ctx.fillStyle = "#eec747"; // Normal bar color
+                    ctx.fillStyle = "#eec747";
                 }
 
-                // Ensure the bars are visible and do not exceed canvas bounds
                 ctx.fillRect(
-                    i * barWidth, // X position based on index and barWidth
-                    searchingCanvas.height - height, // Y position (height from the bottom)
-                    Math.max(barWidth - 1, 1), // Bar width with 1px spacing between bars
-                    height // Bar height
+                    i * barWidth,
+                    searchingCanvas.height - height,
+                    Math.max(barWidth - 1, 1),
+                    height
                 );
             }
         }
@@ -96,6 +88,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         async startSearching() {
+            if (this.searchCompleted) return;
             if (this.searchingInProgress) return;
             this.searchingInProgress = true;
             this.paused = false;
@@ -121,6 +114,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     break;
             }
             this.searchingInProgress = false;
+            this.searchCompleted = true;
         }
 
         togglePause() {
@@ -136,12 +130,16 @@ document.addEventListener("DOMContentLoaded", function() {
                 this.paused = false;
                 pauseButton.textContent = "Pause";
             }
+            this.searchCompleted = false;
             this.generateSortedRandomArray();
             this.drawArray();
             this.updateArrayState();
         }
 
         stepSearching() {
+            if (this.searchCompleted) {
+                return;
+            }
             if (this.searchingInProgress) {
                 this.stepMode = true;
                 this.paused = false;
@@ -157,6 +155,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 this.paused = false;
                 pauseButton.textContent = "Pause";
             }
+            this.searchCompleted = false;
             this.generateSortedRandomArray();
             this.drawArray();
             this.updateArrayState();
@@ -198,14 +197,14 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 if (this.array[i] === target) {
                     this.found = true;
-                    this.drawArray([i], true, true); // Highlight found element in green
+                    this.drawArray([i], true, true);
                     break;
                 }
                 await this.delay();
             }
 
             if (!this.found) {
-                this.drawArray([], true, false); // Change color to gray if not found, after search is done
+                this.drawArray([], true, false);
             }
         }
 
@@ -221,7 +220,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 if (this.array[middle] === target) {
                     this.found = true;
-                    this.drawArray([middle], true, true); // Highlight found element in green
+                    this.drawArray([middle], true, true);
                     break;
                 } else if (this.array[middle] < target) {
                     left = middle + 1;
@@ -233,7 +232,7 @@ document.addEventListener("DOMContentLoaded", function() {
             }
 
             if (!this.found) {
-                this.drawArray([], true, false); // Change color to gray if not found, after search is done
+                this.drawArray([], true, false);
             }
         }
 
@@ -266,11 +265,11 @@ document.addEventListener("DOMContentLoaded", function() {
 
             if (this.array[prev] === target) {
                 this.found = true;
-                this.drawArray([prev], true, true); // Highlight found element in green
+                this.drawArray([prev], true, true);
             }
 
             if (!this.found) {
-                this.drawArray([], true, false); // Change color to gray if not found, after search is done
+                this.drawArray([], true, false);
             }
         }
 
@@ -287,7 +286,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 if (this.array[pos] === target) {
                     this.found = true;
-                    this.drawArray([pos], true, true); // Highlight found element in green
+                    this.drawArray([pos], true, true);
                     break;
                 }
 
@@ -301,7 +300,7 @@ document.addEventListener("DOMContentLoaded", function() {
             }
 
             if (!this.found) {
-                this.drawArray([], true, false); // Change color to gray if not found, after search is done
+                this.drawArray([], true, false);
             }
         }
 
@@ -310,19 +309,16 @@ document.addEventListener("DOMContentLoaded", function() {
     function setCanvasDimensions() {
         let canvasWidth, canvasHeight;
         if (window.innerWidth <= 480) {
-            // For phones or small screens
-            canvasWidth = Math.floor(window.innerWidth * 0.8); // 80% of screen width for mobile
-            canvasHeight = Math.floor(window.innerHeight * 0.6); // 60% height for mobile
+            canvasWidth = Math.floor(window.innerWidth * 0.8);
+            canvasHeight = Math.floor(window.innerHeight * 0.6);
         } else {
-            // For larger screens (tablets, desktops)
-            canvasWidth = Math.floor(window.innerWidth * 0.6); // 60% of width for larger screens
-            canvasHeight = Math.floor(window.innerHeight * 0.8); // 80% height for larger screens
+            canvasWidth = Math.floor(window.innerWidth * 0.6);
+            canvasHeight = Math.floor(window.innerHeight * 0.8);
         }
         searchingCanvas.width = canvasWidth;
         searchingCanvas.height = canvasHeight;
     }
 
-    // Set initial dimensions and listen for window resize
     setCanvasDimensions();
     window.addEventListener("resize", setCanvasDimensions);
     const visualizer = new SearchingVisualizer();
