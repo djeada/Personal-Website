@@ -240,7 +240,7 @@ lines.forEach(line => {
         editorText.value = newLines.join("\n");
     }
 
-function correctLatexDelimiters() {
+function correctLatex() {
     // Check if LaTeX correction is enabled
     if (!latexCorrectionCheckbox.checked) return;
 
@@ -250,7 +250,7 @@ function correctLatexDelimiters() {
     let result = '';
     let i = 0;
 
-    // Helper function to check if the character at position i is escaped
+    // Helper function to check if the character at position index is escaped
     function isEscaped(text, index) {
         let backslashCount = 0;
         index--;
@@ -264,29 +264,57 @@ function correctLatexDelimiters() {
     while (i < text.length) {
         // Check for unescaped \[ or \(
         if (text[i] === '\\' && (text[i + 1] === '[' || text[i + 1] === '(') && !isEscaped(text, i)) {
-            const startDelimiter = text.substr(i, 2);
+            const startDelimiter = text.substr(i, 2); // '\[' or '\('
             const endDelimiter = startDelimiter === '\\[' ? '\\]' : '\\)';
             const replacementDelimiter = startDelimiter === '\\[' ? '$$' : '$';
-            let j = i + 2;
-            let content = '';
+            let j = i + 2; // Position after the opening delimiter
 
-            // Find the closing delimiter
-            while (j < text.length) {
-                // Check for unescaped closing delimiter
-                if (text.substr(j, endDelimiter.length) === endDelimiter && !isEscaped(text, j)) {
-                    break;
-                } else {
-                    content += text[j];
+            // Skip optional whitespace/newlines after opening delimiter
+            if (startDelimiter === '\\[') {
+                while (j < text.length && /\s/.test(text[j])) {
+                    j++;
+                }
+            } else if (startDelimiter === '\\(') {
+                while (j < text.length && text[j] === ' ') {
                     j++;
                 }
             }
 
-            if (j < text.length) {
-                // Found matching end delimiter
+            let contentStart = j; // Start position of the content
+
+            // Search for the closing delimiter
+            let contentEnd = null;
+            while (j < text.length) {
+                let k = j;
+
+                // Before checking for endDelimiter, skip optional whitespace/newlines before it
+                if (endDelimiter === '\\]') {
+                    while (k < text.length && /\s/.test(text[k])) {
+                        k++;
+                    }
+                } else if (endDelimiter === '\\)') {
+                    while (k < text.length && text[k] === ' ') {
+                        k++;
+                    }
+                }
+
+                // Check for unescaped closing delimiter at position k
+                if (text.substr(k, endDelimiter.length) === endDelimiter && !isEscaped(text, k)) {
+                    contentEnd = j; // End position of the content (before skipped whitespace)
+                    break;
+                } else {
+                    j++;
+                }
+            }
+
+            if (contentEnd !== null) {
+                // Found matching closing delimiter
+                const content = text.substring(contentStart, contentEnd);
                 result += replacementDelimiter + content + replacementDelimiter;
-                i = j + endDelimiter.length;
+                // Move i to after the closing delimiter and any skipped whitespace
+                i = k + endDelimiter.length;
             } else {
-                // No matching end delimiter, copy the rest
+                // No matching closing delimiter, copy the opening delimiter and move on
                 result += text[i];
                 i++;
             }
@@ -299,6 +327,7 @@ function correctLatexDelimiters() {
     // Set the corrected text back to the editor
     editorText.value = result;
 }
+
 
 
 
