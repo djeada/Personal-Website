@@ -160,50 +160,86 @@ document.addEventListener("DOMContentLoaded", function() {
         let lines = editorText.value.split("\n");
         let newLines = [];
         let lastLineWasEmpty = false;
+        let insideCodeBlock = false; // Track if we're inside a code block
 
-        lines.forEach((line, index) => {
-            if (line.trim() === "") {
-                if (!lastLineWasEmpty) {
-                    newLines.push("");
-                    lastLineWasEmpty = true;
-                }
-            } else {
-                const isListItem = line.trim().startsWith("-") ||
-                    line.trim().startsWith("*") ||
-                    /^\d+\.\s/.test(line.trim()); // Check for numbered lists like 1., 2., etc.
+        for (let index = 0; index < lines.length; index++) {
+            let line = lines[index];
 
-                const nextIsListItem = index + 1 < lines.length && (
-                    lines[index + 1].trim().startsWith("-") ||
-                    lines[index + 1].trim().startsWith("*") ||
-                    /^\d+\.\s/.test(lines[index + 1].trim())
-                );
+            if (line.trim() === '```') {
+                insideCodeBlock = !insideCodeBlock; // Toggle code block state
 
-                const startsWithUppercase = line.trim().charAt(0) === line.trim().charAt(0).toUpperCase();
-                const isHeaderOrCodeBlock = line.trim().startsWith("#") || line.trim().startsWith("```");
-
-                // Check if the current or previous line is part of a table (lines start and end with "|")
-                const isTableRow = line.trim().startsWith("|") && line.trim().endsWith("|");
-                const prevIsTableRow = index > 0 && lines[index - 1].trim().startsWith("|") && lines[index - 1].trim().endsWith("|");
-
-                // If it's part of a table, don't insert new lines between rows
-                if (isTableRow || prevIsTableRow) {
+                if (insideCodeBlock) {
+                    // Starting ```
                     newLines.push(line);
-                    lastLineWasEmpty = false;
-                } else if (isListItem) {
-                    // If the current line is a list item, don't insert a new line between list items
-                    newLines.push(line);
-                    lastLineWasEmpty = false;
+
+                    // Remove any blank lines immediately after starting ```
+                    while (index + 1 < lines.length && lines[index + 1].trim() === '') {
+                        index++;
+                    }
                 } else {
-                    // If the previous line was a list item and this line isn't, insert a new line
-                    if (index > 0 && lines[index - 1].trim() !== "" && !nextIsListItem &&
-                        (startsWithUppercase || isHeaderOrCodeBlock)) {
-                        newLines.push("");
+                    // Ending ```
+                    // Remove any blank lines immediately before ending ```
+                    while (newLines.length > 0 && newLines[newLines.length - 1].trim() === '') {
+                        newLines.pop();
                     }
                     newLines.push(line);
-                    lastLineWasEmpty = false;
+                }
+                lastLineWasEmpty = false;
+            } else if (insideCodeBlock) {
+                // Inside code block, keep lines as is
+                newLines.push(line);
+                lastLineWasEmpty = false;
+            } else {
+                if (line.trim() === "") {
+                    if (!lastLineWasEmpty) {
+                        newLines.push("");
+                        lastLineWasEmpty = true;
+                    }
+                } else {
+                    const isListItem =
+                        line.trim().startsWith("-") ||
+                        line.trim().startsWith("*") ||
+                        /^\d+\.\s/.test(line.trim());
+
+                    const nextIsListItem =
+                        index + 1 < lines.length &&
+                        (lines[index + 1].trim().startsWith("-") ||
+                            lines[index + 1].trim().startsWith("*") ||
+                            /^\d+\.\s/.test(lines[index + 1].trim()));
+
+                    const startsWithUppercase =
+                        line.trim().charAt(0) === line.trim().charAt(0).toUpperCase();
+                    const isHeaderOrCodeBlock =
+                        line.trim().startsWith("#") || line.trim().startsWith("```");
+
+                    const isTableRow =
+                        line.trim().startsWith("|") && line.trim().endsWith("|");
+                    const prevIsTableRow =
+                        index > 0 &&
+                        lines[index - 1].trim().startsWith("|") &&
+                        lines[index - 1].trim().endsWith("|");
+
+                    if (isTableRow || prevIsTableRow) {
+                        newLines.push(line);
+                        lastLineWasEmpty = false;
+                    } else if (isListItem) {
+                        newLines.push(line);
+                        lastLineWasEmpty = false;
+                    } else {
+                        if (
+                            index > 0 &&
+                            lines[index - 1].trim() !== "" &&
+                            !nextIsListItem &&
+                            (startsWithUppercase || isHeaderOrCodeBlock)
+                        ) {
+                            newLines.push("");
+                        }
+                        newLines.push(line);
+                        lastLineWasEmpty = false;
+                    }
                 }
             }
-        });
+        }
 
         // Ensure the last line is empty, if needed
         if (newLines[newLines.length - 1].trim() !== "") {
@@ -211,9 +247,8 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         editorText.value = newLines.join("\n");
-
-
     }
+
 
 
     function removeTabIndent() {
@@ -225,113 +260,109 @@ document.addEventListener("DOMContentLoaded", function() {
         let lines = editorText.value.split("\n");
         let newLines = [];
 
-lines.forEach(line => {
-    // Regex to match tabs or up to 4 leading spaces
-    const match = line.match(/^(\t| {1,4})/);
+        lines.forEach(line => {
+            // Regex to match tabs or up to 4 leading spaces
+            const match = line.match(/^(\t| {1,4})/);
 
-    if (match) {
-        newLines.push(line.substring(match[0].length)); // Remove the matched tab or spaces
-    } else {
-        newLines.push(line); // If no tab or leading spaces, keep the line as it is
-    }
-});
+            if (match) {
+                newLines.push(line.substring(match[0].length)); // Remove the matched tab or spaces
+            } else {
+                newLines.push(line); // If no tab or leading spaces, keep the line as it is
+            }
+        });
 
 
         editorText.value = newLines.join("\n");
     }
 
-function correctLatex() {
-    // Check if LaTeX correction is enabled
-    if (!latexCorrectionCheckbox.checked) return;
+    function correctLatex() {
+        // Check if LaTeX correction is enabled
+        if (!latexCorrectionCheckbox.checked) return;
 
-    saveState(); // Save current editor state
+        saveState(); // Save current editor state
 
-    let text = editorText.value;
-    let result = '';
-    let i = 0;
+        let text = editorText.value;
+        let result = '';
+        let i = 0;
 
-    // Helper function to check if the character at position index is escaped
-    function isEscaped(text, index) {
-        let backslashCount = 0;
-        index--;
-        while (index >= 0 && text[index] === '\\') {
-            backslashCount++;
+        // Helper function to check if the character at position index is escaped
+        function isEscaped(text, index) {
+            let backslashCount = 0;
             index--;
+            while (index >= 0 && text[index] === '\\') {
+                backslashCount++;
+                index--;
+            }
+            return backslashCount % 2 === 1;
         }
-        return backslashCount % 2 === 1;
-    }
 
-    while (i < text.length) {
-        // Check for unescaped \[ or \(
-        if (text[i] === '\\' && (text[i + 1] === '[' || text[i + 1] === '(') && !isEscaped(text, i)) {
-            const startDelimiter = text.substr(i, 2); // '\[' or '\('
-            const endDelimiter = startDelimiter === '\\[' ? '\\]' : '\\)';
-            const replacementDelimiter = startDelimiter === '\\[' ? '$$' : '$';
-            let j = i + 2; // Position after the opening delimiter
+        while (i < text.length) {
+            // Check for unescaped \[ or \(
+            if (text[i] === '\\' && (text[i + 1] === '[' || text[i + 1] === '(') && !isEscaped(text, i)) {
+                const startDelimiter = text.substr(i, 2); // '\[' or '\('
+                const endDelimiter = startDelimiter === '\\[' ? '\\]' : '\\)';
+                const replacementDelimiter = startDelimiter === '\\[' ? '$$' : '$';
+                let j = i + 2; // Position after the opening delimiter
 
-            // Skip optional whitespace/newlines after opening delimiter
-            if (startDelimiter === '\\[') {
-                while (j < text.length && /\s/.test(text[j])) {
-                    j++;
-                }
-            } else if (startDelimiter === '\\(') {
-                while (j < text.length && text[j] === ' ') {
-                    j++;
-                }
-            }
-
-            let contentStart = j; // Start position of the content
-
-            // Search for the closing delimiter
-            let contentEnd = null;
-            let k;  // Declare k here
-            while (j < text.length) {
-                k = j;  // Assign to k inside the loop
-
-                // Before checking for endDelimiter, skip optional whitespace/newlines before it
-                if (endDelimiter === '\\]') {
-                    while (k < text.length && /\s/.test(text[k])) {
-                        k++;
+                // Skip optional whitespace/newlines after opening delimiter
+                if (startDelimiter === '\\[') {
+                    while (j < text.length && /\s/.test(text[j])) {
+                        j++;
                     }
-                } else if (endDelimiter === '\\)') {
-                    while (k < text.length && text[k] === ' ') {
-                        k++;
+                } else if (startDelimiter === '\\(') {
+                    while (j < text.length && text[j] === ' ') {
+                        j++;
                     }
                 }
 
-                // Check for unescaped closing delimiter at position k
-                if (text.substr(k, endDelimiter.length) === endDelimiter && !isEscaped(text, k)) {
-                    contentEnd = j; // End position of the content (before skipped whitespace)
-                    break;
+                let contentStart = j; // Start position of the content
+
+                // Search for the closing delimiter
+                let contentEnd = null;
+                let k; // Declare k here
+                while (j < text.length) {
+                    k = j; // Assign to k inside the loop
+
+                    // Before checking for endDelimiter, skip optional whitespace/newlines before it
+                    if (endDelimiter === '\\]') {
+                        while (k < text.length && /\s/.test(text[k])) {
+                            k++;
+                        }
+                    } else if (endDelimiter === '\\)') {
+                        while (k < text.length && text[k] === ' ') {
+                            k++;
+                        }
+                    }
+
+                    // Check for unescaped closing delimiter at position k
+                    if (text.substr(k, endDelimiter.length) === endDelimiter && !isEscaped(text, k)) {
+                        contentEnd = j; // End position of the content (before skipped whitespace)
+                        break;
+                    } else {
+                        j++;
+                    }
+                }
+
+                if (contentEnd !== null) {
+                    // Found matching closing delimiter
+                    const content = text.substring(contentStart, contentEnd);
+                    result += replacementDelimiter + content + replacementDelimiter;
+                    // Move i to after the closing delimiter and any skipped whitespace
+                    i = k + endDelimiter.length;
                 } else {
-                    j++;
+                    // No matching closing delimiter, copy the opening delimiter and move on
+                    result += text[i];
+                    i++;
                 }
-            }
-
-            if (contentEnd !== null) {
-                // Found matching closing delimiter
-                const content = text.substring(contentStart, contentEnd);
-                result += replacementDelimiter + content + replacementDelimiter;
-                // Move i to after the closing delimiter and any skipped whitespace
-                i = k + endDelimiter.length;
             } else {
-                // No matching closing delimiter, copy the opening delimiter and move on
                 result += text[i];
                 i++;
             }
-        } else {
-            result += text[i];
-            i++;
         }
+
+        // Set the corrected text back to the editor
+        editorText.value = result;
     }
-
-    // Set the corrected text back to the editor
-    editorText.value = result;
-}
-
-
-
-
 
     function trimListItemsBeforeColon() {
         // Get the checkbox element
@@ -525,7 +556,7 @@ function correctLatex() {
         correctLists();
         removeTabIndent();
         correctLines();
-         correctLatex() ;
+        correctLatex();
     });
     replaceButton.addEventListener("click", replaceTextFunction);
     undoButton.addEventListener("click", undo);
