@@ -51,7 +51,7 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: June 11, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: October 10, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="services">Services</h2>
             <p>A service in computing is a background process that performs specific tasks or offers various functionalities to other programs. These services typically communicate using methods such as sockets or inter-process communication (IPC). The primary purposes of a service include:</p>
@@ -90,18 +90,74 @@
 +--------------------------------------------------+</code></pre>
             </div>
             </p>
-            <h2 id="daemons">Daemons</h2>
+            <h3 id="daemons">Daemons</h3>
             <p>Daemons are specialized background processes designed to perform tasks or provide services autonomously. They are typically launched during the system's startup process but can also be initiated manually. Unlike interactive user programs, daemons operate independently of user control.</p>
             <p>Daemons are traditionally managed using <code>rc</code> (run commands) and <code>init</code> (initialization) scripts, commonly located in <code>/etc/rc.d</code> and <code>/etc/init.d</code> directories. On systems utilizing <code>init.d</code> scripts, you can list all services using <code>ls /etc/init.d</code>. Tools like <code>systemctl</code> (for SystemD-based systems), <code>service</code>, and <code>chkconfig</code> (for SysV-init systems) are used to manage these scripts.</p>
             <p>While <code>SystemD</code> has become the standard for service and daemon management in modern Unix-like systems, some older systems still rely on <code>rc</code> and <code>init</code> scripts. A program can function as both a service and a daemon, depending on its configuration and role.</p>
-            <h2 id="daemons-vs-services">Daemons vs services</h2>
+            <h3 id="daemons-vs-services">Daemons vs services</h3>
             <p>The distinction between daemons and services primarily lies in their roles and operational contexts. Daemons are designed for specific tasks or to provide particular services autonomously. They are generally system-started and can also be manually initiated, operating independently of direct user control, managed via <code>rc</code> and <code>init</code> scripts.</p>
             <p>In contrast, services are background processes that interface with other programs, often necessitating system-wide availability, starting with the system boot, and running continuously in the background. They are managed by starting, stopping, enabling, or disabling them as needed.</p>
-            <p>The fundamental difference lies in their operational scope and interaction: daemons typically perform dedicated tasks or services autonomously, while services facilitate interactions with other system components.</p>
-            <h2 id="managing-services">Managing Services</h2>
+            <p>
+            <table>
+                <tr>
+                    <td><strong>Aspect</strong></td>
+                    <td><strong>Daemon</strong></td>
+                    <td><strong>Service</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Definition</strong></td>
+                    <td>A background process running continuously, often from boot time.</td>
+                    <td>A software function provided to users or other programs.</td>
+                </tr>
+                <tr>
+                    <td><strong>Purpose</strong></td>
+                    <td>To handle tasks regularly, automatically, or on demand without user interaction.</td>
+                    <td>To perform a specific function for the system or other applications.</td>
+                </tr>
+                <tr>
+                    <td><strong>Run Model</strong></td>
+                    <td>Always running in the background (continuous).</td>
+                    <td>Can be continuous (always running) or on-demand.</td>
+                </tr>
+                <tr>
+                    <td><strong>Examples</strong></td>
+                    <td><code>httpd</code> (Apache web server), <code>sshd</code> (SSH server), <code>crond</code> (cron scheduler)</td>
+                    <td>Web server, database server, file-sharing service, etc.</td>
+                </tr>
+                <tr>
+                    <td><strong>How It's Managed</strong></td>
+                    <td>By the system (often via tools like <code>systemd</code>, <code>init.d</code>, etc.).</td>
+                    <td>By system administrators or service management tools.</td>
+                </tr>
+                <tr>
+                    <td><strong>Startup</strong></td>
+                    <td>Generally starts at boot time and runs until shutdown.</td>
+                    <td>May start at boot, run on demand, or be manually started/stopped.</td>
+                </tr>
+                <tr>
+                    <td><strong>Scope</strong></td>
+                    <td>Background operation; typically not interacted with directly by users.</td>
+                    <td>May be accessible to users or other programs as a function or API.</td>
+                </tr>
+                <tr>
+                    <td><strong>Naming</strong></td>
+                    <td>Often ends with "d" (e.g., <code>httpd</code>, <code>sshd</code>).</td>
+                    <td>Name is usually descriptive of the function (e.g., web server).</td>
+                </tr>
+                <tr>
+                    <td><strong>Relationship</strong></td>
+                    <td>Provides specific services by running in the background.</td>
+                    <td>Can be implemented as a daemon but not always required to be one.</td>
+                </tr>
+            </table>
+            </p>
+            <ul>
+                <li>A <strong>daemon</strong> describes <em>how</em> a task runs (continuously and in the background).</li>
+                <li>A <strong>service</strong> describes <em>what</em> a task provides (a specific function).</li>
+            </ul>
+            <p>Daemons are often services, but not all services need to be daemons.</p>
+            <h3 id="managing-services">Managing Services</h3>
             <p>Services, being integral background processes, offer functionalities or services to other programs or the system. Their management involves starting, stopping, enabling, or disabling them, with the specific commands and tools varying based on the service type and the operating system.</p>
-            <h3 id="enabling-and-disabling-services">Enabling and Disabling Services</h3>
-            <p>Enabling and disabling services are crucial tasks in system administration, determining whether a service starts automatically during the system boot process.</p>
             <h4 id="enabling-services">Enabling Services</h4>
             <p>To enable a service means to configure it to start automatically when the system boots up. This is particularly useful for services that are essential for system operations or that provide critical functionalities. The command to enable a service varies depending on the system's initialization system. Here are common examples:</p>
             <p>I. Using <code>chkconfig</code> for SysV-init systems:</p>
@@ -134,8 +190,6 @@
             </div>
             </p>
             <p>This command removes the symbolic link for the httpd.service, preventing it from starting at boot.</p>
-            <h3 id="starting-and-stopping-services">Starting and Stopping Services</h3>
-            <p>Apart from enabling or disabling services for automatic startup, you might need to manually start or stop a service for immediate effect, testing, or troubleshooting.</p>
             <h4 id="starting-services">Starting Services</h4>
             <p>To start a service means to initiate its operation immediately. This is often done after installing a new service or making configuration changes.</p>
             <p>I. Using <code>chkconfig</code> for SysV-init systems:</p>
@@ -168,7 +222,7 @@
             </div>
             </p>
             <p>This command instructs systemd to terminate the httpd service.</p>
-            <h3 id="checking-the-status-of-a-service">Checking the Status of a Service</h3>
+            <h4 id="checking-the-status-of-a-service">Checking the Status of a Service</h4>
             <p>The status of a service shows its current state and if it is active or not. Some common service statuses include:</p>
             <p>
             <table>
@@ -223,7 +277,7 @@
                 <pre><code class="language-shell">systemctl status httpd.service</code></pre>
             </div>
             </p>
-            <h3 id="checking-service-dependencies">Checking Service Dependencies</h3>
+            <h4 id="checking-service-dependencies">Checking Service Dependencies</h4>
             <p>Understanding service dependencies is crucial for effective system administration, particularly when managing startup sequences and troubleshooting service issues. To check whether a particular service is dependent on a specific target or another service, the <code>systemctl</code> command can be utilized in conjunction with <code>grep</code>. Here's how to do it:
                 Using this command sets Adam as the owner and assigns the "admins" group to the file.txt.</p>
             <p>
@@ -243,6 +297,275 @@
                 <li><strong>No Output</strong>: If there is no output, it implies that httpd does not depend on <code>multi-user.target</code>.</li>
             </ul>
             <p>Note that the syntax of the list-dependencies command and the target you specify may vary depending on the operating system and the version of systemctl being used.</p>
+            <h3 id="example-operating-ftp-server">Example: Operating FTP Server</h3>
+            <h3 id="1-installing-ftp-server-using-package-managers-rpm-and-yum-">1. <strong>Installing FTP Server using Package Managers (RPM and YUM)</strong></h3>
+            <h4 id="1-1-using-yum-package-manager"><strong>1.1. Using YUM Package Manager</strong></h4>
+            <p><strong>Step 1: Search for FTP packages</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">yum list | grep ftp</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">vsftpd.x86_64      3.0.2-29.el7   @base
+lftp.x86_64        4.4.8-9.el7    @base</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><code>vsftpd</code> is the FTP server package we are interested in.</li>
+                <li><code>lftp</code> is a command-line FTP client package.</li>
+                <li>The <code>@base</code> indicates that these packages are from the base repository.</li>
+            </ul>
+            <p><strong>Step 2: Install vsftpd (FTP server)</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">yum install vsftpd</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Dependencies Resolved
+================================================================================
+ Package             Arch               Version                  Repository
+================================================================================
+Installing:
+ vsftpd              x86_64             3.0.2-29.el7             base
+...
+Is this ok [y/d/N]: y</code></pre>
+            </div>
+            </p>
+            <p>It resolves dependencies and asks for confirmation to proceed with the installation. Press <code>y</code> to install.</p>
+            <h4 id="1-2-using-rpm-package-manager"><strong>1.2. Using RPM Package Manager</strong></h4>
+            <p><strong>Step 1: Search for FTP package using RPM</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">rpm -qa | grep ftp</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">vsftpd-3.0.2-29.el7.x86_64
+lftp-4.4.8-9.el7.x86_64</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>This lists already installed FTP-related packages.</li>
+                <li><code>vsftpd</code> is the FTP server; if it's listed, you don’t need to install it again.</li>
+            </ul>
+            <p><strong>Step 2: Install vsftpd using RPM</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">rpm -ivh vsftpd-3.0.2-29.el7.x86_64.rpm</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Preparing...                     ################################# [100%]
+Updating / installing...
+   1:vsftpd-3.0.2-29.el7         ################################# [100%]</code></pre>
+            </div>
+            </p>
+            <p>The package installs successfully if no errors appear.</p>
+            <h3 id="2-configuring-and-starting-the-ftp-server">2. <strong>Configuring and Starting the FTP Server</strong></h3>
+            <p><strong>Step 1: Edit the configuration file</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">vi /etc/vsftpd/vsftpd.conf</code></pre>
+            </div>
+            </p>
+            <p>Look for these key options:</p>
+            <ul>
+                <li><code>anonymous_enable=YES</code> or <code>NO</code> (depends on if you want anonymous access).</li>
+                <li><code>local_enable=YES</code> (to allow local users).</li>
+                <li><code>write_enable=YES</code> (if you want to allow file uploads).</li>
+            </ul>
+            <p><strong>Step 2: Enable and start vsftpd service</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">systemctl enable vsftpd
+systemctl start vsftpd</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output (Enable command)</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Created symlink from /etc/systemd/system/multi-user.target.wants/vsftpd.service to /usr/lib/systemd/system/vsftpd.service.</code></pre>
+            </div>
+            </p>
+            <p>The <code>systemctl enable</code> command sets the service to start on boot. The symlink confirmation indicates success.</p>
+            <p><strong>Expected Output (Start command)</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">No output (command completes silently)</code></pre>
+            </div>
+            </p>
+            <p>No output means the service started successfully. Use <code>systemctl status</code> to verify.</p>
+            <p><strong>Step 3: Check service status</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">systemctl status vsftpd</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">● vsftpd.service - Vsftpd ftp daemon
+   Loaded: loaded (/usr/lib/systemd/system/vsftpd.service; enabled; vendor preset: disabled)
+   Active: active (running) since Mon 2024-10-05 12:30:50 UTC; 5min ago</code></pre>
+            </div>
+            </p>
+            <p><strong>Interpretation</strong>:
+                - <code>Active: active (running)</code> indicates that the FTP service is running.</p>
+            <h3 id="3-checking-on-which-port-ftp-operates">3. <strong>Checking on Which Port FTP Operates</strong></h3>
+            <p><strong>Step 1: Check the port being used</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">netstat -tulnp | grep ftp</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">tcp   0  0 0.0.0.0:21     0.0.0.0:*       LISTEN      1234/vsftpd
+tcp6  0  0 :::21          :::*            LISTEN      1234/vsftpd</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>This shows that the FTP server is listening on port <code>21</code> (the standard FTP port).</li>
+                <li><code>1234</code> is the process ID (PID) of the vsftpd service.</li>
+                <li><code>LISTEN</code> means it’s actively waiting for incoming connections.</li>
+            </ul>
+            <h3 id="4-checking-if-the-port-is-free">4. <strong>Checking if the Port is Free</strong></h3>
+            <p><strong>Step 1: Check if port 21 is in use</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">netstat -an | grep 21</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">tcp   0  0 0.0.0.0:21     0.0.0.0:*       LISTEN</code></pre>
+            </div>
+            </p>
+            <p>If you see <code>LISTEN</code> on port <code>21</code>, it means the port is in use by FTP. If there's no output, the port is free.</p>
+            <p><strong>Alternative:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">ss -an | grep 21</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">LISTEN     0      100    0.0.0.0:21      0.0.0.0:*</code></pre>
+            </div>
+            </p>
+            <h3 id="5-testing-the-ftp-server">5. <strong>Testing the FTP Server</strong></h3>
+            <p><strong>Step 1: Verify that the FTP service is running</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">ps -ef | grep vsftpd</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">root     1234     1  0 12:30 ?        00:00:00 /usr/sbin/vsftpd /etc/vsftpd/vsftpd.conf</code></pre>
+            </div>
+            </p>
+            <p>This output shows that vsftpd is running with PID <code>1234</code>.</p>
+            <p><strong>Step 2: Test FTP connection on localhost</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">ftp localhost</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Connected to localhost (127.0.0.1).
+220 (vsFTPd 3.0.2)
+Name (localhost:user):</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>The <code>220 (vsFTPd 3.0.2)</code> message indicates the FTP server is ready.</li>
+                <li>You can enter a username to continue, or test anonymous access with <code>anonymous</code>.</li>
+            </ul>
+            <p><strong>Step 3: Test FTP connection from another machine</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">ftp &lt;server_ip&gt;</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">Connected to &lt;server_ip&gt;.
+220 (vsFTPd 3.0.2)
+Name (&lt;server_ip&gt;:user):</code></pre>
+            </div>
+            </p>
+            <p><strong>Interpretation</strong>:
+                - This output shows that the FTP server is accessible from the network.</p>
+            <p><strong>Step 4: Upload and download test files</strong>
+                1. <strong>Upload file</strong>:</p>
+            <p>CODE_BLOCK_PLACEHOLDER
+                <strong>Expected Output</strong>:
+            </p>
+            <p>
+            <div>
+                <pre><code class="language-bash">put testfile.txt</code></pre>
+            </div>
+            </p>
+            <p><strong>Interpretation</strong>: The file <code>testfile.txt</code> was successfully uploaded.</p>
+            <ol>
+                <li><strong>Download file</strong>:</li>
+            </ol>
+            <p>CODE_BLOCK_PLACEHOLDER
+                <strong>Expected Output</strong>:
+            </p>
+            <p>
+            <div>
+                <pre><code class="language-bash">200 PORT command successful.
+150 Ok to send data.
+226 Transfer complete.</code></pre>
+            </div>
+            </p>
+            <p><strong>Interpretation</strong>: The file was successfully downloaded.</p>
+            <p><strong>Step 5: Exit the FTP session</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">get testfile.txt</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">200 PORT command successful.
+150 Opening BINARY mode data connection.
+226 Transfer complete.</code></pre>
+            </div>
+            </p>
+            <h3 id="6-check-ftp-server-logs">6. <strong>Check FTP Server Logs</strong></h3>
+            <p>
+            <div>
+                <pre><code class="language-bash">bye</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">221 Goodbye.</code></pre>
+            </div>
+            </p>
+            <p>This shows connection and file transfer logs, which can be helpful for debugging.</p>
             <h2 id="creating-a-custom-service-with-systemd">Creating a Custom Service with SystemD</h2>
             <p>Creating a custom service in SystemD involves writing a service unit file. This file is a configuration script that provides instructions to SystemD on how to manage and execute the service. These scripts are typically placed in the <code>/etc/systemd/system/</code> directory. A service script is divided into several sections, each serving a specific purpose.</p>
             <h3 id="common-sections-in-a-service-script">Common Sections in a Service Script</h3>
@@ -262,15 +585,7 @@
             <p>Below is an example of a basic service script. This script configures SystemD to run a specific executable file at startup:</p>
             <p>
             <div>
-                <pre><code class="language-systemd">[Unit]
-Description=Sample Script Service
-
-[Service]
-Type=idle
-ExecStart=/valid/path/to/an/executable/file
-
-[Install]
-WantedBy=multi-user.target</code></pre>
+                <pre><code class="language-bash">tail -f /var/log/vsftpd.log</code></pre>
             </div>
             </p>
             <p>This script includes:</p>
@@ -281,7 +596,7 @@ WantedBy=multi-user.target</code></pre>
                 <li><code>WantedBy=multi-user.target</code>: Specifies that the service should be started under the <code>multi-user.target</code>, which is a standard target for creating a multi-user environment.</li>
             </ul>
             <p>You can read more about targets <a href="https://github.com/djeada/Linux-Notes/blob/main/notes/system_startup.md">here</a>.</p>
-            <h3 id="additional-notes">Additional Notes</h3>
+            <h4 id="additional-notes">Additional Notes</h4>
             <p>After creating or modifying a service script, use <code>systemctl daemon-reload</code> to reload the SystemD configuration and <code>systemctl enable [service-name].service</code> to enable the service.</p>
             <p>In the context of SystemD service management, <code>[service-name]</code> refers to the name of your service unit file, minus the <code>.service</code> extension. It's a unique identifier for your service within the SystemD framework. When you create a custom service script:</p>
             <ol>
@@ -294,7 +609,7 @@ WantedBy=multi-user.target</code></pre>
                 <li>To start the service: <code>systemctl start my_custom_service.service</code></li>
                 <li>To check the service status: <code>systemctl status my_custom_service.service</code></li>
             </ul>
-            <h2 id="challenges">Challenges</h2>
+            <h3 id="challenges">Challenges</h3>
             <ol>
                 <li>Use SystemD to list all timers and determine which corresponding services are enabled on your system.</li>
                 <li>Install and configure a DHCP server using the <code>isc-dhcp-server</code> package. This service should be set up to automatically provide network configuration to client devices.</li>
@@ -309,35 +624,45 @@ WantedBy=multi-user.target</code></pre>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
             <ol>
-                <li><a href="#services">Services</a></li>
-                <li><a href="#daemons">Daemons</a></li>
-                <li><a href="#daemons-vs-services">Daemons vs services</a></li>
-                <li><a href="#managing-services">Managing Services</a>
+                <li><a href="#services">Services</a>
                     <ol>
-                        <li><a href="#enabling-and-disabling-services">Enabling and Disabling Services</a>
+                        <li><a href="#daemons">Daemons</a></li>
+                        <li><a href="#daemons-vs-services">Daemons vs services</a></li>
+                        <li><a href="#managing-services">Managing Services</a>
                             <ol>
                                 <li><a href="#enabling-services">Enabling Services</a></li>
                                 <li><a href="#disabling-services">Disabling Services</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#starting-and-stopping-services">Starting and Stopping Services</a>
-                            <ol>
                                 <li><a href="#starting-services">Starting Services</a></li>
                                 <li><a href="#stopping-services">Stopping Services</a></li>
+                                <li><a href="#checking-the-status-of-a-service">Checking the Status of a Service</a></li>
+                                <li><a href="#checking-service-dependencies">Checking Service Dependencies</a></li>
                             </ol>
                         </li>
-                        <li><a href="#checking-the-status-of-a-service">Checking the Status of a Service</a></li>
-                        <li><a href="#checking-service-dependencies">Checking Service Dependencies</a></li>
+                        <li><a href="#example-operating-ftp-server">Example: Operating FTP Server</a></li>
+                        <li><a href="#1-installing-ftp-server-using-package-managers-rpm-and-yum-">1. Installing FTP Server using Package Managers (RPM and YUM)</a>
+                            <ol>
+                                <li><a href="#1-1-using-yum-package-manager">1.1. Using YUM Package Manager</a></li>
+                                <li><a href="#1-2-using-rpm-package-manager">1.2. Using RPM Package Manager</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#2-configuring-and-starting-the-ftp-server">2. Configuring and Starting the FTP Server</a></li>
+                        <li><a href="#3-checking-on-which-port-ftp-operates">3. Checking on Which Port FTP Operates</a></li>
+                        <li><a href="#4-checking-if-the-port-is-free">4. Checking if the Port is Free</a></li>
+                        <li><a href="#5-testing-the-ftp-server">5. Testing the FTP Server</a></li>
+                        <li><a href="#6-check-ftp-server-logs">6. Check FTP Server Logs</a></li>
                     </ol>
                 </li>
                 <li><a href="#creating-a-custom-service-with-systemd">Creating a Custom Service with SystemD</a>
                     <ol>
                         <li><a href="#common-sections-in-a-service-script">Common Sections in a Service Script</a></li>
-                        <li><a href="#example-of-a-simple-service-script">Example of a Simple Service Script</a></li>
-                        <li><a href="#additional-notes">Additional Notes</a></li>
+                        <li><a href="#example-of-a-simple-service-script">Example of a Simple Service Script</a>
+                            <ol>
+                                <li><a href="#additional-notes">Additional Notes</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#challenges">Challenges</a></li>
                     </ol>
                 </li>
-                <li><a href="#challenges">Challenges</a></li>
             </ol>
             <div id="related-articles">
                 <h2>Related Articles</h2>
