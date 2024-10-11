@@ -51,7 +51,7 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: October 10, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: October 11, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="environment-modules">Environment Modules</h2>
             <p>Environment Modules is a powerful and flexible tool that enables dynamic modification of a user's environment via modulefiles. Each modulefile contains the information necessary to configure the shell for a specific application or version, allowing users to seamlessly switch between different software environments. This utility is essential in complex computing environments, such as high-performance computing (HPC) clusters, where managing multiple software packages and versions can be challenging.</p>
@@ -91,9 +91,10 @@ sudo dnf install environment-modules</code></pre>
                 <pre><code class="language-bash">sudo zypper install environment-modules</code></pre>
             </div>
             </p>
-            <h4 id="installing-from-source">Installing from Source</h4>
-            <p>If a package is not available for your distribution or you need a specific version, you can install Environment Modules from source:</p>
+            <h4 id="installing-environment-modules-from-source">Installing Environment Modules from Source</h4>
+            <p>If the Environment Modules package is not available through your operating system’s package manager, or if you require a specific version, you can install it directly from the source. This approach provides greater flexibility, particularly if you want to install a newer or custom version.</p>
             <p>I. <strong>Download the Latest Version:</strong></p>
+            <p>First, download the source code from the official Environment Modules repository on SourceForge. The following example uses <code>wget</code> to fetch version 4.7.1, but be sure to replace the URL with the latest version if needed:</p>
             <p>
             <div>
                 <pre><code class="language-bash">wget https://sourceforge.net/projects/modules/files/Modules/modules-4.7.1/modules-4.7.1.tar.gz
@@ -101,7 +102,13 @@ tar -xzf modules-4.7.1.tar.gz
 cd modules-4.7.1</code></pre>
             </div>
             </p>
+            <ul>
+                <li><code>wget</code> is a command-line tool used to download files from the internet.</li>
+                <li>The <code>tar -xzf</code> command extracts the downloaded <code>.tar.gz</code> archive, unzipping it into a directory named <code>modules-4.7.1</code>.</li>
+                <li><code>cd modules-4.7.1</code> changes to this directory, where the source code is located, preparing for the installation steps.</li>
+            </ul>
             <p>II. <strong>Configure and Install:</strong></p>
+            <p>After extracting the source, you’ll need to configure the build settings and then compile and install the software:</p>
             <p>
             <div>
                 <pre><code class="language-bash">./configure --prefix=/usr/local/modules
@@ -109,20 +116,29 @@ make
 sudo make install</code></pre>
             </div>
             </p>
+            <ul>
+                <li><code>./configure --prefix=/usr/local/modules</code> initiates the configuration process and specifies the installation prefix. By setting the <code>--prefix</code> option, you control where the software will be installed; in this case, <code>/usr/local/modules</code>. You can customize this path as needed.</li>
+                <li><code>make</code> compiles the source code, creating the binaries that will be installed. This step may take a few minutes depending on your system.</li>
+                <li><code>sudo make install</code> installs the compiled software to the specified prefix directory. This command requires <code>sudo</code> because it installs files in system directories that need root privileges.</li>
+            </ul>
             <p>III. <strong>Configure Shell Initialization:</strong></p>
-            <p>Add the following line to your shell initialization file (e.g., <code>~/.bashrc</code>):</p>
+            <p>To make the <code>module</code> command available in your shell, you need to add a line to your shell initialization file. This line loads the Environment Modules system each time you open a new shell session:</p>
             <p>
             <div>
-                <pre><code class="language-bash">source /usr/local/modules/init/bash</code></pre>
+                <pre><code class="language-bash">echo "source /usr/local/modules/init/bash" &gt;&gt; ~/.bashrc</code></pre>
             </div>
             </p>
-            <p>Replace <code>bash</code> with your shell if different (e.g., <code>zsh</code>, <code>tcsh</code>).</p>
-            <p>After installation, you may need to log out and log back in or source your shell's configuration file:</p>
+            <ul>
+                <li>This command appends the <code>source</code> line to your <code>~/.bashrc</code> file, ensuring the modules system is initialized whenever you start a new shell.</li>
+                <li>Adjust <code>bash</code> in the path if you use a different shell, such as <code>zsh</code> or <code>tcsh</code>. For example, if you use <code>zsh</code>, the line would be: <code>source /usr/local/modules/init/zsh</code>.</li>
+            </ul>
+            <p>To apply these changes immediately, either log out and back in or reload your shell configuration:</p>
             <p>
             <div>
                 <pre><code class="language-bash">source ~/.bashrc</code></pre>
             </div>
             </p>
+            <p>This command applies the new configuration without requiring a logout, so you can start using Environment Modules right away. Now you should be able to run the <code>module</code> command and manage software modules as needed.</p>
             <h3 id="working-with-environment-module-files">Working with Environment Module Files</h3>
             <p>Modulefiles are scripts written in the Tcl language that define how to modify the environment for a specific application. They are typically stored in directories specified by the <code>MODULEPATH</code> environment variable, such as <code>/usr/share/modules/modulefiles</code> or <code>/etc/modulefiles</code>.</p>
             <h4 id="example-modulefile-directory">Example Modulefile Directory</h4>
@@ -160,27 +176,43 @@ sudo make install</code></pre>
             </p>
             <p>This structure provides organization and makes it easy to manage multiple versions of different software using Environment Modules. Each application has its own directory under <code>/etc/modulefiles</code>, and within those directories, version-specific modulefiles are stored.</p>
             <h4 id="creating-modulefile-directories">Creating Modulefile Directories</h4>
+            <p>To organize your modulefiles, it’s a good practice to create a directory structure that reflects the software you’re managing. This makes it easier to maintain and locate modulefiles as your collection grows.</p>
             <p>I. <strong>Create a Directory for Your Application:</strong></p>
+            <p>Use the following command to create a new directory for your application within the standard modulefile path:</p>
             <p>
             <div>
                 <pre><code class="language-bash">sudo mkdir -p /usr/share/modules/modulefiles/my_app</code></pre>
             </div>
             </p>
+            <ul>
+                <li>The <code>-p</code> flag tells <code>mkdir</code> to create the parent directories if they do not already exist, which helps avoid errors if any intermediate directories are missing.</li>
+                <li>Replace <code>my_app</code> with the name of your application, making the modulefile directory structure more organized.</li>
+            </ul>
             <p>II. <strong>Set Appropriate Permissions:</strong></p>
+            <p>To ensure that users can access the modulefiles, set the correct permissions on the new directory:</p>
             <p>
             <div>
                 <pre><code class="language-bash">sudo chmod 755 /usr/share/modules/modulefiles/my_app</code></pre>
             </div>
             </p>
+            <ul>
+                <li>The <code>755</code> permission setting allows the owner to read, write, and execute files in the directory, while others can read and execute files. This is usually suitable for shared module directories, as it allows others to access the files but not modify them.</li>
+            </ul>
             <h4 id="writing-a-modulefile-for-a-specific-version">Writing a Modulefile for a Specific Version</h4>
+            <p>A modulefile is a simple script that configures the environment for a particular software version. By setting paths and environment variables, a modulefile helps users load the necessary settings for your application without modifying their shell configuration files.</p>
             <p>I. <strong>Create the Modulefile:</strong></p>
+            <p>To create a modulefile, use a text editor to open a new file with the version number you want to manage:</p>
             <p>
             <div>
                 <pre><code class="language-bash">sudo nano /usr/share/modules/modulefiles/my_app/1.0</code></pre>
             </div>
             </p>
+            <ul>
+                <li>This command creates a file named <code>1.0</code> inside the <code>my_app</code> directory, representing version 1.0 of your application.</li>
+                <li>You can replace <code>1.0</code> with any version number, following this naming convention for each version of the software you want to manage with modules.</li>
+            </ul>
             <p>II. <strong>Edit the Modulefile:</strong></p>
-            <p>Here's an example modulefile for "my_app" version 1.0:</p>
+            <p>Here’s an example modulefile for <code>my_app</code> version 1.0. The file contains commands that configure the environment whenever the module is loaded.</p>
             <p>
             <div>
                 <pre><code class="language-tcl">#%Module1.0#####################################################################
@@ -209,125 +241,159 @@ setenv MY_APP_HOME $root
 conflict my_app</code></pre>
             </div>
             </p>
-            <p><strong>Explanation:</strong></p>
             <ul>
-                <li><code>proc ModulesHelp { }</code>: Defines the help message displayed with <code>module help my_app/1.0</code>.</li>
-                <li><code>module-whatis</code>: Provides a brief description shown by <code>module whatis my_app/1.0</code>.</li>
-                <li><code>set root</code>: Sets a variable for the installation directory of the application.</li>
-                <li><code>prepend-path</code>: Adds directories to environment variables.</li>
-                <li><code>setenv</code>: Sets a custom environment variable.</li>
-                <li><code>conflict</code>: Prevents loading multiple versions of "my_app" simultaneously.</li>
+                <li><strong>proc ModulesHelp { }</strong>: Defines a function that outputs a help message when the <code>module help my_app/1.0</code> command is run. This is useful for providing users with a brief description of what the module does.</li>
+                <li><strong>module-whatis</strong>: This command specifies a one-line summary of the module, displayed when users run <code>module whatis my_app/1.0</code>. It helps users quickly identify what this modulefile does.</li>
+                <li><strong>set root</strong>: The <code>set</code> command defines a variable (<code>root</code>) that points to the installation directory of your application. This makes the modulefile easier to update, as you can adjust the path in one place if needed.</li>
+                <li>The <strong>prepend-path</strong> command adds directories to various environment variables by placing a new directory at the beginning of each specified path. For example, it adds <code>$root/bin</code> to <code>PATH</code>, so the shell can locate the application's executables; <code>$root/lib</code> to <code>LD_LIBRARY_PATH</code>, enabling the linker to find the application’s libraries; and <code>$root/share/man</code> to <code>MANPATH</code>, allowing the <code>man</code> command to access the application’s manual pages.</li>
+                <li><strong>setenv</strong>: This command defines a custom environment variable <code>MY_APP_HOME</code>, which points to the root directory of the application. Users can reference this variable directly, which can be helpful for scripts or commands related to the application.</li>
+                <li><strong>conflict</strong>: This command prevents users from loading multiple versions of <code>my_app</code> at the same time. If a user tries to load a second version without first unloading the current one, the module system will display an error message. This ensures that only one version of the application is loaded, avoiding potential conflicts.</li>
             </ul>
             <p>III. <strong>Save and Exit:</strong></p>
-            <p>Press <code>Ctrl + O</code> to save and <code>Ctrl + X</code> to exit the editor.</p>
-            <h4 id="managing-the-modulepath-variable">Managing the MODULEPATH Variable</h4>
-            <p>To ensure that your modulefiles are found by the <code>module</code> command, you may need to update the <code>MODULEPATH</code> environment variable.</p>
+            <p>After editing the modulefile, save and close the editor:</p>
+            <ul>
+                <li>Press <code>Ctrl + O</code> to save your changes.</li>
+                <li>Press <code>Ctrl + X</code> to exit <code>nano</code>.</li>
+            </ul>
+            <h3 id="managing-the-modulepath-variable">Managing the MODULEPATH Variable</h3>
+            <p>The <code>MODULEPATH</code> environment variable tells the <code>module</code> command where to look for available modulefiles. By adjusting <code>MODULEPATH</code>, you can customize where the module system searches for additional modules, allowing you to access modulefiles that may not be in the default path.</p>
             <p>I. <strong>Add to MODULEPATH Temporarily:</strong></p>
+            <p>To add a directory to <code>MODULEPATH</code> for your current session only, use the <code>module use</code> command:</p>
             <p>
             <div>
                 <pre><code class="language-bash">module use /usr/share/modules/modulefiles</code></pre>
             </div>
             </p>
+            <p>This command tells the module system to include <code>/usr/share/modules/modulefiles</code> when searching for available modulefiles. However, it only applies to the current terminal session. Once you log out or close the terminal, the addition to <code>MODULEPATH</code> is reset.</p>
             <p>II. <strong>Add to MODULEPATH Permanently:</strong></p>
-            <p>Add the above line to your shell initialization file (e.g., <code>~/.bashrc</code>).</p>
-            <h3 id="usage">Usage</h3>
-            <p>The <code>module</code> command is the primary tool for interacting with Environment Modules. Below are common subcommands and examples of how to use them.</p>
+            <p>To make the change permanent, add the <code>module use</code> line to your shell initialization file, such as <code>~/.bashrc</code> (for Bash users). This ensures the path is always added when you open a new terminal:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">echo "module use /usr/share/modules/modulefiles" &gt;&gt; ~/.bashrc
+source ~/.bashrc</code></pre>
+            </div>
+            </p>
+            <h3 id="usage-of-the-module-command">Usage of the <code>module</code> Command</h3>
+            <p>The <code>module</code> command provides several subcommands to interact with environment modules. These subcommands allow you to load, unload, list, display, switch, and manage module configurations.</p>
             <h4 id="loading-modules">Loading Modules</h4>
             <p>I. <strong>Load a Module:</strong></p>
+            <p>To load a module and make its associated software available for use:</p>
             <p>
             <div>
                 <pre><code class="language-bash">module load my_app</code></pre>
             </div>
             </p>
-            <p>If multiple versions exist, and no default is set, you may need to specify the version:</p>
+            <p>This command loads the specified module and updates environment variables such as <code>PATH</code>, <code>LD_LIBRARY_PATH</code>, or other variables defined by the modulefile. If multiple versions of a module exist and no default is set, you may need to specify the desired version:</p>
             <p>
             <div>
                 <pre><code class="language-bash">module load my_app/1.0</code></pre>
             </div>
             </p>
             <p>II. <strong>Load Multiple Modules:</strong></p>
+            <p>To load multiple modules at once, separate each module name with a space:</p>
             <p>
             <div>
                 <pre><code class="language-bash">module load gcc/9.3.0 openmpi/4.0.5 my_app/1.0</code></pre>
             </div>
             </p>
+            <p>This example loads the GCC compiler, the Open MPI library, and <code>my_app</code>. Modules are loaded in the order specified, which can be important if later modules depend on those loaded earlier.</p>
             <h4 id="unloading-modules">Unloading Modules</h4>
             <p>I. <strong>Unload a Module:</strong></p>
+            <p>To remove a module from your environment and reset any associated environment variables:</p>
             <p>
             <div>
                 <pre><code class="language-bash">module unload my_app</code></pre>
             </div>
             </p>
+            <p>This command removes the specified module's changes from the environment, effectively "unloading" it.</p>
             <p>II. <strong>Unload Multiple Modules:</strong></p>
+            <p>You can also unload multiple modules at once by listing them with spaces:</p>
             <p>
             <div>
                 <pre><code class="language-bash">module unload gcc openmpi my_app</code></pre>
             </div>
             </p>
+            <p>This is useful for clearing several modules without removing all loaded modules.</p>
             <h4 id="listing-modules">Listing Modules</h4>
             <p>I. <strong>List Loaded Modules:</strong></p>
+            <p>To view a list of all currently loaded modules:</p>
             <p>
             <div>
                 <pre><code class="language-bash">module list</code></pre>
             </div>
             </p>
+            <p>This command displays the names and versions of each module currently loaded into your environment.</p>
             <p>II. <strong>List Available Modules:</strong></p>
+            <p>To see a list of all modules available for loading, use:</p>
             <p>
             <div>
                 <pre><code class="language-bash">module avail</code></pre>
             </div>
             </p>
-            <p>To list modules matching a pattern:</p>
+            <p>If you want to filter the results, you can specify part of a module name or a pattern:</p>
             <p>
             <div>
                 <pre><code class="language-bash">module avail my_app</code></pre>
             </div>
             </p>
+            <p>This command will show only those modules that match <code>my_app</code>.</p>
             <h4 id="displaying-module-information">Displaying Module Information</h4>
             <p>I. <strong>Show Module Details:</strong></p>
+            <p>To view detailed information about a specific module, including the environment variables it modifies:</p>
             <p>
             <div>
                 <pre><code class="language-bash">module show my_app/1.0</code></pre>
             </div>
             </p>
+            <p>This command displays the modulefile’s contents and how it affects your environment, helping you understand what it changes when loaded.</p>
             <p>II. <strong>Get Help for a Module:</strong></p>
+            <p>Some modules include a help message to provide additional usage information. To access this help:</p>
             <p>
             <div>
                 <pre><code class="language-bash">module help my_app/1.0</code></pre>
             </div>
             </p>
             <h4 id="switching-between-modules">Switching Between Modules</h4>
+            <p>If you want to replace one version of a module with another, you can use <code>module switch</code>:</p>
             <p>
             <div>
                 <pre><code class="language-bash">module switch my_app/1.0 my_app/2.0</code></pre>
             </div>
             </p>
+            <p>This command unloads the first module and immediately loads the second, effectively switching between versions.</p>
             <h4 id="purging-modules">Purging Modules</h4>
+            <p>The <code>module purge</code> command removes all loaded modules from your environment:</p>
             <p>
             <div>
                 <pre><code class="language-bash">module purge</code></pre>
             </div>
             </p>
-            <p>Use this command with caution, as it will remove all currently loaded modules.</p>
+            <p>This is useful when you need a clean environment but should be used with caution, as it will unload every loaded module, including those you may still need.</p>
             <h4 id="saving-and-restoring-module-sets">Saving and Restoring Module Sets</h4>
             <p>I. <strong>Save Current Module Set:</strong></p>
+            <p>To save your current set of loaded modules, use:</p>
             <p>
             <div>
                 <pre><code class="language-bash">module save my_default_modules</code></pre>
             </div>
             </p>
+            <p>This creates a named set of modules that you can reload later, making it easy to return to a specific configuration.</p>
             <p>II. <strong>Restore Module Set:</strong></p>
+            <p>To reload a saved module set, use:</p>
             <p>
             <div>
                 <pre><code class="language-bash">module restore my_default_modules</code></pre>
             </div>
             </p>
+            <p>This command reloads all the modules saved under the specified name, allowing you to quickly set up your environment.</p>
             <p>III. <strong>List Saved Module Sets:</strong></p>
+            <p>To view a list of all saved module sets:</p>
             <p>
             <div>
                 <pre><code class="language-bash">module savelist</code></pre>
             </div>
             </p>
+            <p>This displays the names of all saved sets, helping you remember what configurations you’ve saved for later use.</p>
             <h3 id="example-switching-between-python-versions">Example: Switching Between Python Versions</h3>
             <p>Environment Modules is especially useful when you need to switch between different versions of the same software. For example, you may need to switch between Python 2.7 and Python 3.8 for different projects. The steps below illustrate how you can use Environment Modules to handle this task.</p>
             <h4 id="i-create-a-directory-for-python-modulefiles">I. Create a directory for Python modulefiles</h4>
@@ -542,7 +608,7 @@ set ModulesVersion "1.0"</code></pre>
                             <li><a href="#debian-based-systems-e-g-ubuntu-">Debian-based Systems (e.g., Ubuntu)</a></li>
                             <li><a href="#red-hat-based-systems-e-g-centos-rhel-fedora-">Red Hat-based Systems (e.g., CentOS, RHEL, Fedora)</a></li>
                             <li><a href="#suse-based-systems-e-g-opensuse-">SUSE-based Systems (e.g., openSUSE)</a></li>
-                            <li><a href="#installing-from-source">Installing from Source</a></li>
+                            <li><a href="#installing-environment-modules-from-source">Installing Environment Modules from Source</a></li>
                         </ol>
                     </li>
                     <li><a href="#working-with-environment-module-files">Working with Environment Module Files</a>
@@ -550,10 +616,10 @@ set ModulesVersion "1.0"</code></pre>
                             <li><a href="#example-modulefile-directory">Example Modulefile Directory</a></li>
                             <li><a href="#creating-modulefile-directories">Creating Modulefile Directories</a></li>
                             <li><a href="#writing-a-modulefile-for-a-specific-version">Writing a Modulefile for a Specific Version</a></li>
-                            <li><a href="#managing-the-modulepath-variable">Managing the MODULEPATH Variable</a></li>
                         </ol>
                     </li>
-                    <li><a href="#usage">Usage</a>
+                    <li><a href="#managing-the-modulepath-variable">Managing the MODULEPATH Variable</a></li>
+                    <li><a href="#usage-of-the-module-command">Usage of the module Command</a>
                         <ol>
                             <li><a href="#loading-modules">Loading Modules</a></li>
                             <li><a href="#unloading-modules">Unloading Modules</a></li>
