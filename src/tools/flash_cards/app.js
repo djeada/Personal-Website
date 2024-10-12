@@ -24,13 +24,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const flipButton = document.getElementById('flipButton');
     const knowButton = document.getElementById('knowButton');
     const nextButton = document.getElementById('nextButton');
-    const shuffleAllButton = document.getElementById('shuffleAllButton');
+    const shuffleAllButton = document.getElementById('shuffleAllButton'); // Single shuffle button for all
     const questionsTableBody = document.getElementById('questionsTable').querySelector('tbody');
 
     let currentCategory = null;
     let currentSubcategories = new Set();
     let cards = [];
-    let currentCardIndex = -1;
+    let currentCardIndex = 0;
     let cardStatus = [];
 
     const proxyUrl = 'https://api.allorigins.win/get?url=';
@@ -132,12 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         cardStatus = Array(cards.length).fill(true);
-        let nextIndex = getNextActiveCardIndex(-1);
-        if (nextIndex !== null) {
-            currentCardIndex = nextIndex;
-        } else {
-            currentCardIndex = -1;
-        }
+        currentCardIndex = 0;
         showCard();
         populateQuestionsTable();
     };
@@ -148,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 subcategory.cards = shuffleArray(subcategory.cards);
             }
         });
-        filterCards();
+        filterCards(); // Refresh the cards with the new shuffled order
     };
 
     const shuffleArray = (array) => {
@@ -159,37 +154,24 @@ document.addEventListener('DOMContentLoaded', () => {
         return array;
     };
 
-    const getNextActiveCardIndex = (startIndex) => {
-        if (cards.length === 0) return null;
-
-        let index = startIndex;
-        let initialIndex = startIndex;
-        let found = false;
+    const showCard = () => {
+        let initialIndex = currentCardIndex;
+        let cardFound = false;
 
         do {
-            index = (index + 1) % cards.length;
-            if (cardStatus[index]) {
-                found = true;
+            if (cardStatus[currentCardIndex]) {
+                cardFound = true;
                 break;
             }
-        } while (index !== initialIndex);
+            currentCardIndex = (currentCardIndex + 1) % cards.length;
+        } while (currentCardIndex !== initialIndex);
 
-        return found ? index : null;
-    };
-
-    const showCard = () => {
-        if (cards.length === 0 || currentCardIndex === -1) {
-            flashcardFront.innerHTML = '<p>No cards available</p>';
+        if (!cardFound) {
+            flashcardFront.innerHTML = '<p>No more cards available</p>';
             flashcardBack.innerHTML = '';
-            return;
-        }
-
-        if (cardStatus[currentCardIndex]) {
+        } else {
             flashcardFront.innerHTML = `<p>${cards[currentCardIndex].front}</p>`;
             flashcardBack.innerHTML = `<p>${cards[currentCardIndex].back}</p>`;
-        } else {
-            flashcardFront.innerHTML = '<p>No more active cards available</p>';
-            flashcardBack.innerHTML = '';
         }
 
         flashcard.classList.remove('flipped');
@@ -218,6 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             indexCell.textContent = index + 1;
+            // Using innerHTML to render HTML content in the question and subcategory cells
             questionCell.innerHTML = card.front;
             subcategoryCell.innerHTML = card.subcategory;
             statusCell.appendChild(checkbox);
@@ -228,6 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
             questionsTableBody.appendChild(row);
         });
     };
+
 
     categorySelect.addEventListener('change', (event) => {
         loadCategoryData(event.target.value);
@@ -240,34 +224,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     knowButton.addEventListener('click', () => {
-        if (cards.length > 0 && currentCardIndex !== -1) {
+        if (cards.length > 0) {
             cardStatus[currentCardIndex] = false;
             populateQuestionsTable();
-            let nextIndex = getNextActiveCardIndex(currentCardIndex);
-            if (nextIndex !== null) {
-                currentCardIndex = nextIndex;
-                showCard();
-            } else {
-                currentCardIndex = -1;
-                flashcardFront.innerHTML = '<p>No more active cards available</p>';
-                flashcardBack.innerHTML = '';
-            }
+            showCard();
         }
     });
 
     nextButton.addEventListener('click', () => {
-        if (cards.length > 0 && currentCardIndex !== -1) {
-            let nextIndex = getNextActiveCardIndex(currentCardIndex);
-            if (nextIndex !== null) {
-                currentCardIndex = nextIndex;
-                showCard();
-            } else {
-                console.log('No more active cards available.');
-            }
+        if (cards.length > 0) {
+            let initialIndex = currentCardIndex;
+            do {
+                currentCardIndex = (currentCardIndex + 1) % cards.length;
+            } while (!cardStatus[currentCardIndex] && currentCardIndex !== initialIndex);
+
+            showCard();
         }
     });
 
-    shuffleAllButton.addEventListener('click', shuffleAll);
+    shuffleAllButton.addEventListener('click', shuffleAll); // Single event listener for shuffling
 
     loadCategories();
 });
