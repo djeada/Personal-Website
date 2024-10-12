@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const proxyUrl = 'https://api.allorigins.win/get?url=';
 
     const fetchJson = async (url) => {
+        document.getElementById('loadingSpinner').style.display = 'block';
         try {
             const response = await fetch(proxyUrl + encodeURIComponent(url));
             const data = await response.json();
@@ -46,10 +47,14 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error fetching JSON data:', error);
             return null;
+        } finally {
+            document.getElementById('loadingSpinner').style.display = 'none';
         }
     };
 
+
     const loadCategories = async () => {
+        document.getElementById('loadingSpinner').style.display = 'block';
         const categoriesUrl = 'https://adamdjellouli.com/tools/flash_cards/categories.json';
         const categories = await fetchJson(categoriesUrl);
 
@@ -65,13 +70,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     loadCategoryData(category);
                 }
             });
-
         } else {
             console.error('Invalid categories data:', categories);
         }
+        document.getElementById('loadingSpinner').style.display = 'none';
     };
 
+
     const loadCategoryData = async (category) => {
+        document.getElementById('loadingSpinner').style.display = 'block';
         const categoryUrl = `https://adamdjellouli.com/tools/flash_cards/${category}.json`;
         const data = await fetchJson(categoryUrl);
 
@@ -83,6 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             console.error('Invalid category data:', data);
         }
+        document.getElementById('loadingSpinner').style.display = 'none';
     };
 
     const populateSubcategories = () => {
@@ -134,20 +142,19 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const showCard = () => {
+        let initialIndex = currentCardIndex;
         let cardFound = false;
-        let checkedCards = cards.length;
 
-        while (checkedCards > 0) {
+        do {
             if (cardStatus[currentCardIndex]) {
                 cardFound = true;
                 break;
             }
             currentCardIndex = (currentCardIndex + 1) % cards.length;
-            checkedCards--;
-        }
+        } while (currentCardIndex !== initialIndex);
 
         if (!cardFound) {
-            flashcardFront.innerHTML = '<p>No cards available</p>';
+            flashcardFront.innerHTML = '<p>No more cards available</p>';
             flashcardBack.innerHTML = '';
         } else {
             flashcardFront.innerHTML = `<p>${cards[currentCardIndex].front}</p>`;
@@ -155,11 +162,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         flashcard.classList.remove('flipped');
-
-        // Apply resize after the text is added to the cards
         resizeText(flashcardFront);
         resizeText(flashcardBack);
     };
+
 
     const populateQuestionsTable = () => {
         questionsTableBody.innerHTML = '';
@@ -193,22 +199,16 @@ document.addEventListener('DOMContentLoaded', () => {
         loadCategoryData(event.target.value);
     });
 
-
-    // Apply resize on card load and when flipping
-    resizeText(flashcardFront);
-    resizeText(flashcardBack);
-
     flipButton.addEventListener('click', () => {
         const flashcard = document.getElementById('flashcard');
         flashcard.classList.toggle('flipped');
-        // Resize text on both sides after flipping
         resizeText(flashcardFront);
         resizeText(flashcardBack);
     });
 
     knowButton.addEventListener('click', () => {
         if (cards.length > 0) {
-            cardStatus[currentCardIndex] = false; // Mark current card as known
+            cardStatus[currentCardIndex] = false;
             populateQuestionsTable();
             showCard();
         }
@@ -216,7 +216,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     nextButton.addEventListener('click', () => {
         if (cards.length > 0) {
-            currentCardIndex = (currentCardIndex + 1) % cards.length;
+            let initialIndex = currentCardIndex;
+            do {
+                currentCardIndex = (currentCardIndex + 1) % cards.length;
+            } while (!cardStatus[currentCardIndex] && currentCardIndex !== initialIndex);
+
             showCard();
         }
     });
