@@ -1,19 +1,42 @@
-function resizeText(cardElement) {
-    let textElement = cardElement.querySelector('p');
+function resizeText(name) {
+    let cardElement = document.getElementById(name);
 
-    if (!textElement) {
-        console.error('Text element not found inside card:', cardElement);
+    // Check if the container exists
+    if (!cardElement) {
+        console.error('Container with id "flashcardBack" not found.');
         return;
     }
 
-    let fontSize = parseFloat(window.getComputedStyle(textElement, null).getPropertyValue('font-size'));
+    // Select all <p> elements within the card element
+    let textElements = cardElement.querySelectorAll('p');
+
+    // Check if there are any <p> elements to resize
+    if (textElements.length === 0) {
+        console.error('No text elements found inside #flashcardBack');
+        return;
+    }
+
+    // Get the initial font size from the first <p> element
+    let fontSize = parseFloat(window.getComputedStyle(textElements[0], null).getPropertyValue('font-size'));
     let targetFontSize = fontSize;
 
-    while (textElement.scrollHeight > cardElement.clientHeight * 0.8 && targetFontSize > 2) {
+    // Apply resizing logic to all <p> elements together
+    let totalHeight;
+    do {
+        // Set the font size for all <p> elements
+        textElements.forEach(textElement => {
+            textElement.style.fontSize = targetFontSize + 'px';
+        });
+
+        // Calculate the total height of all <p> elements
+        totalHeight = Array.from(textElements).reduce((acc, textElement) => acc + textElement.scrollHeight, 0);
+
+        // Decrease font size if the content is too tall
         targetFontSize -= 1;
-        textElement.style.fontSize = targetFontSize + 'px';
-    }
+    } while (totalHeight > cardElement.clientHeight * 0.8 && targetFontSize > 2);
 }
+
+
 
 document.addEventListener('DOMContentLoaded', () => {
     const categorySelect = document.getElementById('categorySelect');
@@ -175,8 +198,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         flashcard.classList.remove('flipped');
-        resizeText(flashcardFront);
-        resizeText(flashcardBack);
+        resizeText('flashcardBack');
+        resizeText('flashcardFront');
 
         if (window.MathJax) {
             MathJax.typesetPromise().catch((err) => console.error('MathJax rendering error:', err));
@@ -219,8 +242,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     flipButton.addEventListener('click', () => {
         flashcard.classList.toggle('flipped');
-        resizeText(flashcardFront);
-        resizeText(flashcardBack);
+        resizeText('flashcardBack');
+        resizeText('flashcardFront');
     });
 
     knowButton.addEventListener('click', () => {
