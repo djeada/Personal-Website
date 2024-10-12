@@ -183,8 +183,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-
-
     const populateQuestionsTable = () => {
         questionsTableBody.innerHTML = '';
         cards.forEach((card, index) => {
@@ -202,8 +200,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             indexCell.textContent = index + 1;
-            questionCell.textContent = card.front;
-            subcategoryCell.textContent = card.subcategory;
+            // Using innerHTML to render HTML content in the question and subcategory cells
+            questionCell.innerHTML = card.front;
+            subcategoryCell.innerHTML = card.subcategory;
             statusCell.appendChild(checkbox);
             row.appendChild(indexCell);
             row.appendChild(questionCell);
@@ -212,6 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
             questionsTableBody.appendChild(row);
         });
     };
+
 
     categorySelect.addEventListener('change', (event) => {
         loadCategoryData(event.target.value);
