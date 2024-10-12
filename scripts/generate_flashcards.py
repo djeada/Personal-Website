@@ -74,6 +74,9 @@ def markdown_to_html(text: str) -> str:
     # Code `code`
     text = re.sub(r"`(.*?)`", r"<code>\1</code>", text)
 
+    # Replace &lt; and &gt; with <code></code> around the content
+    text = re.sub(r"&lt;(.*?)&gt;", r"<code>\1</code>", text)
+
     # Headers # H1, ## H2, ### H3 (for simplicity, up to H3)
     text = re.sub(r"### (.*)", r"<h3>\1</h3>", text)
     text = re.sub(r"## (.*)", r"<h2>\1</h2>", text)

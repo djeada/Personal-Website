@@ -1,17 +1,14 @@
 function resizeText(cardElement) {
     let textElement = cardElement.querySelector('p');
 
-    // Ensure the text element exists before resizing
     if (!textElement) {
         console.error('Text element not found inside card:', cardElement);
         return;
     }
 
-    // Get the initial font size
     let fontSize = parseFloat(window.getComputedStyle(textElement, null).getPropertyValue('font-size'));
     let targetFontSize = fontSize;
 
-    // Apply resizing logic
     while (textElement.scrollHeight > cardElement.clientHeight * 0.8 && targetFontSize > 2) {
         targetFontSize -= 1;
         textElement.style.fontSize = targetFontSize + 'px';
@@ -27,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const flipButton = document.getElementById('flipButton');
     const knowButton = document.getElementById('knowButton');
     const nextButton = document.getElementById('nextButton');
+    const shuffleAllButton = document.getElementById('shuffleAllButton'); // Single shuffle button for all
     const questionsTableBody = document.getElementById('questionsTable').querySelector('tbody');
 
     let currentCategory = null;
@@ -52,7 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-
     const loadCategories = async () => {
         document.getElementById('loadingSpinner').style.display = 'block';
         const categoriesUrl = 'https://adamdjellouli.com/tools/flash_cards/categories.json';
@@ -61,8 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (categories && Array.isArray(categories)) {
             categories.forEach((category, index) => {
                 const option = document.createElement('option');
-                option.value = category; // Keep the original category as the value
-                option.textContent = category.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()); // Convert to title case for display
+                option.value = category;
+                option.textContent = category.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
                 categorySelect.appendChild(option);
 
                 if (index === 0) {
@@ -75,7 +72,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         document.getElementById('loadingSpinner').style.display = 'none';
     };
-
 
     const loadCategoryData = async (category) => {
         document.getElementById('loadingSpinner').style.display = 'block';
@@ -135,10 +131,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 })));
             }
         });
-        cardStatus = Array(cards.length).fill(true); // Initialize all statuses to true (unchecked)
+        cardStatus = Array(cards.length).fill(true);
         currentCardIndex = 0;
         showCard();
         populateQuestionsTable();
+    };
+
+    const shuffleAll = () => {
+        currentCategory.subcategories.forEach(subcategory => {
+            if (currentSubcategories.has(subcategory.name)) {
+                subcategory.cards = shuffleArray(subcategory.cards);
+            }
+        });
+        filterCards(); // Refresh the cards with the new shuffled order
+    };
+
+    const shuffleArray = (array) => {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
     };
 
     const showCard = () => {
@@ -164,7 +177,12 @@ document.addEventListener('DOMContentLoaded', () => {
         flashcard.classList.remove('flipped');
         resizeText(flashcardFront);
         resizeText(flashcardBack);
+
+        if (window.MathJax) {
+            MathJax.typesetPromise().catch((err) => console.error('MathJax rendering error:', err));
+        }
     };
+
 
 
     const populateQuestionsTable = () => {
@@ -200,7 +218,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     flipButton.addEventListener('click', () => {
-        const flashcard = document.getElementById('flashcard');
         flashcard.classList.toggle('flipped');
         resizeText(flashcardFront);
         resizeText(flashcardBack);
@@ -224,6 +241,8 @@ document.addEventListener('DOMContentLoaded', () => {
             showCard();
         }
     });
+
+    shuffleAllButton.addEventListener('click', shuffleAll); // Single event listener for shuffling
 
     loadCategories();
 });

@@ -51,7 +51,7 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: July 30, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: October 12, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="multithreading">Multithreading</h2>
             <p><strong>Multithreading</strong> refers to the capability of a CPU, or a single core within a multi-core processor, to execute multiple threads concurrently. A thread is the smallest unit of processing that can be scheduled by an operating system. In a multithreaded environment, a program, or process, can perform multiple tasks at the same time, as each thread runs in the same shared memory space. This can be useful for tasks that are IO-bound, as threads can be used to keep the CPU busy while waiting for IO operations to complete. However, because threads share the same memory, they must be carefully synchronized to avoid issues like race conditions, where two threads attempt to modify the same data concurrently, leading to unpredictable outcomes.</p>
@@ -101,19 +101,19 @@
             </ul>
             <h3 id="challenges-with-multithreading">Challenges with Multithreading</h3>
             <ul>
-                <li>Multithreading challenges arise because threads share state with one another, making communication simple but error-prone.</li>
-                <li>The most common challenge when dealing with multithreading is the data race.</li>
-                <li>Data race occurs when the result of a multithreaded program depends on the order in which threads are executed.</li>
-                <li>This happens because threads switch preemptively, meaning that you don't control when they switch, and a switch may occur at an inconvenient moment.</li>
-                <li>When multiple threads use the same resources, data race becomes increasingly dangerous.</li>
-                <li>Mutex and semaphore are mechanisms developed to prevent data race.</li>
+                <li>In multithreaded programs, threads share a <strong>common state</strong>, making communication straightforward but introducing risks when accessing shared resources.</li>
+                <li>One of the core challenges is managing <strong>data consistency</strong> across threads. Without proper synchronization, multiple threads can attempt to read or modify shared data simultaneously, leading to <strong>race conditions</strong>.</li>
+                <li>Efficient resource management is critical in multithreading, as threads share memory and processing power. <strong>Overhead</strong> from thread management, such as switching contexts and handling locks, can negate performance benefits if not managed well.</li>
+                <li>Managing <strong>shared memory</strong> is a significant challenge, as multiple threads accessing the same memory location can lead to inconsistencies unless properly synchronized with mechanisms like locks, mutexes, or semaphores.</li>
+                <li>The <strong>nondeterministic</strong> nature of multithreading complicates debugging and testing. Since thread scheduling by the operating system is unpredictable, errors may only appear sporadically, making them hard to identify and fix.</li>
+                <li>Balancing <strong>performance</strong> and thread safety is a critical consideration, as implementing safeguards like locks can prevent data corruption but also lead to delays and reduce parallelism benefits.</li>
             </ul>
             <h4 id="data-race">Data Race</h4>
             <ul>
-                <li>When a multithreaded program's result is dependent on the order in which the threads are executed, this situation is referred to as a race condition.</li>
-                <li>Race conditions happen because threads switch preemptively, and you don't control when the operating system makes the switch.</li>
-                <li>This is convenient since you don't have to manually code where the task should switch, but it requires presuming that a switch may occur at any moment.</li>
-                <li>Consider the following simple example: we have two functions, <em>funA()</em> and <em>funB()</em>, and <em>funB()</em> is dependent on the results of <em>funA()</em>. In a single-threaded program, you call the functions in the correct order:</li>
+                <li>A data race, or <strong>race condition</strong>, arises when the result of a multithreaded program depends on the sequence of thread execution, creating potential for errors and unpredictable results.</li>
+                <li>Since threads are <strong>preemptively switched</strong> by the operating system, control over when switching happens is out of the programmer's hands, increasing the chance of conflicts.</li>
+                <li>This can be convenient, as it removes the need for manual <strong>task-switching</strong> control, but it also means that a switch can happen at any moment, potentially disrupting program flow.</li>
+                <li>Consider an example with two functions, <em>funA()</em> and <em>funB()</em>, where <em>funB()</em> relies on the result of <em>funA()</em>. In a single-threaded program, these functions execute in order:</li>
             </ul>
             <p>
             <div>
@@ -122,11 +122,11 @@ funB()</code></pre>
             </div>
             </p>
             <ul>
-                <li>If these functions are delegated to separate threads, the solution will fail because you don't know which function will execute first, or if they will run in parallel, leading to improper software functioning.</li>
-                <li>Data race occurs when at least two concurrent threads access the same memory address, with at least one of them modifying it.</li>
-                <li>This can corrupt the memory, so crucial areas must be protected with locks.</li>
+                <li>However, if assigned to separate <strong>threads</strong>, the execution order becomes unpredictable, potentially leading to improper results if <em>funB()</em> runs before <em>funA()</em> completes.</li>
+                <li>A data race specifically occurs when two threads <strong>concurrently</strong> access the same memory location, with at least one modifying it, leading to the risk of memory <strong>corruption</strong>.</li>
+                <li>To prevent this, <strong>locks</strong> can be applied to critical sections, ensuring only one thread accesses specific memory at a time, thereby maintaining data integrity.</li>
             </ul>
-            <p>Analogy: Imagine a crowded restaurant kitchen where multiple chefs are working on the same dish at the same time, using the same ingredients and tools. If they are not coordinated properly, they might end up bumping into each other or accidentally using the same tool or ingredient at the same time, causing confusion and potentially ruining the dish. This is similar to what happens in a data race, where multiple threads are accessing the same memory location at the same time without proper synchronization, leading to unpredictable and potentially incorrect results.</p>
+            <p>Analogy: Imagine a busy kitchen where multiple chefs work on the same dish using shared tools and ingredients. Without coordination, they might interfere with each other, using the same tool or ingredient simultaneously, resulting in mistakes or confusion. Similarly, a data race happens when threads access shared memory without synchronization, leading to unpredictable outcomes and potential errors.</p>
             <p>
             <div>
                 <pre><code class="language-clike">#include &lt;iostream&gt;
