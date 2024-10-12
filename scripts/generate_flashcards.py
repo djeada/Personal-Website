@@ -1,11 +1,12 @@
 import json
 import re
 import requests
+import logging
+import markdown
 from pathlib import Path
 from multiprocessing import Pool
 from urllib.parse import urlparse, unquote
 from time import sleep
-import logging
 from typing import List, Dict, Tuple, Optional
 
 # Setup logging
@@ -13,6 +14,7 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+# Constants
 URLS = [
     {
         "url": "https://raw.githubusercontent.com/djeada/Frontend-Notes/main/notes/12_quizes.md",
@@ -41,13 +43,18 @@ URLS = [
 ]
 
 OUTPUT_DIR = Path("../src/tools/flash_cards")
-CATEGORIES = Path("../src/tools/flash_cards/categories.json")
+CATEGORIES_FILE = Path("../src/tools/flash_cards/categories.json")
 RETRY_LIMIT = 3
 TIMEOUT = 10
 FLASHCARD_PATTERN = re.compile(
     r"<details>\s*<summary>(.*?)</summary><br>\s*(.*?)\s*</details>", re.DOTALL
 )
 HEADER_PATTERN = re.compile(r"^(#{2,6})\s*(.+)$", re.MULTILINE)
+
+# Set this to True to enable verbose logging
+VERBOSE = False
+if VERBOSE:
+    logging.getLogger().setLevel(logging.DEBUG)
 
 
 def download_flashcards(url: str, retries: int = RETRY_LIMIT) -> Optional[str]:
@@ -65,42 +72,20 @@ def download_flashcards(url: str, retries: int = RETRY_LIMIT) -> Optional[str]:
 
 
 def markdown_to_html(text: str) -> str:
-    # Bold **text**
-    text = re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", text)
-
-    # Italics *text*
-    text = re.sub(r"\*(.*?)\*", r"<i>\1</i>", text)
-
-    # Code `code`
-    text = re.sub(r"`(.*?)`", r"<code>\1</code>", text)
-
-    # Replace &lt; and &gt; with <code></code> around the content
-    text = re.sub(r"&lt;(.*?)&gt;", r"<code>\1</code>", text)
-
-    # Headers # H1, ## H2, ### H3 (for simplicity, up to H3)
-    text = re.sub(r"### (.*)", r"<h3>\1</h3>", text)
-    text = re.sub(r"## (.*)", r"<h2>\1</h2>", text)
-    text = re.sub(r"# (.*)", r"<h1>\1</h1>", text)
-
-    # Links [text](url)
-    text = re.sub(r"\[(.*?)\]\((.*?)\)", r'<a href="\2">\1</a>', text)
-
-    # Lists - item or * item
-    text = re.sub(r"\n\s*-\s*(.*)", r"<li>\1</li>", text)
-    text = re.sub(r"\n\s*\*\s*(.*)", r"<li>\1</li>", text)
-    text = re.sub(r"(<li>.*?</li>)", r"<ul>\1</ul>", text, flags=re.S)
-
-    return text
+    # Use the markdown module for robust markdown to HTML conversion
+    html = markdown.markdown(text, extensions=["extra", "codehilite"])
+    return html
 
 
 def parse_flashcards(content: str) -> List[Dict[str, str]]:
-    return [
+    flashcards = [
         {
             "front": markdown_to_html(front.strip()),
-            "back": markdown_to_html(re.sub(r"\s+", " ", back.strip())),
+            "back": markdown_to_html(back.strip()),
         }
         for front, back in FLASHCARD_PATTERN.findall(content)
     ]
+    return deduplicate_cards(flashcards)
 
 
 def extract_subcategories_and_sections(content: str) -> List[Tuple[str, str]]:
@@ -128,16 +113,28 @@ def generate_filename_from_category(category: str) -> str:
     return f"{category.replace(' ', '_').lower()}.json"
 
 
+def deduplicate_cards(cards_list: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    seen = set()
+    unique_cards = []
+    for card in cards_list:
+        card_tuple = (card["front"], card["back"])
+        if card_tuple not in seen:
+            seen.add(card_tuple)
+            unique_cards.append(card)
+    return unique_cards
+
+
 def merge_flashcards(
     existing_data: Dict[str, List[Dict[str, str]]],
     new_data: Dict[str, List[Dict[str, str]]],
 ) -> Dict:
-    # Merge new flashcards into existing subcategories
+    # Merge and deduplicate flashcards into existing subcategories
     for subcategory, new_cards in new_data.items():
         if subcategory in existing_data:
-            existing_data[subcategory].extend(new_cards)
+            combined_cards = existing_data[subcategory] + new_cards
+            existing_data[subcategory] = deduplicate_cards(combined_cards)
         else:
-            existing_data[subcategory] = new_cards
+            existing_data[subcategory] = deduplicate_cards(new_cards)
     return existing_data
 
 
@@ -189,35 +186,10 @@ def group_cards_by_subcategory(
     return cards_by_subcategory if cards_by_subcategory else {fallback_subcategory: []}
 
 
-def process_url(url_info: Dict[str, str]) -> None:
-    url = url_info["url"]
-    category = url_info["category"]
-    content = download_flashcards(url)
-    if content:
-        fallback_subcategory = Path(unquote(urlparse(url).path)).stem.replace("_", " ")
-        cards_by_subcategory = group_cards_by_subcategory(content, fallback_subcategory)
-        output_filename = generate_filename_from_category(category)
-        save_to_json(cards_by_subcategory, category, OUTPUT_DIR / output_filename)
-
-
-def update_categories(categories: set) -> None:
-    def to_snake_case(s: str) -> str:
-        return re.sub(r"\W+", "_", s).strip("_").lower()
-
-    # Convert categories to lowercase and snake case
-    categories_list = [to_snake_case(category) for category in categories]
-
-    logging.info(f"Updating categories in {CATEGORIES}")
-
-    # Write the updated categories to the file
-    with open(CATEGORIES, "w", encoding="utf-8") as f:
-        json.dump(categories_list, f, indent=4, ensure_ascii=False)
-
-
-def process_category(urls_info: List[Dict[str, str]]) -> None:
+def process_category(urls_info: List[Dict[str, str]]) -> int:
     """Process all URLs for a single category."""
     if not urls_info:
-        return
+        return 0
 
     category = urls_info[0][
         "category"
@@ -226,9 +198,11 @@ def process_category(urls_info: List[Dict[str, str]]) -> None:
 
     output_filename = generate_filename_from_category(category)
     output_path = OUTPUT_DIR / output_filename
+    output_path.unlink(missing_ok=True)
 
     # Download and process flashcards for all URLs in this category
     all_cards_by_subcategory = {}
+    total_cards = 0
 
     for url_info in urls_info:
         url = url_info["url"]
@@ -248,6 +222,26 @@ def process_category(urls_info: List[Dict[str, str]]) -> None:
     # Save the accumulated flashcards to the JSON file
     save_to_json(all_cards_by_subcategory, category, output_path)
 
+    # Count total cards
+    for cards in all_cards_by_subcategory.values():
+        total_cards += len(cards)
+
+    return total_cards
+
+
+def update_categories(categories: set) -> None:
+    def to_snake_case(s: str) -> str:
+        return re.sub(r"\W+", "_", s).strip("_").lower()
+
+    # Convert categories to lowercase and snake case
+    categories_list = [to_snake_case(category) for category in categories]
+
+    logging.info(f"Updating categories in {CATEGORIES_FILE}")
+
+    # Write the updated categories to the file
+    with open(CATEGORIES_FILE, "w", encoding="utf-8") as f:
+        json.dump(categories_list, f, indent=4, ensure_ascii=False)
+
 
 def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -257,16 +251,21 @@ def main() -> None:
     category_url_map = {}
     for url_info in URLS:
         category = url_info["category"]
+        categories.add(category)
         if category not in category_url_map:
             category_url_map[category] = []
         category_url_map[category].append(url_info)
 
-    # Prepare category processing tasks for the pool
+    # Process each category and collect statistics
+    total_cards_processed = 0
     with Pool() as pool:
-        pool.map(process_category, category_url_map.values())
+        results = pool.map(process_category, category_url_map.values())
+
+    total_cards_processed = sum(results)
+    logging.info(f"Total cards processed: {total_cards_processed}")
 
     # Update categories in categories.json
-    update_categories(set(category_url_map.keys()))
+    update_categories(categories)
 
 
 if __name__ == "__main__":
