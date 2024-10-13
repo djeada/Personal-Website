@@ -60,6 +60,10 @@ const fetchWordList = (url, article) => fetch(proxyUrl + encodeURIComponent(url)
 });
 
 function loadWords() {
+    // Show loading spinner while loading the word lists
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    loadingSpinner.style.display = 'block';
+
     return Promise.all([
         fetchWordList('https://adamdjellouli.com/tools/der_die_das/der.txt', 'der'),
         fetchWordList('https://adamdjellouli.com/tools/der_die_das/die.txt', 'die'),
@@ -68,8 +72,12 @@ function loadWords() {
         if (derWords) wordLists['der'] = derWords.split('\n');
         if (dieWords) wordLists['die'] = dieWords.split('\n');
         if (dasWords) wordLists['das'] = dasWords.split('\n');
+    }).finally(() => {
+        // Hide the loading spinner after loading is complete
+        loadingSpinner.style.display = 'none';
     });
 }
+
 let baseSpeed = 0.0001;
 
 function resizeCanvas() {
@@ -294,6 +302,9 @@ function gameOver() {
 }
 
 function initGame() {
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    loadingSpinner.style.display = 'block'; // Show spinner during initialization
+
     isGameOver = false;
     score = 0;
     lives = 3;
@@ -303,8 +314,14 @@ function initGame() {
     lastWordTime = 0;
     correctWordsTable.innerHTML = '';
     incorrectWordsTable.innerHTML = '';
-    requestAnimationFrame(gameLoop);
+
+    // Run the first frame after loading is done
+    requestAnimationFrame(() => {
+        loadingSpinner.style.display = 'none'; // Hide spinner when initialization is complete
+        gameLoop();
+    });
 }
+
 
 function moveLeft() {
     if (currentWord) {
@@ -354,8 +371,15 @@ gameCanvas.addEventListener('touchstart', e => {
 window.addEventListener('keydown', handleKeyDown);
 window.addEventListener('resize', resizeCanvas);
 window.onload = function() {
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    loadingSpinner.style.display = 'block';
+
     resizeCanvas();
-    loadWords();
+    loadWords().then(() => {
+        initGame();
+    }).finally(() => {
+        loadingSpinner.style.display = 'none';
+    });
     initGame();
 
     // Update DOM element styles based on mode

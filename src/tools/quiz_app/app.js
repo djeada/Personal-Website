@@ -4,10 +4,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const reloadQuestionsButton = document.getElementById('reloadQuestionsButton');
     const quizContainer = document.getElementById('quizContainer');
     const submitButton = document.getElementById('submitButton');
-    const loadingMessage = document.createElement('div');
-    loadingMessage.id = 'loadingMessage';
-    loadingMessage.textContent = 'Loading...';
-    quizContainer.appendChild(loadingMessage);
 
     let currentCategory = null;
     let questions = [];
@@ -78,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const loadCategoryData = async (categoryName) => {
-        showLoadingMessage();
+        showLoadingMessage(); // Show spinner while loading
 
         if (categoryCache[categoryName]) {
             // Use cached data if available
@@ -89,7 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const categoryNameFormatted = toSnakeCase(categoryName);
             const categoryUrl = `https://adamdjellouli.com/tools/quiz_app/${categoryNameFormatted}.json`;
             const data = await fetchJson(categoryUrl);
-            hideLoadingMessage();
 
             if (data) {
                 categoryCache[categoryName] = data; // Cache the data
@@ -98,7 +93,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Invalid category data:', data);
             }
         }
+        hideLoadingMessage(); // Hide spinner once done
     };
+
 
     const processCategoryData = (data) => {
         currentCategory = data;
@@ -115,12 +112,15 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const showLoadingMessage = () => {
-        loadingMessage.style.display = 'block';
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        loadingSpinner.style.display = 'block';
     };
 
     const hideLoadingMessage = () => {
-        loadingMessage.style.display = 'none';
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        loadingSpinner.style.display = 'none';
     };
+
 
     const displayQuestions = () => {
         quizContainer.innerHTML = '';
