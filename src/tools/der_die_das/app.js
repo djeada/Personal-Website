@@ -60,22 +60,23 @@ const fetchWordList = (url, article) => fetch(proxyUrl + encodeURIComponent(url)
 });
 
 function loadWords() {
-    // Show loading spinner while loading the word lists
     const loadingSpinner = document.getElementById('loadingSpinner');
     loadingSpinner.style.display = 'block';
 
-    return Promise.all([
-        fetchWordList('https://adamdjellouli.com/tools/der_die_das/der.txt', 'der'),
-        fetchWordList('https://adamdjellouli.com/tools/der_die_das/die.txt', 'die'),
-        fetchWordList('https://adamdjellouli.com/tools/der_die_das/das.txt', 'das')
-    ]).then(([derWords, dieWords, dasWords]) => {
-        if (derWords) wordLists['der'] = derWords.split('\n');
-        if (dieWords) wordLists['die'] = dieWords.split('\n');
-        if (dasWords) wordLists['das'] = dasWords.split('\n');
-    }).finally(() => {
-        // Hide the loading spinner after loading is complete
-        loadingSpinner.style.display = 'none';
-    });
+    return new Promise(resolve => setTimeout(resolve, 1000)) // Add a 1-second delay
+        .then(() => Promise.all([
+            fetchWordList('https://adamdjellouli.com/tools/der_die_das/der.txt', 'der'),
+            fetchWordList('https://adamdjellouli.com/tools/der_die_das/die.txt', 'die'),
+            fetchWordList('https://adamdjellouli.com/tools/der_die_das/das.txt', 'das')
+        ]))
+        .then(([derWords, dieWords, dasWords]) => {
+            if (derWords) wordLists['der'] = derWords.split('\n');
+            if (dieWords) wordLists['die'] = dieWords.split('\n');
+            if (dasWords) wordLists['das'] = dasWords.split('\n');
+        })
+        .finally(() => {
+            loadingSpinner.style.display = 'none';
+        });
 }
 
 let baseSpeed = 0.0001;
@@ -312,8 +313,9 @@ function initGame() {
     scoreDisplay.textContent = score;
     livesDisplay.textContent = lives;
     lastWordTime = 0;
-    correctWordsTable.innerHTML = '';
-    incorrectWordsTable.innerHTML = '';
+    correctWordsTable.querySelector('tbody').innerHTML = '';
+    incorrectWordsTable.querySelector('tbody').innerHTML = '';
+
 
     // Run the first frame after loading is done
     requestAnimationFrame(() => {
@@ -380,7 +382,6 @@ window.onload = function() {
     }).finally(() => {
         loadingSpinner.style.display = 'none';
     });
-    initGame();
 
     // Update DOM element styles based on mode
     const darkMode = getColorForMode(false, true); // Assuming false for light, true for dark
