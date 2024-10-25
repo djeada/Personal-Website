@@ -165,6 +165,12 @@ document.addEventListener("DOMContentLoaded", function() {
         for (let index = 0; index < lines.length; index++) {
             let line = lines[index];
 
+            // Check if the line contains only dashes (after trimming spaces)
+            if (line.trim().match(/^-+$/)) {
+                // Skip processing for lines that only contain dashes
+                continue;
+            }
+
             if (line.trim() === '```') {
                 insideCodeBlock = !insideCodeBlock; // Toggle code block state
 
@@ -248,8 +254,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
         editorText.value = newLines.join("\n");
     }
-
-
 
     function removeTabIndent() {
         // Check if tab correction is enabled
