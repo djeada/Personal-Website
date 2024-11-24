@@ -133,8 +133,16 @@ class Filter {
 
 let filter = new Filter(filterSelect.value, cutoffFrequency || centerFrequency, filterQ);
 
+function getColorForMode(colorLight, colorDark) {
+    const darkModeValue = getCookie("darkMode");
+    return darkModeValue && darkModeValue.toLowerCase() === "true" ? colorDark : colorLight;
+}
+
 function drawAxes(ctx, width, height) {
-    ctx.strokeStyle = '#ccc';
+    const axisColor = getColorForMode('#ccc', '#444'); // Light gray for light mode, dark gray for dark mode
+    const labelColor = getColorForMode('#000', '#fff'); // Black for light mode, white for dark mode
+
+    ctx.strokeStyle = axisColor;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, height / 2);
@@ -145,11 +153,11 @@ function drawAxes(ctx, width, height) {
     ctx.lineTo(0, height);
     ctx.stroke();
 
-    ctx.fillStyle = '#000';
+    ctx.fillStyle = labelColor;
     ctx.font = '12px Arial';
     ctx.fillText('Time', width - 30, height / 2 + 15);
     ctx.save();
-    ctx.translate(15, 10);
+    ctx.translate(15, 120);
     ctx.rotate(-Math.PI / 2);
     ctx.fillText('Amplitude', 0, 0);
     ctx.restore();
@@ -203,8 +211,11 @@ function animate() {
 
     const dt = timeScale;
 
+    const inputWaveColor = getColorForMode('#000', '#00ff00'); // Black for light mode, green for dark mode
+    const filteredWaveColor = getColorForMode('#00f', '#ff4500'); // Blue for light mode, orange-red for dark mode
+
     for (let x = 0; x < numPoints; x++) {
-        const t = time + x * dt;
+        const t = time - (numPoints - x) * dt; // Reverse time mapping
         const y = generateSignal(t);
         const filteredY = filter.apply(y, dt);
 
@@ -220,18 +231,18 @@ function animate() {
         }
     }
 
-    inputCtx.strokeStyle = '#000';
+    inputCtx.strokeStyle = inputWaveColor;
     inputCtx.lineWidth = 2;
     inputCtx.stroke();
 
-    filteredCtx.strokeStyle = '#00f';
+    filteredCtx.strokeStyle = filteredWaveColor;
     filteredCtx.lineWidth = 2;
     filteredCtx.stroke();
 
-    time += (velocity / 60);
-
+    time -= (velocity / 60); // Reverse increment direction
     requestAnimationFrame(animate);
 }
+
 
 function amplitudeMax() {
     return Math.max(Math.abs(amplitude), 1);
