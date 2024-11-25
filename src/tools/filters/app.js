@@ -7,7 +7,6 @@ const waveformSelect = document.getElementById('waveform');
 const amplitudeSlider = document.getElementById('amplitude');
 const frequencySlider = document.getElementById('frequency');
 const phaseSlider = document.getElementById('phase');
-const dutyCycleSlider = document.getElementById('dutyCycle');
 const filterSelect = document.getElementById('filter');
 const cutoffFrequencySlider = document.getElementById('cutoffFrequency');
 const centerFrequencySlider = document.getElementById('centerFrequency');
@@ -18,14 +17,12 @@ const velocitySlider = document.getElementById('velocity');
 const amplitudeValue = document.getElementById('amplitudeValue');
 const frequencyValue = document.getElementById('frequencyValue');
 const phaseValue = document.getElementById('phaseValue');
-const dutyCycleValue = document.getElementById('dutyCycleValue');
 const cutoffFrequencyValue = document.getElementById('cutoffFrequencyValue');
 const centerFrequencyValue = document.getElementById('centerFrequencyValue');
 const bandwidthValue = document.getElementById('bandwidthValue');
 const filterQValue = document.getElementById('filterQValue');
 const velocityValue = document.getElementById('velocityValue');
 
-const dutyCycleControl = document.getElementById('dutyCycleControl');
 const filterParameters = document.getElementById('filterParameters');
 const singleCutoff = document.getElementById('singleCutoff');
 const bandParameters = document.getElementById('bandParameters');
@@ -34,7 +31,6 @@ const filterQControl = document.getElementById('filterQControl');
 let amplitude = parseFloat(amplitudeSlider.value);
 let frequency = parseFloat(frequencySlider.value);
 let phase = parseFloat(phaseSlider.value);
-let dutyCycle = parseFloat(dutyCycleSlider.value);
 let cutoffFrequency = parseFloat(cutoffFrequencySlider.value);
 let centerFrequency = parseFloat(centerFrequencySlider.value);
 let bandwidth = parseFloat(bandwidthSlider.value);
@@ -163,7 +159,7 @@ function drawAxes(ctx, width, height) {
     ctx.restore();
 }
 
-function generateSignal(t) {
+function generateSignal(t, dt) {
     let y = 0;
     const omega = 2 * Math.PI * frequency;
     const phi = phase;
@@ -179,12 +175,12 @@ function generateSignal(t) {
             y = (2 * amplitude / Math.PI) * Math.asin(Math.sin(omega * t + phi));
             break;
         case 'sawtooth':
-            y = (2 * amplitude / Math.PI) * ((omega * t + phi) % (2 * Math.PI) - Math.PI);
+            y = (2 * amplitude / Math.PI) * (((omega * t + phi) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI);
             break;
         case 'pulse':
-            const period = 1 / frequency;
-            const timeInPeriod = (t + phi / omega) % period;
-            y = (timeInPeriod < (dutyCycle / 100) * period) ? amplitude : -amplitude;
+            const period = 1 / frequency; // Time for one cycle
+            const timeInPeriod = ((t + phi / omega) % period + period) % period; // Ensure positive modulo
+            y = (timeInPeriod < dt) ? amplitude : 0; // Impulse width matches `dt`
             break;
         default:
             y = 0;
@@ -192,6 +188,8 @@ function generateSignal(t) {
 
     return y;
 }
+
+
 
 function animate() {
     inputCtx.clearRect(0, 0, inputCanvas.width, inputCanvas.height);
@@ -201,7 +199,7 @@ function animate() {
     const height = inputCanvas.height;
     const midY = height / 2;
     const numPoints = width;
-    const timeScale = 0.005;
+    const timeScale = 0.005; // Adjust for your canvas resolution and velocity
 
     drawAxes(inputCtx, width, height);
     drawAxes(filteredCtx, width, height);
@@ -209,14 +207,14 @@ function animate() {
     inputCtx.beginPath();
     filteredCtx.beginPath();
 
-    const dt = timeScale;
+    const dt = timeScale; // Define the time step size
 
     const inputWaveColor = getColorForMode('#000', '#00ff00'); // Black for light mode, green for dark mode
     const filteredWaveColor = getColorForMode('#00f', '#ff4500'); // Blue for light mode, orange-red for dark mode
 
     for (let x = 0; x < numPoints; x++) {
         const t = time - (numPoints - x) * dt; // Reverse time mapping
-        const y = generateSignal(t);
+        const y = generateSignal(t, dt); // Pass `dt` to `generateSignal`
         const filteredY = filter.apply(y, dt);
 
         const plotYInput = midY - y * ((height / 2 - 20) / amplitudeMax());
@@ -243,25 +241,26 @@ function animate() {
     requestAnimationFrame(animate);
 }
 
-
 function amplitudeMax() {
-    return Math.max(Math.abs(amplitude), 1);
+
+    switch (waveformSelect.value) {
+        case 'sawtooth':
+            return Math.max(Math.abs(amplitude), 2);
+        default:
+            return Math.max(Math.abs(amplitude), 1);
+    }
 }
 
 function updateValues() {
     amplitude = parseFloat(amplitudeSlider.value);
     frequency = parseFloat(frequencySlider.value);
     phase = parseFloat(phaseSlider.value);
-    dutyCycle = parseFloat(dutyCycleSlider.value);
     velocity = parseFloat(velocitySlider.value);
 
     amplitudeValue.textContent = amplitude.toFixed(2);
     frequencyValue.textContent = frequency.toFixed(2);
     phaseValue.textContent = phase.toFixed(2);
-    dutyCycleValue.textContent = dutyCycle.toFixed(2);
     velocityValue.textContent = velocity.toFixed(2);
-
-    dutyCycleControl.style.display = waveformSelect.value === 'pulse' ? 'block' : 'none';
 }
 
 function updateFilterValues() {
@@ -300,7 +299,6 @@ waveformSelect.addEventListener('change', updateValues);
 amplitudeSlider.addEventListener('input', updateValues);
 frequencySlider.addEventListener('input', updateValues);
 phaseSlider.addEventListener('input', updateValues);
-dutyCycleSlider.addEventListener('input', updateValues);
 velocitySlider.addEventListener('input', updateValues);
 
 filterSelect.addEventListener('change', updateFilterValues);
