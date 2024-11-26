@@ -37,6 +37,18 @@ EN_INPUT_URLS = [
     "https://github.com/djeada/Statistics-Notes/tree/main/notes/time_series_analysis",
     "https://github.com/djeada/Numpy-Tutorials/tree/main/notes",
     "https://github.com/djeada/Vtk-Examples/tree/main/notes",
+    "https://github.com/djeada/Databases-Notes/tree/main/notes/01_introduction_to_databases",
+    "https://github.com/djeada/Databases-Notes/tree/main/notes/02_database_design",
+    "https://github.com/djeada/Databases-Notes/tree/main/notes/03_sql",
+    "https://github.com/djeada/Databases-Notes/tree/main/notes/04_acid_properties_and_transactions",
+    "https://github.com/djeada/Databases-Notes/tree/main/notes/05_storage_and_indexing",
+    "https://github.com/djeada/Databases-Notes/tree/main/notes/06_distributed_databases",
+    "https://github.com/djeada/Databases-Notes/tree/main/notes/07_concurrency_control",
+    "https://github.com/djeada/Databases-Notes/tree/main/notes/08_database_performance",
+    "https://github.com/djeada/Databases-Notes/tree/main/notes/09_database_replication",
+    "https://github.com/djeada/Databases-Notes/tree/main/notes/10_nosql_databases",
+    "https://github.com/djeada/Databases-Notes/tree/main/notes/11_security_best_practices",
+    "https://github.com/djeada/Databases-Notes/tree/main/notes/12_database_engines",
 ]
 
 EN_LANG = "EN"

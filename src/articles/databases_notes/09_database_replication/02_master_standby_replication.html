@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Master-Standby Replication</title>
+    <meta content="Master-Standby replication is a common database replication topology where a primary database server (the master) replicates data to one or more secondary servers (the standbys)." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="https://adamdjellouli.com">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a class="active" href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <section id="article-body">
+            <p style="text-align: right;"><i>Last modified: November 26, 2024</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <header>Master-Standby Replication</header>
+            <p>Master-Standby replication is a common database replication topology where a primary database server (the <strong>master</strong>) replicates data to one or more secondary servers (the <strong>standbys</strong>). This setup enhances data availability, fault tolerance, and load balancing. Standby servers can serve read-only queries and can be promoted to become the master in case of failure.</p>
+            <p>This note provides a comprehensive overview of Master-Standby replication, including its purpose, characteristics, advantages, challenges, and a practical example using PostgreSQL.</p>
+            <h2 id="overview-of-master-standby-replication">Overview of Master-Standby Replication</h2>
+            <h3 id="architectural-diagram">Architectural Diagram</h3>
+            <p>
+            <div>
+                <pre><code class="language-shell">+------------------+
+                    |                  |
+                    |   Master Server  |
+                    |                  |
+                    +--------+---------+
+                             |
+                     Write Operations
+                             |
+                             v
+                    +--------+---------+
+                    |                  |
+                    |   Standby Server |
+                    |      (Read-Only) |
+                    +--------+---------+
+                             |
+                         Replication
+                             |
+                             v
+                    +--------+---------+
+                    |                  |
+                    |   Standby Server |
+                    |      (Read-Only) |
+                    +------------------+</code></pre>
+            </div>
+            </p>
+            <p><strong>Legend:</strong></p>
+            <ul>
+                <li><strong>Master Server</strong>: The primary database server where all write operations occur.</li>
+                <li><strong>Standby Servers</strong>: Secondary servers that replicate data from the master and serve read-only queries.</li>
+                <li><strong>Replication Arrows</strong>: Indicate the flow of data from the master to the standbys.</li>
+            </ul>
+            <h3 id="key-characteristics">Key Characteristics</h3>
+            <ul>
+                <li><strong>Write Operations</strong>: Only the master server handles write operations (INSERT, UPDATE, DELETE).</li>
+                <li><strong>Read Operations</strong>: Standby servers can serve read-only queries, offloading read traffic from the master.</li>
+                <li><strong>Data Replication</strong>: Standbys continuously receive data changes from the master to stay synchronized.</li>
+                <li><strong>Failover Capability</strong>: Standby servers can be promoted to master in case of master failure, ensuring high availability.</li>
+            </ul>
+            <h2 id="purpose-of-master-standby-replication">Purpose of Master-Standby Replication</h2>
+            <ol>
+                <li><strong>High Availability and Disaster Recovery</strong>: Provides redundancy to prevent data loss and minimize downtime in case of failures.</li>
+                <li><strong>Load Balancing</strong>: Offloads read-heavy operations to standby servers, improving performance and scalability.</li>
+                <li><strong>Maintenance Flexibility</strong>: Allows maintenance on the master or standbys without significant downtime.</li>
+                <li><strong>Scalability</strong>: Facilitates horizontal scaling by adding more standby servers as needed.</li>
+            </ol>
+            <h2 id="advantages">Advantages</h2>
+            <ol>
+                <li><strong>Enhanced Fault Tolerance</strong>: Standby servers act as backups, reducing the risk of data loss.</li>
+                <li><strong>Improved Read Performance</strong>: Distributing read queries to standbys alleviates load on the master.</li>
+                <li><strong>Simplified Failover Process</strong>: Standbys can quickly take over as the master, minimizing service interruption.</li>
+                <li><strong>Data Integrity</strong>: Ensures data consistency across servers through continuous replication.</li>
+            </ol>
+            <h2 id="challenges">Challenges</h2>
+            <ol>
+                <li><strong>Replication Lag</strong>: Standbys may not always be perfectly synchronized with the master, leading to potential stale reads.</li>
+                <li><strong>Failover Complexity</strong>: Promoting a standby to master requires careful coordination to prevent data inconsistencies.</li>
+                <li><strong>Write Scalability Limitations</strong>: Since only the master handles writes, write-heavy applications may face scalability issues.</li>
+                <li><strong>Configuration Complexity</strong>: Setting up and managing replication requires careful configuration and monitoring.</li>
+            </ol>
+            <h2 id="example-implementing-master-standby-replication-in-postgresql">Example: Implementing Master-Standby Replication in PostgreSQL</h2>
+            <p>PostgreSQL supports streaming replication out-of-the-box, making it a suitable choice for implementing Master-Standby replication.</p>
+            <h3 id="prerequisites">Prerequisites</h3>
+            <ul>
+                <li><strong>Two or more PostgreSQL servers</strong>: One master and one or more standby servers.</li>
+                <li><strong>Network Connectivity</strong>: All servers must communicate over the network.</li>
+                <li><strong>PostgreSQL Version</strong>: Ensure all servers run compatible PostgreSQL versions (preferably the same version).</li>
+            </ul>
+            <h3 id="configuring-the-master-server">Configuring the Master Server</h3>
+            <h4 id="1-edit-postgresql-conf">1. Edit <code>postgresql.conf</code></h4>
+            <p>Locate and edit the <code>postgresql.conf</code> file, typically found in the data directory (<code>/var/lib/pgsql/data/</code> or <code>/etc/postgresql/</code>).</p>
+            <p>Add or modify the following parameters:</p>
+            <p>
+            <div>
+                <pre><code class="language-conf"># Enable WAL (Write-Ahead Logging) level suitable for replication
+wal_level = replica
+
+# Allow the master to send WAL data to standbys
+max_wal_senders = 3
+
+# Set the maximum number of replication slots (optional)
+max_replication_slots = 3
+
+# Set the amount of WAL data to retain (helps with standby synchronization)
+wal_keep_size = 128MB</code></pre>
+            </div>
+            </p>
+            <h4 id="2-edit-pg_hba-conf">2. Edit <code>pg_hba.conf</code></h4>
+            <p>Update <code>pg_hba.conf</code> to allow the standby servers to connect for replication:</p>
+            <p>
+            <div>
+                <pre><code class="language-conf"># TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+# Allow replication connections from standby servers
+host    replication     replicator      standby_ip/32           md5</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><strong><code>replicator</code></strong>: The replication user.</li>
+                <li><strong><code>standby_ip/32</code></strong>: IP address of the standby server.</li>
+            </ul>
+            <h4 id="3-create-a-replication-user">3. Create a Replication User</h4>
+            <p>Log into the PostgreSQL prompt and create a user for replication:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">CREATE ROLE replicator WITH REPLICATION LOGIN ENCRYPTED PASSWORD 'your_password';</code></pre>
+            </div>
+            </p>
+            <h4 id="4-restart-postgresql">4. Restart PostgreSQL</h4>
+            <p>Restart the PostgreSQL service to apply changes:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash"># For Linux systems using systemd
+sudo systemctl restart postgresql</code></pre>
+            </div>
+            </p>
+            <h3 id="configuring-the-standby-server">Configuring the Standby Server</h3>
+            <h4 id="1-stop-postgresql-service">1. Stop PostgreSQL Service</h4>
+            <p>Ensure the PostgreSQL service on the standby server is stopped:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl stop postgresql</code></pre>
+            </div>
+            </p>
+            <h4 id="2-create-a-base-backup-from-the-master">2. Create a Base Backup from the Master</h4>
+            <p>Use <code>pg_basebackup</code> to create a base backup of the master on the standby server:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">pg_basebackup -h master_ip -D /var/lib/pgsql/data/ -U replicator -W -P --wal-method=stream</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><strong><code>-h master_ip</code></strong>: IP address of the master server.</li>
+                <li><strong><code>-D /var/lib/pgsql/data/</code></strong>: Data directory on the standby server.</li>
+                <li><strong><code>-U replicator</code></strong>: Replication user.</li>
+                <li><strong><code>-W</code></strong>: Prompt for password.</li>
+                <li><strong><code>--wal-method=stream</code></strong>: Stream WAL files during backup.</li>
+            </ul>
+            <h4 id="3-create-standby-signal-file">3. Create <code>standby.signal</code> File</h4>
+            <p>For PostgreSQL versions 12 and above, create an empty file named <code>standby.signal</code> in the data directory:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">touch /var/lib/pgsql/data/standby.signal</code></pre>
+            </div>
+            </p>
+            <p>For versions before 12, create a <code>recovery.conf</code> file with the necessary parameters.</p>
+            <h4 id="4-edit-postgresql-conf-on-standby">4. Edit <code>postgresql.conf</code> on Standby</h4>
+            <p>Set the following parameters in <code>postgresql.conf</code>:</p>
+            <p>
+            <div>
+                <pre><code class="language-conf"># Enable read-only queries on standby
+hot_standby = on
+
+# Configure primary connection info
+primary_conninfo = 'host=master_ip port=5432 user=replicator password=your_password'</code></pre>
+            </div>
+            </p>
+            <h4 id="5-start-postgresql-service">5. Start PostgreSQL Service</h4>
+            <p>Start the PostgreSQL service on the standby server:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl start postgresql</code></pre>
+            </div>
+            </p>
+            <h3 id="verifying-replication">Verifying Replication</h3>
+            <h4 id="1-check-replication-status-on-master">1. Check Replication Status on Master</h4>
+            <p>Connect to the master server and run:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">SELECT client_addr, state
+FROM pg_stat_replication;</code></pre>
+            </div>
+            </p>
+            <p>You should see an entry for each standby server, indicating that they are connected.</p>
+            <h4 id="2-test-data-replication">2. Test Data Replication</h4>
+            <p>On the master server:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">-- Create a test table
+CREATE TABLE replication_test (id SERIAL PRIMARY KEY, data TEXT);
+
+-- Insert data
+INSERT INTO replication_test (data) VALUES ('Test data');</code></pre>
+            </div>
+            </p>
+            <p>On the standby server, attempt to query the table:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">-- Select data from the replicated table
+SELECT * FROM replication_test;</code></pre>
+            </div>
+            </p>
+            <p>You should see the inserted data, confirming that replication is working.</p>
+            <h3 id="failover-procedure">Failover Procedure</h3>
+            <p>In case the master server fails, you can promote a standby server to become the new master.</p>
+            <h4 id="1-promote-standby-to-master">1. Promote Standby to Master</h4>
+            <p>On the standby server, run:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">pg_ctl promote -D /var/lib/pgsql/data/</code></pre>
+            </div>
+            </p>
+            <p>Alternatively, create a <code>promote.signal</code> file in the data directory:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">touch /var/lib/pgsql/data/promote.signal</code></pre>
+            </div>
+            </p>
+            <h4 id="2-update-application-connections">2. Update Application Connections</h4>
+            <p>Redirect your applications to connect to the new master server.</p>
+            <h4 id="3-reconfigure-the-failed-master-as-standby-optional-">3. Reconfigure the Failed Master as Standby (Optional)</h4>
+            <p>Once the original master is back online, you can set it up as a standby to the new master.</p>
+            <h3 id="handling-replication-slots-optional-">Handling Replication Slots (Optional)</h3>
+            <p>Replication slots prevent the master from discarding WAL segments until they have been received by all standbys.</p>
+            <p>On the master server, create a replication slot for each standby:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">SELECT * FROM pg_create_physical_replication_slot('standby_slot');</code></pre>
+            </div>
+            </p>
+            <p>Modify the <code>primary_conninfo</code> on the standby to include the slot:</p>
+            <p>
+            <div>
+                <pre><code class="language-conf">primary_slot_name = 'standby_slot'</code></pre>
+            </div>
+            </p>
+        </section>
+        <div id="table-of-contents">
+            <h2>Table of Contents</h2>
+            <ol>
+                <li><a href="#overview-of-master-standby-replication">Overview of Master-Standby Replication</a>
+                    <ol>
+                        <li><a href="#architectural-diagram">Architectural Diagram</a></li>
+                        <li><a href="#key-characteristics">Key Characteristics</a></li>
+                    </ol>
+                </li>
+                <li><a href="#purpose-of-master-standby-replication">Purpose of Master-Standby Replication</a></li>
+                <li><a href="#advantages">Advantages</a></li>
+                <li><a href="#challenges">Challenges</a></li>
+                <li><a href="#example-implementing-master-standby-replication-in-postgresql">Example: Implementing Master-Standby Replication in PostgreSQL</a>
+                    <ol>
+                        <li><a href="#prerequisites">Prerequisites</a></li>
+                        <li><a href="#configuring-the-master-server">Configuring the Master Server</a>
+                            <ol>
+                                <li><a href="#1-edit-postgresql-conf">1. Edit postgresql.conf</a></li>
+                                <li><a href="#2-edit-pg_hba-conf">2. Edit pg_hba.conf</a></li>
+                                <li><a href="#3-create-a-replication-user">3. Create a Replication User</a></li>
+                                <li><a href="#4-restart-postgresql">4. Restart PostgreSQL</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#configuring-the-standby-server">Configuring the Standby Server</a>
+                            <ol>
+                                <li><a href="#1-stop-postgresql-service">1. Stop PostgreSQL Service</a></li>
+                                <li><a href="#2-create-a-base-backup-from-the-master">2. Create a Base Backup from the Master</a></li>
+                                <li><a href="#3-create-standby-signal-file">3. Create standby.signal File</a></li>
+                                <li><a href="#4-edit-postgresql-conf-on-standby">4. Edit postgresql.conf on Standby</a></li>
+                                <li><a href="#5-start-postgresql-service">5. Start PostgreSQL Service</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#verifying-replication">Verifying Replication</a>
+                            <ol>
+                                <li><a href="#1-check-replication-status-on-master">1. Check Replication Status on Master</a></li>
+                                <li><a href="#2-test-data-replication">2. Test Data Replication</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#failover-procedure">Failover Procedure</a>
+                            <ol>
+                                <li><a href="#1-promote-standby-to-master">1. Promote Standby to Master</a></li>
+                                <li><a href="#2-update-application-connections">2. Update Application Connections</a></li>
+                                <li><a href="#3-reconfigure-the-failed-master-as-standby-optional-">3. Reconfigure the Failed Master as Standby (Optional)</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#handling-replication-slots-optional-">Handling Replication Slots (Optional)</a></li>
+                    </ol>
+                </li>
+            </ol>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Introduction to Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro.html">Databases Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/03_database_management_systems_dbms_.html">Database Management Systems Dbms</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models.html">Data Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/05_glossary.html">Glossary</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis.html">Requirements Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization.html">Normalization</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization.html">Denormalization</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies.html">Indexing Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/05_data_integrity.html">Data Integrity</a></li>
+                        </ol>
+                    </li>
+                    <li>Sql<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql.html">Intro to Sql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl.html">Data Definition Language Ddl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml.html">Data Manipulation Language Dml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl.html">Data Control Language Dcl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl.html">Transaction Control Language Tcl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views.html">Joins Subqueries and Views</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions.html">Stored Procedures and Functions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers.html">Triggers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data.html">Hierarchical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions</a></li>
+                        </ol>
+                    </li>
+                    <li>Acid Properties and Transactions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro.html">Transactions Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation.html">Isolation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li>
+                        </ol>
+                    </li>
+                    <li>Storage and Indexing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk.html">How Tables and Indexes Are Stored on Disk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases.html">Row Based vs Column Based Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems.html">Distributed Database Systems</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning.html">Partitioning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding.html">Sharding</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding.html">Partitioning vs Sharding</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
+                        </ol>
+                    </li>
+                    <li>Concurrency Control<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks.html">Shared vs Exclusive Locks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two Phase Locking</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Double Booking Problem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/05_serializable_vs_repeatable_read.html">Serializable vs Repeatable Read</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Performance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/01_query_optimization_techniques.html">Query Optimization Techniques</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/02_indexing_strategies.html">Indexing Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/03_database_caching.html">Database Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Replication<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Intro to Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master Standby Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi Master Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous vs Asynchronous Replication</a></li>
+                        </ol>
+                    </li>
+                    <li>Nosql Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/01_nosql_databases_intro.html">Nosql Databases Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                        </ol>
+                    </li>
+                    <li>Security Best Practices<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/01_backup_and_recovery_strategies.html">Backup and Recovery Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/02_database_security.html">Database Security</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/03_capacity_planning.html">Capacity Planning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/04_database_migration.html">Database Migration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Engines<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/01_sqlite.html">Sqlite</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/02_mysql.html">Mysql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/03_postgresql.html">Postgresql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/04_mongodb.html">Mongodb</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4_j.html">Neo4 J</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column">
+                <img alt="Adam Djellouli Symbol" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+            <div class="footer-column">
+                <h2><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Our Privacy Policy</a></h2>
+                <p>
+                    Thank you for visiting my personal website. All of the <br />
+                    content on this site is free to use, but please remember <br />
+                    to be a good human being and refrain from any abuse<br />
+                    of the site. If you would like to contact me, please use <br />
+                    my <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn profile</a> or my <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a> if you have any technical <br />
+                    issues or ideas to share. I wish you the best and hope you <br />
+                    have a fantastic life. <br />
+                </p>
+            </div>
+            <div class="footer-column">
+                <h2>Follow me</h2>
+                <ul class="social-media">
+                    <li>
+                        <a class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" target="_blank" title="YouTube">
+                        </a>YouTube
+                    </li>
+                    <li>
+                        <a class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" target="_blank" title="LinkedIn">
+                        </a>LinkedIn
+                    </li>
+                    <li>
+                        <a class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" target="_blank" title="Instagram">
+                        </a>Instagram
+                    </li>
+                    <li>
+                        <a class="fa fa-github" href="https://github.com/djeada" title="GitHub">
+                        </a>Github
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div>
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="../../../app.js"></script>
+    </footer>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

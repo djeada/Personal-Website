@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Understanding Two-Phase Locking (2PL) in Databases</title>
+    <meta content="Two-Phase Locking (2PL) is a fundamental protocol used in database systems to ensure the consistency and serializability of transactions." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="https://adamdjellouli.com">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a class="active" href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <section id="article-body">
+            <p style="text-align: right;"><i>Last modified: November 26, 2024</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="understanding-two-phase-locking-2pl-in-databases">Understanding Two-Phase Locking (2PL) in Databases</h2>
+            <p>Two-Phase Locking (2PL) is a fundamental protocol used in database systems to ensure the consistency and serializability of transactions. By carefully managing how transactions acquire and release locks on resources, 2PL helps maintain data integrity when multiple transactions occur concurrently.</p>
+            <p>To visualize how 2PL works, imagine a transaction moving through two distinct phases: a growing phase where it acquires all the locks it needs, and a shrinking phase where it releases those locks.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Transaction Lifecycle:
+
+[ Growing Phase ]
+      |
+      |-- Acquire Lock on Resource A
+      |
+      |-- Acquire Lock on Resource B
+      |
+[ Lock Point ]  &lt;--- No more locks acquired after this point
+      |
+[ Shrinking Phase ]
+      |
+      |-- Release Lock on Resource A
+      |
+      |-- Release Lock on Resource B</code></pre>
+            </div>
+            </p>
+            <p>In this diagram, during the growing phase, the transaction locks Resource A and Resource B as needed. Once it has all the necessary locks (reaching the lock point), it moves into the shrinking phase, where it starts releasing the locks. After the lock point, no new locks can be acquired.</p>
+            <h3 id="the-two-phases-of-2pl">The Two Phases of 2PL</h3>
+            <p>Two-phase locking operates through two distinct phases, ensuring consistency and isolation in transactions:</p>
+            <ul>
+                <li>During the <strong>growing phase</strong>, the transaction acquires locks on the resources it needs to proceed. It is allowed to obtain new locks in this phase but is restricted from releasing any locks until all required resources are secured. </li>
+                <li>In the <strong>shrinking phase</strong>, the transaction starts releasing locks after it has acquired all the necessary ones. Once this phase begins, the transaction is no longer permitted to obtain additional locks. </li>
+            </ul>
+            <p>By adhering to this protocol, 2PL prevents scenarios where a transaction might release a lock and later need it again, which could lead to inconsistencies or conflicts with other transactions.</p>
+            <h3 id="variations-of-two-phase-locking">Variations of Two-Phase Locking</h3>
+            <p>There are several variations of 2PL, each designed to address specific concerns like preventing deadlocks or ensuring recoverability:</p>
+            <h4 id="strict-two-phase-locking">Strict Two-Phase Locking</h4>
+            <p>In strict 2PL, all exclusive (write) locks held by a transaction are released only after the transaction commits or aborts. This approach prevents other transactions from reading uncommitted data, thereby avoiding cascading aborts.</p>
+            <h4 id="rigorous-two-phase-locking">Rigorous Two-Phase Locking</h4>
+            <p>Rigorous 2PL takes it a step further by holding both shared (read) and exclusive (write) locks until the transaction commits or aborts. This ensures a high level of isolation but can reduce concurrency.</p>
+            <h4 id="conservative-two-phase-locking">Conservative Two-Phase Locking</h4>
+            <p>Also known as static 2PL, this variation requires a transaction to acquire all the locks it needs before it begins execution. If any lock cannot be obtained, the transaction waits. This method avoids deadlocks but can lead to reduced concurrency.</p>
+            <h3 id="an-example-of-two-phase-locking">An Example of Two-Phase Locking</h3>
+            <p>Consider a scenario where Transaction T1 wants to transfer funds from Account A to Account B in a banking database:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">BEGIN TRANSACTION;
+-- Growing Phase
+LOCK TABLE Accounts IN EXCLUSIVE MODE;
+UPDATE Accounts SET balance = balance - 100 WHERE account_id = 'A';
+UPDATE Accounts SET balance = balance + 100 WHERE account_id = 'B';
+-- Lock Point reached here
+-- Shrinking Phase
+COMMIT;
+-- Locks are released after commit</code></pre>
+            </div>
+            </p>
+            <p>In this example, T1 acquires the necessary locks during the growing phase to prevent other transactions from modifying the involved accounts. After the updates are complete and the transaction commits, it enters the shrinking phase where the locks are released.</p>
+            <h3 id="how-2pl-ensures-serializability">How 2PL Ensures Serializability</h3>
+            <p>By controlling the acquisition and release of locks, 2PL ensures that the concurrent execution of transactions is serializable. This means the outcome is the same as if the transactions were executed one after the other in some order, eliminating issues like dirty reads, non-repeatable reads, and lost updates.</p>
+            <h3 id="potential-challenges-with-two-phase-locking-2pl-">Potential Challenges with Two-Phase Locking (2PL)</h3>
+            <p>While two-phase locking (2PL) is an effective protocol for ensuring consistency in transactions, it comes with its own set of challenges:</p>
+            <ul>
+                <li>The risk of <strong>deadlocks</strong> arises when transactions wait indefinitely for each other to release locks, creating circular dependencies. </li>
+                <li><strong>Reduced concurrency</strong> is a concern, as locks held during strict or rigorous 2PL can prevent other transactions from progressing simultaneously. </li>
+                <li>The <strong>performance overhead</strong> of managing locks can be significant, especially in high-throughput systems where many transactions are executed concurrently. </li>
+            </ul>
+            <h3 id="mitigating-deadlocks-in-2pl">Mitigating Deadlocks in 2PL</h3>
+            <p>Deadlocks are a frequent issue in 2PL implementations, but the following strategies can help reduce their impact:</p>
+            <ul>
+                <li>Employing <strong>lock ordering</strong> ensures that transactions acquire locks in a predefined sequence, which minimizes the possibility of circular waits. </li>
+                <li>Introducing <strong>timeouts</strong> for lock acquisition attempts allows the system to detect and handle potential deadlocks early by aborting and retrying stalled transactions. </li>
+                <li>Using <strong>deadlock detection algorithms</strong>, the database periodically examines the wait-for graph for cycles and resolves detected deadlocks by terminating one of the conflicting transactions. </li>
+            </ul>
+            <h3 id="best-practices-for-using-2pl">Best Practices for Using 2PL</h3>
+            <p>Effective use of 2PL requires adherence to best practices to balance consistency and performance while mitigating its drawbacks:</p>
+            <ul>
+                <li><strong>Short transactions</strong> should be prioritized to limit the duration of lock holding, reducing the chances of conflicts and improving overall system efficiency. </li>
+                <li>Transactions should <strong>acquire locks as late as possible</strong>, only when resources are immediately needed, to minimize lock contention. </li>
+                <li>Ensuring that locks are <strong>released promptly</strong> once resources are no longer required helps improve concurrency and throughput. </li>
+                <li>Following a <strong>consistent lock ordering</strong> across all transactions avoids circular waits, a common source of deadlocks. </li>
+                <li>Regularly <strong>monitoring lock contention</strong> with database tools enables identification of bottlenecks, allowing for targeted optimizations. </li>
+            </ul>
+            <h3 id="real-world-analogy">Real-World Analogy</h3>
+            <p>Two-phase locking can be likened to borrowing books from a library with strict rules:</p>
+            <ul>
+                <li>In the <strong>growing phase</strong>, you gather all the books (locks) you need for your research, ensuring no one else can access them while you're using them. </li>
+                <li>During the <strong>shrinking phase</strong>, you return all the books (release locks) once you're done, but you cannot check out additional books after you begin returning. </li>
+            </ul>
+            <p>This ensures that while you have the books, no one else can modify them (e.g., annotate them), and once you're done, others can access them.</p>
+            <h3 id="further-reading">Further Reading</h3>
+            <p>To delve deeper into 2PL and related concepts, you might explore topics such as:</p>
+            <ul>
+                <li><strong>Transaction Isolation Levels</strong>: How different levels affect concurrency and consistency.</li>
+                <li><strong>Optimistic vs. Pessimistic Concurrency Control</strong>: Alternative strategies for managing concurrent transactions.</li>
+                <li><strong>Multiversion Concurrency Control (MVCC)</strong>: A method that allows readers to access data without waiting for writers.</li>
+            </ul>
+        </section>
+        <div id="table-of-contents">
+            <h2>Table of Contents</h2>
+            <ol><a href="#understanding-two-phase-locking-2pl-in-databases">Understanding Two-Phase Locking (2PL) in Databases</a>
+                <ol>
+                    <li><a href="#the-two-phases-of-2pl">The Two Phases of 2PL</a></li>
+                    <li><a href="#variations-of-two-phase-locking">Variations of Two-Phase Locking</a>
+                        <ol>
+                            <li><a href="#strict-two-phase-locking">Strict Two-Phase Locking</a></li>
+                            <li><a href="#rigorous-two-phase-locking">Rigorous Two-Phase Locking</a></li>
+                            <li><a href="#conservative-two-phase-locking">Conservative Two-Phase Locking</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#an-example-of-two-phase-locking">An Example of Two-Phase Locking</a></li>
+                    <li><a href="#how-2pl-ensures-serializability">How 2PL Ensures Serializability</a></li>
+                    <li><a href="#potential-challenges-with-two-phase-locking-2pl-">Potential Challenges with Two-Phase Locking (2PL)</a></li>
+                    <li><a href="#mitigating-deadlocks-in-2pl">Mitigating Deadlocks in 2PL</a></li>
+                    <li><a href="#best-practices-for-using-2pl">Best Practices for Using 2PL</a></li>
+                    <li><a href="#real-world-analogy">Real-World Analogy</a></li>
+                    <li><a href="#further-reading">Further Reading</a></li>
+                </ol>
+            </ol>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Introduction to Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro.html">Databases Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/03_database_management_systems_dbms_.html">Database Management Systems Dbms</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models.html">Data Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/05_glossary.html">Glossary</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis.html">Requirements Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization.html">Normalization</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization.html">Denormalization</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies.html">Indexing Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/05_data_integrity.html">Data Integrity</a></li>
+                        </ol>
+                    </li>
+                    <li>Sql<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql.html">Intro to Sql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl.html">Data Definition Language Ddl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml.html">Data Manipulation Language Dml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl.html">Data Control Language Dcl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl.html">Transaction Control Language Tcl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views.html">Joins Subqueries and Views</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions.html">Stored Procedures and Functions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers.html">Triggers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data.html">Hierarchical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions</a></li>
+                        </ol>
+                    </li>
+                    <li>Acid Properties and Transactions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro.html">Transactions Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation.html">Isolation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li>
+                        </ol>
+                    </li>
+                    <li>Storage and Indexing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk.html">How Tables and Indexes Are Stored on Disk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases.html">Row Based vs Column Based Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems.html">Distributed Database Systems</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning.html">Partitioning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding.html">Sharding</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding.html">Partitioning vs Sharding</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
+                        </ol>
+                    </li>
+                    <li>Concurrency Control<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks.html">Shared vs Exclusive Locks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two Phase Locking</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Double Booking Problem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/05_serializable_vs_repeatable_read.html">Serializable vs Repeatable Read</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Performance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/01_query_optimization_techniques.html">Query Optimization Techniques</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/02_indexing_strategies.html">Indexing Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/03_database_caching.html">Database Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Replication<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Intro to Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master Standby Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi Master Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous vs Asynchronous Replication</a></li>
+                        </ol>
+                    </li>
+                    <li>Nosql Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/01_nosql_databases_intro.html">Nosql Databases Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                        </ol>
+                    </li>
+                    <li>Security Best Practices<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/01_backup_and_recovery_strategies.html">Backup and Recovery Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/02_database_security.html">Database Security</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/03_capacity_planning.html">Capacity Planning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/04_database_migration.html">Database Migration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Engines<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/01_sqlite.html">Sqlite</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/02_mysql.html">Mysql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/03_postgresql.html">Postgresql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/04_mongodb.html">Mongodb</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4_j.html">Neo4 J</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column">
+                <img alt="Adam Djellouli Symbol" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+            <div class="footer-column">
+                <h2><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Our Privacy Policy</a></h2>
+                <p>
+                    Thank you for visiting my personal website. All of the <br />
+                    content on this site is free to use, but please remember <br />
+                    to be a good human being and refrain from any abuse<br />
+                    of the site. If you would like to contact me, please use <br />
+                    my <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn profile</a> or my <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a> if you have any technical <br />
+                    issues or ideas to share. I wish you the best and hope you <br />
+                    have a fantastic life. <br />
+                </p>
+            </div>
+            <div class="footer-column">
+                <h2>Follow me</h2>
+                <ul class="social-media">
+                    <li>
+                        <a class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" target="_blank" title="YouTube">
+                        </a>YouTube
+                    </li>
+                    <li>
+                        <a class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" target="_blank" title="LinkedIn">
+                        </a>LinkedIn
+                    </li>
+                    <li>
+                        <a class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" target="_blank" title="Instagram">
+                        </a>Instagram
+                    </li>
+                    <li>
+                        <a class="fa fa-github" href="https://github.com/djeada" title="GitHub">
+                        </a>Github
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div>
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="../../../app.js"></script>
+    </footer>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

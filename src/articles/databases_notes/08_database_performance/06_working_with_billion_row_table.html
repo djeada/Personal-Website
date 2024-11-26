@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Working with Billion-Row Tables</title>
+    <meta content="Handling tables with billions of rows presents significant challenges related to performance, scalability, and maintenance." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="https://adamdjellouli.com">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a class="active" href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <section id="article-body">
+            <p style="text-align: right;"><i>Last modified: November 26, 2024</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <header>Working with Billion-Row Tables</header>
+            <p>Handling tables with billions of rows presents significant challenges related to performance, scalability, and maintenance. As data volumes grow exponentially, organizations must adopt effective strategies and techniques to manage and process large datasets efficiently. This comprehensive guide explores the challenges of working with billion-row tables, discusses concepts and methods for handling large tables in both single-node and distributed database environments, and provides practical examples to illustrate these techniques.</p>
+            <h2 id="challenges-of-working-with-billion-row-tables">Challenges of Working with Billion-Row Tables</h2>
+            <p>Working with tables containing billions of rows introduces several challenges:</p>
+            <ul>
+                <li>
+                    <p><strong>Performance Degradation</strong>: Large tables can significantly slow down query execution and data processing, leading to longer response times and reduced application performance.</p>
+                </li>
+                <li>
+                    <p><strong>Scalability Issues</strong>: Ensuring that the database can grow without substantial performance degradation is challenging. Traditional scaling methods may not suffice for such large datasets.</p>
+                </li>
+                <li>
+                    <p><strong>Complex Maintenance</strong>: Regular maintenance tasks like indexing, partitioning, backup, and recovery become more complex and time-consuming with large tables.</p>
+                </li>
+                <li>
+                    <p><strong>Resource Utilization</strong>: High disk space consumption, increased memory usage, and higher CPU utilization can strain system resources.</p>
+                </li>
+                <li>
+                    <p><strong>Data Management Complexity</strong>: Ensuring data integrity, consistency, and efficient data retrieval becomes more complicated as data volume increases.</p>
+                </li>
+            </ul>
+            <hr />
+            <h2 id="concepts-for-handling-large-tables">Concepts for Handling Large Tables</h2>
+            <p>To address the challenges of working with large tables, several concepts and techniques can be employed:</p>
+            <h3 id="brute-force-distributed-processing">Brute Force Distributed Processing</h3>
+            <p><strong>Definition</strong>: Dividing the table into chunks and processing these chunks in parallel using distributed computing resources.</p>
+            <ul>
+                <li><strong>Approach</strong>:</li>
+                <li>Split the large table into smaller subsets (chunks).</li>
+                <li>Process each chunk independently and concurrently across multiple machines or processors.</li>
+                <li>
+                    <p>Aggregate the results from all chunks to obtain the final outcome.</p>
+                </li>
+                <li>
+                    <p><strong>Tools and Technologies</strong>:</p>
+                </li>
+                <li><strong>Big Data Frameworks</strong>: Apache Hadoop (MapReduce), Apache Spark.</li>
+                <li><strong>Parallel Computing Libraries</strong>: MPI (Message Passing Interface), OpenMP.</li>
+                <li><strong>Cloud Computing Resources</strong>: AWS EC2 instances, Google Cloud Compute Engine.</li>
+            </ul>
+            <p><strong>Example Using Python and Multiprocessing</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-python">from multiprocessing import Pool
+
+# Function to process each chunk
+def process_chunk(chunk):
+    # Simulate processing of each chunk (e.g., sum values)
+    result = sum(chunk)
+    return result
+
+# Simulate a billion-row table as a list of numbers
+billion_row_table = list(range(1, 1_000_000_001))
+
+# Define the number of chunks and chunk size
+num_chunks = 100
+chunk_size = len(billion_row_table) // num_chunks
+
+# Split the table into chunks
+chunks = [billion_row_table[i:i + chunk_size] for i in range(0, len(billion_row_table), chunk_size)]
+
+# Create a pool of worker processes
+with Pool(num_chunks) as pool:
+    results = pool.map(process_chunk, chunks)
+
+# Combine results from all chunks
+final_result = sum(results)
+print(f"Final Result: {final_result}")</code></pre>
+            </div>
+            </p>
+            <p><strong>Benefits</strong>:</p>
+            <ul>
+                <li><strong>Parallelism</strong>: Significantly reduces processing time by utilizing multiple cores or machines.</li>
+                <li><strong>Scalability</strong>: Easily scales by adding more processing units.</li>
+            </ul>
+            <p><strong>Challenges</strong>:</p>
+            <ul>
+                <li><strong>Resource Intensive</strong>: Requires substantial computational resources.</li>
+                <li><strong>Complexity</strong>: Managing distributed processes and data synchronization can be complex.</li>
+            </ul>
+            <hr />
+            <h3 id="indexing">Indexing</h3>
+            <p><strong>Definition</strong>: Creating data structures (indexes) that allow the database to find and access data quickly without scanning the entire table.</p>
+            <ul>
+                <li><strong>Types of Indexes</strong>:</li>
+                <li><strong>B-Tree Indexes</strong>: Suitable for range queries and exact matches.</li>
+                <li><strong>Hash Indexes</strong>: Ideal for exact match queries.</li>
+                <li>
+                    <p><strong>Bitmap Indexes</strong>: Efficient for columns with a limited number of distinct values.</p>
+                </li>
+                <li>
+                    <p><strong>Implementation</strong>:</p>
+                </li>
+            </ul>
+            <p><strong>Example in SQL</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">-- Creating an index on the 'customer_id' column in the 'orders' table
+CREATE INDEX idx_orders_customer_id ON orders (customer_id);</code></pre>
+            </div>
+            </p>
+            <p><strong>Benefits</strong>:</p>
+            <ul>
+                <li><strong>Improved Query Performance</strong>: Speeds up data retrieval by reducing the amount of data scanned.</li>
+                <li><strong>Selective Access</strong>: Allows the database to quickly locate specific rows.</li>
+            </ul>
+            <p><strong>Challenges</strong>:</p>
+            <ul>
+                <li><strong>Maintenance Overhead</strong>: Indexes require additional storage space and must be updated when data changes.</li>
+                <li><strong>Write Performance Impact</strong>: May slow down insert, update, and delete operations due to index maintenance.</li>
+            </ul>
+            <hr />
+            <h3 id="partitioning">Partitioning</h3>
+            <p><strong>Definition</strong>: Dividing a large table into smaller, more manageable pieces called partitions, which can be processed and maintained separately.</p>
+            <ul>
+                <li><strong>Types of Partitioning</strong>:</li>
+                <li><strong>Horizontal Partitioning</strong>: Divides the table by rows.</li>
+                <li><strong>Vertical Partitioning</strong>: Divides the table by columns.</li>
+                <li><strong>Range Partitioning</strong>: Partitions data based on a range of values (e.g., dates).</li>
+                <li>
+                    <p><strong>List Partitioning</strong>: Partitions data based on a list of values.</p>
+                </li>
+                <li>
+                    <p><strong>Implementation</strong>:</p>
+                </li>
+            </ul>
+            <p><strong>Example in PostgreSQL Using Range Partitioning</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">-- Create a partitioned table
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    customer_id INT,
+    order_date DATE NOT NULL,
+    total DECIMAL(10, 2)
+) PARTITION BY RANGE (order_date);
+
+-- Create partitions for each year
+CREATE TABLE orders_2022 PARTITION OF orders FOR VALUES FROM ('2022-01-01') TO ('2023-01-01');
+CREATE TABLE orders_2023 PARTITION OF orders FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');</code></pre>
+            </div>
+            </p>
+            <p><strong>Benefits</strong>:</p>
+            <ul>
+                <li><strong>Improved Performance</strong>: Queries can scan only relevant partitions, reducing I/O.</li>
+                <li><strong>Manageability</strong>: Easier to maintain smaller partitions (e.g., backup, restore).</li>
+                <li><strong>Scalability</strong>: Supports distributing partitions across multiple disks or nodes.</li>
+            </ul>
+            <p><strong>Challenges</strong>:</p>
+            <ul>
+                <li><strong>Complexity</strong>: Requires careful planning of partition keys and management of partitions.</li>
+                <li><strong>Potential Skew</strong>: Uneven data distribution can lead to imbalanced partitions.</li>
+            </ul>
+            <hr />
+            <h3 id="materialized-views">Materialized Views</h3>
+            <p><strong>Definition</strong>: Precomputed query results stored as a physical table, which can be queried like a regular table.</p>
+            <ul>
+                <li><strong>Usage</strong>:</li>
+                <li>Optimize performance for complex or frequently executed queries.</li>
+                <li>
+                    <p>Reduce computational overhead by avoiding repetitive calculations.</p>
+                </li>
+                <li>
+                    <p><strong>Implementation</strong>:</p>
+                </li>
+            </ul>
+            <p><strong>Example in SQL</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">-- Create a materialized view for total revenue by customer
+CREATE MATERIALIZED VIEW total_revenue_by_customer AS
+SELECT customer_id, SUM(total) AS total_revenue
+FROM orders
+GROUP BY customer_id;</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><strong>Refreshing Materialized Views</strong>:</li>
+                <li><strong>Manual Refresh</strong>: Refresh the view when needed.</li>
+            </ul>
+            <p>CODE_BLOCK_PLACEHOLDER
+                - <strong>Automatic Refresh</strong>: Schedule periodic refreshes using database jobs or triggers.</p>
+            <p><strong>Benefits</strong>:</p>
+            <ul>
+                <li><strong>Faster Query Response</strong>: Precomputed results improve query performance.</li>
+                <li><strong>Offload Processing</strong>: Reduces load on the main tables during heavy query periods.</li>
+            </ul>
+            <p><strong>Challenges</strong>:</p>
+            <ul>
+                <li><strong>Staleness</strong>: Data may become outdated; requires refresh mechanisms.</li>
+                <li><strong>Storage Overhead</strong>: Consumes additional storage space.</li>
+            </ul>
+            <hr />
+            <h2 id="distributed-database-techniques">Distributed Database Techniques</h2>
+            <p>For massive datasets, distributed database techniques help enhance performance and scalability:</p>
+            <h3 id="sharding">Sharding</h3>
+            <p><strong>Definition</strong>: Horizontal partitioning of data across multiple database instances (shards), each holding a subset of the data.</p>
+            <ul>
+                <li>
+                    <p><strong>Shard Key</strong>: A key used to determine the distribution of data across shards.</p>
+                </li>
+                <li>
+                    <p><strong>Implementation</strong>:</p>
+                </li>
+            </ul>
+            <p><strong>Example Using MongoDB Sharding</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">REFRESH MATERIALIZED VIEW total_revenue_by_customer;</code></pre>
+            </div>
+            </p>
+            <p><strong>Benefits</strong>:</p>
+            <ul>
+                <li><strong>Scalability</strong>: Distributes data and load across multiple servers.</li>
+                <li><strong>Performance</strong>: Reduces the amount of data each server handles.</li>
+            </ul>
+            <p><strong>Challenges</strong>:</p>
+            <ul>
+                <li><strong>Complexity</strong>: Managing multiple database instances and ensuring data consistency.</li>
+                <li><strong>Query Routing</strong>: Clients must know which shard to query, or use a routing service.</li>
+            </ul>
+            <hr />
+            <h3 id="distributed-caching">Distributed Caching</h3>
+            <p><strong>Definition</strong>: Using a cache distributed across multiple nodes to store frequently accessed data, reducing the load on the primary database.</p>
+            <ul>
+                <li><strong>Technologies</strong>:</li>
+                <li><strong>Redis Cluster</strong>: Distributed Redis setup for horizontal scaling.</li>
+                <li>
+                    <p><strong>Memcached</strong>: A high-performance, distributed memory caching system.</p>
+                </li>
+                <li>
+                    <p><strong>Implementation</strong>:</p>
+                </li>
+            </ul>
+            <p><strong>Example Using Redis in Python</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-javascript">// Enable sharding on the database
+sh.enableSharding("mydatabase");
+
+// Shard the 'orders' collection on 'customer_id'
+sh.shardCollection("mydatabase.orders", { "customer_id": "hashed" });</code></pre>
+            </div>
+            </p>
+            <p><strong>Benefits</strong>:</p>
+            <ul>
+                <li><strong>Improved Read Performance</strong>: Reduces database read load by serving data from cache.</li>
+                <li><strong>Scalability</strong>: Cache can be scaled independently of the database.</li>
+            </ul>
+            <p><strong>Challenges</strong>:</p>
+            <ul>
+                <li><strong>Cache Invalidation</strong>: Ensuring cached data is updated or invalidated appropriately.</li>
+                <li><strong>Data Consistency</strong>: Potential for serving stale data if not managed properly.</li>
+            </ul>
+            <hr />
+            <h3 id="asynchronous-processing">Asynchronous Processing</h3>
+            <p><strong>Definition</strong>: Offloading heavy computations or time-consuming tasks to background processes, allowing the main application to remain responsive.</p>
+            <ul>
+                <li><strong>Technologies</strong>:</li>
+                <li><strong>Message Queues</strong>: RabbitMQ, Apache Kafka.</li>
+                <li>
+                    <p><strong>Task Queues</strong>: Celery (Python), Sidekiq (Ruby).</p>
+                </li>
+                <li>
+                    <p><strong>Implementation</strong>:</p>
+                </li>
+            </ul>
+            <p><strong>Example Using Celery in Python</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-python">import redis
+
+# Connect to Redis cluster
+cache = redis.RedisCluster(
+    startup_nodes=[
+        {"host": "redis-node1", "port": "6379"},
+        {"host": "redis-node2", "port": "6379"}
+    ],
+    decode_responses=True
+)
+
+def get_popular_products():
+    cache_key = 'popular_products'
+    popular_products = cache.get(cache_key)
+
+    if popular_products is None:
+        # Fetch from database (pseudo-code)
+        popular_products = fetch_popular_products_from_db()
+        cache.set(cache_key, popular_products, ex=3600)  # Cache for 1 hour
+
+    return popular_products</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><strong>Scheduling Tasks</strong>:</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-python">from celery import Celery
+from models import Order
+from django.db.models import Sum
+
+app = Celery('tasks', broker='redis://localhost:6379/0')
+
+@app.task
+def calculate_total_revenue():
+    total_revenue = Order.objects.aggregate(total_revenue=Sum('total'))['total_revenue']
+    # Store total_revenue in a cache or database for reporting</code></pre>
+            </div>
+            </p>
+            <p><strong>Benefits</strong>:</p>
+            <ul>
+                <li><strong>Responsiveness</strong>: Keeps the main application responsive by delegating heavy tasks.</li>
+                <li><strong>Scalability</strong>: Background workers can be scaled independently.</li>
+            </ul>
+            <p><strong>Challenges</strong>:</p>
+            <ul>
+                <li><strong>Complexity</strong>: Managing task queues, workers, and ensuring reliability.</li>
+                <li><strong>Error Handling</strong>: Need mechanisms to handle failures and retries.</li>
+            </ul>
+            <hr />
+            <h2 id="avoiding-a-billion-row-table">Avoiding a Billion-Row Table</h2>
+            <p>Sometimes, redesigning the data model or application architecture can prevent the need to manage extremely large tables.</p>
+            <h3 id="reshuffling-design">Reshuffling Design</h3>
+            <p><strong>Approach</strong>:</p>
+            <ul>
+                <li><strong>Denormalization</strong>: Combine related data into a single table or document to reduce the number of rows.</li>
+                <li><strong>Data Aggregation</strong>: Store pre-aggregated data where possible.</li>
+                <li><strong>Use of NoSQL Databases</strong>: Consider document stores or key-value stores that handle large datasets efficiently.</li>
+            </ul>
+            <p><strong>Example Using MongoDB</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-python"># Schedule the task to run every hour
+  from celery.schedules import crontab
+
+  app.conf.beat_schedule = {
+      'calculate-total-revenue-every-hour': {
+          'task': 'calculate_total_revenue',
+          'schedule': crontab(minute=0, hour='*/1'),
+      },
+  }</code></pre>
+            </div>
+            </p>
+            <p><strong>Benefits</strong>:</p>
+            <ul>
+                <li><strong>Simplified Schema</strong>: Reduces the number of tables and rows.</li>
+                <li><strong>Performance</strong>: Faster read operations due to data locality.</li>
+            </ul>
+            <p><strong>Challenges</strong>:</p>
+            <ul>
+                <li><strong>Data Duplication</strong>: Potential for redundant data.</li>
+                <li><strong>Consistency</strong>: More complex to maintain consistency across denormalized data.</li>
+            </ul>
+            <hr />
+            <h3 id="data-archiving">Data Archiving</h3>
+            <p><strong>Definition</strong>: Moving infrequently accessed or old data to separate storage systems to keep the active dataset manageable.</p>
+            <ul>
+                <li><strong>Approach</strong>:</li>
+                <li>Regularly transfer old data to archive tables or external storage.</li>
+                <li>
+                    <p>Implement policies for data retention and deletion.</p>
+                </li>
+                <li>
+                    <p><strong>Implementation</strong>:</p>
+                </li>
+            </ul>
+            <p><strong>Example in SQL</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-javascript">// User profile with embedded followers list
+{
+  "_id": ObjectId("507f1f77bcf86cd799439011"),
+  "name": "John Doe",
+  "followers": [
+    { "user_id": "user123", "since": "2023-01-01" },
+    { "user_id": "user456", "since": "2023-02-15" }
+  ],
+  "follower_count": 2
+}</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><strong>Archived Data Access</strong>:</li>
+                <li>Access archived data through separate queries or applications.</li>
+                <li>Use data warehousing solutions for historical data analysis.</li>
+            </ul>
+            <p><strong>Benefits</strong>:</p>
+            <ul>
+                <li><strong>Improved Performance</strong>: Smaller active tables result in faster queries and maintenance.</li>
+                <li><strong>Cost Savings</strong>: Archived data can be stored on cheaper storage solutions.</li>
+            </ul>
+            <p><strong>Challenges</strong>:</p>
+            <ul>
+                <li><strong>Data Accessibility</strong>: Additional steps required to access archived data.</li>
+                <li><strong>Data Integrity</strong>: Ensuring data is securely and reliably stored.</li>
+            </ul>
+            <hr />
+            <h2 id="hardware-considerations">Hardware Considerations</h2>
+            <p>Investing in powerful hardware can significantly improve the performance of large datasets:</p>
+            <ul>
+                <li>
+                    <p><strong>Solid-State Drives (SSDs)</strong>: Faster read/write speeds compared to traditional HDDs, reducing I/O bottlenecks.</p>
+                </li>
+                <li>
+                    <p><strong>Memory (RAM)</strong>: Adequate RAM allows for more data to be cached in memory, speeding up data access.</p>
+                </li>
+                <li>
+                    <p><strong>CPU Performance</strong>: Multi-core processors can handle more concurrent operations.</p>
+                </li>
+                <li>
+                    <p><strong>Network Infrastructure</strong>: High-speed networking reduces latency in distributed systems.</p>
+                </li>
+            </ul>
+            <p><strong>Benefits</strong>:</p>
+            <ul>
+                <li>
+                    <p><strong>Enhanced Performance</strong>: Hardware improvements can lead to immediate performance gains.</p>
+                </li>
+                <li>
+                    <p><strong>Scalability</strong>: Supports scaling up (vertical scaling) to handle increased loads.</p>
+                </li>
+            </ul>
+            <p><strong>Challenges</strong>:</p>
+            <ul>
+                <li>
+                    <p><strong>Cost</strong>: High-performance hardware can be expensive.</p>
+                </li>
+                <li>
+                    <p><strong>Diminishing Returns</strong>: Beyond a point, hardware upgrades may yield minimal performance improvements.</p>
+                </li>
+            </ul>
+            <hr />
+            <h2 id="comparison-of-methods-for-handling-large-tables">Comparison of Methods for Handling Large Tables</h2>
+            <p>
+            <table>
+                <tr>
+                    <td>Method</td>
+                    <td>Benefits</td>
+                    <td>Challenges</td>
+                    <td>Assessment</td>
+                </tr>
+                <tr>
+                    <td><strong>Brute Force Distributed Processing</strong></td>
+                    <td>- Parallel processing reduces execution time<br />- Scalability through added resources</td>
+                    <td>- High resource requirements<br />- Complexity in management</td>
+                    <td>Effective for large-scale batch processing; resource-intensive and complex to manage.</td>
+                </tr>
+                <tr>
+                    <td><strong>Indexing</strong></td>
+                    <td>- Speeds up query performance<br />- Reduces data scanned</td>
+                    <td>- Additional storage<br />- Affects write performance</td>
+                    <td>Essential for performance; must balance benefits against maintenance overhead.</td>
+                </tr>
+                <tr>
+                    <td><strong>Partitioning</strong></td>
+                    <td>- Improved query performance<br />- Easier maintenance</td>
+                    <td>- Complexity in partition management<br />- Potential data skew</td>
+                    <td>Enhances performance and manageability; requires careful planning and management.</td>
+                </tr>
+                <tr>
+                    <td><strong>Materialized Views</strong></td>
+                    <td>- Faster query response<br />- Offloads processing</td>
+                    <td>- Data staleness<br />- Storage overhead</td>
+                    <td>Ideal for complex queries; must manage refresh strategies to keep data current.</td>
+                </tr>
+                <tr>
+                    <td><strong>Sharding</strong></td>
+                    <td>- Scalability and performance<br />- Reduces load per server</td>
+                    <td>- Complexity in setup<br />- Query routing challenges</td>
+                    <td>Highly scalable; suitable for distributed systems; adds complexity to application logic.</td>
+                </tr>
+                <tr>
+                    <td><strong>Distributed Caching</strong></td>
+                    <td>- Reduces database load<br />- Improves read performance</td>
+                    <td>- Cache invalidation<br />- Data consistency issues</td>
+                    <td>Effective for read-heavy workloads; requires robust cache management strategies.</td>
+                </tr>
+                <tr>
+                    <td><strong>Asynchronous Processing</strong></td>
+                    <td>- Keeps application responsive<br />- Scalable background processing</td>
+                    <td>- Complexity in task management<br />- Error handling</td>
+                    <td>Ideal for handling long-running tasks; adds complexity to application architecture.</td>
+                </tr>
+                <tr>
+                    <td><strong>Reshuffling Design</strong></td>
+                    <td>- Simplifies data model<br />- Potential performance gains</td>
+                    <td>- Data redundancy<br />- Consistency management</td>
+                    <td>Can prevent the need for large tables; must handle denormalization trade-offs.</td>
+                </tr>
+                <tr>
+                    <td><strong>Data Archiving</strong></td>
+                    <td>- Reduces active dataset size<br />- Improves performance</td>
+                    <td>- Accessibility of archived data<br />- Data migration effort</td>
+                    <td>Effective for managing data growth; requires policies for data lifecycle management.</td>
+                </tr>
+                <tr>
+                    <td><strong>Hardware Upgrades</strong></td>
+                    <td>- Immediate performance improvement</td>
+                    <td>- High costs<br />- Limited scalability</td>
+                    <td>Provides performance boost; may not be sufficient for massive datasets in the long term.</td>
+                </tr>
+            </table>
+            </p>
+            <hr />
+            <h2 id="additional-thoughts">Additional Thoughts</h2>
+            <ul>
+                <li>
+                    <p><strong>Transactional Consistency</strong>: In distributed environments, maintaining ACID (Atomicity, Consistency, Isolation, Durability) properties can be challenging. Consider using databases that support distributed transactions if consistency is critical.</p>
+                </li>
+                <li>
+                    <p><strong>Testing with Realistic Data Volumes</strong>: Performance issues often only surface at scale. Use realistic data sizes in testing to identify potential bottlenecks early.</p>
+                </li>
+                <li>
+                    <p><strong>Monitoring and Metrics</strong>: Implement robust monitoring to track performance metrics, resource utilization, and system health. Tools like Prometheus, Grafana, and database-specific monitoring tools can be valuable.</p>
+                </li>
+                <li>
+                    <p><strong>NoSQL Databases</strong>: Depending on the use case, NoSQL databases like Cassandra, HBase, or MongoDB may handle large datasets more efficiently due to their distributed nature and scalability features.</p>
+                </li>
+                <li>
+                    <p><strong>Data Compression</strong>: Use compression techniques to reduce storage requirements and improve I/O performance. Many databases offer built-in compression options.</p>
+                </li>
+                <li>
+                    <p><strong>Message Queues and Event-Driven Architecture</strong>: Utilize message queues (e.g., Apache Kafka, RabbitMQ) to decouple data ingestion from processing, allowing for more scalable and resilient systems.</p>
+                </li>
+                <li>
+                    <p><strong>Cloud Services</strong>: Consider leveraging cloud-based database services (e.g., Amazon Redshift, Google BigQuery) that are designed to handle large-scale data warehousing and analytics.</p>
+                </li>
+            </ul>
+        </section>
+        <div id="table-of-contents">
+            <h2>Table of Contents</h2>
+            <ol>
+                <li><a href="#challenges-of-working-with-billion-row-tables">Challenges of Working with Billion-Row Tables</a></li>
+                <li><a href="#concepts-for-handling-large-tables">Concepts for Handling Large Tables</a>
+                    <ol>
+                        <li><a href="#brute-force-distributed-processing">Brute Force Distributed Processing</a></li>
+                        <li><a href="#indexing">Indexing</a></li>
+                        <li><a href="#partitioning">Partitioning</a></li>
+                        <li><a href="#materialized-views">Materialized Views</a></li>
+                    </ol>
+                </li>
+                <li><a href="#distributed-database-techniques">Distributed Database Techniques</a>
+                    <ol>
+                        <li><a href="#sharding">Sharding</a></li>
+                        <li><a href="#distributed-caching">Distributed Caching</a></li>
+                        <li><a href="#asynchronous-processing">Asynchronous Processing</a></li>
+                    </ol>
+                </li>
+                <li><a href="#avoiding-a-billion-row-table">Avoiding a Billion-Row Table</a>
+                    <ol>
+                        <li><a href="#reshuffling-design">Reshuffling Design</a></li>
+                        <li><a href="#data-archiving">Data Archiving</a></li>
+                    </ol>
+                </li>
+                <li><a href="#hardware-considerations">Hardware Considerations</a></li>
+                <li><a href="#comparison-of-methods-for-handling-large-tables">Comparison of Methods for Handling Large Tables</a></li>
+                <li><a href="#additional-thoughts">Additional Thoughts</a></li>
+            </ol>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Introduction to Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro.html">Databases Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/03_database_management_systems_dbms_.html">Database Management Systems Dbms</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models.html">Data Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/05_glossary.html">Glossary</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis.html">Requirements Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization.html">Normalization</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization.html">Denormalization</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies.html">Indexing Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/05_data_integrity.html">Data Integrity</a></li>
+                        </ol>
+                    </li>
+                    <li>Sql<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql.html">Intro to Sql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl.html">Data Definition Language Ddl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml.html">Data Manipulation Language Dml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl.html">Data Control Language Dcl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl.html">Transaction Control Language Tcl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views.html">Joins Subqueries and Views</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions.html">Stored Procedures and Functions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers.html">Triggers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data.html">Hierarchical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions</a></li>
+                        </ol>
+                    </li>
+                    <li>Acid Properties and Transactions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro.html">Transactions Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation.html">Isolation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li>
+                        </ol>
+                    </li>
+                    <li>Storage and Indexing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk.html">How Tables and Indexes Are Stored on Disk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases.html">Row Based vs Column Based Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems.html">Distributed Database Systems</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning.html">Partitioning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding.html">Sharding</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding.html">Partitioning vs Sharding</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
+                        </ol>
+                    </li>
+                    <li>Concurrency Control<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks.html">Shared vs Exclusive Locks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two Phase Locking</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Double Booking Problem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/05_serializable_vs_repeatable_read.html">Serializable vs Repeatable Read</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Performance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/01_query_optimization_techniques.html">Query Optimization Techniques</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/02_indexing_strategies.html">Indexing Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/03_database_caching.html">Database Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Replication<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Intro to Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master Standby Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi Master Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous vs Asynchronous Replication</a></li>
+                        </ol>
+                    </li>
+                    <li>Nosql Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/01_nosql_databases_intro.html">Nosql Databases Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                        </ol>
+                    </li>
+                    <li>Security Best Practices<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/01_backup_and_recovery_strategies.html">Backup and Recovery Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/02_database_security.html">Database Security</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/03_capacity_planning.html">Capacity Planning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/04_database_migration.html">Database Migration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Engines<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/01_sqlite.html">Sqlite</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/02_mysql.html">Mysql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/03_postgresql.html">Postgresql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/04_mongodb.html">Mongodb</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4_j.html">Neo4 J</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column">
+                <img alt="Adam Djellouli Symbol" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+            <div class="footer-column">
+                <h2><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Our Privacy Policy</a></h2>
+                <p>
+                    Thank you for visiting my personal website. All of the <br />
+                    content on this site is free to use, but please remember <br />
+                    to be a good human being and refrain from any abuse<br />
+                    of the site. If you would like to contact me, please use <br />
+                    my <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn profile</a> or my <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a> if you have any technical <br />
+                    issues or ideas to share. I wish you the best and hope you <br />
+                    have a fantastic life. <br />
+                </p>
+            </div>
+            <div class="footer-column">
+                <h2>Follow me</h2>
+                <ul class="social-media">
+                    <li>
+                        <a class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" target="_blank" title="YouTube">
+                        </a>YouTube
+                    </li>
+                    <li>
+                        <a class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" target="_blank" title="LinkedIn">
+                        </a>LinkedIn
+                    </li>
+                    <li>
+                        <a class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" target="_blank" title="Instagram">
+                        </a>Instagram
+                    </li>
+                    <li>
+                        <a class="fa fa-github" href="https://github.com/djeada" title="GitHub">
+                        </a>Github
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div>
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="../../../app.js"></script>
+    </footer>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

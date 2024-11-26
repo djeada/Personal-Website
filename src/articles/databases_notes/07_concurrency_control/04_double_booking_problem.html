@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Handling the Double-Booking Problem in Databases</title>
+    <meta content="The double-booking problem is a common issue in database systems, particularly in applications like booking platforms, reservation systems, and inventory management." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="https://adamdjellouli.com">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a class="active" href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <section id="article-body">
+            <p style="text-align: right;"><i>Last modified: November 26, 2024</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="handling-the-double-booking-problem-in-databases">Handling the Double-Booking Problem in Databases</h2>
+            <p>The double-booking problem is a common issue in database systems, particularly in applications like booking platforms, reservation systems, and inventory management. It occurs when multiple transactions simultaneously attempt to reserve or modify the same resource, leading to conflicts and inconsistencies. This can result in overbooked flights, double-sold tickets, or oversold inventory, causing significant problems for both businesses and customers.</p>
+            <h3 id="understanding-the-double-booking-problem">Understanding the Double-Booking Problem</h3>
+            <p>At its core, the double-booking problem arises due to concurrent transactions accessing and modifying shared resources without proper synchronization. When two or more transactions read the same data and proceed to update it based on the initial value, they can inadvertently overwrite each other's changes.</p>
+            <p><strong>Illustrative Scenario:</strong></p>
+            <p>Imagine two customers, Alice and Bob, trying to book the last available seat on a flight at the same time.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Time    Transaction by Alice            Transaction by Bob
+--------------------------------------------------------------
+T1      Read available seats = 1
+T2                                      Read available seats = 1
+T3      Book seat (available seats = 0)
+T4                                      Book seat (available seats = -1)</code></pre>
+            </div>
+            </p>
+            <p>In this timeline:</p>
+            <ul>
+                <li>At <strong>T1</strong>, Alice's transaction reads that there is <strong>1 seat available</strong>.</li>
+                <li>At <strong>T2</strong>, Bob's transaction also reads <strong>1 seat available</strong>.</li>
+                <li>At <strong>T3</strong>, Alice books the seat, updating the available seats to <strong>0</strong>.</li>
+                <li>At <strong>T4</strong>, Bob, unaware of Alice's booking, also books the seat, reducing the available seats to <strong>-1</strong>.</li>
+            </ul>
+            <p>This results in an overbooking situation where the system has allowed more bookings than available seats.</p>
+            <h3 id="causes-of-the-double-booking-problem">Causes of the Double-Booking Problem</h3>
+            <p>Several factors contribute to the occurrence of double-booking in databases:</p>
+            <ul>
+                <li>The presence of <strong>race conditions</strong> allows transactions to operate on the same data concurrently without proper synchronization, resulting in unpredictable and conflicting outcomes. </li>
+                <li><strong>Inadequate locking mechanisms</strong> fail to restrict access effectively, enabling multiple transactions to simultaneously read and write to the same resource, leading to inconsistencies. </li>
+                <li>Utilizing <strong>insufficient isolation levels</strong>, such as read-uncommitted, permits undesirable phenomena like dirty reads and non-repeatable reads, increasing the likelihood of data conflicts. </li>
+                <li><strong>Delayed writes</strong> occur when transactions read data, perform computations, and then write back changes after a delay, potentially overwriting updates made by other transactions in the interim. </li>
+            </ul>
+            <h3 id="preventing-double-booking-with-concurrency-control">Preventing Double-Booking with Concurrency Control</h3>
+            <p>To address the double-booking problem, databases use concurrency control mechanisms to manage simultaneous transactions effectively.</p>
+            <h4 id="implementing-proper-locking">Implementing Proper Locking</h4>
+            <p>Locks are essential to control access to shared resources:</p>
+            <p>I. <strong>Exclusive Locks:</strong> </p>
+            <p>Prevent other transactions from reading or writing a resource while it's locked. When a transaction acquires an exclusive lock on a resource, other transactions must wait until the lock is released.</p>
+            <p><strong>Example:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Transaction A locks Seat #42 exclusively.
+Transaction B tries to lock Seat #42 but must wait until Transaction A releases it.</code></pre>
+            </div>
+            </p>
+            <p>II. <strong>Shared Locks:</strong> </p>
+            <p>Allow multiple transactions to read a resource but prevent any from writing to it until all shared locks are released.</p>
+            <h4 id="setting-appropriate-isolation-levels">Setting Appropriate Isolation Levels</h4>
+            <p>Isolation levels determine how transaction integrity is visible to other transactions:</p>
+            <p>I. <strong>Serializable Isolation Level:</strong> </p>
+            <p>The highest level, ensuring transactions are completely isolated from each other, effectively preventing concurrent access issues.</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+BEGIN TRANSACTION;
+-- Transaction operations
+COMMIT;</code></pre>
+            </div>
+            </p>
+            <p>This level prevents other transactions from inserting or updating data that would affect the current transaction.</p>
+            <p>II. <strong>Repeatable Read:</strong> </p>
+            <p>Ensures that if a transaction reads data multiple times, it will see the same data each time, preventing non-repeatable reads but not phantom reads.</p>
+            <h4 id="using-optimistic-concurrency-control">Using Optimistic Concurrency Control</h4>
+            <p>Optimistic Concurrency Control (OCC) assumes that transaction conflicts are rare and doesn't lock resources when reading:</p>
+            <ul>
+                <li>Transactions proceed without locking resources but validate data before committing.</li>
+                <li>If a conflict is detected (the data has changed since it was read), the transaction is rolled back.</li>
+            </ul>
+            <p><strong>Example with Versioning:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-sql">BEGIN TRANSACTION;
+SELECT quantity, version FROM inventory WHERE product_id = 101;
+-- Perform operations using quantity
+-- Before updating, check if version has changed
+UPDATE inventory
+SET quantity = new_quantity, version = version + 1
+WHERE product_id = 101 AND version = old_version;
+IF @@ROWCOUNT = 0
+   -- Handle conflict (e.g., retry or abort)
+COMMIT;</code></pre>
+            </div>
+            </p>
+            <h4 id="applying-database-constraints">Applying Database Constraints</h4>
+            <p>Constraints at the database level can enforce rules to prevent double-booking:</p>
+            <p>I. <strong>Unique Constraints:</strong> </p>
+            <p>Ensure that a particular value or combination of values is unique across the table.</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">ALTER TABLE bookings
+ADD CONSTRAINT unique_booking UNIQUE (seat_number, flight_id);</code></pre>
+            </div>
+            </p>
+            <p>II. <strong>Check Constraints:</strong> </p>
+            <p>Validate data based on a logical expression.</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">ALTER TABLE flights
+ADD CONSTRAINT seat_count_check CHECK (available_seats &gt;= 0);</code></pre>
+            </div>
+            </p>
+            <h3 id="best-practices-to-avoid-double-booking">Best Practices to Avoid Double-Booking</h3>
+            <p>To effectively prevent double-booking, consider the following strategies:</p>
+            <h4 id="design-transactions-carefully">Design Transactions Carefully</h4>
+            <p>Ensure that transactions are atomic and encapsulate all necessary operations:</p>
+            <ul>
+                <li>Upholding <strong>atomicity</strong> ensures that transactions are executed as all-or-nothing operations, preventing partial updates that could result in inconsistencies if a failure occurs. </li>
+                <li>Maintaining <strong>short transactions</strong> minimizes the duration of locks held, reducing contention and improving overall system throughput in high-concurrency environments. </li>
+            </ul>
+            <h4 id="use-pessimistic-locking-when-necessary">Use Pessimistic Locking When Necessary</h4>
+            <p>In environments with high contention for resources, pessimistic locking can prevent conflicts:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">BEGIN TRANSACTION;
+SELECT * FROM seats WITH (UPDLOCK, HOLDLOCK) WHERE seat_id = 101;
+-- Proceed with booking
+COMMIT;</code></pre>
+            </div>
+            </p>
+            <p>Lock the resource before reading to ensure no other transaction can modify it during the operation.</p>
+            <h4 id="implement-optimistic-locking">Implement Optimistic Locking</h4>
+            <p>In low-contention scenarios, implementing optimistic locking can significantly enhance performance by reducing the overhead associated with traditional locking mechanisms. This approach relies on the principle of detecting conflicts only at the time of writing. By checking for changes before committing updates—often using row versions or timestamps—it ensures that no other transaction has modified the data during the operation. This method works effectively when conflicts are infrequent, as it minimizes the need for locks while maintaining data integrity.</p>
+            <h4 id="consistent-lock-ordering">Consistent Lock Ordering</h4>
+            <p>To address deadlocks, adopting consistent lock ordering is a practical strategy. By establishing a global sequence for acquiring locks, all transactions follow the same order when accessing resources. This structured approach eliminates the possibility of cyclical dependencies, a common cause of deadlocks, ensuring smoother transaction execution and improved system stability.</p>
+            <h4 id="monitor-and-adjust-isolation-levels">Monitor and Adjust Isolation Levels</h4>
+            <p>Balance the need for data integrity with system performance:</p>
+            <ul>
+                <li>Using <strong>higher isolation levels</strong> ensures greater consistency by preventing anomalies such as dirty reads, non-repeatable reads, and phantom reads, though it often comes at the cost of reduced concurrency. </li>
+                <li>Opting for <strong>lower isolation levels</strong> enhances concurrency by allowing more transactions to proceed simultaneously but may introduce anomalies like dirty reads, requiring careful consideration of the application's tolerance for inconsistencies. </li>
+            </ul>
+            <p>Choose the appropriate level based on the application's requirements.</p>
+            <h3 id="real-world-example-ticket-booking-system">Real-World Example: Ticket Booking System</h3>
+            <p>Consider an online concert ticket booking system where multiple users attempt to purchase the last available ticket.</p>
+            <p><strong>Without Proper Concurrency Control:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">User 1 Transaction:
+- Checks available tickets: finds 1 ticket.
+- Decides to purchase the ticket.
+
+User 2 Transaction:
+- Checks available tickets: also finds 1 ticket.
+- Decides to purchase the ticket.
+
+Both users complete the purchase, resulting in overbooking.</code></pre>
+            </div>
+            </p>
+            <p><strong>With Proper Concurrency Control:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">User 1 Transaction:
+- Begins transaction.
+- Locks the ticket record exclusively.
+- Confirms availability.
+- Purchases the ticket.
+- Commits transaction and releases lock.
+
+User 2 Transaction:
+- Begins transaction.
+- Attempts to lock the ticket record but must wait.
+- After User 1's transaction commits, User 2 locks the record.
+- Confirms availability but finds no tickets left.
+- Transaction is aborted or informs the user of unavailability.</code></pre>
+            </div>
+            </p>
+            <p>This approach ensures that only one user can purchase the last ticket, preventing double-booking.</p>
+            <h3 id="implementing-solutions-in-different-database-systems">Implementing Solutions in Different Database Systems</h3>
+            <p>Different databases offer various features to handle concurrency:</p>
+            <h4 id="sql-server-example">SQL Server Example</h4>
+            <p>Using hints to control locking behavior:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">BEGIN TRANSACTION;
+SELECT * FROM seats WITH (ROWLOCK, XLOCK) WHERE seat_id = 101;
+-- Proceed with booking
+UPDATE seats SET status = 'booked' WHERE seat_id = 101;
+COMMIT;</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><code>ROWLOCK</code>: Specifies row-level locking.</li>
+                <li><code>XLOCK</code>: Acquires an exclusive lock on the rows.</li>
+            </ul>
+            <h4 id="postgresql-example">PostgreSQL Example</h4>
+            <p>Relying on MVCC and explicit locking:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">BEGIN TRANSACTION;
+SELECT * FROM seats WHERE seat_id = 101 FOR UPDATE;
+-- Proceed with booking
+UPDATE seats SET status = 'booked' WHERE seat_id = 101;
+COMMIT;</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><code>FOR UPDATE</code>: Locks the selected rows against concurrent updates.</li>
+            </ul>
+            <h3 id="handling-high-concurrency-environments">Handling High Concurrency Environments</h3>
+            <p>Managing systems with a high volume of transactions requires strategies that ensure both efficiency and stability:</p>
+            <ul>
+                <li>Introducing <strong>queueing mechanisms</strong> helps serialize access to critical resources, preventing simultaneous conflicts and improving transaction order. </li>
+                <li>Employing <strong>caching and load balancing</strong> reduces the load on the database by serving frequently accessed data from cache and distributing traffic across multiple servers. </li>
+                <li>Adopting <strong>eventual consistency models</strong> allows temporary inconsistencies to improve performance in distributed systems, though this approach is best suited for applications where strong consistency is not critical. </li>
+            </ul>
+            <h3 id="monitoring-and-testing">Monitoring and Testing</h3>
+            <p>Regular monitoring and proactive testing are essential for identifying and resolving concurrency issues effectively:</p>
+            <ul>
+                <li>Maintaining <strong>detailed logs and audits</strong> provides visibility into transaction activity, enabling the detection and analysis of conflicts or anomalies. </li>
+                <li>Tracking <strong>performance metrics</strong> such as lock wait times, deadlock occurrences, and transaction durations helps assess the efficiency of concurrency controls. </li>
+                <li>Conducting <strong>stress testing</strong> under simulated high-concurrency conditions validates the system’s capacity to handle load and reveals potential bottlenecks or weaknesses. </li>
+            </ul>
+        </section>
+        <div id="table-of-contents">
+            <h2>Table of Contents</h2>
+            <ol><a href="#handling-the-double-booking-problem-in-databases">Handling the Double-Booking Problem in Databases</a>
+                <ol>
+                    <li><a href="#understanding-the-double-booking-problem">Understanding the Double-Booking Problem</a></li>
+                    <li><a href="#causes-of-the-double-booking-problem">Causes of the Double-Booking Problem</a></li>
+                    <li><a href="#preventing-double-booking-with-concurrency-control">Preventing Double-Booking with Concurrency Control</a>
+                        <ol>
+                            <li><a href="#implementing-proper-locking">Implementing Proper Locking</a></li>
+                            <li><a href="#setting-appropriate-isolation-levels">Setting Appropriate Isolation Levels</a></li>
+                            <li><a href="#using-optimistic-concurrency-control">Using Optimistic Concurrency Control</a></li>
+                            <li><a href="#applying-database-constraints">Applying Database Constraints</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#best-practices-to-avoid-double-booking">Best Practices to Avoid Double-Booking</a>
+                        <ol>
+                            <li><a href="#design-transactions-carefully">Design Transactions Carefully</a></li>
+                            <li><a href="#use-pessimistic-locking-when-necessary">Use Pessimistic Locking When Necessary</a></li>
+                            <li><a href="#implement-optimistic-locking">Implement Optimistic Locking</a></li>
+                            <li><a href="#consistent-lock-ordering">Consistent Lock Ordering</a></li>
+                            <li><a href="#monitor-and-adjust-isolation-levels">Monitor and Adjust Isolation Levels</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#real-world-example-ticket-booking-system">Real-World Example: Ticket Booking System</a></li>
+                    <li><a href="#implementing-solutions-in-different-database-systems">Implementing Solutions in Different Database Systems</a>
+                        <ol>
+                            <li><a href="#sql-server-example">SQL Server Example</a></li>
+                            <li><a href="#postgresql-example">PostgreSQL Example</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#handling-high-concurrency-environments">Handling High Concurrency Environments</a></li>
+                    <li><a href="#monitoring-and-testing">Monitoring and Testing</a></li>
+                </ol>
+            </ol>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Introduction to Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro.html">Databases Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/03_database_management_systems_dbms_.html">Database Management Systems Dbms</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models.html">Data Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/05_glossary.html">Glossary</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis.html">Requirements Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization.html">Normalization</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization.html">Denormalization</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies.html">Indexing Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/05_data_integrity.html">Data Integrity</a></li>
+                        </ol>
+                    </li>
+                    <li>Sql<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql.html">Intro to Sql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl.html">Data Definition Language Ddl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml.html">Data Manipulation Language Dml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl.html">Data Control Language Dcl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl.html">Transaction Control Language Tcl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views.html">Joins Subqueries and Views</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions.html">Stored Procedures and Functions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers.html">Triggers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data.html">Hierarchical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions</a></li>
+                        </ol>
+                    </li>
+                    <li>Acid Properties and Transactions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro.html">Transactions Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation.html">Isolation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li>
+                        </ol>
+                    </li>
+                    <li>Storage and Indexing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk.html">How Tables and Indexes Are Stored on Disk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases.html">Row Based vs Column Based Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems.html">Distributed Database Systems</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning.html">Partitioning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding.html">Sharding</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding.html">Partitioning vs Sharding</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
+                        </ol>
+                    </li>
+                    <li>Concurrency Control<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks.html">Shared vs Exclusive Locks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two Phase Locking</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Double Booking Problem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/05_serializable_vs_repeatable_read.html">Serializable vs Repeatable Read</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Performance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/01_query_optimization_techniques.html">Query Optimization Techniques</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/02_indexing_strategies.html">Indexing Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/03_database_caching.html">Database Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Replication<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Intro to Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master Standby Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi Master Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous vs Asynchronous Replication</a></li>
+                        </ol>
+                    </li>
+                    <li>Nosql Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/01_nosql_databases_intro.html">Nosql Databases Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                        </ol>
+                    </li>
+                    <li>Security Best Practices<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/01_backup_and_recovery_strategies.html">Backup and Recovery Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/02_database_security.html">Database Security</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/03_capacity_planning.html">Capacity Planning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/04_database_migration.html">Database Migration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Engines<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/01_sqlite.html">Sqlite</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/02_mysql.html">Mysql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/03_postgresql.html">Postgresql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/04_mongodb.html">Mongodb</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4_j.html">Neo4 J</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column">
+                <img alt="Adam Djellouli Symbol" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+            <div class="footer-column">
+                <h2><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Our Privacy Policy</a></h2>
+                <p>
+                    Thank you for visiting my personal website. All of the <br />
+                    content on this site is free to use, but please remember <br />
+                    to be a good human being and refrain from any abuse<br />
+                    of the site. If you would like to contact me, please use <br />
+                    my <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn profile</a> or my <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a> if you have any technical <br />
+                    issues or ideas to share. I wish you the best and hope you <br />
+                    have a fantastic life. <br />
+                </p>
+            </div>
+            <div class="footer-column">
+                <h2>Follow me</h2>
+                <ul class="social-media">
+                    <li>
+                        <a class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" target="_blank" title="YouTube">
+                        </a>YouTube
+                    </li>
+                    <li>
+                        <a class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" target="_blank" title="LinkedIn">
+                        </a>LinkedIn
+                    </li>
+                    <li>
+                        <a class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" target="_blank" title="Instagram">
+                        </a>Instagram
+                    </li>
+                    <li>
+                        <a class="fa fa-github" href="https://github.com/djeada" title="GitHub">
+                        </a>Github
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div>
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="../../../app.js"></script>
+    </footer>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Backup and Recovery Strategies</title>
+    <meta content="Backup and recovery strategies are crucial components of any database management plan, ensuring data durability, availability, and business continuity." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="https://adamdjellouli.com">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a class="active" href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <section id="article-body">
+            <p style="text-align: right;"><i>Last modified: November 26, 2024</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <header>Backup and Recovery Strategies</header>
+            <p>Backup and recovery strategies are crucial components of any database management plan, ensuring data durability, availability, and business continuity. One of the primary challenges in designing these strategies is performing backups without stopping or slowing down production read/write operations. This note provides an in-depth exploration of backup types, methods to minimize production impact, recovery strategies, best practices, and tools, with illustrative diagrams to enhance understanding.</p>
+            <p><strong>Key Objectives:</strong></p>
+            <ul>
+                <li><strong>Data Durability</strong>: Ensure that data is not lost due to hardware failures, software bugs, or human errors.</li>
+                <li><strong>Data Availability</strong>: Minimize downtime and maintain continuous access to data.</li>
+                <li><strong>Performance Preservation</strong>: Conduct backups without impacting the performance of production read/write operations.</li>
+            </ul>
+            <h2 id="challenges-in-non-disruptive-backups">Challenges in Non-Disruptive Backups</h2>
+            <ul>
+                <li><strong>Resource Contention</strong>: Backup processes can consume significant I/O, CPU, and network resources, competing with production workloads.</li>
+                <li><strong>Data Consistency</strong>: Ensuring the backup captures a consistent state of the database without locking tables or halting transactions.</li>
+                <li><strong>Scalability</strong>: Handling large volumes of data efficiently during backup without affecting application performance.</li>
+            </ul>
+            <hr />
+            <h2 id="types-of-backups">Types of Backups</h2>
+            <p>Understanding the different types of backups is essential for designing an effective backup strategy.</p>
+            <h3 id="full-backup">Full Backup</h3>
+            <ul>
+                <li><strong>Definition</strong>: A complete copy of the entire database at a specific point in time.</li>
+                <li><strong>Characteristics</strong>:</li>
+                <li><strong>Pros</strong>:<ul>
+                        <li>Simplifies recovery since all data is in a single backup.</li>
+                        <li>Easier to manage and restore.</li>
+                    </ul>
+                </li>
+                <li><strong>Cons</strong>:<ul>
+                        <li>Time-consuming to create, especially for large databases.</li>
+                        <li>Requires significant storage space.</li>
+                        <li>Can impact production if not managed properly.</li>
+                    </ul>
+                </li>
+            </ul>
+            <h3 id="incremental-backup">Incremental Backup</h3>
+            <ul>
+                <li><strong>Definition</strong>: Backs up only the data that has changed since the last backup (full or incremental).</li>
+                <li><strong>Characteristics</strong>:</li>
+                <li><strong>Pros</strong>:<ul>
+                        <li>Faster and requires less storage than full backups.</li>
+                        <li>Reduces backup window and resource utilization.</li>
+                    </ul>
+                </li>
+                <li><strong>Cons</strong>:<ul>
+                        <li>Recovery is more complex, requiring all incremental backups since the last full backup.</li>
+                        <li>Potentially longer recovery time.</li>
+                    </ul>
+                </li>
+            </ul>
+            <h3 id="differential-backup">Differential Backup</h3>
+            <ul>
+                <li><strong>Definition</strong>: Backs up data that has changed since the last full backup.</li>
+                <li><strong>Characteristics</strong>:</li>
+                <li><strong>Pros</strong>:<ul>
+                        <li>Faster than full backups.</li>
+                        <li>Simpler recovery process than incremental backups (only need the last full and differential backup).</li>
+                    </ul>
+                </li>
+                <li><strong>Cons</strong>:<ul>
+                        <li>As time passes, differential backups can become nearly as large as full backups.</li>
+                    </ul>
+                </li>
+            </ul>
+            <h3 id="logical-vs-physical-backups">Logical vs. Physical Backups</h3>
+            <ul>
+                <li><strong>Logical Backups</strong>:</li>
+                <li><strong>Definition</strong>: Export database objects like schemas and data using database utilities (e.g., <code>mysqldump</code>, <code>pg_dump</code>).</li>
+                <li><strong>Pros</strong>:<ul>
+                        <li>Portable across different database versions and platforms.</li>
+                        <li>Allows for selective restores.</li>
+                    </ul>
+                </li>
+                <li>
+                    <p><strong>Cons</strong>:</p>
+                    <ul>
+                        <li>Slower and can impact performance due to table scans.</li>
+                        <li>May not capture certain database-specific features.</li>
+                    </ul>
+                </li>
+                <li>
+                    <p><strong>Physical Backups</strong>:</p>
+                </li>
+                <li><strong>Definition</strong>: Copy the physical files that store the database data (e.g., data files, logs).</li>
+                <li><strong>Pros</strong>:<ul>
+                        <li>Faster backup and restore times.</li>
+                        <li>Less impact on performance if managed correctly.</li>
+                    </ul>
+                </li>
+                <li><strong>Cons</strong>:<ul>
+                        <li>Usually platform-specific.</li>
+                        <li>Requires consistency measures (e.g., snapshots).</li>
+                    </ul>
+                </li>
+            </ul>
+            <hr />
+            <h2 id="backup-methods-minimizing-production-impact">Backup Methods Minimizing Production Impact</h2>
+            <p>To avoid disrupting production operations, consider backup methods designed to minimize resource contention and maintain data consistency without halting read/write activities.</p>
+            <h3 id="online-hot-backups">Online (Hot) Backups</h3>
+            <ul>
+                <li><strong>Definition</strong>: Backups taken while the database is running and accessible to users.</li>
+                <li><strong>Mechanism</strong>:</li>
+                <li>Utilize database features that allow for consistent backups without locking tables.</li>
+                <li>Often involve reading data files while tracking changes (e.g., through write-ahead logs).</li>
+                <li><strong>Considerations</strong>:</li>
+                <li>Ensure the backup tool supports online backups.</li>
+                <li>Monitor resource utilization to prevent performance degradation.</li>
+            </ul>
+            <p><strong>Example with PostgreSQL:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash"># Using pg_basebackup for online backup
+pg_basebackup -h localhost -D /backup/data -U replicator -Fp -Xs -P</code></pre>
+            </div>
+            </p>
+            <h3 id="snapshot-based-backups">Snapshot-Based Backups</h3>
+            <ul>
+                <li><strong>Definition</strong>: Leverage filesystem or storage-level snapshots to capture the state of the database at a point in time.</li>
+                <li><strong>Mechanism</strong>:</li>
+                <li><strong>Filesystem Snapshots</strong>: Use features like LVM, ZFS, or Btrfs snapshots.</li>
+                <li><strong>Storage Snapshots</strong>: Use SAN or NAS capabilities to create instant snapshots.</li>
+                <li><strong>Advantages</strong>:</li>
+                <li>Snapshots are nearly instantaneous, minimizing impact.</li>
+                <li>Can be used in conjunction with database mechanisms to ensure consistency.</li>
+            </ul>
+            <p><strong>Illustrative Diagram:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+------------------------+
+|   Production Database  |
+|       (Running)        |
++-----------+------------+
+            |
+       Initiate Snapshot
+            |
+            v
++------------------------+
+|   Snapshot Created     |
+|   (Point-in-Time Copy) |
++------------------------+
+
+- The production database continues to run without interruption.
+- The snapshot can be backed up or moved without affecting the production load.</code></pre>
+            </div>
+            </p>
+            <p><strong>Example with LVM Snapshots:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash"># Create LVM snapshot
+lvcreate --size 10G --snapshot --name db_snapshot /dev/vg0/db_volume
+
+# Mount snapshot and perform backup
+mount /dev/vg0/db_snapshot /mnt/db_snapshot
+tar -czf db_backup.tar.gz /mnt/db_snapshot
+
+# Remove snapshot after backup
+umount /mnt/db_snapshot
+lvremove /dev/vg0/db_snapshot</code></pre>
+            </div>
+            </p>
+            <h3 id="replication-based-backups">Replication-Based Backups</h3>
+            <ul>
+                <li><strong>Definition</strong>: Use a replica (standby) server to perform backups, thereby offloading the backup load from the primary server.</li>
+                <li><strong>Mechanism</strong>:</li>
+                <li>Set up replication to a standby server.</li>
+                <li>Perform backups on the standby without impacting the primary.</li>
+                <li><strong>Advantages</strong>:</li>
+                <li>Eliminates backup load on the primary server.</li>
+                <li>Standby can be used for other purposes like read scaling.</li>
+            </ul>
+            <p><strong>Illustrative Diagram:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+-------------------+
+          |   Primary Server  |
+          |   (Production)    |
+          +---------+---------+
+                    |
+               Replication
+                    |
+                    v
+          +-------------------+
+          |   Standby Server  |
+          |   (Read-Only)     |
+          +---------+---------+
+                    |
+               Backup Process
+                    |
+                    v
+          +-------------------+
+          |   Backup Storage  |
+          +-------------------+
+
+- Replication keeps the standby synchronized with the primary.
+- Backups are performed on the standby, avoiding impact on the primary.</code></pre>
+            </div>
+            </p>
+            <p><strong>Considerations:</strong></p>
+            <ul>
+                <li>Ensure replication lag is minimal to have up-to-date backups.</li>
+                <li>Standby server should have sufficient resources to handle backup operations.</li>
+            </ul>
+            <hr />
+            <h2 id="recovery-strategies">Recovery Strategies</h2>
+            <p>An effective recovery strategy is essential to restore operations quickly after data loss.</p>
+            <h3 id="point-in-time-recovery-pitr-">Point-in-Time Recovery (PITR)</h3>
+            <ul>
+                <li><strong>Definition</strong>: Restoring the database to a specific moment using backups and transaction logs.</li>
+                <li><strong>Mechanism</strong>:</li>
+                <li>Restore the latest full backup.</li>
+                <li>Apply incremental backups (if any).</li>
+                <li>Replay transaction logs up to the desired point in time.</li>
+                <li><strong>Requirements</strong>:</li>
+                <li>Regular backups (full, incremental, or differential).</li>
+                <li>Continuous archiving of transaction logs (WAL files in PostgreSQL, binary logs in MySQL).</li>
+            </ul>
+            <p><strong>Example with PostgreSQL:</strong></p>
+            <ol>
+                <li><strong>Configure Continuous Archiving</strong>:</li>
+            </ol>
+            <p>
+            <div>
+                <pre><code class="language-conf"># postgresql.conf
+   archive_mode = on
+   archive_command = 'cp %p /archive_location/%f'</code></pre>
+            </div>
+            </p>
+            <ol>
+                <li>
+                    <p><strong>Perform Recovery</strong>:</p>
+                </li>
+                <li>
+                    <p>Restore the base backup.</p>
+                </li>
+                <li>Create <code>recovery.conf</code> specifying the target time.</li>
+            </ol>
+            <p>
+            <div>
+                <pre><code class="language-conf"># recovery.conf
+   restore_command = 'cp /archive_location/%f %p'
+   recovery_target_time = '2023-09-14 12:34:56'</code></pre>
+            </div>
+            </p>
+            <h3 id="continuous-data-protection-cdp-">Continuous Data Protection (CDP)</h3>
+            <ul>
+                <li><strong>Definition</strong>: Capturing and storing all changes in real-time or near-real-time to enable quick recovery with minimal data loss.</li>
+                <li><strong>Mechanism</strong>:</li>
+                <li>Log every write operation.</li>
+                <li>Allows recovery to any point in time.</li>
+                <li><strong>Considerations</strong>:</li>
+                <li>Requires significant storage for logs.</li>
+                <li>May impact performance due to continuous logging.</li>
+            </ul>
+            <h3 id="standby-databases">Standby Databases</h3>
+            <ul>
+                <li><strong>Definition</strong>: Maintain one or more standby databases synchronized with the primary via replication.</li>
+                <li><strong>Usage</strong>:</li>
+                <li><strong>Failover</strong>: Promote a standby to primary in case of primary failure.</li>
+                <li><strong>Load Balancing</strong>: Use standbys for read queries.</li>
+                <li><strong>Backup Source</strong>: Perform backups from standby to offload primary.</li>
+            </ul>
+            <p><strong>Failover Process Illustration:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">[Normal Operation]
++-------------------+       Replication       +-------------------+
+|   Primary Server  | ----------------------&gt; |   Standby Server  |
+|   (Active)        |                         |   (Passive)       |
++-------------------+                         +-------------------+
+
+[After Primary Failure]
++-------------------+                          +-------------------+
+|   Primary Server  |      Promote Standby     |   Standby Server  |
+|   (Failed)        | -----------------------&gt; |   (Now Primary)   |
++-------------------+                          +-------------------+
+
+- Standby server becomes the new primary.
+- Clients are redirected to the new primary.</code></pre>
+            </div>
+            </p>
+            <hr />
+            <h2 id="best-practices">Best Practices</h2>
+            <ol>
+                <li><strong>Regular Backup Schedule</strong>:</li>
+                <li>Align with Recovery Point Objective (RPO) and Recovery Time Objective (RTO).</li>
+                <li>
+                    <p>Automate backups to reduce human error.</p>
+                </li>
+                <li>
+                    <p><strong>Backup Testing</strong>:</p>
+                </li>
+                <li>Regularly test restore procedures.</li>
+                <li>
+                    <p>Verify backup integrity to ensure data can be recovered.</p>
+                </li>
+                <li>
+                    <p><strong>Offsite and Redundant Storage</strong>:</p>
+                </li>
+                <li>Store backups in multiple locations.</li>
+                <li>
+                    <p>Use cloud storage for additional redundancy.</p>
+                </li>
+                <li>
+                    <p><strong>Monitoring and Alerts</strong>:</p>
+                </li>
+                <li>Implement monitoring for backup processes.</li>
+                <li>
+                    <p>Set up alerts for failures or performance issues.</p>
+                </li>
+                <li>
+                    <p><strong>Documentation and Procedures</strong>:</p>
+                </li>
+                <li>Maintain up-to-date documentation of backup and recovery processes.</li>
+                <li>
+                    <p>Train staff on recovery procedures.</p>
+                </li>
+                <li>
+                    <p><strong>Security Measures</strong>:</p>
+                </li>
+                <li>Encrypt backups to protect sensitive data.</li>
+                <li>
+                    <p>Restrict access to backup storage.</p>
+                </li>
+                <li>
+                    <p><strong>Resource Management</strong>:</p>
+                </li>
+                <li>Schedule backups during off-peak hours if possible.</li>
+                <li>
+                    <p>Throttle backup processes to limit resource usage.</p>
+                </li>
+                <li>
+                    <p><strong>Compliance and Retention Policies</strong>:</p>
+                </li>
+                <li>Adhere to legal requirements for data retention.</li>
+                <li>Implement policies for backup retention and disposal.</li>
+            </ol>
+            <hr />
+            <h2 id="tools-and-technologies">Tools and Technologies</h2>
+            <p>Various tools and technologies can facilitate efficient backups without impacting production.</p>
+            <h3 id="database-specific-tools">Database-Specific Tools</h3>
+            <ul>
+                <li><strong>MySQL/MariaDB</strong>:</li>
+                <li><strong>Percona XtraBackup</strong>: Open-source tool for hot physical backups.<ul>
+                        <li>Supports non-blocking backups of InnoDB databases.</li>
+                        <li>Incremental backups and compression options.</li>
+                    </ul>
+                </li>
+                <li>
+                    <p><strong>MySQL Enterprise Backup</strong>: Provides hot backup capabilities.</p>
+                </li>
+                <li>
+                    <p><strong>PostgreSQL</strong>:</p>
+                </li>
+                <li><strong>pg_basebackup</strong>: Built-in tool for streaming physical backups.</li>
+                <li>
+                    <p><strong>Barman</strong> and <strong>pgBackRest</strong>: Advanced backup and recovery tools supporting incremental backups, compression, and PITR.</p>
+                </li>
+                <li>
+                    <p><strong>Oracle</strong>:</p>
+                </li>
+                <li><strong>RMAN (Recovery Manager)</strong>: Comprehensive backup and recovery tool integrated with Oracle databases.</li>
+            </ul>
+            <h3 id="filesystem-and-storage-solutions">Filesystem and Storage Solutions</h3>
+            <ul>
+                <li><strong>LVM Snapshots</strong>: Logical Volume Manager allows for point-in-time snapshots of volumes.</li>
+                <li><strong>ZFS Snapshots</strong>: ZFS filesystem supports efficient snapshots and replication.</li>
+                <li><strong>Cloud Provider Snapshots</strong>:</li>
+                <li><strong>AWS EBS Snapshots</strong>: Provides incremental snapshots of EBS volumes.</li>
+                <li><strong>Azure Managed Disks</strong>: Supports snapshots and incremental backups.</li>
+                <li><strong>Google Cloud Persistent Disk Snapshots</strong>: Allows for point-in-time copies.</li>
+            </ul>
+            <h3 id="backup-and-recovery-software">Backup and Recovery Software</h3>
+            <ul>
+                <li><strong>Bacula</strong>: Enterprise-level open-source backup solution.</li>
+                <li><strong>Amanda</strong>: Open-source backup software compatible with various operating systems.</li>
+                <li><strong>Veeam Backup &amp; Replication</strong>: Offers data protection for virtual, physical, and cloud environments.</li>
+                <li><strong>Commvault</strong>: Comprehensive data management solution with backup and recovery capabilities.</li>
+            </ul>
+            <h3 id="continuous-data-protection-tools">Continuous Data Protection Tools</h3>
+            <ul>
+                <li><strong>DRBD (Distributed Replicated Block Device)</strong>: Mirrors block devices between servers.</li>
+                <li><strong>MongoDB Ops Manager</strong>: Provides continuous backup for MongoDB databases.</li>
+                <li><strong>SQL Server Always On Availability Groups</strong>: Supports real-time data replication.</li>
+            </ul>
+        </section>
+        <div id="table-of-contents">
+            <h2>Table of Contents</h2>
+            <ol>
+                <li><a href="#challenges-in-non-disruptive-backups">Challenges in Non-Disruptive Backups</a></li>
+                <li><a href="#types-of-backups">Types of Backups</a>
+                    <ol>
+                        <li><a href="#full-backup">Full Backup</a></li>
+                        <li><a href="#incremental-backup">Incremental Backup</a></li>
+                        <li><a href="#differential-backup">Differential Backup</a></li>
+                        <li><a href="#logical-vs-physical-backups">Logical vs. Physical Backups</a></li>
+                    </ol>
+                </li>
+                <li><a href="#backup-methods-minimizing-production-impact">Backup Methods Minimizing Production Impact</a>
+                    <ol>
+                        <li><a href="#online-hot-backups">Online (Hot) Backups</a></li>
+                        <li><a href="#snapshot-based-backups">Snapshot-Based Backups</a></li>
+                        <li><a href="#replication-based-backups">Replication-Based Backups</a></li>
+                    </ol>
+                </li>
+                <li><a href="#recovery-strategies">Recovery Strategies</a>
+                    <ol>
+                        <li><a href="#point-in-time-recovery-pitr-">Point-in-Time Recovery (PITR)</a></li>
+                        <li><a href="#continuous-data-protection-cdp-">Continuous Data Protection (CDP)</a></li>
+                        <li><a href="#standby-databases">Standby Databases</a></li>
+                    </ol>
+                </li>
+                <li><a href="#best-practices">Best Practices</a></li>
+                <li><a href="#tools-and-technologies">Tools and Technologies</a>
+                    <ol>
+                        <li><a href="#database-specific-tools">Database-Specific Tools</a></li>
+                        <li><a href="#filesystem-and-storage-solutions">Filesystem and Storage Solutions</a></li>
+                        <li><a href="#backup-and-recovery-software">Backup and Recovery Software</a></li>
+                        <li><a href="#continuous-data-protection-tools">Continuous Data Protection Tools</a></li>
+                    </ol>
+                </li>
+            </ol>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Introduction to Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro.html">Databases Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/03_database_management_systems_dbms_.html">Database Management Systems Dbms</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models.html">Data Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/05_glossary.html">Glossary</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis.html">Requirements Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization.html">Normalization</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization.html">Denormalization</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies.html">Indexing Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/05_data_integrity.html">Data Integrity</a></li>
+                        </ol>
+                    </li>
+                    <li>Sql<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql.html">Intro to Sql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl.html">Data Definition Language Ddl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml.html">Data Manipulation Language Dml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl.html">Data Control Language Dcl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl.html">Transaction Control Language Tcl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views.html">Joins Subqueries and Views</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions.html">Stored Procedures and Functions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers.html">Triggers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data.html">Hierarchical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions</a></li>
+                        </ol>
+                    </li>
+                    <li>Acid Properties and Transactions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro.html">Transactions Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation.html">Isolation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li>
+                        </ol>
+                    </li>
+                    <li>Storage and Indexing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk.html">How Tables and Indexes Are Stored on Disk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases.html">Row Based vs Column Based Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems.html">Distributed Database Systems</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning.html">Partitioning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding.html">Sharding</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding.html">Partitioning vs Sharding</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
+                        </ol>
+                    </li>
+                    <li>Concurrency Control<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks.html">Shared vs Exclusive Locks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two Phase Locking</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Double Booking Problem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/05_serializable_vs_repeatable_read.html">Serializable vs Repeatable Read</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Performance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/01_query_optimization_techniques.html">Query Optimization Techniques</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/02_indexing_strategies.html">Indexing Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/03_database_caching.html">Database Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Replication<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Intro to Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master Standby Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi Master Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous vs Asynchronous Replication</a></li>
+                        </ol>
+                    </li>
+                    <li>Nosql Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/01_nosql_databases_intro.html">Nosql Databases Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                        </ol>
+                    </li>
+                    <li>Security Best Practices<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/01_backup_and_recovery_strategies.html">Backup and Recovery Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/02_database_security.html">Database Security</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/03_capacity_planning.html">Capacity Planning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/04_database_migration.html">Database Migration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Engines<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/01_sqlite.html">Sqlite</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/02_mysql.html">Mysql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/03_postgresql.html">Postgresql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/04_mongodb.html">Mongodb</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4_j.html">Neo4 J</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column">
+                <img alt="Adam Djellouli Symbol" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+            <div class="footer-column">
+                <h2><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Our Privacy Policy</a></h2>
+                <p>
+                    Thank you for visiting my personal website. All of the <br />
+                    content on this site is free to use, but please remember <br />
+                    to be a good human being and refrain from any abuse<br />
+                    of the site. If you would like to contact me, please use <br />
+                    my <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn profile</a> or my <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a> if you have any technical <br />
+                    issues or ideas to share. I wish you the best and hope you <br />
+                    have a fantastic life. <br />
+                </p>
+            </div>
+            <div class="footer-column">
+                <h2>Follow me</h2>
+                <ul class="social-media">
+                    <li>
+                        <a class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" target="_blank" title="YouTube">
+                        </a>YouTube
+                    </li>
+                    <li>
+                        <a class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" target="_blank" title="LinkedIn">
+                        </a>LinkedIn
+                    </li>
+                    <li>
+                        <a class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" target="_blank" title="Instagram">
+                        </a>Instagram
+                    </li>
+                    <li>
+                        <a class="fa fa-github" href="https://github.com/djeada" title="GitHub">
+                        </a>Github
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div>
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="../../../app.js"></script>
+    </footer>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

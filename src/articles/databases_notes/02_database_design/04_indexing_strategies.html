@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Database Indexing Strategies</title>
+    <meta content="Database indexing is like adding bookmarks to a large textbook; it helps you quickly find the information you need without flipping through every page." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="https://adamdjellouli.com">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a class="active" href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <section id="article-body">
+            <p style="text-align: right;"><i>Last modified: November 26, 2024</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <header>Database Indexing Strategies</header>
+            <p>Database indexing is like adding bookmarks to a large textbook; it helps you quickly find the information you need without flipping through every page. In the world of databases, indexes significantly speed up data retrieval operations, making your applications faster and more efficient. However, indexing also requires careful planning to balance performance gains with potential costs in storage and maintenance.</p>
+            <h2 id="what-is-database-indexing-">What Is Database Indexing?</h2>
+            <p>At its core, database indexing involves creating a data structure that improves the speed of data retrieval. Without indexes, a database might have to scan every row in a table to find the relevant data—a process known as a full table scan. Indexes act as guides, pointing the database engine directly to the locations of the desired data.</p>
+            <p>Imagine a phone book without any order; finding a person's number would require checking each entry one by one. By organizing the entries alphabetically, you can jump directly to the correct section. Similarly, indexes organize data in a way that makes searching much more efficient.</p>
+            <h3 id="how-indexes-work">How Indexes Work</h3>
+            <p>An index is typically implemented using a data structure like a B-tree or a hash table, which allows for rapid searching, insertion, and deletion of data. Here's a simple ASCII diagram to illustrate the concept:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+-------------------------------------------+
+|                Table                      |
++-------------------------------------------+
+| ID | Name     | Age | Email               |
+|----|----------|-----|---------------------|
+| 1  | Alice    | 30  | alice@example.com   |
+| 2  | Bob      | 25  | bob@example.com     |
+| 3  | Charlie  | 35  | charlie@example.com |
+| 4  | Diana    | 28  | diana@example.com   |
+|... | ...      | ... | ...                 |
++-------------------------------------------+
+
++-----------------------+
+|         Index         |
++-----------------------+
+| Key (Age)| Record ID  |
+|----------|------------|
+|    25    |     2      |
+|    28    |     4      |
+|    30    |     1      |
+|    35    |     3      |
+|   ...    |    ...     |
++-----------------------+</code></pre>
+            </div>
+            </p>
+            <p>In this example, the index on the "Age" column allows the database to quickly locate records based on age without scanning the entire table.</p>
+            <h2 id="selecting-columns-to-index">Selecting Columns to Index</h2>
+            <p>Choosing the right columns to index is crucial. Indexing every column is neither practical nor efficient, as indexes consume additional storage space and can slow down write operations. The goal is to identify columns that will benefit most from indexing.</p>
+            <h3 id="analyzing-query-patterns">Analyzing Query Patterns</h3>
+            <p>Start by examining the queries your application runs most frequently. Look for columns used in:</p>
+            <ul>
+                <li><strong>WHERE clauses</strong> are applied to columns often used for filtering data. </li>
+                <li><strong>JOIN conditions</strong> involve columns that connect tables in queries. </li>
+                <li><strong>ORDER BY clauses</strong> sort query results based on specific columns. </li>
+                <li><strong>GROUP BY clauses</strong> organize data into groups using particular columns. </li>
+            </ul>
+            <p>For instance, if you often query for users based on their email addresses, indexing the "Email" column would be beneficial.</p>
+            <h3 id="considering-column-selectivity">Considering Column Selectivity</h3>
+            <p>Column selectivity refers to the uniqueness of the data in a column. High selectivity means the column has many unique values, which makes indexing more effective. Indexing columns with low selectivity, like boolean flags, might not provide significant performance improvements.</p>
+            <h3 id="balancing-read-and-write-operations">Balancing Read and Write Operations</h3>
+            <p>If your database experiences heavy read operations, indexing can greatly improve performance. However, if write operations (INSERT, UPDATE, DELETE) are more frequent, excessive indexing can slow down the system, as each write operation may require updating multiple indexes.</p>
+            <h2 id="types-of-indexes">Types of Indexes</h2>
+            <p>Different types of indexes are available, each suited to specific use cases. Understanding these types helps you choose the most appropriate one for your needs.</p>
+            <h3 id="b-tree-indexes">B-Tree Indexes</h3>
+            <p>B-Tree indexes are the default and most commonly used type. They are balanced tree structures that maintain sorted data, allowing for efficient retrieval of records based on exact matches and range queries.</p>
+            <p><strong>Use Cases:</strong></p>
+            <ul>
+                <li>Exact matches (e.g., <code>WHERE Age = 30</code>)</li>
+                <li>Range queries (e.g., <code>WHERE Age BETWEEN 25 AND 35</code>)</li>
+            </ul>
+            <h3 id="hash-indexes">Hash Indexes</h3>
+            <p>Hash indexes use a hash function to map keys to locations. They are efficient for exact match queries but not suitable for range queries.</p>
+            <p><strong>Use Cases:</strong></p>
+            <ul>
+                <li>Exact matches (e.g., <code>WHERE Email = 'alice@example.com'</code>)</li>
+                <li>Not suitable for range queries (e.g., <code>WHERE Age &gt; 25</code>)</li>
+            </ul>
+            <h3 id="bitmap-indexes">Bitmap Indexes</h3>
+            <p>Bitmap indexes are ideal for columns with a limited number of distinct values (low cardinality), such as gender or status flags.</p>
+            <p><strong>Use Cases:</strong></p>
+            <ul>
+                <li>Columns with low cardinality</li>
+                <li>Efficient for counting and existence queries</li>
+            </ul>
+            <h3 id="full-text-indexes">Full-Text Indexes</h3>
+            <p>Full-text indexes are specialized for text-searching capabilities, allowing for complex queries on large text fields.</p>
+            <p><strong>Use Cases:</strong></p>
+            <ul>
+                <li>Searching within articles, descriptions, or any large text fields</li>
+                <li>Supporting queries like <code>CONTAINS</code>, <code>MATCH</code>, or <code>AGAINST</code></li>
+            </ul>
+            <h3 id="spatial-indexes">Spatial Indexes</h3>
+            <p>Spatial indexes are designed for geometric data types and are used in applications involving location data.</p>
+            <p><strong>Use Cases:</strong></p>
+            <ul>
+                <li>Queries involving geographical data</li>
+                <li>Efficient for proximity searches</li>
+            </ul>
+            <h2 id="implementing-indexes">Implementing Indexes</h2>
+            <p>Creating indexes involves using specific SQL commands tailored to your database management system (DBMS). Let's look at how to create different types of indexes and understand their impact.</p>
+            <h3 id="creating-a-simple-index">Creating a Simple Index</h3>
+            <p>To create an index on the "Email" column of a "Users" table:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">CREATE INDEX idx_users_email ON Users (Email);</code></pre>
+            </div>
+            </p>
+            <p>This command tells the database to build an index named <code>idx_users_email</code> on the "Email" column, speeding up queries that filter by email.</p>
+            <h3 id="creating-a-composite-index">Creating a Composite Index</h3>
+            <p>Composite indexes involve multiple columns and are useful when queries filter on more than one column. For example:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">CREATE INDEX idx_users_last_first ON Users (LastName, FirstName);</code></pre>
+            </div>
+            </p>
+            <p>This index optimizes queries that search for users by both their last and first names.</p>
+            <h3 id="using-full-text-indexes">Using Full-Text Indexes</h3>
+            <p>For text-heavy columns, a full-text index enhances search capabilities:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">CREATE FULLTEXT INDEX idx_articles_content ON Articles (Content);</code></pre>
+            </div>
+            </p>
+            <p>This allows for efficient text searches within the "Content" column, enabling features like natural language search.</p>
+            <h3 id="impact-on-queries">Impact on Queries</h3>
+            <p>After creating indexes, queries that utilize them will show improved performance. For example, searching for a user by email:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">SELECT * FROM Users WHERE Email = 'alice@example.com';</code></pre>
+            </div>
+            </p>
+            <p>This query will execute faster because the database uses the index to locate the record directly.</p>
+            <h2 id="monitoring-index-performance">Monitoring Index Performance</h2>
+            <p>Indexes can degrade over time due to fragmentation and changes in data distribution. Regular monitoring helps maintain optimal performance.</p>
+            <h3 id="checking-index-usage">Checking Index Usage</h3>
+            <p>Most DBMSs provide tools to check how indexes are used. For example, in MySQL, you can use:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">SHOW INDEX FROM Users;</code></pre>
+            </div>
+            </p>
+            <p>This command displays information about the indexes on the "Users" table.</p>
+            <h3 id="analyzing-query-execution-plans">Analyzing Query Execution Plans</h3>
+            <p>Execution plans show how the database executes a query, including whether it uses an index. In PostgreSQL, you can use:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">EXPLAIN ANALYZE SELECT * FROM Users WHERE Email = 'alice@example.com';</code></pre>
+            </div>
+            </p>
+            <p>This provides detailed information about the query execution, helping you understand if indexes are utilized effectively.</p>
+            <h2 id="maintaining-indexes">Maintaining Indexes</h2>
+            <p>Just like maintaining a car ensures it runs smoothly, maintaining indexes keeps your database performance optimal.</p>
+            <h3 id="rebuilding-indexes">Rebuilding Indexes</h3>
+            <p>Over time, indexes can become fragmented, which slows down data retrieval. Rebuilding an index defragments it, improving performance.</p>
+            <p>In SQL Server:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">ALTER INDEX idx_users_email ON Users REBUILD;</code></pre>
+            </div>
+            </p>
+            <h3 id="reorganizing-indexes">Reorganizing Indexes</h3>
+            <p>Reorganizing is a lighter operation compared to rebuilding and is used when fragmentation is low.</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">ALTER INDEX idx_users_email ON Users REORGANIZE;</code></pre>
+            </div>
+            </p>
+            <h3 id="scheduling-maintenance">Scheduling Maintenance</h3>
+            <p>Plan maintenance activities during off-peak hours to minimize the impact on users. Regular maintenance schedules help prevent performance issues before they affect your application.</p>
+            <h2 id="optimizing-index-strategies">Optimizing Index Strategies</h2>
+            <p>An effective indexing strategy considers the specific needs of your application and adapts over time.</p>
+            <h3 id="regularly-reviewing-indexes">Regularly Reviewing Indexes</h3>
+            <p>Data patterns and query frequencies change over time. Regularly review your indexes to ensure they still align with your application's needs.</p>
+            <ul>
+                <li>Remove indexes that are no longer beneficial.</li>
+                <li>Modify indexes to better suit current query patterns.</li>
+            </ul>
+            <h3 id="balancing-costs-and-benefits">Balancing Costs and Benefits</h3>
+            <p>Remember that indexes consume resources:</p>
+            <ul>
+                <li>They require additional <strong>disk space</strong> for storage. </li>
+                <li>Frequently accessed indexes may reside in <strong>memory</strong>. </li>
+                <li>Maintaining indexes adds extra overhead, which can reduce <strong>write performance</strong>.</li>
+            </ul>
+            <h2 id="best-practices-for-indexing">Best Practices for Indexing</h2>
+            <p>Following best practices helps you get the most out of indexing while avoiding common pitfalls.</p>
+            <h3 id="index-selectively">Index Selectively</h3>
+            <p>Only index columns that are frequently used in queries. Unnecessary indexes waste resources and can degrade performance.</p>
+            <h3 id="avoid-overlapping-indexes">Avoid Overlapping Indexes</h3>
+            <p>Having multiple indexes that serve similar purposes is inefficient. Consolidate indexes where possible.</p>
+            <h3 id="use-covering-indexes">Use Covering Indexes</h3>
+            <p>A covering index includes all the columns needed to satisfy a query, eliminating the need to access the table. For example:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">CREATE INDEX idx_users_email_name ON Users (Email, Name);</code></pre>
+            </div>
+            </p>
+            <p>This index can satisfy queries that select both "Email" and "Name" without accessing the main table.</p>
+            <h3 id="be-mindful-of-index-order">Be Mindful of Index Order</h3>
+            <p>In composite indexes, the order of columns matters. Place the most selective columns first to maximize efficiency.</p>
+            <h3 id="test-before-implementing">Test Before Implementing</h3>
+            <p>Before adding or modifying indexes in a production environment, test the changes in a development environment to assess their impact.</p>
+            <h3 id="monitor-continuously">Monitor Continuously</h3>
+            <p>Use monitoring tools and logs to keep an eye on database performance, adjusting your indexing strategy as needed.</p>
+            <h2 id="practical-examples">Practical Examples</h2>
+            <p>Let's explore some practical scenarios to solidify our understanding.</p>
+            <h3 id="example-1-speeding-up-user-login">Example 1: Speeding Up User Login</h3>
+            <p>A web application experiences slow login times due to a large "Users" table. Users are authenticated using their email and password.</p>
+            <p><strong>Solution:</strong></p>
+            <p>Create an index on the "Email" column to speed up the lookup.</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">CREATE INDEX idx_users_email ON Users (Email);</code></pre>
+            </div>
+            </p>
+            <p>This index allows the database to quickly find the user record based on the email provided during login.</p>
+            <h3 id="example-2-improving-product-searches">Example 2: Improving Product Searches</h3>
+            <p>An e-commerce site allows users to search products by category and price range. The "Products" table has columns "Category", "Price", and "Name".</p>
+            <p><strong>Solution:</strong></p>
+            <p>Create a composite index on "Category" and "Price".</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">CREATE INDEX idx_products_category_price ON Products (Category, Price);</code></pre>
+            </div>
+            </p>
+            <p>This index optimizes queries that filter products by category and price range, improving search performance.</p>
+            <h3 id="example-3-optimizing-reports">Example 3: Optimizing Reports</h3>
+            <p>A reporting tool generates monthly sales summaries using the "Sales" table, which includes "Date" and "Amount" columns.</p>
+            <p><strong>Solution:</strong></p>
+            <p>Create an index on the "Date" column to speed up date-range queries.</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">CREATE INDEX idx_sales_date ON Sales (Date);</code></pre>
+            </div>
+            </p>
+            <p>This index helps the database efficiently retrieve records within specific date ranges, making report generation faster.</p>
+        </section>
+        <div id="table-of-contents">
+            <h2>Table of Contents</h2>
+            <ol>
+                <li><a href="#what-is-database-indexing-">What Is Database Indexing?</a>
+                    <ol>
+                        <li><a href="#how-indexes-work">How Indexes Work</a></li>
+                    </ol>
+                </li>
+                <li><a href="#selecting-columns-to-index">Selecting Columns to Index</a>
+                    <ol>
+                        <li><a href="#analyzing-query-patterns">Analyzing Query Patterns</a></li>
+                        <li><a href="#considering-column-selectivity">Considering Column Selectivity</a></li>
+                        <li><a href="#balancing-read-and-write-operations">Balancing Read and Write Operations</a></li>
+                    </ol>
+                </li>
+                <li><a href="#types-of-indexes">Types of Indexes</a>
+                    <ol>
+                        <li><a href="#b-tree-indexes">B-Tree Indexes</a></li>
+                        <li><a href="#hash-indexes">Hash Indexes</a></li>
+                        <li><a href="#bitmap-indexes">Bitmap Indexes</a></li>
+                        <li><a href="#full-text-indexes">Full-Text Indexes</a></li>
+                        <li><a href="#spatial-indexes">Spatial Indexes</a></li>
+                    </ol>
+                </li>
+                <li><a href="#implementing-indexes">Implementing Indexes</a>
+                    <ol>
+                        <li><a href="#creating-a-simple-index">Creating a Simple Index</a></li>
+                        <li><a href="#creating-a-composite-index">Creating a Composite Index</a></li>
+                        <li><a href="#using-full-text-indexes">Using Full-Text Indexes</a></li>
+                        <li><a href="#impact-on-queries">Impact on Queries</a></li>
+                    </ol>
+                </li>
+                <li><a href="#monitoring-index-performance">Monitoring Index Performance</a>
+                    <ol>
+                        <li><a href="#checking-index-usage">Checking Index Usage</a></li>
+                        <li><a href="#analyzing-query-execution-plans">Analyzing Query Execution Plans</a></li>
+                    </ol>
+                </li>
+                <li><a href="#maintaining-indexes">Maintaining Indexes</a>
+                    <ol>
+                        <li><a href="#rebuilding-indexes">Rebuilding Indexes</a></li>
+                        <li><a href="#reorganizing-indexes">Reorganizing Indexes</a></li>
+                        <li><a href="#scheduling-maintenance">Scheduling Maintenance</a></li>
+                    </ol>
+                </li>
+                <li><a href="#optimizing-index-strategies">Optimizing Index Strategies</a>
+                    <ol>
+                        <li><a href="#regularly-reviewing-indexes">Regularly Reviewing Indexes</a></li>
+                        <li><a href="#balancing-costs-and-benefits">Balancing Costs and Benefits</a></li>
+                    </ol>
+                </li>
+                <li><a href="#best-practices-for-indexing">Best Practices for Indexing</a>
+                    <ol>
+                        <li><a href="#index-selectively">Index Selectively</a></li>
+                        <li><a href="#avoid-overlapping-indexes">Avoid Overlapping Indexes</a></li>
+                        <li><a href="#use-covering-indexes">Use Covering Indexes</a></li>
+                        <li><a href="#be-mindful-of-index-order">Be Mindful of Index Order</a></li>
+                        <li><a href="#test-before-implementing">Test Before Implementing</a></li>
+                        <li><a href="#monitor-continuously">Monitor Continuously</a></li>
+                    </ol>
+                </li>
+                <li><a href="#practical-examples">Practical Examples</a>
+                    <ol>
+                        <li><a href="#example-1-speeding-up-user-login">Example 1: Speeding Up User Login</a></li>
+                        <li><a href="#example-2-improving-product-searches">Example 2: Improving Product Searches</a></li>
+                        <li><a href="#example-3-optimizing-reports">Example 3: Optimizing Reports</a></li>
+                    </ol>
+                </li>
+            </ol>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Introduction to Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro.html">Databases Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/03_database_management_systems_dbms_.html">Database Management Systems Dbms</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models.html">Data Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/05_glossary.html">Glossary</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis.html">Requirements Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization.html">Normalization</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization.html">Denormalization</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies.html">Indexing Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/05_data_integrity.html">Data Integrity</a></li>
+                        </ol>
+                    </li>
+                    <li>Sql<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql.html">Intro to Sql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl.html">Data Definition Language Ddl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml.html">Data Manipulation Language Dml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl.html">Data Control Language Dcl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl.html">Transaction Control Language Tcl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views.html">Joins Subqueries and Views</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions.html">Stored Procedures and Functions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers.html">Triggers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data.html">Hierarchical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions</a></li>
+                        </ol>
+                    </li>
+                    <li>Acid Properties and Transactions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro.html">Transactions Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation.html">Isolation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li>
+                        </ol>
+                    </li>
+                    <li>Storage and Indexing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk.html">How Tables and Indexes Are Stored on Disk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases.html">Row Based vs Column Based Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems.html">Distributed Database Systems</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning.html">Partitioning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding.html">Sharding</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding.html">Partitioning vs Sharding</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
+                        </ol>
+                    </li>
+                    <li>Concurrency Control<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks.html">Shared vs Exclusive Locks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two Phase Locking</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Double Booking Problem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/05_serializable_vs_repeatable_read.html">Serializable vs Repeatable Read</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Performance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/01_query_optimization_techniques.html">Query Optimization Techniques</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/02_indexing_strategies.html">Indexing Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/03_database_caching.html">Database Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Replication<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Intro to Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master Standby Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi Master Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous vs Asynchronous Replication</a></li>
+                        </ol>
+                    </li>
+                    <li>Nosql Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/01_nosql_databases_intro.html">Nosql Databases Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                        </ol>
+                    </li>
+                    <li>Security Best Practices<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/01_backup_and_recovery_strategies.html">Backup and Recovery Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/02_database_security.html">Database Security</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/03_capacity_planning.html">Capacity Planning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/04_database_migration.html">Database Migration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Engines<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/01_sqlite.html">Sqlite</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/02_mysql.html">Mysql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/03_postgresql.html">Postgresql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/04_mongodb.html">Mongodb</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4_j.html">Neo4 J</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column">
+                <img alt="Adam Djellouli Symbol" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+            <div class="footer-column">
+                <h2><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Our Privacy Policy</a></h2>
+                <p>
+                    Thank you for visiting my personal website. All of the <br />
+                    content on this site is free to use, but please remember <br />
+                    to be a good human being and refrain from any abuse<br />
+                    of the site. If you would like to contact me, please use <br />
+                    my <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn profile</a> or my <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a> if you have any technical <br />
+                    issues or ideas to share. I wish you the best and hope you <br />
+                    have a fantastic life. <br />
+                </p>
+            </div>
+            <div class="footer-column">
+                <h2>Follow me</h2>
+                <ul class="social-media">
+                    <li>
+                        <a class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" target="_blank" title="YouTube">
+                        </a>YouTube
+                    </li>
+                    <li>
+                        <a class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" target="_blank" title="LinkedIn">
+                        </a>LinkedIn
+                    </li>
+                    <li>
+                        <a class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" target="_blank" title="Instagram">
+                        </a>Instagram
+                    </li>
+                    <li>
+                        <a class="fa fa-github" href="https://github.com/djeada" title="GitHub">
+                        </a>Github
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div>
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="../../../app.js"></script>
+    </footer>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

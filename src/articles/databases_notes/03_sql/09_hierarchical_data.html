@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Storing Hierarchical Data in Relational Databases with SQL</title>
+    <meta content="In many applications, data is naturally organized in a hierarchical structure, such as organizational charts, file systems, categories and subcategories, and family trees." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="https://adamdjellouli.com">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a class="active" href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <section id="article-body">
+            <p style="text-align: right;"><i>Last modified: November 26, 2024</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <header>Storing Hierarchical Data in Relational Databases with SQL</header>
+            <p>In many applications, data is naturally organized in a hierarchical structure, such as organizational charts, file systems, categories and subcategories, and family trees. Representing and querying this hierarchical data efficiently in a relational database can be challenging due to the flat nature of relational tables. In this guide, we'll explore several models and techniques for storing and querying hierarchical data in SQL, including:</p>
+            <ul>
+                <li><strong>Adjacency List Model</strong></li>
+                <li><strong>Path Enumeration Model</strong></li>
+                <li><strong>Other Models</strong> (Materialized Path, Nested Set, Closure Table)</li>
+                <li><strong>Recursive Queries with Common Table Expressions (CTEs)</strong></li>
+            </ul>
+            <h2 id="adjacency-list-model">Adjacency List Model</h2>
+            <p>The <strong>Adjacency List Model</strong> is the most straightforward way to represent hierarchical data in a relational database. In this model, each record (node) contains a reference (foreign key) to its immediate parent.</p>
+            <h3 id="structure">Structure</h3>
+            <p>Consider a table representing categories:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>category_id</td>
+                    <td>parent_id</td>
+                    <td>category_name</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>NULL</td>
+                    <td>Electronics</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>1</td>
+                    <td>Computers</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>2</td>
+                    <td>Laptops</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>2</td>
+                    <td>Desktops</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>1</td>
+                    <td>Televisions</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>3</td>
+                    <td>Gaming Laptops</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>3</td>
+                    <td>Business Laptops</td>
+                </tr>
+            </table>
+            </p>
+            <ul>
+                <li><strong><code>category_id</code></strong>: Primary key of the category.</li>
+                <li><strong><code>parent_id</code></strong>: Foreign key referencing <code>category_id</code> of the parent category.</li>
+                <li><strong><code>category_name</code></strong>: Name of the category.</li>
+            </ul>
+            <p>In this model, the root nodes (top-level categories) have a <code>NULL</code> <code>parent_id</code>.</p>
+            <h3 id="advantages">Advantages</h3>
+            <ul>
+                <li><strong>Simplicity</strong>: Easy to implement and understand.</li>
+                <li><strong>Maintenance</strong>: Inserting, updating, and deleting nodes is straightforward.</li>
+                <li><strong>Referential Integrity</strong>: Enforced through foreign key constraints.</li>
+            </ul>
+            <h3 id="disadvantages">Disadvantages</h3>
+            <ul>
+                <li><strong>Complex Queries</strong>: Retrieving an entire hierarchy or sub-tree requires recursive queries or multiple self-joins.</li>
+                <li><strong>Performance</strong>: Can be inefficient for deep hierarchies due to multiple joins.</li>
+                <li><strong>Limited Hierarchical Operations</strong>: Difficult to perform operations like finding all descendants or ancestors without complex queries.</li>
+            </ul>
+            <h3 id="example-finding-immediate-children">Example: Finding Immediate Children</h3>
+            <p>To find all immediate subcategories of the "Computers" category:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM Categories
+WHERE parent_id = (
+    SELECT category_id
+    FROM Categories
+    WHERE category_name = 'Computers'
+);</code></pre>
+            </div>
+            </p>
+            <h3 id="example-retrieving-the-full-path">Example: Retrieving the Full Path</h3>
+            <p>To find the full path of a category (from the root to the node), recursive queries are needed.</p>
+            <h2 id="path-enumeration-model">Path Enumeration Model</h2>
+            <p>The <strong>Path Enumeration Model</strong> enhances the adjacency list by storing the full path from the root to each node as a string.</p>
+            <h3 id="structure">Structure</h3>
+            <p>The table includes a <code>path</code> column:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>category_id</td>
+                    <td>path</td>
+                    <td>category_name</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>1</td>
+                    <td>Electronics</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>1.2</td>
+                    <td>Computers</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>1.2.3</td>
+                    <td>Laptops</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>1.2.4</td>
+                    <td>Desktops</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>1.5</td>
+                    <td>Televisions</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>1.2.3.6</td>
+                    <td>Gaming Laptops</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>1.2.3.7</td>
+                    <td>Business Laptops</td>
+                </tr>
+            </table>
+            </p>
+            <ul>
+                <li><strong><code>path</code></strong>: Represents the hierarchy as a concatenated string of <code>category_id</code>s.</li>
+            </ul>
+            <h3 id="advantages">Advantages</h3>
+            <ul>
+                <li><strong>Efficient Hierarchical Queries</strong>: Easy to retrieve all descendants or ancestors using string pattern matching.</li>
+                <li><strong>No Joins Needed</strong>: Simplifies queries since hierarchical relationships are stored within each record.</li>
+            </ul>
+            <h3 id="disadvantages">Disadvantages</h3>
+            <ul>
+                <li><strong>Data Redundancy</strong>: The path information is duplicated in each record.</li>
+                <li><strong>Maintenance Complexity</strong>: Inserting, updating, or deleting nodes requires updating the <code>path</code> values of all affected descendants.</li>
+                <li><strong>Limited Depth</strong>: String length may become an issue in very deep hierarchies.</li>
+            </ul>
+            <h3 id="example-finding-all-descendants">Example: Finding All Descendants</h3>
+            <p>To find all descendants of the "Computers" category:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM Categories
+WHERE path LIKE '1.2.%';</code></pre>
+            </div>
+            </p>
+            <h3 id="example-finding-all-ancestors">Example: Finding All Ancestors</h3>
+            <p>To find the path (all ancestors) of the "Gaming Laptops" category:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM Categories
+WHERE category_id IN (1, 2, 3, 6);</code></pre>
+            </div>
+            </p>
+            <p>But with the path enumeration, you can split the <code>path</code> string to get the ancestors.</p>
+            <h2 id="other-models">Other Models</h2>
+            <h3 id="materialized-path-model">Materialized Path Model</h3>
+            <p>Similar to the path enumeration, but uses a delimiter in the <code>path</code>:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>category_id</td>
+                    <td>path</td>
+                    <td>category_name</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>'/1/'</td>
+                    <td>Electronics</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>'/1/2/'</td>
+                    <td>Computers</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>'/1/2/3/'</td>
+                    <td>Laptops</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>'/1/2/3/6/'</td>
+                    <td>Gaming Laptops</td>
+                </tr>
+            </table>
+            </p>
+            <p><strong>Advantages</strong>:</p>
+            <ul>
+                <li>Easier string parsing using standard string functions.</li>
+                <li>Supports variable-length IDs.</li>
+            </ul>
+            <p><strong>Example</strong>: Finding all descendants:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM Categories
+WHERE path LIKE '/1/2/%';</code></pre>
+            </div>
+            </p>
+            <h3 id="nested-set-model">Nested Set Model</h3>
+            <p>The <strong>Nested Set Model</strong> represents hierarchy through left and right bounds.</p>
+            <h4 id="structure">Structure</h4>
+            <p>Each node is assigned two numbers (<code>lft</code> and <code>rgt</code>):</p>
+            <p>
+            <table>
+                <tr>
+                    <td>category_id</td>
+                    <td>lft</td>
+                    <td>rgt</td>
+                    <td>category_name</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>1</td>
+                    <td>14</td>
+                    <td>Electronics</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>2</td>
+                    <td>9</td>
+                    <td>Computers</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>3</td>
+                    <td>6</td>
+                    <td>Laptops</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>4</td>
+                    <td>5</td>
+                    <td>Gaming Laptops</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>7</td>
+                    <td>8</td>
+                    <td>Desktops</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>10</td>
+                    <td>13</td>
+                    <td>Televisions</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>11</td>
+                    <td>12</td>
+                    <td>Smart TVs</td>
+                </tr>
+            </table>
+            </p>
+            <p><strong>Advantages</strong>:</p>
+            <ul>
+                <li>Efficiently retrieves all descendants or ancestors using range queries.</li>
+                <li>No recursion or joins needed for hierarchy traversal.</li>
+            </ul>
+            <p><strong>Disadvantages</strong>:</p>
+            <ul>
+                <li>Complex maintenance: Inserting or deleting nodes requires recalculating <code>lft</code> and <code>rgt</code> values for many nodes.</li>
+                <li>Difficult to understand and implement.</li>
+            </ul>
+            <p><strong>Example: Finding All Descendants</strong></p>
+            <p>To find all descendants of the "Electronics" category:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM Categories
+WHERE lft &gt; 1 AND rgt &lt; 14;</code></pre>
+            </div>
+            </p>
+            <h3 id="closure-table-model">Closure Table Model</h3>
+            <p>The <strong>Closure Table Model</strong> uses a separate table to store all ancestor-descendant relationships.</p>
+            <h4 id="structure">Structure</h4>
+            <p><strong>Categories Table</strong>:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>category_id</td>
+                    <td>category_name</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>Electronics</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Computers</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>Laptops</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>Gaming Laptops</td>
+                </tr>
+            </table>
+            </p>
+            <p><strong>Closure Table</strong>:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>ancestor_id</td>
+                    <td>descendant_id</td>
+                    <td>depth</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>1</td>
+                    <td>0</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>2</td>
+                    <td>1</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>3</td>
+                    <td>2</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>6</td>
+                    <td>3</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>2</td>
+                    <td>0</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>3</td>
+                    <td>1</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>6</td>
+                    <td>2</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>3</td>
+                    <td>0</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>6</td>
+                    <td>1</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>6</td>
+                    <td>0</td>
+                </tr>
+            </table>
+            </p>
+            <p><strong>Advantages</strong>:</p>
+            <ul>
+                <li>Efficient queries for ancestors and descendants.</li>
+                <li>Supports complex hierarchical queries.</li>
+            </ul>
+            <p><strong>Disadvantages</strong>:</p>
+            <ul>
+                <li>Additional storage required for the closure table.</li>
+                <li>Maintenance overhead when modifying the hierarchy.</li>
+            </ul>
+            <p><strong>Example: Finding All Descendants</strong></p>
+            <p>To find all descendants of the "Computers" category:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">SELECT c.*
+FROM Categories c
+JOIN CategoryClosure cc ON c.category_id = cc.descendant_id
+WHERE cc.ancestor_id = (
+    SELECT category_id FROM Categories WHERE category_name = 'Computers'
+) AND cc.depth &gt; 0;</code></pre>
+            </div>
+            </p>
+            <h2 id="storing-hierarchical-data-in-sql-with-recursive-queries">Storing Hierarchical Data in SQL with Recursive Queries</h2>
+            <p>Most modern relational databases support recursive queries using Common Table Expressions (CTEs). This allows you to traverse hierarchical data stored in the adjacency list model efficiently.</p>
+            <h3 id="recursive-cte-structure">Recursive CTE Structure</h3>
+            <p>A recursive CTE consists of:</p>
+            <ul>
+                <li><strong>Anchor Member</strong>: The base query that provides the starting point of recursion.</li>
+                <li><strong>Recursive Member</strong>: A query that references the CTE itself, allowing the recursion to proceed.</li>
+                <li><strong>Termination Condition</strong>: The recursion stops when no new rows are returned.</li>
+            </ul>
+            <h3 id="syntax">Syntax</h3>
+            <p>
+            <div>
+                <pre><code class="language-sql">WITH RECURSIVE cte_name AS (
+    -- Anchor member
+    SELECT ...
+
+    UNION ALL
+
+    -- Recursive member
+    SELECT ...
+    FROM cte_name
+    JOIN ...
+)
+SELECT * FROM cte_name;</code></pre>
+            </div>
+            </p>
+            <h3 id="example-retrieving-the-full-hierarchy">Example: Retrieving the Full Hierarchy</h3>
+            <p>Given our <code>Categories</code> table in the adjacency list model:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>category_id</td>
+                    <td>parent_id</td>
+                    <td>category_name</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>NULL</td>
+                    <td>Electronics</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>1</td>
+                    <td>Computers</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>2</td>
+                    <td>Laptops</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>2</td>
+                    <td>Desktops</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>1</td>
+                    <td>Televisions</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>3</td>
+                    <td>Gaming Laptops</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>3</td>
+                    <td>Business Laptops</td>
+                </tr>
+            </table>
+            </p>
+            <p>We can use a recursive CTE to retrieve the full hierarchy:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">WITH RECURSIVE category_hierarchy AS (
+    -- Anchor member: select root nodes
+    SELECT
+        category_id,
+        parent_id,
+        category_name,
+        CAST(category_name AS VARCHAR(255)) AS full_path,
+        0 AS depth
+    FROM Categories
+    WHERE parent_id IS NULL
+
+    UNION ALL
+
+    -- Recursive member: join with child nodes
+    SELECT
+        c.category_id,
+        c.parent_id,
+        c.category_name,
+        CONCAT(ch.full_path, ' &gt; ', c.category_name) AS full_path,
+        ch.depth + 1 AS depth
+    FROM Categories c
+    INNER JOIN category_hierarchy ch ON ch.category_id = c.parent_id
+)
+SELECT *
+FROM category_hierarchy
+ORDER BY full_path;</code></pre>
+            </div>
+            </p>
+            <p><strong>Explanation</strong>:</p>
+            <ul>
+                <li><strong><code>CAST</code></strong>: Ensures that <code>full_path</code> starts as a string.</li>
+                <li><strong><code>CONCAT</code></strong>: Builds the full path by appending the current category name.</li>
+                <li><strong><code>depth</code></strong>: Tracks the level in the hierarchy.</li>
+            </ul>
+            <p><strong>Result</strong>:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>category_id</td>
+                    <td>parent_id</td>
+                    <td>category_name</td>
+                    <td>full_path</td>
+                    <td>depth</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>NULL</td>
+                    <td>Electronics</td>
+                    <td>Electronics</td>
+                    <td>0</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>1</td>
+                    <td>Computers</td>
+                    <td>Electronics &gt; Computers</td>
+                    <td>1</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>2</td>
+                    <td>Laptops</td>
+                    <td>Electronics &gt; Computers &gt; Laptops</td>
+                    <td>2</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>3</td>
+                    <td>Gaming Laptops</td>
+                    <td>Electronics &gt; Computers &gt; Laptops &gt; Gaming Laptops</td>
+                    <td>3</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>3</td>
+                    <td>Business Laptops</td>
+                    <td>Electronics &gt; Computers &gt; Laptops &gt; Business Laptops</td>
+                    <td>3</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>2</td>
+                    <td>Desktops</td>
+                    <td>Electronics &gt; Computers &gt; Desktops</td>
+                    <td>2</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>1</td>
+                    <td>Televisions</td>
+                    <td>Electronics &gt; Televisions</td>
+                    <td>1</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="finding-a-subtree">Finding a Subtree</h3>
+            <p>To retrieve a specific category and all its descendants, modify the anchor member:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">WITH RECURSIVE subcategories AS (
+    -- Anchor member: select the starting category
+    SELECT
+        category_id,
+        parent_id,
+        category_name
+    FROM Categories
+    WHERE category_name = 'Computers'
+
+    UNION ALL
+
+    -- Recursive member: find children
+    SELECT
+        c.category_id,
+        c.parent_id,
+        c.category_name
+    FROM Categories c
+    INNER JOIN subcategories s ON s.category_id = c.parent_id
+)
+SELECT *
+FROM subcategories;</code></pre>
+            </div>
+            </p>
+            <p><strong>Result</strong>:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>category_id</td>
+                    <td>parent_id</td>
+                    <td>category_name</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>1</td>
+                    <td>Computers</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>2</td>
+                    <td>Laptops</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>2</td>
+                    <td>Desktops</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>3</td>
+                    <td>Gaming Laptops</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>3</td>
+                    <td>Business Laptops</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="advantages-of-recursive-ctes">Advantages of Recursive CTEs</h3>
+            <ul>
+                <li><strong>Dynamic Queries</strong>: Can handle hierarchies of arbitrary depth.</li>
+                <li><strong>No Additional Schema</strong>: Works with the adjacency list model without additional columns or tables.</li>
+                <li><strong>Flexibility</strong>: Can be used to retrieve ancestors, descendants, or paths.</li>
+            </ul>
+            <h3 id="limitations">Limitations</h3>
+            <ul>
+                <li><strong>Performance</strong>: May not be efficient for very large hierarchies.</li>
+                <li><strong>Database Support</strong>: Requires a database that supports recursive CTEs (e.g., PostgreSQL, SQL Server, Oracle, MySQL 8.0+).</li>
+            </ul>
+        </section>
+        <div id="table-of-contents">
+            <h2>Table of Contents</h2>
+            <ol>
+                <li><a href="#adjacency-list-model">Adjacency List Model</a>
+                    <ol>
+                        <li><a href="#structure">Structure</a></li>
+                        <li><a href="#advantages">Advantages</a></li>
+                        <li><a href="#disadvantages">Disadvantages</a></li>
+                        <li><a href="#example-finding-immediate-children">Example: Finding Immediate Children</a></li>
+                        <li><a href="#example-retrieving-the-full-path">Example: Retrieving the Full Path</a></li>
+                    </ol>
+                </li>
+                <li><a href="#path-enumeration-model">Path Enumeration Model</a>
+                    <ol>
+                        <li><a href="#structure">Structure</a></li>
+                        <li><a href="#advantages">Advantages</a></li>
+                        <li><a href="#disadvantages">Disadvantages</a></li>
+                        <li><a href="#example-finding-all-descendants">Example: Finding All Descendants</a></li>
+                        <li><a href="#example-finding-all-ancestors">Example: Finding All Ancestors</a></li>
+                    </ol>
+                </li>
+                <li><a href="#other-models">Other Models</a>
+                    <ol>
+                        <li><a href="#materialized-path-model">Materialized Path Model</a></li>
+                        <li><a href="#nested-set-model">Nested Set Model</a>
+                            <ol>
+                                <li><a href="#structure">Structure</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#closure-table-model">Closure Table Model</a>
+                            <ol>
+                                <li><a href="#structure">Structure</a></li>
+                            </ol>
+                        </li>
+                    </ol>
+                </li>
+                <li><a href="#storing-hierarchical-data-in-sql-with-recursive-queries">Storing Hierarchical Data in SQL with Recursive Queries</a>
+                    <ol>
+                        <li><a href="#recursive-cte-structure">Recursive CTE Structure</a></li>
+                        <li><a href="#syntax">Syntax</a></li>
+                        <li><a href="#example-retrieving-the-full-hierarchy">Example: Retrieving the Full Hierarchy</a></li>
+                        <li><a href="#finding-a-subtree">Finding a Subtree</a></li>
+                        <li><a href="#advantages-of-recursive-ctes">Advantages of Recursive CTEs</a></li>
+                        <li><a href="#limitations">Limitations</a></li>
+                    </ol>
+                </li>
+            </ol>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Introduction to Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro.html">Databases Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/03_database_management_systems_dbms_.html">Database Management Systems Dbms</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models.html">Data Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/05_glossary.html">Glossary</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis.html">Requirements Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization.html">Normalization</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization.html">Denormalization</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies.html">Indexing Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/05_data_integrity.html">Data Integrity</a></li>
+                        </ol>
+                    </li>
+                    <li>Sql<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql.html">Intro to Sql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl.html">Data Definition Language Ddl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml.html">Data Manipulation Language Dml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl.html">Data Control Language Dcl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl.html">Transaction Control Language Tcl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views.html">Joins Subqueries and Views</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions.html">Stored Procedures and Functions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers.html">Triggers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data.html">Hierarchical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions</a></li>
+                        </ol>
+                    </li>
+                    <li>Acid Properties and Transactions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro.html">Transactions Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation.html">Isolation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li>
+                        </ol>
+                    </li>
+                    <li>Storage and Indexing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk.html">How Tables and Indexes Are Stored on Disk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases.html">Row Based vs Column Based Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems.html">Distributed Database Systems</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning.html">Partitioning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding.html">Sharding</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding.html">Partitioning vs Sharding</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
+                        </ol>
+                    </li>
+                    <li>Concurrency Control<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks.html">Shared vs Exclusive Locks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two Phase Locking</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Double Booking Problem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/05_serializable_vs_repeatable_read.html">Serializable vs Repeatable Read</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Performance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/01_query_optimization_techniques.html">Query Optimization Techniques</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/02_indexing_strategies.html">Indexing Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/03_database_caching.html">Database Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Replication<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Intro to Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master Standby Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi Master Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous vs Asynchronous Replication</a></li>
+                        </ol>
+                    </li>
+                    <li>Nosql Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/01_nosql_databases_intro.html">Nosql Databases Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                        </ol>
+                    </li>
+                    <li>Security Best Practices<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/01_backup_and_recovery_strategies.html">Backup and Recovery Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/02_database_security.html">Database Security</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/03_capacity_planning.html">Capacity Planning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/04_database_migration.html">Database Migration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Engines<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/01_sqlite.html">Sqlite</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/02_mysql.html">Mysql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/03_postgresql.html">Postgresql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/04_mongodb.html">Mongodb</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4_j.html">Neo4 J</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column">
+                <img alt="Adam Djellouli Symbol" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+            <div class="footer-column">
+                <h2><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Our Privacy Policy</a></h2>
+                <p>
+                    Thank you for visiting my personal website. All of the <br />
+                    content on this site is free to use, but please remember <br />
+                    to be a good human being and refrain from any abuse<br />
+                    of the site. If you would like to contact me, please use <br />
+                    my <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn profile</a> or my <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a> if you have any technical <br />
+                    issues or ideas to share. I wish you the best and hope you <br />
+                    have a fantastic life. <br />
+                </p>
+            </div>
+            <div class="footer-column">
+                <h2>Follow me</h2>
+                <ul class="social-media">
+                    <li>
+                        <a class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" target="_blank" title="YouTube">
+                        </a>YouTube
+                    </li>
+                    <li>
+                        <a class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" target="_blank" title="LinkedIn">
+                        </a>LinkedIn
+                    </li>
+                    <li>
+                        <a class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" target="_blank" title="Instagram">
+                        </a>Instagram
+                    </li>
+                    <li>
+                        <a class="fa fa-github" href="https://github.com/djeada" title="GitHub">
+                        </a>Github
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div>
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="../../../app.js"></script>
+    </footer>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

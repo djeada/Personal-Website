@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Database Replication</title>
+    <meta content="Database replication is the process of copying and maintaining database objects, such as tables, in multiple database servers that make up a distributed database system." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="https://adamdjellouli.com">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a class="active" href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <section id="article-body">
+            <p style="text-align: right;"><i>Last modified: November 26, 2024</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <header>Database Replication</header>
+            <p>Database replication is the process of copying and maintaining database objects, such as tables, in multiple database servers that make up a distributed database system. This technique enhances data availability, fault tolerance, and scalability by ensuring that data is consistently replicated across different nodes. Replication is essential for high availability systems, disaster recovery, and load balancing.</p>
+            <p>This note provides a comprehensive understanding of database replication, including its purpose, types, advantages, challenges, and implementation considerations. An illustrative ASCII diagram is included to visualize the replication architecture.</p>
+            <h2 id="overview-of-database-replication">Overview of Database Replication</h2>
+            <h3 id="architectural-diagram">Architectural Diagram</h3>
+            <p>
+            <div>
+                <pre><code class="language-shell">+------------------+
+                       |                  |
+                       |   Master Server  |
+                       |    (Primary)     |
+                       +--------+---------+
+                                |
+                      Replication Channel
+                                |
+                                v
+                    +-----------+-----------+
+                    |                       |
+                    |    Replica Server     |
+                    |     (Secondary)       |
+                    +-----------+-----------+
+                                |
+                                |   Replication Channel
+                                |
+                                v
+                    +-----------+-----------+
+                    |                       |
+                    |    Replica Server     |
+                    |     (Secondary)       |
+                    +-----------------------+</code></pre>
+            </div>
+            </p>
+            <p><strong>Legend:</strong></p>
+            <ul>
+                <li><strong>Master Server (Primary)</strong>: The main database server where all write operations occur.</li>
+                <li><strong>Replica Servers (Secondary)</strong>: Servers that receive data changes from the master and can serve read-only queries.</li>
+                <li><strong>Replication Channel</strong>: The pathway through which data is replicated from the master to replicas.</li>
+            </ul>
+            <h3 id="key-characteristics">Key Characteristics</h3>
+            <ul>
+                <li><strong>Data Synchronization</strong>: Ensures that data is consistent across all servers.</li>
+                <li><strong>Fault Tolerance</strong>: Provides redundancy to prevent data loss.</li>
+                <li><strong>Scalability</strong>: Enhances performance by distributing the workload.</li>
+                <li><strong>High Availability</strong>: Minimizes downtime by allowing failover to replicas.</li>
+            </ul>
+            <h2 id="purpose-of-database-replication">Purpose of Database Replication</h2>
+            <ol>
+                <li><strong>High Availability</strong>: Ensures continuous database operation by replicating data to standby servers that can take over in case of failure.</li>
+                <li><strong>Disaster Recovery</strong>: Protects against catastrophic failures by maintaining copies of data in different locations.</li>
+                <li><strong>Load Balancing</strong>: Distributes read operations across multiple servers to optimize performance.</li>
+                <li><strong>Data Localization</strong>: Provides data closer to users in different geographical locations to reduce latency.</li>
+                <li><strong>Backup Solution</strong>: Acts as a live backup, reducing the need for traditional backup processes.</li>
+            </ol>
+            <h2 id="types-of-database-replication">Types of Database Replication</h2>
+            <p>Database replication can be classified based on synchronization methods and topology.</p>
+            <h3 id="1-synchronous-replication">1. Synchronous Replication</h3>
+            <p>In synchronous replication, the primary server waits for the replicas to acknowledge that they have received and written the data before committing the transaction. This method ensures that all servers have identical data at all times.</p>
+            <p><strong>Process Flow:</strong></p>
+            <ol>
+                <li><strong>Write Operation Initiated</strong>: Client sends a write request to the master server.</li>
+                <li><strong>Data Propagation</strong>: Master server writes data and sends it to replicas.</li>
+                <li><strong>Acknowledgment</strong>: Each replica writes data and sends an acknowledgment back to the master.</li>
+                <li><strong>Transaction Commit</strong>: Master commits the transaction after receiving acknowledgments.</li>
+            </ol>
+            <p><strong>Illustrative Diagram:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Client Write Request
+          |
+          v
++---------------------+
+|    Master Server    |
++---------------------+
+          |
+  Write Data to Disk
+          |
+          v
++---------------------+       +---------------------+
+|   Replica Server 1  |&lt;-----&gt;|   Replica Server 2  |
++---------------------+       +---------------------+
+          ^
+          |
+Acknowledgment from Replicas
+          |
+Transaction Commit on Master</code></pre>
+            </div>
+            </p>
+            <p><strong>Advantages:</strong></p>
+            <ul>
+                <li><strong>Strong Consistency</strong>: Data is consistent across all servers.</li>
+                <li><strong>Data Durability</strong>: Minimizes risk of data loss.</li>
+            </ul>
+            <p><strong>Disadvantages:</strong></p>
+            <ul>
+                <li><strong>Increased Latency</strong>: Transactions wait for replicas, reducing performance.</li>
+                <li><strong>Scalability Limitations</strong>: Not ideal for high-latency networks or geographically dispersed replicas.</li>
+            </ul>
+            <h3 id="2-asynchronous-replication">2. Asynchronous Replication</h3>
+            <p>In asynchronous replication, the master server commits the transaction without waiting for replicas to acknowledge. Data changes are sent to replicas after the transaction is committed.</p>
+            <p><strong>Process Flow:</strong></p>
+            <ol>
+                <li><strong>Write Operation Initiated</strong>: Client sends a write request to the master server.</li>
+                <li><strong>Transaction Commit</strong>: Master server writes data and commits the transaction immediately.</li>
+                <li><strong>Data Propagation</strong>: Data changes are queued and sent to replicas asynchronously.</li>
+            </ol>
+            <p><strong>Illustrative Diagram:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Client Write Request
+          |
+          v
++---------------------+
+|    Master Server    |
++---------------------+
+          |
+  Write Data to Disk
+          |
+Transaction Commit
+          |
+          v
+Asynchronous Data Replication
+          |
+          v
++---------------------+       +---------------------+
+|   Replica Server 1  |       |   Replica Server 2  |
++---------------------+       +---------------------+</code></pre>
+            </div>
+            </p>
+            <p><strong>Advantages:</strong></p>
+            <ul>
+                <li><strong>Lower Latency</strong>: Faster transaction commits.</li>
+                <li><strong>Better Performance</strong>: Master can handle more transactions.</li>
+            </ul>
+            <p><strong>Disadvantages:</strong></p>
+            <ul>
+                <li><strong>Eventual Consistency</strong>: Replicas may lag behind the master.</li>
+                <li><strong>Risk of Data Loss</strong>: Possibility of losing recent transactions if the master fails before replication.</li>
+            </ul>
+            <h3 id="3-snapshot-replication">3. Snapshot Replication</h3>
+            <p>Snapshot replication involves copying data at a specific point in time from the master to replicas. It is suitable for systems where data changes are infrequent or where up-to-the-minute accuracy is not critical.</p>
+            <p><strong>Process Flow:</strong></p>
+            <ol>
+                <li><strong>Snapshot Creation</strong>: Master server takes a snapshot of the database.</li>
+                <li><strong>Snapshot Distribution</strong>: Snapshot is sent to replicas.</li>
+                <li><strong>Snapshot Application</strong>: Replicas apply the snapshot to update their data.</li>
+            </ol>
+            <p><strong>Illustrative Diagram:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+---------------------+
+|    Master Server    |
++---------------------+
+          |
+   Create Snapshot
+          |
+          v
++---------------------+       +---------------------+
+|   Replica Server 1  |       |   Replica Server 2  |
++---------------------+       +---------------------+</code></pre>
+            </div>
+            </p>
+            <p><strong>Advantages:</strong></p>
+            <ul>
+                <li><strong>Simplified Replication</strong>: Easier to implement.</li>
+                <li><strong>Resource Efficiency</strong>: Reduces overhead on the master server.</li>
+            </ul>
+            <p><strong>Disadvantages:</strong></p>
+            <ul>
+                <li><strong>Data Staleness</strong>: Replicas may have outdated data between snapshots.</li>
+                <li><strong>Not Suitable for High-Change Environments</strong>: Inefficient for databases with frequent updates.</li>
+            </ul>
+            <h3 id="4-multi-master-replication">4. Multi-Master Replication</h3>
+            <p>In multi-master replication, multiple servers act as masters, allowing write operations on any server. Data changes are replicated among all masters.</p>
+            <p><strong>Process Flow:</strong></p>
+            <ol>
+                <li><strong>Write Operation on Any Master</strong>: Clients can write to any master server.</li>
+                <li><strong>Data Propagation</strong>: Changes are replicated to other master servers.</li>
+                <li><strong>Conflict Resolution</strong>: Mechanisms are required to handle conflicting updates.</li>
+            </ol>
+            <p><strong>Illustrative Diagram:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+---------------------+       +---------------------+
+|    Master Server 1  |&lt;-----&gt;|    Master Server 2  |
++---------------------+       +---------------------+
+          ^                           ^
+          |                           |
+          |                           |
+          v                           v
++---------------------+       +---------------------+
+|    Replica Server   |       |    Replica Server   |
++---------------------+       +---------------------+</code></pre>
+            </div>
+            </p>
+            <p><strong>Advantages:</strong></p>
+            <ul>
+                <li><strong>Write Scalability</strong>: Allows distributed write operations.</li>
+                <li><strong>High Availability</strong>: No single point of failure for writes.</li>
+            </ul>
+            <p><strong>Disadvantages:</strong></p>
+            <ul>
+                <li><strong>Complex Conflict Resolution</strong>: Increased complexity in handling data conflicts.</li>
+                <li><strong>Data Consistency Challenges</strong>: Risk of data inconsistency without proper mechanisms.</li>
+            </ul>
+            <h2 id="advantages-of-database-replication">Advantages of Database Replication</h2>
+            <ol>
+                <li><strong>Increased Data Availability</strong>: Multiple copies of data reduce downtime.</li>
+                <li><strong>Fault Tolerance</strong>: System can continue operation despite server failures.</li>
+                <li><strong>Improved Performance</strong>: Load balancing reduces bottlenecks.</li>
+                <li><strong>Geographical Distribution</strong>: Data closer to users reduces access latency.</li>
+                <li><strong>Scalability</strong>: Easier to scale out by adding replicas.</li>
+            </ol>
+            <h2 id="challenges-of-database-replication">Challenges of Database Replication</h2>
+            <ol>
+                <li><strong>Data Consistency</strong>: Ensuring all replicas have up-to-date data.</li>
+                <li><strong>Conflict Resolution</strong>: Handling concurrent writes in multi-master setups.</li>
+                <li><strong>Latency</strong>: Network delays can affect synchronization.</li>
+                <li><strong>Complexity</strong>: Increased system complexity requires careful management.</li>
+                <li><strong>Resource Overhead</strong>: Replication consumes additional CPU, memory, and storage.</li>
+            </ol>
+            <h2 id="implementation-considerations">Implementation Considerations</h2>
+            <h3 id="replication-topologies">Replication Topologies</h3>
+            <ol>
+                <li><strong>Master-Slave (Master-Standby)</strong>: One master handles writes; slaves handle reads.</li>
+                <li><strong>Master-Master (Multi-Master)</strong>: Multiple masters handle both reads and writes.</li>
+                <li><strong>Tree (Hierarchical)</strong>: Master replicates to intermediate nodes, which replicate to other nodes.</li>
+                <li><strong>Mesh</strong>: Every node replicates to every other node.</li>
+            </ol>
+            <p><strong>Selection Factors:</strong></p>
+            <ul>
+                <li><strong>Application Requirements</strong>: Consistency, availability, and partition tolerance needs.</li>
+                <li><strong>Network Infrastructure</strong>: Bandwidth and latency considerations.</li>
+                <li><strong>Scalability Needs</strong>: Future growth and performance expectations.</li>
+            </ul>
+            <h3 id="conflict-resolution-strategies">Conflict Resolution Strategies</h3>
+            <ul>
+                <li><strong>Last Write Wins</strong>: The most recent write overrides previous ones.</li>
+                <li><strong>Version Vectors</strong>: Track versions to detect conflicts.</li>
+                <li><strong>Manual Resolution</strong>: Require human intervention to resolve conflicts.</li>
+                <li><strong>Custom Application Logic</strong>: Implement business-specific rules.</li>
+            </ul>
+            <h3 id="monitoring-and-maintenance">Monitoring and Maintenance</h3>
+            <ul>
+                <li><strong>Replication Lag Monitoring</strong>: Detect delays in data propagation.</li>
+                <li><strong>Health Checks</strong>: Regularly verify the status of all nodes.</li>
+                <li><strong>Alerting Systems</strong>: Notify administrators of issues.</li>
+                <li><strong>Regular Backups</strong>: Even with replication, backups are essential.</li>
+            </ul>
+            <h3 id="failover-mechanisms">Failover Mechanisms</h3>
+            <ul>
+                <li><strong>Automatic Failover</strong>: Systems detect failures and switch to a standby server.</li>
+                <li><strong>Manual Failover</strong>: Administrators intervene to promote a standby.</li>
+                <li><strong>Failback Procedures</strong>: Reintegrate the recovered master back into the system.</li>
+            </ul>
+        </section>
+        <div id="table-of-contents">
+            <h2>Table of Contents</h2>
+            <ol>
+                <li><a href="#overview-of-database-replication">Overview of Database Replication</a>
+                    <ol>
+                        <li><a href="#architectural-diagram">Architectural Diagram</a></li>
+                        <li><a href="#key-characteristics">Key Characteristics</a></li>
+                    </ol>
+                </li>
+                <li><a href="#purpose-of-database-replication">Purpose of Database Replication</a></li>
+                <li><a href="#types-of-database-replication">Types of Database Replication</a>
+                    <ol>
+                        <li><a href="#1-synchronous-replication">1. Synchronous Replication</a></li>
+                        <li><a href="#2-asynchronous-replication">2. Asynchronous Replication</a></li>
+                        <li><a href="#3-snapshot-replication">3. Snapshot Replication</a></li>
+                        <li><a href="#4-multi-master-replication">4. Multi-Master Replication</a></li>
+                    </ol>
+                </li>
+                <li><a href="#advantages-of-database-replication">Advantages of Database Replication</a></li>
+                <li><a href="#challenges-of-database-replication">Challenges of Database Replication</a></li>
+                <li><a href="#implementation-considerations">Implementation Considerations</a>
+                    <ol>
+                        <li><a href="#replication-topologies">Replication Topologies</a></li>
+                        <li><a href="#conflict-resolution-strategies">Conflict Resolution Strategies</a></li>
+                        <li><a href="#monitoring-and-maintenance">Monitoring and Maintenance</a></li>
+                        <li><a href="#failover-mechanisms">Failover Mechanisms</a></li>
+                    </ol>
+                </li>
+            </ol>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Introduction to Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro.html">Databases Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/03_database_management_systems_dbms_.html">Database Management Systems Dbms</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models.html">Data Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/05_glossary.html">Glossary</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis.html">Requirements Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization.html">Normalization</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization.html">Denormalization</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies.html">Indexing Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/05_data_integrity.html">Data Integrity</a></li>
+                        </ol>
+                    </li>
+                    <li>Sql<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql.html">Intro to Sql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl.html">Data Definition Language Ddl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml.html">Data Manipulation Language Dml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl.html">Data Control Language Dcl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl.html">Transaction Control Language Tcl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views.html">Joins Subqueries and Views</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions.html">Stored Procedures and Functions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers.html">Triggers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data.html">Hierarchical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions</a></li>
+                        </ol>
+                    </li>
+                    <li>Acid Properties and Transactions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro.html">Transactions Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation.html">Isolation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li>
+                        </ol>
+                    </li>
+                    <li>Storage and Indexing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk.html">How Tables and Indexes Are Stored on Disk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases.html">Row Based vs Column Based Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems.html">Distributed Database Systems</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning.html">Partitioning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding.html">Sharding</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding.html">Partitioning vs Sharding</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
+                        </ol>
+                    </li>
+                    <li>Concurrency Control<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks.html">Shared vs Exclusive Locks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two Phase Locking</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Double Booking Problem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/05_serializable_vs_repeatable_read.html">Serializable vs Repeatable Read</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Performance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/01_query_optimization_techniques.html">Query Optimization Techniques</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/02_indexing_strategies.html">Indexing Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/03_database_caching.html">Database Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Replication<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Intro to Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master Standby Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi Master Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous vs Asynchronous Replication</a></li>
+                        </ol>
+                    </li>
+                    <li>Nosql Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/01_nosql_databases_intro.html">Nosql Databases Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                        </ol>
+                    </li>
+                    <li>Security Best Practices<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/01_backup_and_recovery_strategies.html">Backup and Recovery Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/02_database_security.html">Database Security</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/03_capacity_planning.html">Capacity Planning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/04_database_migration.html">Database Migration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Engines<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/01_sqlite.html">Sqlite</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/02_mysql.html">Mysql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/03_postgresql.html">Postgresql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/04_mongodb.html">Mongodb</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4_j.html">Neo4 J</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column">
+                <img alt="Adam Djellouli Symbol" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+            <div class="footer-column">
+                <h2><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Our Privacy Policy</a></h2>
+                <p>
+                    Thank you for visiting my personal website. All of the <br />
+                    content on this site is free to use, but please remember <br />
+                    to be a good human being and refrain from any abuse<br />
+                    of the site. If you would like to contact me, please use <br />
+                    my <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn profile</a> or my <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a> if you have any technical <br />
+                    issues or ideas to share. I wish you the best and hope you <br />
+                    have a fantastic life. <br />
+                </p>
+            </div>
+            <div class="footer-column">
+                <h2>Follow me</h2>
+                <ul class="social-media">
+                    <li>
+                        <a class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" target="_blank" title="YouTube">
+                        </a>YouTube
+                    </li>
+                    <li>
+                        <a class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" target="_blank" title="LinkedIn">
+                        </a>LinkedIn
+                    </li>
+                    <li>
+                        <a class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" target="_blank" title="Instagram">
+                        </a>Instagram
+                    </li>
+                    <li>
+                        <a class="fa fa-github" href="https://github.com/djeada" title="GitHub">
+                        </a>Github
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div>
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="../../../app.js"></script>
+    </footer>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

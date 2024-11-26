@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Isolation in Database Transactions</title>
+    <meta content="Isolation is a fundamental concept in database systems that ensures each transaction operates independently without interfering with others." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="https://adamdjellouli.com">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a class="active" href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <section id="article-body">
+            <p style="text-align: right;"><i>Last modified: November 26, 2024</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <header>Isolation in Database Transactions</header>
+            <p>Isolation is a fundamental concept in database systems that ensures each transaction operates independently without interfering with others. When multiple transactions occur simultaneously, isolation guarantees that the operations within one transaction are not visible to other transactions until they are completed and committed. This means that the intermediate states of a transaction are hidden from others, maintaining data integrity and consistency throughout the process.</p>
+            <p>Think of isolation as separate workspaces for each transaction. Imagine several chefs in a kitchen, each preparing their own dish without disturbing or altering the ingredients of others. Only when a chef finishes and serves the dish do others see the final result.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+----------------------+      +----------------------+
+|    Transaction A     |      |    Transaction B     |
+| - Processes Data     |      | - Processes Data     |
+| - No Interference    |      | - No Interference    |
++----------------------+      +----------------------+</code></pre>
+            </div>
+            </p>
+            <h2 id="the-importance-of-isolation">The Importance of Isolation</h2>
+            <p>Isolation plays a critical role in ensuring that concurrent transactions do not lead to data anomalies or inconsistencies. By isolating transactions, the database system prevents issues like dirty reads, non-repeatable reads, and phantom reads, which can compromise data integrity.</p>
+            <h3 id="managing-concurrency">Managing Concurrency</h3>
+            <p>In a multi-user environment, numerous transactions might be happening at the same time. Isolation ensures that these concurrent transactions do not interfere with each other, allowing each to proceed as if it were the only one interacting with the database.</p>
+            <h3 id="preserving-data-integrity">Preserving Data Integrity</h3>
+            <p>By keeping transactions isolated until they are completed, the database maintains accurate and consistent data. This prevents unintended side effects that could occur if transactions were allowed to see uncommitted changes from others.</p>
+            <h2 id="real-world-examples">Real-World Examples</h2>
+            <p>To better understand how isolation works, let's look at some practical scenarios where isolation is essential.</p>
+            <h3 id="preventing-dirty-reads">Preventing Dirty Reads</h3>
+            <p>Consider a banking system where Transaction T1 is transferring money from Account X to Account Y. This involves debiting Account X and crediting Account Y.</p>
+            <ul>
+                <li><strong>Transaction T1</strong>:</li>
+                <li>Debit $500 from Account X.</li>
+                <li>Credit $500 to Account Y.</li>
+                <li>Commit the transaction.</li>
+            </ul>
+            <p>Simultaneously, Transaction T2 wants to read the balance of Account Y.</p>
+            <ul>
+                <li><strong>Without Isolation</strong>: If T2 reads the balance after T1 has credited Account Y but before T1 commits, it sees an uncommitted balance. If T1 rolls back, T2's read was incorrect—a dirty read.</li>
+                <li><strong>With Isolation</strong>: T2 cannot see the changes from T1 until they are committed. This ensures T2 always reads accurate, committed data.</li>
+            </ul>
+            <h3 id="avoiding-non-repeatable-reads">Avoiding Non-Repeatable Reads</h3>
+            <p>Imagine an inventory system where Transaction T1 reads the stock level of a product twice during its operation.</p>
+            <ul>
+                <li><strong>Transaction T1</strong>:</li>
+                <li>Read stock level of Product A (e.g., 100 units).</li>
+                <li>Perform some calculations.</li>
+                <li>Read stock level of Product A again.</li>
+            </ul>
+            <p>At the same time, Transaction T2 sells some units of Product A and updates the stock level.</p>
+            <ul>
+                <li><strong>Without Isolation</strong>: T1's second read might show a different stock level (e.g., 90 units), leading to inconsistent data within the same transaction.</li>
+                <li><strong>With Isolation</strong>: T1 sees the same stock level in both reads, ensuring consistency.</li>
+            </ul>
+            <h3 id="preventing-lost-updates">Preventing Lost Updates</h3>
+            <p>In an online booking system, two users attempt to reserve the last available seat.</p>
+            <ul>
+                <li><strong>Transaction T1</strong>:</li>
+                <li>Check seat availability.</li>
+                <li>Reserve the seat.</li>
+                <li>
+                    <p>Commit the transaction.</p>
+                </li>
+                <li>
+                    <p><strong>Transaction T2</strong>:</p>
+                </li>
+                <li>Check seat availability.</li>
+                <li>Attempt to reserve the seat.</li>
+                <li>
+                    <p>Commit the transaction.</p>
+                </li>
+                <li>
+                    <p><strong>Without Isolation</strong>: Both transactions might think the seat is available and reserve it, causing overbooking.</p>
+                </li>
+                <li><strong>With Isolation</strong>: Once T1 reserves the seat, T2 cannot reserve it until T1 commits or rolls back, preventing conflicts.</li>
+            </ul>
+            <h2 id="transaction-isolation-levels">Transaction Isolation Levels</h2>
+            <p>Databases provide different isolation levels to balance between data integrity and system performance. Higher isolation levels offer more data consistency but can reduce concurrency and increase resource usage.</p>
+            <h3 id="overview-of-isolation-levels">Overview of Isolation Levels</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Isolation Level</td>
+                    <td>Description</td>
+                    <td>Pros</td>
+                    <td>Cons</td>
+                </tr>
+                <tr>
+                    <td>Read Uncommitted</td>
+                    <td>Transactions can read uncommitted changes made by others (dirty reads).</td>
+                    <td>Highest concurrency, minimal locking.</td>
+                    <td>Risk of dirty reads, data inconsistencies.</td>
+                </tr>
+                <tr>
+                    <td>Read Committed</td>
+                    <td>Transactions only see committed changes.</td>
+                    <td>Prevents dirty reads, good performance.</td>
+                    <td>May experience non-repeatable reads.</td>
+                </tr>
+                <tr>
+                    <td>Repeatable Read</td>
+                    <td>Ensures that if data is read twice, it remains the same during the transaction.</td>
+                    <td>Prevents non-repeatable reads.</td>
+                    <td>Possible phantom reads, reduced concurrency.</td>
+                </tr>
+                <tr>
+                    <td>Serializable</td>
+                    <td>Transactions are completely isolated from each other.</td>
+                    <td>Highest data integrity.</td>
+                    <td>Lowest concurrency, highest resource usage.</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="detailed-explanation">Detailed Explanation</h3>
+            <h4 id="read-uncommitted">Read Uncommitted</h4>
+            <p>At this level, a transaction may read data that has been modified but not yet committed by other transactions. This can lead to dirty reads, where a transaction reads uncommitted changes that might be rolled back.</p>
+            <h4 id="read-committed">Read Committed</h4>
+            <p>Transactions only see data that has been committed. This prevents dirty reads but allows non-repeatable reads, where data read twice might change if another transaction modifies it between reads.</p>
+            <h4 id="repeatable-read">Repeatable Read</h4>
+            <p>This level ensures that if a transaction reads data multiple times, it sees the same data each time. It prevents non-repeatable reads but may still allow phantom reads, where new rows added by other transactions are visible.</p>
+            <h4 id="serializable">Serializable</h4>
+            <p>The strictest isolation level, where transactions are completely isolated. It prevents dirty reads, non-repeatable reads, and phantom reads by locking the data range involved, but it can significantly reduce concurrency.</p>
+            <h2 id="concurrency-control-mechanisms">Concurrency Control Mechanisms</h2>
+            <p>To enforce isolation, databases use various concurrency control techniques that manage how transactions interact with shared data.</p>
+            <h3 id="locking-mechanisms">Locking Mechanisms</h3>
+            <p>Locking is a primary method where transactions acquire locks on data before accessing it.</p>
+            <ul>
+                <li><strong>Shared Locks</strong>: Allow multiple transactions to read a data item but prevent any from writing to it.</li>
+                <li><strong>Exclusive Locks</strong>: Allow one transaction to write to a data item, preventing others from reading or writing.</li>
+            </ul>
+            <p>Locks can be applied at different granularities:</p>
+            <ul>
+                <li><strong>Row-Level Locking</strong>: Locks specific rows, allowing higher concurrency but with more overhead.</li>
+                <li><strong>Table-Level Locking</strong>: Locks entire tables, reducing overhead but also reducing concurrency.</li>
+            </ul>
+            <p>By controlling access through locks, the database ensures that transactions do not interfere with each other's operations.</p>
+            <h3 id="optimistic-concurrency-control">Optimistic Concurrency Control</h3>
+            <p>Optimistic concurrency control assumes that transaction conflicts are rare and allows transactions to proceed without locking resources.</p>
+            <ul>
+                <li><strong>Process</strong>:</li>
+                <li>Transactions execute without acquiring locks.</li>
+                <li>Before committing, the system checks for conflicts.</li>
+                <li>If a conflict is detected, the transaction is rolled back.</li>
+            </ul>
+            <p>This approach reduces the overhead of locking but requires a mechanism to detect and resolve conflicts during the commit phase.</p>
+            <h3 id="multi-version-concurrency-control-mvcc-">Multi-Version Concurrency Control (MVCC)</h3>
+            <p>MVCC allows multiple versions of data to exist simultaneously, enabling transactions to access data without waiting for locks.</p>
+            <ul>
+                <li><strong>Benefits</strong>:</li>
+                <li>Readers don't block writers and vice versa.</li>
+                <li>Transactions see a consistent snapshot of the database.</li>
+                <li>Improves performance in read-heavy workloads.</li>
+            </ul>
+            <p>Databases like PostgreSQL and Oracle use MVCC to enhance concurrency while maintaining isolation.</p>
+            <h2 id="visualizing-isolation-in-action">Visualizing Isolation in Action</h2>
+            <p>Understanding how isolation works can be aided by visual diagrams.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">[Transaction T1]                 [Transaction T2]
+    |                                  |
+[Begin Transaction]              [Begin Transaction]
+    |                                  |
+[Update Data Item X]              |
+    |                              [Read Data Item X]
+    |                                  |
+[Commit Transaction]                |
+                                     |
+                               [Read Data Item X]
+                                     |
+                               [Commit Transaction]</code></pre>
+            </div>
+            </p>
+            <p>In this scenario:</p>
+            <ul>
+                <li><strong>Without Isolation</strong>: T2 might read the uncommitted changes made by T1, leading to inconsistencies.</li>
+                <li><strong>With Isolation</strong>: T2 cannot see T1's changes until they are committed, ensuring data integrity.</li>
+            </ul>
+            <h2 id="implementing-isolation-in-sql-transactions">Implementing Isolation in SQL Transactions</h2>
+            <p>SQL databases provide commands and settings to control transaction isolation levels and manage concurrency.</p>
+            <h3 id="setting-the-isolation-level">Setting the Isolation Level</h3>
+            <p>Isolation levels can be set per session or per transaction.</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">-- Setting the isolation level to Serializable
+SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+
+BEGIN TRANSACTION;
+
+-- Transaction operations here
+
+COMMIT;</code></pre>
+            </div>
+            </p>
+            <h3 id="example-preventing-dirty-reads">Example: Preventing Dirty Reads</h3>
+            <p>
+            <div>
+                <pre><code class="language-sql">-- Transaction T1
+BEGIN TRANSACTION;
+
+UPDATE accounts
+SET balance = balance - 500
+WHERE account_id = 1;
+
+-- Transaction T2
+SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+BEGIN TRANSACTION;
+
+SELECT balance
+FROM accounts
+WHERE account_id = 1;
+
+COMMIT;
+
+-- T2 will not see the uncommitted change from T1 due to the Read Committed isolation level.
+
+-- T1 commits the transaction
+COMMIT;</code></pre>
+            </div>
+            </p>
+            <h3 id="using-locking-hints">Using Locking Hints</h3>
+            <p>Some SQL databases allow specifying locking behavior directly in queries.</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM accounts WITH (UPDLOCK)
+WHERE account_id = 1;</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><code>WITH (UPDLOCK)</code> requests an update lock, preventing other transactions from modifying the row until the lock is released.</li>
+            </ul>
+        </section>
+        <div id="table-of-contents">
+            <h2>Table of Contents</h2>
+            <ol>
+                <li><a href="#the-importance-of-isolation">The Importance of Isolation</a>
+                    <ol>
+                        <li><a href="#managing-concurrency">Managing Concurrency</a></li>
+                        <li><a href="#preserving-data-integrity">Preserving Data Integrity</a></li>
+                    </ol>
+                </li>
+                <li><a href="#real-world-examples">Real-World Examples</a>
+                    <ol>
+                        <li><a href="#preventing-dirty-reads">Preventing Dirty Reads</a></li>
+                        <li><a href="#avoiding-non-repeatable-reads">Avoiding Non-Repeatable Reads</a></li>
+                        <li><a href="#preventing-lost-updates">Preventing Lost Updates</a></li>
+                    </ol>
+                </li>
+                <li><a href="#transaction-isolation-levels">Transaction Isolation Levels</a>
+                    <ol>
+                        <li><a href="#overview-of-isolation-levels">Overview of Isolation Levels</a></li>
+                        <li><a href="#detailed-explanation">Detailed Explanation</a>
+                            <ol>
+                                <li><a href="#read-uncommitted">Read Uncommitted</a></li>
+                                <li><a href="#read-committed">Read Committed</a></li>
+                                <li><a href="#repeatable-read">Repeatable Read</a></li>
+                                <li><a href="#serializable">Serializable</a></li>
+                            </ol>
+                        </li>
+                    </ol>
+                </li>
+                <li><a href="#concurrency-control-mechanisms">Concurrency Control Mechanisms</a>
+                    <ol>
+                        <li><a href="#locking-mechanisms">Locking Mechanisms</a></li>
+                        <li><a href="#optimistic-concurrency-control">Optimistic Concurrency Control</a></li>
+                        <li><a href="#multi-version-concurrency-control-mvcc-">Multi-Version Concurrency Control (MVCC)</a></li>
+                    </ol>
+                </li>
+                <li><a href="#visualizing-isolation-in-action">Visualizing Isolation in Action</a></li>
+                <li><a href="#implementing-isolation-in-sql-transactions">Implementing Isolation in SQL Transactions</a>
+                    <ol>
+                        <li><a href="#setting-the-isolation-level">Setting the Isolation Level</a></li>
+                        <li><a href="#example-preventing-dirty-reads">Example: Preventing Dirty Reads</a></li>
+                        <li><a href="#using-locking-hints">Using Locking Hints</a></li>
+                    </ol>
+                </li>
+            </ol>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Introduction to Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro.html">Databases Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/03_database_management_systems_dbms_.html">Database Management Systems Dbms</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models.html">Data Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/05_glossary.html">Glossary</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis.html">Requirements Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization.html">Normalization</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization.html">Denormalization</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies.html">Indexing Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/05_data_integrity.html">Data Integrity</a></li>
+                        </ol>
+                    </li>
+                    <li>Sql<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql.html">Intro to Sql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl.html">Data Definition Language Ddl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml.html">Data Manipulation Language Dml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl.html">Data Control Language Dcl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl.html">Transaction Control Language Tcl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views.html">Joins Subqueries and Views</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions.html">Stored Procedures and Functions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers.html">Triggers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data.html">Hierarchical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions</a></li>
+                        </ol>
+                    </li>
+                    <li>Acid Properties and Transactions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro.html">Transactions Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation.html">Isolation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li>
+                        </ol>
+                    </li>
+                    <li>Storage and Indexing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk.html">How Tables and Indexes Are Stored on Disk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases.html">Row Based vs Column Based Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems.html">Distributed Database Systems</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning.html">Partitioning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding.html">Sharding</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding.html">Partitioning vs Sharding</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
+                        </ol>
+                    </li>
+                    <li>Concurrency Control<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks.html">Shared vs Exclusive Locks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two Phase Locking</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Double Booking Problem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/05_serializable_vs_repeatable_read.html">Serializable vs Repeatable Read</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Performance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/01_query_optimization_techniques.html">Query Optimization Techniques</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/02_indexing_strategies.html">Indexing Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/03_database_caching.html">Database Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Replication<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Intro to Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master Standby Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi Master Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous vs Asynchronous Replication</a></li>
+                        </ol>
+                    </li>
+                    <li>Nosql Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/01_nosql_databases_intro.html">Nosql Databases Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                        </ol>
+                    </li>
+                    <li>Security Best Practices<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/01_backup_and_recovery_strategies.html">Backup and Recovery Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/02_database_security.html">Database Security</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/03_capacity_planning.html">Capacity Planning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/04_database_migration.html">Database Migration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Engines<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/01_sqlite.html">Sqlite</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/02_mysql.html">Mysql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/03_postgresql.html">Postgresql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/04_mongodb.html">Mongodb</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4_j.html">Neo4 J</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column">
+                <img alt="Adam Djellouli Symbol" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+            <div class="footer-column">
+                <h2><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Our Privacy Policy</a></h2>
+                <p>
+                    Thank you for visiting my personal website. All of the <br />
+                    content on this site is free to use, but please remember <br />
+                    to be a good human being and refrain from any abuse<br />
+                    of the site. If you would like to contact me, please use <br />
+                    my <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn profile</a> or my <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a> if you have any technical <br />
+                    issues or ideas to share. I wish you the best and hope you <br />
+                    have a fantastic life. <br />
+                </p>
+            </div>
+            <div class="footer-column">
+                <h2>Follow me</h2>
+                <ul class="social-media">
+                    <li>
+                        <a class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" target="_blank" title="YouTube">
+                        </a>YouTube
+                    </li>
+                    <li>
+                        <a class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" target="_blank" title="LinkedIn">
+                        </a>LinkedIn
+                    </li>
+                    <li>
+                        <a class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" target="_blank" title="Instagram">
+                        </a>Instagram
+                    </li>
+                    <li>
+                        <a class="fa fa-github" href="https://github.com/djeada" title="GitHub">
+                        </a>Github
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div>
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="../../../app.js"></script>
+    </footer>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>
