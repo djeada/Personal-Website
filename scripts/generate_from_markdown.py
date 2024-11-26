@@ -30,6 +30,18 @@ class UrlData:
     @property
     def output_path(self) -> Path:
         def process(string: str) -> str:
+            # Define exceptions here
+            exceptions = {
+                "neo4j": "neo4j",
+                # Add more exceptions as needed
+            }
+
+            # Apply exceptions
+            for key, replacement in exceptions.items():
+                if key in string.lower():
+                    string = string.lower().replace(key, replacement)
+
+            # Apply general rules
             string = re.sub(r"(?<=[a-z0-9A-Z])[A-Z]", r"_\g<0>", string)
             string = re.sub(r"\s+", "_", string)
             string = re.sub(r"[^a-zA-Z0-9./]", "_", string.strip())
