@@ -6,20 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Sharding</title>
-    <meta content="
-
-------------------------------
-      |         Database           |
-      ------------------------------
-      /           |          \
-----------------   ---------------   -----------------
-|  Shard 1     |   |  Shard 2   |   |   Shard 3    |
-----------------   ---------------   -----------------
-| Key 1: Data  |   | Key 3: Data|   | Key 5: Data  |
-| Key 2: Data  |   | Key 4: Data|   | Key 6: Data  |
-----------------   ---------------   -----------------
-
-" name="description" />
+    <meta content="Sharding is a method of horizontally partitioning data in a database, so that each shard contains a unique subset of the data." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -64,78 +51,385 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: November 26, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: November 30, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="sharding">Sharding</h2>
-            <ul>
-                <li>Sharding is a data partitioning technique used in distributed systems</li>
-                <li>Splits large datasets into smaller, more manageable pieces called shards</li>
-            </ul>
+            <p>Sharding is a method of horizontally partitioning data in a database, so that each shard contains a unique subset of the data. This approach allows a database to scale by distributing data across multiple servers or clusters, effectively handling large datasets and high traffic loads.</p>
+            <p>Imagine you have a vast library of books that no longer fits on a single bookshelf. To manage this, you distribute the books across multiple bookshelves based on genres or authors. Similarly, sharding splits your database into smaller, more manageable pieces.</p>
+            <h3 id="how-sharding-works">How Sharding Works</h3>
+            <p>At its core, sharding involves breaking up a large database table into smaller chunks called shards. Each shard operates as an independent database, containing its portion of the data.</p>
+            <p><strong>Diagram of Sharding:</strong></p>
             <p>
             <div>
-                <pre><code class="language-shell">------------------------------
-      |         Database           |
-      ------------------------------
-      /           |          \
-----------------   ---------------   -----------------
-|  Shard 1     |   |  Shard 2   |   |   Shard 3    |
-----------------   ---------------   -----------------
-| Key 1: Data  |   | Key 3: Data|   | Key 5: Data  |
-| Key 2: Data  |   | Key 4: Data|   | Key 6: Data  |
-----------------   ---------------   -----------------</code></pre>
+                <pre><code class="language-shell">+----------------------+
+                    |     User Database    |
+                    +----------------------+
+                             /   |   \
+                            /    |    \
+                           /     |     \
+                    +------+  +------+  +------+
+                    |Shard1|  |Shard2|  |Shard3|
+                    +------+  +------+  +------+
+                       |         |         |
+               +-------+--+  +---+---+  +---+---+
+               | User IDs |  | User IDs |  | User IDs |
+               | 1 - 1000 |  |1001-2000|  |2001-3000|
+               +----------+  +---------+  +---------+</code></pre>
             </div>
             </p>
-            <h2 id="purpose">Purpose</h2>
-            <ol>
-                <li>Improve performance and scalability of large datasets in distributed systems</li>
-                <li>Distribute data across multiple nodes or clusters</li>
-                <li>Reduce query latency by parallelizing operations across shards</li>
-            </ol>
-            <h3 id="key-concepts">Key Concepts</h3>
+            <p>In this diagram:</p>
             <ul>
-                <li><strong>Shard:</strong> A shard is a partition that holds a subset of the data. It can be stored on a separate database server or cluster, improving performance and adding redundancy.</li>
-                <li><strong>Sharding Key:</strong> A sharding key is a specific column or set of columns used to determine how data is partitioned. The choice of a good sharding key is crucial as it affects the distribution of data across shards.</li>
-                <li><strong>Shard Placement:</strong> Shard placement refers to the process of determining which shard a piece of data belongs to based on the sharding key.</li>
+                <li><strong>Shard1</strong> contains User IDs from 1 to 1000.</li>
+                <li><strong>Shard2</strong> contains User IDs from 1001 to 2000.</li>
+                <li><strong>Shard3</strong> contains User IDs from 2001 to 3000.</li>
             </ul>
-            <h2 id="sharding-benefits">Sharding Benefits</h2>
+            <p>When a user with ID 1500 logs in, the system knows to query Shard2 directly, reducing the load on the other shards and improving response time.</p>
+            <h3 id="practical-example-sharding-an-e-commerce-database">Practical Example: Sharding an E-commerce Database</h3>
+            <p>Let's consider an online store that has a rapidly growing customer base. The "Orders" table has become enormous, leading to slow queries and performance issues.</p>
+            <h4 id="before-sharding-single-large-table">Before Sharding: Single Large Table</h4>
+            <p><strong>Orders Table:</strong></p>
+            <p>
+            <table>
+                <tr>
+                    <td>OrderID</td>
+                    <td>CustomerID</td>
+                    <td>OrderDate</td>
+                    <td>TotalAmount</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>101</td>
+                    <td>2021-01-10</td>
+                    <td>$150</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>102</td>
+                    <td>2021-01-11</td>
+                    <td>$200</td>
+                </tr>
+                <tr>
+                    <td>...</td>
+                    <td>...</td>
+                    <td>...</td>
+                    <td>...</td>
+                </tr>
+                <tr>
+                    <td>1,000,000</td>
+                    <td>9999</td>
+                    <td>2021-12-31</td>
+                    <td>$75</td>
+                </tr>
+            </table>
+            </p>
+            <p>Handling queries on this table is slow due to its size.</p>
+            <h4 id="after-sharding-distributed-orders-tables">After Sharding: Distributed Orders Tables</h4>
+            <p>The database is sharded based on the "OrderDate" using range-based sharding.</p>
+            <p><strong>Shard January:</strong></p>
+            <p>
+            <table>
+                <tr>
+                    <td>OrderID</td>
+                    <td>CustomerID</td>
+                    <td>OrderDate</td>
+                    <td>TotalAmount</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>101</td>
+                    <td>2021-01-10</td>
+                    <td>$150</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>102</td>
+                    <td>2021-01-11</td>
+                    <td>$200</td>
+                </tr>
+                <tr>
+                    <td>...</td>
+                    <td>...</td>
+                    <td>...</td>
+                    <td>...</td>
+                </tr>
+            </table>
+            </p>
+            <p><strong>Shard February:</strong></p>
+            <p>
+            <table>
+                <tr>
+                    <td>OrderID</td>
+                    <td>CustomerID</td>
+                    <td>OrderDate</td>
+                    <td>TotalAmount</td>
+                </tr>
+                <tr>
+                    <td>5001</td>
+                    <td>201</td>
+                    <td>2021-02-01</td>
+                    <td>$250</td>
+                </tr>
+                <tr>
+                    <td>5002</td>
+                    <td>202</td>
+                    <td>2021-02-02</td>
+                    <td>$300</td>
+                </tr>
+                <tr>
+                    <td>...</td>
+                    <td>...</td>
+                    <td>...</td>
+                    <td>...</td>
+                </tr>
+            </table>
+            </p>
+            <p><strong>Shard March to December:</strong></p>
+            <p>Similarly, other shards contain orders for their respective months.</p>
+            <p>By sharding the "Orders" table by month, queries for orders in a specific month only access the relevant shard, significantly improving performance.</p>
+            <h3 id="selecting-a-sharding-key">Selecting a Sharding Key</h3>
+            <p>The <strong>sharding key</strong> determines how data is distributed across shards and affects system performance and scalability. </p>
+            <p><strong>Factors to Consider:</strong></p>
             <ul>
-                <li><strong>Scalability:</strong> Data distribution across several nodes or clusters allows for horizontal scaling.</li>
-                <li><strong>Performance:</strong> Parallel operations across different shards reduce query latency.</li>
-                <li><strong>Fault Isolation:</strong> Failures are usually localized to individual shards, preventing them from affecting the whole system.</li>
+                <li>A key that ensures <strong>uniform data distribution</strong> helps avoid overloading specific shards and maintains balance. </li>
+                <li>Keys aligned with <strong>query patterns</strong> localize data access, reducing the need for cross-shard queries. </li>
+                <li>Supporting <strong>scalability</strong> is essential, ensuring the system can accommodate the addition of new shards without significant restructuring. </li>
             </ul>
-            <h2 id="sharding-challenges">Sharding Challenges</h2>
+            <p><strong>Example Sharding Keys:</strong></p>
             <ul>
-                <li><strong>Data Distribution:</strong> Choosing a suitable sharding key for even data distribution can be challenging. An incorrect choice may result in data skew and hotspots.</li>
-                <li><strong>Query Complexity:</strong> Handling cross-shard queries increases complexity as it may require more coordination and data transfer between shards.</li>
-                <li><strong>Operational Complexity:</strong> The management of multiple shards and maintaining their consistency introduces operational complexity.</li>
+                <li>Using <strong>UserID</strong> works well for user-centric applications where data is often accessed by individual users. </li>
+                <li><strong>Geographic location</strong> is suitable for systems handling data based on regions, like content delivery or local services. </li>
+                <li><strong>Date/Time</strong> is an effective choice for applications managing time-series data, such as logs or transactional records.</li>
             </ul>
-            <h2 id="sharding-strategies">Sharding Strategies</h2>
+            <h3 id="sharding-strategies">Sharding Strategies</h3>
+            <p>Different strategies can be used to determine how data is partitioned across shards.</p>
+            <h4 id="range-based-sharding">Range-Based Sharding</h4>
+            <p>Data is divided based on ranges of the sharding key.</p>
+            <p><strong>Example:</strong></p>
             <ul>
-                <li><strong>Range-based Sharding:</strong> Data distribution based on a range of sharding key values.</li>
-                <li><strong>Hash-based Sharding:</strong> Data distribution based on a hash function applied to the sharding key.</li>
-                <li><strong>List-based Sharding:</strong> Data distribution based on a list of predefined sharding key values.</li>
+                <li><strong>Shard1:</strong> User IDs 1 - 1,000,000</li>
+                <li><strong>Shard2:</strong> User IDs 1,000,001 - 2,000,000</li>
+                <li><strong>Shard3:</strong> User IDs 2,000,001 - 3,000,000</li>
             </ul>
-            <h2 id="best-practices">Best Practices</h2>
+            <p><strong>Advantages:</strong></p>
             <ul>
-                <li>Choose the sharding strategy that best suits your query patterns and data characteristics.</li>
-                <li>Regularly monitor and adjust the sharding scheme as the system evolves to maintain optimal performance.</li>
-                <li>Implement comprehensive backup and recovery strategies for each shard to ensure data durability.</li>
-                <li>Use sharding-aware tools and libraries to help manage the complexity introduced by sharding, and simplify application development and operations.</li>
+                <li>Simple to implement.</li>
+                <li>Efficient for range queries.</li>
+            </ul>
+            <p><strong>Disadvantages:</strong></p>
+            <ul>
+                <li>Potential for uneven data distribution.</li>
+                <li>Hotspots if one range is accessed more frequently.</li>
+            </ul>
+            <h4 id="hash-based-sharding">Hash-Based Sharding</h4>
+            <p>A hash function is applied to the sharding key to determine the shard.</p>
+            <p><strong>Hash Function Example:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Shard Number = Hash(UserID) % Total Shards</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>For UserID 12345: <code>Hash(12345) % 3 = 0</code> → Shard0</li>
+                <li>For UserID 67890: <code>Hash(67890) % 3 = 1</code> → Shard1</li>
+            </ul>
+            <p><strong>Advantages:</strong></p>
+            <ul>
+                <li>Even data distribution.</li>
+                <li>Avoids hotspots.</li>
+            </ul>
+            <p><strong>Disadvantages:</strong></p>
+            <ul>
+                <li>Not suitable for range queries.</li>
+                <li>Adding shards requires rehashing data.</li>
+            </ul>
+            <h4 id="directory-based-sharding">Directory-Based Sharding</h4>
+            <p>A lookup service maintains a mapping of keys to shards.</p>
+            <p><strong>Example Directory:</strong></p>
+            <p>
+            <table>
+                <tr>
+                    <td>UserID Range</td>
+                    <td>Shard</td>
+                </tr>
+                <tr>
+                    <td>1 - 500,000</td>
+                    <td>ShardA</td>
+                </tr>
+                <tr>
+                    <td>500,001 - 1,000,000</td>
+                    <td>ShardB</td>
+                </tr>
+                <tr>
+                    <td>...</td>
+                    <td>...</td>
+                </tr>
+            </table>
+            </p>
+            <p><strong>Advantages:</strong></p>
+            <ul>
+                <li>Flexible and dynamic.</li>
+                <li>Can handle uneven data distribution.</li>
+            </ul>
+            <p><strong>Disadvantages:</strong></p>
+            <ul>
+                <li>Directory can become a bottleneck.</li>
+                <li>Added complexity.</li>
+            </ul>
+            <h3 id="handling-cross-shard-queries">Handling Cross-Shard Queries</h3>
+            <ul>
+                <li>Queries across multiple shards can become <strong>complex</strong> due to the distribution of data. </li>
+                <li>In scenarios like identifying all users signed up in the past 24 hours, data is <strong>spread</strong> across multiple shards, requiring additional mechanisms for aggregation. </li>
+                <li>Using <strong>parallel queries</strong>, systems execute the query on all shards simultaneously and merge the results to produce the final output. </li>
+                <li>Data <strong>duplication</strong> can be implemented by maintaining a global summary table or index containing key information from all shards. </li>
+                <li>Cross-shard querying introduces <strong>overhead</strong>, as the system must coordinate and aggregate data from multiple sources. </li>
+                <li>Ensuring data <strong>consistency</strong> is a challenge, especially if the system relies on duplicated or aggregated information across shards. </li>
+            </ul>
+            <h3 id="practical-implementation-with-mongodb">Practical Implementation with MongoDB</h3>
+            <p>MongoDB is a popular NoSQL database that supports sharding natively.</p>
+            <p><strong>Setting Up Sharding:</strong></p>
+            <p>I. <strong>Enable Sharding on the Database:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-javascript">sh.enableSharding("myDatabase")</code></pre>
+            </div>
+            </p>
+            <p>II. <strong>Choose a Shard Key:</strong></p>
+            <p>For example, using "user_id".</p>
+            <p>III. <strong>Shard the Collection:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-javascript">sh.shardCollection("myDatabase.users", { "user_id": "hashed" })</code></pre>
+            </div>
+            </p>
+            <p><strong>Data Distribution:</strong></p>
+            <ul>
+                <li>MongoDB automatically distributes data based on the hashed "user_id".</li>
+                <li>Balancer ensures shards are evenly loaded.</li>
+            </ul>
+            <p><strong>Single Shard Query:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-javascript">db.users.find({ "user_id": 12345 })</code></pre>
+            </div>
+            </p>
+            <p>The query is routed to the shard containing <code>user_id</code> 12345.</p>
+            <p><strong>Broadcast Query:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-javascript">db.users.find({ "age": { $gte: 18 } })</code></pre>
+            </div>
+            </p>
+            <p>The query is sent to all shards since "age" is not the shard key.</p>
+            <h3 id="real-world-use-case-twitter-s-timeline-storage">Real-World Use Case: Twitter's Timeline Storage</h3>
+            <p>Twitter employs sharding to efficiently manage its vast volume of tweet data.</p>
+            <p><strong>Challenges:</strong></p>
+            <ul>
+                <li>Handling the ingestion of millions of tweets daily requires a scalable and robust data storage solution.</li>
+                <li>Ensuring rapid retrieval of tweets for user timelines is essential for a seamless user experience.</li>
+            </ul>
+            <p><strong>Sharding Strategy:</strong></p>
+            <p>Tweets are distributed across shards based on the UserID, ensuring that all tweets from a particular user reside in the same shard. </p>
+            <p><strong>Benefits:</strong></p>
+            <ul>
+                <li>This approach leads to an even distribution of data across shards, preventing any single shard from becoming a bottleneck.</li>
+                <li>It facilitates efficient retrieval of a user's tweets, as all relevant data is located within the same shard.</li>
+            </ul>
+            <p><strong>Handling Cross-Shard Operations:</strong></p>
+            <ul>
+                <li>Aggregation services compile data from multiple shards to construct comprehensive user timelines.</li>
+                <li>Caching mechanisms, such as Redis clusters, are utilized to store home timelines, enhancing performance and reducing latency. </li>
+            </ul>
+            <h3 id="best-practices-for-sharding">Best Practices for Sharding</h3>
+            <p>Implementing sharding effectively involves careful planning.</p>
+            <h4 id="understand-your-data-and-access-patterns">Understand Your Data and Access Patterns</h4>
+            <p>Analyze how data is accessed to choose an appropriate shard key.</p>
+            <p><strong>Questions to Ask:</strong></p>
+            <ul>
+                <li>What are the most common queries?</li>
+                <li>Does the data have natural partitions?</li>
+                <li>Are certain data ranges accessed more frequently?</li>
+            </ul>
+            <h4 id="plan-for-scalability">Plan for Scalability</h4>
+            <p>Design the sharding strategy to accommodate future growth.</p>
+            <ul>
+                <li>Using a <strong>flexible shard key</strong> enables the system to accommodate new shards without requiring extensive data redistribution. </li>
+                <li>Leveraging <strong>automated scaling</strong> tools simplifies the process of adding shards, minimizing manual intervention and downtime. </li>
+            </ul>
+            <h4 id="monitor-and-optimize">Monitor and Optimize</h4>
+            <p>Regularly monitor shard performance and adjust as needed.</p>
+            <p><strong>Metrics to Track:</strong></p>
+            <ul>
+                <li>Query latency</li>
+                <li>Shard sizes</li>
+                <li>Resource utilization</li>
+            </ul>
+            <p><strong>Optimization Actions:</strong></p>
+            <ul>
+                <li>Rebalancing shards</li>
+                <li>Adjusting shard keys</li>
+            </ul>
+            <h4 id="handle-failures-gracefully">Handle Failures Gracefully</h4>
+            <p>Implement robust mechanisms to deal with shard failures.</p>
+            <ul>
+                <li>Implementing <strong>redundancy</strong> by replicating data within shards helps prevent data loss and ensures availability during failures. </li>
+                <li>Employing <strong>failover strategies</strong> allows the system to automatically reroute traffic to backup replicas or alternate shards if a primary shard fails. </li>
+            </ul>
+            <h3 id="challenges-of-sharding">Challenges of Sharding</h3>
+            <p>While sharding offers significant benefits, it also introduces complexity.</p>
+            <h4 id="increased-system-complexity">Increased System Complexity</h4>
+            <ul>
+                <li><strong>Application logic</strong> becomes more complex as applications must be designed to understand and interact with the sharding architecture. </li>
+                <li><strong>Testing</strong> scenarios grow in complexity to ensure functionality and reliability across all shards under various conditions. </li>
+            </ul>
+            <h4 id="data-consistency">Data Consistency</h4>
+            <ul>
+                <li><strong>Distributed transactions</strong> pose challenges in ensuring ACID properties across multiple shards, requiring additional coordination mechanisms. </li>
+                <li><strong>Consistency models</strong> may need to be adjusted, often relaxing strict consistency to improve performance and scalability. </li>
+            </ul>
+            <h4 id="operational-overhead">Operational Overhead</h4>
+            <ul>
+                <li><strong>Maintenance</strong> requirements increase due to the need to manage a larger number of servers and their configurations. </li>
+                <li><strong>Backups</strong> must be performed separately for each shard, adding to the time and effort required for data protection. </li>
             </ul>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
-            <ol>
-                <li><a href="#sharding">Sharding</a></li>
-                <li><a href="#purpose">Purpose</a>
-                    <ol>
-                        <li><a href="#key-concepts">Key Concepts</a></li>
-                    </ol>
-                </li>
-                <li><a href="#sharding-benefits">Sharding Benefits</a></li>
-                <li><a href="#sharding-challenges">Sharding Challenges</a></li>
-                <li><a href="#sharding-strategies">Sharding Strategies</a></li>
-                <li><a href="#best-practices">Best Practices</a></li>
+            <ol><a href="#sharding">Sharding</a>
+                <ol>
+                    <li><a href="#how-sharding-works">How Sharding Works</a></li>
+                    <li><a href="#practical-example-sharding-an-e-commerce-database">Practical Example: Sharding an E-commerce Database</a>
+                        <ol>
+                            <li><a href="#before-sharding-single-large-table">Before Sharding: Single Large Table</a></li>
+                            <li><a href="#after-sharding-distributed-orders-tables">After Sharding: Distributed Orders Tables</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#selecting-a-sharding-key">Selecting a Sharding Key</a></li>
+                    <li><a href="#sharding-strategies">Sharding Strategies</a>
+                        <ol>
+                            <li><a href="#range-based-sharding">Range-Based Sharding</a></li>
+                            <li><a href="#hash-based-sharding">Hash-Based Sharding</a></li>
+                            <li><a href="#directory-based-sharding">Directory-Based Sharding</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#handling-cross-shard-queries">Handling Cross-Shard Queries</a></li>
+                    <li><a href="#practical-implementation-with-mongodb">Practical Implementation with MongoDB</a></li>
+                    <li><a href="#real-world-use-case-twitter-s-timeline-storage">Real-World Use Case: Twitter's Timeline Storage</a></li>
+                    <li><a href="#best-practices-for-sharding">Best Practices for Sharding</a>
+                        <ol>
+                            <li><a href="#understand-your-data-and-access-patterns">Understand Your Data and Access Patterns</a></li>
+                            <li><a href="#plan-for-scalability">Plan for Scalability</a></li>
+                            <li><a href="#monitor-and-optimize">Monitor and Optimize</a></li>
+                            <li><a href="#handle-failures-gracefully">Handle Failures Gracefully</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#challenges-of-sharding">Challenges of Sharding</a>
+                        <ol>
+                            <li><a href="#increased-system-complexity">Increased System Complexity</a></li>
+                            <li><a href="#data-consistency">Data Consistency</a></li>
+                            <li><a href="#operational-overhead">Operational Overhead</a></li>
+                        </ol>
+                    </li>
+                </ol>
             </ol>
             <div id="related-articles">
                 <h2>Related Articles</h2>

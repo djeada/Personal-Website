@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Consistent Hashing</title>
-    <meta content="Consider a circle (or 'ring') representing the hash space, where data entries and nodes are mapped." name="description" />
+    <meta content="Imagine you're organizing books in a vast library with shelves arranged in a circle." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -51,87 +51,331 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: November 26, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: November 30, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="consistent-hashing">Consistent Hashing</h2>
-            <ul>
-                <li>Consistent hashing is a distributed hashing technique.</li>
-                <li>It provides even data distribution and minimal data movement during node addition/removal.</li>
-            </ul>
-            <p>Consider a circle (or 'ring') representing the hash space, where data entries and nodes are mapped.</p>
+            <p>Imagine you're organizing books in a vast library with shelves arranged in a circle. Each book is placed on a shelf based on its title's position in the alphabet, looping back to the beginning after 'Z'. If you add a new shelf or remove one, you wouldn't want to reshuffle all the books—just a few should need to move. Consistent hashing works similarly in computer systems, allowing data to be distributed across multiple servers efficiently, even as servers are added or removed.</p>
+            <h3 id="the-hash-ring-concept">The Hash Ring Concept</h3>
+            <p>Consistent hashing uses a logical ring to represent the entire range of possible hash values. Both data items and nodes (servers) are mapped onto this ring using a hash function.</p>
+            <p><strong>Visualizing the Hash Ring:</strong></p>
             <p>
             <div>
-                <pre><code class="language-shell">0/360
-                     |
-                     |
-         270 --------+-------- 90
-                     |
-                     |
-                    180</code></pre>
+                <pre><code class="language-shell">+---------+
+                      |         |
+                +-----+   0°    +-----+
+                |     |         |     |
+                |     +---------+     |
+                |                     |
+         +------+                     +------+
+         |                                    |
+    270° +                                    + 90°
+         |                                    |
+         +------+                     +------+
+                |                     |
+                |     +---------+     |
+                |     |         |     |
+                +-----+  180°   +-----+
+                      |         |
+                      +---------+</code></pre>
             </div>
             </p>
-            <p>Let's assume we have 4 data entries (1, 2, 3, and 4) which will also be mapped onto the circle:</p>
+            <ul>
+                <li>The circle represents the entire hash space (e.g., 0 to 2³² - 1).</li>
+                <li>Positions on the ring correspond to hash values from the hash function.</li>
+                <li>Nodes and data are placed on the ring based on their hash values.</li>
+            </ul>
+            <h3 id="mapping-nodes-and-data-onto-the-ring">Mapping Nodes and Data onto the Ring</h3>
+            <p>Suppose we have three nodes—<strong>Node A</strong>, <strong>Node B</strong>, and <strong>Node C</strong>—and several data keys that need to be stored.</p>
+            <p><strong>Assigning Nodes to the Ring:</strong></p>
+            <ul>
+                <li><strong>Node A</strong> hashes to position at 0°.</li>
+                <li><strong>Node B</strong> hashes to position at 120°.</li>
+                <li><strong>Node C</strong> hashes to position at 240°.</li>
+            </ul>
+            <p><strong>Visual Representation with Nodes:</strong></p>
             <p>
             <div>
-                <pre><code class="language-shell">0/360 -- A
-                     |
-               1 --  |  -- 2
-     D - 270 --------+-------- 90 - B
-                     |
-             4 --    |    -- 3
-                  C --180</code></pre>
+                <pre><code class="language-shell">+---------+
+                      |  Node A |
+                +-----+   0°    +-----+
+                |     |         |     |
+                |     +---------+     |
+                |                     |
+         +------+                     +------+
+         |                                    |
+         |                                    |
+         |                                    |
+         +------+                     +------+
+                |                     |
+                |     +---------+     |
+                |     | Node C  |     |
+                +-----+ 240°    +-----+
+                      |         |
+                      +---------+</code></pre>
             </div>
             </p>
-            <p>Each data entry is assigned to the closest node in the clockwise direction:</p>
+            <p><strong>Placing Data Items on the Ring:</strong></p>
+            <p>Let's say we have data items with keys <strong>K1</strong>, <strong>K2</strong>, and <strong>K3</strong>.</p>
             <ul>
-                <li><strong>Data entry 1</strong> is stored on <strong>node A</strong>.</li>
-                <li><strong>Data entry 2</strong> is stored on <strong>node B</strong>.</li>
-                <li><strong>Data entry 3</strong> is stored on <strong>node C</strong>.</li>
-                <li><strong>Data entry 4</strong> is stored on <strong>node D</strong>.</li>
+                <li><strong>K1</strong> hashes to 100°.</li>
+                <li><strong>K2</strong> hashes to 200°.</li>
+                <li><strong>K3</strong> hashes to 330°.</li>
             </ul>
-            <p>This way, consistent hashing distributes the data evenly and ensures that only a small number of data entries need to be remapped when a node is added or removed.</p>
-            <h2 id="concepts">Concepts</h2>
+            <p><strong>Visual Representation with Data:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+---------+
+                      |  Node A |
+                +-----+   0°    +-----+
+                |     |         |     |
+                |     +---------+     |
+                |         ↑           |
+         +------+        K3           +------+
+         |                                    |
+         |                                    |
+         |                                    |
+         +------+                     +------+
+                |                     |
+                |     +---------+     |
+                |     | Node C  |     |
+                +-----+ 240°    +-----+
+                      |    ↑    |
+                      |   K2    |</code></pre>
+            </div>
+            </p>
+            <h3 id="how-data-assignment-works">How Data Assignment Works</h3>
+            <p>In consistent hashing, each data item is assigned to the next node encountered when moving clockwise around the ring.</p>
             <ul>
-                <li><strong>Hash Ring</strong>: A conceptual circular space where both nodes and data items are placed. This ring structure allows for efficient distribution and lookup of data.</li>
-                <li><strong>Hash Function</strong>: A function that maps data items and nodes to specific positions on the hash ring. The hash function ensures that the placement is both deterministic and uniform.</li>
-                <li><strong>Virtual Nodes</strong>: Multiple positions on the hash ring that represent a single physical node. Virtual nodes help improve data distribution and handle the heterogeneity of node capacities by allowing nodes to take on multiple roles.</li>
+                <li><strong>K1 (100°)</strong> is stored on <strong>Node B (120°)</strong>.</li>
+                <li><strong>K2 (200°)</strong> is stored on <strong>Node C (240°)</strong>.</li>
+                <li><strong>K3 (330°)</strong> wraps around the ring and is stored on <strong>Node A (0°)</strong>.</li>
             </ul>
-            <h2 id="mechanism">Mechanism</h2>
+            <p><strong>Complete Ring with Nodes and Data:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+---------+
+                      |  Node A |
+                +-----+   0°    +-----+
+                |     |    ↑    |     |
+                |     +--- K3 ---+     |
+                |                     |
+         +------+                     +------+
+         |                                    |
+         |                                    |
+         |                                    |
+         +------+                     +------+
+                |                     |
+                |     +---------+     |
+                |     | Node C  |     |
+                +-----+ 240°    +-----+
+                      |    ↑    |
+                      |   K2    |</code></pre>
+            </div>
+            </p>
+            <h3 id="adding-and-removing-nodes">Adding and Removing Nodes</h3>
+            <p>One of the strengths of consistent hashing is that it minimizes the amount of data that needs to move when nodes join or leave the system.</p>
+            <h4 id="adding-a-new-node">Adding a New Node</h4>
+            <p>Suppose we add <strong>Node D</strong> that hashes to 80°.</p>
+            <ul>
+                <li><strong>K1 (100°)</strong> now maps to <strong>Node D</strong> instead of <strong>Node B</strong>.</li>
+                <li>Only <strong>K1</strong> needs to be moved to the new node.</li>
+            </ul>
+            <p><strong>Ring After Adding Node D:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+---------+
+                      |  Node A |
+                +-----+   0°    +-----+
+                |     |         |     |
+                |     +---------+     |
+                |                     |
+         +------+                     +------+
+         |            Node D (80°)            |
+         |                ↑                   |
+         |               K1                   |
+         +------+                     +------+
+                |                     |
+                |     +---------+     |
+                |     | Node C  |     |
+                +-----+ 240°    +-----+
+                      |    ↑    |
+                      |   K2    |</code></pre>
+            </div>
+            </p>
+            <h4 id="removing-a-node">Removing a Node</h4>
+            <p>If <strong>Node B</strong> leaves the system:</p>
+            <ul>
+                <li>Data items previously mapped to <strong>Node B</strong> now map to the next node clockwise.</li>
+                <li><strong>K1</strong> (if still at <strong>Node B</strong>) would move to <strong>Node D</strong> or <strong>Node C</strong> depending on its position.</li>
+            </ul>
+            <h3 id="practical-example-distributed-caching-with-consistent-hashing">Practical Example: Distributed Caching with Consistent Hashing</h3>
+            <p>Consider a web application using a distributed cache to store session data. Let's see how consistent hashing helps in this scenario.</p>
+            <h4 id="without-consistent-hashing">Without Consistent Hashing</h4>
+            <ul>
+                <li>Servers are selected using a simple modulo operation: <code>server = hash(key) % number_of_servers</code>.</li>
+                <li>Adding or removing a server changes <code>number_of_servers</code>, causing most keys to remap to different servers.</li>
+                <li>This results in cache misses and increased load on the database.</li>
+            </ul>
+            <h4 id="with-consistent-hashing">With Consistent Hashing</h4>
+            <ul>
+                <li>Servers and keys are placed on the hash ring.</li>
+                <li>Only keys that would map to the affected servers need to be remapped.</li>
+                <li>The majority of keys continue to map to the same servers, preserving cache hits.</li>
+            </ul>
+            <h3 id="virtual-nodes-vnodes-">Virtual Nodes (VNodes)</h3>
+            <p>To enhance data distribution and fault tolerance, consistent hashing often uses virtual nodes.</p>
+            <h4 id="what-are-virtual-nodes-">What Are Virtual Nodes?</h4>
+            <ul>
+                <li>Each physical node is represented multiple times on the hash ring at different positions.</li>
+                <li>For example, <strong>Node A</strong> might be placed at positions 5°, 120°, and 250°.</li>
+            </ul>
+            <h4 id="benefits-of-virtual-nodes">Benefits of Virtual Nodes</h4>
+            <ul>
+                <li><strong>Improved load balancing</strong> is achieved as increasing the number of points on the hash ring leads to a more even distribution of data among nodes. </li>
+                <li><strong>Easier scaling</strong> is possible because adding or removing a physical node only requires redistributing its associated virtual nodes, minimizing disruption. </li>
+                <li>Supporting <strong>heterogeneous nodes</strong> allows nodes with greater capacity to have more virtual nodes, enabling them to handle a proportionally larger share of data and requests. </li>
+            </ul>
+            <h3 id="implementing-consistent-hashing">Implementing Consistent Hashing</h3>
+            <p>Let's walk through how you might implement consistent hashing in practice.</p>
+            <h4 id="step-1-hash-function-selection">Step 1: Hash Function Selection</h4>
+            <p>Choose a hash function that distributes values uniformly, such as MD5 or SHA-1.</p>
+            <h4 id="step-2-mapping-nodes-to-the-ring">Step 2: Mapping Nodes to the Ring</h4>
+            <p>Assign each node (or virtual node) a hash value to determine its position on the ring.</p>
+            <h4 id="step-3-mapping-keys-to-nodes">Step 3: Mapping Keys to Nodes</h4>
+            <p>For each data key:</p>
             <ol>
-                <li>Nodes and data items are assigned positions on the hash ring using the hash function. This ensures that both are distributed uniformly across the ring.</li>
-                <li>Each data item is allocated to the first node it encounters in the clockwise direction on the hash ring. This method ensures even distribution and efficient lookup.</li>
-                <li>When a new node is added, it takes over some of the data items from its neighboring nodes, ensuring a balanced load.</li>
-                <li>When a node is removed, its data items are redistributed to the remaining neighboring nodes, maintaining data availability and balance.</li>
+                <li>Compute its hash value.</li>
+                <li>Locate the first node on the ring whose hash value is greater than or equal to the key's hash.</li>
+                <li>If no such node exists (the key's hash is higher than any node's hash), wrap around to the first node on the ring.</li>
             </ol>
-            <h2 id="use-cases">Use Cases</h2>
+            <h4 id="sample-code-snippet-pseudocode-">Sample Code Snippet (Pseudocode)</h4>
+            <p>
+            <div>
+                <pre><code class="language-python"># Import a reliable hash function
+import hashlib
+
+# Function to compute hash value
+def compute_hash(key):
+    return int(hashlib.sha1(key.encode()).hexdigest(), 16)
+
+# Nodes in the system
+nodes = ['NodeA', 'NodeB', 'NodeC']
+
+# Create the ring with virtual nodes
+ring = {}
+virtual_nodes = 100  # Number of virtual nodes per physical node
+
+for node in nodes:
+    for i in range(virtual_nodes):
+        vnode_key = f"{node}:{i}"
+        hash_val = compute_hash(vnode_key)
+        ring[hash_val] = node
+
+# Sort the hash ring
+sorted_hashes = sorted(ring.keys())
+
+# Function to find the node for a given key
+def get_node(key):
+    hash_val = compute_hash(key)
+    for node_hash in sorted_hashes:
+        if hash_val &lt;= node_hash:
+            return ring[node_hash]
+    return ring[sorted_hashes[0]]  # Wrap around
+
+# Example usage
+key = 'my_data_key'
+assigned_node = get_node(key)
+print(f"Key '{key}' is assigned to {assigned_node}")</code></pre>
+            </div>
+            </p>
+            <h4 id="interpreting-the-output">Interpreting the Output</h4>
             <ul>
-                <li>Used in systems like Memcached and Redis to ensure that cache data is evenly distributed and quickly retrievable.</li>
-                <li>Employed to distribute requests evenly across multiple servers, preventing any single server from becoming a bottleneck.</li>
-                <li>Applied in databases such as Apache Cassandra and DynamoDB to manage data distribution and replication efficiently.</li>
-                <li>Used to spread file storage across multiple nodes, ensuring redundancy and quick access.</li>
+                <li>The key <code>'my_data_key'</code> is assigned to a node based on its hash value.</li>
+                <li>If you add or remove nodes, only the keys that map to the affected virtual nodes need to change assignments.</li>
             </ul>
-            <h2 id="advantages">Advantages</h2>
+            <h3 id="real-world-applications">Real-World Applications</h3>
+            <h4 id="distributed-databases-apache-cassandra">Distributed Databases: Apache Cassandra</h4>
             <ul>
-                <li>Ensures that data is evenly distributed across all nodes, preventing any single node from becoming a hotspot.</li>
-                <li>When nodes are added or removed, only a small portion of data needs to be moved, reducing the overhead on the system.</li>
-                <li>Each node carries a fair share of the load, leading to improved overall system performance and reliability.</li>
+                <li>Uses consistent hashing to distribute data across nodes in a cluster.</li>
+                <li>Ensures high availability and fault tolerance.</li>
+                <li>Supports virtual nodes to improve load balancing.</li>
             </ul>
-            <h2 id="best-practices">Best Practices</h2>
+            <h4 id="distributed-cache-amazon-dynamodb">Distributed Cache: Amazon DynamoDB</h4>
             <ul>
-                <li>Select an appropriate hash function that provides optimal distribution and minimal collisions.</li>
-                <li>Implement virtual nodes for better data distribution and to handle heterogeneity among physical nodes.</li>
-                <li>Regularly monitor and adjust the consistent hashing scheme to ensure sustained system performance as it evolves.</li>
+                <li>Employs consistent hashing to distribute data and handle partitions.</li>
+                <li>Provides seamless scaling by adding or removing nodes with minimal impact.</li>
+            </ul>
+            <h4 id="load-balancing-web-servers">Load Balancing: Web Servers</h4>
+            <ul>
+                <li>Consistent hashing can distribute client requests based on client IP addresses.</li>
+                <li>Helps maintain session affinity without storing session data on every server.</li>
+            </ul>
+            <h3 id="advantages-of-consistent-hashing">Advantages of Consistent Hashing</h3>
+            <ul>
+                <li>The <strong>scalability</strong> of consistent hashing allows nodes to be added or removed with minimal impact on existing data placement. </li>
+                <li><strong>Efficiency</strong> is enhanced by reducing cache misses and lowering database load in distributed caching systems. </li>
+                <li>Built-in <strong>fault tolerance</strong> ensures the system remains operational even if some nodes fail. </li>
+                <li>A <strong>balanced load</strong> is achieved by distributing data and requests evenly across available nodes. </li>
+            </ul>
+            <h3 id="challenges-and-considerations">Challenges and Considerations</h3>
+            <ul>
+                <li><strong>Hotspots</strong> can arise if the hash function or data keys do not distribute data uniformly, leading to overloaded nodes. </li>
+                <li>Choosing the right <strong>hash function</strong> is critical to ensure a good spread of hash values across nodes. </li>
+                <li>The <strong>complexity</strong> of implementing virtual nodes and managing the hash ring can increase system overhead. </li>
+            </ul>
+            <h3 id="best-practices">Best Practices</h3>
+            <ul>
+                <li>Incorporating <strong>virtual nodes</strong> improves load distribution and minimizes hotspots. </li>
+                <li>Regularly <strong>monitor system performance</strong> to identify and address uneven load or emerging bottlenecks. </li>
+                <li>Selecting a <strong>consistent hash function</strong> that avoids clustering of values ensures better distribution of data. </li>
+                <li>Designing for <strong>scaling</strong> from the outset helps the system accommodate growth and handle additional nodes smoothly. </li>
             </ul>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
-            <ol>
-                <li><a href="#consistent-hashing">Consistent Hashing</a></li>
-                <li><a href="#concepts">Concepts</a></li>
-                <li><a href="#mechanism">Mechanism</a></li>
-                <li><a href="#use-cases">Use Cases</a></li>
-                <li><a href="#advantages">Advantages</a></li>
-                <li><a href="#best-practices">Best Practices</a></li>
+            <ol><a href="#consistent-hashing">Consistent Hashing</a>
+                <ol>
+                    <li><a href="#the-hash-ring-concept">The Hash Ring Concept</a></li>
+                    <li><a href="#mapping-nodes-and-data-onto-the-ring">Mapping Nodes and Data onto the Ring</a></li>
+                    <li><a href="#how-data-assignment-works">How Data Assignment Works</a></li>
+                    <li><a href="#adding-and-removing-nodes">Adding and Removing Nodes</a>
+                        <ol>
+                            <li><a href="#adding-a-new-node">Adding a New Node</a></li>
+                            <li><a href="#removing-a-node">Removing a Node</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#practical-example-distributed-caching-with-consistent-hashing">Practical Example: Distributed Caching with Consistent Hashing</a>
+                        <ol>
+                            <li><a href="#without-consistent-hashing">Without Consistent Hashing</a></li>
+                            <li><a href="#with-consistent-hashing">With Consistent Hashing</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#virtual-nodes-vnodes-">Virtual Nodes (VNodes)</a>
+                        <ol>
+                            <li><a href="#what-are-virtual-nodes-">What Are Virtual Nodes?</a></li>
+                            <li><a href="#benefits-of-virtual-nodes">Benefits of Virtual Nodes</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#implementing-consistent-hashing">Implementing Consistent Hashing</a>
+                        <ol>
+                            <li><a href="#step-1-hash-function-selection">Step 1: Hash Function Selection</a></li>
+                            <li><a href="#step-2-mapping-nodes-to-the-ring">Step 2: Mapping Nodes to the Ring</a></li>
+                            <li><a href="#step-3-mapping-keys-to-nodes">Step 3: Mapping Keys to Nodes</a></li>
+                            <li><a href="#sample-code-snippet-pseudocode-">Sample Code Snippet (Pseudocode)</a></li>
+                            <li><a href="#interpreting-the-output">Interpreting the Output</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#real-world-applications">Real-World Applications</a>
+                        <ol>
+                            <li><a href="#distributed-databases-apache-cassandra">Distributed Databases: Apache Cassandra</a></li>
+                            <li><a href="#distributed-cache-amazon-dynamodb">Distributed Cache: Amazon DynamoDB</a></li>
+                            <li><a href="#load-balancing-web-servers">Load Balancing: Web Servers</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#advantages-of-consistent-hashing">Advantages of Consistent Hashing</a></li>
+                    <li><a href="#challenges-and-considerations">Challenges and Considerations</a></li>
+                    <li><a href="#best-practices">Best Practices</a></li>
+                </ol>
             </ol>
             <div id="related-articles">
                 <h2>Related Articles</h2>

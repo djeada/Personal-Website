@@ -51,9 +51,9 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: November 26, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: November 30, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
-            <header>Storing Hierarchical Data in Relational Databases with SQL</header>
+            <h2 id="storing-hierarchical-data-in-relational-databases-with-sql">Storing Hierarchical Data in Relational Databases with SQL</h2>
             <p>In many applications, data is naturally organized in a hierarchical structure, such as organizational charts, file systems, categories and subcategories, and family trees. Representing and querying this hierarchical data efficiently in a relational database can be challenging due to the flat nature of relational tables. In this guide, we'll explore several models and techniques for storing and querying hierarchical data in SQL, including:</p>
             <ul>
                 <li><strong>Adjacency List Model</strong></li>
@@ -61,9 +61,9 @@
                 <li><strong>Other Models</strong> (Materialized Path, Nested Set, Closure Table)</li>
                 <li><strong>Recursive Queries with Common Table Expressions (CTEs)</strong></li>
             </ul>
-            <h2 id="adjacency-list-model">Adjacency List Model</h2>
+            <h3 id="adjacency-list-model">Adjacency List Model</h3>
             <p>The <strong>Adjacency List Model</strong> is the most straightforward way to represent hierarchical data in a relational database. In this model, each record (node) contains a reference (foreign key) to its immediate parent.</p>
-            <h3 id="structure">Structure</h3>
+            <h4 id="structure">Structure</h4>
             <p>Consider a table representing categories:</p>
             <p>
             <table>
@@ -115,19 +115,30 @@
                 <li><strong><code>category_name</code></strong>: Name of the category.</li>
             </ul>
             <p>In this model, the root nodes (top-level categories) have a <code>NULL</code> <code>parent_id</code>.</p>
-            <h3 id="advantages">Advantages</h3>
+            <h4 id="advantages">Advantages</h4>
             <ul>
-                <li><strong>Simplicity</strong>: Easy to implement and understand.</li>
-                <li><strong>Maintenance</strong>: Inserting, updating, and deleting nodes is straightforward.</li>
-                <li><strong>Referential Integrity</strong>: Enforced through foreign key constraints.</li>
+                <li>This model is simple to understand because each node directly references its parent using a parent identifier.</li>
+                <li>Maintenance tasks such as inserting, updating, and deleting nodes are easier since they primarily involve modifying the parent-child relationship for the affected node.</li>
+                <li>Referential integrity is naturally supported using foreign key constraints, ensuring valid relationships between nodes in the hierarchy.</li>
             </ul>
-            <h3 id="disadvantages">Disadvantages</h3>
+            <h4 id="disadvantages">Disadvantages</h4>
             <ul>
-                <li><strong>Complex Queries</strong>: Retrieving an entire hierarchy or sub-tree requires recursive queries or multiple self-joins.</li>
-                <li><strong>Performance</strong>: Can be inefficient for deep hierarchies due to multiple joins.</li>
-                <li><strong>Limited Hierarchical Operations</strong>: Difficult to perform operations like finding all descendants or ancestors without complex queries.</li>
+                <li>Queries that require retrieving the entire hierarchy or sub-tree become complex and often involve recursive queries or multiple self-joins.</li>
+                <li>Performance issues can arise for deep hierarchies as multiple joins increase query execution time and complexity.</li>
+                <li>Hierarchical operations, such as finding all descendants or ancestors of a node, require sophisticated and potentially resource-intensive queries.</li>
             </ul>
-            <h3 id="example-finding-immediate-children">Example: Finding Immediate Children</h3>
+            <h4 id="implementation-considerations">Implementation Considerations</h4>
+            <ul>
+                <li>Each node in this model contains a reference (usually a foreign key) to its parent node, forming a parent-child relationship.</li>
+                <li>Root nodes are identified by having a null value in the parent reference column or a special indicator.</li>
+                <li>This model works well in systems where hierarchical queries are infrequent or limited to shallow hierarchies.</li>
+            </ul>
+            <h4 id="use-cases">Use Cases</h4>
+            <ul>
+                <li>Suitable for simple hierarchical relationships like organizational charts or file systems where queries are straightforward and not too deep.</li>
+                <li>Preferred when data modifications, such as node addition or removal, occur frequently and need to be efficient.</li>
+            </ul>
+            <h4 id="example-finding-immediate-children">Example: Finding Immediate Children</h4>
             <p>To find all immediate subcategories of the "Computers" category:</p>
             <p>
             <div>
@@ -140,11 +151,11 @@ WHERE parent_id = (
 );</code></pre>
             </div>
             </p>
-            <h3 id="example-retrieving-the-full-path">Example: Retrieving the Full Path</h3>
+            <h4 id="example-retrieving-the-full-path">Example: Retrieving the Full Path</h4>
             <p>To find the full path of a category (from the root to the node), recursive queries are needed.</p>
-            <h2 id="path-enumeration-model">Path Enumeration Model</h2>
+            <h3 id="path-enumeration-model">Path Enumeration Model</h3>
             <p>The <strong>Path Enumeration Model</strong> enhances the adjacency list by storing the full path from the root to each node as a string.</p>
-            <h3 id="structure">Structure</h3>
+            <h4 id="structure">Structure</h4>
             <p>The table includes a <code>path</code> column:</p>
             <p>
             <table>
@@ -193,18 +204,29 @@ WHERE parent_id = (
             <ul>
                 <li><strong><code>path</code></strong>: Represents the hierarchy as a concatenated string of <code>category_id</code>s.</li>
             </ul>
-            <h3 id="advantages">Advantages</h3>
+            <h4 id="advantages">Advantages</h4>
             <ul>
-                <li><strong>Efficient Hierarchical Queries</strong>: Easy to retrieve all descendants or ancestors using string pattern matching.</li>
-                <li><strong>No Joins Needed</strong>: Simplifies queries since hierarchical relationships are stored within each record.</li>
+                <li>Efficient hierarchical queries are possible because all descendants or ancestors of a node can be retrieved using string pattern matching on the path column.</li>
+                <li>Joins are not required for hierarchical traversals since the entire hierarchy is encoded within the path stored in each record, simplifying query construction.</li>
             </ul>
-            <h3 id="disadvantages">Disadvantages</h3>
+            <h4 id="disadvantages">Disadvantages</h4>
             <ul>
-                <li><strong>Data Redundancy</strong>: The path information is duplicated in each record.</li>
-                <li><strong>Maintenance Complexity</strong>: Inserting, updating, or deleting nodes requires updating the <code>path</code> values of all affected descendants.</li>
-                <li><strong>Limited Depth</strong>: String length may become an issue in very deep hierarchies.</li>
+                <li>Data redundancy arises due to the duplication of path information in each record, which increases storage requirements.</li>
+                <li>Maintenance complexity is high because inserting, updating, or deleting nodes necessitates updating the path values for all affected descendants.</li>
+                <li>Extremely deep hierarchies may encounter limitations due to string length constraints, especially in databases with fixed-size fields for storing paths.</li>
             </ul>
-            <h3 id="example-finding-all-descendants">Example: Finding All Descendants</h3>
+            <h4 id="implementation-considerations">Implementation Considerations</h4>
+            <ul>
+                <li>Each node includes a <code>path</code> attribute representing its position in the hierarchy, typically in a delimited format (e.g., <code>1/3/5</code>).</li>
+                <li>Root nodes are represented with a single identifier in the <code>path</code> column, while child nodes concatenate their identifier to their parent’s path.</li>
+                <li>Queries use string pattern matching, such as <code>LIKE</code> in SQL, to find nodes based on their path relationships.</li>
+            </ul>
+            <h4 id="use-cases">Use Cases</h4>
+            <ul>
+                <li>This model is ideal for scenarios where fast, read-heavy hierarchical queries are required, and the hierarchy does not change frequently.</li>
+                <li>It is commonly used in applications with relatively shallow hierarchies or where the depth is well-defined and manageable.</li>
+            </ul>
+            <h4 id="example-finding-all-descendants">Example: Finding All Descendants</h4>
             <p>To find all descendants of the "Computers" category:</p>
             <p>
             <div>
@@ -213,7 +235,7 @@ FROM Categories
 WHERE path LIKE '1.2.%';</code></pre>
             </div>
             </p>
-            <h3 id="example-finding-all-ancestors">Example: Finding All Ancestors</h3>
+            <h4 id="example-finding-all-ancestors">Example: Finding All Ancestors</h4>
             <p>To find the path (all ancestors) of the "Gaming Laptops" category:</p>
             <p>
             <div>
@@ -223,7 +245,6 @@ WHERE category_id IN (1, 2, 3, 6);</code></pre>
             </div>
             </p>
             <p>But with the path enumeration, you can split the <code>path</code> string to get the ancestors.</p>
-            <h2 id="other-models">Other Models</h2>
             <h3 id="materialized-path-model">Materialized Path Model</h3>
             <p>Similar to the path enumeration, but uses a delimiter in the <code>path</code>:</p>
             <p>
@@ -255,10 +276,27 @@ WHERE category_id IN (1, 2, 3, 6);</code></pre>
                 </tr>
             </table>
             </p>
-            <p><strong>Advantages</strong>:</p>
+            <h4 id="advantages">Advantages</h4>
             <ul>
-                <li>Easier string parsing using standard string functions.</li>
-                <li>Supports variable-length IDs.</li>
+                <li>Hierarchical queries are highly efficient because descendants or ancestors of a node can be easily retrieved using string pattern matching on the materialized path.</li>
+                <li>There is no need for joins to navigate the hierarchy since the full path is embedded in each record, simplifying query structure.</li>
+            </ul>
+            <h4 id="disadvantages">Disadvantages</h4>
+            <ul>
+                <li>Data redundancy occurs because the path is stored in every record, leading to increased storage requirements, especially in large hierarchies.</li>
+                <li>Maintenance operations, such as inserting, updating, or deleting nodes, are complex and require recalculating the <code>path</code> for all affected descendants.</li>
+                <li>Deep hierarchies may encounter challenges with string length limitations, depending on the database system's maximum string size.</li>
+            </ul>
+            <h4 id="implementation-considerations">Implementation Considerations</h4>
+            <ul>
+                <li>Each node includes a <code>path</code> field representing its position in the hierarchy as a delimited string (e.g., <code>1/2/4</code>).</li>
+                <li>Root nodes are represented by their unique identifier, while child nodes append their identifier to the parent’s path with a delimiter.</li>
+                <li>Queries typically use string operations like <code>LIKE</code> to retrieve nodes related by hierarchy.</li>
+            </ul>
+            <h4 id="use-cases">Use Cases</h4>
+            <ul>
+                <li>Suitable for scenarios where read-heavy workloads dominate and hierarchical queries, such as retrieving descendants or ancestors, need to be efficient.</li>
+                <li>Preferred in systems with relatively stable hierarchies where structural updates are infrequent.</li>
             </ul>
             <p><strong>Example</strong>: Finding all descendants:</p>
             <p>
@@ -324,15 +362,28 @@ WHERE path LIKE '/1/2/%';</code></pre>
                 </tr>
             </table>
             </p>
-            <p><strong>Advantages</strong>:</p>
+            <h4 id="advantages">Advantages</h4>
             <ul>
-                <li>Efficiently retrieves all descendants or ancestors using range queries.</li>
-                <li>No recursion or joins needed for hierarchy traversal.</li>
+                <li>Efficient hierarchical queries are possible for retrieving all descendants or ancestors of a node because the hierarchy is represented using <code>left</code> and <code>right</code> values.</li>
+                <li>Pre-order traversal eliminates the need for recursive queries or joins, making read operations straightforward and fast.</li>
+                <li>Hierarchical operations, such as counting descendants or determining the depth of a subtree, can be performed with simple arithmetic operations.</li>
             </ul>
-            <p><strong>Disadvantages</strong>:</p>
+            <h4 id="disadvantages">Disadvantages</h4>
             <ul>
-                <li>Complex maintenance: Inserting or deleting nodes requires recalculating <code>lft</code> and <code>rgt</code> values for many nodes.</li>
-                <li>Difficult to understand and implement.</li>
+                <li>Maintenance operations, including inserting, updating, or deleting nodes, are complex and require recalculating the <code>left</code> and <code>right</code> values for multiple nodes.</li>
+                <li>Modifications to the hierarchy can be time-consuming, especially for large trees, as they involve significant updates to the nested set values.</li>
+                <li>The model is less intuitive and harder to understand compared to simpler models like adjacency lists or path enumeration.</li>
+            </ul>
+            <h4 id="implementation-considerations">Implementation Considerations</h4>
+            <ul>
+                <li>Each node is assigned a <code>left</code> and <code>right</code> value representing its position in a pre-ordered traversal of the hierarchy.</li>
+                <li>Root nodes have the smallest <code>left</code> value and the largest <code>right</code> value encompassing all its descendants.</li>
+                <li>Queries rely on conditions like <code>left</code> and <code>right</code> containment to retrieve hierarchical relationships.</li>
+            </ul>
+            <h4 id="use-cases">Use Cases</h4>
+            <ul>
+                <li>Best suited for read-heavy applications where the hierarchy is relatively static and frequent modifications are not required.</li>
+                <li>Commonly used in applications that require efficient subtree retrievals, such as content management systems or organizational charts.</li>
             </ul>
             <p><strong>Example: Finding All Descendants</strong></p>
             <p>To find all descendants of the "Electronics" category:</p>
@@ -431,15 +482,28 @@ WHERE lft &gt; 1 AND rgt &lt; 14;</code></pre>
                 </tr>
             </table>
             </p>
-            <p><strong>Advantages</strong>:</p>
+            <h4 id="advantages">Advantages</h4>
             <ul>
-                <li>Efficient queries for ancestors and descendants.</li>
-                <li>Supports complex hierarchical queries.</li>
+                <li>Hierarchical queries, such as retrieving all descendants, ancestors, or paths between nodes, are highly efficient because the relationships are precomputed and stored.</li>
+                <li>Supports complex hierarchical operations, such as finding the depth, level, or specific paths, with simple and fast queries.</li>
+                <li>Flexibility allows for easy traversal of both upward (ancestors) and downward (descendants) relationships in the hierarchy.</li>
             </ul>
-            <p><strong>Disadvantages</strong>:</p>
+            <h4 id="disadvantages">Disadvantages</h4>
             <ul>
-                <li>Additional storage required for the closure table.</li>
-                <li>Maintenance overhead when modifying the hierarchy.</li>
+                <li>Increased storage requirements arise because the closure table stores every possible pair of ancestor and descendant for the hierarchy.</li>
+                <li>Maintenance operations, such as inserting, updating, or deleting nodes, require updating multiple rows in the closure table, which can be time-consuming for large hierarchies.</li>
+                <li>The model is less intuitive than simpler models like adjacency lists, making it harder to understand and implement without prior knowledge.</li>
+            </ul>
+            <h4 id="implementation-considerations">Implementation Considerations</h4>
+            <ul>
+                <li>The closure table is a separate table that stores pairs of nodes along with their relationships, typically including a <code>parent_id</code>, <code>child_id</code>, and optionally, a <code>depth</code> column.</li>
+                <li>Root nodes are represented with a self-referential relationship in the closure table, where <code>parent_id</code> equals <code>child_id</code>.</li>
+                <li>Queries leverage joins on the closure table to retrieve hierarchical relationships efficiently.</li>
+            </ul>
+            <h4 id="use-cases">Use Cases</h4>
+            <ul>
+                <li>Suitable for applications requiring frequent and complex hierarchical queries, such as social networks, organizational charts, and tree-like structures.</li>
+                <li>Ideal for scenarios where the hierarchy changes infrequently, or batch updates can be used to recalculate relationships.</li>
             </ul>
             <p><strong>Example: Finding All Descendants</strong></p>
             <p>To find all descendants of the "Computers" category:</p>
@@ -453,16 +517,29 @@ WHERE cc.ancestor_id = (
 ) AND cc.depth &gt; 0;</code></pre>
             </div>
             </p>
-            <h2 id="storing-hierarchical-data-in-sql-with-recursive-queries">Storing Hierarchical Data in SQL with Recursive Queries</h2>
+            <h3 id="storing-hierarchical-data-in-sql-with-recursive-queries">Storing Hierarchical Data in SQL with Recursive Queries</h3>
             <p>Most modern relational databases support recursive queries using Common Table Expressions (CTEs). This allows you to traverse hierarchical data stored in the adjacency list model efficiently.</p>
-            <h3 id="recursive-cte-structure">Recursive CTE Structure</h3>
+            <h4 id="recursive-cte-structure">Recursive CTE Structure</h4>
             <p>A recursive CTE consists of:</p>
+            <p><strong>Anchor Member</strong></p>
             <ul>
-                <li><strong>Anchor Member</strong>: The base query that provides the starting point of recursion.</li>
-                <li><strong>Recursive Member</strong>: A query that references the CTE itself, allowing the recursion to proceed.</li>
-                <li><strong>Termination Condition</strong>: The recursion stops when no new rows are returned.</li>
+                <li>The anchor member is the initial query in the recursive CTE that defines the starting point of the recursion, typically the root nodes or base cases of the hierarchy.</li>
+                <li>It is executed once and serves as the foundation upon which the recursive part builds additional rows.</li>
+                <li>For example, in an organizational hierarchy, the anchor member might select all top-level managers with no superiors.</li>
             </ul>
-            <h3 id="syntax">Syntax</h3>
+            <p><strong>Recursive Member</strong></p>
+            <ul>
+                <li>The recursive member is a query within the CTE that references the CTE itself, enabling it to iterate through the hierarchy by progressively adding rows.</li>
+                <li>This query is executed repeatedly, appending its results to the results of the anchor member until no new rows are generated.</li>
+                <li>It typically joins the hierarchical data source to itself, using a parent-child relationship to navigate the structure.</li>
+            </ul>
+            <p><strong>Termination Condition</strong></p>
+            <ul>
+                <li>The termination condition is implicitly defined by the recursive member and occurs when the query returns no new rows to add to the result set.</li>
+                <li>This ensures that the recursion stops automatically, preventing infinite loops and completing the query execution.</li>
+                <li>Proper design of the recursive logic is critical to avoid unintentional infinite recursion, especially for improperly structured hierarchies.</li>
+            </ul>
+            <h4 id="syntax">Syntax</h4>
             <p>
             <div>
                 <pre><code class="language-sql">WITH RECURSIVE cte_name AS (
@@ -479,7 +556,7 @@ WHERE cc.ancestor_id = (
 SELECT * FROM cte_name;</code></pre>
             </div>
             </p>
-            <h3 id="example-retrieving-the-full-hierarchy">Example: Retrieving the Full Hierarchy</h3>
+            <h4 id="example-retrieving-the-full-hierarchy">Example: Retrieving the Full Hierarchy</h4>
             <p>Given our <code>Categories</code> table in the adjacency list model:</p>
             <p>
             <table>
@@ -623,7 +700,7 @@ ORDER BY full_path;</code></pre>
                 </tr>
             </table>
             </p>
-            <h3 id="finding-a-subtree">Finding a Subtree</h3>
+            <h4 id="finding-a-subtree">Finding a Subtree</h4>
             <p>To retrieve a specific category and all its descendants, modify the anchor member:</p>
             <p>
             <div>
@@ -685,64 +762,93 @@ FROM subcategories;</code></pre>
                 </tr>
             </table>
             </p>
-            <h3 id="advantages-of-recursive-ctes">Advantages of Recursive CTEs</h3>
+            <h4 id="advantages">Advantages</h4>
             <ul>
-                <li><strong>Dynamic Queries</strong>: Can handle hierarchies of arbitrary depth.</li>
-                <li><strong>No Additional Schema</strong>: Works with the adjacency list model without additional columns or tables.</li>
-                <li><strong>Flexibility</strong>: Can be used to retrieve ancestors, descendants, or paths.</li>
+                <li>Dynamic queries can process hierarchical data of arbitrary depth, making them highly versatile for a wide range of hierarchy sizes and structures.</li>
+                <li>This approach does not require any changes to the schema, as it works seamlessly with the adjacency list model without needing extra columns or additional tables.</li>
+                <li>The flexibility of recursive CTEs allows retrieving various hierarchical relationships, including ancestors, descendants, or specific paths, through adaptable query structures.</li>
             </ul>
-            <h3 id="limitations">Limitations</h3>
+            <h4 id="limitations">Limitations</h4>
             <ul>
-                <li><strong>Performance</strong>: May not be efficient for very large hierarchies.</li>
-                <li><strong>Database Support</strong>: Requires a database that supports recursive CTEs (e.g., PostgreSQL, SQL Server, Oracle, MySQL 8.0+).</li>
+                <li>Performance can degrade significantly for very large or deep hierarchies, as recursive operations can be computationally intensive and memory-consuming.</li>
+                <li>Database support is a limiting factor, as only certain databases (e.g., PostgreSQL, SQL Server, Oracle, MySQL 8.0+) offer built-in support for recursive CTEs, restricting its use in other database systems.</li>
+            </ul>
+            <h4 id="implementation-considerations">Implementation Considerations</h4>
+            <ul>
+                <li>Recursive CTEs start with a base case query to define the root nodes and then recursively union subsequent queries to fetch child or parent nodes.</li>
+                <li>They are defined using SQL syntax like <code>WITH RECURSIVE</code> and include termination conditions to prevent infinite loops.</li>
+            </ul>
+            <h4 id="use-cases">Use Cases</h4>
+            <ul>
+                <li>Ideal for querying hierarchical relationships in systems that use the adjacency list model and require minimal schema modifications.</li>
+                <li>Suitable for dynamic hierarchies where the depth is unknown or variable.</li>
             </ul>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
-            <ol>
-                <li><a href="#adjacency-list-model">Adjacency List Model</a>
-                    <ol>
-                        <li><a href="#structure">Structure</a></li>
-                        <li><a href="#advantages">Advantages</a></li>
-                        <li><a href="#disadvantages">Disadvantages</a></li>
-                        <li><a href="#example-finding-immediate-children">Example: Finding Immediate Children</a></li>
-                        <li><a href="#example-retrieving-the-full-path">Example: Retrieving the Full Path</a></li>
-                    </ol>
-                </li>
-                <li><a href="#path-enumeration-model">Path Enumeration Model</a>
-                    <ol>
-                        <li><a href="#structure">Structure</a></li>
-                        <li><a href="#advantages">Advantages</a></li>
-                        <li><a href="#disadvantages">Disadvantages</a></li>
-                        <li><a href="#example-finding-all-descendants">Example: Finding All Descendants</a></li>
-                        <li><a href="#example-finding-all-ancestors">Example: Finding All Ancestors</a></li>
-                    </ol>
-                </li>
-                <li><a href="#other-models">Other Models</a>
-                    <ol>
-                        <li><a href="#materialized-path-model">Materialized Path Model</a></li>
-                        <li><a href="#nested-set-model">Nested Set Model</a>
-                            <ol>
-                                <li><a href="#structure">Structure</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#closure-table-model">Closure Table Model</a>
-                            <ol>
-                                <li><a href="#structure">Structure</a></li>
-                            </ol>
-                        </li>
-                    </ol>
-                </li>
-                <li><a href="#storing-hierarchical-data-in-sql-with-recursive-queries">Storing Hierarchical Data in SQL with Recursive Queries</a>
-                    <ol>
-                        <li><a href="#recursive-cte-structure">Recursive CTE Structure</a></li>
-                        <li><a href="#syntax">Syntax</a></li>
-                        <li><a href="#example-retrieving-the-full-hierarchy">Example: Retrieving the Full Hierarchy</a></li>
-                        <li><a href="#finding-a-subtree">Finding a Subtree</a></li>
-                        <li><a href="#advantages-of-recursive-ctes">Advantages of Recursive CTEs</a></li>
-                        <li><a href="#limitations">Limitations</a></li>
-                    </ol>
-                </li>
+            <ol><a href="#storing-hierarchical-data-in-relational-databases-with-sql">Storing Hierarchical Data in Relational Databases with SQL</a>
+                <ol>
+                    <li><a href="#adjacency-list-model">Adjacency List Model</a>
+                        <ol>
+                            <li><a href="#structure">Structure</a></li>
+                            <li><a href="#advantages">Advantages</a></li>
+                            <li><a href="#disadvantages">Disadvantages</a></li>
+                            <li><a href="#implementation-considerations">Implementation Considerations</a></li>
+                            <li><a href="#use-cases">Use Cases</a></li>
+                            <li><a href="#example-finding-immediate-children">Example: Finding Immediate Children</a></li>
+                            <li><a href="#example-retrieving-the-full-path">Example: Retrieving the Full Path</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#path-enumeration-model">Path Enumeration Model</a>
+                        <ol>
+                            <li><a href="#structure">Structure</a></li>
+                            <li><a href="#advantages">Advantages</a></li>
+                            <li><a href="#disadvantages">Disadvantages</a></li>
+                            <li><a href="#implementation-considerations">Implementation Considerations</a></li>
+                            <li><a href="#use-cases">Use Cases</a></li>
+                            <li><a href="#example-finding-all-descendants">Example: Finding All Descendants</a></li>
+                            <li><a href="#example-finding-all-ancestors">Example: Finding All Ancestors</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#materialized-path-model">Materialized Path Model</a>
+                        <ol>
+                            <li><a href="#advantages">Advantages</a></li>
+                            <li><a href="#disadvantages">Disadvantages</a></li>
+                            <li><a href="#implementation-considerations">Implementation Considerations</a></li>
+                            <li><a href="#use-cases">Use Cases</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#nested-set-model">Nested Set Model</a>
+                        <ol>
+                            <li><a href="#structure">Structure</a></li>
+                            <li><a href="#advantages">Advantages</a></li>
+                            <li><a href="#disadvantages">Disadvantages</a></li>
+                            <li><a href="#implementation-considerations">Implementation Considerations</a></li>
+                            <li><a href="#use-cases">Use Cases</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#closure-table-model">Closure Table Model</a>
+                        <ol>
+                            <li><a href="#structure">Structure</a></li>
+                            <li><a href="#advantages">Advantages</a></li>
+                            <li><a href="#disadvantages">Disadvantages</a></li>
+                            <li><a href="#implementation-considerations">Implementation Considerations</a></li>
+                            <li><a href="#use-cases">Use Cases</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#storing-hierarchical-data-in-sql-with-recursive-queries">Storing Hierarchical Data in SQL with Recursive Queries</a>
+                        <ol>
+                            <li><a href="#recursive-cte-structure">Recursive CTE Structure</a></li>
+                            <li><a href="#syntax">Syntax</a></li>
+                            <li><a href="#example-retrieving-the-full-hierarchy">Example: Retrieving the Full Hierarchy</a></li>
+                            <li><a href="#finding-a-subtree">Finding a Subtree</a></li>
+                            <li><a href="#advantages">Advantages</a></li>
+                            <li><a href="#limitations">Limitations</a></li>
+                            <li><a href="#implementation-considerations">Implementation Considerations</a></li>
+                            <li><a href="#use-cases">Use Cases</a></li>
+                        </ol>
+                    </li>
+                </ol>
             </ol>
             <div id="related-articles">
                 <h2>Related Articles</h2>
