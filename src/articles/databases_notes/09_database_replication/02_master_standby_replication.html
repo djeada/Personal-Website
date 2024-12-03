@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Master-Standby Replication</title>
-    <meta content="Master-Standby replication is a common database replication topology where a primary database server (the master) replicates data to one or more secondary servers (the standbys)." name="description" />
+    <meta content="Master-Standby replication is a widely adopted database replication topology where a primary database server, known as the master, replicates data to one or more secondary servers called standbys." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -51,103 +51,123 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: November 26, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: December 03, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <header>Master-Standby Replication</header>
-            <p>Master-Standby replication is a common database replication topology where a primary database server (the <strong>master</strong>) replicates data to one or more secondary servers (the <strong>standbys</strong>). This setup enhances data availability, fault tolerance, and load balancing. Standby servers can serve read-only queries and can be promoted to become the master in case of failure.</p>
-            <p>This note provides a comprehensive overview of Master-Standby replication, including its purpose, characteristics, advantages, challenges, and a practical example using PostgreSQL.</p>
-            <h2 id="overview-of-master-standby-replication">Overview of Master-Standby Replication</h2>
-            <h3 id="architectural-diagram">Architectural Diagram</h3>
+            <p>Master-Standby replication is a widely adopted database replication topology where a primary database server, known as the master, replicates data to one or more secondary servers called standbys. This setup enhances data availability, fault tolerance, and load balancing within a database system. Standby servers can handle read-only queries and, in case of a master server failure, can be promoted to become the new master, ensuring continuous operation.</p>
+            <h2 id="understanding-master-standby-replication">Understanding Master-Standby Replication</h2>
+            <p>To visualize how Master-Standby replication works, consider the following ASCII diagram:</p>
             <p>
             <div>
                 <pre><code class="language-shell">+------------------+
-                    |                  |
-                    |   Master Server  |
-                    |                  |
-                    +--------+---------+
-                             |
-                     Write Operations
-                             |
-                             v
-                    +--------+---------+
-                    |                  |
-                    |   Standby Server |
-                    |      (Read-Only) |
-                    +--------+---------+
-                             |
-                         Replication
-                             |
-                             v
-                    +--------+---------+
-                    |                  |
-                    |   Standby Server |
-                    |      (Read-Only) |
-                    +------------------+</code></pre>
+                      |                  |
+                      |   Master Server  |
+                      |                  |
+                      +---------+--------+
+                                |
+                      Write Operations
+                                |
+                                v
+                      +---------+---------+
+                      |                   |
+                      |  Standby Server 1 |
+                      |    (Read-Only)    |
+                      +---------+---------+
+                                |
+                            Replication
+                                |
+                                v
+                      +---------+---------+
+                      |                   |
+                      |  Standby Server 2 |
+                      |    (Read-Only)    |
+                      +-------------------+</code></pre>
             </div>
             </p>
-            <p><strong>Legend:</strong></p>
+            <p>In this architecture, the master server handles all write operations, such as inserts, updates, and deletes. The standby servers continuously receive data changes from the master to stay synchronized and can serve read-only queries, offloading read traffic from the master. This arrangement not only improves performance but also provides a failover mechanism in case the master server becomes unavailable.</p>
+            <h2 id="the-purpose-of-master-standby-replication">The Purpose of Master-Standby Replication</h2>
+            <p>Master-Standby replication serves several essential purposes in database systems:</p>
+            <ol>
+                <li>
+                    <p><strong>High Availability and Disaster Recovery</strong>: By replicating data to standby servers, the system can prevent data loss and minimize downtime during failures. If the master server fails, a standby can be promoted to take over, ensuring uninterrupted service.</p>
+                </li>
+                <li>
+                    <p><strong>Load Balancing</strong>: Offloading read-heavy operations to standby servers distributes the workload more evenly, enhancing performance and scalability. This allows the master server to focus on write operations without being overwhelmed.</p>
+                </li>
+                <li>
+                    <p><strong>Maintenance Flexibility</strong>: Regular maintenance tasks, such as backups or software updates, can be performed on the master or standby servers without significant downtime. Standby servers can be updated one at a time, providing continuous service to users.</p>
+                </li>
+                <li>
+                    <p><strong>Scalability</strong>: As demand on the database grows, additional standby servers can be added to handle increased read traffic. This horizontal scaling is a cost-effective way to enhance system capacity without overhauling the existing infrastructure.</p>
+                </li>
+            </ol>
+            <h2 id="advantages-of-master-standby-replication">Advantages of Master-Standby Replication</h2>
+            <p>Implementing Master-Standby replication offers several benefits:</p>
             <ul>
-                <li><strong>Master Server</strong>: The primary database server where all write operations occur.</li>
-                <li><strong>Standby Servers</strong>: Secondary servers that replicate data from the master and serve read-only queries.</li>
-                <li><strong>Replication Arrows</strong>: Indicate the flow of data from the master to the standbys.</li>
+                <li>
+                    <p><strong>Enhanced Fault Tolerance</strong>: With standby servers acting as backups, the risk of data loss is significantly reduced. In the event of a failure, a standby can quickly take over as the master.</p>
+                </li>
+                <li>
+                    <p><strong>Improved Read Performance</strong>: Distributing read queries to standby servers alleviates the load on the master server, resulting in faster response times for users.</p>
+                </li>
+                <li>
+                    <p><strong>Simplified Failover Process</strong>: The ability to promote a standby server to master simplifies the failover process, minimizing service interruptions and ensuring business continuity.</p>
+                </li>
+                <li>
+                    <p><strong>Data Integrity</strong>: Continuous replication ensures that data remains consistent across all servers, maintaining data integrity throughout the system.</p>
+                </li>
             </ul>
-            <h3 id="key-characteristics">Key Characteristics</h3>
+            <h2 id="challenges-of-master-standby-replication">Challenges of Master-Standby Replication</h2>
+            <p>Despite its advantages, Master-Standby replication presents some challenges:</p>
             <ul>
-                <li><strong>Write Operations</strong>: Only the master server handles write operations (INSERT, UPDATE, DELETE).</li>
-                <li><strong>Read Operations</strong>: Standby servers can serve read-only queries, offloading read traffic from the master.</li>
-                <li><strong>Data Replication</strong>: Standbys continuously receive data changes from the master to stay synchronized.</li>
-                <li><strong>Failover Capability</strong>: Standby servers can be promoted to master in case of master failure, ensuring high availability.</li>
+                <li>
+                    <p><strong>Replication Lag</strong>: Standby servers may not always be perfectly synchronized with the master, leading to potential stale reads. This lag can be problematic for applications requiring real-time data.</p>
+                </li>
+                <li>
+                    <p><strong>Failover Complexity</strong>: Promoting a standby to master requires careful coordination to prevent data inconsistencies. Automated failover mechanisms need to be thoroughly tested to ensure reliability.</p>
+                </li>
+                <li>
+                    <p><strong>Write Scalability Limitations</strong>: Since only the master handles write operations, applications with heavy write loads may face scalability issues. The master server can become a bottleneck if not properly managed.</p>
+                </li>
+                <li>
+                    <p><strong>Configuration Complexity</strong>: Setting up and managing replication involves intricate configurations and ongoing monitoring. Administrators need to be skilled in replication technologies to maintain the system effectively.</p>
+                </li>
             </ul>
-            <h2 id="purpose-of-master-standby-replication">Purpose of Master-Standby Replication</h2>
-            <ol>
-                <li><strong>High Availability and Disaster Recovery</strong>: Provides redundancy to prevent data loss and minimize downtime in case of failures.</li>
-                <li><strong>Load Balancing</strong>: Offloads read-heavy operations to standby servers, improving performance and scalability.</li>
-                <li><strong>Maintenance Flexibility</strong>: Allows maintenance on the master or standbys without significant downtime.</li>
-                <li><strong>Scalability</strong>: Facilitates horizontal scaling by adding more standby servers as needed.</li>
-            </ol>
-            <h2 id="advantages">Advantages</h2>
-            <ol>
-                <li><strong>Enhanced Fault Tolerance</strong>: Standby servers act as backups, reducing the risk of data loss.</li>
-                <li><strong>Improved Read Performance</strong>: Distributing read queries to standbys alleviates load on the master.</li>
-                <li><strong>Simplified Failover Process</strong>: Standbys can quickly take over as the master, minimizing service interruption.</li>
-                <li><strong>Data Integrity</strong>: Ensures data consistency across servers through continuous replication.</li>
-            </ol>
-            <h2 id="challenges">Challenges</h2>
-            <ol>
-                <li><strong>Replication Lag</strong>: Standbys may not always be perfectly synchronized with the master, leading to potential stale reads.</li>
-                <li><strong>Failover Complexity</strong>: Promoting a standby to master requires careful coordination to prevent data inconsistencies.</li>
-                <li><strong>Write Scalability Limitations</strong>: Since only the master handles writes, write-heavy applications may face scalability issues.</li>
-                <li><strong>Configuration Complexity</strong>: Setting up and managing replication requires careful configuration and monitoring.</li>
-            </ol>
-            <h2 id="example-implementing-master-standby-replication-in-postgresql">Example: Implementing Master-Standby Replication in PostgreSQL</h2>
-            <p>PostgreSQL supports streaming replication out-of-the-box, making it a suitable choice for implementing Master-Standby replication.</p>
+            <h2 id="implementing-master-standby-replication-in-postgresql">Implementing Master-Standby Replication in PostgreSQL</h2>
+            <p>PostgreSQL offers built-in support for streaming replication, making it a suitable choice for implementing Master-Standby replication. Below is a practical example of how to set up this replication using PostgreSQL.</p>
             <h3 id="prerequisites">Prerequisites</h3>
+            <p>Before beginning the setup, ensure the following:</p>
             <ul>
-                <li><strong>Two or more PostgreSQL servers</strong>: One master and one or more standby servers.</li>
-                <li><strong>Network Connectivity</strong>: All servers must communicate over the network.</li>
-                <li><strong>PostgreSQL Version</strong>: Ensure all servers run compatible PostgreSQL versions (preferably the same version).</li>
+                <li>
+                    <p><strong>PostgreSQL Servers</strong>: At least two PostgreSQL servers are available—one master and one or more standby servers.</p>
+                </li>
+                <li>
+                    <p><strong>Network Connectivity</strong>: All servers can communicate over the network, with necessary ports open and accessible.</p>
+                </li>
+                <li>
+                    <p><strong>Compatible Versions</strong>: All servers run compatible PostgreSQL versions, preferably the same version, to avoid compatibility issues.</p>
+                </li>
             </ul>
             <h3 id="configuring-the-master-server">Configuring the Master Server</h3>
-            <h4 id="1-edit-postgresql-conf">1. Edit <code>postgresql.conf</code></h4>
-            <p>Locate and edit the <code>postgresql.conf</code> file, typically found in the data directory (<code>/var/lib/pgsql/data/</code> or <code>/etc/postgresql/</code>).</p>
-            <p>Add or modify the following parameters:</p>
+            <h4 id="editing-postgresql-conf">Editing <code>postgresql.conf</code></h4>
+            <p>Locate and edit the <code>postgresql.conf</code> file, typically found in the data directory (e.g., <code>/var/lib/pgsql/data/</code> or <code>/etc/postgresql/</code>). Modify the following parameters to enable replication:</p>
             <p>
             <div>
-                <pre><code class="language-conf"># Enable WAL (Write-Ahead Logging) level suitable for replication
+                <pre><code class="language-conf"># Enable Write-Ahead Logging (WAL) level suitable for replication
 wal_level = replica
 
-# Allow the master to send WAL data to standbys
+# Allow the master to send WAL data to standby servers
 max_wal_senders = 3
 
 # Set the maximum number of replication slots (optional)
 max_replication_slots = 3
 
-# Set the amount of WAL data to retain (helps with standby synchronization)
+# Retain WAL data to assist standby synchronization
 wal_keep_size = 128MB</code></pre>
             </div>
             </p>
-            <h4 id="2-edit-pg_hba-conf">2. Edit <code>pg_hba.conf</code></h4>
-            <p>Update <code>pg_hba.conf</code> to allow the standby servers to connect for replication:</p>
+            <h4 id="editing-pg_hba-conf">Editing <code>pg_hba.conf</code></h4>
+            <p>Update the <code>pg_hba.conf</code> file to allow the standby servers to connect for replication. Add the following line:</p>
             <p>
             <div>
                 <pre><code class="language-conf"># TYPE  DATABASE        USER            ADDRESS                 METHOD
@@ -156,19 +176,17 @@ wal_keep_size = 128MB</code></pre>
 host    replication     replicator      standby_ip/32           md5</code></pre>
             </div>
             </p>
-            <ul>
-                <li><strong><code>replicator</code></strong>: The replication user.</li>
-                <li><strong><code>standby_ip/32</code></strong>: IP address of the standby server.</li>
-            </ul>
-            <h4 id="3-create-a-replication-user">3. Create a Replication User</h4>
-            <p>Log into the PostgreSQL prompt and create a user for replication:</p>
+            <p>Replace <code>replicator</code> with the username of the replication role and <code>standby_ip/32</code> with the IP address of the standby server.</p>
+            <h4 id="creating-a-replication-user">Creating a Replication User</h4>
+            <p>Log into the PostgreSQL prompt on the master server and create a user for replication:</p>
             <p>
             <div>
                 <pre><code class="language-sql">CREATE ROLE replicator WITH REPLICATION LOGIN ENCRYPTED PASSWORD 'your_password';</code></pre>
             </div>
             </p>
-            <h4 id="4-restart-postgresql">4. Restart PostgreSQL</h4>
-            <p>Restart the PostgreSQL service to apply changes:</p>
+            <p>This user will be used by the standby servers to authenticate with the master.</p>
+            <h4 id="restarting-postgresql">Restarting PostgreSQL</h4>
+            <p>Restart the PostgreSQL service on the master server to apply the configuration changes:</p>
             <p>
             <div>
                 <pre><code class="language-bash"># For Linux systems using systemd
@@ -176,47 +194,48 @@ sudo systemctl restart postgresql</code></pre>
             </div>
             </p>
             <h3 id="configuring-the-standby-server">Configuring the Standby Server</h3>
-            <h4 id="1-stop-postgresql-service">1. Stop PostgreSQL Service</h4>
-            <p>Ensure the PostgreSQL service on the standby server is stopped:</p>
+            <h4 id="stopping-the-postgresql-service">Stopping the PostgreSQL Service</h4>
+            <p>Ensure that the PostgreSQL service on the standby server is stopped before proceeding:</p>
             <p>
             <div>
                 <pre><code class="language-bash">sudo systemctl stop postgresql</code></pre>
             </div>
             </p>
-            <h4 id="2-create-a-base-backup-from-the-master">2. Create a Base Backup from the Master</h4>
-            <p>Use <code>pg_basebackup</code> to create a base backup of the master on the standby server:</p>
+            <h4 id="creating-a-base-backup-from-the-master">Creating a Base Backup from the Master</h4>
+            <p>Use the <code>pg_basebackup</code> utility to create a base backup of the master server on the standby server:</p>
             <p>
             <div>
                 <pre><code class="language-bash">pg_basebackup -h master_ip -D /var/lib/pgsql/data/ -U replicator -W -P --wal-method=stream</code></pre>
             </div>
             </p>
             <ul>
-                <li><strong><code>-h master_ip</code></strong>: IP address of the master server.</li>
-                <li><strong><code>-D /var/lib/pgsql/data/</code></strong>: Data directory on the standby server.</li>
-                <li><strong><code>-U replicator</code></strong>: Replication user.</li>
-                <li><strong><code>-W</code></strong>: Prompt for password.</li>
-                <li><strong><code>--wal-method=stream</code></strong>: Stream WAL files during backup.</li>
+                <li><strong><code>-h master_ip</code></strong>: The IP address of the master server.</li>
+                <li><strong><code>-D /var/lib/pgsql/data/</code></strong>: The data directory on the standby server.</li>
+                <li><strong><code>-U replicator</code></strong>: The replication user created earlier.</li>
+                <li><strong><code>-W</code></strong>: Prompt for the password.</li>
+                <li><strong><code>--wal-method=stream</code></strong>: Stream WAL files during the backup.</li>
             </ul>
-            <h4 id="3-create-standby-signal-file">3. Create <code>standby.signal</code> File</h4>
-            <p>For PostgreSQL versions 12 and above, create an empty file named <code>standby.signal</code> in the data directory:</p>
+            <h4 id="creating-the-standby-signal-file">Creating the <code>standby.signal</code> File</h4>
+            <p>For PostgreSQL versions 12 and above, create an empty file named <code>standby.signal</code> in the data directory to indicate that this server should start in standby mode:</p>
             <p>
             <div>
                 <pre><code class="language-bash">touch /var/lib/pgsql/data/standby.signal</code></pre>
             </div>
             </p>
-            <p>For versions before 12, create a <code>recovery.conf</code> file with the necessary parameters.</p>
-            <h4 id="4-edit-postgresql-conf-on-standby">4. Edit <code>postgresql.conf</code> on Standby</h4>
-            <p>Set the following parameters in <code>postgresql.conf</code>:</p>
+            <p>For versions before 12, a <code>recovery.conf</code> file is required with the necessary parameters.</p>
+            <h4 id="editing-postgresql-conf-on-the-standby">Editing <code>postgresql.conf</code> on the Standby</h4>
+            <p>Set the following parameters in the standby server's <code>postgresql.conf</code> file:</p>
             <p>
             <div>
                 <pre><code class="language-conf"># Enable read-only queries on standby
 hot_standby = on
 
-# Configure primary connection info
+# Configure connection information to the primary server
 primary_conninfo = 'host=master_ip port=5432 user=replicator password=your_password'</code></pre>
             </div>
             </p>
-            <h4 id="5-start-postgresql-service">5. Start PostgreSQL Service</h4>
+            <p>Replace <code>master_ip</code> with the IP address of the master server and <code>your_password</code> with the password for the replication user.</p>
+            <h4 id="starting-the-postgresql-service">Starting the PostgreSQL Service</h4>
             <p>Start the PostgreSQL service on the standby server:</p>
             <p>
             <div>
@@ -224,62 +243,63 @@ primary_conninfo = 'host=master_ip port=5432 user=replicator password=your_passw
             </div>
             </p>
             <h3 id="verifying-replication">Verifying Replication</h3>
-            <h4 id="1-check-replication-status-on-master">1. Check Replication Status on Master</h4>
-            <p>Connect to the master server and run:</p>
+            <h4 id="checking-replication-status-on-the-master">Checking Replication Status on the Master</h4>
+            <p>Connect to the master server and execute the following SQL query to check the replication status:</p>
             <p>
             <div>
                 <pre><code class="language-sql">SELECT client_addr, state
 FROM pg_stat_replication;</code></pre>
             </div>
             </p>
-            <p>You should see an entry for each standby server, indicating that they are connected.</p>
-            <h4 id="2-test-data-replication">2. Test Data Replication</h4>
-            <p>On the master server:</p>
+            <p>This should display an entry for each standby server, indicating that they are connected and replicating.</p>
+            <h4 id="testing-data-replication">Testing Data Replication</h4>
+            <p>On the master server, create a test table and insert data:</p>
             <p>
             <div>
                 <pre><code class="language-sql">-- Create a test table
 CREATE TABLE replication_test (id SERIAL PRIMARY KEY, data TEXT);
 
--- Insert data
+-- Insert sample data
 INSERT INTO replication_test (data) VALUES ('Test data');</code></pre>
             </div>
             </p>
-            <p>On the standby server, attempt to query the table:</p>
+            <p>On the standby server, query the test table to confirm that the data has been replicated:</p>
             <p>
             <div>
                 <pre><code class="language-sql">-- Select data from the replicated table
 SELECT * FROM replication_test;</code></pre>
             </div>
             </p>
-            <p>You should see the inserted data, confirming that replication is working.</p>
-            <h3 id="failover-procedure">Failover Procedure</h3>
-            <p>In case the master server fails, you can promote a standby server to become the new master.</p>
-            <h4 id="1-promote-standby-to-master">1. Promote Standby to Master</h4>
-            <p>On the standby server, run:</p>
+            <p>If the data appears on the standby server, replication is working correctly.</p>
+            <h3 id="performing-a-failover-procedure">Performing a Failover Procedure</h3>
+            <p>In the event that the master server fails, you can promote a standby server to become the new master.</p>
+            <h4 id="promoting-the-standby-to-master">Promoting the Standby to Master</h4>
+            <p>On the standby server, run the following command to promote it:</p>
             <p>
             <div>
                 <pre><code class="language-bash">pg_ctl promote -D /var/lib/pgsql/data/</code></pre>
             </div>
             </p>
-            <p>Alternatively, create a <code>promote.signal</code> file in the data directory:</p>
+            <p>Alternatively, you can create a <code>promote.signal</code> file in the data directory:</p>
             <p>
             <div>
                 <pre><code class="language-bash">touch /var/lib/pgsql/data/promote.signal</code></pre>
             </div>
             </p>
-            <h4 id="2-update-application-connections">2. Update Application Connections</h4>
-            <p>Redirect your applications to connect to the new master server.</p>
-            <h4 id="3-reconfigure-the-failed-master-as-standby-optional-">3. Reconfigure the Failed Master as Standby (Optional)</h4>
-            <p>Once the original master is back online, you can set it up as a standby to the new master.</p>
+            <p>This action transitions the standby server to accept write operations.</p>
+            <h4 id="updating-application-connections">Updating Application Connections</h4>
+            <p>Redirect your application's database connections to the new master server to resume normal operations.</p>
+            <h4 id="reconfiguring-the-failed-master-as-a-standby-optional-">Reconfiguring the Failed Master as a Standby (Optional)</h4>
+            <p>Once the original master server is operational again, you can configure it as a standby to the new master, ensuring it remains part of the replication setup.</p>
             <h3 id="handling-replication-slots-optional-">Handling Replication Slots (Optional)</h3>
-            <p>Replication slots prevent the master from discarding WAL segments until they have been received by all standbys.</p>
+            <p>Replication slots prevent the master server from discarding WAL segments until they have been received by all standby servers. This helps maintain synchronization, especially when standbys are temporarily disconnected.</p>
             <p>On the master server, create a replication slot for each standby:</p>
             <p>
             <div>
                 <pre><code class="language-sql">SELECT * FROM pg_create_physical_replication_slot('standby_slot');</code></pre>
             </div>
             </p>
-            <p>Modify the <code>primary_conninfo</code> on the standby to include the slot:</p>
+            <p>Modify the <code>primary_conninfo</code> on the standby server to include the slot name:</p>
             <p>
             <div>
                 <pre><code class="language-conf">primary_slot_name = 'standby_slot'</code></pre>
@@ -289,46 +309,41 @@ SELECT * FROM replication_test;</code></pre>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
             <ol>
-                <li><a href="#overview-of-master-standby-replication">Overview of Master-Standby Replication</a>
-                    <ol>
-                        <li><a href="#architectural-diagram">Architectural Diagram</a></li>
-                        <li><a href="#key-characteristics">Key Characteristics</a></li>
-                    </ol>
-                </li>
-                <li><a href="#purpose-of-master-standby-replication">Purpose of Master-Standby Replication</a></li>
-                <li><a href="#advantages">Advantages</a></li>
-                <li><a href="#challenges">Challenges</a></li>
-                <li><a href="#example-implementing-master-standby-replication-in-postgresql">Example: Implementing Master-Standby Replication in PostgreSQL</a>
+                <li><a href="#understanding-master-standby-replication">Understanding Master-Standby Replication</a></li>
+                <li><a href="#the-purpose-of-master-standby-replication">The Purpose of Master-Standby Replication</a></li>
+                <li><a href="#advantages-of-master-standby-replication">Advantages of Master-Standby Replication</a></li>
+                <li><a href="#challenges-of-master-standby-replication">Challenges of Master-Standby Replication</a></li>
+                <li><a href="#implementing-master-standby-replication-in-postgresql">Implementing Master-Standby Replication in PostgreSQL</a>
                     <ol>
                         <li><a href="#prerequisites">Prerequisites</a></li>
                         <li><a href="#configuring-the-master-server">Configuring the Master Server</a>
                             <ol>
-                                <li><a href="#1-edit-postgresql-conf">1. Edit postgresql.conf</a></li>
-                                <li><a href="#2-edit-pg_hba-conf">2. Edit pg_hba.conf</a></li>
-                                <li><a href="#3-create-a-replication-user">3. Create a Replication User</a></li>
-                                <li><a href="#4-restart-postgresql">4. Restart PostgreSQL</a></li>
+                                <li><a href="#editing-postgresql-conf">Editing postgresql.conf</a></li>
+                                <li><a href="#editing-pg_hba-conf">Editing pg_hba.conf</a></li>
+                                <li><a href="#creating-a-replication-user">Creating a Replication User</a></li>
+                                <li><a href="#restarting-postgresql">Restarting PostgreSQL</a></li>
                             </ol>
                         </li>
                         <li><a href="#configuring-the-standby-server">Configuring the Standby Server</a>
                             <ol>
-                                <li><a href="#1-stop-postgresql-service">1. Stop PostgreSQL Service</a></li>
-                                <li><a href="#2-create-a-base-backup-from-the-master">2. Create a Base Backup from the Master</a></li>
-                                <li><a href="#3-create-standby-signal-file">3. Create standby.signal File</a></li>
-                                <li><a href="#4-edit-postgresql-conf-on-standby">4. Edit postgresql.conf on Standby</a></li>
-                                <li><a href="#5-start-postgresql-service">5. Start PostgreSQL Service</a></li>
+                                <li><a href="#stopping-the-postgresql-service">Stopping the PostgreSQL Service</a></li>
+                                <li><a href="#creating-a-base-backup-from-the-master">Creating a Base Backup from the Master</a></li>
+                                <li><a href="#creating-the-standby-signal-file">Creating the standby.signal File</a></li>
+                                <li><a href="#editing-postgresql-conf-on-the-standby">Editing postgresql.conf on the Standby</a></li>
+                                <li><a href="#starting-the-postgresql-service">Starting the PostgreSQL Service</a></li>
                             </ol>
                         </li>
                         <li><a href="#verifying-replication">Verifying Replication</a>
                             <ol>
-                                <li><a href="#1-check-replication-status-on-master">1. Check Replication Status on Master</a></li>
-                                <li><a href="#2-test-data-replication">2. Test Data Replication</a></li>
+                                <li><a href="#checking-replication-status-on-the-master">Checking Replication Status on the Master</a></li>
+                                <li><a href="#testing-data-replication">Testing Data Replication</a></li>
                             </ol>
                         </li>
-                        <li><a href="#failover-procedure">Failover Procedure</a>
+                        <li><a href="#performing-a-failover-procedure">Performing a Failover Procedure</a>
                             <ol>
-                                <li><a href="#1-promote-standby-to-master">1. Promote Standby to Master</a></li>
-                                <li><a href="#2-update-application-connections">2. Update Application Connections</a></li>
-                                <li><a href="#3-reconfigure-the-failed-master-as-standby-optional-">3. Reconfigure the Failed Master as Standby (Optional)</a></li>
+                                <li><a href="#promoting-the-standby-to-master">Promoting the Standby to Master</a></li>
+                                <li><a href="#updating-application-connections">Updating Application Connections</a></li>
+                                <li><a href="#reconfiguring-the-failed-master-as-a-standby-optional-">Reconfiguring the Failed Master as a Standby (Optional)</a></li>
                             </ol>
                         </li>
                         <li><a href="#handling-replication-slots-optional-">Handling Replication Slots (Optional)</a></li>
