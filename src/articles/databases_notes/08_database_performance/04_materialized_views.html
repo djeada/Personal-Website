@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Materialized Views</title>
-    <meta content="Materialized views are a powerful database feature that stores the results of a query physically on disk, providing fast access to precomputed data." name="description" />
+    <meta content="Materialized views are a powerful database feature that allows you to store the result of a query physically on disk, much like a regular table." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -51,135 +51,65 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: November 26, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: December 03, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
-            <header>Materialized Views</header>
-            <p>Materialized views are a powerful database feature that stores the results of a query physically on disk, providing fast access to precomputed data. Unlike standard (virtual) views, which execute their underlying query each time they are accessed, materialized views cache the query results and can be refreshed on-demand or at specified intervals. This feature significantly improves performance for complex queries, especially in environments where data does not change frequently or real-time data is not critical.</p>
-            <h2 id="concepts-and-characteristics">Concepts and Characteristics</h2>
-            <h3 id="stored-query-results">Stored Query Results</h3>
-            <p>Materialized views physically store the result set of a query in the database. This storage eliminates the need to re-execute the query each time the data is requested.</p>
+            <h2 id="materialized-views">Materialized Views</h2>
+            <p>Materialized views are a powerful database feature that allows you to store the result of a query physically on disk, much like a regular table. Unlike standard views, which are virtual and execute the underlying query each time they are accessed, materialized views cache the query result and can be refreshed periodically. This approach significantly improves performance for complex queries, especially when dealing with large datasets or computationally intensive operations.</p>
+            <h3 id="understanding-materialized-views">Understanding Materialized Views</h3>
+            <p>Imagine you have a complex query that aggregates sales data across multiple regions and products. Running this query every time can be time-consuming and resource-intensive. A materialized view lets you store the result of this query, so subsequent accesses are faster because the database doesn't have to re-execute the computation each time.</p>
+            <h4 id="how-materialized-views-work">How Materialized Views Work</h4>
+            <p>Here's a simple representation of how materialized views fit into a database system:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+-----------------------+
+             |     Base Tables       |
+             +----------+------------+
+                        |
+             Complex Query Execution
+                        |
+                        v
+             +-----------------------+
+             |   Materialized View   |
+             +----------+------------+
+                        |
+               Query on Materialized View
+                        |
+                        v
+             +-----------------------+
+             |      Query Result     |
+             +-----------------------+</code></pre>
+            </div>
+            </p>
+            <p>In this diagram:</p>
             <ul>
-                <li><strong>Reduction of Computation</strong>: By storing the results, the database avoids recalculating complex joins, aggregations, and calculations.</li>
-                <li><strong>Data Retrieval</strong>: Accessing data from a materialized view is similar to querying a regular table, providing faster data retrieval.</li>
+                <li>The base tables contain the raw data.</li>
+                <li>A complex query is executed on these tables, and the result is stored in the materialized view.</li>
+                <li>When you query the materialized view, you retrieve data directly from it without re-executing the complex query.</li>
             </ul>
-            <h3 id="refresh-strategies">Refresh Strategies</h3>
-            <p>Since the data in a materialized view is a snapshot of the data at the time it was created or last refreshed, it can become stale as the underlying tables change.</p>
+            <h3 id="benefits-of-using-materialized-views">Benefits of Using Materialized Views</h3>
+            <p>Materialized views offer several advantages:</p>
             <ul>
-                <li><strong>Manual Refresh</strong>: The materialized view is refreshed only when explicitly instructed.</li>
-                <li><strong>Automatic Refresh</strong>: The database system automatically refreshes the materialized view at specified intervals or upon certain events.</li>
-                <li><strong>Incremental Refresh</strong>: Only the changes since the last refresh are applied, improving refresh efficiency.</li>
-                <li><strong>Complete Refresh</strong>: The entire materialized view is recomputed from scratch.</li>
+                <li><strong>Improved Performance</strong>: They speed up query execution by providing quick access to precomputed results.</li>
+                <li><strong>Reduced Load on Base Tables</strong>: Frequent querying of large tables can be resource-intensive; materialized views alleviate this by offloading queries.</li>
+                <li><strong>Simplified Data Access</strong>: They can simplify complex data structures, making it easier for applications and users to retrieve data.</li>
             </ul>
-            <h3 id="performance-improvement">Performance Improvement</h3>
-            <p>Materialized views enhance performance by:</p>
+            <h3 id="refreshing-materialized-views">Refreshing Materialized Views</h3>
+            <p>Since data in the underlying tables can change, materialized views can become outdated. Refreshing a materialized view updates it with the latest data.</p>
+            <h4 id="refresh-methods">Refresh Methods</h4>
             <ul>
-                <li><strong>Reducing Query Execution Time</strong>: Complex queries run faster because the heavy computation is done in advance.</li>
-                <li><strong>Load Distribution</strong>: Shifts computational load from query time to refresh time, which can be scheduled during off-peak hours.</li>
-                <li><strong>Supporting Indexes</strong>: Indexes can be created on materialized views, further improving query performance.</li>
+                <li><strong>Complete Refresh</strong>: Recomputes the entire materialized view from scratch.</li>
+                <li><strong>Incremental (Fast) Refresh</strong>: Only applies changes since the last refresh, which can be more efficient.</li>
             </ul>
-            <h3 id="storage-cost">Storage Cost</h3>
-            <p>Storing the result set consumes additional disk space.</p>
+            <h4 id="refresh-strategies">Refresh Strategies</h4>
             <ul>
-                <li><strong>Storage Planning</strong>: Assess the trade-off between storage cost and performance gain.</li>
-                <li><strong>Compression</strong>: Some databases support data compression to mitigate storage requirements.</li>
-                <li><strong>Archiving</strong>: Old or less frequently used materialized views can be archived or dropped.</li>
+                <li><strong>On-Demand Refresh</strong>: Manually refresh the view whenever needed.</li>
+                <li><strong>Scheduled Refresh</strong>: Set up automatic refreshes at specific intervals (e.g., daily, hourly).</li>
             </ul>
-            <h3 id="data-consistency">Data Consistency</h3>
-            <p>Materialized views may not reflect real-time data changes.</p>
-            <ul>
-                <li><strong>Staleness</strong>: The data is only as fresh as the last refresh.</li>
-                <li><strong>Consistency Levels</strong>: Define acceptable staleness levels based on application requirements.</li>
-                <li><strong>Transactional Consistency</strong>: Ensuring that the data in the materialized view is consistent with the underlying tables at a transaction level.</li>
-            </ul>
-            <h3 id="indexing-materialized-views">Indexing Materialized Views</h3>
-            <p>Indexes can be applied to materialized views to optimize query performance.</p>
-            <ul>
-                <li><strong>Creating Indexes</strong>: Similar to indexing tables, indexes can be created on columns in the materialized view.</li>
-                <li><strong>Maintaining Indexes</strong>: Indexes need to be maintained during refresh operations, which may impact refresh performance.</li>
-            </ul>
-            <hr />
-            <h2 id="use-cases">Use Cases</h2>
-            <h3 id="data-warehousing-and-business-intelligence">Data Warehousing and Business Intelligence</h3>
-            <p>In data warehousing environments, materialized views are invaluable for:</p>
-            <ul>
-                <li><strong>Aggregating Large Data Sets</strong>: Precomputing sums, averages, counts, and other aggregations over massive tables.</li>
-                <li><strong>Simplifying Complex Queries</strong>: Storing results of multi-join queries to simplify reporting queries.</li>
-                <li><strong>Improving Dashboard Performance</strong>: Enhancing the responsiveness of BI tools and dashboards that rely on heavy data computations.</li>
-            </ul>
-            <p><strong>Real-World Example</strong>:</p>
-            <p>A retail company maintains a data warehouse to analyze sales data across multiple stores and regions. Materialized views can store aggregated sales data per region, reducing the time required for analysts to generate sales reports.</p>
-            <h3 id="pre-aggregation-in-olap-systems">Pre-aggregation in OLAP Systems</h3>
-            <p>Online Analytical Processing (OLAP) systems benefit from materialized views by:</p>
-            <ul>
-                <li><strong>Speeding Up Multi-dimensional Queries</strong>: Storing pre-aggregated data across different dimensions (e.g., time, geography, product).</li>
-                <li><strong>Enhancing Cube Performance</strong>: Materialized views can act as building blocks for OLAP cubes.</li>
-            </ul>
-            <p><strong>Example</strong>:</p>
-            <p>An airline uses an OLAP system to analyze flight data. Materialized views can store aggregated metrics like average delays per route, enabling quick analysis and decision-making.</p>
-            <h3 id="distributed-databases-and-replication">Distributed Databases and Replication</h3>
-            <p>In distributed database systems:</p>
-            <ul>
-                <li><strong>Data Replication</strong>: Materialized views can replicate data across nodes, improving data locality and access speed.</li>
-                <li><strong>Data Consolidation</strong>: Aggregating data from multiple sources into a single materialized view.</li>
-            </ul>
-            <p><strong>Example</strong>:</p>
-            <p>A global enterprise with databases in different regions can use materialized views to consolidate financial data into a central location for corporate reporting.</p>
-            <h3 id="materialized-views-in-partitioned-tables">Materialized Views in Partitioned Tables</h3>
-            <p>Materialized views can work with partitioned tables to:</p>
-            <ul>
-                <li><strong>Improve Query Performance on Partitioned Data</strong>: Precompute results on partitions to speed up queries that span multiple partitions.</li>
-                <li><strong>Facilitate Data Archiving</strong>: Materialized views can be used to summarize archived data.</li>
-            </ul>
-            <p><strong>Example</strong>:</p>
-            <p>A telecom company partitions call detail records by month. Materialized views can aggregate data on each partition to provide monthly summaries.</p>
-            <h3 id="caching-complex-calculations">Caching Complex Calculations</h3>
-            <p>For applications involving complex calculations:</p>
-            <ul>
-                <li><strong>Precomputing Expensive Calculations</strong>: Materialized views can store the results of computationally intensive operations.</li>
-                <li><strong>Reducing Application Load</strong>: Offloading calculations to the database reduces application server load.</li>
-            </ul>
-            <p><strong>Example</strong>:</p>
-            <p>A scientific research database performs complex statistical analyses on large datasets. Materialized views can store the results of these analyses for faster access by researchers.</p>
-            <hr />
-            <h2 id="implementation-in-different-database-systems">Implementation in Different Database Systems</h2>
-            <p>Materialized views are supported in various forms across different database systems, each with specific features and capabilities.</p>
-            <h3 id="postgresql">PostgreSQL</h3>
-            <ul>
-                <li><strong>Creation</strong>: Supports creating materialized views using the <code>CREATE MATERIALIZED VIEW</code> statement.</li>
-                <li><strong>Refresh</strong>: Manual refresh using <code>REFRESH MATERIALIZED VIEW</code>.</li>
-                <li><strong>Indexing</strong>: Allows indexing on materialized views.</li>
-                <li><strong>Limitations</strong>: Does not support automatic or incremental refresh natively (as of PostgreSQL 13).</li>
-            </ul>
-            <h3 id="oracle-database">Oracle Database</h3>
-            <ul>
-                <li><strong>Advanced Features</strong>: Extensive support for materialized views.</li>
-                <li><strong>Refresh Options</strong>:</li>
-                <li><strong>Fast Refresh</strong>: Incremental refresh using materialized view logs.</li>
-                <li><strong>Complete Refresh</strong>: Full recomputation.</li>
-                <li><strong>Force Refresh</strong>: Automatically decides between fast and complete.</li>
-                <li><strong>Query Rewrite</strong>: Optimizer can rewrite queries to use materialized views automatically.</li>
-                <li><strong>Automatic Refresh</strong>: Supports automatic refresh at defined intervals.</li>
-            </ul>
-            <h3 id="microsoft-sql-server">Microsoft SQL Server</h3>
-            <ul>
-                <li><strong>Indexed Views</strong>: SQL Server implements materialized views as indexed views.</li>
-                <li><strong>Creation</strong>: Uses <code>CREATE VIEW</code> with <code>WITH SCHEMABINDING</code> and indexes.</li>
-                <li><strong>Restrictions</strong>: Indexed views have specific requirements, such as deterministic functions and schema binding.</li>
-                <li><strong>Automatic Updates</strong>: Data changes in base tables automatically update the indexed view.</li>
-            </ul>
-            <h3 id="mysql">MySQL</h3>
-            <ul>
-                <li><strong>Lack of Native Support</strong>: MySQL does not have built-in materialized views (as of version 8.0).</li>
-                <li><strong>Workarounds</strong>:</li>
-                <li><strong>Manual Implementation</strong>: Using tables to store query results.</li>
-                <li><strong>Third-Party Tools</strong>: Using tools like Flexviews or MatViews.</li>
-            </ul>
-            <hr />
-            <h2 id="examples">Examples</h2>
             <h3 id="creating-a-materialized-view-in-postgresql">Creating a Materialized View in PostgreSQL</h3>
-            <p><strong>Scenario</strong>:</p>
-            <p>You have a <code>sales</code> table with millions of records, and you frequently need to report total sales per region.</p>
-            <p><strong>Creating the Materialized View</strong>:</p>
+            <p>Let's walk through an example of creating and using a materialized view in PostgreSQL.</p>
+            <h4 id="scenario">Scenario</h4>
+            <p>Suppose you have a table called <code>sales</code> with millions of records, and you often run a query to get total sales per region.</p>
+            <h4 id="creating-the-materialized-view">Creating the Materialized View</h4>
             <p>
             <div>
                 <pre><code class="language-sql">CREATE MATERIALIZED VIEW sales_summary AS
@@ -188,247 +118,149 @@ FROM sales
 GROUP BY region;</code></pre>
             </div>
             </p>
-            <p><strong>Indexing the Materialized View</strong>:</p>
+            <p>This command creates a materialized view named <code>sales_summary</code> that stores the total sales per region.</p>
+            <h4 id="querying-the-materialized-view">Querying the Materialized View</h4>
             <p>
             <div>
-                <pre><code class="language-sql">CREATE INDEX idx_sales_summary_region ON sales_summary (region);</code></pre>
+                <pre><code class="language-sql">SELECT * FROM sales_summary;</code></pre>
             </div>
             </p>
-            <p><strong>Querying the Materialized View</strong>:</p>
-            <p>
-            <div>
-                <pre><code class="language-sql">SELECT region, total_sales
-FROM sales_summary
-WHERE region = 'North America';</code></pre>
-            </div>
-            </p>
-            <p><strong>Refreshing the Materialized View</strong>:</p>
+            <p>When you run this query, PostgreSQL retrieves data directly from the <code>sales_summary</code> materialized view, which is faster than executing the aggregation on the entire <code>sales</code> table.</p>
+            <h4 id="refreshing-the-materialized-view">Refreshing the Materialized View</h4>
+            <p>After new sales data is inserted into the <code>sales</code> table, you can refresh the materialized view to include the latest data:</p>
             <p>
             <div>
                 <pre><code class="language-sql">REFRESH MATERIALIZED VIEW sales_summary;</code></pre>
             </div>
             </p>
-            <p><strong>Automating the Refresh</strong>:</p>
-            <p>Set up a cron job or use a scheduling tool to run the refresh command at specified intervals.</p>
-            <h3 id="incremental-refresh-in-oracle">Incremental Refresh in Oracle</h3>
-            <p><strong>Scenario</strong>:</p>
-            <p>An Oracle database with a <code>transactions</code> table where new transactions are added continuously.</p>
-            <p><strong>Creating Materialized View Log</strong>:</p>
+            <h4 id="automating-the-refresh">Automating the Refresh</h4>
+            <p>You can automate the refresh process using a scheduled task or a cron job. For example, to refresh the materialized view every night at midnight, you might set up a cron job with the following command:</p>
             <p>
             <div>
-                <pre><code class="language-sql">CREATE MATERIALIZED VIEW LOG ON transactions
-WITH PRIMARY KEY, ROWID
+                <pre><code class="language-shell">0 0 * * * psql -U username -d database_name -c "REFRESH MATERIALIZED VIEW sales_summary;"</code></pre>
+            </div>
+            </p>
+            <h3 id="indexing-materialized-views">Indexing Materialized Views</h3>
+            <p>Just like regular tables, you can create indexes on materialized views to further enhance query performance.</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">CREATE INDEX idx_sales_summary_region ON sales_summary(region);</code></pre>
+            </div>
+            </p>
+            <p>This index speeds up queries that filter or join on the <code>region</code> column.</p>
+            <h3 id="use-cases-for-materialized-views">Use Cases for Materialized Views</h3>
+            <p>Materialized views are especially useful in scenarios where complex queries are frequently executed, and real-time data is not a strict requirement.</p>
+            <h4 id="data-warehousing">Data Warehousing</h4>
+            <p>In data warehouses, where analytical queries on large datasets are common, materialized views can precompute and store aggregated data, making reports and dashboards load faster.</p>
+            <h4 id="reporting-and-analytics">Reporting and Analytics</h4>
+            <p>For applications that generate regular reports, materialized views can store pre-aggregated data, reducing the time it takes to produce reports.</p>
+            <h4 id="performance-optimization">Performance Optimization</h4>
+            <p>Applications experiencing performance bottlenecks due to heavy read operations on complex queries can use materialized views to alleviate the load on the database.</p>
+            <h3 id="considerations-and-best-practices">Considerations and Best Practices</h3>
+            <p>While materialized views offer performance benefits, there are factors to consider:</p>
+            <ul>
+                <li><strong>Storage Overhead</strong>: They consume additional disk space since they store data physically.</li>
+                <li><strong>Maintenance Effort</strong>: Regularly refreshing materialized views is necessary to keep data up-to-date.</li>
+                <li><strong>Data Freshness</strong>: There is a trade-off between performance and how current the data is; real-time data might require more frequent refreshes.</li>
+            </ul>
+            <h4 id="choosing-the-right-refresh-strategy">Choosing the Right Refresh Strategy</h4>
+            <p>Your choice depends on how often the underlying data changes and how fresh you need the data in the materialized view to be.</p>
+            <ul>
+                <li><strong>Fast-Changing Data</strong>: Consider more frequent or even real-time refreshes.</li>
+                <li><strong>Slow-Changing Data</strong>: Scheduled refreshes at longer intervals might suffice.</li>
+            </ul>
+            <h3 id="materialized-views-in-different-database-systems">Materialized Views in Different Database Systems</h3>
+            <h4 id="oracle-database">Oracle Database</h4>
+            <p>Oracle has robust support for materialized views, including features like query rewrite and incremental refreshes.</p>
+            <h5>Creating a Materialized View with Fast Refresh</h5>
+            <p>
+            <div>
+                <pre><code class="language-sql">CREATE MATERIALIZED VIEW sales_mv
+BUILD IMMEDIATE
+REFRESH FAST ON DEMAND
+AS
+SELECT region, SUM(amount) AS total_sales
+FROM sales
+GROUP BY region;</code></pre>
+            </div>
+            </p>
+            <h5>Setting Up a Materialized View Log</h5>
+            <p>To enable fast refreshes, you need to create a materialized view log on the base table:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">CREATE MATERIALIZED VIEW LOG ON sales
+WITH ROWID, SEQUENCE (region, amount)
 INCLUDING NEW VALUES;</code></pre>
             </div>
             </p>
-            <p><strong>Creating the Materialized View with Fast Refresh</strong>:</p>
+            <h4 id="microsoft-sql-server">Microsoft SQL Server</h4>
+            <p>In SQL Server, materialized views are implemented as indexed views.</p>
+            <h5>Creating an Indexed View</h5>
             <p>
             <div>
-                <pre><code class="language-sql">CREATE MATERIALIZED VIEW transactions_summary
-BUILD IMMEDIATE
-REFRESH FAST ON COMMIT
-AS
-SELECT customer_id, SUM(amount) AS total_amount
-FROM transactions
-GROUP BY customer_id;</code></pre>
-            </div>
-            </p>
-            <p><strong>Explanation</strong>:</p>
-            <ul>
-                <li><strong><code>REFRESH FAST ON COMMIT</code></strong>: The materialized view is incrementally refreshed whenever a transaction on the base table is committed.</li>
-                <li><strong>Materialized View Log</strong>: Stores changes to the base table, enabling incremental refresh.</li>
-            </ul>
-            <h3 id="using-materialized-views-in-sql-server">Using Materialized Views in SQL Server</h3>
-            <p><strong>Scenario</strong>:</p>
-            <p>In SQL Server, you want to create an indexed view to optimize query performance.</p>
-            <p><strong>Creating the Indexed View</strong>:</p>
-            <p>
-            <div>
-                <pre><code class="language-sql">CREATE VIEW dbo.SalesSummary
-WITH SCHEMABINDING
-AS
-SELECT region, SUM(amount) AS total_sales, COUNT_BIG(*) AS row_count
-FROM dbo.Sales
+                <pre><code class="language-sql">CREATE VIEW dbo.sales_summary
+WITH SCHEMABINDING AS
+SELECT region, SUM(amount) AS total_sales, COUNT_BIG(*) AS count
+FROM dbo.sales
 GROUP BY region;
 GO
 
-CREATE UNIQUE CLUSTERED INDEX idx_SalesSummary_region
-ON dbo.SalesSummary (region);</code></pre>
+CREATE UNIQUE CLUSTERED INDEX idx_sales_summary ON dbo.sales_summary(region);</code></pre>
             </div>
             </p>
-            <p><strong>Requirements</strong>:</p>
+            <h3 id="limitations-of-materialized-views">Limitations of Materialized Views</h3>
             <ul>
-                <li><strong><code>WITH SCHEMABINDING</code></strong>: Binds the view to the schema of the underlying tables.</li>
-                <li><strong>Deterministic Functions</strong>: Only deterministic functions are allowed.</li>
-                <li><strong>Indexed View Limitations</strong>: Must meet specific criteria to be indexed.</li>
-            </ul>
-            <p><strong>Querying the Indexed View</strong>:</p>
-            <p>
-            <div>
-                <pre><code class="language-sql">SELECT region, total_sales
-FROM dbo.SalesSummary
-WHERE region = 'Europe';</code></pre>
-            </div>
-            </p>
-            <p><strong>Automatic Updates</strong>:</p>
-            <p>Changes to the <code>Sales</code> table automatically update the indexed view.</p>
-            <hr />
-            <h2 id="managing-materialized-views">Managing Materialized Views</h2>
-            <h3 id="refreshing-strategies">Refreshing Strategies</h3>
-            <p>Choosing the right refresh strategy is critical:</p>
-            <ul>
-                <li><strong>On-Demand Refresh</strong>: Manually refresh when needed using appropriate commands.</li>
-                <li><strong>Scheduled Refresh</strong>: Use database scheduling tools or external schedulers to automate refreshes.</li>
-                <li><strong>Event-Based Refresh</strong>: Trigger refreshes based on specific events or conditions.</li>
-                <li><strong>Continuous Refresh</strong>: Some systems support near real-time or continuous refresh mechanisms.</li>
-            </ul>
-            <p><strong>Considerations</strong>:</p>
-            <ul>
-                <li><strong>System Load</strong>: Schedule refreshes during low-usage periods to minimize impact.</li>
-                <li><strong>Data Freshness</strong>: Balance between data accuracy and performance.</li>
-                <li><strong>Dependencies</strong>: Ensure that dependencies between materialized views and base tables are managed.</li>
-            </ul>
-            <h3 id="monitoring-and-performance-tuning">Monitoring and Performance Tuning</h3>
-            <p>Regular monitoring ensures optimal performance:</p>
-            <ul>
-                <li><strong>Monitor Refresh Times</strong>: Track how long refresh operations take.</li>
-                <li><strong>Analyze Query Plans</strong>: Use <code>EXPLAIN</code> or similar tools to understand query execution.</li>
-                <li><strong>Adjust Indexes</strong>: Optimize indexes on materialized views based on query patterns.</li>
-                <li><strong>Resource Utilization</strong>: Monitor CPU, memory, and I/O during refreshes.</li>
-            </ul>
-            <h3 id="security-considerations">Security Considerations</h3>
-            <ul>
-                <li><strong>Access Control</strong>: Grant appropriate permissions to users accessing materialized views.</li>
-                <li><strong>Data Sensitivity</strong>: Ensure that materialized views do not expose sensitive data unintentionally.</li>
-                <li><strong>Audit Logging</strong>: Keep logs of access and changes to materialized views.</li>
-            </ul>
-            <hr />
-            <h2 id="best-practices">Best Practices</h2>
-            <h3 id="appropriate-use-cases">Appropriate Use Cases</h3>
-            <ul>
-                <li><strong>Complex Queries</strong>: Use materialized views for queries that are resource-intensive.</li>
-                <li><strong>Stable Data</strong>: Best suited for data that does not change rapidly.</li>
-                <li><strong>Frequent Access</strong>: When the same query results are needed frequently.</li>
-            </ul>
-            <h3 id="choosing-the-right-refresh-strategy">Choosing the Right Refresh Strategy</h3>
-            <ul>
-                <li><strong>Understand Data Change Patterns</strong>: Align refresh strategy with how often data changes.</li>
-                <li><strong>User Requirements</strong>: Determine acceptable data staleness based on user needs.</li>
-                <li><strong>System Capabilities</strong>: Leverage database features like incremental refresh if available.</li>
-            </ul>
-            <h3 id="indexing-and-optimization">Indexing and Optimization</h3>
-            <ul>
-                <li><strong>Index Relevant Columns</strong>: Index columns used in WHERE clauses and JOIN conditions.</li>
-                <li><strong>Avoid Unnecessary Indexes</strong>: Too many indexes can slow down refresh operations.</li>
-                <li><strong>Update Statistics</strong>: Ensure that database statistics are up-to-date for the optimizer.</li>
-            </ul>
-            <h3 id="storage-management">Storage Management</h3>
-            <ul>
-                <li><strong>Monitor Disk Usage</strong>: Regularly check the storage consumed by materialized views.</li>
-                <li><strong>Compression</strong>: Use data compression features if supported.</li>
-                <li><strong>Prune Unused Views</strong>: Remove materialized views that are no longer needed.</li>
-            </ul>
-            <h3 id="consistency-and-data-integrity">Consistency and Data Integrity</h3>
-            <ul>
-                <li><strong>Transaction Management</strong>: Ensure that refresh operations maintain data integrity.</li>
-                <li><strong>Error Handling</strong>: Implement error handling for refresh failures.</li>
-                <li><strong>Dependency Management</strong>: Be aware of dependencies between materialized views and base tables.</li>
-            </ul>
-            <h3 id="automating-refreshes">Automating Refreshes</h3>
-            <ul>
-                <li><strong>Scheduling Tools</strong>: Use cron jobs, database schedulers, or other automation tools.</li>
-                <li><strong>Refresh Policies</strong>: Define clear policies for when and how materialized views are refreshed.</li>
-                <li><strong>Monitoring Automation</strong>: Set up alerts for refresh failures or performance issues.</li>
-            </ul>
-            <h3 id="testing-and-validation">Testing and Validation</h3>
-            <ul>
-                <li><strong>Test Performance Gains</strong>: Validate that materialized views provide the expected performance improvements.</li>
-                <li><strong>Data Accuracy</strong>: Verify that the data in the materialized view matches the base tables.</li>
-                <li><strong>Regression Testing</strong>: Include materialized views in your testing when making changes to base tables or queries.</li>
-            </ul>
-            <hr />
-            <h2 id="limitations-and-considerations">Limitations and Considerations</h2>
-            <h3 id="when-not-to-use-materialized-views">When Not to Use Materialized Views</h3>
-            <ul>
-                <li><strong>Highly Dynamic Data</strong>: If data changes constantly and freshness is critical, materialized views may not be suitable.</li>
-                <li><strong>Simple Queries</strong>: For straightforward queries that run quickly, materialized views may add unnecessary complexity.</li>
-                <li><strong>Resource Constraints</strong>: Limited storage or processing resources may make materialized views impractical.</li>
-            </ul>
-            <h3 id="potential-performance-overheads">Potential Performance Overheads</h3>
-            <ul>
-                <li><strong>Refresh Overhead</strong>: Refreshing materialized views can consume significant resources.</li>
-                <li><strong>Impact on Base Tables</strong>: Frequent refreshes may lock base tables, impacting other operations.</li>
-                <li><strong>Index Maintenance</strong>: Maintaining indexes on materialized views adds overhead during refreshes.</li>
-            </ul>
-            <h3 id="maintenance-complexity">Maintenance Complexity</h3>
-            <ul>
-                <li><strong>Management Effort</strong>: Additional effort is required to manage, monitor, and maintain materialized views.</li>
-                <li><strong>Complex Dependencies</strong>: Dependencies between views and tables can complicate schema changes.</li>
-                <li><strong>Upgrade and Migration</strong>: Moving databases or upgrading versions may require special handling of materialized views.</li>
+                <li>They might not reflect the most recent data until refreshed.</li>
+                <li>Requires additional management for refreshing and maintaining.</li>
+                <li>Refreshing can be resource-intensive, especially for complete refreshes.</li>
             </ul>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
-            <ol>
-                <li><a href="#concepts-and-characteristics">Concepts and Characteristics</a>
-                    <ol>
-                        <li><a href="#stored-query-results">Stored Query Results</a></li>
-                        <li><a href="#refresh-strategies">Refresh Strategies</a></li>
-                        <li><a href="#performance-improvement">Performance Improvement</a></li>
-                        <li><a href="#storage-cost">Storage Cost</a></li>
-                        <li><a href="#data-consistency">Data Consistency</a></li>
-                        <li><a href="#indexing-materialized-views">Indexing Materialized Views</a></li>
-                    </ol>
-                </li>
-                <li><a href="#use-cases">Use Cases</a>
-                    <ol>
-                        <li><a href="#data-warehousing-and-business-intelligence">Data Warehousing and Business Intelligence</a></li>
-                        <li><a href="#pre-aggregation-in-olap-systems">Pre-aggregation in OLAP Systems</a></li>
-                        <li><a href="#distributed-databases-and-replication">Distributed Databases and Replication</a></li>
-                        <li><a href="#materialized-views-in-partitioned-tables">Materialized Views in Partitioned Tables</a></li>
-                        <li><a href="#caching-complex-calculations">Caching Complex Calculations</a></li>
-                    </ol>
-                </li>
-                <li><a href="#implementation-in-different-database-systems">Implementation in Different Database Systems</a>
-                    <ol>
-                        <li><a href="#postgresql">PostgreSQL</a></li>
-                        <li><a href="#oracle-database">Oracle Database</a></li>
-                        <li><a href="#microsoft-sql-server">Microsoft SQL Server</a></li>
-                        <li><a href="#mysql">MySQL</a></li>
-                    </ol>
-                </li>
-                <li><a href="#examples">Examples</a>
-                    <ol>
-                        <li><a href="#creating-a-materialized-view-in-postgresql">Creating a Materialized View in PostgreSQL</a></li>
-                        <li><a href="#incremental-refresh-in-oracle">Incremental Refresh in Oracle</a></li>
-                        <li><a href="#using-materialized-views-in-sql-server">Using Materialized Views in SQL Server</a></li>
-                    </ol>
-                </li>
-                <li><a href="#managing-materialized-views">Managing Materialized Views</a>
-                    <ol>
-                        <li><a href="#refreshing-strategies">Refreshing Strategies</a></li>
-                        <li><a href="#monitoring-and-performance-tuning">Monitoring and Performance Tuning</a></li>
-                        <li><a href="#security-considerations">Security Considerations</a></li>
-                    </ol>
-                </li>
-                <li><a href="#best-practices">Best Practices</a>
-                    <ol>
-                        <li><a href="#appropriate-use-cases">Appropriate Use Cases</a></li>
-                        <li><a href="#choosing-the-right-refresh-strategy">Choosing the Right Refresh Strategy</a></li>
-                        <li><a href="#indexing-and-optimization">Indexing and Optimization</a></li>
-                        <li><a href="#storage-management">Storage Management</a></li>
-                        <li><a href="#consistency-and-data-integrity">Consistency and Data Integrity</a></li>
-                        <li><a href="#automating-refreshes">Automating Refreshes</a></li>
-                        <li><a href="#testing-and-validation">Testing and Validation</a></li>
-                    </ol>
-                </li>
-                <li><a href="#limitations-and-considerations">Limitations and Considerations</a>
-                    <ol>
-                        <li><a href="#when-not-to-use-materialized-views">When Not to Use Materialized Views</a></li>
-                        <li><a href="#potential-performance-overheads">Potential Performance Overheads</a></li>
-                        <li><a href="#maintenance-complexity">Maintenance Complexity</a></li>
-                    </ol>
-                </li>
+            <ol><a href="#materialized-views">Materialized Views</a>
+                <ol>
+                    <li><a href="#understanding-materialized-views">Understanding Materialized Views</a>
+                        <ol>
+                            <li><a href="#how-materialized-views-work">How Materialized Views Work</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#benefits-of-using-materialized-views">Benefits of Using Materialized Views</a></li>
+                    <li><a href="#refreshing-materialized-views">Refreshing Materialized Views</a>
+                        <ol>
+                            <li><a href="#refresh-methods">Refresh Methods</a></li>
+                            <li><a href="#refresh-strategies">Refresh Strategies</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#creating-a-materialized-view-in-postgresql">Creating a Materialized View in PostgreSQL</a>
+                        <ol>
+                            <li><a href="#scenario">Scenario</a></li>
+                            <li><a href="#creating-the-materialized-view">Creating the Materialized View</a></li>
+                            <li><a href="#querying-the-materialized-view">Querying the Materialized View</a></li>
+                            <li><a href="#refreshing-the-materialized-view">Refreshing the Materialized View</a></li>
+                            <li><a href="#automating-the-refresh">Automating the Refresh</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#indexing-materialized-views">Indexing Materialized Views</a></li>
+                    <li><a href="#use-cases-for-materialized-views">Use Cases for Materialized Views</a>
+                        <ol>
+                            <li><a href="#data-warehousing">Data Warehousing</a></li>
+                            <li><a href="#reporting-and-analytics">Reporting and Analytics</a></li>
+                            <li><a href="#performance-optimization">Performance Optimization</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#considerations-and-best-practices">Considerations and Best Practices</a>
+                        <ol>
+                            <li><a href="#choosing-the-right-refresh-strategy">Choosing the Right Refresh Strategy</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#materialized-views-in-different-database-systems">Materialized Views in Different Database Systems</a>
+                        <ol>
+                            <li><a href="#oracle-database">Oracle Database</a></li>
+                            <li><a href="#microsoft-sql-server">Microsoft SQL Server</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#limitations-of-materialized-views">Limitations of Materialized Views</a></li>
+                </ol>
             </ol>
             <div id="related-articles">
                 <h2>Related Articles</h2>

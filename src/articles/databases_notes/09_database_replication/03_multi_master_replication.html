@@ -53,41 +53,34 @@
         <section id="article-body">
             <p style="text-align: right;"><i>Last modified: December 03, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
-            <header>Multi-Master Replication</header>
+            <h2 id="multi-master-replication">Multi-Master Replication</h2>
             <p>Multi-master replication is a database replication model where multiple database nodes, referred to as masters, can perform read and write operations concurrently. Each master node propagates its data changes to every other master node, ensuring consistency across the entire system. This approach enhances scalability, availability, and performance but introduces complexities like conflict resolution and increased configuration overhead.</p>
-            <h2 id="understanding-the-architecture">Understanding the Architecture</h2>
+            <h3 id="understanding-the-architecture">Understanding the Architecture</h3>
             <p>To visualize how multi-master replication works, consider the following ASCII diagram:</p>
             <p>
             <div>
-                <pre><code class="language-shell">+-------------------+
-                |                   |
-                |   Master Node 1   |
-                |                   |
-                +---------+---------+
-                          ^         
-                          |         
-                     Replication    
-                          |         
-                          v         
-                +---------+---------+
-                |                   |
-                |   Master Node 2   |
-                |                   |
-                +---------+---------+
-                          ^         
-                          |         
-                     Replication    
-                          |         
-                          v         
-                +---------+---------+
-                |                   |
-                |   Master Node 3   |
-                |                   |
-                +-------------------+</code></pre>
+                <pre><code class="language-shell">#
+               +---------------------+
+               |                     |
+               |      Clients        |
+               | (Write &amp; Read Ops)  |
+               |                     |
+               +----------+----------+
+                          |
+           +--------------+---------------------+----------------------------------+
+           |                                    |                                  |
+ Write &amp; Read Operations                 Write &amp; Read Operations           Write &amp; Read Operations  
+           |                                    |                                  |
+           v                                    v                                  v
++----------+-----------+              +---------+----------+             +---------+----------+
+|                      | Replication  |                    | Replication |                    |
+|    Master Server     | ----------&gt;  |   Master Server    | ----------&gt; |   Master Server    |
+|                      | &lt;----------  |                    | &lt;---------- |                    |
++----------+-----------+              +---------+----------+             +---------+----------+</code></pre>
             </div>
             </p>
             <p>In this setup, each master node is connected to every other master node through replication links. Data changes made on any node are replicated to all other nodes, and clients can connect to any master node for both read and write operations. This interconnected architecture allows for a highly available and scalable system.</p>
-            <h2 id="key-characteristics">Key Characteristics</h2>
+            <h4 id="key-characteristics">Key Characteristics</h4>
             <p>Multi-master replication has several defining features:</p>
             <ul>
                 <li>All master nodes can accept write operations simultaneously.</li>
@@ -95,87 +88,53 @@
                 <li>The system remains operational even if one or more master nodes fail, providing high availability.</li>
                 <li>Mechanisms are required to handle conflicting updates due to concurrent writes, which adds complexity to the system.</li>
             </ul>
-            <h2 id="purpose-of-multi-master-replication">Purpose of Multi-Master Replication</h2>
+            <h4 id="purpose-of-multi-master-replication">Purpose of Multi-Master Replication</h4>
             <p>The primary goals of multi-master replication include:</p>
             <ol>
-                <li>
-                    <p><strong>Scalability of Write Operations</strong>: By distributing the write load across multiple nodes, the system can handle higher transaction volumes without a single point becoming a bottleneck.</p>
-                </li>
-                <li>
-                    <p><strong>Enhanced High Availability</strong>: With multiple masters, the system continues to operate even if one master fails, offering redundancy and resilience.</p>
-                </li>
-                <li>
-                    <p><strong>Geographical Distribution</strong>: In geographically dispersed systems, allowing writes to the nearest master reduces latency and improves performance for users in different locations.</p>
-                </li>
-                <li>
-                    <p><strong>Load Balancing</strong>: Balancing both read and write operations across multiple nodes optimizes resource utilization and prevents any single node from becoming overwhelmed.</p>
-                </li>
+                <li>By distributing the write load across multiple nodes, the system can handle higher transaction volumes without a single point becoming a bottleneck.</li>
+                <li>With multiple masters, the system continues to operate even if one master fails, offering redundancy and resilience.</li>
+                <li>In geographically dispersed systems, allowing writes to the nearest master reduces latency and improves performance for users in different locations.</li>
+                <li>Balancing both read and write operations across multiple nodes optimizes resource utilization and prevents any single node from becoming overwhelmed.</li>
             </ol>
-            <h2 id="advantages">Advantages</h2>
+            <h3 id="advantages">Advantages</h3>
             <p>Implementing multi-master replication offers several benefits:</p>
             <ul>
-                <li>
-                    <p><strong>Increased Write Scalability</strong>: Supports higher write throughput by allowing multiple nodes to handle write operations concurrently.</p>
-                </li>
-                <li>
-                    <p><strong>Improved Fault Tolerance</strong>: Eliminates single points of failure, enhancing the system's resilience since other masters can take over if one fails.</p>
-                </li>
-                <li>
-                    <p><strong>Reduced Latency</strong>: Localized writes reduce the delay associated with remote database access, providing faster response times for users.</p>
-                </li>
-                <li>
-                    <p><strong>Better Resource Utilization</strong>: Distributes workloads across multiple nodes, preventing bottlenecks and optimizing performance.</p>
-                </li>
+                <li>Supports higher write throughput by allowing multiple nodes to handle write operations concurrently.</li>
+                <li>Eliminates single points of failure, enhancing the system's resilience since other masters can take over if one fails.</li>
+                <li>Localized writes reduce the delay associated with remote database access, providing faster response times for users.</li>
+                <li>Distributes workloads across multiple nodes, preventing bottlenecks and optimizing performance.</li>
             </ul>
-            <h2 id="challenges">Challenges</h2>
+            <h3 id="challenges">Challenges</h3>
             <p>Despite its advantages, multi-master replication introduces several challenges:</p>
             <ul>
-                <li>
-                    <p><strong>Conflict Detection and Resolution</strong>: Concurrent writes to the same data can cause conflicts. Mechanisms must be in place to detect and resolve these conflicts appropriately.</p>
-                </li>
-                <li>
-                    <p><strong>Data Consistency Models</strong>: Ensuring strong consistency across nodes can be complex and may impact performance, especially in systems with high latency between nodes.</p>
-                </li>
-                <li>
-                    <p><strong>Increased Complexity</strong>: Configuring, managing, and monitoring a multi-master setup is more complicated than single-master configurations.</p>
-                </li>
-                <li>
-                    <p><strong>Network Overhead</strong>: Replicating data across multiple nodes increases network traffic, which can affect performance if not managed properly.</p>
-                </li>
+                <li>Concurrent writes to the same data can cause conflicts. Mechanisms must be in place to detect and resolve these conflicts appropriately.</li>
+                <li>Ensuring strong consistency across nodes can be complex and may impact performance, especially in systems with high latency between nodes.</li>
+                <li>Configuring, managing, and monitoring a multi-master setup is more complicated than single-master configurations.</li>
+                <li>Replicating data across multiple nodes increases network traffic, which can affect performance if not managed properly.</li>
             </ul>
-            <h2 id="conflict-resolution-strategies">Conflict Resolution Strategies</h2>
+            <h3 id="conflict-resolution-strategies">Conflict Resolution Strategies</h3>
             <p>Handling conflicts is a critical aspect of multi-master replication. Various strategies can be employed:</p>
             <ul>
-                <li>
-                    <p><strong>Synchronous Replication</strong>: Uses locking mechanisms to prevent conflicts by ensuring that only one node can modify a particular piece of data at a time. While this maintains consistency, it can reduce performance due to increased latency.</p>
-                </li>
-                <li>
-                    <p><strong>Asynchronous Replication with Conflict Detection</strong>: Allows conflicts to occur but relies on mechanisms to detect and resolve them after the fact. This can improve performance but may lead to temporary inconsistencies.</p>
-                </li>
-                <li>
-                    <p><strong>Timestamp Ordering</strong>: Resolves conflicts based on the timestamp of transactions, where the most recent transaction takes precedence.</p>
-                </li>
-                <li>
-                    <p><strong>Application-Level Handling</strong>: Incorporates custom logic within the application to handle conflicts according to specific business rules, providing flexibility in how conflicts are resolved.</p>
-                </li>
+                <li><strong>Synchronous replication</strong> ensures data consistency by using <strong>locking mechanisms</strong> that allow only one node to modify a specific piece of data at any given time. This approach can result in reduced performance due to increased latency caused by waiting for acknowledgments from other nodes. </li>
+                <li><strong>Asynchronous replication</strong> with <strong>conflict detection</strong> improves performance by allowing changes to proceed without waiting for all nodes to acknowledge. However, it introduces the risk of <strong>temporary inconsistencies</strong>, which are resolved later through conflict detection and resolution mechanisms. </li>
+                <li><strong>Timestamp ordering</strong> resolves conflicts by prioritizing <strong>transactions</strong> based on their timestamps, where the <strong>latest transaction</strong> overrides previous ones. This method simplifies resolution but may discard earlier valid changes. </li>
+                <li><strong>Application-level handling</strong> uses <strong>custom logic</strong> defined within the application to resolve conflicts. This approach provides <strong>flexibility</strong>, enabling conflict resolution tailored to the specific needs and business logic of the application.</li>
             </ul>
-            <h2 id="implementing-multi-master-replication-with-mysql-and-galera-cluster">Implementing Multi-Master Replication with MySQL and Galera Cluster</h2>
+            <h3 id="implementing-multi-master-replication-with-mysql-and-galera-cluster">Implementing Multi-Master Replication with MySQL and Galera Cluster</h3>
             <p>Galera Cluster is a synchronous multi-master replication plugin for MySQL and MariaDB databases. It ensures that transactions are committed on all nodes simultaneously, providing strong data consistency across the cluster.</p>
-            <h3 id="prerequisites">Prerequisites</h3>
+            <h4 id="prerequisites">Prerequisites</h4>
             <p>To set up a Galera Cluster, you'll need:</p>
             <ul>
-                <li>
-                    <p><strong>Operating System</strong>: Linux-based systems such as Ubuntu, Debian, CentOS, or RHEL.</p>
-                </li>
-                <li>
-                    <p><strong>Database Software</strong>: MySQL or MariaDB compatible with Galera.</p>
-                </li>
-                <li>
-                    <p><strong>Network Configuration</strong>: All nodes must be able to communicate over the network, with appropriate firewall settings to allow the necessary ports.</p>
-                </li>
+                <li><strong>Operating system</strong> requirements include Linux-based distributions like <strong>Ubuntu</strong>, <strong>Debian</strong>, <strong>CentOS</strong>, or <strong>RHEL</strong>, which are commonly supported. </li>
+                <li><strong>Database software</strong> compatibility is necessary, requiring a <strong>MySQL</strong> or <strong>MariaDB</strong> version that supports Galera clustering. </li>
+                <li><strong>Network configuration</strong> is critical, ensuring that all <strong>nodes</strong> can communicate over the network and that <strong>firewall settings</strong> allow traffic through the required <strong>ports</strong> for cluster communication. </li>
+                <li><strong>Cluster nodes</strong> must have unique <strong>IP addresses</strong> and consistent <strong>hostname resolution</strong> to maintain stable communication. </li>
+                <li><strong>Synchronized clocks</strong> are recommended across nodes using a service like <strong>NTP</strong> to prevent time-related inconsistencies. </li>
+                <li><strong>Galera software</strong> or <strong>plugins</strong> specific to the database version in use should be installed on all participating nodes. </li>
+                <li><strong>Sufficient resources</strong>, such as CPU, memory, and disk I/O capacity, are necessary for each node to handle the expected workload and cluster operations. </li>
             </ul>
-            <h3 id="setting-up-the-cluster">Setting Up the Cluster</h3>
-            <h4 id="installation">Installation</h4>
+            <h4 id="setting-up-the-cluster">Setting Up the Cluster</h4>
+            <h5>Installation</h5>
             <p>Install the database server and Galera Cluster on each master node.</p>
             <p>For Ubuntu/Debian systems:</p>
             <p>
@@ -191,7 +150,7 @@ sudo apt-get install mariadb-server mariadb-client galera-3 rsync</code></pre>
             </div>
             </p>
             <p><em>Note: Replace <code>mariadb</code> with <code>mysql</code> if you prefer MySQL over MariaDB.</em></p>
-            <h4 id="configuring-the-database-server">Configuring the Database Server</h4>
+            <h5>Configuring the Database Server</h5>
             <p>Edit the configuration file, typically located at <code>/etc/mysql/my.cnf</code> or <code>/etc/my.cnf</code>, and add or modify the following settings:</p>
             <p>
             <div>
@@ -219,7 +178,7 @@ wsrep_sst_method = rsync</code></pre>
             </div>
             </p>
             <p>Replace <code>node1_ip</code>, <code>node2_ip</code>, <code>node3_ip</code> with the IP addresses of your master nodes. Also, set <code>nodeX</code> and <code>nodeX_ip</code> to the hostname and IP address of the current node you're configuring.</p>
-            <h4 id="securing-the-database">Securing the Database</h4>
+            <h5>Securing the Database</h5>
             <p>Run the following command to secure your database installation:</p>
             <p>
             <div>
@@ -227,7 +186,7 @@ wsrep_sst_method = rsync</code></pre>
             </div>
             </p>
             <p>Follow the prompts to set a root password and remove anonymous users, enhancing the security of your database servers.</p>
-            <h4 id="initializing-the-cluster">Initializing the Cluster</h4>
+            <h5>Initializing the Cluster</h5>
             <p>On the first node only, bootstrap the cluster:</p>
             <p>
             <div>
@@ -242,7 +201,7 @@ sudo galera_new_cluster</code></pre>
 sudo service mysql bootstrap</code></pre>
             </div>
             </p>
-            <h4 id="starting-mysql-on-other-nodes">Starting MySQL on Other Nodes</h4>
+            <h5>Starting MySQL on Other Nodes</h5>
             <p>On the remaining nodes, start the MySQL service normally:</p>
             <p>
             <div>
@@ -255,7 +214,7 @@ sudo service mysql bootstrap</code></pre>
                 <pre><code class="language-bash">sudo /etc/init.d/mysql start</code></pre>
             </div>
             </p>
-            <h4 id="verifying-cluster-status">Verifying Cluster Status</h4>
+            <h5>Verifying Cluster Status</h5>
             <p>To check the cluster size and ensure all nodes are connected, run the following command on any node:</p>
             <p>
             <div>
@@ -263,114 +222,68 @@ sudo service mysql bootstrap</code></pre>
             </div>
             </p>
             <p>The result should display the total number of nodes in the cluster, confirming that the setup is successful.</p>
-            <h3 id="understanding-conflict-resolution-in-galera-cluster">Understanding Conflict Resolution in Galera Cluster</h3>
-            <p>Galera Cluster uses a certification-based replication mechanism to handle conflicts:</p>
-            <ol>
-                <li>
-                    <p><strong>Transaction Processing</strong>: Transactions are executed optimistically without immediate concern for conflicts.</p>
-                </li>
-                <li>
-                    <p><strong>Write-Set Creation</strong>: Upon commit, a write-set containing the data changes is created.</p>
-                </li>
-                <li>
-                    <p><strong>Replication</strong>: The write-set is replicated to all other nodes in the cluster.</p>
-                </li>
-                <li>
-                    <p><strong>Certification Test</strong>: Each node performs a certification test to detect conflicts:</p>
-                </li>
-                <li>If no conflicts are found, the transaction is applied.</li>
-                <li>If a conflict is detected, the transaction is aborted, and an error is returned to the client.</li>
-            </ol>
-            <h4 id="how-conflicts-are-detected">How Conflicts Are Detected</h4>
+            <h4 id="understanding-conflict-resolution-in-galera-cluster">Understanding Conflict Resolution in Galera Cluster</h4>
             <ul>
-                <li>
-                    <p><strong>Transaction IDs</strong>: Each transaction is assigned a Global Transaction ID (GTID) to track changes across the cluster.</p>
-                </li>
-                <li>
-                    <p><strong>Version Checks</strong>: The cluster checks if the rows affected by the transaction have been altered since the transaction began.</p>
-                </li>
-                <li>
-                    <p><strong>Conflict Resolution</strong>: In case of a conflict, typically the transaction with the later GTID (the one that arrived last) is rolled back to maintain consistency.</p>
-                </li>
+                <li>Galera Cluster uses a certification-based replication mechanism to manage <strong>conflicts</strong>. </li>
+                <li>Transactions are executed <strong>optimistically</strong> without immediate checks for conflicts. </li>
+                <li>A <strong>write-set</strong> containing the changes is created when a transaction is committed. </li>
+                <li>The write-set is <strong>replicated</strong> to all other nodes in the cluster. </li>
+                <li>Each node performs a certification <strong>test</strong> on the replicated write-set. </li>
+                <li>If no conflicts are found during the certification test, the transaction is <strong>applied</strong>. </li>
+                <li>If a conflict is detected during the certification test, the transaction is <strong>aborted</strong>. </li>
+                <li>An <strong>error</strong> is returned to the client when a transaction is aborted due to conflicts. </li>
             </ul>
-            <h4 id="handling-conflicts-in-applications">Handling Conflicts in Applications</h4>
-            <p>Applications interacting with a Galera Cluster should be designed to:</p>
+            <h5>How Conflicts Are Detected</h5>
             <ul>
-                <li>
-                    <p><strong>Retry Aborted Transactions</strong>: Implement logic to automatically retry transactions that fail due to conflicts.</p>
-                </li>
-                <li>
-                    <p><strong>Minimize Conflicts</strong>: Design database schemas and access patterns to reduce the likelihood of conflicting writes, such as partitioning data or avoiding hot spots.</p>
-                </li>
-                <li>
-                    <p><strong>Handle Errors Gracefully</strong>: Provide meaningful feedback to users when transactions fail, allowing them to retry or take corrective action.</p>
-                </li>
+                <li>Each <strong>transaction</strong> is assigned a <strong>Global Transaction ID (GTID)</strong>, which allows the cluster to track changes consistently across nodes. </li>
+                <li>The cluster performs <strong>version checks</strong> to determine if rows affected by a transaction have been altered by other transactions since the original transaction began. </li>
+                <li>When a <strong>conflict</strong> is detected, the transaction with the later <strong>GTID</strong> (indicating the last arrival) is typically <strong>rolled back</strong> to maintain consistency across the cluster. </li>
             </ul>
-            <h3 id="testing-the-cluster">Testing the Cluster</h3>
-            <p>To ensure that the cluster operates correctly:</p>
+            <h5>Handling Conflicts in Applications</h5>
             <ul>
-                <li>
-                    <p><strong>Data Consistency Test</strong>: Insert data on one node and verify that it appears on all other nodes.</p>
-                </li>
-                <li>
-                    <p><strong>Conflict Test</strong>: Attempt to write conflicting data on different nodes simultaneously to observe how conflicts are resolved.</p>
-                </li>
-                <li>
-                    <p><strong>Failover Test</strong>: Stop one of the nodes and ensure that the cluster continues to operate without data loss, demonstrating fault tolerance.</p>
-                </li>
+                <li>Applications should include logic to <strong>retry aborted transactions</strong>, enabling seamless recovery when conflicts occur. </li>
+                <li><strong>Minimizing conflicts</strong> is important and can be achieved by designing database schemas and access patterns to reduce <strong>conflicting writes</strong>, such as partitioning data or avoiding frequent updates to the same rows (hot spots). </li>
+                <li>Applications should be designed to <strong>handle errors gracefully</strong>, providing users with meaningful feedback when transactions fail, and enabling them to retry or make corrective actions. </li>
             </ul>
-            <h2 id="best-practices">Best Practices</h2>
+            <h4 id="testing-the-cluster">Testing the Cluster</h4>
+            <ul>
+                <li>A <strong>data consistency test</strong> should be conducted by inserting data on one node and verifying that the data propagates correctly to all other nodes. </li>
+                <li>A <strong>conflict test</strong> involves simultaneously writing conflicting data on different nodes to observe how the cluster resolves the conflicts. </li>
+                <li>A <strong>failover test</strong> ensures fault tolerance by stopping one node and confirming that the cluster continues to operate without data loss or significant disruption. </li>
+            </ul>
+            <h3 id="best-practices">Best Practices</h3>
             <p>To maximize the benefits of multi-master replication and ensure a stable environment, consider the following best practices:</p>
             <ul>
-                <li>
-                    <p><strong>Monitor Cluster Health</strong>: Use monitoring tools to keep an eye on replication status, node health, and network performance. This helps in early detection of issues.</p>
-                </li>
-                <li>
-                    <p><strong>Optimize Network Configuration</strong>: Ensure low-latency and reliable network connections between nodes to minimize replication delays and reduce the chance of conflicts.</p>
-                </li>
-                <li>
-                    <p><strong>Implement Backup Strategies</strong>: Even with replication, regular backups are essential to protect against data corruption or catastrophic failures.</p>
-                </li>
-                <li>
-                    <p><strong>Plan for Schema Changes</strong>: Perform schema changes during maintenance windows and ensure that all nodes are compatible. Galera Cluster can replicate DDL statements, but careful planning is necessary.</p>
-                </li>
-                <li>
-                    <p><strong>Security Measures</strong>: Secure communication between nodes using encryption and restrict network access to trusted hosts.</p>
-                </li>
+                <li>Use monitoring tools to keep an eye on replication status, node health, and network performance. This helps in early detection of issues.</li>
+                <li>Ensure low-latency and reliable network connections between nodes to minimize replication delays and reduce the chance of conflicts.</li>
+                <li>Even with replication, regular backups are essential to protect against data corruption or catastrophic failures.</li>
+                <li>Perform schema changes during maintenance windows and ensure that all nodes are compatible. Galera Cluster can replicate DDL statements, but careful planning is necessary.</li>
+                <li>Secure communication between nodes using encryption and restrict network access to trusted hosts.</li>
             </ul>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
-            <ol>
-                <li><a href="#understanding-the-architecture">Understanding the Architecture</a></li>
-                <li><a href="#key-characteristics">Key Characteristics</a></li>
-                <li><a href="#purpose-of-multi-master-replication">Purpose of Multi-Master Replication</a></li>
-                <li><a href="#advantages">Advantages</a></li>
-                <li><a href="#challenges">Challenges</a></li>
-                <li><a href="#conflict-resolution-strategies">Conflict Resolution Strategies</a></li>
-                <li><a href="#implementing-multi-master-replication-with-mysql-and-galera-cluster">Implementing Multi-Master Replication with MySQL and Galera Cluster</a>
-                    <ol>
-                        <li><a href="#prerequisites">Prerequisites</a></li>
-                        <li><a href="#setting-up-the-cluster">Setting Up the Cluster</a>
-                            <ol>
-                                <li><a href="#installation">Installation</a></li>
-                                <li><a href="#configuring-the-database-server">Configuring the Database Server</a></li>
-                                <li><a href="#securing-the-database">Securing the Database</a></li>
-                                <li><a href="#initializing-the-cluster">Initializing the Cluster</a></li>
-                                <li><a href="#starting-mysql-on-other-nodes">Starting MySQL on Other Nodes</a></li>
-                                <li><a href="#verifying-cluster-status">Verifying Cluster Status</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#understanding-conflict-resolution-in-galera-cluster">Understanding Conflict Resolution in Galera Cluster</a>
-                            <ol>
-                                <li><a href="#how-conflicts-are-detected">How Conflicts Are Detected</a></li>
-                                <li><a href="#handling-conflicts-in-applications">Handling Conflicts in Applications</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#testing-the-cluster">Testing the Cluster</a></li>
-                    </ol>
-                </li>
-                <li><a href="#best-practices">Best Practices</a></li>
+            <ol><a href="#multi-master-replication">Multi-Master Replication</a>
+                <ol>
+                    <li><a href="#understanding-the-architecture">Understanding the Architecture</a>
+                        <ol>
+                            <li><a href="#key-characteristics">Key Characteristics</a></li>
+                            <li><a href="#purpose-of-multi-master-replication">Purpose of Multi-Master Replication</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#advantages">Advantages</a></li>
+                    <li><a href="#challenges">Challenges</a></li>
+                    <li><a href="#conflict-resolution-strategies">Conflict Resolution Strategies</a></li>
+                    <li><a href="#implementing-multi-master-replication-with-mysql-and-galera-cluster">Implementing Multi-Master Replication with MySQL and Galera Cluster</a>
+                        <ol>
+                            <li><a href="#prerequisites">Prerequisites</a></li>
+                            <li><a href="#setting-up-the-cluster">Setting Up the Cluster</a></li>
+                            <li><a href="#understanding-conflict-resolution-in-galera-cluster">Understanding Conflict Resolution in Galera Cluster</a></li>
+                            <li><a href="#testing-the-cluster">Testing the Cluster</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#best-practices">Best Practices</a></li>
+                </ol>
             </ol>
             <div id="related-articles">
                 <h2>Related Articles</h2>
