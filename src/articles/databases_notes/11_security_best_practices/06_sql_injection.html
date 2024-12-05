@@ -5,8 +5,8 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>SQL Injection Attacks</title>
-    <meta content="SQL Injection is a critical security vulnerability that allows attackers to interfere with the queries an application makes to its database." name="description" />
+    <title>Understanding SQL Injection Attacks</title>
+    <meta content="Welcome!" name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -51,410 +51,338 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: November 26, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: December 05, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
-            <header>SQL Injection Attacks</header>
-            <p>SQL Injection is a critical security vulnerability that allows attackers to interfere with the queries an application makes to its database. By manipulating user input, attackers can inject malicious SQL code, potentially accessing, modifying, or destroying data without proper authorization.</p>
-            <p><strong>Key Objectives:</strong></p>
-            <ul>
-                <li>Explain how SQL Injection attacks occur.</li>
-                <li>Provide examples of vulnerabilities and attack types.</li>
-                <li>Offer prevention techniques and best practices.</li>
-                <li>Enhance understanding with illustrative diagrams and code examples.</li>
-            </ul>
-            <hr />
-            <h2 id="how-sql-injection-occurs">How SQL Injection Occurs</h2>
-            <p>SQL Injection occurs when an application incorporates untrusted user input into SQL queries without proper validation or sanitization. Attackers manipulate input fields to alter the intended SQL command, potentially executing malicious queries.</p>
-            <p><strong>Mechanism:</strong></p>
-            <ol>
-                <li>
-                    <p><strong>User Input Submission:</strong></p>
-                </li>
-                <li>
-                    <p>The application accepts input from users (e.g., form fields, URL parameters).</p>
-                </li>
-                <li>
-                    <p><strong>Dynamic SQL Query Construction:</strong></p>
-                </li>
-                <li>
-                    <p>User input is concatenated directly into SQL statements.</p>
-                </li>
-                <li>
-                    <p><strong>Execution of Altered Query:</strong></p>
-                </li>
-                <li>
-                    <p>The database executes the modified SQL query, which may include unintended commands.</p>
-                </li>
-            </ol>
-            <p><strong>Illustrative Diagram:</strong></p>
+            <h2 id="understanding-sql-injection-attacks">Understanding SQL Injection Attacks</h2>
+            <p>Welcome! Let's delve into the world of SQL Injection Attacks, a critical security concern in web applications. We'll explore how these attacks occur, examine concrete examples, and discuss effective prevention strategies. By the end of this journey, you'll have a solid understanding of SQL Injection and how to protect your applications from such vulnerabilities.</p>
+            <h3 id="what-is-sql-injection-">What is SQL Injection?</h3>
+            <p>SQL Injection is a technique where attackers exploit vulnerabilities in an application's interaction with its database. By inserting malicious SQL code into input fields, they can manipulate queries to access unauthorized data, modify or delete records, and even take control of the entire database. Think of it as someone sneaking harmful instructions into a conversation between your application and its database.</p>
+            <h3 id="how-does-sql-injection-happen-">How Does SQL Injection Happen?</h3>
+            <p>At the core, SQL Injection occurs when user input is incorporated directly into SQL queries without proper validation or sanitization. This unfiltered input can alter the structure of the SQL commands, leading to unintended and potentially dangerous outcomes.</p>
+            <p><strong>The Process Simplified:</strong></p>
+            <p>I. <strong>User Input Submission</strong></p>
+            <p>Users provide input through forms, URL parameters, or other data entry points.</p>
+            <p>II. <strong>Query Construction</strong></p>
+            <p>The application builds SQL queries by combining static code with user input.</p>
+            <p>III. <strong>Query Execution</strong></p>
+            <p>The database executes the constructed query, which may have been tampered with if the input was malicious.</p>
+            <p><strong>Visual Representation:</strong></p>
             <p>
             <div>
-                <pre><code class="language-shell">[ User Input ]
-     |
-     v
-[ Application ]
-     |
-     v
-[ SQL Query Construction ]
-     |
-     v
-[ SQL Database ]</code></pre>
+                <pre><code class="language-shell">[ User Input ] --&gt; [ Application ] --&gt; [ Query Construction ] --&gt; [ Database Execution ]</code></pre>
             </div>
             </p>
-            <ul>
-                <li>Without proper handling, user input flows through the application and alters the SQL query sent to the database.</li>
-            </ul>
-            <hr />
-            <h2 id="vulnerability-example-authentication-form">Vulnerability Example: Authentication Form</h2>
-            <p>A common vulnerability arises in authentication forms where user credentials are checked against the database.</p>
-            <p><strong>Vulnerable Code Example (Pseudo-code):</strong></p>
+            <h3 id="vulnerable-code-example">Vulnerable Code Example</h3>
+            <p>Imagine a login form where users enter their username and password. A vulnerable application might handle this input as follows:</p>
             <p>
             <div>
-                <pre><code class="language-javascript">// User-provided input
-let username = params['username'];
-let password = params['password'];
+                <pre><code class="language-php">&lt;?php
+// User-provided input
+$username = $_POST['username'];
+$password = $_POST['password'];
 
 // Vulnerable SQL query construction
-let query = "SELECT * FROM users WHERE username = '" + username + "' AND password = '" + password + "';";
+$query = "SELECT * FROM users WHERE username = '$username' AND password = '$password'";
 
 // Execute the query
-let user = database.execute(query);
+$result = mysqli_query($connection, $query);
 
-// Authenticate the user
-if (user) {
-    logInUser(user);
-}</code></pre>
+// Check if user exists
+if (mysqli_num_rows($result) &gt; 0) {
+    echo "Welcome, $username!";
+} else {
+    echo "Invalid username or password.";
+}
+?&gt;</code></pre>
             </div>
             </p>
-            <p><strong>Issue:</strong></p>
+            <p>In this example, user inputs <code>$username</code> and <code>$password</code> are directly embedded into the SQL query without any checks. This opens the door for SQL Injection.</p>
+            <h3 id="concrete-examples-of-sql-injection-attacks">Concrete Examples of SQL Injection Attacks</h3>
+            <p>Let's explore how attackers can exploit such vulnerabilities with real-world scenarios.</p>
+            <h4 id="1-authentication-bypass">1. Authentication Bypass</h4>
+            <p>An attacker aims to gain unauthorized access by bypassing the login authentication.</p>
+            <p><strong>Attack Scenario:</strong></p>
+            <p>The attacker inputs the following:</p>
             <ul>
-                <li>User input is directly concatenated into the SQL query without validation.</li>
-                <li>Allows attackers to inject SQL code via the <code>username</code> or <code>password</code> fields.</li>
+                <li><strong>Username:</strong> <code>admin' --</code></li>
+                <li><strong>Password:</strong> <code>irrelevant</code></li>
             </ul>
-            <p><strong>Illustrative Diagram:</strong></p>
+            <p><strong>Resulting SQL Query:</strong></p>
             <p>
             <div>
-                <pre><code class="language-shell">[ User Input ]
-     |
-     | (username and password)
-     v
-[ Vulnerable Query Construction ]
-     |
-     | ("SELECT * FROM users WHERE username = 'input' AND password = 'input';")
-     v
-[ Database Execution ]</code></pre>
+                <pre><code class="language-sql">SELECT * FROM users WHERE username = 'admin' --' AND password = 'irrelevant'</code></pre>
             </div>
             </p>
-            <hr />
-            <h2 id="attack-types-and-examples">Attack Types and Examples</h2>
-            <h3 id="1-authentication-bypass">1. Authentication Bypass</h3>
-            <p><strong>Objective:</strong></p>
+            <p><strong>What's Happening:</strong></p>
             <ul>
-                <li>Gain unauthorized access by bypassing authentication mechanisms.</li>
-            </ul>
-            <p><strong>Attack Example:</strong></p>
-            <ul>
-                <li>Inputting a crafted username or password to manipulate the SQL query.</li>
-            </ul>
-            <p><strong>Malicious Input:</strong></p>
-            <ul>
-                <li>Username: <code>' OR '1'='1</code></li>
-                <li>Password: <code>' OR '1'='1</code></li>
-            </ul>
-            <p><strong>Resulting Query:</strong></p>
-            <p>
-            <div>
-                <pre><code class="language-sql">SELECT * FROM users WHERE username = '' OR '1'='1' AND password = '' OR '1'='1';</code></pre>
-            </div>
-            </p>
-            <p><strong>Effect:</strong></p>
-            <ul>
-                <li>The condition <code>'1'='1'</code> is always true.</li>
-                <li>The query returns all users, potentially logging in the attacker without valid credentials.</li>
-            </ul>
-            <p><strong>Diagram of Attack Flow:</strong></p>
-            <p>
-            <div>
-                <pre><code class="language-shell">[ User Input ]
-     |
-     | (malicious username and password)
-     v
-[ Vulnerable Query Construction ]
-     |
-     | ("SELECT * FROM users WHERE username = '' OR '1'='1' ...")
-     v
-[ Database Execution ]
-     |
-     v
-[ Authentication Bypassed ]</code></pre>
-            </div>
-            </p>
-            <h3 id="2-data-exfiltration">2. Data Exfiltration</h3>
-            <p><strong>Objective:</strong></p>
-            <ul>
-                <li>Retrieve sensitive data from the database.</li>
-            </ul>
-            <p><strong>Attack Example:</strong></p>
-            <ul>
-                <li>Exploiting the query to return additional data.</li>
-            </ul>
-            <p><strong>Malicious Input:</strong></p>
-            <ul>
-                <li>Username: <code>admin' UNION SELECT credit_card_number FROM credit_cards --</code></li>
-                <li>Password: <code>anything</code></li>
-            </ul>
-            <p><strong>Resulting Query:</strong></p>
-            <p>
-            <div>
-                <pre><code class="language-sql">SELECT * FROM users WHERE username = 'admin' UNION SELECT credit_card_number FROM credit_cards --' AND password = 'anything';</code></pre>
-            </div>
-            </p>
-            <p><strong>Effect:</strong></p>
-            <ul>
-                <li>Combines results from the <code>users</code> table and the <code>credit_cards</code> table.</li>
-                <li>Exposes sensitive information.</li>
-            </ul>
-            <h3 id="3-data-manipulation">3. Data Manipulation</h3>
-            <p><strong>Objective:</strong></p>
-            <ul>
-                <li>Modify or delete data within the database.</li>
-            </ul>
-            <p><strong>Attack Example:</strong></p>
-            <ul>
-                <li>Inserting commands to alter database records.</li>
-            </ul>
-            <p><strong>Malicious Input:</strong></p>
-            <ul>
-                <li>Username: <code>'; UPDATE users SET role='admin' WHERE username='attacker';--</code></li>
-                <li>Password: <code>anything</code></li>
-            </ul>
-            <p><strong>Resulting Query:</strong></p>
-            <p>
-            <div>
-                <pre><code class="language-sql">SELECT * FROM users WHERE username = ''; UPDATE users SET role='admin' WHERE username='attacker';--' AND password = 'anything';</code></pre>
-            </div>
-            </p>
-            <p><strong>Effect:</strong></p>
-            <ul>
-                <li>Executes an <code>UPDATE</code> command, elevating the attacker's privileges.</li>
-            </ul>
-            <h3 id="4-denial-of-service">4. Denial of Service</h3>
-            <p><strong>Objective:</strong></p>
-            <ul>
-                <li>Disrupt database operations, causing downtime or resource exhaustion.</li>
-            </ul>
-            <p><strong>Attack Example:</strong></p>
-            <ul>
-                <li>Injecting code to create long-running queries.</li>
-            </ul>
-            <p><strong>Malicious Input:</strong></p>
-            <ul>
-                <li>Username: <code>admin'; WAITFOR DELAY '0:0:10';--</code></li>
-                <li>Password: <code>anything</code></li>
-            </ul>
-            <p><strong>Resulting Query:</strong></p>
-            <p>
-            <div>
-                <pre><code class="language-sql">SELECT * FROM users WHERE username = 'admin'; WAITFOR DELAY '0:0:10';--' AND password = 'anything';</code></pre>
-            </div>
-            </p>
-            <p><strong>Effect:</strong></p>
-            <ul>
-                <li>Introduces a delay, potentially overloading the database with concurrent requests.</li>
-            </ul>
-            <hr />
-            <h2 id="preventing-sql-injection-attacks">Preventing SQL Injection Attacks</h2>
-            <p>Implementing robust defense strategies is crucial to prevent SQL Injection vulnerabilities.</p>
-            <h3 id="input-validation">Input Validation</h3>
-            <ul>
-                <li>
-                    <p><strong>Definition:</strong></p>
-                </li>
-                <li>
-                    <p>Check user input for expected format, length, type, and allowable characters.</p>
-                </li>
-                <li>
-                    <p><strong>Techniques:</strong></p>
-                </li>
-                <li>
-                    <p><strong>Whitelist Validation:</strong> Accept only known good input.</p>
-                </li>
-                <li>
-                    <p><strong>Blacklist Validation:</strong> Reject known malicious patterns (less effective).</p>
-                </li>
-                <li>
-                    <p><strong>Example:</strong></p>
-                </li>
+                <li>The <code>--</code> sequence comments out the rest of the SQL query.</li>
+                <li>The query effectively becomes:</li>
             </ul>
             <p>
             <div>
-                <pre><code class="language-javascript">if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-      throw new Error('Invalid username');
-  }</code></pre>
+                <pre><code class="language-sql">SELECT * FROM users WHERE username = 'admin'</code></pre>
             </div>
             </p>
-            <h3 id="parameterized-queries-prepared-statements-">Parameterized Queries (Prepared Statements)</h3>
+            <p>The password check is bypassed, granting access to the 'admin' account.</p>
+            <p><strong>Interpretation:</strong></p>
             <ul>
-                <li>
-                    <p><strong>Definition:</strong></p>
-                </li>
-                <li>
-                    <p>Use placeholders for user input in SQL statements, allowing the database to distinguish between code and data.</p>
-                </li>
-                <li>
-                    <p><strong>Benefits:</strong></p>
-                </li>
-                <li>
-                    <p>Prevents attackers from altering the intent of the query.</p>
-                </li>
-                <li>
-                    <p>Simplifies code maintenance.</p>
-                </li>
-                <li>
-                    <p><strong>Example in Java using JDBC:</strong></p>
-                </li>
+                <li>The attacker successfully logs in as 'admin' without knowing the password.</li>
+                <li>They gain full administrative privileges within the application.</li>
             </ul>
+            <p><strong>Visual Representation:</strong></p>
             <p>
             <div>
-                <pre><code class="language-java">String query = "SELECT * FROM users WHERE username = ? AND password = ?";
-  PreparedStatement stmt = connection.prepareStatement(query);
-  stmt.setString(1, username);
-  stmt.setString(2, password);
-  ResultSet rs = stmt.executeQuery();</code></pre>
+                <pre><code class="language-shell">[ Malicious Input ]
+        |
+        v
+[ Altered Query ]
+        |
+        v
+[ Unauthorized Access ]</code></pre>
             </div>
             </p>
-            <p><strong>Illustrative Diagram:</strong></p>
-            <p>
-            <div>
-                <pre><code class="language-shell">[ User Input ]
-     |
-     v
-[ Parameterized Query ]
-     |
-     | (SQL code and parameters sent separately)
-     v
-[ Database Execution ]</code></pre>
-            </div>
-            </p>
-            <h3 id="stored-procedures">Stored Procedures</h3>
+            <h4 id="2-data-extraction">2. Data Extraction</h4>
+            <p>An attacker tries to retrieve sensitive information from the database.</p>
+            <p><strong>Attack Scenario:</strong></p>
+            <p>The attacker inputs:</p>
             <ul>
-                <li>
-                    <p><strong>Definition:</strong></p>
-                </li>
-                <li>
-                    <p>Predefined SQL statements stored in the database, executed with provided parameters.</p>
-                </li>
-                <li>
-                    <p><strong>Benefits:</strong></p>
-                </li>
-                <li>
-                    <p>Centralizes query logic within the database.</p>
-                </li>
-                <li>
-                    <p>Limits direct interaction with SQL statements.</p>
-                </li>
-                <li>
-                    <p><strong>Example in SQL Server:</strong></p>
-                </li>
+                <li><strong>Username:</strong> <code>john' UNION SELECT username, password FROM users --</code></li>
+                <li><strong>Password:</strong> <code>irrelevant</code></li>
             </ul>
+            <p><strong>Resulting SQL Query:</strong></p>
             <p>
             <div>
-                <pre><code class="language-sql">-- Create stored procedure
-  CREATE PROCEDURE AuthenticateUser
-      @Username NVARCHAR(50),
-      @Password NVARCHAR(50)
-  AS
-  BEGIN
-      SELECT * FROM users WHERE username = @Username AND password = @Password;
-  END</code></pre>
+                <pre><code class="language-sql">SELECT * FROM users WHERE username = 'john' UNION SELECT username, password FROM users --' AND password = 'irrelevant'</code></pre>
             </div>
             </p>
-            <p>
-            <div>
-                <pre><code class="language-csharp">// Call stored procedure from application
-  SqlCommand cmd = new SqlCommand("AuthenticateUser", connection);
-  cmd.CommandType = CommandType.StoredProcedure;
-  cmd.Parameters.AddWithValue("@Username", username);
-  cmd.Parameters.AddWithValue("@Password", password);
-  SqlDataReader reader = cmd.ExecuteReader();</code></pre>
-            </div>
-            </p>
-            <h3 id="escaping-user-input">Escaping User Input</h3>
+            <p><strong>What's Happening:</strong></p>
             <ul>
-                <li>
-                    <p><strong>Definition:</strong></p>
-                </li>
-                <li>
-                    <p>Sanitize user input by escaping special characters that could alter SQL syntax.</p>
-                </li>
-                <li>
-                    <p><strong>Considerations:</strong></p>
-                </li>
-                <li>
-                    <p>Must be implemented carefully for each database type.</p>
-                </li>
-                <li>
-                    <p>Not a standalone solution; should be combined with other methods.</p>
-                </li>
-                <li>
-                    <p><strong>Example:</strong></p>
-                </li>
+                <li>The <code>UNION</code> operator combines the results of two queries.</li>
+                <li>The attacker forces the database to return all usernames and passwords.</li>
             </ul>
+            <p><strong>Interpretation:</strong></p>
+            <ul>
+                <li>The application may display or process the combined data.</li>
+                <li>The attacker gains access to credentials of all users.</li>
+            </ul>
+            <h4 id="3-data-manipulation">3. Data Manipulation</h4>
+            <p>An attacker wants to modify data, such as elevating their privileges.</p>
+            <p><strong>Attack Scenario:</strong></p>
+            <p>The attacker inputs:</p>
+            <ul>
+                <li><strong>Username:</strong> <code>'; UPDATE users SET role='admin' WHERE username='attacker'; --</code></li>
+                <li><strong>Password:</strong> <code>irrelevant</code></li>
+            </ul>
+            <p><strong>Resulting SQL Query:</strong></p>
             <p>
             <div>
-                <pre><code class="language-python">import MySQLdb
+                <pre><code class="language-sql">SELECT * FROM users WHERE username = ''; UPDATE users SET role='admin' WHERE username='attacker'; --' AND password = 'irrelevant'</code></pre>
+            </div>
+            </p>
+            <p><strong>What's Happening:</strong></p>
+            <ul>
+                <li>The first query selects a user with an empty username.</li>
+                <li>The second query updates the attacker's role to 'admin'.</li>
+                <li>The <code>--</code> comments out the rest of the original query.</li>
+            </ul>
+            <p><strong>Interpretation:</strong></p>
+            <ul>
+                <li>The attacker's account now has administrative privileges.</li>
+                <li>They can perform actions reserved for admins, compromising security.</li>
+            </ul>
+            <h4 id="4-denial-of-service">4. Denial of Service</h4>
+            <p>An attacker aims to disrupt the database's functionality.</p>
+            <p><strong>Attack Scenario:</strong></p>
+            <p>The attacker inputs:</p>
+            <ul>
+                <li><strong>Username:</strong> <code>'; DROP TABLE users; --</code></li>
+                <li><strong>Password:</strong> <code>irrelevant</code></li>
+            </ul>
+            <p><strong>Resulting SQL Query:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-sql">SELECT * FROM users WHERE username = ''; DROP TABLE users; --' AND password = 'irrelevant'</code></pre>
+            </div>
+            </p>
+            <p><strong>What's Happening:</strong></p>
+            <ul>
+                <li>The <code>DROP TABLE users</code> command deletes the entire users table.</li>
+                <li>The application loses all user data, causing it to fail.</li>
+            </ul>
+            <p><strong>Interpretation:</strong></p>
+            <ul>
+                <li>The database is severely compromised.</li>
+                <li>Recovery may require restoring from backups, resulting in downtime.</li>
+            </ul>
+            <h3 id="preventing-sql-injection-attacks">Preventing SQL Injection Attacks</h3>
+            <p>Understanding prevention is crucial to safeguard applications from SQL Injection.</p>
+            <h4 id="use-parameterized-queries-prepared-statements-">Use Parameterized Queries (Prepared Statements)</h4>
+            <p>Parameterized queries ensure that user input is treated strictly as data, not executable code.</p>
+            <p><strong>Secure Code Example in PHP using PDO:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-php">&lt;?php
+// User-provided input
+$username = $_POST['username'];
+$password = $_POST['password'];
 
-  username = MySQLdb.escape_string(user_input)</code></pre>
+// Prepare the SQL statement
+$stmt = $pdo-&gt;prepare('SELECT * FROM users WHERE username = :username AND password = :password');
+
+// Bind parameters
+$stmt-&gt;bindParam(':username', $username);
+$stmt-&gt;bindParam(':password', $password);
+
+// Execute the statement
+$stmt-&gt;execute();
+
+// Check if user exists
+if ($stmt-&gt;rowCount() &gt; 0) {
+    echo "Welcome, $username!";
+} else {
+    echo "Invalid username or password.";
+}
+?&gt;</code></pre>
             </div>
             </p>
-            <h3 id="least-privilege-principle">Least Privilege Principle</h3>
+            <p><strong>Why This is Secure:</strong></p>
             <ul>
-                <li>
-                    <p><strong>Definition:</strong></p>
-                </li>
-                <li>
-                    <p>Grant the minimum necessary permissions to database accounts used by applications.</p>
-                </li>
-                <li>
-                    <p><strong>Benefits:</strong></p>
-                </li>
-                <li>
-                    <p>Limits the impact of a compromised application.</p>
-                </li>
-                <li>
-                    <p>Prevents unauthorized access to sensitive data or operations.</p>
-                </li>
-                <li>
-                    <p><strong>Implementation:</strong></p>
-                </li>
-                <li>
-                    <p>Use separate accounts for different application functions.</p>
-                </li>
-                <li>Restrict accounts to specific tables and queries.</li>
+                <li>The query structure is fixed, and parameters are bound separately.</li>
+                <li>Even if an attacker supplies malicious input, it won't alter the query's logic.</li>
+            </ul>
+            <p><strong>Visual Representation:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">[ User Input ] --&gt; [ Application ] --&gt; [ Parameterized Query ] --&gt; [ Safe Execution ]</code></pre>
+            </div>
+            </p>
+            <h4 id="validate-and-sanitize-user-input">Validate and Sanitize User Input</h4>
+            <p>Always check that inputs meet expected criteria before using them.</p>
+            <p><strong>Example in PHP:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-php">&lt;?php
+// Validate username (e.g., only letters and numbers)
+if (!preg_match('/^[a-zA-Z0-9]+$/', $_POST['username'])) {
+    die('Invalid username.');
+}
+
+// Sanitize inputs
+$username = htmlspecialchars($_POST['username']);
+$password = htmlspecialchars($_POST['password']);
+?&gt;</code></pre>
+            </div>
+            </p>
+            <p><strong>Benefits:</strong></p>
+            <ul>
+                <li>Prevents injection of special characters.</li>
+                <li>Ensures input conforms to expected patterns.</li>
+            </ul>
+            <h4 id="use-stored-procedures">Use Stored Procedures</h4>
+            <p>Stored procedures are precompiled SQL statements stored in the database, which can be executed with parameters.</p>
+            <p><strong>Creating a Stored Procedure in MySQL:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-sql">DELIMITER //
+CREATE PROCEDURE AuthenticateUser(IN p_username VARCHAR(50), IN p_password VARCHAR(50))
+BEGIN
+    SELECT * FROM users WHERE username = p_username AND password = p_password;
+END //
+DELIMITER ;</code></pre>
+            </div>
+            </p>
+            <p><strong>Calling the Stored Procedure in PHP:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-php">&lt;?php
+// User-provided input
+$username = $_POST['username'];
+$password = $_POST['password'];
+
+// Prepare and execute the stored procedure
+$stmt = $pdo-&gt;prepare('CALL AuthenticateUser(:username, :password)');
+$stmt-&gt;bindParam(':username', $username);
+$stmt-&gt;bindParam(':password', $password);
+$stmt-&gt;execute();
+
+// Check if user exists
+if ($stmt-&gt;rowCount() &gt; 0) {
+    echo "Welcome, $username!";
+} else {
+    echo "Invalid username or password.";
+}
+?&gt;</code></pre>
+            </div>
+            </p>
+            <p><strong>Advantages:</strong></p>
+            <ul>
+                <li>The SQL code is predefined and not altered by user input.</li>
+                <li>Parameters are handled securely by the database.</li>
+            </ul>
+            <h4 id="implement-least-privilege-principle">Implement Least Privilege Principle</h4>
+            <p>Limit the database permissions of the application's user account.</p>
+            <p><strong>Recommendations:</strong></p>
+            <ul>
+                <li>Grant only necessary privileges (e.g., <code>SELECT</code>, <code>INSERT</code>).</li>
+                <li>Avoid using database admin accounts in the application.</li>
+            </ul>
+            <p><strong>Example of Restricting Privileges in MySQL:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-sql">GRANT SELECT, INSERT, UPDATE ON mydatabase.users TO 'app_user'@'localhost' IDENTIFIED BY 'securepassword';</code></pre>
+            </div>
+            </p>
+            <p><strong>Impact:</strong></p>
+            <ul>
+                <li>Even if an attacker gains some level of access, the damage is limited.</li>
+                <li>Critical operations like dropping tables are not permitted.</li>
+            </ul>
+            <h4 id="escape-user-input">Escape User Input</h4>
+            <p>If parameterized queries aren't available, ensure special characters are properly escaped.</p>
+            <p><strong>Example in PHP:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-php">&lt;?php
+// Escape special characters
+$username = mysqli_real_escape_string($connection, $_POST['username']);
+$password = mysqli_real_escape_string($connection, $_POST['password']);
+
+// Construct the query
+$query = "SELECT * FROM users WHERE username = '$username' AND password = '$password'";
+?&gt;</code></pre>
+            </div>
+            </p>
+            <p><strong>Caution:</strong></p>
+            <ul>
+                <li>Escaping reduces risk but isn't foolproof.</li>
+                <li>Prefer parameterized queries when possible.</li>
             </ul>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
-            <ol>
-                <li><a href="#how-sql-injection-occurs">How SQL Injection Occurs</a></li>
-                <li><a href="#vulnerability-example-authentication-form">Vulnerability Example: Authentication Form</a></li>
-                <li><a href="#attack-types-and-examples">Attack Types and Examples</a>
-                    <ol>
-                        <li><a href="#1-authentication-bypass">1. Authentication Bypass</a></li>
-                        <li><a href="#2-data-exfiltration">2. Data Exfiltration</a></li>
-                        <li><a href="#3-data-manipulation">3. Data Manipulation</a></li>
-                        <li><a href="#4-denial-of-service">4. Denial of Service</a></li>
-                    </ol>
-                </li>
-                <li><a href="#preventing-sql-injection-attacks">Preventing SQL Injection Attacks</a>
-                    <ol>
-                        <li><a href="#input-validation">Input Validation</a></li>
-                        <li><a href="#parameterized-queries-prepared-statements-">Parameterized Queries (Prepared Statements)</a></li>
-                        <li><a href="#stored-procedures">Stored Procedures</a></li>
-                        <li><a href="#escaping-user-input">Escaping User Input</a></li>
-                        <li><a href="#least-privilege-principle">Least Privilege Principle</a></li>
-                    </ol>
-                </li>
+            <ol><a href="#understanding-sql-injection-attacks">Understanding SQL Injection Attacks</a>
+                <ol>
+                    <li><a href="#what-is-sql-injection-">What is SQL Injection?</a></li>
+                    <li><a href="#how-does-sql-injection-happen-">How Does SQL Injection Happen?</a></li>
+                    <li><a href="#vulnerable-code-example">Vulnerable Code Example</a></li>
+                    <li><a href="#concrete-examples-of-sql-injection-attacks">Concrete Examples of SQL Injection Attacks</a>
+                        <ol>
+                            <li><a href="#1-authentication-bypass">1. Authentication Bypass</a></li>
+                            <li><a href="#2-data-extraction">2. Data Extraction</a></li>
+                            <li><a href="#3-data-manipulation">3. Data Manipulation</a></li>
+                            <li><a href="#4-denial-of-service">4. Denial of Service</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#preventing-sql-injection-attacks">Preventing SQL Injection Attacks</a>
+                        <ol>
+                            <li><a href="#use-parameterized-queries-prepared-statements-">Use Parameterized Queries (Prepared Statements)</a></li>
+                            <li><a href="#validate-and-sanitize-user-input">Validate and Sanitize User Input</a></li>
+                            <li><a href="#use-stored-procedures">Use Stored Procedures</a></li>
+                            <li><a href="#implement-least-privilege-principle">Implement Least Privilege Principle</a></li>
+                            <li><a href="#escape-user-input">Escape User Input</a></li>
+                        </ol>
+                    </li>
+                </ol>
             </ol>
             <div id="related-articles">
                 <h2>Related Articles</h2>
