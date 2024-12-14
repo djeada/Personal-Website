@@ -51,7 +51,7 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: December 03, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: December 14, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="understanding-the-storage-of-tables-and-indexes-on-disk">Understanding the Storage of Tables and Indexes on Disk</h2>
             <p>Exploring how databases store tables and indexes on disk can provide valuable insights into optimizing performance and managing data efficiently. Let's delve into the fundamental concepts of disk storage in relational databases, focusing on the structures and mechanisms that underlie data organization.</p>
@@ -75,6 +75,93 @@
             </div>
             </p>
             <p>In this diagram, we see an extent containing four pages, each holding part of the table's data.</p>
+            <ul>
+                <li>A table is stored in files composed of fixed-size units known as <strong>pages</strong>, which serve as the fundamental building blocks for simplifying <strong>I/O operations</strong> by standardizing data access and storage. </li>
+                <li>Each <strong>row</strong> of data is stored within these disk pages, typically packed tightly end-to-end to maximize storage efficiency. However, gaps can occur due to <strong>fragmentation</strong>, which can degrade performance over time. </li>
+                <li>Many databases define a <strong>page</strong> as their basic unit of storage, with typical sizes of 8KB in PostgreSQL and 16KB in MySQL, though this can often be configured to suit specific workload requirements or <strong>storage hardware</strong>. </li>
+                <li>The database performs all data <strong>reads and writes</strong> at the page level instead of accessing individual bytes or rows, enabling more efficient interaction with storage systems. </li>
+                <li>When the database fetches <strong>data</strong> from disk, it must load the entire page into memory, even if the query requires only a small portion of the data on that page, which can lead to inefficiencies if <strong>data locality</strong> is poor. </li>
+                <li><strong>Disk I/O performance</strong> is heavily influenced by how efficiently the database can access pages, often relying on caching frequently accessed pages in memory to minimize the need for repeated disk reads. </li>
+                <li><strong>Data locality</strong>, where rows frequently accessed together are stored on adjacent pages, helps reduce the number of pages the database must read for common queries, improving performance. </li>
+                <li>Allocating pages in <strong>contiguous blocks</strong>, often grouped into larger units called extents, improves the efficiency of sequential scans by reducing the number of separate I/O operations needed to access large datasets. </li>
+                <li>Aligning <strong>page size</strong> with the underlying storage device’s block size or performance characteristics can reduce unnecessary fragmentation, minimize overhead, and improve overall I/O efficiency. </li>
+                <li>When a single <strong>row</strong> of data is scattered across multiple pages, the database must perform additional I/O operations to retrieve the data, slowing down queries that would otherwise benefit from quick lookups. </li>
+                <li>Storage devices often operate on <strong>fixed-size blocks</strong>; matching the database’s page size to the block size can avoid partial block reads or writes, which waste resources and degrade performance. </li>
+                <li>Reorganizing or <strong>vacuuming tables</strong> helps reclaim freed space within pages, making it available for future inserts and improving the database’s ability to store data compactly and efficiently. </li>
+            </ul>
+            <h3 id="table-and-heap-organization">Table and Heap Organization</h3>
+            <ul>
+                <li>Tables without <strong>clustered ordering</strong> store rows in a heap-like structure where rows are appended as new inserts occur, without maintaining any particular logical order. </li>
+                <li>The heap does not enforce a logical order, so retrieving specific <strong>rows</strong> without the use of indexes often requires scanning multiple pages sequentially, which can be inefficient for large datasets. </li>
+                <li>A heap can become <strong>sparse</strong> if many rows are deleted, leaving gaps and unused space on pages. This empty space can be reused by future inserts, but excessive sparsity may require maintenance to optimize storage. </li>
+                <li>Heap scans involve reading all the <strong>pages</strong> of a table sequentially from start to end, which can be slow for large tables if queries lack selective conditions to filter rows early. </li>
+                <li>Physical <strong>row identifiers</strong> (such as TIDs in PostgreSQL) directly point to a specific page and item offset, enabling the database to quickly locate and access particular rows without additional lookups. </li>
+                <li>The database engine tracks <strong>free space</strong> on each page using internal structures, helping it efficiently determine where to place new rows without unnecessarily extending the heap or wasting storage. </li>
+                <li>High <strong>update frequency</strong> on variable-length columns can lead to row movement or page splits, which increase fragmentation and can degrade performance if left unchecked over time. </li>
+                <li><strong>Compressing data</strong> within each page allows more rows to fit into memory or storage, improving data density and reducing I/O, but at the cost of additional CPU overhead during compression and decompression processes. </li>
+                <li>Dedicated <strong>space management structures</strong>, sometimes in the form of metadata pages, monitor how full each page is, guiding the database in selecting optimal locations for inserting new rows and minimizing fragmentation. </li>
+                <li><strong>Row headers</strong>, stored alongside user data, occupy part of the available space on each page. This overhead can reduce the capacity available for actual row data, especially for tables with many small rows. </li>
+                <li>When a single <strong>row</strong> is too large to fit into one page, the database may split it into multiple segments, linked together with pointers. While this enables storage of large rows, it increases the cost of accessing them due to the need for multiple I/O operations. </li>
+                <li><strong>Heap fragmentation</strong> can be reduced through periodic maintenance operations, such as table vacuuming or reorganization, which compact data and ensure higher density of rows within pages, improving query performance. </li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-shell">+----------------------------------------------------+
+|                       Heap File                   |
++----------------------------------------------------+
+|  Page 1         |  Page 2         |  Page 3       |
++------------------+-----------------+---------------+
+| [Row1] [Row2]   | [Row3] [Row4]   | [Row5] [Row6] |
+| [Free Space]    | [Row7]          | [Free Space]  |
++------------------+-----------------+---------------+</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Pages are fixed-size units of storage, containing rows and free space.</li>
+                <li>Rows (e.g., Row1, Row2) are stored in the order of insertion unless affected by updates or deletes.</li>
+            </ul>
+            <p><strong>Scenario: Fragmentation caused by deletions</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+----------------------------------------------------+
+|                       Heap File                   |
++----------------------------------------------------+
+|  Page 1         |  Page 2         |  Page 3       |
++------------------+-----------------+---------------+
+| [Row1] [Deleted]| [Row4] [Deleted]| [Row6] [Row7] |
+| [Free Space]    | [Free Space]    | [Free Space]  |
++------------------+-----------------+---------------+</code></pre>
+            </div>
+            </p>
+            <p>Deletions leave gaps in pages, creating free space that can be reused.</p>
+            <p><strong>Scenario: Large row spanning multiple pages</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+----------------------------------------------------+
+|                       Heap File                   |
++----------------------------------------------------+
+|  Page 1         |  Page 2         |  Page 3       |
++------------------+-----------------+---------------+
+| [Row1] [Row2]   | [Part of Row8]  | [Part of Row8]|
+| [Free Space]    | [Free Space]    | [Free Space]  |
++------------------+-----------------+---------------+</code></pre>
+            </div>
+            </p>
+            <p>A large row (Row8) is split across multiple pages, linked by pointers.</p>
+            <p><strong>Scenario: Post-maintenance compacted heap</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+----------------------------------------------------+
+|                       Heap File                   |
++----------------------------------------------------+
+|  Page 1         |  Page 2         |  Page 3       |
++------------------+-----------------+---------------+
+| [Row1] [Row2]   | [Row4] [Row6]   | [Row7]        |
+| [Free Space]    | [Free Space]    | [Free Space]  |
++------------------+-----------------+---------------+</code></pre>
+            </div>
+            </p>
+            <p>Periodic maintenance (e.g., VACUUM) reorganizes rows to reclaim space and reduce fragmentation.</p>
             <h4 id="table-storage-models">Table Storage Models</h4>
             <p>Tables are stored on disk as collections of pages, but the way data is organized within these pages can vary.</p>
             <ul>
@@ -102,25 +189,133 @@
             </div>
             </p>
             <h4 id="indexes">Indexes</h4>
-            <p>Indexes are data structures that improve the speed of data retrieval operations on a database table. They are essential for efficient querying, especially in large databases.</p>
-            <p>Different types of indexes include:</p>
             <ul>
-                <li><strong>B-Tree Indexes</strong> are widely used due to their balanced tree structure, which supports efficient searches, insertions, and deletions, making them suitable for a variety of query types, including range queries.</li>
-                <li><strong>Hash Indexes</strong> rely on a hash function to map keys to specific locations, offering high efficiency for equality searches but lacking support for range queries.</li>
-                <li><strong>Bitmap Indexes</strong> use bitmaps to represent data, making them effective for columns with low cardinality (few distinct values), and they are commonly employed in data warehousing for complex analytical queries.</li>
+                <li>Indexes are important on-disk structures that optimize database query performance by directing queries to the appropriate pages without scanning the entire heap.</li>
+                <li>They come in various types, each suited to different query patterns and data characteristics.</li>
             </ul>
-            <p>A simplified illustration of a B-tree index might look like this:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+-----------------+
+|    Query        |
++--------+--------+
+         |
+         v
++--------+--------+
+|    Index Pages  |
++--------+--------+
+         |
+         v
++--------+--------+
+|   Heap Pages    |
++-----------------+</code></pre>
+            </div>
+            </p>
+            <p><strong>B-Tree Indexes</strong></p>
+            <ul>
+                <li>B-tree indexes have a balanced tree structure, supporting efficient searches, insertions, and deletions with logarithmic lookup time by navigating through a hierarchy of </li>
+                <li>Suitable for a variety of query types, including range queries.</li>
+            </ul>
             <p>
             <div>
                 <pre><code class="language-shell">Tree:
-        [50]
-       /    \
-    [25]    [75]
-   /   \    /   \
-[10] [30] [60] [90]</code></pre>
+        (root page)
+       /          \
+   (index page)  (index page)
+   /       \        /      \
+(data)   (data)  (data)  (data)</code></pre>
             </div>
             </p>
-            <p>Each node in the tree represents a page, and the structure allows for quick navigation to the desired data.</p>
+            <p><strong>Hash Indexes</strong></p>
+            <ul>
+                <li>Use a hash function to map keys to specific hash buckets, offering high efficiency for equality searches.</li>
+                <li>Do not support range queries or sorting of rows across different pages.</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-shell">[Diagram: Hash Index Mapping]
+Key1 --&gt; Bucket A
+Key2 --&gt; Bucket B
+Key3 --&gt; Bucket A</code></pre>
+            </div>
+            </p>
+            <p><strong>Bitmap Indexes</strong></p>
+            <ul>
+                <li>Represent data using bitmaps, effective for columns with low cardinality (few distinct values).</li>
+                <li>Commonly employed in data warehousing for complex analytical queries, as they can compactly represent row sets and quickly combine multiple conditions, reducing unnecessary page reads.</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-shell">[Diagram: Bitmap Index Example]
+Value1: 101010
+Value2: 110011
+Value3: 100101</code></pre>
+            </div>
+            </p>
+            <p><strong>Non-Clustered Indexes</strong></p>
+            <ul>
+                <li>Store key values along with references (pointers) to heap rows.</li>
+                <li>Allow quick lookups of pages even if the heap is not sorted.</li>
+                <li>Queries navigate through index pages to find pointers to heap pages containing matching rows.</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-shell">[Diagram: Non-Clustered Index]
++------------+       +------------+
+| Index Page | ----&gt; | Heap Page  |
++------------+       +------------+</code></pre>
+            </div>
+            </p>
+            <p><strong>Clustered Indexes</strong></p>
+            <ul>
+                <li>Physically order the table heap based on the index key, placing related rows close together on pages.</li>
+                <li>Improves the performance of range queries and ensures related data is stored contiguously.</li>
+                <li>Using random primary keys can scatter inserts across many pages, potentially degrading write performance.</li>
+                <li>Row updates that increase size may require moving the row to a different page, necessitating pointer adjustments.</li>
+            </ul>
+            <p><strong>Partial Indexes</strong></p>
+            <ul>
+                <li>Store index entries only for specific rows that meet certain conditions.</li>
+                <li>Reduce the number of index pages used and improve performance for specialized queries.</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-shell">+--------------+
+| Condition    |
++--------------+
+| Indexed Rows |
++--------------+</code></pre>
+            </div>
+            </p>
+            <p><strong>Covering Indexes</strong></p>
+            <ul>
+                <li>Include all the necessary columns for a query within the index itself.</li>
+                <li>Allow the query to retrieve data directly from the index, avoiding access to heap pages and reducing disk I/O.</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-shell">+------------+
+| Key + Data |
++------------+</code></pre>
+            </div>
+            </p>
+            <p><strong>Index-Only Scans</strong></p>
+            <ul>
+                <li>Utilize indexes that contain all the requested data.</li>
+                <li>Enable queries to bypass heap pages, further reducing disk I/O and improving performance.</li>
+            </ul>
+            <p><strong>Free Space Maps</strong></p>
+            <ul>
+                <li>Some databases maintain a map of free space across pages.</li>
+                <li>Quickly identify where new rows can be inserted, optimizing storage utilization.</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-shell">+------------+------------+------------+
+| Page 1     | Page 2     | Page 3     |
+| Free Space | Used Space | Free Space |
++------------+------------+------------+</code></pre>
+            </div>
+            </p>
             <h3 id="implications-for-performance">Implications for Performance</h3>
             <p>Understanding how tables and indexes are stored can have significant implications for database performance and optimization strategies.</p>
             <h4 id="data-locality">Data Locality</h4>
@@ -136,18 +331,22 @@
             <p>Indexes improve query performance by allowing the database to locate data without scanning every row in a table. However, they also consume disk space and can slow down write operations because the index must be updated whenever data is modified.</p>
             <p>Balancing the number and types of indexes is crucial. Over-indexing can lead to unnecessary overhead, while under-indexing can result in slow query performance.</p>
             <h3 id="practical-examples-and-commands">Practical Examples and Commands</h3>
-            <p>In systems like PostgreSQL, you can inspect and manage storage aspects using specific commands.</p>
-            <p>To check the size of a table and its indexes:</p>
+            <p>Managing and optimizing database storage is crucial for maintaining performance and ensuring efficient use of resources. Below are practical commands for PostgreSQL and MySQL that help inspect and manage storage aspects. Each command includes its purpose, when to use it, expected output, and how to interpret the results.</p>
+            <h4 id="postgresql-commands"><strong>PostgreSQL Commands</strong></h4>
+            <p>I. <strong>Check Table and Index Sizes</strong></p>
+            <ul>
+                <li>Retrieves the size of a specific table, its indexes, and the total combined size in a human-readable format.</li>
+                <li>Use when you need to understand the storage footprint of a table and its indexes to manage disk space or optimize performance.</li>
+            </ul>
             <p>
             <div>
                 <pre><code class="language-sql">SELECT
-  pg_size_pretty(pg_relation_size('your_table')) AS table_size,
-  pg_size_pretty(pg_indexes_size('your_table')) AS indexes_size,
-  pg_size_pretty(pg_total_relation_size('your_table')) AS total_size;</code></pre>
+ pg_size_pretty(pg_relation_size('your_table')) AS table_size,
+ pg_size_pretty(pg_indexes_size('your_table')) AS indexes_size,
+ pg_size_pretty(pg_total_relation_size('your_table')) AS total_size;</code></pre>
             </div>
             </p>
-            <p>This command returns the sizes in a human-readable format.</p>
-            <p>Example output:</p>
+            <p><strong>Expected Output:</strong></p>
             <p>
             <table>
                 <tr>
@@ -162,11 +361,271 @@
                 </tr>
             </table>
             </p>
-            <p>Interpreting the results:</p>
             <ul>
-                <li><strong>table_size</strong> refers to the amount of disk space allocated specifically for storing the table's raw data.</li>
-                <li><strong>indexes_size</strong> represents the total disk space used by all indexes associated with the table, which facilitate faster query operations.</li>
-                <li><strong>total_size</strong> is the sum of the table's data size and the space consumed by its indexes, indicating the overall storage footprint of the table.</li>
+                <li><strong>table_size:</strong> Disk space used by the table's raw data.</li>
+                <li><strong>indexes_size:</strong> Disk space used by all indexes associated with the table.</li>
+                <li><strong>total_size:</strong> Combined disk space of the table and its indexes, indicating the overall storage footprint.</li>
+            </ul>
+            <p>II. <strong>Analyze Query Execution with Buffer Usage</strong></p>
+            <ul>
+                <li>Provides detailed execution plans for a query, including the number of disk pages read from memory and disk.</li>
+                <li>Use when diagnosing query performance issues to understand how much data is being read from different sources.</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-sql">EXPLAIN (ANALYZE, BUFFERS) your_query;</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Seq Scan on your_table  (cost=0.00..431.00 rows=21000 width=...)
+ Buffers: shared hit=123 read=45
+ ...</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><strong>shared hit:</strong> Pages read from shared memory (cache).</li>
+                <li><strong>read:</strong> Pages read from disk.</li>
+                <li>High disk reads may indicate the need for better indexing or increased memory allocation.</li>
+            </ul>
+            <p>III. <strong>Reclaim Dead Space with VACUUM</strong></p>
+            <ul>
+                <li>Cleans up dead rows and reclaims space for future inserts, optimizing storage usage.</li>
+                <li>Regular maintenance to prevent table bloat and maintain optimal performance, especially after大量的INSERTs, UPDATEs, or DELETEs.</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-sql">VACUUM your_table;</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">VACUUM</code></pre>
+            </div>
+            </p>
+            <p>Successful execution indicates that dead space has been reclaimed. Use <code>VACUUM VERBOSE your_table;</code> for detailed output.</p>
+            <p>IV. <strong>Check Space Usage with pgstattuple</strong></p>
+            <ul>
+                <li>Provides detailed statistics about table space usage, including dead tuples and fragmentation.</li>
+                <li>Use when assessing how much space is wasted due to dead rows and fragmentation, guiding maintenance actions like <code>VACUUM</code>.</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-sql">SELECT * FROM pgstattuple('your_table');</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">table_len    |  1000000
+  tuple_count  |   20000
+  tuple_len    |    800000
+  dead_tuple_count |  5000
+  dead_tuple_len   |  200000
+  free_space        |  0</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><strong>dead_tuple_count &amp; dead_tuple_len:</strong> Amount of space occupied by obsolete rows.</li>
+                <li>High values suggest the need for vacuuming to reclaim space.</li>
+            </ul>
+            <p>V. <strong>Enable Page-Level Checksums</strong></p>
+            <ul>
+                <li>Initializes a PostgreSQL database cluster with page-level checksums to detect data corruption.</li>
+                <li>Use during database initialization to enhance data integrity by detecting corrupted pages.</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-bash">initdb --data-checksums -D /path/to/data</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Data page checksums are enabled.</code></pre>
+            </div>
+            </p>
+            <p>Ensures that any corrupted data pages are identified, enhancing reliability and data integrity.</p>
+            <p>VI. <strong>Monitor I/O Statistics with pg_stat_io</strong></p>
+            <ul>
+                <li>Provides insights into the number of pages read and written for each query.</li>
+                <li>Use when analyzing I/O performance to identify queries that cause excessive disk access.</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-sql">SELECT * FROM pg_stat_io;</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">query_id | read_pages | write_pages
+---------|------------|------------
+1        |     500    |     20
+2        |    1500    |     50</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><strong>read_pages:</strong> Number of pages read from disk or memory.</li>
+                <li><strong>write_pages:</strong> Number of pages written to disk.</li>
+                <li>High read/write counts may indicate inefficient queries or the need for indexing.</li>
+            </ul>
+            <p>VII. <strong>Optimize Memory Usage with shared_buffers</strong></p>
+            <ul>
+                <li>Sets the amount of memory allocated for PostgreSQL to cache data pages, reducing physical I/O.</li>
+                <li>Use when performance tuning to allow more data to reside in memory, thus minimizing disk access.</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-conf">shared_buffers = 2GB</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Increasing <code>shared_buffers</code> can improve performance by reducing disk reads.</li>
+                <li>Balance is required to ensure sufficient memory for other system operations.</li>
+            </ul>
+            <p>VIII. <strong>Update Statistics with ANALYZE</strong></p>
+            <ul>
+                <li>Updates the statistics about the distribution of data in the table, aiding the query planner in choosing efficient execution paths.</li>
+                <li>Use after significant data changes (INSERTs, UPDATEs, DELETEs) to ensure the query planner has accurate information.</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-sql">ANALYZE your_table;</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">ANALYZE</code></pre>
+            </div>
+            </p>
+            <p>Successful execution means statistics are updated. Use <code>EXPLAIN</code> to see how updated statistics affect query plans.</p>
+            <p>IX. <strong>Reorder Table Data with CLUSTER</strong></p>
+            <ul>
+                <li>Reorders the physical storage of a table based on an index, improving data locality for queries that use that index.</li>
+                <li>Use when queries frequently access data in the order of a specific index, enhancing I/O performance.</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-sql">CLUSTER your_table USING your_index;</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">CLUSTER</code></pre>
+            </div>
+            </p>
+            <p>The table is physically reordered, which can lead to faster sequential scans and better cache utilization for indexed queries.</p>
+            <h4 id="mysql-commands"><strong>MySQL Commands</strong></h4>
+            <p>I. <strong>Show Table Status</strong></p>
+            <ul>
+                <li>Provides detailed information about a table, including the number of rows, data length, and index length.</li>
+                <li>To assess table size, row count, and index usage for storage optimization and performance tuning.</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-sql">SHOW TABLE STATUS LIKE 'your_table';</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected Output:</strong></p>
+            <p>
+            <table>
+                <tr>
+                    <td>Name</td>
+                    <td>Engine</td>
+                    <td>Version</td>
+                    <td>Row_format</td>
+                    <td>Rows</td>
+                    <td>Avg_row_length</td>
+                    <td>Data_length</td>
+                    <td>Max_data_length</td>
+                    <td>Index_length</td>
+                    <td>...</td>
+                </tr>
+                <tr>
+                    <td>your_table</td>
+                    <td>InnoDB</td>
+                    <td>10</td>
+                    <td>Compact</td>
+                    <td>20000</td>
+                    <td>100</td>
+                    <td>2000000</td>
+                    <td>...</td>
+                    <td>500000</td>
+                    <td>...</td>
+                </tr>
+            </table>
+            </p>
+            <ul>
+                <li><strong>Rows:</strong> Number of records in the table.</li>
+                <li><strong>Data_length:</strong> Amount of space used for storing data.</li>
+                <li><strong>Index_length:</strong> Amount of space used for indexes.</li>
+                <li>High <code>Data_length</code> or <code>Index_length</code> may indicate the need for optimization.</li>
+            </ul>
+            <p>II. <strong>Monitor InnoDB Buffer Pool Metrics</strong></p>
+            <p>Used to determine how effectively the buffer pool is caching data and to identify if more memory allocation is needed.</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">SHOW GLOBAL STATUS LIKE 'Innodb_buffer_pool_read_requests';
+SHOW GLOBAL STATUS LIKE 'Innodb_buffer_pool_reads';</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><strong>Innodb_buffer_pool_read_requests:</strong> Number of logical read requests.</li>
+                <li><strong>Innodb_buffer_pool_reads:</strong> Number of reads that had to fetch data from disk.</li>
+            </ul>
+            <p><strong>Expected Output:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+---------------------------------+-------+
+| Variable_name                   | Value |
++---------------------------------+-------+
+| Innodb_buffer_pool_read_requests | 100000 |
++---------------------------------+-------+
+
++--------------------------+-------+
+| Variable_name            | Value |
++--------------------------+-------+
+| Innodb_buffer_pool_reads | 500   |
++--------------------------+-------+</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><strong>Ratio:</strong> <code>Innodb_buffer_pool_reads / Innodb_buffer_pool_read_requests</code></li>
+                <li>A low ratio indicates most reads are served from memory. A high ratio suggests insufficient buffer pool size, leading to more disk I/O.</li>
+            </ul>
+            <p>III. <strong>Adjust Buffer Pool Size</strong></p>
+            <ul>
+                <li>Sets the size of the InnoDB buffer pool, which caches data and indexes in memory to reduce disk I/O</li>
+                <li>Use during performance tuning to allocate more memory for caching, thereby improving read performance.</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-conf">innodb_buffer_pool_size = 4G</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Increasing <code>innodb_buffer_pool_size</code> can reduce disk reads.</li>
+                <li>Ensure the server has sufficient memory to accommodate the buffer pool alongside other processes.</li>
+            </ul>
+            <h3 id="other-considerations">Other Considerations</h3>
+            <ul>
+                <li>Some storage engines optimize <strong>sequential scans</strong> by prefetching pages of data into memory before they are needed. This approach takes advantage of the predictable access patterns in large analytical queries, reducing the number of individual I/O operations and significantly improving throughput for workloads that process data in sequence. </li>
+                <li><strong>Partitioning</strong> large tables involves splitting the data into smaller, more manageable chunks that are stored across multiple files. Each partition manages its own set of blocks or pages, which allows the database to handle queries more efficiently by accessing only the relevant partitions. This can improve performance by minimizing unnecessary I/O and increasing the concurrency of queries accessing different partitions. </li>
+                <li><strong>Compression</strong> techniques reduce the amount of storage required by encoding data in a more compact format. By fitting more rows into a single block, compression decreases disk usage and I/O operations. However, the tradeoff is increased CPU utilization, as the database needs to decompress data during reads and compress it again during writes. This balance is crucial in environments where both storage efficiency and processing power are important considerations. </li>
+                <li>Large <strong>indexes</strong> can grow so much that they span multiple blocks and levels within the database’s storage hierarchy. This can slow down lookup operations due to the increased number of I/O operations needed to navigate the index. Keeping index keys short and efficient reduces the overall depth of the index structure, leading to faster searches and lower storage overhead. </li>
+                <li><strong>Write-ahead logging (WAL)</strong> is a mechanism that ensures data integrity by recording changes to a log file before applying them to the main data files. This approach provides crash recovery capabilities, as the log can be replayed to restore changes in the event of a failure. However, WAL requires additional storage and generates extra I/O, which can impact write performance. </li>
+                <li><strong>SSD storage</strong> significantly enhances the speed of random data access compared to traditional HDDs. This makes certain indexing and layout strategies, such as those optimizing for random reads, more beneficial. For example, B-tree and hash indexes perform better on SSDs due to the hardware's ability to quickly retrieve scattered blocks of data. </li>
+                <li>The database engine tracks <strong>dirty blocks</strong> in memory—those that have been modified but not yet written back to disk. Periodically, the system flushes these blocks to disk to maintain data durability. This process can temporarily impact performance, especially if a large number of dirty blocks are written simultaneously or during peak system activity. </li>
+                <li>Performing <strong>bulk inserts</strong> can improve data ingestion performance by writing data in large, contiguous blocks rather than executing many small, random writes. This reduces fragmentation and the overhead associated with managing multiple small I/O operations, making bulk inserts an efficient choice for loading large datasets. </li>
+                <li>Monitoring <strong>fragmentation</strong> at the storage block level helps identify inefficiencies where data is scattered or stored in non-contiguous locations. High fragmentation can lead to increased random access patterns, slowing down query performance. Reorganizing data or rebuilding indexes can reduce fragmentation and improve access times. </li>
+                <li><strong>Striped storage volumes</strong>, created using techniques such as RAID, distribute data across multiple disks in a way that allows concurrent reads and writes. This parallelism enables the database to access multiple blocks simultaneously, significantly improving throughput for read-heavy and write-heavy workloads. </li>
+                <li><strong>In-memory databases</strong> eliminate the need for disk-based I/O, offering extremely low-latency data access by storing all data in RAM. Despite this, many in-memory systems organize their data into logical blocks or pages to maintain compatibility with traditional database algorithms and to manage memory efficiently. </li>
+                <li>Queries that rely on <strong>sequential I/O</strong> perform well when the database can read blocks of data in order without unnecessary seeks. Read-ahead mechanisms, where the database preloads data before it is requested, further enhance performance for workloads that access data sequentially, such as table scans or range queries. </li>
             </ul>
         </section>
         <div id="table-of-contents">
@@ -176,6 +635,10 @@
                     <li><a href="#storage-structures">Storage Structures</a>
                         <ol>
                             <li><a href="#pages-and-extents">Pages and Extents</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#table-and-heap-organization">Table and Heap Organization</a>
+                        <ol>
                             <li><a href="#table-storage-models">Table Storage Models</a></li>
                             <li><a href="#indexes">Indexes</a></li>
                         </ol>
@@ -187,7 +650,13 @@
                             <li><a href="#effective-indexing-strategies">Effective Indexing Strategies</a></li>
                         </ol>
                     </li>
-                    <li><a href="#practical-examples-and-commands">Practical Examples and Commands</a></li>
+                    <li><a href="#practical-examples-and-commands">Practical Examples and Commands</a>
+                        <ol>
+                            <li><a href="#postgresql-commands">PostgreSQL Commands</a></li>
+                            <li><a href="#mysql-commands">MySQL Commands</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#other-considerations">Other Considerations</a></li>
                 </ol>
             </ol>
             <div id="related-articles">
