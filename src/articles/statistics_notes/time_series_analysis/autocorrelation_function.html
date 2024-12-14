@@ -5,8 +5,8 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>ARMA, ARIMA and SARIMA Models</title>
-    <meta content="ARMA, ARIMA, and SARIMA are models commonly used to analyze and forecast time series data." name="description" />
+    <title>Autocorrelation Function (ACF) and Partial Autocorrelation Function (PACF)</title>
+    <meta content="In time series analysis, understanding the relationships between observations at different time lags is crucial for model identification and forecasting." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -53,351 +53,442 @@
         <section id="article-body">
             <p style="text-align: right;"><i>Last modified: December 14, 2024</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
-            <h2 id="arma-arima-and-sarima-models">ARMA, ARIMA and SARIMA Models</h2>
-            <p>ARMA, ARIMA, and SARIMA are models commonly used to analyze and forecast time series data. ARMA (AutoRegressive Moving Average) combines two ideas: using past values to predict current ones (<strong>autoregression</strong>) and smoothing out noise using past forecast errors (<strong>moving average</strong>). ARIMA (AutoRegressive Integrated Moving Average) builds on ARMA by adding a step to handle trends in non-stationary data through differencing. SARIMA (Seasonal ARIMA) takes it a step further by accounting for repeating seasonal patterns. These models are practical and versatile for working with time series data that show trends, noise, or seasonal effects.</p>
-            <h3 id="autoregressive-moving-average-arma-models">Autoregressive Moving Average (ARMA) Models</h3>
-            <p>ARMA models combine autoregressive (AR) and moving average (MA) components to model time series data exhibiting both autocorrelation and serial dependence.</p>
-            <h4 id="mathematical-definition-of-arma-models">Mathematical Definition of ARMA Models</h4>
-            <p>An <strong>ARMA($p, q$)</strong> model is defined by:</p>
-            <p>$$X_t = c + \sum_{i=1}^{p} \phi_i X_{t-i} + \epsilon_t + \sum_{j=1}^{q} \theta_j \epsilon_{t-j}$$</p>
-            <p>or, equivalently, using the backshift operator $B$:</p>
-            <p>$$\phi(B) X_t = c + \theta(B) \epsilon_t$$</p>
-            <p>where:</p>
+            <h2 id="autocorrelation-function-acf-and-partial-autocorrelation-function-pacf-">Autocorrelation Function (ACF) and Partial Autocorrelation Function (PACF)</h2>
+            <p>In time series analysis, understanding the relationships between observations at different time lags is crucial for model identification and forecasting. Two essential tools for analyzing these relationships are the <strong>Autocorrelation Function (ACF)</strong> and the <strong>Partial Autocorrelation Function (PACF)</strong>.</p>
             <ul>
-                <li>$\phi(B) = 1 - \phi_1 B - \phi_2 B^2 - \dots - \phi_p B^p$</li>
-                <li>$\theta(B) = 1 + \theta_1 B + \theta_2 B^2 + \dots + \theta_q B^q$</li>
+                <li>The <strong>ACF</strong> measures the correlation between observations at different time lags.</li>
+                <li>The <strong>PACF</strong> isolates the direct effect of a specific lag by removing the influence of intermediate lags.</li>
             </ul>
-            <h4 id="stationarity-of-ar-processes">Stationarity of AR Processes</h4>
-            <p>An AR($p$) process is <strong>stationary</strong> if all the roots of the characteristic polynomial $\phi(B) = 0$ lie outside the unit circle in the complex plane. This condition ensures that the time series has a constant mean and variance over time.</p>
-            <h4 id="invertibility-of-ma-processes">Invertibility of MA Processes</h4>
-            <p>An MA($q$) process is <strong>invertible</strong> if all the roots of $\theta(B) = 0$ lie outside the unit circle. Invertibility allows the MA process to be expressed as an infinite AR process, ensuring a unique representation and facilitating parameter estimation.</p>
-            <h4 id="infinite-order-representations">Infinite Order Representations</h4>
-            <p><strong>AR(∞) Representation of MA Processes</strong>:</p>
-            <p>An MA process can be expressed as an infinite-order AR process:</p>
-            <p>$$X_t = \sum_{k=1}^{\infty} \pi_k X_{t-k} + \epsilon_t$$</p>
-            <p><strong>MA(∞) Representation of AR Processes</strong>:</p>
-            <p>An AR process can be expressed as an infinite-order MA process:</p>
-            <p>$$X_t = \sum_{k=0}^{\infty} \psi_k \epsilon_{t-k}$$</p>
-            <h4 id="example-arma-1-1-process">Example: ARMA(1,1) Process</h4>
-            <p>Consider the ARMA(1,1) model:</p>
-            <p>$$X_t = \phi X_{t-1} + \epsilon_t + \theta \epsilon_{t-1}$$</p>
-            <p>Let $\phi = 0.7$, $\theta = 0.2$, and $\epsilon_t$ is white noise.</p>
-            <h5>Simulation</h5>
-            <p>To analyze this process, we simulate a large number of observations using statistical software (e.g., R or Python) to approximate its properties.</p>
-            <p>
-            <div>
-                <pre><code class="language-r">set.seed(500)
-data &lt;- arima.sim(n = 1e6, list(ar = 0.7, ma = 0.2))</code></pre>
-            </div>
-            </p>
-            <h5>Converting ARMA to Infinite Order Processes</h5>
-            <p><strong>AR(∞) Representation</strong>:</p>
-            <p>$$\begin{align<em>}
-                    (1 - \phi B) X_t &amp;= (1 + \theta B) \epsilon_t \\
-                    X_t &amp;= (1 - \phi B)^{-1} (1 + \theta B) \epsilon_t \\
-                    X_t &amp;= [1 + \phi B + \phi^2 B^2 + \dots] (1 + \theta B) \epsilon_t \\
-                    \end{align</em>}$$</p>
-            <p>Multiplying the series:</p>
-            <p>$$X_t = [1 + (\phi + \theta) B + (\phi^2 + \phi \theta) B^2 + \dots] \epsilon_t$$</p>
-            <p><strong>MA(∞) Representation</strong>:</p>
-            <p>$$X_t = \frac{1 + \theta B}{1 - \phi B} \epsilon_t = [1 + \psi_1 B + \psi_2 B^2 + \dots] \epsilon_t$$</p>
-            <p>Calculating $\psi$ coefficients:</p>
-            <p>$$\psi_k = \phi^k + \theta \phi^{k-1}$$</p>
-            <h5>Theoretical Autocorrelations</h5>
-            <p>The autocorrelation function (ACF) for an ARMA(1,1) process is:</p>
-            <p>$$\rho_k = \phi^k \left( \frac{1 + \phi \theta}{1 + 2 \phi \theta + \theta^2} \right)$$</p>
-            <p>Calculations:</p>
-            <p>$$\begin{align<em>}
-                    \rho_1 &amp;= 0.7 \left( \frac{1 + 0.7 \times 0.2}{1 + 2 \times 0.7 \times 0.2 + 0.2^2} \right) \approx 0.777 \\
-                    \rho_2 &amp;= 0.7 \times \rho_1 \approx 0.544 \\
-                    \rho_3 &amp;= 0.7 \times \rho_2 \approx 0.381 \\
-                    \end{align</em>}$$</p>
-            <h5>Results and Interpretation</h5>
+            <h3 id="autocorrelation-function-acf-">Autocorrelation Function (ACF)</h3>
+            <p>The <strong>Autocorrelation Function (ACF)</strong> measures the correlation between a time series and its lagged values. It helps detect patterns such as trends and seasonality. The autocorrelation at lag $k$, denoted $\rho_k$, is defined as:</p>
+            <p>$$
+                \rho_k = \frac{\gamma_k}{\gamma_0}
+                $$</p>
+            <p>Where:</p>
             <ul>
-                <li>The autocorrelations computed from the simulated data closely match the theoretical values, validating the model.</li>
-                <li>The ARMA(1,1) model captures both the short-term dependencies (MA component) and the longer-term autocorrelation (AR component).</li>
+                <li>$\gamma_k$ is the autocovariance at lag $k$.</li>
+                <li>$\gamma_0$ is the variance of the time series (autocovariance at lag 0).</li>
             </ul>
-            <h3 id="autoregressive-integrated-moving-average-arima-models">Autoregressive Integrated Moving Average (ARIMA) Models</h3>
-            <p>ARIMA models generalize ARMA models to include differencing, allowing them to model non-stationary time series data.</p>
-            <h4 id="mathematical-definition-of-arima-models">Mathematical Definition of ARIMA Models</h4>
-            <p>An <strong>ARIMA($p, d, q$)</strong> model is defined by:</p>
-            <p>$$\phi(B) (1 - B)^d X_t = c + \theta(B) \epsilon_t$$</p>
-            <p>where:</p>
+            <h4 id="autocovariance-function">Autocovariance Function</h4>
+            <p>The <strong>autocovariance</strong> at lag $k$ is the covariance between observations separated by $k$ time periods. It is given by:</p>
+            <p>$$
+                \gamma_k = \text{Cov}(X_t, X_{t+k}) = \mathbb{E}[(X_t - \mu)(X_{t+k} - \mu)]
+                $$</p>
+            <p>Where:</p>
             <ul>
-                <li>$\phi(B)$: Autoregressive polynomial.</li>
-                <li>$\theta(B)$: Moving average polynomial.</li>
-                <li>$d$: Order of differencing required to achieve stationarity.</li>
+                <li>$\mu$ is the mean of the time series.</li>
+                <li>$\mathbb{E}$ denotes the expectation operator.</li>
             </ul>
-            <h4 id="determining-differencing-order">Determining Differencing Order</h4>
+            <h4 id="autocorrelation-coefficient">Autocorrelation Coefficient</h4>
+            <p>The <strong>autocorrelation coefficient</strong> at lag $k$ normalizes the autocovariance $\gamma_k$ by dividing it by the variance $\gamma_0$. It is a dimensionless quantity that ranges between -1 and 1, making it easier to interpret:</p>
+            <p>$$
+                \rho_k = \frac{\gamma_k}{\gamma_0} = \frac{\mathbb{E}[(X_t - \mu)(X_{t+k} - \mu)]}{\mathbb{E}[(X_t - \mu)^2]}
+                $$</p>
+            <h4 id="sample-autocorrelation-function">Sample Autocorrelation Function</h4>
+            <p>In practice, the ACF is estimated from the data using sample autocorrelations. The <strong>sample autocorrelation coefficient</strong> $r_k$ at lag $k$ is calculated as:</p>
+            <p>$$
+                r_k = \frac{\sum_{t=1}^{N-k} (x_t - \bar{x})(x_{t+k} - \bar{x})}{\sum_{t=1}^{N} (x_t - \bar{x})^2}
+                $$</p>
+            <p>Where:</p>
             <ul>
-                <li><strong>Unit Root Tests</strong>: Tests like the Augmented Dickey-Fuller (ADF) test assess whether differencing is needed.</li>
-                <li><strong>Visual Inspection</strong>: Time series plots reveal trends or changing variance.</li>
-                <li><strong>ACF Analysis</strong>: A slow decay in the ACF suggests non-stationarity.</li>
+                <li>$\bar{x}$ is the sample mean of the series.</li>
+                <li>$N$ is the number of observations.</li>
+                <li>$x_t$ is the observed value at time $t$.</li>
             </ul>
-            <h4 id="fitting-arima-models-numerical-example">Fitting ARIMA Models: Numerical Example</h4>
-            <p>Suppose we have a time series $X_t$ exhibiting an upward trend.</p>
-            <h5>Step 1: Differencing</h5>
-            <p>First-order differencing is applied to achieve stationarity:</p>
-            <p>$$Y_t = (1 - B) X_t = X_t - X_{t-1}$$</p>
-            <h5>Step 2: Model Identification</h5>
-            <p>Analyzing the differenced series $Y_t$:</p>
-            <ul>
-                <li><strong>ACF</strong>: Significant spikes at lag $q$ suggest an MA($q$) component.</li>
-                <li><strong>PACF</strong>: Significant spikes at lag $p$ suggest an AR($p$) component.</li>
-            </ul>
-            <p>Assume ACF suggests MA(1) and PACF suggests AR(1).</p>
-            <h5>Step 3: Parameter Estimation</h5>
-            <p>Fit an ARIMA(1,1,1) model:</p>
-            <p>$$(1 - \phi B)(1 - B) X_t = c + (1 + \theta B) \epsilon_t$$</p>
-            <p>Estimate $\phi$, $\theta$, and $c$ using MLE.</p>
-            <h5>Step 4: Model Diagnostics</h5>
-            <ul>
-                <li><strong>Residual Analysis</strong>: Plot residuals to check for randomness.</li>
-                <li><strong>Ljung-Box Test</strong>: Confirm absence of autocorrelation in residuals.</li>
-                <li><strong>Information Criteria</strong>: Compare AIC and BIC values for different models.</li>
-            </ul>
-            <h5>Step 5: Forecasting</h5>
-            <p>Use the fitted model to forecast future values:</p>
-            <p>$$\hat{X}<em>{t+h} = c + \phi \hat{X}</em>{t+h-1} + \theta \hat{\epsilon}_{t+h-1}$$</p>
-            <h3 id="seasonal-arima-processes-sarima-">Seasonal ARIMA Processes (SARIMA)</h3>
-            <p>Seasonal ARIMA (SARIMA) models are widely used for time series data exhibiting both trend and seasonal behaviors.</p>
-            <h4 id="mathematical-formulation">Mathematical Formulation</h4>
-            <p>A <strong>SARIMA($p, d, q \times P, D, Q$)$_s$</strong> model incorporates both non-seasonal and seasonal factors:</p>
-            <p>$$\Phi_P(B^s) \phi_p(B) (1 - B^s)^D (1 - B)^d X_t = \Theta_Q(B^s) \theta_q(B) \epsilon_t$$</p>
-            <p><strong>Non-seasonal components</strong> in time series models include several terms: </p>
-            <ul>
-                <li>The <strong>autoregressive (AR) polynomial</strong>, represented as $\phi_p(B)$, captures the influence of past values on the current value. </li>
-                <li>The <strong>differencing order</strong>, $d$, represents the number of times the series is differenced to achieve stationarity. </li>
-                <li>The <strong>moving average (MA) polynomial</strong>, $\theta_q(B)$, models the impact of past forecast errors on the current value. </li>
-            </ul>
-            <p><strong>Seasonal components</strong> extend these concepts to capture repeating patterns: </p>
-            <ul>
-                <li>The <strong>seasonal AR polynomial</strong>, $\Phi_P(B^s)$, accounts for autoregressive effects at seasonal lags. </li>
-                <li>The <strong>seasonal differencing order</strong>, $D$, specifies the number of seasonal differences needed to remove seasonal trends. </li>
-                <li>The <strong>seasonal MA polynomial</strong>, $\Theta_Q(B^s)$, models the impact of seasonal forecast errors. </li>
-                <li>The <strong>seasonal period</strong>, $s$, defines the length of the seasonal cycle (e.g., 12 for monthly data). </li>
-            </ul>
-            <p>The <strong>backshift operator</strong> is used to reference previous values in the series:</p>
-            <ul>
-                <li>For <strong>non-seasonal lags</strong>, $BX_t = X_{t-1}$, indicating a one-period shift backward. </li>
-                <li>For <strong>seasonal lags</strong>, $B^sX_t = X_{t-s}$, referencing values from the same season in prior cycles. </li>
-            </ul>
-            <h4 id="examples-of-sarima-models">Examples of SARIMA Models</h4>
-            <h5>Example 1: SARIMA(1, 0, 0)(1, 0, 0)$_{12}$</h5>
-            <p><strong>Model Equation</strong>:</p>
-            <p>$$(1 - \phi_1 B)(1 - \Phi_1 B^{12}) X_t = \epsilon_t$$</p>
-            <ul>
-                <li><strong>Non-seasonal AR(1)</strong>: $\phi_1 B X_t$</li>
-                <li><strong>Seasonal AR(1) with period 12</strong>: $\Phi_1 B^{12} X_t$</li>
-                <li><strong>Interpretation</strong>: Current value depends on the previous value and the value from 12 periods ago.</li>
-            </ul>
-            <h5>Example 2: SARIMA(0, 1, 1)(0, 1, 1)$_{4}$</h5>
-            <p><strong>Model Equation</strong>:</p>
-            <p>$$(1 - B)(1 - B^4) X_t = (1 + \theta_1 B)(1 + \Theta_1 B^4) \epsilon_t$$</p>
-            <ul>
-                <li><strong>First-order Non-seasonal Differencing</strong>: $(1 - B) X_t$</li>
-                <li><strong>First-order Seasonal Differencing with period 4</strong>: $(1 - B^4) X_t$</li>
-                <li><strong>Non-seasonal MA(1)</strong>: $\theta_1 B \epsilon_t$</li>
-                <li><strong>Seasonal MA(1)</strong>: $\Theta_1 B^4 \epsilon_t$</li>
-            </ul>
-            <h5>Simplification and Expansion</h5>
-            <p><strong>Non-seasonal Differencing</strong>:</p>
-            <p>$$(1 - B) X_t = X_t - X_{t-1}$$</p>
-            <p><strong>Seasonal Differencing</strong>:</p>
-            <p>$$(1 - B^s) X_t = X_t - X_{t-s}$$</p>
-            <p><strong>Combining Differencing</strong>:</p>
-            <p>$$(1 - B)(1 - B^s) X_t = X_t - X_{t-1} - X_{t-s} + X_{t-s-1}$$</p>
-            <h4 id="stationarity-and-invertibility-conditions">Stationarity and Invertibility Conditions</h4>
-            <ul>
-                <li><strong>Stationarity</strong>: All roots of $\phi_p(B)$ and $\Phi_P(B^s)$ polynomials must lie outside the unit circle.</li>
-                <li><strong>Invertibility</strong>: All roots of $\theta_q(B)$ and $\Theta_Q(B^s)$ polynomials must lie outside the unit circle.</li>
-            </ul>
-            <h4 id="seasonal-differencing">Seasonal Differencing</h4>
-            <ul>
-                <li>Removes seasonal trends to achieve stationarity.</li>
-            </ul>
-            <p><strong>First-order Seasonal Differencing</strong>:</p>
-            <p>$$\nabla_s X_t = X_t - X_{t-s}$$</p>
-            <p><strong>Second-order Seasonal Differencing</strong>:</p>
-            <p>$$\nabla_s^2 X_t = X_t - 2 X_{t-s} + X_{t-2s}$$</p>
-            <h3 id="autocorrelation-function-acf-of-sarima-processes">Autocorrelation Function (ACF) of SARIMA Processes</h3>
-            <p>The ACF of a SARIMA model displays patterns reflecting both seasonal and non-seasonal behavior.</p>
-            <h4 id="example-sarima-0-0-1-0-0-1-_-12-">Example: SARIMA(0, 0, 1)(0, 0, 1)$_{12}$</h4>
-            <p><strong>Model Specification</strong>:</p>
-            <p>$$X_t = \epsilon_t + \theta_1 \epsilon_{t-1} + \Theta_1 \epsilon_{t-12} + \theta_1 \Theta_1 \epsilon_{t-13}$$</p>
-            <p><strong>Parameters</strong>:</p>
-            <ul>
-                <li>$\theta_1 = 0.7$</li>
-                <li>$\Theta_1 = 0.6$</li>
-            </ul>
-            <p><strong>Error Term</strong>:</p>
-            <p>$\epsilon_t$: White noise with mean zero and variance $\sigma^2$</p>
-            <h4 id="calculating-autocovariances">Calculating Autocovariances</h4>
-            <p>I. <strong>Variance ($\gamma_0$)</strong>:</p>
-            <p>$$\gamma_0 = \text{Var}(X_t) = \sigma^2 \left(1 + \theta_1^2 + \Theta_1^2 + \theta_1^2 \Theta_1^2\right)$$</p>
-            <p>II. <strong>Covariance at Lag 1 ($\gamma_1$)</strong>:</p>
-            <p>$$\gamma_1 = \text{Cov}(X_t, X_{t-1}) = \sigma^2 \theta_1 \left(1 + \Theta_1^2\right)$$</p>
-            <p>III. <strong>Covariance at Lag 12 ($\gamma_{12}$)</strong>:</p>
-            <p>$$\gamma_{12} = \sigma^2 \Theta_1 \left(1 + \theta_1^2\right)$$</p>
-            <p>IV. <strong>Covariance at Lag 13 ($\gamma_{13}$)</strong>:</p>
-            <p>$$\gamma_{13} = \sigma^2 \theta_1 \Theta_1 \left(1 + \theta_1 \Theta_1\right)$$</p>
-            <h4 id="calculating-autocorrelations">Calculating Autocorrelations</h4>
-            <p><strong>ACF at Lag $k$</strong>:</p>
-            <p>$$\rho_k = \frac{\gamma_k}{\gamma_0}$$</p>
-            <ul>
-                <li>Significant spikes at lags that are multiples of the seasonal period ($s$) indicate seasonal correlations.</li>
-                <li>Non-seasonal correlations are observed at lower lags.</li>
-            </ul>
-            <h3 id="example-monthly-airline-passenger-data">Example: Monthly Airline Passenger Data</h3>
-            <p>Consider a time series consisting of monthly airline passenger data. This particular time series is characterized by two distinct features: an upward trend indicating an increase in the number of passengers over time, and a seasonal pattern that repeats every 12 months, typically linked to factors such as holiday travel or seasonal tourism.</p>
-            <h3 id="steps-to-model-and-forecast-the-time-series">Steps to Model and Forecast the Time Series</h3>
-            <p>I. Decompose the Time Series into Trend, Seasonal, and Residual Components:</p>
-            <ul>
-                <li>Time series decomposition methods such as classical decomposition and STL decomposition can be applied to analyze the structure of a time series. </li>
-                <li>The decomposition process breaks down the original time series into three distinct components to enhance interpretability. </li>
-                <li>The <strong>trend component</strong> reveals the long-term direction of the data, indicating whether it is increasing, decreasing, or remaining stable over time. </li>
-                <li>The <strong>seasonal component</strong> highlights periodic patterns in the data, occurring at consistent intervals such as months, quarters, or years. </li>
-                <li>The <strong>residual component</strong> accounts for random fluctuations or noise that are not explained by the trend or seasonal patterns.</li>
-            </ul>
-            <p>II. Detrend the Time Series Using Differencing or Transformation:</p>
-            <ul>
-                <li>Methods such as logarithmic transformation and differencing are useful for stabilizing the mean and variance of a time series. </li>
-                <li><strong>Differencing</strong> involves subtracting the current value from the previous value, which helps remove trends and make the series stationary. Seasonal differencing adjusts for periodic patterns by subtracting the value from the same period in the previous cycle. </li>
-                <li><strong>Transformations</strong> like logarithmic, square root, or Box-Cox are applied to stabilize variance and reduce heteroscedasticity in the time series. These techniques make it easier to model and analyze the data effectively.</li>
-            </ul>
-            <p>III. Fit an Appropriate Model that Accounts for Both Trend and Seasonality:</p>
-            <ul>
-                <li>Models such as Seasonal ARIMA (SARIMA) and Exponential Smoothing State Space Model (ETS) are effective for forecasting time series data with seasonal patterns. </li>
-                <li><strong>SARIMA</strong> extends the ARIMA model by incorporating seasonal terms, making it suitable for data with repeating seasonal behavior. It is defined by the parameters (p, d, q) for the non-seasonal part and (P, D, Q)s for the seasonal part, where "s" represents the seasonal frequency. </li>
-                <li><strong>ETS</strong> combines error, trend, and seasonal components, making it useful for handling time series with stable seasonal patterns. It adapts to variations in the data and is flexible in modeling additive or multiplicative effects.</li>
-            </ul>
-            <p>IV. Forecast Future Values Using the Fitted Model:</p>
-            <ul>
-                <li>Use the model to forecast future values.</li>
-                <li>This step involves generating predictions based on the model's understanding of the trend and seasonal patterns in the historical data.</li>
-                <li>Ensure to provide confidence intervals for these predictions to understand the potential variability in the forecasts.</li>
-            </ul>
-            <p><img alt="seasonality_forecast" src="https://github.com/djeada/Statistics-Notes/assets/37275728/218ec3bc-81a7-492e-a69b-3bf3d97ba8de" /></p>
-            <ul>
-                <li>The <strong>original data</strong> is presented in blue, and the trend component is shown in orange, allowing for a clear visualization of long-term trends over time. </li>
-                <li>The <strong>seasonal component</strong> is depicted in green, illustrating the recurring patterns that occur periodically within the data. </li>
-                <li>The <strong>differenced series</strong> is represented in purple, demonstrating how differencing can transform the data to remove trends and achieve stationarity. </li>
-                <li>The <strong>forecast versus actual values</strong> plot combines the original series in blue and the forecasted values in red. Confidence intervals are shaded in black to indicate the forecast's uncertainty. </li>
-            </ul>
-        </section>
-        <div id="table-of-contents">
-            <h2>Table of Contents</h2>
-            <ol><a href="#arma-arima-and-sarima-models">ARMA, ARIMA and SARIMA Models</a>
-                <ol>
-                    <li><a href="#autoregressive-moving-average-arma-models">Autoregressive Moving Average (ARMA) Models</a>
-                        <ol>
-                            <li><a href="#mathematical-definition-of-arma-models">Mathematical Definition of ARMA Models</a></li>
-                            <li><a href="#stationarity-of-ar-processes">Stationarity of AR Processes</a></li>
-                            <li><a href="#invertibility-of-ma-processes">Invertibility of MA Processes</a></li>
-                            <li><a href="#infinite-order-representations">Infinite Order Representations</a></li>
-                            <li><a href="#example-arma-1-1-process">Example: ARMA(1,1) Process</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#autoregressive-integrated-moving-average-arima-models">Autoregressive Integrated Moving Average (ARIMA) Models</a>
-                        <ol>
-                            <li><a href="#mathematical-definition-of-arima-models">Mathematical Definition of ARIMA Models</a></li>
-                            <li><a href="#determining-differencing-order">Determining Differencing Order</a></li>
-                            <li><a href="#fitting-arima-models-numerical-example">Fitting ARIMA Models: Numerical Example</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#seasonal-arima-processes-sarima-">Seasonal ARIMA Processes (SARIMA)</a>
-                        <ol>
-                            <li><a href="#mathematical-formulation">Mathematical Formulation</a></li>
-                            <li><a href="#examples-of-sarima-models">Examples of SARIMA Models</a></li>
-                            <li><a href="#stationarity-and-invertibility-conditions">Stationarity and Invertibility Conditions</a></li>
-                            <li><a href="#seasonal-differencing">Seasonal Differencing</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#autocorrelation-function-acf-of-sarima-processes">Autocorrelation Function (ACF) of SARIMA Processes</a>
-                        <ol>
-                            <li><a href="#example-sarima-0-0-1-0-0-1-_-12-">Example: SARIMA(0, 0, 1)(0, 0, 1)$_{12}$</a></li>
-                            <li><a href="#calculating-autocovariances">Calculating Autocovariances</a></li>
-                            <li><a href="#calculating-autocorrelations">Calculating Autocorrelations</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#example-monthly-airline-passenger-data">Example: Monthly Airline Passenger Data</a></li>
-                    <li><a href="#steps-to-model-and-forecast-the-time-series">Steps to Model and Forecast the Time Series</a></li>
-                </ol>
+            <h4 id="plotting-the-acf">Plotting the ACF</h4>
+            <p>The <strong>Autocorrelation Function (ACF) plot</strong>, or <strong>Correlogram</strong>, is a useful tool for understanding the structure of time series data. In Python, you can generate and interpret the ACF plot using libraries like <code>statsmodels</code> and <code>matplotlib</code>. The ACF plot helps identify significant correlations at different lags and reveals patterns in the data.</p>
+            <p>e ACF plot can provide answers to the following questions:</p>
+            <pre><div><pre><code class="language-is">the observed time series white noise / random?
+Is an observation related to an adjacent observation, an observation twice-removed, and so on?
+Can the observed time series be modeled with an MA model? If yes, what is the order?</code></pre>
+    </div>
+    </pre>
+    <p>Key Points for Interpreting the ACF Plot</p>
+    <ol>
+        <li>If the ACF values decrease slowly over many lags, this suggests the presence of a <strong>trend</strong> in the data.</li>
+        <li>Repeated peaks or cyclic behavior in the ACF plot indicate <strong>seasonal patterns</strong> in the data, with regular intervals of high correlation.</li>
+        <li>A rapid drop-off or sharp cutoff after a few lags suggests the data may follow a <strong>Moving Average (MA)</strong> process, where the current value is explained by a few prior error terms (shocks).</li>
+    </ol>
+    <h4 id="python-example">Python Example</h4>
+    <p>Below is a Python example where we generate and plot the ACF for three different types of time series: one with a trend, one with seasonal patterns, and one following a moving average process.</p>
+    <p>
+    <div>
+        <pre><code class="language-python">import numpy as np
+import matplotlib.pyplot as plt
+from statsmodels.graphics.tsaplots import plot_acf
+
+# code for simulating time series with trend and seasonality
+np.random.seed(42)
+N = 1000
+
+# Example 1: Time Series with a stronger trend (Random Walk)
+trend_series = np.cumsum(np.random.normal(1, 1, N))  # Random walk simulating a trend with positive drift
+
+# Example 2: Time Series with clearer seasonality (less noise)
+seasonal_series = np.sin(np.linspace(0, 20 * np.pi, N))  # A sine wave to emphasize seasonality
+
+# Moving Average Process (MA(1)) remains the same
+ma_series = np.random.normal(0, 1, N)
+for i in range(1, N):
+    ma_series[i] += 0.5 * ma_series[i - 1]  # Moving average with lag 1
+
+# Plotting the time series
+plt.figure(figsize=(12, 8))
+plt.subplot(3, 1, 1)
+plt.plot(trend_series, label="Time Series with Trend")
+plt.title('Time Series with Trend')
+plt.grid(True)
+
+plt.subplot(3, 1, 2)
+plt.plot(seasonal_series, label="Time Series with Seasonality")
+plt.title('Time Series with Seasonality')
+plt.grid(True)
+
+plt.subplot(3, 1, 3)
+plt.plot(ma_series, label="Moving Average (MA(1)) Process")
+plt.title('Moving Average (MA(1)) Process')
+plt.grid(True)
+
+plt.tight_layout()
+plt.show()
+
+# Plotting ACF for each time series
+plt.figure(figsize=(12, 8))
+
+# ACF for the time series with trend
+plt.subplot(3, 1, 1)
+plot_acf(trend_series, lags=50, ax=plt.gca())
+plt.title('ACF of Time Series with Trend')
+
+# ACF for the time series with seasonality
+plt.subplot(3, 1, 2)
+plot_acf(seasonal_series, lags=50, ax=plt.gca())
+plt.title('ACF of Time Series with Seasonality')
+
+# ACF for the MA(1) process
+plt.subplot(3, 1, 3)
+plot_acf(ma_series, lags=50, ax=plt.gca())
+plt.title('ACF of Moving Average (MA(1)) Process')
+
+plt.tight_layout()
+plt.show()</code></pre>
+    </div>
+    </p>
+    <p>Time Series Data:</p>
+    <p><img alt="output(1)" src="https://github.com/user-attachments/assets/9358ee1c-9b09-4df8-8434-1835868b38f3" /></p>
+    <p>Acf plots:</p>
+    <p><img alt="output(2)" src="https://github.com/user-attachments/assets/ce26bcd4-bbcc-4334-a8cc-b1c52d54b548" /></p>
+    <p>Interpreting the ACF Plot:</p>
+    <ul>
+        <li><strong>Slow Decay</strong> in the first plot indicates that the time series has a <strong>trend</strong> and is non-stationary.</li>
+        <li><strong>Regular Peaks</strong> in the second plot highlight <strong>seasonal patterns</strong> in the data, repeating at consistent intervals.</li>
+        <li><strong>Sharp Cutoff</strong> in the third plot suggests that the data is generated from an <strong>MA(1)</strong> process, where values depend only on recent observations.</li>
+    </ul>
+    <h3 id="partial-autocorrelation-function-pacf-">Partial Autocorrelation Function (PACF)</h3>
+    <p>The <strong>Partial Autocorrelation Function (PACF)</strong> measures the correlation between the time series and its lagged values, after removing the linear effects of the intermediate lags. It helps isolate the direct impact of each lag.</p>
+    <p>The PACF at lag $k$, denoted by $\phi_{kk}$, represents the correlation between $X_t$ and $X_{t+k}$, after accounting for the effect of $X_{t+1}, X_{t+2}, \dots, X_{t+k-1}$.</p>
+    <h4 id="yule-walker-equations">Yule-Walker Equations</h4>
+    <p>The <strong>Yule-Walker equations</strong> for an autoregressive (AR) process provide a recursive way to compute the PACF for different lags. For an AR(p) process:</p>
+    <p>$$
+        \gamma_k = \sum_{j=1}^{p} \phi_{pj} \gamma_{k-j}
+        $$</p>
+    <p>Where $\phi_{pj}$ are the partial autocorrelation coefficients, and $\gamma_k$ is the autocovariance at lag $k$.</p>
+    <h4 id="recursive-calculation-of-pacf">Recursive Calculation of PACF</h4>
+    <p>The PACF at lag $k$ can be recursively calculated as:</p>
+    <p>I. $\phi_{11} = \rho_1$</p>
+    <p>II. For $k \geq 2$:</p>
+    <p>$$
+        \phi_{kk} = \frac{\rho_k - \sum_{j=1}^{k-1} \phi_{k-1,j} \rho_{k-j}}{1 - \sum_{j=1}^{k-1} \phi_{k-1,j} \rho_j}
+        $$</p>
+    <p>III. The intermediate coefficients $\phi_{kj}$ (for $j &lt; k$) are updated using:</p>
+    <p>$$
+        \phi_{kj} = \phi_{k-1,j} - \phi_{kk} \phi_{k-1,k-j}
+        $$</p>
+    <h4 id="plotting-the-pacf">Plotting the PACF</h4>
+    <p>The <strong>Partial Autocorrelation Function (PACF) plot</strong> is a valuable tool for understanding the relationship between a time series and its lagged values after accounting for the influence of intervening lags. Unlike the ACF, which shows the correlation between the series and its lagged values, the PACF removes the effect of any intermediate lags.</p>
+    <p>The PACF is particularly useful for identifying the order of an <strong>Autoregressive (AR) process</strong>. If you suspect your time series follows an AR model, the PACF plot can help you determine the number of lag terms to include in your model.</p>
+    <p>he PACF plot can provide answers to the following questions:</p>
+    <pre><code>Can the observed time series be modeled with an AR model? If yes, what is the order?
+</code></pre>
+    <p>Key Points for Interpreting the PACF Plot:</p>
+    <ol>
+        <li>Significant spikes at early lags indicate that those specific lags are important for modeling the time series. For an <strong>AR(p)</strong> process, you will see significant spikes up to lag ( p ), and the PACF will then cut off.</li>
+        <li>A sharp drop after lag ( p ) suggests that the time series follows an <strong>AR(p)</strong> process, meaning that only ( p ) past observations are needed to model the series.</li>
+        <li>If the PACF plot exhibits a gradual decay, this indicates the presence of a <strong>Moving Average (MA) process</strong>, since partial correlations decrease slowly over many lags.</li>
+    </ol>
+    <h4 id="python-example">Python Example</h4>
+    <p>In this example, we will simulate different time series data (AR, MA, and ARMA processes) and plot their PACF to see how they behave.</p>
+    <p>
+    <div>
+        <pre><code class="language-python">import numpy as np
+import matplotlib.pyplot as plt
+from statsmodels.tsa.arima_process import ArmaProcess
+from statsmodels.graphics.tsaplots import plot_pacf
+
+# Example 1: Simulating an AR(2) process
+np.random.seed(42)
+ar2 = np.array([1, -0.75, 0.25])  # AR(2) coefficients (X_t = 0.75*X_t-1 - 0.25*X_t-2 + noise)
+ma0 = np.array([1])  # No MA component
+AR_process = ArmaProcess(ar2, ma0)
+ar_series = AR_process.generate_sample(nsample=1000)
+
+# Example 2: Simulating a Moving Average (MA) process
+ma1 = np.array([1, 0.5])  # MA(1) coefficients
+MA_process = ArmaProcess([1], ma1)
+ma_series = MA_process.generate_sample(nsample=1000)
+
+# Example 3: Simulating an ARMA(1,1) process
+ar1 = np.array([1, 0.5])  # AR(1) coefficients
+ma1 = np.array([1, -0.5])  # MA(1) coefficients
+ARMA_process = ArmaProcess(ar1, ma1)
+arma_series = ARMA_process.generate_sample(nsample=1000)
+
+# Plotting the time series
+plt.figure(figsize=(12, 8))
+plt.subplot(3, 1, 1)
+plt.plot(ar_series, label="AR(2) Process")
+plt.title('AR(2) Process')
+plt.grid(True)
+
+plt.subplot(3, 1, 2)
+plt.plot(ma_series, label="MA(1) Process")
+plt.title('MA(1) Process')
+plt.grid(True)
+
+plt.subplot(3, 1, 3)
+plt.plot(arma_series, label="ARMA(1,1) Process")
+plt.title('ARMA(1,1) Process')
+plt.grid(True)
+
+plt.tight_layout()
+plt.show()
+
+# Plotting PACF for each time series
+plt.figure(figsize=(12, 8))
+
+# PACF for the AR(2) process
+plt.subplot(3, 1, 1)
+plot_pacf(ar_series, lags=30, ax=plt.gca())
+plt.title('PACF of AR(2) Process')
+
+# PACF for the MA(1) process
+plt.subplot(3, 1, 2)
+plot_pacf(ma_series, lags=30, ax=plt.gca())
+plt.title('PACF of MA(1) Process')
+
+# PACF for the ARMA(1,1) process
+plt.subplot(3, 1, 3)
+plot_pacf(arma_series, lags=30, ax=plt.gca())
+plt.title('PACF of ARMA(1,1) Process')
+
+plt.tight_layout()
+plt.show()</code></pre>
+    </div>
+    </p>
+    <p>Time Series Data:</p>
+    <p><img alt="Screenshot from 2024-09-09 20-32-19" src="https://github.com/user-attachments/assets/50ddf1a6-fcae-49fa-92e0-ea0f133f0265" /></p>
+    <p>Pacf plots:</p>
+    <p><img alt="Screenshot from 2024-09-09 20-35-34" src="https://github.com/user-attachments/assets/59a1ff40-5b4f-4351-bfaf-63b0e6950947" /></p>
+    <p>Interpreting the PACF Plot:</p>
+    <ul>
+        <li>In the AR(2) process, the PACF will show significant spikes at lags 1 and 2, followed by a sharp drop. This sharp cutoff indicates an autoregressive model of order 2.</li>
+        <li>In the MA(1) process, the PACF will display a gradual decay, characteristic of a moving average process, where the partial correlations decrease slowly over time.</li>
+        <li>For the ARMA(1,1) process, the PACF plot may show significant spikes at early lags, reflecting the autoregressive part, followed by a slower decay, reflecting the moving average component.</li>
+    </ul>
+    <h3 id="comparing-acf-and-pacf">Comparing ACF and PACF</h3>
+    <ul>
+        <li>The <strong>ACF</strong> measures the correlation between the time series and its lagged values, capturing both direct and indirect effects (i.e., effects from intermediate lags).</li>
+        <li>The <strong>PACF</strong> removes the influence of the intermediate lags, isolating the direct effect of each lag on the time series.</li>
+    </ul>
+    <p>In practice:</p>
+    <ul>
+        <li>The <strong>ACF</strong> of an AR(p) process decays gradually, but the <strong>PACF</strong> cuts off after lag $p$.</li>
+        <li>The <strong>ACF</strong> of an MA(q) process cuts off after lag $q$, while the <strong>PACF</strong> decays gradually.</li>
+    </ul>
+    <h3 id="example-acf-and-pacf-for-ar-1-process">Example: ACF and PACF for AR(1) Process</h3>
+    <p>Consider the autoregressive process of order 1, denoted AR(1):</p>
+    <p>$$
+        X_t = \phi X_{t-1} + \epsilon_t
+        $$</p>
+    <p>Where $\epsilon_t$ is white noise.</p>
+    <h4 id="acf-for-ar-1-">ACF for AR(1)</h4>
+    <p>The autocorrelation function for an AR(1) process is:</p>
+    <p>$$
+        \rho_k = \phi^k
+        $$</p>
+    <p>This implies that the autocorrelation decays exponentially with increasing lag $k$, showing a <strong>gradual decay</strong> in the ACF plot.</p>
+    <h4 id="pacf-for-ar-1-">PACF for AR(1)</h4>
+    <p>The partial autocorrelation function for an AR(1) process shows a <strong>significant spike at lag 1</strong>, followed by zeros at higher lags. This is because, for an AR(1) process, only the first lag has a direct effect, while higher lags are indirectly related to the series.</p>
+    <h3 id="visualization-of-acf-and-pacf">Visualization of ACF and PACF</h3>
+    <p>The following is using mock data for time series with <strong>short-term dependencies</strong>, specifically one that could be modeled as an <strong>AR(1) process</strong>. Common data types that show this behavior include <strong>financial data</strong> (such as stock prices or returns), <strong>economic indicators</strong>, or <strong>meteorological data</strong> (like temperature series).</p>
+    <p><img alt="c20f0056-8024-4e6d-a91b-3202c158da64" src="https://github.com/djeada/Statistics-Notes/assets/37275728/1154a4f5-6105-452a-a5fa-30399f43094b" /></p>
+    <h4 id="left-plot-autocorrelation-function-acf-">Left Plot: Autocorrelation Function (ACF)</h4>
+    <ul>
+        <li>The ACF plot starts at 1 for lag 0, which is expected because the series is perfectly correlated with itself at lag 0.</li>
+        <li>The ACF <strong>decays gradually</strong> but remains positive for a number of lags (up to lag ~20), which is typical of an <strong>autoregressive (AR)</strong> process, specifically an <strong>AR(1)</strong> or <strong>AR(2)</strong> model. In an AR process, past values have a direct influence on future values, leading to a slow decay in autocorrelation.</li>
+        <li>The shaded area represents the <strong>confidence intervals</strong>. If any spikes go outside these bounds, it indicates significant autocorrelation at those lags. In this case, we see that most lags within the confidence bounds are not statistically significant, but the gradual decay suggests a trend.</li>
+    </ul>
+    <h4 id="right-plot-partial-autocorrelation-function-pacf-">Right Plot: Partial Autocorrelation Function (PACF)</h4>
+    <ul>
+        <li>The PACF plot shows a <strong>sharp cutoff</strong> after lag 1. This is characteristic of an <strong>AR(1) process</strong>, where only the first lag has a significant direct effect on the current value, and the influence of higher-order lags is negligible once the first lag's effect is accounted for.</li>
+        <li>The significant spike at lag 1 suggests that this time series can be modeled as an <strong>autoregressive process of order 1 (AR(1))</strong>.</li>
+    </ul>
+    <h3 id="auto-regressive-ar-and-moving-average-ma-models-with-acf-and-pacf">Auto-Regressive (AR) and Moving Average (MA) Models with ACF and PACF</h3>
+    <p>In time series analysis, <strong>Auto-Regressive (AR)</strong> and <strong>Moving Average (MA)</strong> models are widely used for modeling and forecasting. Identifying the correct order of these models relies on interpreting the <strong>Autocorrelation Function (ACF)</strong> and the <strong>Partial Autocorrelation Function (PACF)</strong>.</p>
+    <h4 id="auto-regressive-ar-model"><strong>Auto-Regressive (AR) Model</strong></h4>
+    <p>The AR model assumes that the current value of a time series ((y_t)) is a linear combination of its past values:</p>
+    <p>[
+        \hat{y_t} = \alpha_1 y_{t-1} + \alpha_2 y_{t-2} + \dots + \alpha_p y_{t-p}
+        ]</p>
+    <ul>
+        <li><strong>Key Assumption:</strong> The present value depends on its own prior values ((y_{t-1}, y_{t-2}, \dots, y_{t-p})).</li>
+        <li><strong>ACF and PACF Interpretation:</strong></li>
+        <li><strong>PACF:</strong> Helps determine the order ((p)) of the AR model. The PACF will show significant spikes up to lag (p), after which it drops off.</li>
+        <li><strong>ACF:</strong> May decay gradually, showing a tail-off pattern, which is less helpful for directly identifying (p).</li>
+    </ul>
+    <h4 id="moving-average-ma-model"><strong>Moving Average (MA) Model</strong></h4>
+    <p>The MA model assumes that the current value ((y_t)) is influenced by past error terms ((\epsilon_t)):</p>
+    <p>[
+        \hat{y_t} = \epsilon_t + \beta_1 \epsilon_{t-1} + \beta_2 \epsilon_{t-2} + \dots + \beta_q \epsilon_{t-q}
+        ]</p>
+    <ul>
+        <li><strong>Key Assumption:</strong> The present value is driven by current and past random shocks ((\epsilon_t, \epsilon_{t-1}, \dots, \epsilon_{t-q})).</li>
+        <li><strong>ACF and PACF Interpretation:</strong></li>
+        <li><strong>ACF:</strong> Helps determine the order ((q)) of the MA model. The ACF will show significant spikes up to lag (q), after which it drops off.</li>
+        <li><strong>PACF:</strong> Typically decreases gradually and does not provide a clear cutoff for (q).</li>
+    </ul>
+    <h3 id="comparison">Comparison</h3>
+    <p>acf and pacf plots for
+        AR(1): Autoregressive process of order 1.
+        AR(2): Autoregressive process of order 2.
+        MA(1): Moving average process of order 1.
+        MA(2): Moving average process of order 2.
+        Linear Growing: A simple deterministic increasing trend.
+        Constant: A flat series with a constant value.
+        Sine with Noise: A sinusoidal series with added noise.
+        White Noise: A purely random series.</p>
+    <p><img alt="acf_pacf_cheat_sheet" src="https://github.com/user-attachments/assets/8271d59f-a3a1-42bf-8472-3565f2a04c99" /></p>
+    </section>
+    <div id="table-of-contents">
+        <h2>Table of Contents</h2>
+        <ol><a href="#autocorrelation-function-acf-and-partial-autocorrelation-function-pacf-">Autocorrelation Function (ACF) and Partial Autocorrelation Function (PACF)</a>
+            <ol>
+                <li><a href="#autocorrelation-function-acf-">Autocorrelation Function (ACF)</a>
+                    <ol>
+                        <li><a href="#autocovariance-function">Autocovariance Function</a></li>
+                        <li><a href="#autocorrelation-coefficient">Autocorrelation Coefficient</a></li>
+                        <li><a href="#sample-autocorrelation-function">Sample Autocorrelation Function</a></li>
+                        <li><a href="#plotting-the-acf">Plotting the ACF</a></li>
+                        <li><a href="#python-example">Python Example</a></li>
+                    </ol>
+                </li>
+                <li><a href="#partial-autocorrelation-function-pacf-">Partial Autocorrelation Function (PACF)</a>
+                    <ol>
+                        <li><a href="#yule-walker-equations">Yule-Walker Equations</a></li>
+                        <li><a href="#recursive-calculation-of-pacf">Recursive Calculation of PACF</a></li>
+                        <li><a href="#plotting-the-pacf">Plotting the PACF</a></li>
+                        <li><a href="#python-example">Python Example</a></li>
+                    </ol>
+                </li>
+                <li><a href="#comparing-acf-and-pacf">Comparing ACF and PACF</a></li>
+                <li><a href="#example-acf-and-pacf-for-ar-1-process">Example: ACF and PACF for AR(1) Process</a>
+                    <ol>
+                        <li><a href="#acf-for-ar-1-">ACF for AR(1)</a></li>
+                        <li><a href="#pacf-for-ar-1-">PACF for AR(1)</a></li>
+                    </ol>
+                </li>
+                <li><a href="#visualization-of-acf-and-pacf">Visualization of ACF and PACF</a>
+                    <ol>
+                        <li><a href="#left-plot-autocorrelation-function-acf-">Left Plot: Autocorrelation Function (ACF)</a></li>
+                        <li><a href="#right-plot-partial-autocorrelation-function-pacf-">Right Plot: Partial Autocorrelation Function (PACF)</a></li>
+                    </ol>
+                </li>
+                <li><a href="#auto-regressive-ar-and-moving-average-ma-models-with-acf-and-pacf">Auto-Regressive (AR) and Moving Average (MA) Models with ACF and PACF</a>
+                    <ol>
+                        <li><a href="#auto-regressive-ar-model">Auto-Regressive (AR) Model</a></li>
+                        <li><a href="#moving-average-ma-model">Moving Average (MA) Model</a></li>
+                    </ol>
+                </li>
+                <li><a href="#comparison">Comparison</a></li>
             </ol>
-            <div id="related-articles">
-                <h2>Related Articles</h2>
-                <ol>
-                    <li>Basic Concepts<ol>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/axioms_of_probability.html">Axioms of Probability</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/bayes_theorem.html">Bayes Theorem</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/bayesian_vs_frequentist.html">Bayesian vs Frequentist</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/conditional_probability.html">Conditional Probability</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/descriptive_statistics.html">Descriptive Statistics</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/geometric_probability.html">Geometric Probability</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/introduction_to_probability.html">Introduction to Probability</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/introduction_to_statistics.html">Introduction to Statistics</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/probability_tree.html">Probability Tree</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/standard_error_and_lln.html">Standard Error and Lln</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/total_probability.html">Total Probability</a></li>
-                        </ol>
-                    </li>
-                    <li>Probability Distributions<ol>
-                            <li>Continuous Distributions<ol>
-                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/continuous_distributions/beta_distribution.html">Beta Distribution</a></li>
-                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/continuous_distributions/chi_square_distribution.html">Chi Square Distribution</a></li>
-                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/continuous_distributions/exponential_distribution.html">Exponential Distribution</a></li>
-                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/continuous_distributions/f_distribution.html">F Distribution</a></li>
-                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/continuous_distributions/gamma_distribution.html">Gamma Distribution</a></li>
-                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/continuous_distributions/log_normal_distribution.html">Log Normal Distribution</a></li>
-                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/continuous_distributions/normal_distribution.html">Normal Distribution</a></li>
-                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/continuous_distributions/student_t_distribution.html">Student T Distribution</a></li>
-                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/continuous_distributions/uniform_distribution.html">Uniform Distribution</a></li>
-                                </ol>
-                            </li>
-                            <li>Discrete Distributions<ol>
-                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/discrete_distributions/binomial_distribution.html">Binomial Distribution</a></li>
-                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/discrete_distributions/geometric_distribution.html">Geometric Distribution</a></li>
-                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/discrete_distributions/negative_binomial_distribution.html">Negative Binomial Distribution</a></li>
-                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/discrete_distributions/poisson_distribution.html">Poisson Distribution</a></li>
-                                </ol>
-                            </li>
-                            <li>Intro<ol>
-                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/intro/central_limit_theorem.html">Central Limit Theorem</a></li>
-                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/intro/introduction_to_distributions.html">Introduction to Distributions</a></li>
-                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/intro/normal_curve_and_z_score.html">Normal Curve and z Score</a></li>
-                                </ol>
-                            </li>
-                        </ol>
-                    </li>
-                    <li>Correlation and Regression<ol>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/correlation_and_regression/correlation.html">Correlation</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/correlation_and_regression/covariance.html">Covariance</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/correlation_and_regression/logistic_regression.html">Logistic Regression</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/correlation_and_regression/metrics.html">Metrics</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/correlation_and_regression/multiple_regression.html">Multiple Regression</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/correlation_and_regression/simple_linear_regression.html">Simple Linear Regression</a></li>
-                        </ol>
-                    </li>
-                    <li>Time Series Analysis<ol>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/autocorrelation_function.html">Autocorrelation Function</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/autocovariance_function.html">Autocovariance Function</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/autoregressive_models.html">Autoregressive Models</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/backward_shift_operator.html">Backward Shift Operator</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/difference_equations.html">Difference Equations</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/forecasting.html">Forecasting</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/invertibility.html">Invertibility</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/moving_average_models.html">Moving Average Models</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/random_walk.html">Random Walk</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/seasonality_and_trends.html">Seasonality and Trends</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/series.html">Series</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/stationarity.html">Stationarity</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/time_series.html">Time Series</a></li>
-                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/yule_walker_equations.html">Yule Walker Equations</a></li>
-                        </ol>
-                    </li>
-                </ol>
-            </div>
+        </ol>
+        <div id="related-articles">
+            <h2>Related Articles</h2>
+            <ol>
+                <li>Basic Concepts<ol>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/axioms_of_probability.html">Axioms of Probability</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/bayes_theorem.html">Bayes Theorem</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/bayesian_vs_frequentist.html">Bayesian vs Frequentist</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/conditional_probability.html">Conditional Probability</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/descriptive_statistics.html">Descriptive Statistics</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/geometric_probability.html">Geometric Probability</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/introduction_to_probability.html">Introduction to Probability</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/introduction_to_statistics.html">Introduction to Statistics</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/probability_tree.html">Probability Tree</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/standard_error_and_lln.html">Standard Error and Lln</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/basic_concepts/total_probability.html">Total Probability</a></li>
+                    </ol>
+                </li>
+                <li>Probability Distributions<ol>
+                        <li>Continuous Distributions<ol>
+                                <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/continuous_distributions/beta_distribution.html">Beta Distribution</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/continuous_distributions/chi_square_distribution.html">Chi Square Distribution</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/continuous_distributions/exponential_distribution.html">Exponential Distribution</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/continuous_distributions/f_distribution.html">F Distribution</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/continuous_distributions/gamma_distribution.html">Gamma Distribution</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/continuous_distributions/log_normal_distribution.html">Log Normal Distribution</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/continuous_distributions/normal_distribution.html">Normal Distribution</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/continuous_distributions/student_t_distribution.html">Student T Distribution</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/continuous_distributions/uniform_distribution.html">Uniform Distribution</a></li>
+                            </ol>
+                        </li>
+                        <li>Discrete Distributions<ol>
+                                <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/discrete_distributions/binomial_distribution.html">Binomial Distribution</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/discrete_distributions/geometric_distribution.html">Geometric Distribution</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/discrete_distributions/negative_binomial_distribution.html">Negative Binomial Distribution</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/discrete_distributions/poisson_distribution.html">Poisson Distribution</a></li>
+                            </ol>
+                        </li>
+                        <li>Intro<ol>
+                                <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/intro/central_limit_theorem.html">Central Limit Theorem</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/intro/introduction_to_distributions.html">Introduction to Distributions</a></li>
+                                <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/intro/normal_curve_and_z_score.html">Normal Curve and z Score</a></li>
+                            </ol>
+                        </li>
+                    </ol>
+                </li>
+                <li>Correlation and Regression<ol>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/correlation_and_regression/correlation.html">Correlation</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/correlation_and_regression/covariance.html">Covariance</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/correlation_and_regression/logistic_regression.html">Logistic Regression</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/correlation_and_regression/metrics.html">Metrics</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/correlation_and_regression/multiple_regression.html">Multiple Regression</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/correlation_and_regression/simple_linear_regression.html">Simple Linear Regression</a></li>
+                    </ol>
+                </li>
+                <li>Time Series Analysis<ol>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/arima_models.html">Arima Models</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/autocorrelation_function.html">Autocorrelation Function</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/autocovariance_function.html">Autocovariance Function</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/autoregressive_models.html">Autoregressive Models</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/backward_shift_operator.html">Backward Shift Operator</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/difference_equations.html">Difference Equations</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/forecasting.html">Forecasting</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/invertibility.html">Invertibility</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/moving_average_models.html">Moving Average Models</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/random_walk.html">Random Walk</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/seasonality_and_trends.html">Seasonality and Trends</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/series.html">Series</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/stationarity.html">Stationarity</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/statistical_moments_and_time_series.html">Statistical Moments and Time Series</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/time_series.html">Time Series</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/time_series_modeling.html">Time Series Modeling</a></li>
+                        <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/yule_walker_equations.html">Yule Walker Equations</a></li>
+                    </ol>
+                </li>
+            </ol>
         </div>
+    </div>
     </div>
     <footer>
         <div class="footer-columns">
