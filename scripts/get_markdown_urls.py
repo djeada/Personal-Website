@@ -49,6 +49,13 @@ EN_INPUT_URLS = [
     "https://github.com/djeada/Databases-Notes/tree/main/notes/10_nosql_databases",
     "https://github.com/djeada/Databases-Notes/tree/main/notes/11_security_best_practices",
     "https://github.com/djeada/Databases-Notes/tree/main/notes/12_database_engines",
+    "https://github.com/djeada/Numerical-Methods/tree/main/notes/1_root_and_extrema_finding",
+    "https://github.com/djeada/Numerical-Methods/tree/main/notes/2_systems_of_equations",
+    "https://github.com/djeada/Numerical-Methods/tree/main/notes/3_differentiation",
+    "https://github.com/djeada/Numerical-Methods/tree/main/notes/4_integration",
+    "https://github.com/djeada/Numerical-Methods/tree/main/notes/5_matrices",
+    "https://github.com/djeada/Numerical-Methods/tree/main/notes/6_regression",
+    "https://github.com/djeada/Numerical-Methods/tree/main/notes/7_ordinary_differential_equations",
 ]
 
 EN_LANG = "EN"
