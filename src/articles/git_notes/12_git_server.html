@@ -56,10 +56,10 @@
             <h2 id="git-server">Git Server</h2>
             <p>Setting up your own Git server provides several benefits compared to relying on hosted platforms:</p>
             <ul>
-                <li><strong>Increased Control</strong>: You decide where your repositories are stored and how they are accessed.</li>
-                <li><strong>Enhanced Security</strong>: Limit outside access and define strict access policies on your own server.</li>
-                <li><strong>Customization</strong>: Integrate your repositories with custom deployment scripts or CI/CD pipelines tailored to your workflow.</li>
-                <li><strong>Scalability</strong>: Grow your server as your number of projects or developers increases.</li>
+                <li>Hosting your own server provides <strong>increased control</strong> over repository storage locations and access configurations, allowing full ownership of your data.</li>
+                <li>Self-hosting enables <strong>enhanced security</strong> by limiting outside access and allowing you to define and enforce strict access policies directly on your server.</li>
+                <li>The ability to customize allows you to <strong>integrate repositories</strong> with deployment scripts or CI/CD pipelines tailored to fit your specific workflow needs.</li>
+                <li>Self-hosted servers offer <strong>scalability</strong>, giving you the flexibility to expand resources as your number of projects or team size grows.</li>
             </ul>
             <p>Below is a high-level diagram of how various Git clients interact with a central bare repository:</p>
             <p>
@@ -87,126 +87,140 @@
          +--------------------------------+</code></pre>
             </div>
             </p>
-            <h2 id="prerequisites">Prerequisites</h2>
-            <p>I. <strong>Debian-based OS</strong>: Have a Debian-based operating system installed (e.g., Debian, Ubuntu). </p>
-            <p>II. <strong>SSH Server</strong>: Ensure <code>ssh</code> (OpenSSH) is installed and running so you can securely connect and manage the server remotely. </p>
-            <p>III. <strong>Administrative Access</strong>: Have root or sudo privileges for installing software and configuring the system. </p>
-            <h2 id="1-install-git">1. Install Git</h2>
+            <h3 id="prerequisites">Prerequisites</h3>
+            <ul>
+                <li>A <strong>Debian-based operating system</strong> such as Debian or Ubuntu should be installed on the server.</li>
+                <li>An <strong>SSH server</strong> like OpenSSH must be installed and running to enable secure remote connections and management.</li>
+                <li><strong>Administrative access</strong> with root or sudo privileges is required for installing necessary software and configuring the system.</li>
+            </ul>
+            <h3 id="install-git">Install Git</h3>
             <p>I. <strong>Update Package Lists</strong> </p>
-            <p>CODE_BLOCK_PLACEHOLDER
-                II. <strong>Install Git</strong> </p>
             <p>
             <div>
                 <pre><code class="language-bash">sudo apt update</code></pre>
             </div>
             </p>
-            <p>This installs the latest version of Git available in your distribution’s package repositories.</p>
-            <h2 id="2-set-up-a-bare-repository">2. Set Up a Bare Repository</h2>
-            <p>A bare repository is a central repository that <strong>does not</strong> contain a working directory (i.e., no files you can directly edit). Instead, it stores the Git version control data, making it ideal for sharing among multiple developers or for deployment processes.</p>
-            <h3 id="2-1-create-a-directory-for-your-repositories">2.1 Create a Directory for Your Repositories</h3>
-            <p>Decide on a location for your repositories. Below, we’re using <code>/opt/git/</code> for organizational purposes:</p>
+            <p>II. <strong>Install Git</strong> </p>
             <p>
             <div>
                 <pre><code class="language-bash">sudo apt install git-core</code></pre>
             </div>
             </p>
-            <h3 id="2-2-navigate-into-the-directory">2.2 Navigate into the Directory</h3>
+            <p>This installs the latest version of Git available in your distribution’s package repositories.</p>
+            <h3 id="set-up-a-bare-repository">Set Up a Bare Repository</h3>
+            <p>A bare repository is a central repository that <strong>does not</strong> contain a working directory (i.e., no files you can directly edit). Instead, it stores the Git version control data, making it ideal for sharing among multiple developers or for deployment processes.</p>
+            <h4 id="create-a-directory-for-your-repositories">Create a Directory for Your Repositories</h4>
+            <p>Decide on a location for your repositories. Below, we’re using <code>/opt/git/</code> for organizational purposes:</p>
             <p>
             <div>
                 <pre><code class="language-bash">sudo mkdir -p /opt/git/myrepo.git</code></pre>
             </div>
             </p>
-            <h3 id="2-3-initialize-a-bare-repository">2.3 Initialize a Bare Repository</h3>
-            <p>CODE_BLOCK_PLACEHOLDER
-                Your new bare repository is now located at <code>/opt/git/myrepo.git</code>. Other team members (or even you on another machine) can clone and push to this remote repository.</p>
-            <h2 id="3-configure-user-access">3. Configure User Access</h2>
-            <h3 id="3-1-create-a-dedicated-git-user">3.1 Create a Dedicated Git User</h3>
-            <p>For enhanced security and simplified access management, set up a dedicated <code>git</code> user:</p>
+            <h4 id="navigate-into-the-directory">Navigate into the Directory</h4>
             <p>
             <div>
                 <pre><code class="language-bash">cd /opt/git/myrepo.git</code></pre>
             </div>
             </p>
-            <p>Follow the prompts to configure the new user’s details.</p>
-            <h3 id="3-2-set-a-password-for-the-git-user">3.2 Set a Password for the Git User</h3>
-            <p>CODE_BLOCK_PLACEHOLDER
-                You can optionally skip setting a password if you plan to rely solely on SSH keys.</p>
-            <h3 id="3-3-configure-ssh-for-the-git-user">3.3 Configure SSH for the Git User</h3>
-            <p>To allow key-based SSH authentication, switch to the <code>git</code> user and set up their <code>.ssh</code> directory:</p>
+            <h4 id="initialize-a-bare-repository">Initialize a Bare Repository</h4>
             <p>
             <div>
                 <pre><code class="language-bash">sudo git init --bare</code></pre>
             </div>
             </p>
-            <ul>
-                <li><strong><code>mkdir ~/.ssh</code></strong>: Creates a directory to store SSH config and authorized keys. </li>
-                <li><strong><code>chmod 700 ~/.ssh</code></strong>: Grants read, write, and execute permissions to the <code>git</code> user only. </li>
-                <li><strong><code>touch ~/.ssh/authorized_keys</code></strong>: Creates the file that will store public keys. </li>
-                <li><strong><code>chmod 600 ~/.ssh/authorized_keys</code></strong>: Ensures that only the <code>git</code> user can read and write to this file.</li>
-            </ul>
-            <h3 id="3-4-authorize-additional-users">3.4 Authorize Additional Users</h3>
-            <p>To grant another developer access to this Git server, append their <strong>public SSH key</strong> to the <code>authorized_keys</code> file:</p>
-            <p>CODE_BLOCK_PLACEHOLDER
-                Replace <code>public_key_content</code> with the actual public key string (e.g., the contents of the user’s <code>id_rsa.pub</code> file). From now on, these users can authenticate as <code>git</code> via SSH.</p>
-            <h2 id="4-using-the-repository">4. Using the Repository</h2>
-            <p>With the server ready, developers can clone and work with the repository:</p>
+            <p>Your new bare repository is now located at <code>/opt/git/myrepo.git</code>. Other team members (or even you on another machine) can clone and push to this remote repository.</p>
+            <h3 id="configure-user-access">Configure User Access</h3>
+            <h4 id="create-a-dedicated-git-user">Create a Dedicated Git User</h4>
+            <p>For enhanced security and simplified access management, set up a dedicated <code>git</code> user:</p>
             <p>
             <div>
                 <pre><code class="language-bash">sudo adduser git</code></pre>
             </div>
             </p>
-            <ul>
-                <li><strong><code>git@yourserver</code></strong>: Replace <code>yourserver</code> with the hostname or IP address of your Git server. </li>
-                <li><strong><code>/opt/git/myrepo.git</code></strong>: The path to the bare repository you created.</li>
-            </ul>
-            <p>Once cloned, they can <strong>pull</strong> and <strong>push</strong> changes:</p>
+            <p>Follow the prompts to configure the new user’s details.</p>
+            <h4 id="set-a-password-for-the-git-user">Set a Password for the Git User</h4>
+            <p>CODE_BLOCK_PLACEHOLDER
+                You can optionally skip setting a password if you plan to rely solely on SSH keys.</p>
+            <h4 id="configure-ssh-for-the-git-user">Configure SSH for the Git User</h4>
+            <p>To allow key-based SSH authentication, switch to the <code>git</code> user and set up their <code>.ssh</code> directory:</p>
             <p>
             <div>
                 <pre><code class="language-bash">sudo passwd git</code></pre>
             </div>
             </p>
-            <h2 id="5-additional-tips-for-a-robust-git-server">5. Additional Tips for a Robust Git Server</h2>
-            <p>I. <strong>GitWeb or cgit</strong><br />
-                - For a user-friendly web interface to browse and manage repositories.<br />
-                II. <strong>Repository Backups</strong><br />
-                - Regularly back up <code>/opt/git</code> or wherever your repositories reside. Tools like <code>rsync</code> or <code>tar</code> can help automate this.<br />
-                III. <strong>Git Hooks</strong><br />
-                - Customize repository behavior with hooks (e.g., post-receive hooks for deployments).<br />
-                IV. <strong>Continuous Integration / Continuous Deployment (CI/CD)</strong><br />
-                - Integrate Jenkins, GitLab CI, or GitHub Actions (self-hosted runners) for automated builds, tests, or deployments.<br />
-                V. <strong>Monitoring &amp; Logging</strong><br />
-                - Implement system monitoring (e.g., <code>htop</code>, <code>nagios</code>, or <code>prometheus</code>) to track server resource usage.<br />
-                - Check system logs for suspicious activity or errors.<br />
-                VI. <strong>Server Security</strong><br />
-                - Keep your OS up-to-date with security patches.<br />
-                - Configure a firewall (e.g., <code>ufw</code> or <code>iptables</code>) to restrict unwanted inbound connections.<br />
-                - Use SSH key-based authentication instead of passwords whenever possible.<br />
-                VII. <strong>Keep Git Up to Date</strong><br />
-                - Regularly update Git to ensure you have the latest security patches and features. </p>
+            <ul>
+                <li>The command <strong><code>mkdir ~/.ssh</code></strong> creates a directory to store SSH configuration files and authorized keys for the user.</li>
+                <li>Using <strong><code>chmod 700 ~/.ssh</code></strong> sets permissions so that only the owner has read, write, and execute access to the <code>.ssh</code> directory.</li>
+                <li>The <strong><code>touch ~/.ssh/authorized_keys</code></strong> command creates an empty file to store public keys for granting SSH access.</li>
+                <li>Applying <strong><code>chmod 600 ~/.ssh/authorized_keys</code></strong> restricts the file's permissions so that only the user can read and write to it, ensuring secure access control.</li>
+            </ul>
+            <h4 id="authorize-additional-users">Authorize Additional Users</h4>
+            <p>To grant another developer access to this Git server, append their <strong>public SSH key</strong> to the <code>authorized_keys</code> file:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">sudo su git
+mkdir ~/.ssh
+chmod 700 ~/.ssh
+touch ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys</code></pre>
+            </div>
+            </p>
+            <p>Replace <code>public_key_content</code> with the actual public key string (e.g., the contents of the user’s <code>id_rsa.pub</code> file). From now on, these users can authenticate as <code>git</code> via SSH.</p>
+            <h3 id="using-the-repository">Using the Repository</h3>
+            <p>With the server ready, developers can clone and work with the repository:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">echo "public_key_content" &gt;&gt; ~/.ssh/authorized_keys</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Replace <strong><code>yourserver</code></strong> with the hostname or IP address of your Git server when setting up SSH connections or accessing the repository.</li>
+                <li>Specify <strong><code>/opt/git/myrepo.git</code></strong> as the path to the bare repository you created on the server for cloning, pushing, or pulling operations.</li>
+            </ul>
+            <p>Once cloned, they can <strong>pull</strong> and <strong>push</strong> changes:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">git clone git@yourserver:/opt/git/myrepo.git</code></pre>
+            </div>
+            </p>
+            <h3 id="additional-tips-for-a-robust-git-server">Additional Tips for a Robust Git Server</h3>
+            <ul>
+                <li>GitWeb or cgit can provide a <strong>user-friendly web interface</strong> for browsing and managing repositories efficiently.</li>
+                <li>Regularly backing up the repository directory, such as <code>/opt/git</code>, using <strong>tools like rsync or tar</strong> ensures data recovery in case of failures.</li>
+                <li>Git hooks allow you to <strong>customize repository behavior</strong>, such as implementing post-receive hooks for automated deployments or notifications.</li>
+                <li>Continuous Integration and Deployment (CI/CD) can be implemented using <strong>tools like Jenkins, GitLab CI, or GitHub Actions</strong>, which support automated testing, building, and deployment processes.</li>
+                <li>Monitoring server performance with <strong>tools like htop, nagios, or prometheus</strong> helps track resource usage and identify potential bottlenecks.</li>
+                <li>Reviewing system logs helps detect <strong>suspicious activity or errors</strong> that may affect server operations.</li>
+                <li>Keeping the operating system updated ensures it has the <strong>latest security patches</strong>, reducing vulnerabilities.</li>
+                <li>Using a firewall such as <strong>ufw or iptables</strong> helps restrict unnecessary inbound connections to improve server security.</li>
+                <li>SSH key-based authentication is generally <strong>more secure than passwords</strong> and is recommended for accessing the Git server.</li>
+                <li>Regularly updating Git ensures you have access to <strong>the latest features and security fixes</strong>, maintaining compatibility and reliability.</li>
+            </ul>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
-            <ol>
-                <li><a href="#git-server">Git Server</a></li>
-                <li><a href="#prerequisites">Prerequisites</a></li>
-                <li><a href="#1-install-git">1. Install Git</a></li>
-                <li><a href="#2-set-up-a-bare-repository">2. Set Up a Bare Repository</a>
-                    <ol>
-                        <li><a href="#2-1-create-a-directory-for-your-repositories">2.1 Create a Directory for Your Repositories</a></li>
-                        <li><a href="#2-2-navigate-into-the-directory">2.2 Navigate into the Directory</a></li>
-                        <li><a href="#2-3-initialize-a-bare-repository">2.3 Initialize a Bare Repository</a></li>
-                    </ol>
-                </li>
-                <li><a href="#3-configure-user-access">3. Configure User Access</a>
-                    <ol>
-                        <li><a href="#3-1-create-a-dedicated-git-user">3.1 Create a Dedicated Git User</a></li>
-                        <li><a href="#3-2-set-a-password-for-the-git-user">3.2 Set a Password for the Git User</a></li>
-                        <li><a href="#3-3-configure-ssh-for-the-git-user">3.3 Configure SSH for the Git User</a></li>
-                        <li><a href="#3-4-authorize-additional-users">3.4 Authorize Additional Users</a></li>
-                    </ol>
-                </li>
-                <li><a href="#4-using-the-repository">4. Using the Repository</a></li>
-                <li><a href="#5-additional-tips-for-a-robust-git-server">5. Additional Tips for a Robust Git Server</a></li>
+            <ol><a href="#git-server">Git Server</a>
+                <ol>
+                    <li><a href="#prerequisites">Prerequisites</a></li>
+                    <li><a href="#install-git">Install Git</a></li>
+                    <li><a href="#set-up-a-bare-repository">Set Up a Bare Repository</a>
+                        <ol>
+                            <li><a href="#create-a-directory-for-your-repositories">Create a Directory for Your Repositories</a></li>
+                            <li><a href="#navigate-into-the-directory">Navigate into the Directory</a></li>
+                            <li><a href="#initialize-a-bare-repository">Initialize a Bare Repository</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#configure-user-access">Configure User Access</a>
+                        <ol>
+                            <li><a href="#create-a-dedicated-git-user">Create a Dedicated Git User</a></li>
+                            <li><a href="#set-a-password-for-the-git-user">Set a Password for the Git User</a></li>
+                            <li><a href="#configure-ssh-for-the-git-user">Configure SSH for the Git User</a></li>
+                            <li><a href="#authorize-additional-users">Authorize Additional Users</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#using-the-repository">Using the Repository</a></li>
+                    <li><a href="#additional-tips-for-a-robust-git-server">Additional Tips for a Robust Git Server</a></li>
+                </ol>
             </ol>
             <div id="related-articles">
                 <h2>Related Articles</h2>
