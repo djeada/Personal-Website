@@ -16,6 +16,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const romanListCheckbox = document.getElementById("roman-list-conversion");
     const tabCorrectionCheckbox = document.getElementById("tab-correction");
     const latexCorrectionCheckbox = document.getElementById("latex-correction");
+    const simplifyTextCheckbox = document.getElementById("simplify-text");
 
     const searchText = document.getElementById("search-text");
     const replaceText = document.getElementById("replace-text");
@@ -154,105 +155,253 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function correctLines() {
         if (!lineCorrectionCheckbox.checked) return;
-
         saveState();
 
         let lines = editorText.value.split("\n");
-        let newLines = [];
-        let lastLineWasEmpty = false;
-        let insideCodeBlock = false; // Track if we're inside a code block
 
-        for (let index = 0; index < lines.length; index++) {
-            let line = lines[index];
+        function removeDashOnlyLines(arr) {
+            return arr.filter(l => !/^-+$/.test(l.trim()));
+        }
 
-            // Check if the line contains only dashes (after trimming spaces)
-            if (line.trim().match(/^-+$/)) {
-                // Skip processing for lines that only contain dashes
-                continue;
+        function handleBlocks(arr) {
+            let res = [];
+            let inside = false;
+            let blockMarker = null;
+
+            function toggleBlock(line, i) {
+                inside = !inside;
+                if (inside) {
+                    while (res.length && !res[res.length - 1].trim()) {
+                        res.pop();
+                    }
+                    res.push("");
+                    res.push(line);
+                } else {
+                    res.push(line);
+                    while (i + 1 < arr.length && !arr[i + 1].trim()) {
+                        i++;
+                    }
+                    res.push("");
+                }
+                return i;
             }
 
-            if (line.trim() === '```') {
-                insideCodeBlock = !insideCodeBlock; // Toggle code block state
+            for (let i = 0; i < arr.length; i++) {
+                let line = arr[i];
+                let t = line.trim();
 
-                if (insideCodeBlock) {
-                    // Starting ```
-                    newLines.push(line);
-
-                    // Remove any blank lines immediately after starting ```
-                    while (index + 1 < lines.length && lines[index + 1].trim() === '') {
-                        index++;
-                    }
-                } else {
-                    // Ending ```
-                    // Remove any blank lines immediately before ending ```
-                    while (newLines.length > 0 && newLines[newLines.length - 1].trim() === '') {
-                        newLines.pop();
-                    }
-                    newLines.push(line);
-                }
-                lastLineWasEmpty = false;
-            } else if (insideCodeBlock) {
-                // Inside code block, keep lines as is
-                newLines.push(line);
-                lastLineWasEmpty = false;
-            } else {
-                if (line.trim() === "") {
-                    if (!lastLineWasEmpty) {
-                        newLines.push("");
-                        lastLineWasEmpty = true;
-                    }
-                } else {
-                    const isListItem =
-                        line.trim().startsWith("-") ||
-                        line.trim().startsWith("*") ||
-                        /^\d+\.\s/.test(line.trim());
-
-                    const nextIsListItem =
-                        index + 1 < lines.length &&
-                        (lines[index + 1].trim().startsWith("-") ||
-                            lines[index + 1].trim().startsWith("*") ||
-                            /^\d+\.\s/.test(lines[index + 1].trim()));
-
-                    const startsWithUppercase =
-                        line.trim().charAt(0) === line.trim().charAt(0).toUpperCase();
-                    const isHeaderOrCodeBlock =
-                        line.trim().startsWith("#") || line.trim().startsWith("```");
-
-                    const isTableRow =
-                        line.trim().startsWith("|") && line.trim().endsWith("|");
-                    const prevIsTableRow =
-                        index > 0 &&
-                        lines[index - 1].trim().startsWith("|") &&
-                        lines[index - 1].trim().endsWith("|");
-
-                    if (isTableRow || prevIsTableRow) {
-                        newLines.push(line);
-                        lastLineWasEmpty = false;
-                    } else if (isListItem) {
-                        newLines.push(line);
-                        lastLineWasEmpty = false;
+                if (!inside) {
+                    if (t.includes("```")) {
+                        blockMarker = "```";
+                        i = toggleBlock(line, i);
+                    } else if (t.includes("$$")) {
+                        blockMarker = "$$";
+                        i = toggleBlock(line, i);
                     } else {
-                        if (
-                            index > 0 &&
-                            lines[index - 1].trim() !== "" &&
-                            !nextIsListItem &&
-                            (startsWithUppercase || isHeaderOrCodeBlock)
-                        ) {
-                            newLines.push("");
-                        }
-                        newLines.push(line);
-                        lastLineWasEmpty = false;
+                        res.push(line);
+                    }
+                } else {
+                    if (t.includes(blockMarker)) {
+                        i = toggleBlock(line, i);
+                    } else {
+                        res.push(line);
                     }
                 }
             }
+            return res;
         }
 
-        // Ensure the last line is empty, if needed
-        if (newLines[newLines.length - 1].trim() !== "") {
-            newLines.push("");
+        function handleLists(arr) {
+            let res = [];
+            let inside = false,
+                marker = null;
+
+            function isListItem(t) {
+                let s = t.trim();
+                return s.startsWith("-") || s.startsWith("*") || /^\d+\.\s/.test(s);
+            }
+
+            for (let i = 0; i < arr.length; i++) {
+                let line = arr[i],
+                    t = line.trim();
+                if (!inside && (t.includes("```") || t.includes("$$"))) {
+                    marker = t.includes("```") ? "```" : "$$";
+                    inside = true;
+                    res.push(line);
+                    continue;
+                } else if (inside && t.includes(marker)) {
+                    inside = false;
+                    res.push(line);
+                    continue;
+                }
+                if (inside) {
+                    res.push(line);
+                    continue;
+                }
+
+                if (isListItem(line)) {
+                    let start = i;
+                    while (i < arr.length && isListItem(arr[i])) i++;
+                    let end = i; // i is now first non-list line or arr.length
+
+                    if (res.length && res[res.length - 1].trim() !== "") {
+                        res.push("");
+                    }
+                    for (let j = start; j < end; j++) {
+                        if (arr[j].trim()) {
+                            res.push(arr[j]);
+                        }
+                    }
+                    if (end < arr.length && arr[end].trim() !== "") {
+                        res.push("");
+                    }
+                    i--;
+                } else {
+                    res.push(line);
+                }
+            }
+            return res;
         }
 
-        editorText.value = newLines.join("\n");
+        function handleTables(arr) {
+            let res = [];
+            let inside = false,
+                marker = null;
+
+            for (let i = 0; i < arr.length; i++) {
+                let line = arr[i],
+                    t = line.trim();
+                if (!inside && (t.includes("```") || t.includes("$$"))) {
+                    marker = t.includes("```") ? "```" : "$$";
+                    inside = true;
+                    res.push(line);
+                    continue;
+                } else if (inside && t.includes(marker)) {
+                    inside = false;
+                    res.push(line);
+                    continue;
+                }
+                if (inside) {
+                    res.push(line);
+                    continue;
+                }
+
+                let isTableRow = t.startsWith("|") && t.endsWith("|");
+                if (isTableRow) {
+                    let start = i;
+                    while (i < arr.length) {
+                        let temp = arr[i].trim();
+                        if (temp.startsWith("|") && temp.endsWith("|")) i++;
+                        else break;
+                    }
+                    let end = i; // i is now first non-table line or arr.length
+
+                    if (res.length && res[res.length - 1].trim() !== "") {
+                        res.push("");
+                    }
+                    for (let j = start; j < end; j++) {
+                        res.push(arr[j]);
+                    }
+                    if (end < arr.length && arr[end].trim() !== "") {
+                        res.push("");
+                    }
+                    i--;
+                } else {
+                    res.push(line);
+                }
+            }
+            return res;
+        }
+
+        function handleHeaders(arr) {
+            let res = [];
+            let inside = false,
+                marker = null;
+
+            for (let i = 0; i < arr.length; i++) {
+                let line = arr[i],
+                    t = line.trim();
+                if (!inside && (t.includes("```") || t.includes("$$"))) {
+                    marker = t.includes("```") ? "```" : "$$";
+                    inside = true;
+                    res.push(line);
+                    continue;
+                } else if (inside && t.includes(marker)) {
+                    inside = false;
+                    res.push(line);
+                    continue;
+                }
+                if (inside) {
+                    res.push(line);
+                    continue;
+                }
+
+                let isHeader = t.startsWith("#");
+                if (isHeader) {
+                    if (res.length && res[res.length - 1].trim() !== "") {
+                        res.push("");
+                    }
+                    res.push(line);
+                    if (i + 1 < arr.length && arr[i + 1].trim() !== "") {
+                        res.push("");
+                    }
+                } else {
+                    res.push(line);
+                }
+            }
+            return res;
+        }
+
+        function collapseConsecutiveEmptyLines(arr) {
+            let res = [];
+            let inside = false,
+                marker = null,
+                lastEmpty = false;
+
+            for (let i = 0; i < arr.length; i++) {
+                let line = arr[i],
+                    t = line.trim();
+                if (!inside && (t.includes("```") || t.includes("$$"))) {
+                    marker = t.includes("```") ? "```" : "$$";
+                    inside = true;
+                    res.push(line);
+                    lastEmpty = false;
+                } else if (inside && t.includes(marker)) {
+                    inside = false;
+                    res.push(line);
+                    lastEmpty = false;
+                } else if (inside) {
+                    res.push(line);
+                } else {
+                    if (!t) {
+                        if (!lastEmpty) {
+                            res.push("");
+                            lastEmpty = true;
+                        }
+                    } else {
+                        res.push(line);
+                        lastEmpty = false;
+                    }
+                }
+            }
+            return res;
+        }
+
+        function ensureLastLineEmpty(arr) {
+            if (!arr.length) return [""];
+            if (arr[arr.length - 1].trim() !== "") arr.push("");
+            return arr;
+        }
+
+        lines = removeDashOnlyLines(lines);
+        lines = handleBlocks(lines);
+        lines = handleLists(lines);
+        lines = handleTables(lines);
+        lines = handleHeaders(lines);
+        lines = collapseConsecutiveEmptyLines(lines);
+        lines = ensureLastLineEmpty(lines);
+
+        editorText.value = lines.join("\n");
     }
 
     function removeTabIndent() {
@@ -298,6 +447,27 @@ document.addEventListener("DOMContentLoaded", function() {
                 index--;
             }
             return backslashCount % 2 === 1;
+        }
+
+        // Internal function to apply additional corrections within a math block
+        function applyCorrections(content) {
+            // 1. Remove surrounding identical characters around math signs
+            // Regex Explanation:
+            // - Look for a non-space character (captured as \1)
+            // - Followed by one of the math signs [=<>+\-]
+            // - Followed by the same non-space character (\1)
+            // Replace the entire match with just the math sign.
+
+            // Using a regex that ensures the surrounding characters are identical and not space
+            content = content.replace(/([^ \t\n\r\f\v=<>+\-])([=<>+\-])\1/g, '$2');
+
+            // 2. Replace ,$, ;$, .$ with $
+            content = content.replace(/([,;\.])\$/g, '$');
+
+            // 3. Replace ,d and .d with d
+            content = content.replace(/([,\.])d/g, 'd');
+
+            return content;
         }
 
         while (i < text.length) {
@@ -349,12 +519,48 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 if (contentEnd !== null) {
                     // Found matching closing delimiter
-                    const content = text.substring(contentStart, contentEnd);
+                    let content = text.substring(contentStart, contentEnd);
+
+                    // Apply additional corrections within the math block
+                    content = applyCorrections(content);
+
                     result += replacementDelimiter + content + replacementDelimiter;
                     // Move i to after the closing delimiter and any skipped whitespace
                     i = k + endDelimiter.length;
                 } else {
                     // No matching closing delimiter, copy the opening delimiter and move on
+                    result += text[i];
+                    i++;
+                }
+            } else if (text[i] === '$') {
+                // Handle existing $...$ or $$...$$ blocks
+                let delimiter = '$';
+                if (text[i + 1] === '$') {
+                    delimiter = '$$';
+                }
+                let startDelimiter = delimiter;
+                let endDelimiter = delimiter;
+                let j = i + delimiter.length;
+
+                let contentStart = j;
+
+                // Find the matching closing delimiter
+                let contentEnd = text.indexOf(endDelimiter, j);
+                while (contentEnd !== -1 && isEscaped(text, contentEnd)) {
+                    // If the found delimiter is escaped, search for the next one
+                    contentEnd = text.indexOf(endDelimiter, contentEnd + endDelimiter.length);
+                }
+
+                if (contentEnd !== -1) {
+                    let content = text.substring(contentStart, contentEnd);
+
+                    // Apply additional corrections within the math block
+                    content = applyCorrections(content);
+
+                    result += startDelimiter + content + endDelimiter;
+                    i = contentEnd + endDelimiter.length;
+                } else {
+                    // No matching closing delimiter, copy the current character and move on
                     result += text[i];
                     i++;
                 }
@@ -537,6 +743,424 @@ document.addEventListener("DOMContentLoaded", function() {
         editorText.value = text;
     }
 
+    function simplifyText() {
+        // Check if Text Simplification is enabled
+        if (!simplifyTextCheckbox.checked) return;
+
+        saveState(); // Save current editor state
+
+        let text = editorText.value;
+        let result = '';
+        let i = 0;
+
+        // Helper function to check if the character at position index is escaped
+        function isEscaped(text, index) {
+            let backslashCount = 0;
+            index--;
+            while (index >= 0 && text[index] === '\\') {
+                backslashCount++;
+                index--;
+            }
+            return backslashCount % 2 === 1;
+        }
+
+        // Internal function to apply word replacements in text blocks
+        function applySimplifications(content) {
+            // Define the mapping of complex words to simpler alternatives
+            const replacements = {
+                'crucial': 'important',
+                'critical': 'important',
+                'employ': 'use',
+                'ensure': 'make sure',
+                'essential': 'necessary',
+                'pivotal': 'key',
+                'signifies': 'indicates',
+                'established': 'set up',
+                'navigate': 'find your way through',
+                'paramount': 'most important',
+                'ultimately': 'finally',
+                'esteemed': 'respected',
+                'myriad': 'many',
+                'tapestry': 'fabric',
+                'meticulous': 'careful',
+                'intricate': 'complex',
+                'facilitating': 'helping',
+                'commendable': 'praiseworthy',
+                'robust': 'strong',
+                'seamless': 'smooth',
+                'multi-faceted': 'many-sided',
+                'complex': 'complicated',
+                'ample': 'enough',
+                'ascertain': 'find out',
+                'benevolent': 'kind',
+                'cognizant': 'aware',
+                'disseminate': 'spread',
+                'endeavor': 'effort',
+                'exacerbate': 'worsen',
+                'facilitate': 'help',
+                'gregarious': 'sociable',
+                'hinder': 'block',
+                'implement': 'carry out',
+                'juxtapose': 'place side by side',
+                'leverage': 'use',
+                'magnanimous': 'generous',
+                'negligible': 'insignificant',
+                'obfuscate': 'confuse',
+                'perfunctory': 'done without care',
+                'quintessential': 'perfect example',
+                'reiterate': 'repeat',
+                'substantiate': 'prove',
+                'transient': 'temporary',
+                'ubiquitous': 'everywhere',
+                'vacillate': 'waver',
+                'wane': 'decrease',
+                'xenophobia': 'fear of foreigners',
+                'yoke': 'join',
+                'zealous': 'enthusiastic',
+                'ameliorate': 'improve',
+                'belligerent': 'hostile',
+                'capricious': 'unpredictable',
+                'deleterious': 'harmful',
+                'efficacious': 'effective',
+                'fortuitous': 'accidental',
+                'gratuitous': 'unnecessary',
+                'hapless': 'unfortunate',
+                'idiosyncratic': 'unique',
+                'jargon': 'specialized language',
+                'knack': 'skill',
+                'laconic': 'brief',
+                'mellifluous': 'pleasant sounding',
+                'nonchalant': 'casual',
+                'ostracize': 'exclude',
+                'pragmatic': 'practical',
+                'quandary': 'dilemma',
+                'rampant': 'widespread',
+                'sagacious': 'wise',
+                'taciturn': 'quiet',
+                'untenable': 'unsustainable',
+                'venerable': 'respected',
+                'whimsical': 'playful',
+                'xenial': 'hospitable',
+                'yonder': 'over there',
+                'zephyr': 'breeze',
+                'aesthetic': 'beautiful',
+                'bucolic': 'rustic',
+                'cajole': 'persuade',
+                'daunting': 'intimidating',
+                'ephemeral': 'short-lived',
+                'flamboyant': 'showy',
+                'gregarious': 'sociable',
+                'heinous': 'horrible',
+                'immutable': 'unchanging',
+                'jubilant': 'joyful',
+                'kinetic': 'relating to motion',
+                'lucid': 'clear',
+                'mundane': 'ordinary',
+                'noxious': 'harmful',
+                'ostentatious': 'showy',
+                'placate': 'calm',
+                'quell': 'suppress',
+                'resilient': 'strong',
+                'stoic': 'unemotional',
+                'tangible': 'real',
+                'umbrage': 'offense',
+                'vapid': 'dull',
+                'wane': 'decrease',
+                'xylem': 'plant tissue',
+                'yielding': 'flexible',
+                'zenith': 'peak',
+                'alacrity': 'eagerness',
+                'blatant': 'obvious',
+                'candid': 'honest',
+                'deference': 'respect',
+                'elucidate': 'explain',
+                'fallacious': 'incorrect',
+                'garish': 'bright and showy',
+                'harbinger': 'forerunner',
+                'iconoclast': 'rebel',
+                'juxtaposition': 'comparison',
+                'kudos': 'praise',
+                'languid': 'slow',
+                'munificent': 'generous',
+                'nonplussed': 'confused',
+                'obdurate': 'stubborn',
+                'palpable': 'clear',
+                'querulous': 'complaining',
+                'reticent': 'quiet',
+                'sanguine': 'optimistic',
+                'tirade': 'rant',
+                'ubiquity': 'everywhere',
+                'vociferous': 'loud',
+                'winsome': 'charming',
+                'yawning': 'wide',
+                'zealot': 'enthusiast',
+                'aberration': 'deviation',
+                'bombastic': 'overblown',
+                'camaraderie': 'friendship',
+                'deleterious': 'harmful',
+                'enigma': 'mystery',
+                'fallacy': 'mistake',
+                'garrulous': 'talkative',
+                'hubris': 'arrogance',
+                'insidious': 'sneaky',
+                'jocular': 'funny',
+                'lachrymose': 'tearful',
+                'malaise': 'unease',
+                'nefarious': 'wicked',
+                'obsequious': 'overly obedient',
+                'paradigm': 'model',
+                'quixotic': 'unrealistic',
+                'recalcitrant': 'stubborn',
+                'soporific': 'sleep-inducing',
+                'tantamount': 'equivalent',
+                'unilateral': 'one-sided',
+                'voracious': 'hungry',
+                'winsome': 'charming',
+                'xenial': 'hospitable',
+                'yearn': 'long for',
+                'zeal': 'enthusiasm',
+                'ameliorate': 'improve',
+                'bifurcate': 'split',
+                'cogent': 'persuasive',
+                'dichotomy': 'division',
+                'ebb': 'decline',
+                'facade': 'front',
+                'garner': 'gather',
+                'hinder': 'block',
+                'immutable': 'unchanging',
+                'juxtapose': 'place side by side',
+                'knell': 'bell sound indicating death',
+                'lucid': 'clear',
+                'maudlin': 'sentimental',
+                'nonchalant': 'casual',
+                'opulent': 'rich',
+                'palliate': 'lessen',
+                'quagmire': 'difficult situation',
+                'rapacious': 'greedy',
+                'sagacity': 'wisdom',
+                'tacit': 'unspoken',
+                'umbrage': 'offense',
+                'vicarious': 'experienced through others',
+                'wane': 'decrease',
+                'xenophobia': 'fear of foreigners',
+                'yearn': 'long for',
+                'zealous': 'enthusiastic',
+                'ambivalent': 'uncertain',
+                'bellicose': 'aggressive',
+                'censure': 'criticize',
+                'deleterious': 'harmful',
+                'elaborate': 'detailed',
+                'fortitude': 'courage',
+                'gratuitous': 'unnecessary',
+                'hubris': 'arrogance',
+                'impervious': 'unaffected',
+                'jovial': 'cheerful',
+                'lucid': 'clear',
+                'misanthrope': 'people-hater',
+                'nonpareil': 'unmatched',
+                'oblique': 'indirect',
+                'precocious': 'advanced',
+                'quandary': 'dilemma',
+                'rescind': 'cancel',
+                'stoic': 'unemotional',
+                'truculent': 'aggressive',
+                'vacillate': 'waver',
+                'wanton': 'uncontrolled',
+                'xenial': 'hospitable',
+                'yoke': 'join',
+                'zenith': 'peak',
+                'apathy': 'indifference',
+                'blandishment': 'flattery',
+                'circumspect': 'cautious',
+                'demure': 'reserved',
+                'ephemeral': 'short-lived',
+                'fallacious': 'incorrect',
+                'grandiose': 'impressive',
+                'hapless': 'unfortunate',
+                'impecunious': 'poor',
+                'jingoism': 'extreme nationalism',
+                'knavery': 'dishonesty',
+                'loquacious': 'talkative',
+                'munificent': 'generous',
+                'negligent': 'careless',
+                'obfuscate': 'confuse',
+                'palpable': 'clear',
+                'quiescent': 'inactive',
+                'ravenous': 'hungry',
+                'sagacious': 'wise',
+                'tirade': 'rant',
+                'umbrageous': 'offensive',
+                'vapid': 'dull',
+                'winsome': 'charming',
+                'xenophobia': 'fear of foreigners',
+                'yawning': 'wide',
+                'zephyr': 'breeze',
+                'ambiguous': 'unclear',
+                'bombastic': 'overblown',
+                'candid': 'honest',
+                'deleterious': 'harmful',
+                'enigmatic': 'mysterious',
+                'fallacious': 'incorrect',
+                'gregarious': 'sociable',
+                'haughty': 'arrogant',
+                'immutable': 'unchanging',
+                'juxtaposition': 'comparison',
+                'kinetic': 'relating to motion',
+                'lucid': 'clear',
+                'malevolent': 'evil',
+                'nefarious': 'wicked',
+                'obstinate': 'stubborn',
+                'placate': 'calm',
+                'quandary': 'dilemma',
+                'resilient': 'strong',
+                'stoic': 'unemotional',
+                'tangible': 'real',
+                'umbrage': 'offense',
+                'venerable': 'respected',
+                'winsome': 'charming',
+                'yonder': 'over there',
+                'zealous': 'enthusiastic',
+                // Add more replacements as needed
+            };
+
+            // Create a regex pattern to match all keys in the replacements map
+            // The 'i' flag makes it case-insensitive
+            const pattern = new RegExp(`\\b(${Object.keys(replacements).join('|')})\\b`, 'gi');
+
+            // Replace matched words using the replacements map
+            content = content.replace(pattern, function(match) {
+                // Preserve the original case (capitalize if necessary)
+                const lowerMatch = match.toLowerCase();
+                let replacement = replacements[lowerMatch];
+
+                if (!replacement) return match; // If no replacement found, return the original word
+
+                // Handle case preservation
+                if (match[0] === match[0].toUpperCase()) {
+                    // Capitalize the first letter of the replacement
+                    replacement = replacement.charAt(0).toUpperCase() + replacement.slice(1);
+                }
+
+                return replacement;
+            });
+
+            return content;
+        }
+
+        while (i < text.length) {
+            // Check for unescaped \[ or \(
+            if (text[i] === '\\' && (text[i + 1] === '[' || text[i + 1] === '(') && !isEscaped(text, i)) {
+                const startDelimiter = text.substr(i, 2); // '\[' or '\('
+                const endDelimiter = startDelimiter === '\\[' ? '\\]' : '\\)';
+                const replacementDelimiter = startDelimiter === '\\[' ? '$$' : '$';
+                let j = i + 2; // Position after the opening delimiter
+
+                // Skip optional whitespace/newlines after opening delimiter
+                if (startDelimiter === '\\[') {
+                    while (j < text.length && /\s/.test(text[j])) {
+                        j++;
+                    }
+                } else if (startDelimiter === '\\(') {
+                    while (j < text.length && text[j] === ' ') {
+                        j++;
+                    }
+                }
+
+                let contentStart = j; // Start position of the content
+
+                // Search for the closing delimiter
+                let contentEnd = null;
+                let k; // Declare k here
+                while (j < text.length) {
+                    k = j; // Assign to k inside the loop
+
+                    // Before checking for endDelimiter, skip optional whitespace/newlines before it
+                    if (endDelimiter === '\\]') {
+                        while (k < text.length && /\s/.test(text[k])) {
+                            k++;
+                        }
+                    } else if (endDelimiter === '\\)') {
+                        while (k < text.length && text[k] === ' ') {
+                            k++;
+                        }
+                    }
+
+                    // Check for unescaped closing delimiter at position k
+                    if (text.substr(k, endDelimiter.length) === endDelimiter && !isEscaped(text, k)) {
+                        contentEnd = j; // End position of the content (before skipped whitespace)
+                        break;
+                    } else {
+                        j++;
+                    }
+                }
+
+                if (contentEnd !== null) {
+                    // Found matching closing delimiter
+                    let content = text.substring(contentStart, contentEnd);
+
+                    // Do NOT apply simplifications within math blocks
+                    result += replacementDelimiter + content + replacementDelimiter;
+                    // Move i to after the closing delimiter and any skipped whitespace
+                    i = k + endDelimiter.length;
+                } else {
+                    // No matching closing delimiter, copy the opening delimiter and move on
+                    result += text[i];
+                    i++;
+                }
+            } else if (text[i] === '$') {
+                // Handle existing $...$ or $$...$$ blocks
+                let delimiter = '$';
+                if (text[i + 1] === '$') {
+                    delimiter = '$$';
+                }
+                let startDelimiter = delimiter;
+                let endDelimiter = delimiter;
+                let j = i + delimiter.length;
+
+                let contentStart = j;
+
+                // Find the matching closing delimiter
+                let contentEnd = text.indexOf(endDelimiter, j);
+                while (contentEnd !== -1 && isEscaped(text, contentEnd)) {
+                    // If the found delimiter is escaped, search for the next one
+                    contentEnd = text.indexOf(endDelimiter, contentEnd + endDelimiter.length);
+                }
+
+                if (contentEnd !== -1) {
+                    // Found matching closing delimiter
+                    let content = text.substring(contentStart, contentEnd);
+
+                    // Do NOT apply simplifications within math blocks
+                    result += startDelimiter + content + endDelimiter;
+                    i = contentEnd + endDelimiter.length;
+                } else {
+                    // No matching closing delimiter, copy the current character and move on
+                    result += text[i];
+                    i++;
+                }
+            } else {
+                // Handle regular text outside math blocks
+                // Find the next delimiter to minimize processing
+                let nextDelimiterIndex = text.indexOf('\\[', i);
+                let nextDelimiterIndex2 = text.indexOf('\\(', i);
+                let nextDelimiterIndex3 = text.indexOf('$', i);
+                let nextIndices = [nextDelimiterIndex, nextDelimiterIndex2, nextDelimiterIndex3].filter(index => index !== -1);
+                let nextIndex = nextIndices.length > 0 ? Math.min(...nextIndices) : text.length;
+
+                // Extract the text block to simplify
+                let textBlock = text.substring(i, nextIndex);
+
+                // Apply simplifications to the text block
+                textBlock = applySimplifications(textBlock);
+
+                result += textBlock;
+                i = nextIndex;
+            }
+        }
+
+        // Set the simplified text back to the editor
+        editorText.value = result;
+    }
 
     function replaceTextFunction() {
         const searchValue = searchText.value;
@@ -561,6 +1185,8 @@ document.addEventListener("DOMContentLoaded", function() {
         removeTabIndent();
         correctLines();
         correctLatex();
+        simplifyText();
+
     });
     replaceButton.addEventListener("click", replaceTextFunction);
     undoButton.addEventListener("click", undo);
