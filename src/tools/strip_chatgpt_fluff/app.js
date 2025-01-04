@@ -159,250 +159,100 @@ document.addEventListener("DOMContentLoaded", function() {
 
         let lines = editorText.value.split("\n");
 
-        function removeDashOnlyLines(arr) {
-            return arr.filter(l => !/^-+$/.test(l.trim()));
+        // Pass 1: Insert blank lines before and after code/math blocks, headers, tables
+        // but do nothing if we're already inside a code/math block.
+        let pass1 = [];
+        let inBlock = false,
+            blockMarker = null;
+
+        function pushBlankLineIfNeeded(arr) {
+            if (arr.length && arr[arr.length - 1].trim() !== "") {
+                arr.push("");
+            }
         }
 
-        function handleBlocks(arr) {
-            let res = [];
-            let inside = false;
-            let blockMarker = null;
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i];
+            let t = line.trim();
 
-            function toggleBlock(line, i) {
-                inside = !inside;
-                if (inside) {
-                    while (res.length && !res[res.length - 1].trim()) {
-                        res.pop();
-                    }
-                    res.push("");
-                    res.push(line);
-                } else {
-                    res.push(line);
-                    while (i + 1 < arr.length && !arr[i + 1].trim()) {
-                        i++;
-                    }
-                    res.push("");
-                }
-                return i;
-            }
-
-            for (let i = 0; i < arr.length; i++) {
-                let line = arr[i];
-                let t = line.trim();
-
-                if (!inside) {
-                    if (t.includes("```")) {
-                        blockMarker = "```";
-                        i = toggleBlock(line, i);
-                    } else if (t.includes("$$")) {
-                        blockMarker = "$$";
-                        i = toggleBlock(line, i);
-                    } else {
-                        res.push(line);
-                    }
-                } else {
-                    if (t.includes(blockMarker)) {
-                        i = toggleBlock(line, i);
-                    } else {
-                        res.push(line);
-                    }
-                }
-            }
-            return res;
-        }
-
-        function handleLists(arr) {
-            let res = [];
-            let inside = false,
-                marker = null;
-
-            function isListItem(t) {
-                let s = t.trim();
-                return s.startsWith("-") || s.startsWith("*") || /^\d+\.\s/.test(s);
-            }
-
-            for (let i = 0; i < arr.length; i++) {
-                let line = arr[i],
-                    t = line.trim();
-                if (!inside && (t.includes("```") || t.includes("$$"))) {
-                    marker = t.includes("```") ? "```" : "$$";
-                    inside = true;
-                    res.push(line);
-                    continue;
-                } else if (inside && t.includes(marker)) {
-                    inside = false;
-                    res.push(line);
-                    continue;
-                }
-                if (inside) {
-                    res.push(line);
-                    continue;
-                }
-
-                if (isListItem(line)) {
-                    let start = i;
-                    while (i < arr.length && isListItem(arr[i])) i++;
-                    let end = i; // i is now first non-list line or arr.length
-
-                    if (res.length && res[res.length - 1].trim() !== "") {
-                        res.push("");
-                    }
-                    for (let j = start; j < end; j++) {
-                        if (arr[j].trim()) {
-                            res.push(arr[j]);
+            if (!inBlock) {
+                if (t === "```" || t === "$$") {
+                    pushBlankLineIfNeeded(pass1);
+                    pass1.push(line);
+                    inBlock = true;
+                    blockMarker = t;
+                } else if (/^#+\s/.test(t)) {
+                    pushBlankLineIfNeeded(pass1);
+                    pass1.push(line);
+                    pass1.push("");
+                } else if (t.startsWith("|") && t.endsWith("|")) {
+                    pushBlankLineIfNeeded(pass1);
+                    pass1.push(line);
+                    while (i + 1 < lines.length) {
+                        let nt = lines[i + 1].trim();
+                        if (nt.startsWith("|") && nt.endsWith("|")) {
+                            i++;
+                            pass1.push(lines[i]);
+                        } else {
+                            break;
                         }
                     }
-                    if (end < arr.length && arr[end].trim() !== "") {
-                        res.push("");
-                    }
-                    i--;
+                    pass1.push("");
                 } else {
-                    res.push(line);
+                    pass1.push(line);
+                }
+            } else {
+                pass1.push(line);
+                if (t === blockMarker) {
+                    inBlock = false;
+                    blockMarker = null;
+                    pushBlankLineIfNeeded(pass1);
                 }
             }
-            return res;
         }
 
-        function handleTables(arr) {
-            let res = [];
-            let inside = false,
-                marker = null;
+        // Pass 2: Collapse consecutive blank lines outside blocks only.
+        let pass2 = [];
+        inBlock = false;
+        blockMarker = null;
+        let lastEmpty = false;
 
-            for (let i = 0; i < arr.length; i++) {
-                let line = arr[i],
-                    t = line.trim();
-                if (!inside && (t.includes("```") || t.includes("$$"))) {
-                    marker = t.includes("```") ? "```" : "$$";
-                    inside = true;
-                    res.push(line);
-                    continue;
-                } else if (inside && t.includes(marker)) {
-                    inside = false;
-                    res.push(line);
-                    continue;
-                }
-                if (inside) {
-                    res.push(line);
-                    continue;
-                }
+        for (let i = 0; i < pass1.length; i++) {
+            let line = pass1[i];
+            let t = line.trim();
 
-                let isTableRow = t.startsWith("|") && t.endsWith("|");
-                if (isTableRow) {
-                    let start = i;
-                    while (i < arr.length) {
-                        let temp = arr[i].trim();
-                        if (temp.startsWith("|") && temp.endsWith("|")) i++;
-                        else break;
-                    }
-                    let end = i; // i is now first non-table line or arr.length
-
-                    if (res.length && res[res.length - 1].trim() !== "") {
-                        res.push("");
-                    }
-                    for (let j = start; j < end; j++) {
-                        res.push(arr[j]);
-                    }
-                    if (end < arr.length && arr[end].trim() !== "") {
-                        res.push("");
-                    }
-                    i--;
-                } else {
-                    res.push(line);
-                }
-            }
-            return res;
-        }
-
-        function handleHeaders(arr) {
-            let res = [];
-            let inside = false,
-                marker = null;
-
-            for (let i = 0; i < arr.length; i++) {
-                let line = arr[i],
-                    t = line.trim();
-                if (!inside && (t.includes("```") || t.includes("$$"))) {
-                    marker = t.includes("```") ? "```" : "$$";
-                    inside = true;
-                    res.push(line);
-                    continue;
-                } else if (inside && t.includes(marker)) {
-                    inside = false;
-                    res.push(line);
-                    continue;
-                }
-                if (inside) {
-                    res.push(line);
-                    continue;
-                }
-
-                let isHeader = t.startsWith("#");
-                if (isHeader) {
-                    if (res.length && res[res.length - 1].trim() !== "") {
-                        res.push("");
-                    }
-                    res.push(line);
-                    if (i + 1 < arr.length && arr[i + 1].trim() !== "") {
-                        res.push("");
-                    }
-                } else {
-                    res.push(line);
-                }
-            }
-            return res;
-        }
-
-        function collapseConsecutiveEmptyLines(arr) {
-            let res = [];
-            let inside = false,
-                marker = null,
-                lastEmpty = false;
-
-            for (let i = 0; i < arr.length; i++) {
-                let line = arr[i],
-                    t = line.trim();
-                if (!inside && (t.includes("```") || t.includes("$$"))) {
-                    marker = t.includes("```") ? "```" : "$$";
-                    inside = true;
-                    res.push(line);
+            if (!inBlock) {
+                if (t === "```" || t === "$$") {
+                    pass2.push(line);
+                    inBlock = true;
+                    blockMarker = t;
                     lastEmpty = false;
-                } else if (inside && t.includes(marker)) {
-                    inside = false;
-                    res.push(line);
-                    lastEmpty = false;
-                } else if (inside) {
-                    res.push(line);
-                } else {
-                    if (!t) {
-                        if (!lastEmpty) {
-                            res.push("");
-                            lastEmpty = true;
-                        }
-                    } else {
-                        res.push(line);
-                        lastEmpty = false;
+                } else if (t === "") {
+                    if (!lastEmpty) {
+                        pass2.push("");
+                        lastEmpty = true;
                     }
+                } else {
+                    pass2.push(line);
+                    lastEmpty = false;
+                }
+            } else {
+                pass2.push(line);
+                if (t === blockMarker) {
+                    inBlock = false;
+                    blockMarker = null;
+                    lastEmpty = false;
                 }
             }
-            return res;
         }
 
-        function ensureLastLineEmpty(arr) {
-            if (!arr.length) return [""];
-            if (arr[arr.length - 1].trim() !== "") arr.push("");
-            return arr;
+        if (!pass2.length || pass2[pass2.length - 1].trim() !== "") {
+            pass2.push("");
         }
 
-        lines = removeDashOnlyLines(lines);
-        lines = handleBlocks(lines);
-        lines = handleLists(lines);
-        lines = handleTables(lines);
-        lines = handleHeaders(lines);
-        lines = collapseConsecutiveEmptyLines(lines);
-        lines = ensureLastLineEmpty(lines);
-
-        editorText.value = lines.join("\n");
+        editorText.value = pass2.join("\n");
     }
+
 
     function removeTabIndent() {
         // Check if tab correction is enabled
@@ -429,138 +279,105 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function correctLatex() {
-        // Check if LaTeX correction is enabled
         if (!latexCorrectionCheckbox.checked) return;
-
-        saveState(); // Save current editor state
+        saveState();
 
         let text = editorText.value;
         let result = '';
         let i = 0;
 
-        // Helper function to check if the character at position index is escaped
-        function isEscaped(text, index) {
+        function isEscaped(str, index) {
             let backslashCount = 0;
             index--;
-            while (index >= 0 && text[index] === '\\') {
+            while (index >= 0 && str[index] === '\\') {
                 backslashCount++;
                 index--;
             }
-            return backslashCount % 2 === 1;
+            return (backslashCount % 2) === 1;
         }
 
-        // Internal function to apply additional corrections within a math block
+        // Corrections inside the math content
         function applyCorrections(content) {
-            // 1. Remove surrounding identical characters around math signs
-            // Regex Explanation:
-            // - Look for a non-space character (captured as \1)
-            // - Followed by one of the math signs [=<>+\-]
-            // - Followed by the same non-space character (\1)
-            // Replace the entire match with just the math sign.
-
-            // Using a regex that ensures the surrounding characters are identical and not space
+            // Remove pairs of identical non-space chars around a math sign
             content = content.replace(/([^ \t\n\r\f\v=<>+\-])([=<>+\-])\1/g, '$2');
-
-            // 2. Replace ,$, ;$, .$ with $
+            // Replace ,$, ;$, .$ with $
             content = content.replace(/([,;\.])\$/g, '$');
-
-            // 3. Replace ,d and .d with d
+            // Replace ,d and .d with d
             content = content.replace(/([,\.])d/g, 'd');
-
             return content;
         }
 
         while (i < text.length) {
-            // Check for unescaped \[ or \(
-            if (text[i] === '\\' && (text[i + 1] === '[' || text[i + 1] === '(') && !isEscaped(text, i)) {
-                const startDelimiter = text.substr(i, 2); // '\[' or '\('
+            // Convert \[...\] -> $$...$$ or \(...\) -> $...$
+            if (
+                text[i] === '\\' &&
+                (text[i + 1] === '[' || text[i + 1] === '(') &&
+                !isEscaped(text, i)
+            ) {
+                const startDelimiter = text.substr(i, 2); // "\[" or "\("
                 const endDelimiter = startDelimiter === '\\[' ? '\\]' : '\\)';
-                const replacementDelimiter = startDelimiter === '\\[' ? '$$' : '$';
-                let j = i + 2; // Position after the opening delimiter
+                const replDelimiter = startDelimiter === '\\[' ? '$$' : '$';
+                let j = i + 2;
 
-                // Skip optional whitespace/newlines after opening delimiter
+                // Skip optional whitespace after \[ or \(
                 if (startDelimiter === '\\[') {
-                    while (j < text.length && /\s/.test(text[j])) {
-                        j++;
-                    }
+                    while (j < text.length && /\s/.test(text[j])) j++;
                 } else if (startDelimiter === '\\(') {
-                    while (j < text.length && text[j] === ' ') {
-                        j++;
-                    }
+                    while (j < text.length && text[j] === ' ') j++;
                 }
 
-                let contentStart = j; // Start position of the content
-
-                // Search for the closing delimiter
+                let contentStart = j;
                 let contentEnd = null;
-                let k; // Declare k here
+                // Search for the matching closing delimiter
                 while (j < text.length) {
-                    k = j; // Assign to k inside the loop
-
-                    // Before checking for endDelimiter, skip optional whitespace/newlines before it
+                    // Potential place for end delimiter
+                    let k = j;
                     if (endDelimiter === '\\]') {
-                        while (k < text.length && /\s/.test(text[k])) {
-                            k++;
-                        }
+                        while (k < text.length && /\s/.test(text[k])) k++;
                     } else if (endDelimiter === '\\)') {
-                        while (k < text.length && text[k] === ' ') {
-                            k++;
-                        }
+                        while (k < text.length && text[k] === ' ') k++;
                     }
-
-                    // Check for unescaped closing delimiter at position k
-                    if (text.substr(k, endDelimiter.length) === endDelimiter && !isEscaped(text, k)) {
-                        contentEnd = j; // End position of the content (before skipped whitespace)
+                    if (
+                        text.substr(k, endDelimiter.length) === endDelimiter &&
+                        !isEscaped(text, k)
+                    ) {
+                        contentEnd = j;
                         break;
-                    } else {
-                        j++;
                     }
+                    j++;
                 }
 
                 if (contentEnd !== null) {
-                    // Found matching closing delimiter
                     let content = text.substring(contentStart, contentEnd);
-
-                    // Apply additional corrections within the math block
                     content = applyCorrections(content);
-
-                    result += replacementDelimiter + content + replacementDelimiter;
-                    // Move i to after the closing delimiter and any skipped whitespace
+                    result += replDelimiter + content + replDelimiter;
                     i = k + endDelimiter.length;
                 } else {
-                    // No matching closing delimiter, copy the opening delimiter and move on
                     result += text[i];
                     i++;
                 }
-            } else if (text[i] === '$') {
-                // Handle existing $...$ or $$...$$ blocks
+            }
+            // Handle existing $...$ or $$...$$
+            else if (text[i] === '$') {
                 let delimiter = '$';
-                if (text[i + 1] === '$') {
-                    delimiter = '$$';
-                }
+                if (text[i + 1] === '$') delimiter = '$$';
+
                 let startDelimiter = delimiter;
                 let endDelimiter = delimiter;
                 let j = i + delimiter.length;
-
                 let contentStart = j;
 
-                // Find the matching closing delimiter
                 let contentEnd = text.indexOf(endDelimiter, j);
                 while (contentEnd !== -1 && isEscaped(text, contentEnd)) {
-                    // If the found delimiter is escaped, search for the next one
                     contentEnd = text.indexOf(endDelimiter, contentEnd + endDelimiter.length);
                 }
 
                 if (contentEnd !== -1) {
                     let content = text.substring(contentStart, contentEnd);
-
-                    // Apply additional corrections within the math block
                     content = applyCorrections(content);
-
                     result += startDelimiter + content + endDelimiter;
                     i = contentEnd + endDelimiter.length;
                 } else {
-                    // No matching closing delimiter, copy the current character and move on
                     result += text[i];
                     i++;
                 }
@@ -570,9 +387,9 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         }
 
-        // Set the corrected text back to the editor
         editorText.value = result;
     }
+
 
     function trimListItemsBeforeColon() {
         // Get the checkbox element
@@ -773,11 +590,11 @@ document.addEventListener("DOMContentLoaded", function() {
                 'employ': 'use',
                 'ensure': 'make sure',
                 'essential': 'necessary',
-                'pivotal': 'key',
+                'pivotal': 'important',
                 'signifies': 'indicates',
                 'established': 'set up',
                 'navigate': 'find your way through',
-                'paramount': 'most important',
+                'paramount': 'important',
                 'ultimately': 'finally',
                 'esteemed': 'respected',
                 'myriad': 'many',
@@ -1183,8 +1000,8 @@ document.addEventListener("DOMContentLoaded", function() {
         trimListItemsBeforeColon();
         correctLists();
         removeTabIndent();
-        correctLines();
         correctLatex();
+        correctLines();
         simplifyText();
 
     });
