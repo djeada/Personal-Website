@@ -153,186 +153,190 @@ document.addEventListener("DOMContentLoaded", function() {
         editorText.value = newLines.join("\n");
     }
 
-    function correctLines() {
-        if (!lineCorrectionCheckbox.checked) return;
-        saveState();
+function correctLines() {
+    if (!lineCorrectionCheckbox.checked) return;
+    saveState();
 
-        let lines = editorText.value.split("\n");
+    let lines = editorText.value.split("\n");
 
-        // Helper to detect list items
-        function isListItem(line) {
-            // e.g. "- something" or "* something" (allow indentation too)
-            return /^\s*[-*]\s+/.test(line);
+    // Helper to detect list items
+    function isListItem(line) {
+        // e.g. "- something" or "* something" (allow indentation too)
+        return /^\s*[-*]\s+/.test(line);
+    }
+
+    // Helper to detect lines that are capital Roman numeral headings (e.g., "I. Title", "XVII. Topic")
+    function isRomanHeading(line) {
+        // Trim first; match one or more Roman chars, then a dot, then a space
+        return /^[IVXLCDM]+\.\s/.test(line.trim());
+    }
+
+    // ============= PASS 0: Remove lines that ONLY contain minus signs (like "----") ============
+    let pass0 = [];
+    for (let line of lines) {
+        const t = line.trim();
+        if (/^-+$/.test(t)) {
+            // Skip lines that ONLY have '-' characters
+            continue;
         }
+        pass0.push(line);
+    }
 
-        // ============= PASS 0: Remove lines that ONLY contain minus signs (like "----") ============
-        let pass0 = [];
-        for (let line of lines) {
-            const t = line.trim();
-            if (/^-+$/.test(t)) {
-                // Skip lines that ONLY have '-' characters
-                continue;
-            }
-            pass0.push(line);
+    // ============= PASS 1: Insert blank lines before/after blocks, headings, tables, lists ============
+    // (but do NOT modify lines inside code/math blocks).
+    let pass1 = [];
+    let inBlock = false;
+    let blockMarker = null;
+
+    function pushBlankLineIfNeeded(arr) {
+        // Insert a blank line if the last line isn't blank (and array isn't empty).
+        if (arr.length && arr[arr.length - 1].trim() !== "") {
+            arr.push("");
         }
+    }
 
-        // ============= PASS 1: Insert blank lines before/after blocks, headings, tables, lists ============
-        // (but do NOT modify lines inside code/math blocks).
-        let pass1 = [];
-        let inBlock = false;
-        let blockMarker = null;
+    for (let i = 0; i < pass0.length; i++) {
+        let line = pass0[i];
+        let t = line.trim();
 
-        function pushBlankLineIfNeeded(arr) {
-            // Insert a blank line if the last line isn't blank (and array isn't empty).
-            if (arr.length && arr[arr.length - 1].trim() !== "") {
-                arr.push("");
-            }
-        }
-
-        for (let i = 0; i < pass0.length; i++) {
-            let line = pass0[i];
-            let t = line.trim();
-
-            if (!inBlock) {
-                // Code or math block start?
-                if (t === "```" || t === "$$") {
-                    pushBlankLineIfNeeded(pass1); // blank line BEFORE block
-                    pass1.push(line);
-                    inBlock = true;
-                    blockMarker = t;
-                }
-                // Heading? (# Something)
-                else if (/^#+\s/.test(t)) {
-                    pushBlankLineIfNeeded(pass1); // blank line BEFORE heading
-                    pass1.push(line);
-                    pass1.push(""); // blank line AFTER heading
-                }
-                // Table line? (starts/ends with "|")
-                else if (t.startsWith("|") && t.endsWith("|")) {
-                    pushBlankLineIfNeeded(pass1); // blank line BEFORE table
-                    pass1.push(line);
-
-                    // Collect subsequent table lines
-                    while (i + 1 < pass0.length) {
-                        let nt = pass0[i + 1].trim();
-                        if (nt.startsWith("|") && nt.endsWith("|")) {
-                            i++;
-                            pass1.push(pass0[i]);
-                        } else {
-                            break;
-                        }
-                    }
-                    pass1.push(""); // blank line AFTER table
-                }
-                // First list item? Insert blank line before it (unless the last line is already blank).
-                else if (isListItem(line)) {
-                    pushBlankLineIfNeeded(pass1);
-                    pass1.push(line);
-                }
-                // Otherwise, just pass it along
-                else {
-                    pass1.push(line);
-                }
-            } else {
-                // We are inside a code/math block, do not alter lines
+        if (!inBlock) {
+            // Code or math block start?
+            if (t === "```" || t === "$$") {
+                pushBlankLineIfNeeded(pass1); // blank line BEFORE block
                 pass1.push(line);
-                // Check if we're leaving the block
-                if (t === blockMarker) {
-                    inBlock = false;
-                    blockMarker = null;
-                    pushBlankLineIfNeeded(pass1); // blank line AFTER block
+                inBlock = true;
+                blockMarker = t;
+            }
+            // Heading? (# Something) OR capital Roman numeral heading (I. Something)
+            else if (/^#+\s/.test(t) || isRomanHeading(line)) {
+                pushBlankLineIfNeeded(pass1); // blank line BEFORE heading
+                pass1.push(line);
+                pass1.push(""); // blank line AFTER heading
+            }
+            // Table line? (starts/ends with "|")
+            else if (t.startsWith("|") && t.endsWith("|")) {
+                pushBlankLineIfNeeded(pass1); // blank line BEFORE table
+                pass1.push(line);
+
+                // Collect subsequent table lines
+                while (i + 1 < pass0.length) {
+                    let nt = pass0[i + 1].trim();
+                    if (nt.startsWith("|") && nt.endsWith("|")) {
+                        i++;
+                        pass1.push(pass0[i]);
+                    } else {
+                        break;
+                    }
                 }
+                pass1.push(""); // blank line AFTER table
+            }
+            // First list item? Insert blank line before it (unless the last line is already blank).
+            else if (isListItem(line)) {
+                pushBlankLineIfNeeded(pass1);
+                pass1.push(line);
+            }
+            // Otherwise, just pass it along
+            else {
+                pass1.push(line);
+            }
+        } else {
+            // We are inside a code/math block, do not alter lines
+            pass1.push(line);
+            // Check if we're leaving the block
+            if (t === blockMarker) {
+                inBlock = false;
+                blockMarker = null;
+                pushBlankLineIfNeeded(pass1); // blank line AFTER block
             }
         }
+    }
 
-        // ============= PASS 2: Remove blank lines between consecutive list items (outside code blocks) ============
-        // That is, if pass2's last line is a list item, and next line is a list item,
-        // skip a blank line between them.
-        let pass2 = [];
-        inBlock = false;
-        blockMarker = null;
+    // ============= PASS 2: Remove blank lines between consecutive list items (outside code blocks) ============
+    // That is, if pass2's last line is a list item, and next line is a list item,
+    // skip a blank line between them.
+    let pass2 = [];
+    inBlock = false;
+    blockMarker = null;
 
-        for (let i = 0; i < pass1.length; i++) {
-            let line = pass1[i];
-            let t = line.trim();
+    for (let i = 0; i < pass1.length; i++) {
+        let line = pass1[i];
+        let t = line.trim();
 
-            if (!inBlock) {
-                if (t === "```" || t === "$$") {
-                    pass2.push(line);
-                    inBlock = true;
-                    blockMarker = t;
-                } else {
-                    // If it's a blank line, check neighbors
-                    if (t === "" && i + 1 < pass1.length) {
-                        let nextLine = pass1[i + 1];
-                        // If previous line in pass2 is a list item,
-                        // and next line is also a list item, remove this blank line.
-                        if (
-                            pass2.length > 0 &&
-                            isListItem(pass2[pass2.length - 1]) &&
-                            isListItem(nextLine)
-                        ) {
-                            continue; // skip pushing this blank line
-                        }
-                    }
-                    pass2.push(line);
-                }
-            } else {
-                // Inside code/math block, just push
+        if (!inBlock) {
+            if (t === "```" || t === "$$") {
                 pass2.push(line);
-                if (t === blockMarker) {
-                    inBlock = false;
-                    blockMarker = null;
+                inBlock = true;
+                blockMarker = t;
+            } else {
+                // If it's a blank line, check neighbors
+                if (t === "" && i + 1 < pass1.length) {
+                    let nextLine = pass1[i + 1];
+                    // If the previous line in pass2 is a list item
+                    // and next line is also a list item, remove this blank line.
+                    if (
+                        pass2.length > 0 &&
+                        isListItem(pass2[pass2.length - 1]) &&
+                        isListItem(nextLine)
+                    ) {
+                        continue; // skip pushing this blank line
+                    }
                 }
+                pass2.push(line);
+            }
+        } else {
+            // Inside code/math block, just push
+            pass2.push(line);
+            if (t === blockMarker) {
+                inBlock = false;
+                blockMarker = null;
             }
         }
+    }
 
-        // ============= PASS 3: Collapse multiple consecutive blank lines into one (outside code blocks) ============
-        let pass3 = [];
-        inBlock = false;
-        blockMarker = null;
-        let lastWasEmpty = false;
+    // ============= PASS 3: Collapse multiple consecutive blank lines into one (outside code blocks) ============
+    let pass3 = [];
+    inBlock = false;
+    blockMarker = null;
+    let lastWasEmpty = false;
 
-        for (let i = 0; i < pass2.length; i++) {
-            let line = pass2[i];
-            let t = line.trim();
+    for (let i = 0; i < pass2.length; i++) {
+        let line = pass2[i];
+        let t = line.trim();
 
-            if (!inBlock) {
-                // Start of block?
-                if (t === "```" || t === "$$") {
-                    pass3.push(line);
-                    inBlock = true;
-                    blockMarker = t;
-                    lastWasEmpty = false;
-                } else if (t === "") {
-                    // Only push one blank line if we haven't just pushed one
-                    if (!lastWasEmpty) {
-                        pass3.push("");
-                        lastWasEmpty = true;
-                    }
-                } else {
-                    pass3.push(line);
-                    lastWasEmpty = false;
+        if (!inBlock) {
+            // Start of code/math block?
+            if (t === "```" || t === "$$") {
+                pass3.push(line);
+                inBlock = true;
+                blockMarker = t;
+                lastWasEmpty = false;
+            } else if (t === "") {
+                // Only push one blank line if we haven't just pushed one
+                if (!lastWasEmpty) {
+                    pass3.push("");
+                    lastWasEmpty = true;
                 }
             } else {
                 pass3.push(line);
-                if (t === blockMarker) {
-                    inBlock = false;
-                    blockMarker = null;
-                    lastWasEmpty = false;
-                }
+                lastWasEmpty = false;
+            }
+        } else {
+            pass3.push(line);
+            if (t === blockMarker) {
+                inBlock = false;
+                blockMarker = null;
+                lastWasEmpty = false;
             }
         }
-
-        // Optionally ensure a trailing blank line at the end
-        if (pass3.length && pass3[pass3.length - 1].trim() !== "") {
-            pass3.push("");
-        }
-
-        editorText.value = pass3.join("\n");
     }
 
+    // Optionally ensure a trailing blank line at the end
+    if (pass3.length && pass3[pass3.length - 1].trim() !== "") {
+        pass3.push("");
+    }
 
+    editorText.value = pass3.join("\n");
+}
 
 
     function removeTabIndent() {
@@ -359,147 +363,147 @@ document.addEventListener("DOMContentLoaded", function() {
         editorText.value = newLines.join("\n");
     }
 
-    function correctLatex() {
-        if (!latexCorrectionCheckbox.checked) return;
-        saveState();
+   function correctLatex() {
+    if (!latexCorrectionCheckbox.checked) return;
+    saveState();
 
-        let text = editorText.value;
-        let result = '';
-        let i = 0;
+    const text = editorText.value;
+    let result = '';
+    let i = 0;
 
-        /**
-         * Checks if a position in the string is preceded by a backslash.
-         * (Meaning the character is "escaped".)
-         */
-        function isEscaped(str, index) {
-            let backslashCount = 0;
-            index--;
-            while (index >= 0 && str[index] === '\\') {
-                backslashCount++;
-                index--;
-            }
-            return (backslashCount % 2) === 1;
+    // -------------------------------------------------------------
+    // 1) Helper: checks if a given `index` is "escaped" by backslash
+    // -------------------------------------------------------------
+    function isEscaped(str, index) {
+        let backslashCount = 0;
+        let pos = index - 1;
+        // Count consecutive backslashes going backward
+        while (pos >= 0 && str[pos] === '\\') {
+            backslashCount++;
+            pos--;
         }
+        // If we have an odd number of backslashes, it's escaped
+        return (backslashCount % 2) === 1;
+    }
 
-        /**
-         * Perform small corrections on the math content itself.
-         */
-        function applyCorrections(content) {
-            // 1) Remove pairs of identical non-space chars around a math sign, e.g. "x=x" with repeated "x"
-            content = content.replace(/([^ \t\n\r\f\v=<>+\-])([=<>+\-])\1/g, '$2');
+    // -------------------------------------------------------------
+    // 2) Helper: apply small corrections to math content itself
+    // -------------------------------------------------------------
+    function applyCorrections(content) {
+        // (a) Remove punctuation if it appears immediately before '$' or '$$'.
+        //     e.g.,  "something.,$$" -> "something$$"
+        content = content.replace(/([.,;:!?])(\s*)(\${1,2})(?!\$)/g, '$2$3');
 
-            // 2) Remove punctuation if it appears immediately before "$$" or "$"
-            //    For instance, "someText.$$" -> "someText$$" or "someText.$" -> "someText$"
-            content = content.replace(/([.,;:!?])(\s*)(\$\$)/g, '$2$3');
-            content = content.replace(/([.,;:!?])(\s*)(\$)/g, '$2$3');
+        // (b) Replace ",d" or ".d" with "d"
+        content = content.replace(/([,\.])d/g, 'd');
 
-            // 3) Replace ",d" or ".d" with "d"
-            content = content.replace(/([,\.])d/g, 'd');
+        return content;
+    }
 
-            return content;
-        }
-
-        while (i < text.length) {
-            // --- 1) Convert \[...\] -> $$...$$ or \(...\) -> $...$ ---
+    // -------------------------------------------------------------
+    // 3) Helper: scans text from `startIndex` until unescaped `endTag`
+    //    e.g., for \[...\], endTag = '\]'; for $...$, endTag = '$'
+    // -------------------------------------------------------------
+    function getMathContent(str, startIndex, endTag) {
+        // We'll collect everything from after `startIndex` until we find `endTag`.
+        let pos = startIndex;
+        while (pos < str.length) {
+            // If we find endTag not escaped, that's our end
             if (
-                text[i] === '\\' &&
-                (text[i + 1] === '[' || text[i + 1] === '(') &&
-                !isEscaped(text, i)
+                str.substr(pos, endTag.length) === endTag &&
+                !isEscaped(str, pos)
             ) {
-                const startDelimiter = text.substr(i, 2); // "\[" or "\("
-                const endDelimiter = (startDelimiter === '\\[' ? '\\]' : '\\)');
-                const replDelimiter = (startDelimiter === '\\[' ? '$$' : '$');
-                let j = i + 2;
+                return {
+                    content: str.substring(startIndex, pos),
+                    endIndex: pos + endTag.length
+                };
+            }
+            pos++;
+        }
+        // Not found
+        return null;
+    }
 
-                // Skip optional whitespace after \[ or \(
-                if (startDelimiter === '\\[') {
-                    while (j < text.length && /\s/.test(text[j])) j++;
-                } else if (startDelimiter === '\\(') {
-                    while (j < text.length && text[j] === ' ') j++;
-                }
+    // -------------------------------------------------------------
+    // 4) Main parse loop
+    // -------------------------------------------------------------
+    while (i < text.length) {
+        // --- (A) Check for "\[" or "\(" to convert -> $$...$$ or $...$ ---
+        if (
+            text[i] === '\\' &&
+            (text[i + 1] === '[' || text[i + 1] === '(') &&
+            !isEscaped(text, i)
+        ) {
+            const twoChar = text.substr(i, 2); // "\[" or "\("
+            let endTag, replacement;
 
-                let contentStart = j;
-                let contentEnd = null;
-
-                // Search for the matching closing delimiter "\]" or "\)"
-                while (j < text.length) {
-                    let k = j;
-                    // Possibly skip whitespace before "\]" or "\)"
-                    if (endDelimiter === '\\]') {
-                        while (k < text.length && /\s/.test(text[k])) k++;
-                    } else if (endDelimiter === '\\)') {
-                        while (k < text.length && text[k] === ' ') k++;
-                    }
-
-                    if (
-                        text.substr(k, endDelimiter.length) === endDelimiter &&
-                        !isEscaped(text, k)
-                    ) {
-                        contentEnd = j;
-                        break;
-                    }
-                    j++;
-                }
-
-                // If we found a closing "\]" or "\)"
-                if (contentEnd !== null) {
-                    let content = text.substring(contentStart, contentEnd);
-                    content = applyCorrections(content);
-                    result += replDelimiter + content + replDelimiter;
-                    i = k + endDelimiter.length;
-                } else {
-                    // No matching bracket found—just copy the character
-                    result += text[i];
-                    i++;
-                }
+            if (twoChar === '\\[') {
+                endTag = '\\]';   // we look for "\]"
+                replacement = '$$';
+            } else {
+                endTag = '\\)';   // we look for "\)"
+                replacement = '$';
             }
 
-            // --- 2) Handle existing $...$ or $$...$$ blocks ---
-            else if (text[i] === '$') {
-                // Determine if it’s a single-dollar or double-dollar block
-                let delimiter = '$';
-                if (text[i + 1] === '$') {
-                    delimiter = '$$';
-                }
+            // Skip the 2-character delimiter
+            const startSearch = i + 2;
 
-                let startDelimiter = delimiter;
-                let endDelimiter = delimiter;
-                let j = i + delimiter.length;
-                let contentStart = j;
+            const found = getMathContent(text, startSearch, endTag);
+            if (found) {
+                // We have everything from after "\[" up to "\]"
+                const rawMath = found.content;
+                const corrected = applyCorrections(rawMath);
 
-                // Find the next occurrence of the same delimiter
-                let contentEnd = text.indexOf(endDelimiter, j);
-                while (contentEnd !== -1 && isEscaped(text, contentEnd)) {
-                    // Look for the next if the found delimiter is escaped
-                    contentEnd = text.indexOf(endDelimiter, contentEnd + endDelimiter.length);
-                }
+                // Add the replacement delimiters: $$ ... $$ or $ ... $
+                result += replacement + corrected + replacement;
 
-                if (contentEnd !== -1) {
-                    let content = text.substring(contentStart, contentEnd);
-                    content = applyCorrections(content);
-                    result += startDelimiter + content + endDelimiter;
-                    i = contentEnd + endDelimiter.length;
-                } else {
-                    // No matching closing "$" or "$$"
-                    result += text[i];
-                    i++;
-                }
-            }
-
-            // --- 3) Everything else (normal text) ---
-            else {
+                // Advance `i` past the endTag
+                i = found.endIndex;
+                continue; // Move on to next loop iteration
+            } else {
+                // We didn't find a matching "\]" or "\)", so just copy the '\'
                 result += text[i];
                 i++;
             }
         }
-        result = result.replace(
-            /([.,;:!?])(\s*)(\${1,2})(?!\$)/g,
-            '$2$3'
-        );
-        // Put the transformed text back in the editor
-        editorText.value = result;
+
+        // --- (B) Check for "$" or "$$" blocks in the text ---
+        else if (text[i] === '$' && !isEscaped(text, i)) {
+            // Check if we have "$$" vs single "$"
+            let delimiter = '$';
+            if (text[i + 1] === '$') {
+                delimiter = '$$';
+            }
+
+            const startSearch = i + delimiter.length;
+            const found = getMathContent(text, startSearch, delimiter);
+            if (found) {
+                const rawMath = found.content;
+                const corrected = applyCorrections(rawMath);
+
+                // Add "$$ ... $$" or "$ ... $"
+                result += delimiter + corrected + delimiter;
+
+                // Advance
+                i = found.endIndex;
+                continue;
+            } else {
+                // No closing match, so just copy one char
+                result += text[i];
+                i++;
+            }
+        }
+
+        // --- (C) Otherwise, copy the current character as-is ---
+        else {
+            result += text[i];
+            i++;
+        }
     }
 
+    // Finally, set the transformed result back into your editor
+    editorText.value = result;
+}
 
 
     function trimListItemsBeforeColon() {
