@@ -159,63 +159,98 @@ document.addEventListener("DOMContentLoaded", function() {
 
         let lines = editorText.value.split("\n");
 
-        // Pass 1: Insert blank lines before and after code/math blocks, headers, tables
-        // but do nothing if we're already inside a code/math block.
+        // Helper to detect list items
+        function isListItem(line) {
+            // e.g. "- something" or "* something" (allow indentation too)
+            return /^\s*[-*]\s+/.test(line);
+        }
+
+        // ============= PASS 0: Remove lines that ONLY contain minus signs (like "----") ============
+        let pass0 = [];
+        for (let line of lines) {
+            const t = line.trim();
+            if (/^-+$/.test(t)) {
+                // Skip lines that ONLY have '-' characters
+                continue;
+            }
+            pass0.push(line);
+        }
+
+        // ============= PASS 1: Insert blank lines before/after blocks, headings, tables, lists ============
+        // (but do NOT modify lines inside code/math blocks).
         let pass1 = [];
-        let inBlock = false,
-            blockMarker = null;
+        let inBlock = false;
+        let blockMarker = null;
 
         function pushBlankLineIfNeeded(arr) {
+            // Insert a blank line if the last line isn't blank (and array isn't empty).
             if (arr.length && arr[arr.length - 1].trim() !== "") {
                 arr.push("");
             }
         }
 
-        for (let i = 0; i < lines.length; i++) {
-            let line = lines[i];
+        for (let i = 0; i < pass0.length; i++) {
+            let line = pass0[i];
             let t = line.trim();
 
             if (!inBlock) {
+                // Code or math block start?
                 if (t === "```" || t === "$$") {
-                    pushBlankLineIfNeeded(pass1);
+                    pushBlankLineIfNeeded(pass1); // blank line BEFORE block
                     pass1.push(line);
                     inBlock = true;
                     blockMarker = t;
-                } else if (/^#+\s/.test(t)) {
-                    pushBlankLineIfNeeded(pass1);
+                }
+                // Heading? (# Something)
+                else if (/^#+\s/.test(t)) {
+                    pushBlankLineIfNeeded(pass1); // blank line BEFORE heading
                     pass1.push(line);
-                    pass1.push("");
-                } else if (t.startsWith("|") && t.endsWith("|")) {
-                    pushBlankLineIfNeeded(pass1);
+                    pass1.push(""); // blank line AFTER heading
+                }
+                // Table line? (starts/ends with "|")
+                else if (t.startsWith("|") && t.endsWith("|")) {
+                    pushBlankLineIfNeeded(pass1); // blank line BEFORE table
                     pass1.push(line);
-                    while (i + 1 < lines.length) {
-                        let nt = lines[i + 1].trim();
+
+                    // Collect subsequent table lines
+                    while (i + 1 < pass0.length) {
+                        let nt = pass0[i + 1].trim();
                         if (nt.startsWith("|") && nt.endsWith("|")) {
                             i++;
-                            pass1.push(lines[i]);
+                            pass1.push(pass0[i]);
                         } else {
                             break;
                         }
                     }
-                    pass1.push("");
-                } else {
+                    pass1.push(""); // blank line AFTER table
+                }
+                // First list item? Insert blank line before it (unless the last line is already blank).
+                else if (isListItem(line)) {
+                    pushBlankLineIfNeeded(pass1);
+                    pass1.push(line);
+                }
+                // Otherwise, just pass it along
+                else {
                     pass1.push(line);
                 }
             } else {
+                // We are inside a code/math block, do not alter lines
                 pass1.push(line);
+                // Check if we're leaving the block
                 if (t === blockMarker) {
                     inBlock = false;
                     blockMarker = null;
-                    pushBlankLineIfNeeded(pass1);
+                    pushBlankLineIfNeeded(pass1); // blank line AFTER block
                 }
             }
         }
 
-        // Pass 2: Collapse consecutive blank lines outside blocks only.
+        // ============= PASS 2: Remove blank lines between consecutive list items (outside code blocks) ============
+        // That is, if pass2's last line is a list item, and next line is a list item,
+        // skip a blank line between them.
         let pass2 = [];
         inBlock = false;
         blockMarker = null;
-        let lastEmpty = false;
 
         for (let i = 0; i < pass1.length; i++) {
             let line = pass1[i];
@@ -226,32 +261,78 @@ document.addEventListener("DOMContentLoaded", function() {
                     pass2.push(line);
                     inBlock = true;
                     blockMarker = t;
-                    lastEmpty = false;
-                } else if (t === "") {
-                    if (!lastEmpty) {
-                        pass2.push("");
-                        lastEmpty = true;
-                    }
                 } else {
+                    // If it's a blank line, check neighbors
+                    if (t === "" && i + 1 < pass1.length) {
+                        let nextLine = pass1[i + 1];
+                        // If previous line in pass2 is a list item,
+                        // and next line is also a list item, remove this blank line.
+                        if (
+                            pass2.length > 0 &&
+                            isListItem(pass2[pass2.length - 1]) &&
+                            isListItem(nextLine)
+                        ) {
+                            continue; // skip pushing this blank line
+                        }
+                    }
                     pass2.push(line);
-                    lastEmpty = false;
                 }
             } else {
+                // Inside code/math block, just push
                 pass2.push(line);
                 if (t === blockMarker) {
                     inBlock = false;
                     blockMarker = null;
-                    lastEmpty = false;
                 }
             }
         }
 
-        if (!pass2.length || pass2[pass2.length - 1].trim() !== "") {
-            pass2.push("");
+        // ============= PASS 3: Collapse multiple consecutive blank lines into one (outside code blocks) ============
+        let pass3 = [];
+        inBlock = false;
+        blockMarker = null;
+        let lastWasEmpty = false;
+
+        for (let i = 0; i < pass2.length; i++) {
+            let line = pass2[i];
+            let t = line.trim();
+
+            if (!inBlock) {
+                // Start of block?
+                if (t === "```" || t === "$$") {
+                    pass3.push(line);
+                    inBlock = true;
+                    blockMarker = t;
+                    lastWasEmpty = false;
+                } else if (t === "") {
+                    // Only push one blank line if we haven't just pushed one
+                    if (!lastWasEmpty) {
+                        pass3.push("");
+                        lastWasEmpty = true;
+                    }
+                } else {
+                    pass3.push(line);
+                    lastWasEmpty = false;
+                }
+            } else {
+                pass3.push(line);
+                if (t === blockMarker) {
+                    inBlock = false;
+                    blockMarker = null;
+                    lastWasEmpty = false;
+                }
+            }
         }
 
-        editorText.value = pass2.join("\n");
+        // Optionally ensure a trailing blank line at the end
+        if (pass3.length && pass3[pass3.length - 1].trim() !== "") {
+            pass3.push("");
+        }
+
+        editorText.value = pass3.join("\n");
     }
+
+
 
 
     function removeTabIndent() {
@@ -286,6 +367,10 @@ document.addEventListener("DOMContentLoaded", function() {
         let result = '';
         let i = 0;
 
+        /**
+         * Checks if a position in the string is preceded by a backslash.
+         * (Meaning the character is "escaped".)
+         */
         function isEscaped(str, index) {
             let backslashCount = 0;
             index--;
@@ -296,27 +381,34 @@ document.addEventListener("DOMContentLoaded", function() {
             return (backslashCount % 2) === 1;
         }
 
-        // Corrections inside the math content
+        /**
+         * Perform small corrections on the math content itself.
+         */
         function applyCorrections(content) {
-            // Remove pairs of identical non-space chars around a math sign
+            // 1) Remove pairs of identical non-space chars around a math sign, e.g. "x=x" with repeated "x"
             content = content.replace(/([^ \t\n\r\f\v=<>+\-])([=<>+\-])\1/g, '$2');
-            // Replace ,$, ;$, .$ with $
-            content = content.replace(/([,;\.])\$/g, '$');
-            // Replace ,d and .d with d
+
+            // 2) Remove punctuation if it appears immediately before "$$" or "$"
+            //    For instance, "someText.$$" -> "someText$$" or "someText.$" -> "someText$"
+            content = content.replace(/([.,;:!?])(\s*)(\$\$)/g, '$2$3');
+            content = content.replace(/([.,;:!?])(\s*)(\$)/g, '$2$3');
+
+            // 3) Replace ",d" or ".d" with "d"
             content = content.replace(/([,\.])d/g, 'd');
+
             return content;
         }
 
         while (i < text.length) {
-            // Convert \[...\] -> $$...$$ or \(...\) -> $...$
+            // --- 1) Convert \[...\] -> $$...$$ or \(...\) -> $...$ ---
             if (
                 text[i] === '\\' &&
                 (text[i + 1] === '[' || text[i + 1] === '(') &&
                 !isEscaped(text, i)
             ) {
                 const startDelimiter = text.substr(i, 2); // "\[" or "\("
-                const endDelimiter = startDelimiter === '\\[' ? '\\]' : '\\)';
-                const replDelimiter = startDelimiter === '\\[' ? '$$' : '$';
+                const endDelimiter = (startDelimiter === '\\[' ? '\\]' : '\\)');
+                const replDelimiter = (startDelimiter === '\\[' ? '$$' : '$');
                 let j = i + 2;
 
                 // Skip optional whitespace after \[ or \(
@@ -328,15 +420,17 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 let contentStart = j;
                 let contentEnd = null;
-                // Search for the matching closing delimiter
+
+                // Search for the matching closing delimiter "\]" or "\)"
                 while (j < text.length) {
-                    // Potential place for end delimiter
                     let k = j;
+                    // Possibly skip whitespace before "\]" or "\)"
                     if (endDelimiter === '\\]') {
                         while (k < text.length && /\s/.test(text[k])) k++;
                     } else if (endDelimiter === '\\)') {
                         while (k < text.length && text[k] === ' ') k++;
                     }
+
                     if (
                         text.substr(k, endDelimiter.length) === endDelimiter &&
                         !isEscaped(text, k)
@@ -347,28 +441,36 @@ document.addEventListener("DOMContentLoaded", function() {
                     j++;
                 }
 
+                // If we found a closing "\]" or "\)"
                 if (contentEnd !== null) {
                     let content = text.substring(contentStart, contentEnd);
                     content = applyCorrections(content);
                     result += replDelimiter + content + replDelimiter;
                     i = k + endDelimiter.length;
                 } else {
+                    // No matching bracket found—just copy the character
                     result += text[i];
                     i++;
                 }
             }
-            // Handle existing $...$ or $$...$$
+
+            // --- 2) Handle existing $...$ or $$...$$ blocks ---
             else if (text[i] === '$') {
+                // Determine if it’s a single-dollar or double-dollar block
                 let delimiter = '$';
-                if (text[i + 1] === '$') delimiter = '$$';
+                if (text[i + 1] === '$') {
+                    delimiter = '$$';
+                }
 
                 let startDelimiter = delimiter;
                 let endDelimiter = delimiter;
                 let j = i + delimiter.length;
                 let contentStart = j;
 
+                // Find the next occurrence of the same delimiter
                 let contentEnd = text.indexOf(endDelimiter, j);
                 while (contentEnd !== -1 && isEscaped(text, contentEnd)) {
+                    // Look for the next if the found delimiter is escaped
                     contentEnd = text.indexOf(endDelimiter, contentEnd + endDelimiter.length);
                 }
 
@@ -378,17 +480,26 @@ document.addEventListener("DOMContentLoaded", function() {
                     result += startDelimiter + content + endDelimiter;
                     i = contentEnd + endDelimiter.length;
                 } else {
+                    // No matching closing "$" or "$$"
                     result += text[i];
                     i++;
                 }
-            } else {
+            }
+
+            // --- 3) Everything else (normal text) ---
+            else {
                 result += text[i];
                 i++;
             }
         }
-
+        result = result.replace(
+            /([.,;:!?])(\s*)(\${1,2})(?!\$)/g,
+            '$2$3'
+        );
+        // Put the transformed text back in the editor
         editorText.value = result;
     }
+
 
 
     function trimListItemsBeforeColon() {
@@ -587,6 +698,7 @@ document.addEventListener("DOMContentLoaded", function() {
             const replacements = {
                 'crucial': 'important',
                 'critical': 'important',
+                'fundamental': 'important',
                 'employ': 'use',
                 'ensure': 'make sure',
                 'essential': 'necessary',
