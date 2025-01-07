@@ -201,11 +201,12 @@ document.addEventListener("DOMContentLoaded", function() {
 
             if (!inBlock) {
                 // Code or math block start?
+                // (line must be exactly "```" or exactly "$$")
                 if (t === "```" || t === "$$") {
                     pushBlankLineIfNeeded(pass1); // blank line BEFORE block
                     pass1.push(line);
                     inBlock = true;
-                    blockMarker = t;
+                    blockMarker = t; // We'll look for the same marker to close
                 }
                 // Heading? (# Something) OR capital Roman numeral heading (I. Something)
                 else if (/^#+\s/.test(t) || isRomanHeading(line)) {
@@ -243,6 +244,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 // We are inside a code/math block, do not alter lines
                 pass1.push(line);
                 // Check if we're leaving the block
+                // i.e. if t matches the original marker: "```" or "$$"
                 if (t === blockMarker) {
                     inBlock = false;
                     blockMarker = null;
@@ -272,7 +274,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     if (t === "" && i + 1 < pass1.length) {
                         let nextLine = pass1[i + 1];
                         // If the previous line in pass2 is a list item
-                        // and next line is also a list item, remove this blank line.
+                        // and next line is also a list item => remove this blank line
                         if (
                             pass2.length > 0 &&
                             isListItem(pass2[pass2.length - 1]) &&
@@ -284,7 +286,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     pass2.push(line);
                 }
             } else {
-                // Inside code/math block, just push
+                // Inside code/math block, just push lines
                 pass2.push(line);
                 if (t === blockMarker) {
                     inBlock = false;
@@ -390,7 +392,7 @@ document.addEventListener("DOMContentLoaded", function() {
         // 2) Helper: apply small corrections to math content itself
         // -------------------------------------------------------------
         function applyCorrections(content) {
-            // >>> ADD THIS LINE: remove leading/trailing spaces <<<
+            // Trim leading/trailing spaces in the math environment
             content = content.trim();
 
             // (a) Remove punctuation if it appears immediately before '$' or '$$'.
@@ -400,6 +402,9 @@ document.addEventListener("DOMContentLoaded", function() {
             // (b) Replace ",d" or ".d" with "d"
             content = content.replace(/([,\.])d/g, 'd');
 
+            // (c) Remove punctuation if it is the very last character in the math content
+            content = content.replace(/([.,;:!?])\s*$/, '');
+
             return content;
         }
 
@@ -408,10 +413,8 @@ document.addEventListener("DOMContentLoaded", function() {
         //    e.g., for \[...\], endTag = '\]'; for $...$, endTag = '$'
         // -------------------------------------------------------------
         function getMathContent(str, startIndex, endTag) {
-            // We'll collect everything from after `startIndex` until we find `endTag`.
             let pos = startIndex;
             while (pos < str.length) {
-                // If we find endTag not escaped, that's our end
                 if (
                     str.substr(pos, endTag.length) === endTag &&
                     !isEscaped(str, pos)
@@ -423,15 +426,14 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
                 pos++;
             }
-            // Not found
-            return null;
+            return null; // no matching endTag found
         }
 
         // -------------------------------------------------------------
         // 4) Main parse loop
         // -------------------------------------------------------------
         while (i < text.length) {
-            // --- (A) Check for "\[" or "\(" to convert -> $$...$$ or $...$ ---
+            // --- (A) Convert \[...\] to $$...$$ or \(...\) to $...$ ---
             if (
                 text[i] === '\\' &&
                 (text[i + 1] === '[' || text[i + 1] === '(') &&
@@ -450,29 +452,26 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 // Skip the 2-character delimiter
                 const startSearch = i + 2;
-
                 const found = getMathContent(text, startSearch, endTag);
+
                 if (found) {
-                    // We have everything from after "\[" up to "\]"
+                    // content inside the brackets
                     const rawMath = found.content;
                     const corrected = applyCorrections(rawMath);
-
-                    // Add the replacement delimiters: $$ ... $$ or $ ... $
+                    // Add the replacement delimiters: $$...$$ or $...$
                     result += replacement + corrected + replacement;
-
-                    // Advance `i` past the endTag
                     i = found.endIndex;
-                    continue; // Move on to next loop iteration
+                    continue;
                 } else {
-                    // We didn't find a matching "\]" or "\)", so just copy the '\'
+                    // No matching "\]" or "\)", just copy this character
                     result += text[i];
                     i++;
                 }
             }
 
-            // --- (B) Check for "$" or "$$" blocks in the text ---
+            // --- (B) Check for "$" or "$$" math blocks ---
             else if (text[i] === '$' && !isEscaped(text, i)) {
-                // Check if we have "$$" vs single "$"
+                // Determine if it's a single-dollar or double-dollar block
                 let delimiter = '$';
                 if (text[i + 1] === '$') {
                     delimiter = '$$';
@@ -483,21 +482,17 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (found) {
                     const rawMath = found.content;
                     const corrected = applyCorrections(rawMath);
-
-                    // Add "$$ ... $$" or "$ ... $"
                     result += delimiter + corrected + delimiter;
-
-                    // Advance
                     i = found.endIndex;
                     continue;
                 } else {
-                    // No closing match, so just copy one char
+                    // No closing match
                     result += text[i];
                     i++;
                 }
             }
 
-            // --- (C) Otherwise, copy the current character as-is ---
+            // --- (C) Otherwise, copy normal text ---
             else {
                 result += text[i];
                 i++;
@@ -507,6 +502,7 @@ document.addEventListener("DOMContentLoaded", function() {
         // Finally, set the transformed result back into your editor
         editorText.value = result;
     }
+
 
 
 
