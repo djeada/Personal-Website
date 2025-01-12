@@ -51,7 +51,7 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: January 07, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: January 12, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="performance-optimization-and-parallelism">Performance Optimization and Parallelism</h2>
             <p>When working with complicated datasets and sophisticated visualization pipelines, performance optimization and parallelism become important for delivering real-time or near-real-time insights. VTK (Visualization Toolkit) supports a variety of performance-enhancing techniques and offers a strong framework for parallel processing, allowing you to scale your visualization workflows to handle massive datasets or highly detailed 3D scenes. This section covers several key strategies to help optimize VTK-based applications:</p>
@@ -476,30 +476,30 @@ MPI.Finalize()</code></pre>
                 </tr>
             </table>
             </p>
-            <h3 id="practical-considerations">Practical Considerations</h3>
+            <h4 id="practical-considerations">Practical Considerations</h4>
             <p>When scaling your application to multiple nodes or a large number of processes, pay attention to:</p>
-            <h4 id="load-balancing">Load Balancing</h4>
+            <h5>Load Balancing</h5>
             <ul>
-                <li>Static load balancing assigns tasks or data subsets to processes before execution, ensuring each node gets a predetermined workload (e.g., block-based decomposition of a mesh). </li>
-                <li>Dynamic load balancing monitors workloads during runtime, redistributing tasks if some nodes finish earlier or deal with less complex geometry to ensure better resource utilization. </li>
+                <li><strong>Static load balancing</strong> assigns tasks or data subsets to processes before execution, ensuring each node gets a predetermined workload (e.g., a simple block-based decomposition of a mesh). This approach is straightforward to carry out and works well when the workload is uniformly distributed or predictable. However, it might lead to underutilized nodes if the actual workload deviates significantly from the initial estimate. </li>
+                <li><strong>Dynamic load balancing</strong> continuously or periodically monitors each node’s workload during runtime and redistributes tasks if some nodes finish earlier or encounter less complicated geometry. This can help maintain balanced use of resources across the cluster, improving overall throughput. However, dynamic approaches often introduce additional overhead for monitoring and redistributing work, so they should be used judiciously, especially when the cost of redistribution may outweigh its benefits.</li>
             </ul>
-            <h4 id="data-distribution">Data Distribution</h4>
+            <h5>Data Distribution</h5>
             <ul>
-                <li>Partitioning involves dividing the dataset (e.g., a volume or mesh) into smaller subsets, minimizing inter-process communication while maintaining efficiency. </li>
-                <li>In replication, the entire dataset is stored on each node, reducing communication overhead but requiring significant memory resources. </li>
-                <li>Decomposition distributes only subsets of the dataset to nodes, optimizing memory usage but necessitating effective communication for shared data or dependencies. </li>
-                <li>Data locality prioritizes placing data near the processing nodes to reduce network latency and improve performance.</li>
+                <li><strong>Partitioning</strong> involves dividing the dataset (e.g., a volume or mesh) into smaller logical or spatial subsets. The goal is to reduce the amount of inter-process communication needed while still allowing each node to work efficiently on its portion of the data. Careful partitioning can significantly improve scalability, but poor partition strategies can lead to load imbalance or increased network traffic. </li>
+                <li><strong>Replication</strong> stores the entire dataset on each node, drastically reducing communication overhead since all the necessary data is local. However, this method is memory-intensive, making it feasible only for smaller datasets or systems with very large memory capacities. </li>
+                <li><strong>Decomposition</strong> provides a compromise by distributing only subsets of the dataset (e.g., sub-volumes, partial meshes) to each node. This method optimizes memory usage and potentially balances computational loads, but requires effective communication mechanisms when data or dependencies span multiple nodes. If not managed properly, communication can become a bottleneck and offset the benefits of decomposition. </li>
+                <li><strong>Data locality</strong> focuses on placing data physically close to the nodes that process it. This can be achieved through careful assignment of tasks to nodes with corresponding data or by employing hardware features like non-uniform memory access (NUMA) controls. Proper data locality helps reduce network latency and improves performance, especially for data-intensive computations.</li>
             </ul>
-            <h4 id="synchronization">Synchronization</h4>
+            <h5>Synchronization</h5>
             <ul>
-                <li>Barriers (e.g., <code>MPI_Barrier</code>) make sure all processes are at the same stage before proceeding. </li>
-                <li>Collective Operations (e.g., <code>MPI_Bcast</code>, <code>MPI_Reduce</code>) allow coordinated sharing or reduction of data. </li>
-                <li>Race Conditions: Make sure that no two processes overwrite shared data structures simultaneously.</li>
+                <li><strong>Barriers</strong> (e.g., <code>MPI_Barrier</code>) make sure that all processes reach a certain point in the code before proceeding. This can be useful for maintaining consistent states across processes, such as at important algorithm phases or before collective I/O. Overusing barriers, however, can degrade performance by forcing faster processes to wait for slower ones. </li>
+                <li><strong>Collective Operations</strong> (e.g., <code>MPI_Bcast</code>, <code>MPI_Reduce</code>) provide coordinated and efficient ways to share or aggregate data among all processes. These operations are heavily optimized in most MPI implementations, but must be used carefully to avoid excessive synchronization overhead. </li>
+                <li><strong>Race Conditions</strong> occur when two or more processes attempt to modify shared data structures simultaneously in an uncontrolled manner. To avoid this, make sure proper synchronization through locking mechanisms, atomic operations, or careful data partitioning that prevents unwanted concurrent writes.</li>
             </ul>
-            <h3 id="error-handling">Error Handling</h3>
+            <h5>Error Handling</h5>
             <ul>
-                <li>Default Error Handler in MPI typically aborts the job on errors. </li>
-                <li>Custom Error Handlers can be set for more graceful recovery (e.g., logging errors and continuing partial computations).</li>
+                <li><strong>Default Error Handler</strong> in MPI typically aborts the entire job if an error occurs in any process. This ensures fast failure recognition but offers no opportunity for partial recovery or logging intermediate results. </li>
+                <li><strong>Custom Error Handlers</strong> can be set to catch and handle errors more gracefully. They allow you to log the error, attempt partial computations, or even dynamically reassign tasks if a process fails. This can be important in large-scale systems where maintaining some level of progress is preferable to aborting the entire job due to a single failure.</li>
             </ul>
             <h4 id="detailed-example-with-tasks-distribution-and-rendering">Detailed Example with Tasks, Distribution, and Rendering</h4>
             <p>Below is a more in-depth illustrative example combining MPI for both task distribution and VTK parallel rendering:</p>
@@ -663,17 +663,7 @@ MPI.Finalize()</code></pre>
                             <li><a href="#a-simple-mpi4py-example-in-python">A Simple mpi4py Example in Python</a></li>
                             <li><a href="#primary-classes-in-vtk-for-parallelism">Primary Classes in VTK for Parallelism</a></li>
                             <li><a href="#contextual-configuration-and-use-cases">Contextual Configuration and Use Cases</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#practical-considerations">Practical Considerations</a>
-                        <ol>
-                            <li><a href="#load-balancing">Load Balancing</a></li>
-                            <li><a href="#data-distribution">Data Distribution</a></li>
-                            <li><a href="#synchronization">Synchronization</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#error-handling">Error Handling</a>
-                        <ol>
+                            <li><a href="#practical-considerations">Practical Considerations</a></li>
                             <li><a href="#detailed-example-with-tasks-distribution-and-rendering">Detailed Example with Tasks, Distribution, and Rendering</a></li>
                         </ol>
                     </li>
