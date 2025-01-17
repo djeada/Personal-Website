@@ -51,7 +51,7 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: September 22, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: January 17, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="programowanie-asynchroniczne">Programowanie asynchroniczne</h2>
             <p>Programowanie asynchroniczne to paradygmat, który umożliwia wykonywanie operacji w sposób nieblokujący, pozwalając na równoczesne przetwarzanie wielu zadań w ramach jednego wątku. W przeciwieństwie do tradycyjnego programowania synchronicznego, gdzie operacje są wykonywane sekwencyjnie i każda musi zakończyć się przed rozpoczęciem kolejnej, programowanie asynchroniczne pozwala na zawieszenie wykonania operacji, która oczekuje na wynik (np. operacji wejścia/wyjścia), i przełączenie się na wykonywanie innej operacji. Dzięki temu zasoby systemowe są wykorzystywane efektywniej, co jest szczególnie ważne w aplikacjach, które są ograniczone przez operacje I/O (tzw. I/O-bound).</p>
@@ -70,6 +70,74 @@
                 <li><strong>Pętla zdarzeń</strong> to mechanizm zarządzający wykonywaniem korutyn i obsługą zdarzeń asynchronicznych.</li>
                 <li><strong>Zadania (Tasks)</strong> są abstrakcją reprezentującą wykonywanie korutyn, która może być zarządzana przez pętlę zdarzeń.</li>
             </ul>
+            <p>
+            <div>
+                <pre><code class="language-shell">--------------------------------------------------------------------------------
+|                      Synchroniczne (Blokujące) Wywołanie Funkcji             |
+--------------------------------------------------------------------------------
+
+  Oś czasu (od góry do dołu)
+
+   Wywołujący (np. program główny)                      Funkcja Foo (synch)
+
+         |  (1) Wywołujący rozpoczyna
+         |
+         |  (2) Wywołujący wywołuje Foo()  +--------------------------------+
+         |-------------------------------&gt; | Foo() zaczyna wykonywać swoje  |
+         |                                 | zadania                        |
+         |                                 |    - Możliwe operacje We/Wy    |
+         |                                 |    - Lub obliczenia            |
+         |                                 +--------------+-----------------+
+         |                                                |
+         |  (3) Wywołujący jest zablokowany               |
+         |      aż Foo() zakończy swoje zadania           |
+         |                                                |
+         |                                 +--------------v--------------------+
+         |                                 | Foo() kończy zadania, zwraca dane |
+         |&lt;--------------------------------+ np. wynik lub kod statusu         |
+         |                                 +--------------+--------------------+
+         |
+         |  (4) Wywołujący otrzymuje wynik
+         |      i kontynuuje
+         |
+         V
+
+
+--------------------------------------------------------------------------------
+|                   Asynchroniczne (Niezablokujące) Wywołanie Funkcji          |
+--------------------------------------------------------------------------------
+
+  Oś czasu (od góry do dołu)
+
+   Wywołujący (np. program główny)                     Funkcja Bar (async)
+
+         |  (1) Wywołujący rozpoczyna
+         |
+         |  (2) Wywołujący wywołuje BarAsync()
+         |------------------------------------------&gt; +-----------------------------------+
+         |                                            | BarAsync() inicjuje swoje zadania |
+         |  (3) BarAsync()                            +-----------------------------------+
+         |      natychmiast zwraca kontrolę           
+         |                                          
+         |  (4) Wywołujący NIE jest zablokowany;   
+         |      może kontynuować inne zadania
+         | 
+         | &lt;---- Możliwe wykonywanie dalszej logiki, obsługa interfejsu użytkownika, itp. --+
+         |
+         |  (5) W międzyczasie, BarAsync() kończy swoje zadanie w tle
+         |      (odpowiedź sieciowa, odczyt pliku, itp.)
+         |            
+         |                           +-----------------------------------------------+
+         |&lt;------------------------&gt; | BarAsync() wywołuje zwrotnie Wywołującego     |
+         |                           | (np. funkcja zwrotna lub rozwiązanie promise) |
+         |                           +-----------------------------------------------+
+         |
+         |  (6) Wywołujący obsługuje otrzymany wynik
+         |      który właśnie nadeszedł
+         |
+         V</code></pre>
+            </div>
+            </p>
             <h4 id="zalety-asyncio-">Zalety <code>asyncio</code>:</h4>
             <ul>
                 <li>Pozwala na obsługę tysięcy jednoczesnych połączeń bez znaczącego obciążenia systemu.</li>
