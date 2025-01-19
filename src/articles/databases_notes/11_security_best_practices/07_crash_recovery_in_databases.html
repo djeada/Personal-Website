@@ -5,8 +5,8 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>PostgreSQL</title>
-    <meta content="Supports ACID transactions, ensuring data consistency and reliability" name="description" />
+    <title>Understanding Crash Recovery in Databases</title>
+    <meta content="Crash recovery is a important component of database systems that ensures data consistency and durability despite unexpected events like power outages, hardware failures, or software crashes." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -51,272 +51,155 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: November 26, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: January 19, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
-            <h2 id="postgresql">PostgreSQL</h2>
+            <h2 id="understanding-crash-recovery-in-databases">Understanding Crash Recovery in Databases</h2>
+            <p>Crash recovery is a important component of database systems that ensures data consistency and durability despite unexpected events like power outages, hardware failures, or software crashes. By design, databases must be capable of returning to a reliable state after a failure occurs. This is largely accomplished through mechanisms like the Write-Ahead Log (WAL), which records changes before they are committed to the actual data files on disk.</p>
+            <p>After reading the material, you should be able to answer the following questions:</p>
             <ul>
-                <li>PostgreSQL: a powerful, open-source object-relational database management system (ORDBMS)</li>
-                <li>Developed and maintained by the PostgreSQL Global Development Group</li>
-                <li>Suitable for a wide range of applications, from small-scale projects to enterprise-level systems</li>
+                <li>What is crash recovery in database systems, and why is it important?</li>
+                <li>How does the Write-Ahead Log (WAL) facilitate crash recovery?</li>
+                <li>What is the role of checkpointing in the crash recovery process?</li>
+                <li>What are the main steps a database follows during crash recovery after a system restart?</li>
+                <li>What are the benefits and trade-offs associated with WAL-based recovery mechanisms?</li>
             </ul>
-            <h2 id="features">Features</h2>
-            <h3 id="acid-compliance">ACID Compliance</h3>
-            <p>Supports ACID transactions, ensuring data consistency and reliability</p>
-            <h3 id="extensibility">Extensibility</h3>
+            <h3 id="the-basics-of-crash-recovery">The Basics of Crash Recovery</h3>
+            <p>Databases typically cache data in memory (often called the buffer pool) for speed. When a change is made, such as adding a row or updating an existing row, it is applied first in memory. Only later is this modified data flushed to disk. If a crash or power loss happens mid-write, data could end up corrupted or partially written. Crash recovery techniques help the database detect and correct any inconsistencies by replaying or discarding in-flight changes.</p>
+            <h3 id="the-role-of-the-write-ahead-log-wal-">The Role of the Write-Ahead Log (WAL)</h3>
+            <p>The WAL, sometimes called the redo log, keeps track of all modifications. Every time data is changed in memory, a record of that change is written to the WAL on disk before the database eventually writes the changed data pages to disk. </p>
             <ul>
-                <li>Allows custom functions, operators, data types, and index methods</li>
-                <li>Supports stored procedures, triggers, and views</li>
+                <li>The WAL is appended in a strictly sequential manner, which is efficient for most disk types and reduces write overhead.</li>
+                <li>Because each modification is recorded in the log, the WAL acts as the authoritative record of what changed in the database.</li>
+                <li>If the system crashes, the database can use the WAL to redo committed changes that may not have made it to the data files, or ignore changes for uncommitted transactions.</li>
             </ul>
-            <h3 id="concurrency-control">Concurrency Control</h3>
-            <p>Uses Multi-Version Concurrency Control (MVCC) to handle concurrent access without locking</p>
-            <h3 id="robust-security">Robust Security</h3>
-            <p>Offers strong encryption, authentication, and authorization mechanisms</p>
-            <h3 id="cross-platform">Cross-Platform</h3>
-            <p>Compatible with various operating systems, including Windows, macOS, Linux, and Unix</p>
-            <h3 id="full-text-search">Full-Text Search</h3>
-            <p>Built-in support for text search and advanced indexing</p>
-            <h3 id="spatial-data-support">Spatial Data Support</h3>
-            <p>Support for geographic objects and spatial queries through PostGIS extension</p>
-            <h3 id="high-availability-and-replication">High Availability and Replication</h3>
-            <p>Supports various replication methods, including streaming replication and logical replication</p>
-            <h2 id="postgresql-commands">PostgreSQL Commands</h2>
-            <h3 id="creating-a-database">Creating a Database</h3>
+            <h3 id="wal-and-transaction-states">WAL and Transaction States</h3>
+            <p>Databases manage transactions to make sure atomicity (all or nothing). The WAL is directly tied to these transaction guarantees:</p>
+            <ul>
+                <li>Once a transaction commits, its entries in the WAL are written to disk. Even if a crash occurs immediately afterward, the committed changes can be replayed from the WAL upon restart.</li>
+                <li>If the system crashes before these transactions commit, the database treats them as rolled back. Uncommitted WAL entries are discarded or ignored during recovery.</li>
+            </ul>
+            <h3 id="checkpointing">Checkpointing</h3>
+            <p>A checkpoint operation flushes all in-memory data pages to disk and writes a special checkpoint record to the WAL. This makes the on-disk data more up-to-date and reduces the amount of log replay needed if a crash occurs.</p>
+            <ul>
+                <li>Frequent checkpoints mean there is less WAL data to replay during restart.</li>
+                <li>Writing all in-memory data pages to disk can be expensive, especially for large or very active databases.</li>
+                <li>Administrators tune checkpoint frequency to balance acceptable recovery time with acceptable performance during normal operations.</li>
+            </ul>
+            <h3 id="crash-recovery-steps">Crash Recovery Steps</h3>
+            <p>When a database restarts after a crash, it goes through a sequence of steps to make sure a consistent state:</p>
+            <p>I. <strong>Identify the Last Checkpoint</strong>: The database checks the latest checkpoint in the WAL. </p>
+            <p>II. <strong>Redo Phase</strong>: Committed transactions after the checkpoint are applied to the data files to bring them up to date. </p>
+            <p>III. <strong>Undo or Rollback</strong>: Any uncommitted transactions in the WAL are discarded or rolled back so they do not appear as valid changes. </p>
+            <p>IV. <strong>Resume Normal Operations</strong>: The database finishes replaying WAL records and transitions back to handling regular queries.</p>
+            <h3 id="flushing-the-wal">Flushing the WAL</h3>
+            <p>Some databases offer configuration options for controlling how often the WAL is physically written and synchronized to disk:</p>
+            <ul>
+                <li>Ensures the operating system flushes the WAL to stable storage, guaranteeing durability.</li>
+                <li>Allows multiple transactions to commit before flushing, reducing the total number of disk writes at the cost of slightly delayed durability.</li>
+                <li>Stricter flushing maintains stronger guarantees but can lower throughput for write-heavy workloads.</li>
+            </ul>
+            <h3 id="benefits-of-wal-based-recovery">Benefits of WAL-Based Recovery</h3>
+            <ul>
+                <li>Committed transactions survive power loss or crashes, thanks to the WAL.</li>
+                <li>WAL records are appended sequentially, which matches well with disk I/O patterns.</li>
+                <li>WAL entries can be streamed to secondary systems for real-time or near-real-time replication.</li>
+                <li>The WAL can be archived and replayed on top of a previous full backup to reach a desired point in time.</li>
+            </ul>
+            <h3 id="drawbacks-and-trade-offs">Drawbacks and Trade-Offs</h3>
+            <ul>
+                <li>WAL files occupy extra disk space that administrators must monitor and manage.</li>
+                <li>Every change is written at least twice—once to the WAL, then later to the actual data file.</li>
+                <li>Frequent checkpoints can spike I/O usage and temporarily slow other operations.</li>
+                <li>Adjusting checkpoint intervals, flush frequencies, and other parameters requires careful tuning to find the right balance between performance and reliability.</li>
+            </ul>
+            <h3 id="practical-example">Practical Example</h3>
+            <p>Consider an <code>orders</code> table:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>OrderID</td>
+                    <td>CustomerID</td>
+                    <td>Status</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>1001</td>
+                    <td>Pending</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>1002</td>
+                    <td>Shipped</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>1003</td>
+                    <td>Delivered</td>
+                </tr>
+            </table>
+            </p>
+            <p>Suppose a user updates <code>OrderID = 1</code> from <code>Pending</code> to <code>Shipped</code>. </p>
+            <p>I. The database modifies the in-memory page representing <code>OrderID = 1</code>. </p>
+            <p>II. A corresponding record showing the old and new values (<code>Pending</code> -&gt; <code>Shipped</code>) is appended to the WAL on disk. </p>
+            <p>III. The data file containing the <code>orders</code> table may not be updated immediately. </p>
+            <p>IV. If the database crashes at this point, the WAL can be replayed to recover the change. </p>
+            <p>V. After restart, the database replays the WAL entries for all committed transactions, ensuring <code>OrderID = 1</code> is set to <code>Shipped</code> in the data file.</p>
+            <h3 id="visualizing-crash-recovery-with-an-ascii-diagram">Visualizing Crash Recovery with an ASCII Diagram</h3>
             <p>
             <div>
-                <pre><code class="language-shell">CREATE DATABASE database_name;</code></pre>
+                <pre><code class="language-shell">+------------------+
+Changes in --&gt; |    Memory       |
+the database   | (Buffer Pool)   |
+               +--------+--------+
+                        |
+                WAL Record Written
+                        |
+                        v
+               +------------------+
+               | Write-Ahead Log |
+               |   (Redo Log)    |
+               +--------+--------+
+                        |
+  Checkpoint ----------&gt;+  
+     (Flush data pages) .
+                        .
+                        .
+                        v
+               +------------------+
+               |  Data Files on   |
+               |       Disk       |
+               +------------------+</code></pre>
             </div>
             </p>
-            <h3 id="creating-tables">Creating Tables</h3>
-            <p>
-            <div>
-                <pre><code class="language-shell">CREATE TABLE table_name (
-column_name1 datatype PRIMARY KEY,
-column_name2 datatype NOT NULL,
-...
-);</code></pre>
-            </div>
-            </p>
-            <h3 id="inserting-data">Inserting Data</h3>
-            <p>
-            <div>
-                <pre><code class="language-shell">INSERT INTO table_name (column1, column2, ...)
-VALUES (value1, value2, ...);</code></pre>
-            </div>
-            </p>
-            <h3 id="querying-data">Querying Data</h3>
-            <p>
-            <div>
-                <pre><code class="language-shell">SELECT column1, column2, ...
-FROM table_name
-WHERE condition;</code></pre>
-            </div>
-            </p>
-            <h3 id="updating-data">Updating Data</h3>
-            <p>
-            <div>
-                <pre><code class="language-shell">UPDATE table_name
-SET column1 = value1, column2 = value2, ...
-WHERE condition;</code></pre>
-            </div>
-            </p>
-            <h3 id="deleting-data">Deleting Data</h3>
-            <p>
-            <div>
-                <pre><code class="language-shell">DELETE FROM table_name
-WHERE condition;</code></pre>
-            </div>
-            </p>
-            <h3 id="dropping-tables">Dropping Tables</h3>
-            <p>
-            <div>
-                <pre><code class="language-shell">DROP TABLE table_name;</code></pre>
-            </div>
-            </p>
-            <h2 id="administration-and-management">Administration and Management</h2>
-            <h3 id="pgadmin">pgAdmin</h3>
-            <p>A popular, open-source graphical administration tool for PostgreSQL</p>
-            <h3 id="command-line-client">Command-Line Client</h3>
-            <p>A text-based interface for executing SQL queries and managing databases (e.g., psql)</p>
-            <h3 id="performance-tuning">Performance Tuning</h3>
-            <p>PostgreSQL provides various configuration options for optimizing performance</p>
-            <h3 id="backup-and-recovery">Backup and Recovery</h3>
-            <p>Supports logical and physical backups using tools like pg_dump and pg_basebackup</p>
-            <h3 id="monitoring">Monitoring</h3>
-            <p>Built-in statistics collector for monitoring and diagnosing performance issues</p>
-            <h2 id="use-cases">Use Cases</h2>
             <ul>
-                <li>Common choice for web applications due to its flexibility and extensibility</li>
-                <li>Widely used in GIS applications due to PostGIS support</li>
-                <li>Suitable for data warehousing and analytical processing workloads</li>
-                <li>Ideal for large-scale enterprise applications requiring a robust and feature-rich RDBMS</li>
+                <li>The buffer pool stores active data pages in memory. </li>
+                <li>All changes are recorded in the WAL on disk before data files are updated. </li>
+                <li>A checkpoint flushes the current in-memory state of data to disk and records this action in the WAL. </li>
+                <li>After a crash, the database replays committed transactions from the WAL and ignores uncommitted changes.</li>
             </ul>
-            <h2 id="engine">ENgine</h2>
-            <p>PostgreSQL uses a single, unified storage engine. However, PostgreSQL provides a rich and flexible architecture for handling data and offers many advanced features. Unlike MySQL, which uses multiple storage engines, PostgreSQL uses a unified engine but provides mechanisms to customize storage and indexing behaviors.</p>
-            <h3 id="key-features-of-postgresql-s-storage-system"><strong>Key Features of PostgreSQL’s Storage System</strong></h3>
-            <h4 id="1-unified-storage-engine">1. <strong>Unified Storage Engine</strong></h4>
-            <ul>
-                <li>PostgreSQL uses a single, robust storage engine for all operations, ensuring ACID compliance and high performance across a variety of workloads.</li>
-            </ul>
-            <hr />
-            <h4 id="2-table-storage-models">2. <strong>Table Storage Models</strong></h4>
-            <ul>
-                <li>PostgreSQL organizes data in tables using a row-based storage model.</li>
-                <li><strong>Heap Storage:</strong>
-                    <ul>
-                        <li>Default storage model for tables.</li>
-                        <li>Data is stored in no particular order, and MVCC (Multiversion Concurrency Control) ensures consistency without locking reads.</li>
-                    </ul>
-                </li>
-            </ul>
-            <hr />
-            <h4 id="3-mvcc-multiversion-concurrency-control-">3. <strong>MVCC (Multiversion Concurrency Control)</strong></h4>
-            <ul>
-                <li>PostgreSQL uses MVCC to handle transactions and concurrency.</li>
-                <li>Instead of locking rows, it creates multiple versions of rows to ensure consistency.</li>
-                <li>MVCC supports advanced features like:<ul>
-                        <li>Point-in-time recovery (PITR).</li>
-                        <li>Non-blocking reads during write operations.</li>
-                    </ul>
-                </li>
-            </ul>
-            <hr />
-            <h4 id="4-tablespaces">4. <strong>Tablespaces</strong></h4>
-            <ul>
-                <li>PostgreSQL supports tablespaces, allowing users to control where data files are stored on disk.</li>
-                <li>Useful for optimizing storage performance and managing large-scale data systems.</li>
-            </ul>
-            <hr />
-            <h4 id="5-toast-the-oversized-attribute-storage-technique-">5. <strong>TOAST (The Oversized-Attribute Storage Technique)</strong></h4>
-            <ul>
-                <li>PostgreSQL can handle large data fields like blobs, JSON, or XML efficiently using TOAST.</li>
-                <li>Automatically stores large column data externally and references it in the main table.</li>
-            </ul>
-            <hr />
-            <h3 id="indexing-options-in-postgresql"><strong>Indexing Options in PostgreSQL</strong></h3>
-            <p>PostgreSQL supports a variety of indexing methods, allowing customization for different workloads:</p>
-            <ol>
-                <li><strong>B-Tree:</strong></li>
-                <li>Default index type, ideal for most general-purpose queries.</li>
-                <li><strong>Hash:</strong></li>
-                <li>Optimized for equality lookups (e.g., <code>=</code> or <code>IN</code>).</li>
-                <li><strong>GIN (Generalized Inverted Index):</strong></li>
-                <li>Efficient for full-text searches and indexing JSON/array fields.</li>
-                <li><strong>GiST (Generalized Search Tree):</strong></li>
-                <li>Useful for spatial data, geometric searches, and full-text indexing.</li>
-                <li><strong>BRIN (Block Range Index):</strong></li>
-                <li>Optimized for large, sequentially stored data sets like time-series data.</li>
-                <li><strong>SP-GiST (Space Partitioned GiST):</strong></li>
-                <li>Efficient for non-balanced tree structures like quadtrees or k-d trees.</li>
-                <li><strong>Bloom Filters:</strong></li>
-                <li>Space-efficient, probabilistic data structures for certain query types.</li>
-            </ol>
-            <hr />
-            <h3 id="advanced-features-in-postgresql"><strong>Advanced Features in PostgreSQL</strong></h3>
-            <h4 id="1-partitioning">1. <strong>Partitioning</strong></h4>
-            <ul>
-                <li>PostgreSQL supports declarative partitioning (range, list, and hash) to optimize large data sets by dividing them into smaller, manageable parts.</li>
-            </ul>
-            <h4 id="2-foreign-data-wrappers-fdw-">2. <strong>Foreign Data Wrappers (FDW)</strong></h4>
-            <ul>
-                <li>Allows PostgreSQL to interact with external data sources (e.g., other databases, files) as if they were local tables.</li>
-            </ul>
-            <h4 id="3-custom-data-types">3. <strong>Custom Data Types</strong></h4>
-            <ul>
-                <li>PostgreSQL allows users to define their own data types, providing flexibility for domain-specific applications.</li>
-            </ul>
-            <h4 id="4-json-and-jsonb-support">4. <strong>JSON and JSONB Support</strong></h4>
-            <ul>
-                <li>PostgreSQL has robust support for semi-structured data through JSON and JSONB.</li>
-                <li>JSONB (binary JSON) provides efficient indexing and querying capabilities.</li>
-            </ul>
-            <h4 id="5-full-text-search">5. <strong>Full-Text Search</strong></h4>
-            <ul>
-                <li>Built-in full-text search capabilities enable efficient querying of textual data.</li>
-            </ul>
-            <h4 id="6-pl-pgsql-and-other-procedural-languages">6. <strong>PL/pgSQL and Other Procedural Languages</strong></h4>
-            <ul>
-                <li>PostgreSQL supports embedded procedural languages (e.g., PL/pgSQL, PL/Python, PL/Perl), allowing complex application logic to run within the database.</li>
-            </ul>
-            <hr />
-            <h3 id="storage-customization-in-postgresql"><strong>Storage Customization in PostgreSQL</strong></h3>
-            <ul>
-                <li>While PostgreSQL doesn’t use multiple storage engines like MySQL, it offers advanced configuration and extension capabilities to tailor the database to specific needs:</li>
-                <li>Extensions like <code>pg_partman</code> for partition management.</li>
-                <li><code>TimescaleDB</code> for time-series data.</li>
-                <li><code>PostGIS</code> for geographic and spatial data.</li>
-            </ul>
-            <h3 id="comparison-to-mysql"><strong>Comparison to MySQL</strong></h3>
-            <ul>
-                <li><strong>Single Unified Engine vs. Multiple Engines:</strong></li>
-                <li>PostgreSQL has a unified engine with deep extensibility, while MySQL offers multiple engines (e.g., InnoDB, MyISAM).</li>
-                <li><strong>Concurrency:</strong> PostgreSQL’s MVCC implementation often outperforms MySQL for high-concurrency scenarios.</li>
-                <li><strong>Extensibility:</strong> PostgreSQL supports custom data types, extensions, and advanced indexing, making it more flexible for complex applications.</li>
-                <li><strong>ACID Compliance:</strong> PostgreSQL is fully ACID-compliant by default, whereas MySQL depends on the storage engine (e.g., InnoDB is ACID-compliant, MyISAM is not).</li>
-            </ul>
+            <h3 id="best-practices">Best Practices</h3>
+            <p>I. Find the right interval to minimize both I/O spikes and recovery time. </p>
+            <p>II. Make sure adequate storage capacity and regularly archive or clean old WAL files. </p>
+            <p>III. Configure fsync to make sure that WAL data truly resides on stable media. </p>
+            <p>IV. Combine periodic full backups with continuous WAL archiving for point-in-time recovery. </p>
+            <p>V. Validate recovery settings in staging environments to confirm that the database can recover from abrupt failures.</p>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
-            <ol>
-                <li><a href="#postgresql">PostgreSQL</a></li>
-                <li><a href="#features">Features</a>
-                    <ol>
-                        <li><a href="#acid-compliance">ACID Compliance</a></li>
-                        <li><a href="#extensibility">Extensibility</a></li>
-                        <li><a href="#concurrency-control">Concurrency Control</a></li>
-                        <li><a href="#robust-security">Robust Security</a></li>
-                        <li><a href="#cross-platform">Cross-Platform</a></li>
-                        <li><a href="#full-text-search">Full-Text Search</a></li>
-                        <li><a href="#spatial-data-support">Spatial Data Support</a></li>
-                        <li><a href="#high-availability-and-replication">High Availability and Replication</a></li>
-                    </ol>
-                </li>
-                <li><a href="#postgresql-commands">PostgreSQL Commands</a>
-                    <ol>
-                        <li><a href="#creating-a-database">Creating a Database</a></li>
-                        <li><a href="#creating-tables">Creating Tables</a></li>
-                        <li><a href="#inserting-data">Inserting Data</a></li>
-                        <li><a href="#querying-data">Querying Data</a></li>
-                        <li><a href="#updating-data">Updating Data</a></li>
-                        <li><a href="#deleting-data">Deleting Data</a></li>
-                        <li><a href="#dropping-tables">Dropping Tables</a></li>
-                    </ol>
-                </li>
-                <li><a href="#administration-and-management">Administration and Management</a>
-                    <ol>
-                        <li><a href="#pgadmin">pgAdmin</a></li>
-                        <li><a href="#command-line-client">Command-Line Client</a></li>
-                        <li><a href="#performance-tuning">Performance Tuning</a></li>
-                        <li><a href="#backup-and-recovery">Backup and Recovery</a></li>
-                        <li><a href="#monitoring">Monitoring</a></li>
-                    </ol>
-                </li>
-                <li><a href="#use-cases">Use Cases</a></li>
-                <li><a href="#engine">ENgine</a>
-                    <ol>
-                        <li><a href="#key-features-of-postgresql-s-storage-system">Key Features of PostgreSQL’s Storage System</a>
-                            <ol>
-                                <li><a href="#1-unified-storage-engine">1. Unified Storage Engine</a></li>
-                                <li><a href="#2-table-storage-models">2. Table Storage Models</a></li>
-                                <li><a href="#3-mvcc-multiversion-concurrency-control-">3. MVCC (Multiversion Concurrency Control)</a></li>
-                                <li><a href="#4-tablespaces">4. Tablespaces</a></li>
-                                <li><a href="#5-toast-the-oversized-attribute-storage-technique-">5. TOAST (The Oversized-Attribute Storage Technique)</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#indexing-options-in-postgresql">Indexing Options in PostgreSQL</a></li>
-                        <li><a href="#advanced-features-in-postgresql">Advanced Features in PostgreSQL</a>
-                            <ol>
-                                <li><a href="#1-partitioning">1. Partitioning</a></li>
-                                <li><a href="#2-foreign-data-wrappers-fdw-">2. Foreign Data Wrappers (FDW)</a></li>
-                                <li><a href="#3-custom-data-types">3. Custom Data Types</a></li>
-                                <li><a href="#4-json-and-jsonb-support">4. JSON and JSONB Support</a></li>
-                                <li><a href="#5-full-text-search">5. Full-Text Search</a></li>
-                                <li><a href="#6-pl-pgsql-and-other-procedural-languages">6. PL/pgSQL and Other Procedural Languages</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#storage-customization-in-postgresql">Storage Customization in PostgreSQL</a></li>
-                        <li><a href="#comparison-to-mysql">Comparison to MySQL</a></li>
-                    </ol>
-                </li>
+            <ol><a href="#understanding-crash-recovery-in-databases">Understanding Crash Recovery in Databases</a>
+                <ol>
+                    <li><a href="#the-basics-of-crash-recovery">The Basics of Crash Recovery</a></li>
+                    <li><a href="#the-role-of-the-write-ahead-log-wal-">The Role of the Write-Ahead Log (WAL)</a></li>
+                    <li><a href="#wal-and-transaction-states">WAL and Transaction States</a></li>
+                    <li><a href="#checkpointing">Checkpointing</a></li>
+                    <li><a href="#crash-recovery-steps">Crash Recovery Steps</a></li>
+                    <li><a href="#flushing-the-wal">Flushing the WAL</a></li>
+                    <li><a href="#benefits-of-wal-based-recovery">Benefits of WAL-Based Recovery</a></li>
+                    <li><a href="#drawbacks-and-trade-offs">Drawbacks and Trade-Offs</a></li>
+                    <li><a href="#practical-example">Practical Example</a></li>
+                    <li><a href="#visualizing-crash-recovery-with-an-ascii-diagram">Visualizing Crash Recovery with an ASCII Diagram</a></li>
+                    <li><a href="#best-practices">Best Practices</a></li>
+                </ol>
             </ol>
             <div id="related-articles">
                 <h2>Related Articles</h2>

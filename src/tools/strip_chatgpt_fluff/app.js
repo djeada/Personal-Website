@@ -395,6 +395,9 @@ document.addEventListener("DOMContentLoaded", function() {
             // Trim leading/trailing spaces in the math environment
             content = content.trim();
 
+            // **New Line Added: Remove all occurrences of \;**
+            content = content.replace(/\\;/g, '');
+
             // (a) Remove punctuation if it appears immediately before '$' or '$$'.
             //     e.g. "something.,$$" -> "something$$"
             content = content.replace(/([.,;:!?])(\s*)(\${1,2})(?!\$)/g, '$2$3');
@@ -502,8 +505,6 @@ document.addEventListener("DOMContentLoaded", function() {
         // Finally, set the transformed result back into your editor
         editorText.value = result;
     }
-
-
 
 
     function trimListItemsBeforeColon() {
