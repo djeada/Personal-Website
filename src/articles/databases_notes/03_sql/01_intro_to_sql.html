@@ -51,10 +51,18 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: November 30, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: January 22, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="introduction-to-sql">Introduction to SQL</h2>
-            <p>Welcome to the world of SQL, where you can communicate with databases using simple, yet powerful commands. SQL, which stands for Structured Query Language, is a standardized language designed specifically for managing and querying relational databases. Whether you're retrieving data, updating records, or creating new tables, SQL provides the tools you need to interact with your database effectively.</p>
+            <p>Welcome to the world of SQL, where you can communicate with databases using simple, yet powerful commands. SQL, which stands for Structured Query Language, is a standardized language designed specifically for managing and querying relational databases.</p>
+            <p>After reading the material, you should be able to answer the following questions:</p>
+            <ol>
+                <li>What are the fundamental components and data types in SQL, and how are they used to structure and manage data within relational databases?</li>
+                <li>How can you construct and execute basic SQL queries to retrieve, filter, sort, and limit data?</li>
+                <li>What are primary and foreign keys, and how do they enforce relationships and data integrity within a database?</li>
+                <li>How do joins, subqueries, and common table expressions (CTEs) function to retrieve and manipulate data across multiple tables?</li>
+                <li>What are the techniques for optimizing SQL queries, including the use of indexes, understanding query plans, and managing transactions and concurrency control?</li>
+            </ol>
             <h3 id="understanding-the-basics">Understanding the Basics</h3>
             <p>At its core, SQL allows you to perform a variety of operations on data stored in relational databases. These databases organize data into tables, which consist of rows and columns, much like a spreadsheet. Each table represents a specific entity, such as customers or orders, and each column represents an attribute of that entity.</p>
             <p>Imagine a simple table of customers:</p>
@@ -70,13 +78,42 @@
             </div>
             </p>
             <p>This table, named <code>Customers</code>, stores basic information about each customer. SQL allows you to interact with this table in various ways, such as retrieving all customers, finding a customer by email, or adding a new customer to the list.</p>
-            <h3 id="key-concepts-in-sql">Key Concepts in SQL</h3>
+            <h3 id="concepts-in-sql">Concepts in SQL</h3>
             <p>Before diving into writing SQL commands, it's important to grasp some fundamental concepts that form the foundation of SQL and relational databases.</p>
             <h4 id="tables-and-schemas">Tables and Schemas</h4>
             <ul>
                 <li><strong>Tables</strong> are structured collections of related data, organized into rows (records) and columns (attributes), serving as the primary storage units in a database.</li>
                 <li><strong>Schemas</strong> are organizational frameworks within a database, grouping related tables, views, indexes, and other objects to manage and structure data effectively.</li>
             </ul>
+            <p>
+            <div>
+                <pre><code class="language-shell">+------------------------------------------------------------+
+|                      Schema                                |
+|           (Organizational Framework)                       |
+|                                                            |
+|  +----------------------+      +-------------------------+ |
+|  |        Table 1       |      |        Table 2          | |
+|  |----------------------|      |-------------------------| |
+|  | ID     | Name        |      | ProductID | ProductName | |
+|  |--------|-------------|      |-----------|-------------| |
+|  | 1      | Alice       |      | 101       | Widget      | |
+|  | 2      | Bob         |      | 102       | Gizmo       | |
+|  | 3      | Charlie     |      | 103       | Thingamajig | |
+|  +----------------------+      +-------------------------+ |
+|                                                            |
+|  +----------------------+                                  |
+|  |        Table 3       |                                  |
+|  |----------------------|                                  |
+|  | OrderID | CustomerID |                                  |
+|  |---------|------------|                                  |
+|  | 5001    | 1          |                                  |
+|  | 5002    | 2          |                                  |
+|  | 5003    | 3          |                                  |
+|  +----------------------+                                  |
+|                                                            |
++------------------------------------------------------------+</code></pre>
+            </div>
+            </p>
             <h4 id="data-types">Data Types</h4>
             <p>Every column in a table has a data type, which defines the kind of data it can store. Common data types include:</p>
             <ul>
@@ -434,22 +471,94 @@ END;</code></pre>
             </p>
             <p>Transactions are essential for operations that involve multiple steps, ensuring that the database doesn't end up in an inconsistent state if an error occurs.</p>
             <h3 id="indexes-and-query-optimization">Indexes and Query Optimization</h3>
-            <p>Indexes improve the speed of data retrieval by providing quick access paths to data within tables.</p>
+            <p>Indexes improve the speed of data retrieval by providing quick access paths to data within tables. By creating indexes on frequently searched columns, the database can locate and retrieve the desired rows more efficiently, reducing the need to scan entire tables. This optimization is crucial for enhancing the performance of queries, especially in large databases where full table scans can be time-consuming. Additionally, indexes can help enforce uniqueness and improve the performance of join operations by providing efficient pathways between related tables.</p>
             <h4 id="creating-an-index">Creating an Index</h4>
             <p>
             <div>
                 <pre><code class="language-sql">CREATE INDEX idx_lastname ON Customers(LastName);</code></pre>
             </div>
             </p>
-            <p>This creates an index on the <code>LastName</code> column, speeding up queries that search by last name.</p>
+            <p>This SQL command creates an index named <code>idx_lastname</code> on the <code>LastName</code> column of the <code>Customers</code> table. By indexing the <code>LastName</code> column, the database can quickly locate records based on last names without scanning the entire table. For example, when executing a query that searches for customers with a specific last name, the database will use the <code>idx_lastname</code> index to find matching records more rapidly. The expected result of this command is the creation of the index, which can be confirmed by querying the database's metadata or using database management tools to view existing indexes on the <code>Customers</code> table. </p>
+            <p>After executing the <code>CREATE INDEX</code> command, you can verify the creation of the index by running the following command:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">SHOW INDEX FROM Customers;</code></pre>
+            </div>
+            </p>
+            <p><strong>Sample Output:</strong></p>
+            <p>
+            <table>
+                <tr>
+                    <td>Table</td>
+                    <td>Non_unique</td>
+                    <td>Key_name</td>
+                    <td>Seq_in_index</td>
+                    <td>Column_name</td>
+                    <td>Collation</td>
+                    <td>Cardinality</td>
+                    <td>Sub_part</td>
+                    <td>Packed</td>
+                    <td>Null</td>
+                    <td>Index_type</td>
+                    <td>Comment</td>
+                    <td>Index_comment</td>
+                </tr>
+                <tr>
+                    <td>Customers</td>
+                    <td>1</td>
+                    <td>idx_lastname</td>
+                    <td>1</td>
+                    <td>LastName</td>
+                    <td>A</td>
+                    <td>1500</td>
+                    <td>NULL</td>
+                    <td>NULL</td>
+                    <td>YES</td>
+                    <td>BTREE</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            </table>
+            </p>
+            <p>This output indicates that the <code>idx_lastname</code> index has been successfully created on the <code>LastName</code> column of the <code>Customers</code> table. The <code>Cardinality</code> value suggests the number of unique values in the index, which helps in assessing the index's effectiveness.</p>
             <h4 id="understanding-query-plans">Understanding Query Plans</h4>
-            <p>Most database systems provide tools to analyze how queries are executed, known as query plans. These help identify bottlenecks and optimize performance.</p>
+            <p>Most database systems provide tools to analyze how queries are executed, known as query plans. These plans detail the steps the database engine takes to execute a query, including which indexes are used, the order of operations, and the methods of data retrieval. By examining query plans, developers and database administrators can identify bottlenecks, such as unnecessary full table scans or inefficient join operations, and make informed decisions to optimize performance. Analyzing query plans is essential for understanding how changes to indexes or query structure can impact overall database performance.</p>
             <p>
             <div>
                 <pre><code class="language-sql">EXPLAIN SELECT * FROM Customers WHERE LastName = 'Smith';</code></pre>
             </div>
             </p>
-            <p>This command displays how the database executes the query, showing whether it uses indexes and how it scans the data.</p>
+            <p>When this command is executed, the database generates a query plan that outlines how it will retrieve the requested data. The expected result is a detailed breakdown showing whether the <code>idx_lastname</code> index is utilized to find records where the <code>LastName</code> is 'Smith'. The query plan might indicate the use of an index scan, the estimated number of rows to be processed, and the cost associated with the operation. For instance, the output may show that the index is used to perform an efficient lookup, significantly reducing the query execution time compared to a full table scan. By analyzing this information, one can verify that the index is effectively enhancing query performance or identify areas where further optimization may be necessary.</p>
+            <p>After running the <code>EXPLAIN</code> command, you might receive an output similar to the following:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>id</td>
+                    <td>select_type</td>
+                    <td>table</td>
+                    <td>type</td>
+                    <td>possible_keys</td>
+                    <td>key</td>
+                    <td>key_len</td>
+                    <td>ref</td>
+                    <td>rows</td>
+                    <td>Extra</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>SIMPLE</td>
+                    <td>Customers</td>
+                    <td>ref</td>
+                    <td>idx_lastname</td>
+                    <td>idx_lastname</td>
+                    <td>767</td>
+                    <td>const</td>
+                    <td>10</td>
+                    <td>Using index</td>
+                </tr>
+            </table>
+            </p>
+            <p>This output indicates that the <code>idx_lastname</code> index is being used to execute the query. The <code>type</code> column shows a <code>ref</code> type access, which is efficient and typically means the index is being utilized correctly. The <code>rows</code> column estimates that only 10 rows need to be examined to satisfy the query, demonstrating a significant performance improvement over a full table scan. The <code>Extra</code> column mentioning <code>Using index</code> further confirms that the index is effectively optimizing the query execution.</p>
             <h3 id="advanced-topics">Advanced Topics</h3>
             <h4 id="window-functions">Window Functions</h4>
             <p>Window functions perform calculations across sets of rows related to the current row.</p>
@@ -480,7 +589,7 @@ FROM Orders;</code></pre>
             <ol><a href="#introduction-to-sql">Introduction to SQL</a>
                 <ol>
                     <li><a href="#understanding-the-basics">Understanding the Basics</a></li>
-                    <li><a href="#key-concepts-in-sql">Key Concepts in SQL</a>
+                    <li><a href="#concepts-in-sql">Concepts in SQL</a>
                         <ol>
                             <li><a href="#tables-and-schemas">Tables and Schemas</a></li>
                             <li><a href="#data-types">Data Types</a></li>

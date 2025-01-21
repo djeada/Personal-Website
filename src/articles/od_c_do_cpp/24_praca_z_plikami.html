@@ -51,7 +51,7 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: January 02, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: January 22, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="praca-z-plikami">Praca z plikami</h2>
             <p>Obsługa plików jest przydatną umiejętnością przy pisaniu aplikacji w C i C++. Praca z plikami pozwala na trwałe przechowywanie danych, które mogą być później odczytywane i przetwarzane przez program. Dzięki temu aplikacje mogą zachowywać stan między uruchomieniami, przechowywać konfiguracje, logi, a także przetwarzać duże ilości danych wejściowych i wyjściowych.</p>
@@ -233,9 +233,24 @@ int main() {
                 <li>W niektórych przypadkach zamykanie plików pozwala na <strong>zwalnianie pamięci</strong>, ponieważ otwarte pliki mogą zajmować zasoby pamięciowe. Nieprawidłowe zarządzanie tymi plikami może prowadzić do wycieków pamięci, co w dłuższej perspektywie może skutkować awariami aplikacji.</li>
             </ul>
             <p>Ważne jest, aby programiści dbali o prawidłowe zamykanie plików oraz stosowali techniki zapewniające, że pliki zostaną zamknięte nawet w przypadku wystąpienia błędów czy wyjątków.</p>
-            <h4 id="raii-w-c-">RAII w C++</h4>
-            <p>RAII (Resource Acquisition Is Initialization) to koncepcja programistyczna, która polega na tym, że zasób (takie jak plik) jest przejmowany przez obiekt w momencie jego tworzenia, a następnie zwalniany automatycznie, gdy obiekt ten przestaje istnieć. Jest to szczególnie przydatne w językach takich jak C++, które nie mają wbudowanego zarządzania pamięcią, ponieważ pozwala na bezpieczne i efektywne zarządzanie zasobami bez ryzyka wycieków.</p>
-            <p>Poniżej przedstawiam bardziej rozbudowaną klasę <code>File</code>, która implementuje koncepcję RAII:</p>
+            <h3 id="raii-w-c-">RAII w C++</h3>
+            <p><strong>RAII (Resource Acquisition Is Initialization)</strong> to wzorzec projektowy i zarazem podejście, w którym przejęcie zasobów (np. pamięci, gniazda sieciowego czy uchwytu do pliku) następuje podczas inicjalizacji obiektu, a zwolnienie tych zasobów jest gwarantowane w jego destruktorze. Dzięki temu:</p>
+            <ol>
+                <li><strong>Obiekt jest uznawany za w pełni zainicjalizowany dopiero wtedy, gdy z powodzeniem uda się nabyć wszystkie potrzebne zasoby.</strong> Jeżeli pozyskanie któregokolwiek z nich się nie powiedzie (np. nie uda się otworzyć pliku czy nawiązać połączenia sieciowego), konstruktor może zgłosić błąd poprzez wyjątek, a obiekt nie zostanie w pełni utworzony. </li>
+                <li><strong>Zwalnianie zasobów odbywa się automatycznie w destruktorze</strong>, gdy obiekt wychodzi z zasięgu (scope) – na przykład po zakończeniu funkcji lub bloku, w którym został zadeklarowany. </li>
+                <li><strong>Nie ma potrzeby wywoływania jawnych operacji zwalniania</strong> (np. zamykania pliku czy zwalniania pamięci), co znacząco minimalizuje ryzyko wycieków zasobów. </li>
+            </ol>
+            <p>Przykładowymi zasobami, które często są „opakowywane” w obiekty RAII, mogą być:</p>
+            <ul>
+                <li><strong>Pamięć</strong> (zazwyczaj zarządzana przy pomocy inteligentnych wskaźników, takich jak <code>std::unique_ptr</code> czy <code>std::shared_ptr</code> w C++), </li>
+                <li><strong>Gniazda sieciowe (sockets)</strong> do komunikacji przez sieć, </li>
+                <li><strong>Uchwyty do plików</strong> (otwarte strumienie wejścia/wyjścia), </li>
+                <li><strong>Blokady (locki) i muteksy</strong> w środowiskach wielowątkowych, </li>
+                <li><strong>Dowolne inne zasoby systemowe</strong>, takie jak uchwyty do baz danych czy identyfikatory procesów.</li>
+            </ul>
+            <p>Kluczową zaletą RAII jest to, że <strong>dopóki obiekt istnieje, zasób pozostaje w użytecznym stanie</strong>, a gdy obiekt przestaje istnieć, zasób jest zwalniany. Podejście to ściśle współgra z mechanizmem wyjątków w C++ – jeśli nie uda się pozyskać zasobu, konstruktor zgłasza wyjątek, a wszystkie wcześniej pobrane zasoby są natychmiast zwalniane w ramach stack unwinding (cofania stosu wywołań).</p>
+            <p><strong>Przykład z klasą <code>File</code></strong></p>
+            <p>Aby zilustrować ideę RAII na prostym przykładzie, można zaprezentować klasę <code>File</code>, która odpowiada za otwieranie i zamykanie pliku:</p>
             <p>
             <div>
                 <pre><code class="language-clike">#include &lt;fstream&gt;
@@ -247,10 +262,13 @@ class File {
  public:
   File(const std::string&amp; filename, const std::string&amp; mode = "r") 
     : m_filename(filename) {
-      if (mode == "r") m_file.open(filename, std::ios::in);
-      else if (mode == "w") m_file.open(filename, std::ios::out);
-      else if (mode == "a") m_file.open(filename, std::ios::app);
-      else {
+      if (mode == "r") {
+          m_file.open(filename, std::ios::in);
+      } else if (mode == "w") {
+          m_file.open(filename, std::ios::out);
+      } else if (mode == "a") {
+          m_file.open(filename, std::ios::app);
+      } else {
           throw std::invalid_argument("Nieznany tryb otwarcia pliku");
       }
 
@@ -265,7 +283,9 @@ class File {
     }
   }
 
-  std::fstream&amp; stream() { return m_file; }
+  std::fstream&amp; stream() {
+    return m_file;
+  }
 
  private:
   std::string m_filename;
@@ -287,14 +307,27 @@ int main() {
 }</code></pre>
             </div>
             </p>
-            <p>Kod ten definiuje klasę <code>File</code>, która zarządza otwieraniem i zamykaniem plików w C++. Dzięki zastosowaniu RAII, zarządzanie zasobami staje się bardziej niezawodne i mniej podatne na błędy. Omówmy szczegółowo, jak działa ta klasa:</p>
             <ol>
-                <li>Konstruktor klasy <code>File</code> przyjmuje nazwę pliku oraz tryb otwarcia jako argumenty. W zależności od trybu, otwiera plik w odpowiednim trybie (<code>std::ios::in</code> dla odczytu, <code>std::ios::out</code> dla zapisu, <code>std::ios::app</code> dla dopisywania). Jeśli podany tryb jest nieznany, rzuca wyjątek <code>std::invalid_argument</code>. Po próbie otwariańia pliku, sprawdza, czy operacja się powiodła. Jeśli nie, rzuca wyjątek <code>std::runtime_error</code>. Dzięki temu, jeśli otwarie pliku się nie powiedzie, obiekt <code>File</code> nie zostanie poprawnie utworzony, a program może odpowiednio zareagować na błąd.</li>
-                <li>Destruktor klasy <code>File</code> sprawdza, czy plik jest nadal otwarty. Jeśli tak, zamyka go za pomocą <code>m_file.close()</code>. Dzięki temu, niezależnie od tego, jak zakończy się działanie programu – czy to poprzez normalne zakończenie funkcji <code>main</code>, czy poprzez wyrzucenie wyjątku – plik zostanie zawsze zamknięty, co zapobiega wyciekom zasobów.</li>
-                <li>Metoda <code>stream()</code> zwraca referencję do obiektu <code>std::fstream</code>, co umożliwia wykonywanie dalszych operacji na pliku, takich jak odczyt czy zapis danych.</li>
-                <li>W funkcji <code>main</code> używamy bloku <code>try-catch</code>, aby przechwycić ewentualne wyjątki rzucane przez klasę <code>File</code>. Jeśli wystąpi błąd podczas otwierania pliku, program wyświetli odpowiedni komunikat o błędzie i zakończy działanie z kodem błędu <code>1</code>.</li>
+                <li><strong>Konstruktor</strong> próbuje otworzyć plik w zadanym trybie. Jeśli wskazany tryb jest niepoprawny, zgłasza wyjątek <code>std::invalid_argument</code>. W przypadku nieudanego otwarcia pliku rzuca <code>std::runtime_error</code>. </li>
+                <li><strong>Obiekt</strong> będzie uznany za w pełni zainicjalizowany wyłącznie wówczas, gdy uda się skutecznie otworzyć plik. Gdyby pojawił się błąd, konstrukcja obiektu zostanie przerwana, a kod w <code>main</code> może przechwycić wyjątek i odpowiednio na niego zareagować. </li>
+                <li><strong>Destruktor</strong> sprawdza, czy plik wciąż jest otwarty, i zamyka go, gdy obiekt wyjdzie z zasięgu. Ma to miejsce zarówno przy normalnym zakończeniu funkcji, jak i w przypadku wyjątku. Dzięki temu programista nie musi pamiętać o ręcznym zamykaniu pliku. </li>
+                <li>Metoda <code>stream()</code> zwraca referencję do strumienia <code>std::fstream</code>, co umożliwia czytanie i pisanie do pliku za pomocą dostępnych w C++ operacji na strumieniach.</li>
             </ol>
-            <p>Przykład ten pokazuje, jak za pomocą RAII można zarządzać zasobami (w tym przypadku plikami) w bezpieczny i efektywny sposób. Dzięki temu minimalizujemy ryzyko wycieków zasobów oraz zapewniamy, że pliki są zawsze poprawnie zamykane, niezależnie od tego, jak zakończy się działanie programu.</p>
+            <h4 id="raii-a-wyjątki">RAII a wyjątki</h4>
+            <p>RAII i obsługa wyjątków w C++ stanowią spójny mechanizm. Jeśli konstruktor obiektu nie jest w stanie pozyskać wszystkich zasobów (na przykład plik nie może zostać otwarty, brakuje pamięci lub nie udało się nawiązać połączenia sieciowego), to wyjątek zgłoszony w konstruktorze zapewnia:</p>
+            <ul>
+                <li><strong>Automatyczne wycofanie</strong> już zarezerwowanych zasobów (jeśli zdążono je zainicjalizować przed wystąpieniem błędu). </li>
+                <li><strong>Brak wycieków</strong>: obiekt „nie powstaje” w niekompletnym stanie, więc nie pozostaje w pamięci. </li>
+                <li><strong>Łatwiejszą kontrolę logiki błędów</strong>: tam, gdzie tworzymy obiekt, możemy uchwycić wyjątek i podjąć decyzję, co zrobić dalej (np. przerwać działanie programu, wyświetlić komunikat, spróbować innej ścieżki, itp.).</li>
+            </ul>
+            <h4 id="krytyka-i-praktyczne-wskazówki">Krytyka i praktyczne wskazówki</h4>
+            <p>Chociaż RAII jest bardzo pomocne, czasem krytykuje się je za to, że:</p>
+            <ol>
+                <li><strong>Wszystkie scenariusze obsługi błędu mogą trafiać do konstruktorów i destruktorów</strong>, co bywa trudne do rozbudowanej personalizacji. W niektórych przypadkach chcemy np. po nieudanej próbie otwarcia pliku spróbować ponownie po kilku sekundach, w innych – zapisać komunikat do dziennika zdarzeń lub całkowicie zakończyć działanie programu. </li>
+                <li><strong>Zbyt duże obciążenie logiką błędów</strong> wewnątrz klasy może prowadzić do zbytniej komplikacji. Zamiast ograniczać się do prostego „otwórz plik → w razie niepowodzenia rzuć wyjątek”, możemy potrzebować bardziej złożonych ścieżek decyzyjnych (np. warunkowe retry, praca w trybie awaryjnym, przełączenie na inny plik itd.). </li>
+                <li><strong>W niektórych sytuacjach</strong> konieczna jest bardziej rozproszona obsługa zasobów – np. kiedy żywotność zasobu nie jest ściśle powiązana z żywotnością pojedynczego obiektu (możemy mieć duży system, w którym zasób jest współdzielony między wieloma komponentami). Wtedy konstrukcja typu RAII bywa niewystarczająca lub nadmiernie skomplikowana do utrzymania.</li>
+            </ol>
+            <p>W praktycznych projektach często stosuje się RAII do tych zasobów, które są wyraźnie powiązane z czasem życia obiektu i nie wymagają skomplikowanej logiki w sytuacjach awaryjnych. Jeśli jednak potrzeby aplikacji wykraczają poza standardowy „otwórz-wykorzystaj-zamknij”, należy rozważyć uzupełnienie RAII o inny mechanizm obsługi błędów (np. dedykowane metody zarządzania pewnymi zasobami lub rozbudowany system odroczonego przywracania/zwalniania zasobu).</p>
         </section>
         <div id="table-of-contents">
             <h2>Spis Treści</h2>
@@ -320,7 +353,12 @@ int main() {
                     <li><a href="#gwarancja-bezpiecznego-zamknięcia-pliku">Gwarancja bezpiecznego zamknięcia pliku</a>
                         <ol>
                             <li><a href="#dlaczego-bezpieczne-zamykanie-pliku-jest-ważne-">Dlaczego bezpieczne zamykanie pliku jest ważne?</a></li>
-                            <li><a href="#raii-w-c-">RAII w C++</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#raii-w-c-">RAII w C++</a>
+                        <ol>
+                            <li><a href="#raii-a-wyjątki">RAII a wyjątki</a></li>
+                            <li><a href="#krytyka-i-praktyczne-wskazówki">Krytyka i praktyczne wskazówki</a></li>
                         </ol>
                     </li>
                 </ol>
