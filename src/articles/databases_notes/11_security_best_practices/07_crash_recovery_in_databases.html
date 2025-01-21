@@ -51,7 +51,7 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: January 19, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: January 21, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="understanding-crash-recovery-in-databases">Understanding Crash Recovery in Databases</h2>
             <p>Crash recovery is a important component of database systems that ensures data consistency and durability despite unexpected events like power outages, hardware failures, or software crashes. By design, databases must be capable of returning to a reliable state after a failure occurs. This is largely accomplished through mechanisms like the Write-Ahead Log (WAL), which records changes before they are committed to the actual data files on disk.</p>
@@ -72,6 +72,38 @@
                 <li>Because each modification is recorded in the log, the WAL acts as the authoritative record of what changed in the database.</li>
                 <li>If the system crashes, the database can use the WAL to redo committed changes that may not have made it to the data files, or ignore changes for uncommitted transactions.</li>
             </ul>
+            <p>
+            <div>
+                <pre><code class="language-shell">+----------------+          +----------------+          +----------------+
+|                |          |                |          |                |
+|  Application   |  ---&gt;    |   Write-Ahead  |  ---&gt;    |   Data Store   |
+|    Transaction |          |      Log (WAL) |          |   (Main DB)    |
+|                |          |                |          |                |
++----------------+          +----------------+          +----------------+
+        |                           |                           |
+        |                           |                           |
+        |                           v                           |
+        |                   +---------------+                   |
+        |                   | Append Log    |                   |
+        |                   | Records to    |                   |
+        |                   | WAL on Disk   |                   |
+        |                   +---------------+                   |
+        |                           |                           |
+        |                           v                           |
+        |                   +---------------+                   |
+        |                   | Sync WAL to   |                   |
+        |                   | Disk          |                   |
+        |                   +---------------+                   |
+        |                           |                           |
+        |                           v                           |
+        |                   +---------------+                   |
+        |                   | Apply Changes |                   |
+        |                   | to Data Store |                   |
+        |                   +---------------+                   |
+        |                                                       |
+        +-------------------------------------------------------+</code></pre>
+            </div>
+            </p>
             <h3 id="wal-and-transaction-states">WAL and Transaction States</h3>
             <p>Databases manage transactions to make sure atomicity (all or nothing). The WAL is directly tied to these transaction guarantees:</p>
             <ul>
@@ -87,10 +119,12 @@
             </ul>
             <h3 id="crash-recovery-steps">Crash Recovery Steps</h3>
             <p>When a database restarts after a crash, it goes through a sequence of steps to make sure a consistent state:</p>
-            <p>I. <strong>Identify the Last Checkpoint</strong>: The database checks the latest checkpoint in the WAL. </p>
-            <p>II. <strong>Redo Phase</strong>: Committed transactions after the checkpoint are applied to the data files to bring them up to date. </p>
-            <p>III. <strong>Undo or Rollback</strong>: Any uncommitted transactions in the WAL are discarded or rolled back so they do not appear as valid changes. </p>
-            <p>IV. <strong>Resume Normal Operations</strong>: The database finishes replaying WAL records and transitions back to handling regular queries.</p>
+            <ol>
+                <li>The database checks the latest <strong>checkpoint</strong> in the WAL to identify the last checkpoint.</li>
+                <li>Committed transactions after the checkpoint are applied to the data files to bring them up to date.</li>
+                <li>Any uncommitted transactions in the WAL are discarded or rolled back so they do not appear as valid changes.</li>
+                <li>The database finishes replaying WAL records and transitions back to handling regular queries.</li>
+            </ol>
             <h3 id="flushing-the-wal">Flushing the WAL</h3>
             <p>Some databases offer configuration options for controlling how often the WAL is physically written and synchronized to disk:</p>
             <ul>
@@ -98,6 +132,54 @@
                 <li>Allows multiple transactions to commit before flushing, reducing the total number of disk writes at the cost of slightly delayed durability.</li>
                 <li>Stricter flushing maintains stronger guarantees but can lower throughput for write-heavy workloads.</li>
             </ul>
+            <p>
+            <div>
+                <pre><code class="language-shell">+===========================+
+|       Database System     |
++===========================+
+             |
+             | Initiate Transaction
+             v
++---------------------------+
+|        Client/System      |
++---------------------------+
+             |
+             | Generate Log Record
+             v
++---------------------------+
+|      WAL Buffer (RAM)     |
+|  -----------------------  |
+|  | Log Record 1        |  |
+|  | Log Record 2        |  |
+|  | Log Record 3        |  |
+|  | ...                 |  |
+|  -----------------------  |
++---------------------------+
+             |
+             | Sequential Write (Flush)
+             v
++---------------------------+
+|     Stable Storage (Disk) |
+|  -----------------------  |
+|  | Log Record 1        |  |
+|  | Log Record 2        |  |
+|  | Log Record 3        |  |
+|  | ...                 |  |
+|  -----------------------  |
++---------------------------+
+             |
+             | Apply Changes to Database
+             v
++---------------------------+
+|       Database Files      |
+|  -----------------------  |
+|  | Data Page A         |  |
+|  | Data Page B         |  |
+|  | ...                 |  |
+|  -----------------------  |
++---------------------------+</code></pre>
+            </div>
+            </p>
             <h3 id="benefits-of-wal-based-recovery">Benefits of WAL-Based Recovery</h3>
             <ul>
                 <li>Committed transactions survive power loss or crashes, thanks to the WAL.</li>
@@ -144,10 +226,11 @@
             <p>III. The data file containing the <code>orders</code> table may not be updated immediately. </p>
             <p>IV. If the database crashes at this point, the WAL can be replayed to recover the change. </p>
             <p>V. After restart, the database replays the WAL entries for all committed transactions, ensuring <code>OrderID = 1</code> is set to <code>Shipped</code> in the data file.</p>
-            <h3 id="visualizing-crash-recovery-with-an-ascii-diagram">Visualizing Crash Recovery with an ASCII Diagram</h3>
+            <h3 id="visualizing-crash-recovery">Visualizing Crash Recovery</h3>
             <p>
             <div>
-                <pre><code class="language-shell">+------------------+
+                <pre><code class="language-shell">#
+               +-----------------+
 Changes in --&gt; |    Memory       |
 the database   | (Buffer Pool)   |
                +--------+--------+
@@ -155,7 +238,7 @@ the database   | (Buffer Pool)   |
                 WAL Record Written
                         |
                         v
-               +------------------+
+               +-----------------+
                | Write-Ahead Log |
                |   (Redo Log)    |
                +--------+--------+
@@ -197,7 +280,7 @@ the database   | (Buffer Pool)   |
                     <li><a href="#benefits-of-wal-based-recovery">Benefits of WAL-Based Recovery</a></li>
                     <li><a href="#drawbacks-and-trade-offs">Drawbacks and Trade-Offs</a></li>
                     <li><a href="#practical-example">Practical Example</a></li>
-                    <li><a href="#visualizing-crash-recovery-with-an-ascii-diagram">Visualizing Crash Recovery with an ASCII Diagram</a></li>
+                    <li><a href="#visualizing-crash-recovery">Visualizing Crash Recovery</a></li>
                     <li><a href="#best-practices">Best Practices</a></li>
                 </ol>
             </ol>
