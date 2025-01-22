@@ -1,8 +1,61 @@
 "use strict";
 
+// Preset buttons
+const btnLinear = document.getElementById("btnLinear");
+const btnCircularRight = document.getElementById("btnCircularRight");
+const btnCircularLeft = document.getElementById("btnCircularLeft");
+const btnElliptical = document.getElementById("btnElliptical");
+
+btnLinear.addEventListener("click", () => {
+    // Example: linear at 45°
+    psiSlider.value = "45";
+    deltaSlider.value = "0";
+    psi = 45 * Math.PI / 180;
+    delta = 0;
+    psiValue.textContent = "45°";
+    deltaValue.textContent = "0°";
+    drawAll();
+});
+
+btnCircularRight.addEventListener("click", () => {
+    // Right-handed circular: psi=45°, delta=+90°
+    psiSlider.value = "45";
+    deltaSlider.value = "90";
+    psi = 45 * Math.PI / 180;
+    delta = 90 * Math.PI / 180;
+    psiValue.textContent = "45°";
+    deltaValue.textContent = "90°";
+    drawAll();
+});
+
+btnCircularLeft.addEventListener("click", () => {
+    // Left-handed circular: psi=45°, delta=-90°
+    psiSlider.value = "45";
+    deltaSlider.value = "-90";
+    psi = 45 * Math.PI / 180;
+    delta = -90 * Math.PI / 180;
+    psiValue.textContent = "45°";
+    deltaValue.textContent = "-90°";
+    drawAll();
+});
+
+btnElliptical.addEventListener("click", () => {
+    // Example elliptical: psi=30°, delta=60°
+    psiSlider.value = "30";
+    deltaSlider.value = "60";
+    psi = 30 * Math.PI / 180;
+    delta = 60 * Math.PI / 180;
+    psiValue.textContent = "30°";
+    deltaValue.textContent = "60°";
+    drawAll();
+});
+
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-
+const cw = canvas.width,
+    ch = canvas.height,
+    cx = cw / 2,
+    cy = ch / 2;
 const psiSlider = document.getElementById("idpsi");
 const psiValue = document.getElementById("idpsiValue");
 const deltaSlider = document.getElementById("iddelta");
@@ -10,40 +63,214 @@ const deltaValue = document.getElementById("iddeltaValue");
 const viewMode3DCheck = document.getElementById("viewMode3D");
 const startStopBtn = document.getElementById("startStopBtn");
 const resetBtn = document.getElementById("resetBtn");
-
-let timerRunning = false;
-let frameCounter = 0;
+let timerRunning = false,
+    frameCounter = 0,
+    psi = +psiSlider.value * Math.PI / 180,
+    delta = +deltaSlider.value * Math.PI / 180;
 const samplesPerCycle = 90;
 
-// Convert initial slider values (degrees) to radians
-let psi = parseFloat(psiSlider.value) * Math.PI / 180;
-let delta = parseFloat(deltaSlider.value) * Math.PI / 180;
+function drawArrow(ax, ay, bx, by, c) {
+    ctx.strokeStyle = c;
+    ctx.fillStyle = c;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(bx, by);
+    ctx.stroke();
+    let h = 10,
+        dx = bx - ax,
+        dy = by - ay,
+        A = Math.atan2(dy, dx);
+    ctx.beginPath();
+    ctx.moveTo(bx, by);
+    ctx.lineTo(bx - h * Math.cos(A - Math.PI / 6), by - h * Math.sin(A - Math.PI / 6));
+    ctx.lineTo(bx - h * Math.cos(A + Math.PI / 6), by - h * Math.sin(A + Math.PI / 6));
+    ctx.lineTo(bx, by);
+    ctx.fill();
+}
 
-// Listen for slider changes
+function drawAxes2D() {
+    ctx.strokeStyle = "#555";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, cy);
+    ctx.lineTo(cw, cy);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx, 0);
+    ctx.lineTo(cx, ch);
+    ctx.stroke();
+}
+
+function drawEllipse2D() {
+    let n = 180,
+        cp = Math.cos(psi),
+        sp = Math.sin(psi);
+    ctx.beginPath();
+    for (let i = 0; i <= n; i++) {
+        let t = 2 * Math.PI * i / n,
+            x = cp * Math.cos(t),
+            y = sp * Math.cos(t + delta);
+        let px = cx + x * 100,
+            py = cy - y * 100;
+        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = "blue";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+}
+
+function drawInstantaneous2D() {
+    let cp = Math.cos(psi),
+        sp = Math.sin(psi),
+        w = 2 * Math.PI * (frameCounter / samplesPerCycle);
+    let x = cp * Math.cos(w),
+        y = sp * Math.cos(w + delta);
+    drawArrow(cx, cy, cx + x * 100, cy - y * 100, "red");
+}
+
+function project3D(p) {
+    let r = 60 * Math.PI / 180,
+        s = 80,
+        xx = p.x + p.z * Math.cos(r),
+        yy = p.y + p.z * Math.sin(r);
+    return {
+        x: xx * s,
+        y: yy * s
+    };
+}
+
+function drawLine3D(a, b, o, c = "#555") {
+    let p1 = project3D(a),
+        p2 = project3D(b);
+    let x1 = o.x + p1.x,
+        y1 = o.y - p1.y,
+        x2 = o.x + p2.x,
+        y2 = o.y - p2.y;
+    ctx.strokeStyle = c;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+}
+
+function drawAxes3D() {
+    let o = {
+            x: cx,
+            y: cy
+        },
+        r = 2;
+    drawLine3D({
+        x: -r,
+        y: 0,
+        z: 0
+    }, {
+        x: r,
+        y: 0,
+        z: 0
+    }, o);
+    drawLine3D({
+        x: 0,
+        y: -r,
+        z: 0
+    }, {
+        x: 0,
+        y: r,
+        z: 0
+    }, o);
+    drawLine3D({
+        x: 0,
+        y: 0,
+        z: -r
+    }, {
+        x: 0,
+        y: 0,
+        z: r
+    }, o);
+}
+
+function drawWave3D() {
+    let o = {
+            x: cx,
+            y: cy
+        },
+        n = 80,
+        k = 2 * Math.PI,
+        w = 2 * Math.PI,
+        t = frameCounter / samplesPerCycle;
+    let cp = Math.cos(psi),
+        sp = Math.sin(psi),
+        z1 = -2,
+        z2 = 2;
+    ctx.beginPath();
+    for (let i = 0; i <= n; i++) {
+        let z = z1 + (z2 - z1) * i / n,
+            ex = cp * Math.cos(w * t - k * z),
+            ey = sp * Math.cos(w * t - k * z + delta);
+        let pp = project3D({
+                x: ex,
+                y: ey,
+                z: z
+            }),
+            px = o.x + pp.x,
+            py = o.y - pp.y;
+        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = "blue";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    let ex = cp * Math.cos(w * t),
+        ey = sp * Math.cos(w * t + delta),
+        p = project3D({
+            x: ex,
+            y: ey,
+            z: 0
+        });
+    drawArrow(o.x, o.y, o.x + p.x, o.y - p.y, "red");
+}
+
+function drawAll() {
+    ctx.clearRect(0, 0, cw, ch);
+    if (!viewMode3DCheck.checked) {
+        drawAxes2D();
+        drawEllipse2D();
+        if (timerRunning) drawInstantaneous2D();
+    } else {
+        drawAxes3D();
+        drawWave3D();
+    }
+}
+
+function animate() {
+    if (!timerRunning) return;
+    frameCounter++;
+    drawAll();
+    requestAnimationFrame(animate);
+}
+
 psiSlider.addEventListener("input", () => {
-    psi = parseFloat(psiSlider.value) * Math.PI / 180;
+    psi = +psiSlider.value * Math.PI / 180;
     psiValue.innerHTML = psiSlider.value + "°";
     if (!timerRunning) drawAll();
 });
+
 deltaSlider.addEventListener("input", () => {
-    delta = parseFloat(deltaSlider.value) * Math.PI / 180;
+    delta = +deltaSlider.value * Math.PI / 180;
     deltaValue.innerHTML = deltaSlider.value + "°";
     if (!timerRunning) drawAll();
 });
 
-// 3D/2D toggle
 viewMode3DCheck.addEventListener("change", () => {
     if (!timerRunning) drawAll();
 });
 
-// Start/Stop animation
 startStopBtn.addEventListener("click", () => {
     timerRunning = !timerRunning;
     startStopBtn.textContent = timerRunning ? "Stop" : "Start";
     if (timerRunning) animate();
 });
 
-// Reset
 resetBtn.addEventListener("click", () => {
     timerRunning = false;
     startStopBtn.textContent = "Start";
@@ -57,262 +284,4 @@ resetBtn.addEventListener("click", () => {
     drawAll();
 });
 
-function animate() {
-    if (!timerRunning) return;
-    frameCounter++;
-    drawAll();
-    requestAnimationFrame(animate);
-}
-
-function drawAll() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    if (!viewMode3DCheck.checked) {
-        // 2D
-        drawAxes2D();
-        drawEllipse2D();
-        if (timerRunning) drawInstantaneous2D();
-    } else {
-        // 3D
-        drawAxes3D();
-        drawWave3D();
-    }
-}
-
-/* ------------------- 2D Drawing -------------------- */
-
-function drawAxes2D() {
-    ctx.strokeStyle = "#555";
-    ctx.lineWidth = 2;
-
-    // X-axis (horizontal)
-    ctx.beginPath();
-    ctx.moveTo(0, canvas.height / 2);
-    ctx.lineTo(canvas.width, canvas.height / 2);
-    ctx.stroke();
-
-    // Y-axis (vertical)
-    ctx.beginPath();
-    ctx.moveTo(canvas.width / 2, 0);
-    ctx.lineTo(canvas.width / 2, canvas.height);
-    ctx.stroke();
-}
-
-function drawEllipse2D() {
-    let n = 180;
-    let cp = Math.cos(psi);
-    let sp = Math.sin(psi);
-
-    ctx.beginPath();
-    for (let i = 0; i <= n; i++) {
-        let t = 2 * Math.PI * (i / n);
-        let xx = cp * Math.cos(t);
-        let yy = sp * Math.cos(t + delta);
-
-        let px = canvas.width / 2 + xx * 100;
-        let py = canvas.height / 2 - yy * 100;
-
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-    }
-    ctx.closePath();
-    ctx.strokeStyle = "blue";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-}
-
-function drawInstantaneous2D() {
-    let cp = Math.cos(psi),
-        sp = Math.sin(psi),
-        omega = 2 * Math.PI * (frameCounter / samplesPerCycle);
-
-    let xx = cp * Math.cos(omega);
-    let yy = sp * Math.cos(omega + delta);
-
-    let x1 = canvas.width / 2,
-        y1 = canvas.height / 2,
-        x2 = x1 + xx * 100,
-        y2 = y1 - yy * 100;
-
-    drawArrow(x1, y1, x2, y2, "red");
-}
-
-/* ------------------- 3D Drawing -------------------- */
-
-/**
- * project3D(p)
- * Simple “tilt-only” style projection,
- * where x is horizontal, y is vertical,
- * and z is tilted by tiltAngle (positive => up-right).
- *
- * p: { x, y, z } in 3D
- * returns: { x, y } in "2D model coords" (unshifted).
- */
-function project3D(p) {
-    // +60° => z goes up/right
-    const tiltAngle = +60 * Math.PI / 180;
-    const scale = 80; // a bit smaller to fit the entire axis on the canvas
-
-    let xx = p.x + p.z * Math.cos(tiltAngle);
-    let yy = p.y + p.z * Math.sin(tiltAngle);
-
-    return {
-        x: xx * scale,
-        y: yy * scale
-    };
-}
-
-/**
- * Draw a 3D line between two 3D points in "model space."
- */
-function drawLine3D(p1, p2, origin, color = "#555") {
-    let pp1 = project3D(p1);
-    let pp2 = project3D(p2);
-
-    let x1 = origin.x + pp1.x;
-    let y1 = origin.y - pp1.y;
-    let x2 = origin.x + pp2.x;
-    let y2 = origin.y - pp2.y;
-
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
-}
-
-function drawAxes3D() {
-    // Origin exactly in the canvas center
-    const origin = {
-        x: canvas.width / 2,
-        y: canvas.height / 2
-    };
-
-    // Each axis from -2 to +2 => symmetrical around the origin
-    let axisRange = 2;
-
-    // X-axis: from (-2,0,0) to (+2,0,0)
-    drawLine3D({
-        x: -axisRange,
-        y: 0,
-        z: 0
-    }, {
-        x: axisRange,
-        y: 0,
-        z: 0
-    }, origin);
-    // Y-axis: from (0,-2,0) to (0,+2,0)
-    drawLine3D({
-        x: 0,
-        y: -axisRange,
-        z: 0
-    }, {
-        x: 0,
-        y: axisRange,
-        z: 0
-    }, origin);
-    // Z-axis: from (0,0,-2) to (0,0,+2)
-    drawLine3D({
-        x: 0,
-        y: 0,
-        z: -axisRange
-    }, {
-        x: 0,
-        y: 0,
-        z: axisRange
-    }, origin);
-}
-
-function drawWave3D() {
-    // Same origin as our 3D axes
-    const origin = {
-        x: canvas.width / 2,
-        y: canvas.height / 2
-    };
-
-    // For the wave, use z from -2..2
-    let n = 80,
-        k = 2 * Math.PI,
-        w = 2 * Math.PI,
-        t = frameCounter / samplesPerCycle,
-        cp = Math.cos(psi),
-        sp = Math.sin(psi),
-        zmin = -2,
-        zmax = +2;
-
-    ctx.beginPath();
-    for (let i = 0; i <= n; i++) {
-        let z = zmin + (zmax - zmin) * (i / n);
-        let ex = cp * Math.cos(w * t - k * z);
-        let ey = sp * Math.cos(w * t - k * z + delta);
-
-        let p2d = project3D({
-            x: ex,
-            y: ey,
-            z: z
-        });
-        let px = origin.x + p2d.x;
-        let py = origin.y - p2d.y;
-
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-    }
-    ctx.strokeStyle = "blue";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Also draw the instantaneous arrow at z=0
-    let ex = cp * Math.cos(w * t);
-    let ey = sp * Math.cos(w * t + delta);
-
-    let head2d = project3D({
-        x: ex,
-        y: ey,
-        z: 0
-    });
-
-    drawArrow(
-        origin.x,
-        origin.y,
-        origin.x + head2d.x,
-        origin.y - head2d.y,
-        "red"
-    );
-}
-
-/* ------------------- Utility -------------------- */
-
-function drawArrow(x1, y1, x2, y2, color) {
-    ctx.strokeStyle = color;
-    ctx.fillStyle = color;
-    ctx.lineWidth = 2;
-
-    // Main line
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
-
-    // Arrowhead
-    let h = 10,
-        dx = x2 - x1,
-        dy = y2 - y1,
-        a = Math.atan2(dy, dx);
-
-    ctx.beginPath();
-    ctx.moveTo(x2, y2);
-    ctx.lineTo(
-        x2 - h * Math.cos(a - Math.PI / 6),
-        y2 - h * Math.sin(a - Math.PI / 6)
-    );
-    ctx.lineTo(
-        x2 - h * Math.cos(a + Math.PI / 6),
-        y2 - h * Math.sin(a + Math.PI / 6)
-    );
-    ctx.lineTo(x2, y2);
-    ctx.fill();
-}
-
-// Initial draw
 drawAll();
