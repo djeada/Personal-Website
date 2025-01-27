@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Disk I/O Analysis for Monitoring System Performance</title>
+    <meta content="Disk I/O operations directly impact performance in applications requiring frequent or large-scale data access." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="https://adamdjellouli.com">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a class="active" href="../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <section id="article-body">
+            <p style="text-align: right;"><i>Last modified: January 27, 2025</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="disk-i-o-analysis-for-monitoring-system-performance">Disk I/O Analysis for Monitoring System Performance</h2>
+            <p>Disk I/O operations directly impact performance in applications requiring frequent or large-scale data access. Understanding and monitoring disk I/O is essential for diagnosing performance bottlenecks, optimizing resource utilization, and ensuring that applications run efficiently. Disk I/O analysis involves examining how data is read from and written to storage devices, identifying patterns, and pinpointing areas where performance can be improved.</p>
+            <p>We will delve into the methods and tools used for disk I/O analysis, providing detailed explanations and practical steps for monitoring and interpreting disk I/O activities.</p>
+            <h3 id="disk-i-o-process">Disk I/O Process</h3>
+            <p><strong>Read Operation</strong>:</p>
+            <ul>
+                <li>Application requests data.</li>
+                <li>File System checks cache; if not present, requests from disk.</li>
+                <li>Disk Driver retrieves data from physical storage.</li>
+                <li>Data is passed back up to the application.</li>
+            </ul>
+            <p><strong>Write Operation</strong>:</p>
+            <ul>
+                <li>Application sends data to be written.</li>
+                <li>File System may cache writes for efficiency.</li>
+                <li>Disk Driver writes data to physical storage.</li>
+                <li>Acknowledgment is sent back to the application.</li>
+            </ul>
+            <p>Example: </p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+--------------------+
+|     Application    |
++--------------------+
+           |
+           v
++--------------------+
+|   File System API  |
++--------------------+
+           |
+           v
++--------------------+
+|    File System     |
+|   (e.g., ext4)     |
++--------------------+
+           |
+           v
++--------------------+
+|   Block Device     |
+|   (e.g., /dev/sda) |
++--------------------+
+           |
+           v
++--------------------+
+|  Disk Driver       |
++--------------------+
+           |
+           v
++--------------------+
+|  Physical Storage  |
+|  (HDD/SSD)         |
++--------------------+</code></pre>
+            </div>
+            </p>
+            <p>Explanation:</p>
+            <ul>
+                <li>The <strong>application layer</strong> is where an application initiates a request to read or write data, starting the file operation process.</li>
+                <li>A <strong>file system API</strong> is then utilized, with system calls like <code>read()</code> and <code>write()</code> to interact with the underlying file system for data access.</li>
+                <li>The <strong>file system</strong> translates these file operations into specific block-level operations, bridging the gap between high-level requests and lower-level storage processes.</li>
+                <li>The <strong>block device</strong> represents the disk in terms of addressable blocks, which are the units of data that the file system operates on.</li>
+                <li>A <strong>disk driver</strong> manages the communication between the operating system and the physical storage device, ensuring proper data transfer.</li>
+                <li>At the lowest level, <strong>physical storage</strong> refers to the actual hardware, such as a hard disk or SSD, where data is stored or retrieved based on the instructions received from the higher layers.</li>
+            </ul>
+            <h3 id="factors-affecting-disk-i-o-performance">Factors Affecting Disk I/O Performance</h3>
+            <ul>
+                <li>The <strong>HDD (Hard Disk Drive)</strong> relies on mechanical parts to read and write data, making it slower in terms of access times and higher in latency compared to other storage options.</li>
+                <li>In contrast, the <strong>SSD (Solid State Drive)</strong> offers significantly faster read and write speeds due to the absence of mechanical parts, leading to lower latency and better random access performance.</li>
+                <li><strong>Sequential I/O</strong> operations benefit from minimized seek times, which results in faster data transfer, particularly in systems with rotating storage like HDDs.</li>
+                <li>For <strong>Random I/O</strong> operations, HDDs are notably slower because of the mechanical movement required to locate data, whereas SSDs, lacking such mechanical constraints, handle random access much more efficiently.</li>
+                <li>The <strong>queue depth</strong> refers to the number of I/O operations that can be processed by the storage device simultaneously, influencing overall performance, especially under heavy load.</li>
+                <li>The <strong>file system</strong> can impact efficiency significantly, with certain file systems being more adept at managing metadata and utilizing caching, which enhances disk performance.</li>
+                <li><strong>Caching and buffering</strong> mechanisms rely on the use of RAM to temporarily store data during disk operations, which helps to improve overall disk performance by reducing direct read and write operations to the disk.</li>
+            </ul>
+            <h3 id="disk-scheduling-algorithms">Disk Scheduling Algorithms</h3>
+            <ul>
+                <li>The <strong>First-Come, First-Served (FCFS)</strong> algorithm processes I/O requests sequentially in the exact order in which they arrive, without any prioritization or reordering.</li>
+                <li>Using the <strong>Shortest Seek Time First (SSTF)</strong> approach, the disk scheduler selects the I/O request that is closest to the current position of the disk head, reducing seek time but potentially leading to the starvation of farther requests.</li>
+                <li>The <strong>Elevator Algorithm (SCAN)</strong> moves the disk arm in one direction, servicing all pending I/O requests along the way until it reaches the end of the disk, at which point it reverses direction to continue processing any remaining requests.</li>
+            </ul>
+            <p><strong>Visualization: Elevator Algorithm</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Cylinder Positions:
+0---|---|---|---|---|---|---|---|---|---|---|
+     Requests at positions: 10, 22, 20, 35, 2, 40
+
+Disk arm starts at position 20, moves towards higher cylinders:
+
+1. Services request at 20
+2. Moves to 22
+3. Moves to 35
+4. Moves to 40
+- Reverses direction -
+5. Moves to 10
+6. Moves to 2</code></pre>
+            </div>
+            </p>
+            <h3 id="initialization-and-setup">Initialization and Setup</h3>
+            <p>Implementing disk I/O analysis begins with setting up a monitoring environment that can capture and interpret disk I/O activities without significantly impacting system performance. This involves selecting appropriate tools and configuring them to collect relevant data at regular intervals.</p>
+            <p>Some considerations during initialization and setup:</p>
+            <ul>
+                <li>Choose tools and methods that have minimal overhead to avoid introducing performance degradation during monitoring.</li>
+                <li>Ensure that the monitoring setup captures all necessary metrics, including read/write operations, I/O wait times, and queue lengths.</li>
+                <li>Configure the system to collect data at intervals that provide sufficient granularity for analysis without overwhelming system resources.</li>
+            </ul>
+            <h3 id="conceptual-overview">Conceptual Overview</h3>
+            <p>Disk I/O operations involve transferring data between the system's memory and storage devices, such as hard drives, solid-state drives (SSDs), or network-attached storage (NAS). Understanding the fundamentals of disk I/O is crucial for effective analysis.</p>
+            <p>Main idea:</p>
+            <ul>
+                <li>Disk <strong>read and write</strong> operations involve accessing or storing data on disk drives, facilitating essential data retrieval and storage functions within computer systems.</li>
+                <li>The operating system employs <strong>I/O scheduling</strong> to arrange and prioritize incoming I/O requests, which helps to enhance overall disk performance by reducing unnecessary delays.</li>
+                <li><strong>I/O wait times</strong> measure the duration that processes remain idle while awaiting their I/O operations to complete, potentially leading to decreased system responsiveness when prolonged.</li>
+                <li>Monitoring <strong>I/O queue lengths</strong> is crucial, as longer queues often indicate performance bottlenecks with multiple I/O requests waiting to be processed by the disk.</li>
+                <li><strong>Synchronous I/O</strong> operations require the requesting process to pause until the I/O task completes, potentially causing delays in execution when operations take longer than expected.</li>
+                <li>With <strong>asynchronous I/O</strong> methods, a process can begin an I/O operation and proceed with other tasks concurrently, promoting system efficiency by allowing work to continue while awaiting I/O completion.</li>
+                <li><strong>Caching mechanisms</strong> can reduce I/O operation frequency by temporarily storing data in memory, thus improving access times for frequently used data and reducing overall latency.</li>
+                <li><strong>Direct I/O</strong> bypasses caching mechanisms to read or write data directly to disk, which is beneficial for applications requiring consistent data integrity, such as databases.</li>
+                <li>The <strong>buffering</strong> process allows data to accumulate in a temporary storage area before being written to disk, helping to optimize performance by reducing the frequency of write operations.</li>
+                <li>In <strong>block I/O</strong>, data is transferred in fixed-sized blocks, which is efficient for reading or writing large amounts of data sequentially, enhancing throughput on bulk data operations.</li>
+                <li><strong>Character I/O</strong>, in contrast, handles data one character at a time, making it more suitable for applications that require continuous data streams, such as terminals or printers.</li>
+                <li><strong>Latency</strong> in I/O operations reflects the delay experienced when accessing or transferring data, with higher latency potentially causing slower overall performance in time-sensitive applications.</li>
+                <li><strong>Throughput</strong> is a key metric in I/O performance, indicating the amount of data transferred over a given period, with higher throughput representing better system efficiency.</li>
+                <li><strong>I/O bandwidth</strong> determines the maximum rate at which data can be transferred between the storage device and the system, influencing how quickly large files can be read or written.</li>
+                <li><strong>Disk fragmentation</strong> can impact read and write speeds by causing data to be spread across multiple locations, which forces the disk to spend additional time locating fragmented pieces during access.</li>
+            </ul>
+            <h3 id="sampling-disk-i-o-over-time">Sampling Disk I/O Over Time</h3>
+            <p>Monitoring disk I/O involves periodically sampling various metrics to capture the system's behavior over time. This can be achieved using built-in Linux tools and utilities that provide real-time statistics.</p>
+            <p><strong>Tools for Sampling Disk I/O</strong>:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Command</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td><strong><code>iostat</code></strong></td>
+                    <td>Part of the <code>sysstat</code> package, <code>iostat</code> reports CPU statistics and input/output statistics for devices and partitions.</td>
+                </tr>
+                <tr>
+                    <td><strong><code>vmstat</code></strong></td>
+                    <td>Provides information about processes, memory, paging, block I/O, traps, and CPU activity.</td>
+                </tr>
+                <tr>
+                    <td><strong><code>dstat</code></strong></td>
+                    <td>A versatile tool that combines the functionality of <code>iostat</code>, <code>vmstat</code>, <code>netstat</code>, and others.</td>
+                </tr>
+                <tr>
+                    <td><strong><code>sar</code></strong></td>
+                    <td>Collects, reports, and saves system activity information.</td>
+                </tr>
+                <tr>
+                    <td><strong><code>blktrace</code></strong></td>
+                    <td>Provides detailed information about block layer I/O operations.</td>
+                </tr>
+                <tr>
+                    <td><strong><code>iotop</code></strong></td>
+                    <td>Displays I/O usage information per process or thread.</td>
+                </tr>
+            </table>
+            </p>
+            <p><strong>Sampling Methods</strong>:</p>
+            <ul>
+                <li><strong>Periodic sampling</strong> involves collecting data at regular intervals, such as every second, to monitor trends and detect any sudden spikes or unusual patterns in I/O activity.</li>
+                <li><strong>Event-based sampling</strong> triggers data collection in response to specific events, like when I/O wait times become excessive or queue lengths surpass a predefined threshold.</li>
+                <li><strong>Continuous monitoring</strong> relies on tools that provide real-time updates, allowing users to observe I/O activities as they occur and promptly respond to any performance issues. </li>
+                <li>These methods help administrators track and optimize system performance by identifying potential bottlenecks and ensuring efficient I/O operations.</li>
+            </ul>
+            <h3 id="application-for-performance-optimization">Application for Performance Optimization</h3>
+            <p>Disk I/O analysis is essential for applications that are sensitive to storage performance, such as databases, file servers, and virtualization platforms. By monitoring disk I/O, you can:</p>
+            <ul>
+                <li>Determine if disk I/O is a limiting factor in application performance.</li>
+                <li>Adjust application configurations or system settings to improve I/O efficiency.</li>
+                <li>Assess whether the current storage infrastructure can handle increased load.</li>
+                <li>Identify failing disks or storage devices that may be causing I/O errors or slowdowns.</li>
+            </ul>
+            <p>For example, a database experiencing high latency might be suffering from slow disk I/O due to insufficient disk speeds or high contention. By analyzing disk I/O metrics, you can decide whether to implement caching mechanisms, upgrade storage hardware, or optimize database queries to reduce I/O load.</p>
+            <h3 id="shift-from-traditional-metrics-to-advanced-analysis">Shift From Traditional Metrics to Advanced Analysis</h3>
+            <p>Traditional performance monitoring often focuses on high-level metrics like CPU utilization or memory usage. While these are important, they may not reveal issues related to disk I/O, which can be a significant performance bottleneck.</p>
+            <p>Shifting the focus to disk I/O analysis involves:</p>
+            <ul>
+                <li>High I/O wait times can indicate that processes are frequently waiting for disk operations, leading to reduced performance.</li>
+                <li>Understanding whether the workload is sequential or random, read-heavy or write-heavy, can inform optimization strategies.</li>
+                <li>Long I/O queues suggest that the disk subsystem cannot keep up with the workload, necessitating hardware upgrades or workload redistribution.</li>
+            </ul>
+            <h3 id="action-plan">Action Plan</h3>
+            <p>To effectively monitor and optimize disk I/O performance, follow this action plan:</p>
+            <p>I. Establish Baseline Metrics:</p>
+            <ul>
+                <li>Use tools like <code>iostat</code> and <code>vmstat</code> to collect baseline data on disk I/O performance under normal operating conditions.</li>
+                <li>Record metrics such as average read/write speeds, I/O wait times, and queue lengths.</li>
+            </ul>
+            <p>II. Implement Regular Monitoring:</p>
+            <ul>
+                <li>Set up continuous monitoring using tools like <code>dstat</code> or <code>sar</code> to collect data over time.</li>
+                <li>Configure alerts for abnormal I/O activity, such as spikes in wait times or significant deviations from the baseline.</li>
+            </ul>
+            <p>III. Analyze Collected Data:</p>
+            <ul>
+                <li>Examine trends and patterns in the data to identify periods of high I/O activity.</li>
+                <li>Correlate I/O metrics with application performance to determine the impact of disk I/O on overall system behavior.</li>
+            </ul>
+            <p>IV. Identify and Address Bottlenecks:</p>
+            <ul>
+                <li>Investigate high I/O wait times or long queues to pinpoint bottlenecks.</li>
+                <li>Consider hardware upgrades, such as moving to SSDs, increasing RAID levels, or adding more disks to distribute the load.</li>
+                <li>Optimize applications to reduce unnecessary I/O operations, such as caching frequently accessed data in memory.</li>
+            </ul>
+            <p>V. Optimize System Settings:</p>
+            <ul>
+                <li>Tune kernel parameters related to disk I/O, such as elevator algorithms or readahead settings.</li>
+                <li>Adjust filesystem mount options to improve performance, like enabling write-back caching or adjusting journaling modes.</li>
+            </ul>
+            <p>VI. Validate Improvements:</p>
+            <ul>
+                <li>After making changes, monitor the system to ensure that performance has improved.</li>
+                <li>Compare new metrics against the baseline to quantify the impact of optimizations.</li>
+            </ul>
+            <h3 id="tools-for-disk-i-o-analysis">Tools for Disk I/O Analysis</h3>
+            <p>Several tools are available for monitoring and analyzing disk I/O performance. Each tool offers different levels of detail and functionality.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Command</td>
+                    <td>Usage</td>
+                    <td>Description</td>
+                    <td>Benefits</td>
+                </tr>
+                <tr>
+                    <td><strong><code>iostat</code></strong></td>
+                    <td><code>iostat -x 1</code></td>
+                    <td>Provides extended I/O statistics for devices, including utilization, read/write rates, and average request sizes.</td>
+                    <td>Offers a quick overview of disk performance with minimal impact on system resources.</td>
+                </tr>
+                <tr>
+                    <td><strong><code>vmstat</code></strong></td>
+                    <td><code>vmstat 1</code></td>
+                    <td>Displays virtual memory statistics, including process states, memory usage, paging, block I/O, and CPU activity.</td>
+                    <td>Helps correlate disk I/O with memory and CPU usage.</td>
+                </tr>
+                <tr>
+                    <td><strong><code>dstat</code></strong></td>
+                    <td><code>dstat -dny</code></td>
+                    <td>Monitors disk I/O, network activity, and system resources in real-time.</td>
+                    <td>Combines multiple monitoring capabilities into one tool for comprehensive analysis.</td>
+                </tr>
+                <tr>
+                    <td><strong><code>blktrace</code></strong></td>
+                    <td><code>blktrace -d /dev/sda -o - \| blkparse -i -</code></td>
+                    <td>Traces block I/O operations at the kernel level, providing detailed information about each I/O request.</td>
+                    <td>Ideal for in-depth analysis of I/O patterns and diagnosing complex issues.</td>
+                </tr>
+                <tr>
+                    <td><strong><code>fio</code></strong></td>
+                    <td>Configured via job files</td>
+                    <td>A flexible I/O workload generator used for benchmarking and testing disk I/O performance.</td>
+                    <td>Allows you to simulate specific workloads to test system performance under controlled conditions.</td>
+                </tr>
+                <tr>
+                    <td><strong><code>perf</code></strong></td>
+                    <td><code>perf record -e block:block_rq_issue -a</code></td>
+                    <td>A powerful profiling tool that can monitor various performance events, including block I/O operations.</td>
+                    <td>Useful for correlating disk I/O events with CPU usage and other system activities.</td>
+                </tr>
+                <tr>
+                    <td><strong><code>GNOME System Monitor</code></strong></td>
+                    <td>GUI-based tool</td>
+                    <td>Provides graphical representation of system performance, including disk I/O.</td>
+                    <td>User-friendly interface for quick visual assessment of system health.</td>
+                </tr>
+                <tr>
+                    <td><strong><code>Collectd</code></strong> and <strong><code>Grafana</code></strong></td>
+                    <td>Collect metrics using <code>collectd</code> and visualize in <code>Grafana</code> dashboards</td>
+                    <td>Collects system statistics and displays them in customizable dashboards.</td>
+                    <td>Ideal for long-term monitoring and trend analysis.</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="understanding-disk-i-o-states">Understanding Disk I/O States</h3>
+            <p>Processes and threads in a system can be in various states related to disk I/O. Understanding these states is crucial for interpreting monitoring data.</p>
+            <h4 id="common-disk-i-o-states">Common Disk I/O States</h4>
+            <p>I. <strong>Uninterruptible Sleep (<code>D</code> State)</strong>:</p>
+            <ul>
+                <li>Processes waiting for I/O operations to complete are often in an uninterruptible sleep state.</li>
+                <li>A high number of processes in this state can indicate I/O bottlenecks.</li>
+            </ul>
+            <p>II. <strong>I/O Wait (<code>wa</code> in CPU Usage)</strong>:</p>
+            <ul>
+                <li>Represents the percentage of time the CPU is idle while the system has pending disk I/O operations.</li>
+                <li>High I/O wait times suggest that the CPU is often idle waiting for disk operations, indicating potential disk performance issues.</li>
+            </ul>
+            <p>III. <strong>Blocked Processes</strong>:</p>
+            <ul>
+                <li>Processes that cannot proceed because they are waiting for I/O resources.</li>
+                <li>May lead to increased load averages and reduced system responsiveness.</li>
+            </ul>
+            <h4 id="analyzing-process-states">Analyzing Process States</h4>
+            <p>I. <strong>Identifying Processes in Uninterruptible Sleep State</strong></p>
+            <p>The command <code>ps -eo pid,state,cmd | grep "^D"</code> is used to list processes that are in the <strong>uninterruptible sleep</strong> state, commonly represented by the letter <code>D</code> in the process state. This state typically occurs when a process is waiting on disk I/O (Input/Output) and cannot be interrupted until the I/O operation completes. </p>
+            <p>Command breakdown:</p>
+            <ul>
+                <li><code>ps</code>: Displays information about active processes.</li>
+                <li><code>-eo pid,state,cmd</code>: Specifies the output format to include the process ID (<code>pid</code>), state (<code>state</code>), and command (<code>cmd</code>).</li>
+                <li><code>grep "^D"</code>: Filters the output to only show processes in the <code>D</code> state (uninterruptible sleep).</li>
+            </ul>
+            <p><strong>Example Output</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">PID S CMD
+5678 D /usr/bin/myapp</code></pre>
+            </div>
+            </p>
+            <p>The process with PID <code>5678</code> is in the uninterruptible sleep state (<code>D</code>), indicating that it is likely waiting for disk-related operations to complete. This state can be a sign of a disk I/O bottleneck or issues with file systems or storage devices. If too many processes are stuck in this state, it might point to problems with disk performance or disk saturation.</p>
+            <p>II. <strong>Monitoring I/O Wait with <code>top</code> Command Sorted by %WA</strong></p>
+            <p>The <code>top -o %WA</code> command is used to run the <code>top</code> utility with the output sorted by I/O wait time (represented as <code>%WA</code>). The I/O wait percentage tells you the amount of time the CPU is waiting for disk I/O operations to complete, which can indicate whether disk operations are slowing down the system.</p>
+            <p>Breaking down the command:</p>
+            <ul>
+                <li><code>top</code> displays real-time system activity, including CPU, memory, and process usage.</li>
+                <li><code>-o %WA</code> sorts the process list by I/O wait percentage (<code>%WA</code>), which is the percentage of CPU time spent waiting for I/O operations.</li>
+            </ul>
+            <p><strong>Example Output</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">PID USER  PR  NI  VIRT  RES  SHR S %CPU %MEM %WA  TIME+ COMMAND
+5678 user 20   0  100m  10m 5000 D  0.0  0.5 50.0 1:00.00 myapp</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>The process with PID <code>5678</code> (<code>myapp</code>) has a high I/O wait time, shown by <code>%WA = 50.0</code>, meaning 50% of the CPU's time is spent waiting on this process's I/O operations.</li>
+                <li>The state column (<code>S</code>) indicates the process is in an uninterruptible sleep state (<code>D</code>), further reinforcing that the process is waiting on disk I/O.</li>
+                <li>If several processes are contributing to high I/O wait times, it could signal that the system's storage subsystem is under strain, leading to performance bottlenecks.</li>
+            </ul>
+            <h3 id="scheduler-and-i-o-priorities">Scheduler and I/O Priorities</h3>
+            <p>The Linux I/O scheduler plays a critical role in managing how disk I/O requests are handled. Understanding how the scheduler works can help optimize I/O performance.</p>
+            <h4 id="i-o-schedulers">I/O Schedulers</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>I/O Scheduler</td>
+                    <td>Description</td>
+                    <td>Benefits</td>
+                    <td>Considerations/Drawbacks</td>
+                </tr>
+                <tr>
+                    <td><strong>Completely Fair Queuing (CFQ)</strong></td>
+                    <td>Distributes I/O bandwidth evenly among all processes.</td>
+                    <td>Suitable for general-purpose workloads.</td>
+                    <td>May not be optimal for high-performance or specialized workloads.</td>
+                </tr>
+                <tr>
+                    <td><strong>Deadline</strong></td>
+                    <td>Focuses on meeting deadlines for I/O requests to prevent starvation.</td>
+                    <td>Good for systems requiring predictable I/O latency.</td>
+                    <td>Can be less efficient for non-time-sensitive workloads.</td>
+                </tr>
+                <tr>
+                    <td><strong>Noop</strong></td>
+                    <td>Performs minimal scheduling, simply merging requests when possible.</td>
+                    <td>Ideal for SSDs where seek times are negligible.</td>
+                    <td>Not ideal for HDDs where seek time optimization is important.</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="changing-i-o-scheduler">Changing I/O Scheduler</h4>
+            <p>The command <code>echo deadline &gt; /sys/block/sda/queue/scheduler</code> changes the I/O scheduler for the device <code>/dev/sda</code> to the <code>deadline</code> scheduler.</p>
+            <p>Explanation:</p>
+            <ul>
+                <li>This command writes the value <code>deadline</code> to the scheduler configuration file of the device <code>/dev/sda</code>, instantly changing the scheduling algorithm for that device.</li>
+                <li>The <code>deadline</code> scheduler ensures that disk I/O requests are completed within a specific timeframe, making it well-suited for environments where I/O predictability is critical.</li>
+                <li>Changes made this way are <strong>temporary</strong> and will revert back to the default scheduler on reboot. To make the change permanent, you would need to configure the boot parameters in the system's bootloader configuration, such as in GRUB, by adding the scheduler setting to the kernel boot options.</li>
+            </ul>
+            <h4 id="understanding-i-o-priorities">Understanding I/O Priorities</h4>
+            <p>Processes can be assigned I/O priorities to control how much disk access they get relative to other processes. This is managed using the <code>ionice</code> command. There are three main I/O scheduling classes:</p>
+            <ul>
+                <li>Processes with an <strong>idle</strong> priority only receive I/O time when no other process is using the disk, making it suitable for background tasks that do not require urgent disk access.</li>
+                <li>The <strong>best-effort</strong> class is the default I/O priority, with priorities ranging from 0 (highest priority) to 7 (lowest priority), ensuring a balance where processes with higher priorities get faster disk access, but no process is starved.</li>
+                <li>In the <strong>real-time</strong> class, processes are given the highest priority for disk access, allowing them to monopolize the disk if needed, which can potentially starve other processes, so it is recommended for critical, time-sensitive operations only.</li>
+                <li><strong>Idle</strong> class processes are least intrusive, while <strong>real-time</strong> processes are the most demanding, highlighting the importance of using real-time priority only when absolutely necessary to avoid affecting overall system performance.</li>
+            </ul>
+            <h4 id="setting-i-o-priority">Setting I/O Priority</h4>
+            <p>To manually set the I/O priority of a process, you use the <code>ionice</code> command. For example, to assign a process with PID <code>5678</code> to the <strong>best-effort</strong> class with the highest priority (<code>0</code>), you would use the following command:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">ionice -c2 -n0 -p 5678</code></pre>
+            </div>
+            </p>
+            <p>Breaking down the command:</p>
+            <ul>
+                <li><code>-c2</code> specifies the <strong>best-effort</strong> class.</li>
+                <li><code>-n0</code> sets the highest priority within the best-effort class (0 is highest, 7 is lowest).</li>
+                <li><code>-p 5678</code> targets the process with the PID <code>5678</code>.</li>
+            </ul>
+            <h3 id="filesystem-and-storage-optimization">Filesystem and Storage Optimization</h3>
+            <p>Optimizing the filesystem and storage configuration can have a significant impact on disk I/O performance.</p>
+            <p><strong>Filesystem Choices</strong>:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Filesystem</td>
+                    <td>Description</td>
+                    <td>Benefits</td>
+                    <td>Drawbacks</td>
+                </tr>
+                <tr>
+                    <td><strong>Ext4</strong></td>
+                    <td>General-purpose filesystem with journaling.</td>
+                    <td>Supports large files and volumes, suitable for most applications.</td>
+                    <td>None specific, widely supported and stable.</td>
+                </tr>
+                <tr>
+                    <td><strong>XFS</strong></td>
+                    <td>High-performance filesystem designed for parallel I/O.</td>
+                    <td>Good for large files and high-throughput environments.</td>
+                    <td>May require more tuning for certain workloads.</td>
+                </tr>
+                <tr>
+                    <td><strong>Btrfs</strong></td>
+                    <td>Modern filesystem with advanced features like snapshots and pooling.</td>
+                    <td>Advanced features like snapshots and pooling.</td>
+                    <td>Still under heavy development; may not be ideal for production systems requiring stability.</td>
+                </tr>
+            </table>
+            </p>
+            <p><strong>Mount Options</strong>:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Option</td>
+                    <td>Description</td>
+                    <td>Benefits</td>
+                    <td>Drawbacks</td>
+                </tr>
+                <tr>
+                    <td><strong><code>noatime</code></strong></td>
+                    <td>Disables updating the access time of files on read.</td>
+                    <td>Reduces unnecessary write operations, improving read performance.</td>
+                    <td>None specific to general performance.</td>
+                </tr>
+                <tr>
+                    <td><strong><code>data=writeback</code></strong></td>
+                    <td>Writes data and metadata asynchronously.</td>
+                    <td>Increases performance.</td>
+                    <td>Risk of data integrity loss during crashes.</td>
+                </tr>
+                <tr>
+                    <td><strong><code>discard</code></strong></td>
+                    <td>Enables TRIM operations on SSDs.</td>
+                    <td>Helps maintain SSD performance over time.</td>
+                    <td>Not all SSDs may benefit equally from this option.</td>
+                </tr>
+            </table>
+            </p>
+            <p><strong>RAID Configurations</strong>:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>RAID Level</td>
+                    <td>Description</td>
+                    <td>Benefits</td>
+                    <td>Drawbacks</td>
+                </tr>
+                <tr>
+                    <td><strong>RAID 0 (Striping)</strong></td>
+                    <td>Distributes data across multiple disks for increased performance.</td>
+                    <td>High performance.</td>
+                    <td>No redundancy; a single disk failure leads to data loss.</td>
+                </tr>
+                <tr>
+                    <td><strong>RAID 1 (Mirroring)</strong></td>
+                    <td>Duplicates data across disks for redundancy.</td>
+                    <td>Redundancy; protection from data loss.</td>
+                    <td>No performance gain in write operations.</td>
+                </tr>
+                <tr>
+                    <td><strong>RAID 5/6 (Parity)</strong></td>
+                    <td>Balances performance and redundancy using parity bits.</td>
+                    <td>Balanced performance and redundancy.</td>
+                    <td>Write performance can be affected due to parity calculations.</td>
+                </tr>
+                <tr>
+                    <td><strong>RAID 10 (Striping + Mirroring)</strong></td>
+                    <td>Combines the benefits of RAID 0 and RAID 1.</td>
+                    <td>High performance and redundancy.</td>
+                    <td>Requires more disks, increasing cost.</td>
+                </tr>
+            </table>
+            </p>
+            <p><strong>Storage Technologies</strong>:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Storage Technology</td>
+                    <td>Description</td>
+                    <td>Benefits</td>
+                    <td>Considerations/Drawbacks</td>
+                </tr>
+                <tr>
+                    <td><strong>SSD</strong></td>
+                    <td>Solid-state drives offering significantly faster read/write speeds and lower latency compared to HDDs.</td>
+                    <td>Faster performance, reduced latency, and no moving parts.</td>
+                    <td>Higher cost per GB compared to HDDs.</td>
+                </tr>
+                <tr>
+                    <td><strong>HDD</strong></td>
+                    <td>Traditional mechanical drives with slower read/write speeds.</td>
+                    <td>More affordable per GB and widely available in large capacities.</td>
+                    <td>Slower performance and higher latency compared to SSDs.</td>
+                </tr>
+                <tr>
+                    <td><strong>NVMe Drives</strong></td>
+                    <td>Non-Volatile Memory Express (NVMe) drives that provide ultra-fast performance via PCIe interfaces.</td>
+                    <td>Ideal for applications requiring high-speed storage, such as high-frequency trading platforms.</td>
+                    <td>More expensive than both SSDs and HDDs.</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="challenges">Challenges</h3>
+            <ol>
+                <li>Research and describe the process of both read and write operations in the disk I/O pathway, starting from the application layer down to physical storage. Illustrate each layer involved, such as the file system, block device, disk driver, and physical storage, and explain the role of each in the process.</li>
+                <li>Use the <code>iostat</code> command to monitor disk I/O performance on your system. Record metrics such as read/write rates and I/O wait times over a period of five minutes. Analyze the results, and explain any spikes or patterns you observe in relation to the applications running on your system during this time.</li>
+                <li>Investigate the impact of storage types on disk I/O performance. Compare HDDs and SSDs by researching their read/write speeds, latency, and performance in random vs. sequential I/O operations. Summarize the key differences, and describe scenarios where each storage type would be most appropriate.</li>
+                <li>Use the <code>vmstat</code> command to track block I/O on your system. Record your observations and explain how the block I/O activity correlates with other system metrics, such as CPU usage and memory activity. Based on your findings, discuss any potential I/O bottlenecks that may affect system performance.</li>
+                <li>Research the concept of disk scheduling algorithms and examine at least two, such as First-Come, First-Served (FCFS) and the Elevator Algorithm (SCAN). Write a summary explaining how these algorithms prioritize disk requests, and consider how each might affect overall disk performance in different workloads.</li>
+                <li>Experiment with the <code>blktrace</code> command to monitor block I/O events on a specific disk (e.g., <code>/dev/sda</code>). Capture I/O activity for a few minutes, then analyze the data to identify trends or patterns. Discuss how such detailed I/O tracking can help diagnose complex disk performance issues.</li>
+                <li>Set up a simple benchmarking test using the <code>fio</code> tool to simulate disk I/O activity under various workloads, such as sequential and random reads/writes. Compare the results to observe how each workload affects the disk's performance, and explain what these differences reveal about disk behavior under different access patterns.</li>
+                <li>Monitor your system’s disk I/O using the <code>iotop</code> command to identify the processes consuming the most I/O resources. Record which processes are most active and evaluate how their activity impacts overall disk performance. Explain how monitoring active processes can aid in identifying performance bottlenecks.</li>
+                <li>Research I/O scheduling classes and priorities, such as idle, best-effort, and real-time, and use the <code>ionice</code> command to set these priorities for a particular process. Conduct a small experiment by setting different priorities for a test process and observing the impact on its performance relative to other processes. Summarize how I/O prioritization can be leveraged for optimizing disk access.</li>
+                <li>Use the <code>iostat</code> and <code>dstat</code> commands to collect baseline disk I/O performance data under normal system conditions. Record metrics such as average I/O wait times, queue lengths, and transfer rates over a period of time. Identify any recurring patterns and hypothesize potential causes, considering how this baseline data could inform system tuning or optimization efforts in the future.</li>
+            </ol>
+        </section>
+        <div id="table-of-contents">
+            <h2>Table of Contents</h2>
+            <ol><a href="#disk-i-o-analysis-for-monitoring-system-performance">Disk I/O Analysis for Monitoring System Performance</a>
+                <ol>
+                    <li><a href="#disk-i-o-process">Disk I/O Process</a></li>
+                    <li><a href="#factors-affecting-disk-i-o-performance">Factors Affecting Disk I/O Performance</a></li>
+                    <li><a href="#disk-scheduling-algorithms">Disk Scheduling Algorithms</a></li>
+                    <li><a href="#initialization-and-setup">Initialization and Setup</a></li>
+                    <li><a href="#conceptual-overview">Conceptual Overview</a></li>
+                    <li><a href="#sampling-disk-i-o-over-time">Sampling Disk I/O Over Time</a></li>
+                    <li><a href="#application-for-performance-optimization">Application for Performance Optimization</a></li>
+                    <li><a href="#shift-from-traditional-metrics-to-advanced-analysis">Shift From Traditional Metrics to Advanced Analysis</a></li>
+                    <li><a href="#action-plan">Action Plan</a></li>
+                    <li><a href="#tools-for-disk-i-o-analysis">Tools for Disk I/O Analysis</a></li>
+                    <li><a href="#understanding-disk-i-o-states">Understanding Disk I/O States</a>
+                        <ol>
+                            <li><a href="#common-disk-i-o-states">Common Disk I/O States</a></li>
+                            <li><a href="#analyzing-process-states">Analyzing Process States</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#scheduler-and-i-o-priorities">Scheduler and I/O Priorities</a>
+                        <ol>
+                            <li><a href="#i-o-schedulers">I/O Schedulers</a></li>
+                            <li><a href="#changing-i-o-scheduler">Changing I/O Scheduler</a></li>
+                            <li><a href="#understanding-i-o-priorities">Understanding I/O Priorities</a></li>
+                            <li><a href="#setting-i-o-priority">Setting I/O Priority</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#filesystem-and-storage-optimization">Filesystem and Storage Optimization</a></li>
+                    <li><a href="#challenges">Challenges</a></li>
+                </ol>
+            </ol>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/commands.html">Commands</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/cron_jobs.html">Cron Jobs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/disk_io_analysis.html">Disk Io Analysis</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/disk_usage.html">Disk Usage</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/dwm.html">Dwm</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/encryption.html">Encryption</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/enviroment_modules.html">Enviroment Modules</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/enviroment_variable.html">Enviroment Variable</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/file_system.html">File System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/files_and_dirs.html">Files and Dirs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/finding_files.html">Finding Files</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/firewall.html">Firewall</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/grep.html">Grep</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/hardware.html">Hardware</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/inodes_and_symlinks.html">Inodes and Symlinks</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/introduction.html">Introduction</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/kernel.html">Kernel</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ldap.html">Ldap</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/log_files_and_journals.html">Log Files and Journals</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/logical_volume_management.html">Logical Volume Management</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/managing_users.html">Managing Users</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/mounting.html">Mounting</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/networking.html">Networking</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/nfs.html">Nfs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/package_managers.html">Package Managers</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/partitions.html">Partitions</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/performance_monitoring.html">Performance Monitoring</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/permissions.html">Permissions</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/pipe_and_redirect.html">Pipe and Redirect</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ports.html">Ports</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/processes.html">Processes</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/running_executables.html">Running Executables</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/sed_and_awk.html">Sed and Awk</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/selinux.html">Selinux</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/services.html">Services</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/shells_and_bash_configuration.html">Shells and Bash Configuration</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ssh_and_scp.html">Ssh and Scp</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/system_startup.html">System Startup</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/tar_and_gzip.html">Tar and Gzip</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/task_state_analysis.html">Task State Analysis</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/utilities.html">Utilities</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/virtual_machines.html">Virtual Machines</a></li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column">
+                <img alt="Adam Djellouli Symbol" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+            <div class="footer-column">
+                <h2><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Our Privacy Policy</a></h2>
+                <p>
+                    Thank you for visiting my personal website. All of the <br />
+                    content on this site is free to use, but please remember <br />
+                    to be a good human being and refrain from any abuse<br />
+                    of the site. If you would like to contact me, please use <br />
+                    my <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn profile</a> or my <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a> if you have any technical <br />
+                    issues or ideas to share. I wish you the best and hope you <br />
+                    have a fantastic life. <br />
+                </p>
+            </div>
+            <div class="footer-column">
+                <h2>Follow me</h2>
+                <ul class="social-media">
+                    <li>
+                        <a class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" target="_blank" title="YouTube">
+                        </a>YouTube
+                    </li>
+                    <li>
+                        <a class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" target="_blank" title="LinkedIn">
+                        </a>LinkedIn
+                    </li>
+                    <li>
+                        <a class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" target="_blank" title="Instagram">
+                        </a>Instagram
+                    </li>
+                    <li>
+                        <a class="fa fa-github" href="https://github.com/djeada" title="GitHub">
+                        </a>Github
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div>
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="../../app.js"></script>
+    </footer>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>
