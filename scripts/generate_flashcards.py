@@ -66,7 +66,7 @@ def download_flashcards(url: str, retries: int = RETRY_LIMIT) -> Optional[str]:
             return response.text
         except requests.RequestException as e:
             logging.warning(f"Attempt {attempt + 1} failed: {e}")
-            sleep(2 ** attempt)
+            sleep(2**attempt)
     logging.error(f"Failed to download flashcards from {url} after {retries} attempts")
     return None
 

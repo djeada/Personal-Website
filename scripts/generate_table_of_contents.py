@@ -1,6 +1,7 @@
 """
 Generates a table of contents for each article post.
 """
+
 import copy
 import re
 from concurrent.futures import ThreadPoolExecutor

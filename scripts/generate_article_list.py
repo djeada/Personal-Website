@@ -391,7 +391,7 @@ def generate_pages_for_subdir(subdir: Path, output_file: Path):
                         )
                     )
 
-    articles = sorted(articles, key=lambda x: x[1])
+    articles = sorted(articles, key=lambda x: x[1], reverse=True)
 
     # Just one page for each subdir, so no need for pagination
     html_content = convert_articles_to_html(articles)
