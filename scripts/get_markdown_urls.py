@@ -31,7 +31,7 @@ EN_INPUT_URLS = [
     "https://github.com/djeada/Parallel-And-Concurrent-Programming/tree/master/notes",
     "https://github.com/djeada/Statistics-Notes/tree/main/notes/basic_concepts",
     "https://github.com/djeada/Statistics-Notes/tree/main/notes/correlation_and_regression",
-    "https://github.com/djeada/Statistics-Notes/tree/main/notes/hypothesis_testing_and_confidence_intervals",
+    "https://github.com/djeada/Statistics-Notes/tree/main/notes/statistical_inference",
     "https://github.com/djeada/Statistics-Notes/tree/main/notes/probability_distributions/continuous_distributions",
     "https://github.com/djeada/Statistics-Notes/tree/main/notes/probability_distributions/discrete_distributions",
     "https://github.com/djeada/Statistics-Notes/tree/main/notes/probability_distributions/intro",

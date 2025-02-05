@@ -153,43 +153,67 @@ document.addEventListener("DOMContentLoaded", function() {
         editorText.value = newLines.join("\n");
     }
 
+    /*
+    implements the three main formatting rules while never altering lines inside code blocks, math blocks, or table lines (“forbidden zones”). The passes proceed in this order:
+
+        Pass 0: Remove lines containing only - - - ...
+        Pass 1: Insert blank lines around recognized elements (headings, lists, code/math blocks, tables) but do no changes inside them.
+        Pass 2: Collapse multiple consecutive blank lines outside forbidden zones (keep only one).
+        Pass 3: Remove any blank lines that appear between consecutive list items (last step).
+        */
     function correctLines() {
+        // 0) Check if corrections are enabled
         if (!lineCorrectionCheckbox.checked) return;
         saveState();
 
+        // 1) Split the editor text into lines
         let lines = editorText.value.split("\n");
 
-        // Helper to detect list items
+        // ------------------------------------------------------------------------
+        // Helper functions
+        // ------------------------------------------------------------------------
+
         function isListItem(line) {
-            // e.g. "- something" or "* something" (allow indentation too)
+            // Matches, e.g., '- something' or '* something' (with optional indentation)
             return /^\s*[-*]\s+/.test(line);
         }
 
-        // Helper to detect lines that are capital Roman numeral headings (e.g., "I. Title", "XVII. Topic")
         function isRomanHeading(line) {
-            // Trim first; match one or more Roman chars, then a dot, then a space
+            // Matches uppercase Roman numerals followed by a dot and space
+            // e.g. "I. Title", "XVII. Topic"
             return /^[IVXLCDM]+\.\s/.test(line.trim());
         }
 
-        // ============= PASS 0: Remove lines that ONLY contain minus signs (like "----") ============
+        function isTableLine(line) {
+            // Treat as a table line if it starts and ends with '|'
+            // e.g. "| Col1 | Col2 |"
+            let t = line.trim();
+            return t.startsWith("|") && t.endsWith("|");
+        }
+
+        // ------------------------------------------------------------------------
+        // Pass 0: Remove lines that ONLY contain minus signs (like "----")
+        // ------------------------------------------------------------------------
         let pass0 = [];
         for (let line of lines) {
-            const t = line.trim();
+            let t = line.trim();
+            // Skip lines that ONLY have '-' characters
             if (/^-+$/.test(t)) {
-                // Skip lines that ONLY have '-' characters
                 continue;
             }
             pass0.push(line);
         }
 
-        // ============= PASS 1: Insert blank lines before/after blocks, headings, tables, lists ============
-        // (but do NOT modify lines inside code/math blocks).
+        // ------------------------------------------------------------------------
+        // Pass 1: Insert blank lines above/below certain elements
+        //         (but do NOT modify lines inside code/math/table blocks)
+        // ------------------------------------------------------------------------
         let pass1 = [];
-        let inBlock = false;
-        let blockMarker = null;
+        let inBlock = false; // for code/math
+        let blockMarker = null; // will store "```" or "$$"
 
         function pushBlankLineIfNeeded(arr) {
-            // Insert a blank line if the last line isn't blank (and array isn't empty).
+            // Insert a blank line if the last line isn't already blank
             if (arr.length && arr[arr.length - 1].trim() !== "") {
                 arr.push("");
             }
@@ -199,135 +223,151 @@ document.addEventListener("DOMContentLoaded", function() {
             let line = pass0[i];
             let t = line.trim();
 
+            // Check if this line is the start/end of code or math block
+            // (forbidden zone)
             if (!inBlock) {
-                // Code or math block start?
-                // (line must be exactly "```" or exactly "$$")
                 if (t === "```" || t === "$$") {
-                    pushBlankLineIfNeeded(pass1); // blank line BEFORE block
-                    pass1.push(line);
-                    inBlock = true;
-                    blockMarker = t; // We'll look for the same marker to close
-                }
-                // Heading? (# Something) OR capital Roman numeral heading (I. Something)
-                else if (/^#+\s/.test(t) || isRomanHeading(line)) {
-                    pushBlankLineIfNeeded(pass1); // blank line BEFORE heading
-                    pass1.push(line);
-                    pass1.push(""); // blank line AFTER heading
-                }
-                // Table line? (starts/ends with "|")
-                else if (t.startsWith("|") && t.endsWith("|")) {
-                    pushBlankLineIfNeeded(pass1); // blank line BEFORE table
-                    pass1.push(line);
-
-                    // Collect subsequent table lines
-                    while (i + 1 < pass0.length) {
-                        let nt = pass0[i + 1].trim();
-                        if (nt.startsWith("|") && nt.endsWith("|")) {
-                            i++;
-                            pass1.push(pass0[i]);
-                        } else {
-                            break;
-                        }
-                    }
-                    pass1.push(""); // blank line AFTER table
-                }
-                // First list item? Insert blank line before it (unless the last line is already blank).
-                else if (isListItem(line)) {
+                    // Insert blank line before block
                     pushBlankLineIfNeeded(pass1);
                     pass1.push(line);
-                }
-                // Otherwise, just pass it along
-                else {
-                    pass1.push(line);
+                    inBlock = true;
+                    blockMarker = t;
+                    continue;
                 }
             } else {
-                // We are inside a code/math block, do not alter lines
+                // We are inside a code/math block
                 pass1.push(line);
-                // Check if we're leaving the block
-                // i.e. if t matches the original marker: "```" or "$$"
+                // Check if it's the closing marker
                 if (t === blockMarker) {
                     inBlock = false;
                     blockMarker = null;
-                    pushBlankLineIfNeeded(pass1); // blank line AFTER block
+                    // Insert blank line after block
+                    pushBlankLineIfNeeded(pass1);
                 }
+                continue;
+            }
+
+            // If we get here, we're NOT in a code/math block
+            // but we also need to treat table lines as forbidden.
+            if (isTableLine(line)) {
+                // Insert blank line before the table block
+                pushBlankLineIfNeeded(pass1);
+                pass1.push(line);
+
+                // Collect any subsequent table lines as one block
+                while (i + 1 < pass0.length) {
+                    let nextT = pass0[i + 1].trim();
+                    if (nextT.startsWith("|") && nextT.endsWith("|")) {
+                        i++;
+                        pass1.push(pass0[i]);
+                    } else {
+                        break;
+                    }
+                }
+
+                // Insert blank line after table block
+                pushBlankLineIfNeeded(pass1);
+            } else if (/^#+\s/.test(t) || isRomanHeading(line)) {
+                // Heading => insert blank line above and below
+                pushBlankLineIfNeeded(pass1);
+                pass1.push(line);
+                pass1.push("");
+            } else if (isListItem(line)) {
+                // List item => insert blank line above
+                pushBlankLineIfNeeded(pass1);
+                pass1.push(line);
+            } else {
+                // Normal line => just push
+                pass1.push(line);
             }
         }
 
-        // ============= PASS 2: Remove blank lines between consecutive list items (outside code blocks) ============
-        // That is, if pass2's last line is a list item, and next line is a list item,
-        // skip a blank line between them.
+        // ------------------------------------------------------------------------
+        // Pass 2: Collapse multiple consecutive blank lines
+        //         (but skip inside code/math/table blocks)
+        // ------------------------------------------------------------------------
         let pass2 = [];
         inBlock = false;
         blockMarker = null;
+        let lastWasBlank = false;
 
         for (let i = 0; i < pass1.length; i++) {
             let line = pass1[i];
             let t = line.trim();
+            let tableCheck = isTableLine(line);
 
-            if (!inBlock) {
+            if (!inBlock && !tableCheck) {
+                // Check code/math block start
                 if (t === "```" || t === "$$") {
                     pass2.push(line);
                     inBlock = true;
                     blockMarker = t;
-                } else {
-                    // If it's a blank line, check neighbors
-                    if (t === "" && i + 1 < pass1.length) {
-                        let nextLine = pass1[i + 1];
-                        // If the previous line in pass2 is a list item
-                        // and next line is also a list item => remove this blank line
-                        if (
-                            pass2.length > 0 &&
-                            isListItem(pass2[pass2.length - 1]) &&
-                            isListItem(nextLine)
-                        ) {
-                            continue; // skip pushing this blank line
-                        }
+                    lastWasBlank = false;
+                } else if (t === "") {
+                    // If it's a blank line, only push it if we haven't just pushed one
+                    if (!lastWasBlank) {
+                        pass2.push("");
+                        lastWasBlank = true;
                     }
+                } else {
+                    // Normal line => push it
                     pass2.push(line);
+                    lastWasBlank = false;
                 }
             } else {
-                // Inside code/math block, just push lines
+                // Either inside code/math block OR it's a table line => pass through
                 pass2.push(line);
-                if (t === blockMarker) {
+
+                // If inside code/math, check for the end marker
+                if (!tableCheck && t === blockMarker) {
                     inBlock = false;
                     blockMarker = null;
                 }
+                lastWasBlank = false;
             }
         }
 
-        // ============= PASS 3: Collapse multiple consecutive blank lines into one (outside code blocks) ============
+        // ------------------------------------------------------------------------
+        // Pass 3: Remove any blank lines that appear between consecutive list items
+        //         (outside forbidden zones)
+        // ------------------------------------------------------------------------
         let pass3 = [];
         inBlock = false;
         blockMarker = null;
-        let lastWasEmpty = false;
 
         for (let i = 0; i < pass2.length; i++) {
             let line = pass2[i];
             let t = line.trim();
+            let tableCheck = isTableLine(line);
 
-            if (!inBlock) {
-                // Start of code/math block?
+            if (!inBlock && !tableCheck) {
+                // Check if it's start/end of code/math
                 if (t === "```" || t === "$$") {
                     pass3.push(line);
                     inBlock = true;
                     blockMarker = t;
-                    lastWasEmpty = false;
-                } else if (t === "") {
-                    // Only push one blank line if we haven't just pushed one
-                    if (!lastWasEmpty) {
-                        pass3.push("");
-                        lastWasEmpty = true;
+                }
+                // If it's a blank line, see if the previous line and the next line are list items
+                else if (t === "" && i + 1 < pass2.length) {
+                    let nextLine = pass2[i + 1];
+                    if (
+                        pass3.length > 0 &&
+                        isListItem(pass3[pass3.length - 1]) &&
+                        isListItem(nextLine)
+                    ) {
+                        // Skip pushing this blank line
+                        continue;
                     }
+                    pass3.push(line);
                 } else {
                     pass3.push(line);
-                    lastWasEmpty = false;
                 }
             } else {
+                // Inside code/math block or table => pass through unmodified
                 pass3.push(line);
-                if (t === blockMarker) {
+                if (!tableCheck && t === blockMarker) {
                     inBlock = false;
                     blockMarker = null;
-                    lastWasEmpty = false;
                 }
             }
         }
@@ -337,8 +377,10 @@ document.addEventListener("DOMContentLoaded", function() {
             pass3.push("");
         }
 
+        // 5) Rejoin everything
         editorText.value = pass3.join("\n");
     }
+
 
 
     function removeTabIndent() {

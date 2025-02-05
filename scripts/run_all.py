@@ -8,18 +8,18 @@ logging.basicConfig(
 
 # Dictionary mapping scripts to their respective command line arguments
 SCRIPTS_TO_ARGS = {
-    "python clean_output_dirs.py": [],
+    "python3 clean_output_dirs.py": [],
     # "python get_markdown_urls.py": [],
-    "python generate_from_markdown.py": [],
-    "python apply_common_elements.py": [],
-    "python bundle_css.py": [],
-    "python generate_table_of_contents.py": [],
-    "python generate_related_articles_section.py": [],
-    "python generate_quizzes.py": [],
-    "python generate_flashcards.py": [],
+    "python3 generate_from_markdown.py": [],
+    "python3 apply_common_elements.py": [],
+    "python3 bundle_css.py": [],
+    "python3 generate_table_of_contents.py": [],
+    "python3 generate_related_articles_section.py": [],
+    "python3 generate_quizzes.py": [],
+    "python3 generate_flashcards.py": [],
     "./format.sh": [],
-    "python generate_article_list.py": [],
-    "python create_site_map.py": [],
+    "python3 generate_article_list.py": [],
+    "python3 create_site_map.py": [],
 }
 
 
