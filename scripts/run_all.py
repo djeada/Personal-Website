@@ -111,7 +111,7 @@ def run_all():
     logging.info("Initiating the execution of all scripts...")
     for script, args_list in SCRIPTS_TO_ARGS.items():
         run_script(script, args_list)
-    run_script("python apply_common_elements.py", [])
+    run_script("python3 apply_common_elements.py", [])
     run_script("./format.sh", [])
     logging.info("All scripts executed successfully.")
 
