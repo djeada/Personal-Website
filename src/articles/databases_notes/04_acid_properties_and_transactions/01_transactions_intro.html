@@ -51,24 +51,41 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: March 11, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: March 12, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="what-is-a-transaction-">What Is a Transaction?</h2>
             <p>A database transaction is a sequence of operations performed as a single, indivisible unit of work. These operations—such as inserting, updating, or deleting records—are executed together to ensure data integrity and consistency, especially when multiple users or processes access the database at the same time.</p>
             <p>
             <div>
                 <pre><code class="language-shell">1. Initial State:
-+------------------+          +------------------+
-| Account A: $100  |          | Account B: $50   |
-+------------------+          +------------------+
 
-2. Transaction Begins:
-- Transfer $20 from Account A to Account B
+┌───────────────────────┐             ┌───────────────────────┐
+│      Account A        │             │      Account B        │
+│                       │             │                       │
+│     Balance: $100     │             │      Balance: $50     │
+└───────────────────────┘             └───────────────────────┘
+
+              │                                 │
+              │                                 │
+              ▼                                 ▼
+
+2. Transaction Initiated:
+
+┌───────────────────────────────────────────────────────────┐
+│             Transferring $20 from Account A               │
+│                         to Account B                      │
+└───────────────────────────────────────────────────────────┘
+
+              │                                 │
+              ▼                                 ▼
 
 3. After Transaction:
-+------------------+          +------------------+
-| Account A: $80   |          | Account B: $70   |
-+------------------+          +------------------+</code></pre>
+
+┌───────────────────────┐             ┌───────────────────────┐
+│      Account A        │             │      Account B        │
+│                       │             │                       │
+│     Balance: $80      │             │      Balance: $70     │
+└───────────────────────┘             └───────────────────────┘</code></pre>
             </div>
             </p>
             <p>In the example above, the transaction involves transferring $20 from Account A to Account B. If any part of this transaction fails—say, if the system crashes after debiting Account A but before crediting Account B—the transaction management system ensures that all changes are rolled back, returning the database to its initial state.</p>
@@ -81,63 +98,88 @@
                 <li>How do different concurrency control mechanisms, such as optimistic and pessimistic concurrency control, help manage simultaneous transactions and prevent conflicts in a database?</li>
             </ol>
             <h3 id="acid-properties">ACID Properties</h3>
-            <p>Transactions are defined by their <strong>ACID</strong> properties: Atomicity, Consistency, Isolation, and Durability. These principles guarantee that database transactions are processed reliably, maintaining data integrity even in the face of errors, power failures, or other unexpected issues.</p>
+            <p>Transactions in databases follow the <strong>ACID</strong> properties—Atomicity, Consistency, Isolation, and Durability—to ensure reliability, correctness, and robustness, even during errors or system failures.</p>
             <h4 id="atomicity">Atomicity</h4>
-            <p>Atomicity ensures that a transaction is all-or-nothing. This means that either all operations within the transaction are completed successfully, or none are applied at all. If any operation fails, the entire transaction is aborted, and the database remains unchanged.</p>
+            <p>Atomicity guarantees that a transaction is treated as a single, indivisible unit. Either all operations within the transaction succeed, or none do. If any operation within a transaction fails, all previously executed steps are reversed.</p>
             <p>
             <div>
-                <pre><code class="language-shell">Transaction Steps:
-1. Debit $20 from Account A
-2. Credit $20 to Account B
+                <pre><code class="language-shell">Transaction Example:
 
-If Step 2 fails, Step 1 is undone.</code></pre>
+Initial State:
+Account A: $100
+Account B: $50
+
+Transaction Steps:
+1. Debit $20 from Account A (Account A: $80)
+2. Credit $20 to Account B (Account B: $70)
+
+If Step 2 fails:
+Rollback Step 1 → Account A returns to $100</code></pre>
             </div>
             </p>
-            <p>In this way, atomicity prevents partial updates that could lead to data inconsistencies.</p>
+            <p><em>Atomicity prevents partial updates, preserving database consistency.</em></p>
             <h4 id="consistency">Consistency</h4>
-            <p>Consistency guarantees that a transaction brings the database from one valid state to another, adhering to all predefined rules such as integrity constraints and triggers. This means that any data written to the database must be valid according to all defined rules.</p>
+            <p>Consistency ensures that transactions transition the database from one valid state to another valid state, following all rules, constraints, and triggers defined in the database.</p>
             <p>
             <div>
-                <pre><code class="language-shell">Before Transaction:
-- Total Balance: $150
+                <pre><code class="language-shell">Transaction Example:
+
+Initial State:
+Account A: $100
+Account B: $50
 
 After Transaction:
-- Total Balance: $150
+Account A: $80
+Account B: $70
 
-The total balance remains consistent throughout the transaction.</code></pre>
+Total balance remains consistent:
+Before: $150 | After: $150</code></pre>
             </div>
             </p>
-            <p>This property ensures that the integrity of the database is maintained.</p>
+            <p><em>Consistency maintains data integrity throughout transactions.</em></p>
             <h4 id="isolation">Isolation</h4>
-            <p>Isolation means that concurrent transactions occur independently without interference. Each transaction operates as if it is the only one using the database, preventing transactions from seeing intermediate states of other concurrent transactions.</p>
+            <p>Isolation ensures concurrent transactions operate independently, without affecting each other. Transactions run as if they are executed sequentially, preventing intermediate states from being visible to other concurrent transactions.</p>
             <p>
             <div>
-                <pre><code class="language-shell">Transaction T1: Reads and updates Account A
-Transaction T2: Reads and updates Account B
+                <pre><code class="language-shell">Isolation Example:
 
-Even if T1 and T2 run simultaneously, they don't affect each other's operations.</code></pre>
+Transaction T1:
+Reads Account A → Updates Account A
+
+Transaction T2:
+Reads Account B → Updates Account B
+
+Even if T1 and T2 execute simultaneously:
+T1 ↔ Account A (isolated)
+T2 ↔ Account B (isolated)
+
+No interference between transactions.</code></pre>
             </div>
             </p>
-            <p>Isolation prevents conflicts and ensures that transactions do not compromise each other's integrity.</p>
+            <p><em>Isolation prevents transactions from causing conflicts or inconsistency.</em></p>
             <h4 id="durability">Durability</h4>
-            <p>Durability assures that once a transaction has been committed, its changes are permanent, even in the event of a system failure. The database system ensures that committed transactions are saved to non-volatile storage.</p>
+            <p>Durability guarantees that once a transaction is committed, its effects are permanently saved, even if a system failure occurs immediately afterward. The committed state is stored on durable, non-volatile storage.</p>
             <p>
             <div>
-                <pre><code class="language-shell">Transaction Committed:
-- Changes are written to disk.
+                <pre><code class="language-shell">Durability Example:
+
+Transaction Commit:
+→ Changes saved permanently to disk.
 
 System Crash Occurs:
-- After restart, the committed changes are still present.</code></pre>
+→ Restart System
+
+After Recovery:
+→ Committed changes still present.</code></pre>
             </div>
             </p>
-            <p>This property guarantees that the results of a transaction won't be lost.</p>
+            <p><em>Durability ensures permanent recording of committed transactions.</em></p>
             <h3 id="analogy-of-a-post-office">Analogy of a post office</h3>
-            <p>Once upon a time in a quaint little village, there was a diligent postman named Tom. Tom had the responsibility of ensuring that all letters sent from the village's post office reached their rightful recipients.</p>
-            <p>One day, Tom received a special request. A villager, Alice, wanted to send two letters: one to her friend Bob and another to her cousin Charlie. Tom knew that both letters were part of a surprise birthday plan and thus, both had to be delivered together or not at all.</p>
-            <p>Tom carefully prepared both letters, ensuring that if one letter couldn't be delivered (perhaps due to an incorrect address), neither would be sent out. This way, Alice's surprise would remain a secret until both friends could be told at the same time, perfectly demonstrating the principle of <strong>ATOMICITY</strong>.</p>
-            <p>The post office had strict guidelines for sending letters. Each letter had to be stamped, sealed, and the address had to be correctly formatted. Tom meticulously checked Alice's letters to ensure they met all the criteria. When he found that one of the letters didn't have a stamp, he knew he couldn't send them until they were both properly prepared. This careful adherence to standards ensured the integrity and reliability of the postal service, much like how <strong>CONSISTENCY</strong> in databases ensures data integrity.</p>
-            <p>Meanwhile, other villagers were also sending and receiving letters. Tom was juggling multiple deliveries and pickups, but he was careful to treat each task independently. For instance, while preparing Alice's letters, he was also packaging a parcel for another villager, Dave. Despite switching between tasks, Dave's parcel and Alice's letters were handled as if they were the only tasks in the world, unaffected by each other. This highlighted the principle of <strong>ISOLATION</strong>, ensuring that simultaneous transactions don’t negatively impact each other.</p>
-            <p>Finally, after ensuring that both of Alice's letters were stamped, sealed, and addressed correctly, Tom sent them out for delivery. Once the letters were on their way, Tom knew that the task was irreversible and permanent. He recorded the dispatch in the post office's logbook, providing a tangible record of the transaction. Even if a storm came or his bicycle broke down, the post office guaranteed that the letters would reach Bob and Charlie. This commitment to delivering the letters despite potential obstacles demonstrated the principle of <strong>DURABILITY</strong>, akin to how once a transaction is committed in a database, it is permanently recorded and unaffected by subsequent failures.</p>
+            <p>Once upon a time in a small village, there was a dedicated postman named Tom. Tom's job was to ensure all letters sent from the village post office reached their intended recipients safely and quickly.</p>
+            <p>One day, Tom received a special request. A villager named Alice wanted to send two important letters—one to her friend Bob and another to her cousin Charlie. Tom learned these letters were part of a surprise birthday celebration. Alice made it clear that both letters had to arrive together; otherwise, the surprise would be spoiled. Understanding this, Tom promised Alice that either both letters would be delivered or neither would leave the post office. This clearly demonstrated the principle of ATOMICITY, where tasks must fully complete or not occur at all.</p>
+            <p>The village post office had strict rules for handling letters: each must be stamped, sealed, and properly addressed. Tom carefully checked Alice's letters and found one missing a stamp. Knowing the importance of following the rules, he held both letters back until the issue was resolved. This careful approach ensured the postal service's reliability, highlighting CONSISTENCY—making sure every action follows set standards.</p>
+            <p>While Tom was working on Alice's letters, the post office was busy with other activities. Villagers like Dave were sending packages and receiving letters at the same time. Tom skillfully managed multiple tasks, ensuring each delivery was handled independently. Even though he was multitasking, Alice's letters and Dave's package were treated separately without interfering with each other. This demonstrated the principle of ISOLATION, where tasks carried out simultaneously do not affect each other negatively.</p>
+            <p>Eventually, Alice fixed the stamp issue. Once both letters were ready, Tom sent them out for delivery. Once dispatched, the action became permanent and couldn't be reversed. Tom recorded the details in the official logbook, ensuring clear documentation. Even if issues like bad weather or mechanical problems arose, the post office had ways to ensure Bob and Charlie would eventually receive their letters. This illustrated DURABILITY, meaning that once an action is complete, it stays permanent and secure, just like committed database transactions.</p>
             <h3 id="transaction-management">Transaction Management</h3>
             <p>Managing transactions involves coordinating their execution to uphold the ACID properties. This ensures that the database remains reliable and consistent, even when multiple transactions occur concurrently.</p>
             <ul>
