@@ -80,7 +80,7 @@ const GITHUB_BASE_REPOS = {
     "algorithms_and_data_structures": "https://github.com/djeada/Algorithms-And-Data-Structures",
     "frontend_notes": "https://github.com/djeada/Frontend-Notes",
     "numerical_methods": "https://github.com/djeada/Numerical-Methods",
-    "database_notes": "https://github.com/djeada/Databases-Notes",
+    "databases_notes": "https://github.com/djeada/Databases-Notes",
     "git_notes": "https://github.com/djeada/Git-Notes",
     "linux_notes": "https://github.com/djeada/Linux-Notes",
     "numpy_tutorials": "https://github.com/djeada/Numpy-Tutorials",
@@ -88,6 +88,8 @@ const GITHUB_BASE_REPOS = {
     "statistics_notes": "https://github.com/djeada/Statistics-Notes",
     "kurs_podstaw_pythona": "https://github.com/djeada/Kurs-Podstaw-Pythona",
     "od_c_do_cpp": "https://github.com/djeada/Od-C-do-Cpp",
+        "stanford_machine_learning": "https://github.com/djeada/Stanford-Machine-Learning",
+
 };
 
 // Mapping of section keys to additional path prepends within the repo.
@@ -95,7 +97,7 @@ const PATH_PREPENDS = {
     "algorithms_and_data_structures": "notes",
     "frontend_notes": "notes",
     "numerical_methods": "notes",
-    "database_notes": "notes",
+    "databases_notes": "notes",
     "git_notes": "notes",
     "linux_notes": "notes",
     "numpy_tutorials": "notes",
@@ -103,6 +105,8 @@ const PATH_PREPENDS = {
     "statistics_notes": "notes",
     "kurs_podstaw_pythona": "notatki",
     "od_c_do_cpp": "notatki",
+            "stanford_machine_learning": "slides",
+
 };
 
 // Mapping of section keys to the main branch names.
@@ -110,7 +114,7 @@ const MAIN_BRANCH = {
     "algorithms_and_data_structures": "master",
     "frontend_notes": "master",
     "numerical_methods": "master",
-    "database_notes": "master",
+    "databases_notes": "master",
     "git_notes": "main",
     "linux_notes": "master",
     "numpy_tutorials": "master",
@@ -118,6 +122,8 @@ const MAIN_BRANCH = {
     "statistics_notes": "master",
     "kurs_podstaw_pythona": "master",
     "od_c_do_cpp": "master",
+                "stanford_machine_learning": "master",
+
 };
 
 /**
