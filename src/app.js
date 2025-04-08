@@ -79,7 +79,7 @@ function checkLogo() {
 const GITHUB_BASE_REPOS = {
     "algorithms_and_data_structures": "https://github.com/djeada/Algorithms-And-Data-Structures",
     "frontend_notes": "https://github.com/djeada/Frontend-Notes",
-        "numerical_methods": "https://github.com/djeada/Numerical-Methods",
+    "numerical_methods": "https://github.com/djeada/Numerical-Methods",
     "database_notes": "https://github.com/djeada/Databases-Notes",
     "git_notes": "https://github.com/djeada/Git-Notes",
     "linux_notes": "https://github.com/djeada/Linux-Notes",
@@ -88,16 +88,14 @@ const GITHUB_BASE_REPOS = {
     "statistics_notes": "https://github.com/djeada/Statistics-Notes",
     "kurs_podstaw_pythona": "https://github.com/djeada/Kurs-Podstaw-Pythona",
     "od_c_do_cpp": "https://github.com/djeada/Od-C-do-Cpp",
-
 };
 
 // Mapping of section keys to additional path prepends within the repo.
-// For example, if the algorithms repository has its files under a "notes" folder.
 const PATH_PREPENDS = {
     "algorithms_and_data_structures": "notes",
     "frontend_notes": "notes",
     "numerical_methods": "notes",
-        "database_notes": "notes",
+    "database_notes": "notes",
     "git_notes": "notes",
     "linux_notes": "notes",
     "numpy_tutorials": "notes",
@@ -105,12 +103,27 @@ const PATH_PREPENDS = {
     "statistics_notes": "notes",
     "kurs_podstaw_pythona": "notatki",
     "od_c_do_cpp": "notatki",
+};
 
+// Mapping of section keys to the main branch names.
+const MAIN_BRANCH = {
+    "algorithms_and_data_structures": "master",
+    "frontend_notes": "master",
+    "numerical_methods": "master",
+    "database_notes": "master",
+    "git_notes": "main",
+    "linux_notes": "master",
+    "numpy_tutorials": "master",
+    "parallel_and_concurrent_programming": "master",
+    "statistics_notes": "master",
+    "kurs_podstaw_pythona": "master",
+    "od_c_do_cpp": "master",
 };
 
 /**
  * Returns an object containing:
- *  - baseRepoUrl: the GitHub repository base URL found using the section key.
+ *  - sectionKey: the key for looking up repo-specific configurations.
+ *  - baseRepoUrl: the GitHub repository base URL using the section key.
  *  - filePathInRepo: the relative file path in that repository, with an additional prepended folder if configured,
  *    and with any .html file extension replaced with .md.
  *
@@ -159,7 +172,7 @@ function getArticleGithubPath() {
         filePathInRepo = prependFolder + (filePathInRepo ? "/" + filePathInRepo : "");
     }
 
- // Normalize the file extension:
+    // Normalize the file extension:
     // Replace a .html extension with .md or, if no extension exists, append .md.
     if (filePathInRepo.match(/\.html$/)) {
         filePathInRepo = filePathInRepo.replace(/\.html$/, ".md");
@@ -169,6 +182,7 @@ function getArticleGithubPath() {
     }
 
     return {
+        sectionKey,
         baseRepoUrl,
         filePathInRepo
     };
@@ -182,12 +196,10 @@ function handleSuggestEditClick() {
     if (!result) {
         return; // An error has been shown.
     }
-    const {
-        baseRepoUrl,
-        filePathInRepo
-    } = result;
-    // Constructs the URL to edit the file (assumes branch "master").
-    const editUrl = `${baseRepoUrl}/edit/master/${filePathInRepo}`;
+    const { sectionKey, baseRepoUrl, filePathInRepo } = result;
+    // Lookup the correct branch for the section using the MAIN_BRANCH mapping.
+    const branch = MAIN_BRANCH.hasOwnProperty(sectionKey) ? MAIN_BRANCH[sectionKey] : "master";
+    const editUrl = `${baseRepoUrl}/edit/${branch}/${filePathInRepo}`;
     window.open(editUrl, "_blank");
 }
 
