@@ -114,7 +114,7 @@ const MAIN_BRANCH = {
     "algorithms_and_data_structures": "master",
     "frontend_notes": "master",
     "numerical_methods": "master",
-    "databases_notes": "master",
+    "databases_notes": "main",
     "git_notes": "main",
     "linux_notes": "main",
     "numpy_tutorials": "main",
