@@ -16,6 +16,7 @@
     <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
     <link href="../../../resources/style.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 
 <body>
@@ -51,7 +52,22 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: July 26, 2022</i></p>
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: April 08, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="atomicity-in-database-transactions">Atomicity in Database Transactions</h2>
             <p>Atomicity is a fundamental principle in database systems that ensures each transaction is processed as an indivisible unit. This means that all operations within a transaction must be completed successfully for the transaction to be committed to the database. If any operation fails, the entire transaction is rolled back, leaving the database unchanged. This "all-or-nothing" approach is crucial for maintaining data integrity and consistency.</p>
@@ -179,38 +195,106 @@ COMMIT;</code></pre>
             </div>
             </p>
             <p>By rolling back to the savepoint, the transaction undoes changes made after the savepoint without affecting earlier operations.</p>
-            <h3 id="visualizing-transaction-flow">Visualizing Transaction Flow</h3>
-            <p>Understanding the flow of a transaction can help illustrate the concept of atomicity.</p>
+            <h4 id="visualizing-transaction-flow">Visualizing Transaction Flow</h4>
+            <p>To really understand <strong>atomicity</strong> in databases, it's useful to visualize what happens during a transaction. Think of a transaction as a sequence of steps that must either <strong>all succeed or none at all</strong>—no in-between.</p>
+            <p>Here’s a simple diagram showing the <em>normal flow</em> of a transaction:</p>
             <p>
             <div>
                 <pre><code class="language-shell">[Start Transaction]
-       |
-   [Operation 1]
-       |
-   [Operation 2]
-       |
-[Check for Errors]
-       |
-   [No Errors]
-       |
-     [Commit]</code></pre>
+        |
+    [Operation 1]
+        |
+    [Operation 2]
+        |
+ [Check for Errors]
+        |
+    [No Errors]
+        |
+      [Commit]</code></pre>
             </div>
             </p>
-            <p>If an error is detected at any point, the transaction flow changes:</p>
+            <p>This is the “happy path.” You start a transaction, do your operations, check for any issues, and if nothing’s wrong, you commit the changes. Committing makes everything permanent in the database.</p>
+            <p>But if <strong>any</strong> operation fails, you don’t go forward—you go back. That’s the whole point of atomicity. You either do it all or undo it all.</p>
+            <p>Let’s see what that looks like:</p>
             <p>
             <div>
                 <pre><code class="language-shell">[Start Transaction] &lt;---
-       |               |
-   [Operation 1]       |
-       |               |
-   [Operation 2]       |
-       |               |
-[Error Detected]       |
-       |               |
-    [Rollback] ---------</code></pre>
+        |               |
+    [Operation 1]       |
+        |               |
+    [Operation 2]       |
+        |               |
+ [Error Detected]       |
+        |               |
+     [Rollback] ---------</code></pre>
             </div>
             </p>
-            <p>This visualization shows that the transaction only commits if all operations succeed, embodying the principle of atomicity.</p>
+            <p>Here’s how this might look in actual SQL (using PostgreSQL syntax):</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">BEGIN;
+
+UPDATE accounts SET balance = balance - 100 WHERE id = 1;
+
+UPDATE accounts SET balance = balance + 100 WHERE id = 2;
+
+COMMIT;</code></pre>
+            </div>
+            </p>
+            <p>This is transferring $100 from account 1 to account 2. Simple enough.</p>
+            <p>Now, let’s simulate an error. Say the second <code>UPDATE</code> fails—maybe account 2 doesn’t exist. We’d use this approach to protect data integrity:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">BEGIN;
+
+UPDATE accounts SET balance = balance - 100 WHERE id = 1;
+
+-- Suppose this line fails:
+UPDATE accounts SET balance = balance + 100 WHERE id = 999;
+
+ROLLBACK;</code></pre>
+            </div>
+            </p>
+            <p><strong>What happens?</strong></p>
+            <ul>
+                <li>The <strong>first <code>UPDATE</code></strong> goes through and deducts $100.</li>
+                <li>The <strong>second <code>UPDATE</code></strong> fails because account 999 doesn’t exist.</li>
+                <li>The database sees an error and immediately knows it must <strong>ROLLBACK</strong>.</li>
+                <li>That means the $100 deduction is also undone.</li>
+            </ul>
+            <p><strong>Why is this good?</strong></p>
+            <p>Without transactions, you’d have just lost $100 from account 1. Atomicity protects you from half-done operations.</p>
+            <p>Here’s how you might catch this in application code (Python + psycopg2 example):</p>
+            <p>
+            <div>
+                <pre><code class="language-python">import psycopg2
+
+try:
+    conn = psycopg2.connect(...)
+    cur = conn.cursor()
+
+    cur.execute("BEGIN;")
+    cur.execute("UPDATE accounts SET balance = balance - 100 WHERE id = 1;")
+    cur.execute("UPDATE accounts SET balance = balance + 100 WHERE id = 999;")
+
+    conn.commit()
+
+except Exception as e:
+    conn.rollback()
+    print("Transaction failed and was rolled back:", e)
+
+finally:
+    cur.close()
+    conn.close()</code></pre>
+            </div>
+            </p>
+            <p>Output:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Transaction failed and was rolled back: ERROR: account 999 does not exist</code></pre>
+            </div>
+            </p>
+            <p>So the main idea is: <strong>no partial changes allowed.</strong> Either all steps complete, or the system undoes everything like nothing ever happened.</p>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
@@ -240,9 +324,9 @@ COMMIT;</code></pre>
                             <li><a href="#basic-transaction-commands">Basic Transaction Commands</a></li>
                             <li><a href="#example-transferring-funds-between-accounts">Example: Transferring Funds Between Accounts</a></li>
                             <li><a href="#using-savepoints">Using Savepoints</a></li>
+                            <li><a href="#visualizing-transaction-flow">Visualizing Transaction Flow</a></li>
                         </ol>
                     </li>
-                    <li><a href="#visualizing-transaction-flow">Visualizing Transaction Flow</a></li>
                 </ol>
             </ol>
             <div id="related-articles">
@@ -408,6 +492,9 @@ COMMIT;</code></pre>
         </script>
         <script src="../../../app.js"></script>
     </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
 </body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>

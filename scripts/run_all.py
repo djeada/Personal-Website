@@ -19,6 +19,7 @@ SCRIPTS_TO_ARGS = {
     "python3 generate_flashcards.py": [],
     "./format.sh": [],
     "python3 generate_article_list.py": [],
+    "python3 generate_article_buttons.py": [],
     "python3 create_site_map.py": [],
 }
 

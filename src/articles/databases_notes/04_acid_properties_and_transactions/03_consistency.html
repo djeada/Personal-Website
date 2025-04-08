@@ -16,6 +16,7 @@
     <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
     <link href="../../../resources/style.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 
 <body>
@@ -51,19 +52,47 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: October 05, 2022</i></p>
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: April 08, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="consistency-in-database-transactions">Consistency in Database Transactions</h2>
             <p>Consistency is a vital principle in database systems that ensures data remains accurate, valid, and reliable throughout all transactions. When a transaction occurs, the database moves from one consistent state to another, always adhering to the predefined rules and constraints set within the database schema. This means that any data written to the database must satisfy all integrity constraints, such as data types, unique keys, and relationships.</p>
             <p>Imagine the database as a meticulously organized library. Every book (data entry) has a specific place, and any new book added must fit into the system without disrupting the existing order. Consistency ensures that the library remains organized and every book is where it should be, both before and after any changes.</p>
             <p>
             <div>
-                <pre><code class="language-shell">+--------------------+      +--------------------+
-|      Before        |      |       After        |
-| - Consistent State | ---&gt; | - Consistent State |
-| - All Constraints  |      | - All Constraints  |
-|   Satisfied        |      |   Satisfied        |
-+--------------------+      +--------------------+</code></pre>
+                <pre><code class="language-shell">Valid State before Transaction
+   +------------------+
+   |    Valid DB      |
+   | (Integrity OK)   |
+   +--------+---------+
+            | Transaction executes
+            V
+ +-------------------------+
+ |  Transaction Processing  |
+ |   (apply operations,    |
+ |  enforce constraints)   |
+ +------------+------------+
+            |
+            V
+Valid State after Transaction
+   +------------------+
+   |    Valid DB      |
+   | (Integrity OK)   |
+   +------------------+</code></pre>
             </div>
             </p>
             <p>After reading the material, you should be able to answer the following questions:</p>
@@ -128,39 +157,44 @@
             </ul>
             <p>This method reduces contention between reading and writing transactions, maintaining consistency without heavy locking.</p>
             <h3 id="visualizing-consistency-in-action">Visualizing Consistency in Action</h3>
-            <p>Understanding how consistency is enforced can be visualized through the flow of a transaction.</p>
+            <p>Consistency is about making sure the data in your database always follows the rules you define—things like valid references, correct relationships, and logical constraints. If a transaction would break any of these rules, the database stops it to keep data consistent.</p>
             <p>
             <div>
                 <pre><code class="language-shell">[Begin Transaction]
          |
- [Perform Operations]
+     [Perform Operations]
          |
 [Check Constraints and Rules]
          |
-[Constraints Satisfied?]---No---&gt;[Rollback Transaction]
+[Constraints Satisfied?]--- No ---&gt; [Transaction Fails]
          |
-        Yes
+         Yes
          |
-  [Commit Transaction]</code></pre>
+   [Transaction Can Proceed]</code></pre>
             </div>
             </p>
-            <p>In this process, the transaction only commits if all constraints are satisfied. If any operation violates a constraint, the transaction is rolled back, and the database remains in its previous consistent state.</p>
+            <p>This simplified diagram shows that each operation in a transaction is checked against the database’s integrity rules (constraints). If an operation would violate those rules—like inserting a duplicate unique key or referencing a non-existent row—the transaction is <strong>not</strong> allowed to finalize. When a transaction proceeds successfully, it means the database remains in a valid, consistent state.</p>
             <h3 id="consistency-in-sql-transactions">Consistency in SQL Transactions</h3>
-            <p>SQL databases enforce consistency through various constraints and transaction controls defined within the schema and during transaction execution.</p>
-            <h4 id="defining-constraints-in-tables">Defining Constraints in Tables</h4>
-            <p>Constraints are rules applied to table columns to enforce data integrity.</p>
+            <p>In SQL, consistency is maintained through mechanisms like constraints and the schema design:</p>
             <ul>
-                <li>A <strong>Primary Key</strong> ensures that each row in a table has a unique identifier, preventing duplicate entries and serving as the main reference point.</li>
-                <li>A <strong>Unique Constraint</strong> guarantees that all values in a specified column or set of columns are distinct across the table.</li>
-                <li>A <strong>Foreign Key</strong> enforces referential integrity by linking a column in one table to a primary key in another table.</li>
-                <li>A <strong>Check Constraint</strong> imposes a specific condition that each row in the table must meet, adding an additional layer of validation.</li>
-                <li>The <strong>Not Null</strong> constraint ensures that a column cannot contain null values, requiring a valid entry for every row.</li>
+                <li><strong>Constraints</strong> (PRIMARY KEY, FOREIGN KEY, UNIQUE, CHECK, etc.) define what valid data looks like.</li>
+                <li><strong>Schema Rules</strong> (like data types and relationships) enforce logical correctness. </li>
             </ul>
-            <h4 id="example-enforcing-unique-and-foreign-key-constraints">Example: Enforcing Unique and Foreign Key Constraints</h4>
-            <p>Consider a database schema for users and orders.</p>
+            <p>By applying these consistently, any data change is automatically verified. If the change fails, the database prevents it from being fully applied, ensuring the data remains correct and “consistent” at all times.</p>
+            <h3 id="defining-constraints-in-tables">Defining Constraints in Tables</h3>
+            <p>Constraints are embedded into your table definitions to ensure any data written matches your rules:</p>
+            <ul>
+                <li><strong>Primary Key</strong>: Ensures each row has a unique identifier. This prevents ambiguity and keeps data references accurate.</li>
+                <li><strong>Unique Constraint</strong>: Prohibits duplicate values in specified columns, enforcing uniqueness.</li>
+                <li><strong>Foreign Key</strong>: Requires rows in one table to match valid entries in another table. This keeps relationships consistent and prevents “orphan” data.</li>
+                <li><strong>Check Constraint</strong>: Forces values to match some logical condition, such as “salary must be greater than zero.”</li>
+                <li><strong>Not Null</strong>: Disallows empty fields in columns where a value is required.</li>
+            </ul>
+            <h3 id="example-enforcing-unique-and-foreign-key-constraints">Example: Enforcing Unique and Foreign Key Constraints</h3>
+            <p>Below is a schema for <code>users</code> and <code>orders</code>:</p>
             <p>
             <div>
-                <pre><code class="language-sql">CREATE TABLE users (
+                <pre><code class="language-shell">CREATE TABLE users (
     user_id INT PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL
@@ -174,16 +208,17 @@ CREATE TABLE orders (
 );</code></pre>
             </div>
             </p>
-            <p>When inserting data, the database checks these constraints:</p>
+            <h4 id="how-consistency-is-preserved">How Consistency Is Preserved</h4>
             <ul>
-                <li>Enforcing <strong>Unique Usernames and Emails</strong> in the <code>users</code> table helps prevent duplicate records, maintaining data integrity and consistency.</li>
-                <li>Ensuring <strong>Valid User IDs in Orders</strong> guarantees that each order is linked to an existing user, maintaining referential integrity within the database.</li>
+                <li><strong>Unique Columns</strong>: The database will refuse any new <code>username</code> or <code>email</code> if it already exists in <code>users</code>. This safeguards against duplicate records.</li>
+                <li><strong>Foreign Key Link</strong>: Each <code>orders.user_id</code> must be a valid <code>users.user_id</code>. If you attempt to insert an order tied to a non-existent user, the database won’t allow it.</li>
             </ul>
-            <h4 id="example-transaction-maintaining-consistency">Example Transaction Maintaining Consistency</h4>
-            <p>Let's look at a transaction that adds a new order.</p>
+            <p>So, any data you insert must keep these relationships correct. If you try to break these rules, the operation is blocked, preserving consistency.</p>
+            <h3 id="example-transaction-checking-consistency">Example: Transaction Checking Consistency</h3>
+            <p>Let’s say you want to place an order:</p>
             <p>
             <div>
-                <pre><code class="language-sql">BEGIN TRANSACTION;
+                <pre><code class="language-shell">BEGIN TRANSACTION;
 
 INSERT INTO orders (order_id, user_id, order_date)
 VALUES (101, 1, '2023-11-24');
@@ -191,17 +226,15 @@ VALUES (101, 1, '2023-11-24');
 COMMIT;</code></pre>
             </div>
             </p>
-            <p>Before committing, the database verifies:</p>
-            <ul>
-                <li><strong>Does the <code>user_id</code> 1 exist in the <code>users</code> table?</strong></li>
-                <li><strong>Does the <code>order_id</code> 101 already exist?</strong></li>
-            </ul>
-            <p>If any constraint is violated, the transaction is rolled back to maintain consistency.</p>
-            <h4 id="using-check-constraints">Using Check Constraints</h4>
-            <p>Check constraints enforce domain-specific rules.</p>
+            <p>For this transaction to be consistent:
+                1. <strong>Is <code>user_id = 1</code> valid in <code>users</code>?</strong><br />
+                2. <strong>Is <code>order_id = 101</code> unique in <code>orders</code>?</strong></p>
+            <p>If these conditions hold true, the data remains valid—no broken links, no duplicates—so the database moves to a new consistent state. If any condition fails, the database disallows the operation to keep the existing data correct.</p>
+            <h3 id="using-check-constraints">Using Check Constraints</h3>
+            <p>Check constraints let you define more specific rules within your table, ensuring logical accuracy:</p>
             <p>
             <div>
-                <pre><code class="language-sql">CREATE TABLE employees (
+                <pre><code class="language-shell">CREATE TABLE employees (
     employee_id INT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     salary DECIMAL(10, 2) CHECK (salary &gt; 0),
@@ -209,12 +242,21 @@ COMMIT;</code></pre>
 );</code></pre>
             </div>
             </p>
-            <p>These constraints ensure:</p>
             <ul>
-                <li>Requiring <strong>Positive Salary Values</strong> ensures that all salary entries in the database are greater than zero, maintaining logical data constraints.</li>
-                <li>Enforcing <strong>Valid Department Names</strong> restricts department entries to a predefined list of acceptable options, ensuring consistency and accuracy in the data.</li>
+                <li><strong>Salary Must Be Greater Than 0</strong>: Any attempt to set <code>salary</code> to zero or a negative number is rejected.</li>
+                <li><strong>Department Must Be One of the Listed Values</strong>: Only <code>HR</code>, <code>Sales</code>, <code>IT</code>, or <code>Finance</code> are allowed. Anything else fails the check.</li>
             </ul>
-            <p>Any transaction attempting to insert or update data that violates these constraints will be rejected, preserving the database's consistency.</p>
+            <p>Whenever you insert or update a row, the database verifies these conditions. If any are violated, the data never enters an inconsistent state; it’s simply not accepted.</p>
+            <h3 id="atomicity-vs-consistency">Atomicity vs. Consistency</h3>
+            <ul>
+                <li><strong>Atomicity</strong> focuses on the “all-or-nothing” aspect of a transaction. If any part of a transaction fails, the entire transaction is rolled back, leaving the database unchanged. This is about whether the changes happen as one complete unit or not at all.</li>
+                <li><strong>Consistency</strong> ensures that any data written to the database follows all the predefined rules and integrity constraints. Consistency is about making sure the end result of a transaction does not break the logical correctness of the database.</li>
+            </ul>
+            <p>In short:</p>
+            <ul>
+                <li><strong>Atomicity</strong> protects your database from partial updates if something goes wrong.</li>
+                <li><strong>Consistency</strong> guarantees that any final state of the database is valid with respect to the rules you set.</li>
+            </ul>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
@@ -240,14 +282,16 @@ COMMIT;</code></pre>
                         </ol>
                     </li>
                     <li><a href="#visualizing-consistency-in-action">Visualizing Consistency in Action</a></li>
-                    <li><a href="#consistency-in-sql-transactions">Consistency in SQL Transactions</a>
+                    <li><a href="#consistency-in-sql-transactions">Consistency in SQL Transactions</a></li>
+                    <li><a href="#defining-constraints-in-tables">Defining Constraints in Tables</a></li>
+                    <li><a href="#example-enforcing-unique-and-foreign-key-constraints">Example: Enforcing Unique and Foreign Key Constraints</a>
                         <ol>
-                            <li><a href="#defining-constraints-in-tables">Defining Constraints in Tables</a></li>
-                            <li><a href="#example-enforcing-unique-and-foreign-key-constraints">Example: Enforcing Unique and Foreign Key Constraints</a></li>
-                            <li><a href="#example-transaction-maintaining-consistency">Example Transaction Maintaining Consistency</a></li>
-                            <li><a href="#using-check-constraints">Using Check Constraints</a></li>
+                            <li><a href="#how-consistency-is-preserved">How Consistency Is Preserved</a></li>
                         </ol>
                     </li>
+                    <li><a href="#example-transaction-checking-consistency">Example: Transaction Checking Consistency</a></li>
+                    <li><a href="#using-check-constraints">Using Check Constraints</a></li>
+                    <li><a href="#atomicity-vs-consistency">Atomicity vs. Consistency</a></li>
                 </ol>
             </ol>
             <div id="related-articles">
@@ -413,6 +457,9 @@ COMMIT;</code></pre>
         </script>
         <script src="../../../app.js"></script>
     </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
 </body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>

@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Git branching</title>
-    <meta content="Git branches are an essential tool for managing different versions of your codebase and for collaborating with others." name="description" />
+    <meta content="Git branches help you keep different versions of your codebase separate and make collaboration smoother." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -16,6 +16,7 @@
     <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
     <link href="../../resources/style.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 
 <body>
@@ -51,131 +52,193 @@
     </nav>
     <div id="article-wrapper">
         <section id="article-body">
-            <p style="text-align: right;"><i>Last modified: May 26, 2022</i></p>
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: April 08, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="git-branching">Git branching</h2>
-            <p>Git branches are an essential tool for managing different versions of your codebase and for collaborating with others. In this section, we'll cover the basics of Git branches and how to use them effectively.</p>
+            <p>Git branches help you keep different versions of your codebase separate and make collaboration smoother. Think of them like parallel timelines for your project. By creating a branch, you're effectively saying, “I want to try something new without messing up the main timeline.”</p>
+            <p>Below, we’ll walk through what branches are, how they work, why and when to create them, and how to manage them with some straightforward Git commands.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">.----( feature_x )----.
+    /                       \
+---A------B------C------D----E---( main )
+          \                 /
+       '----( fix_bug )-----'</code></pre>
+            </div>
+            </p>
+            <p>Above is a sketch showing a simplified idea: multiple branches coming off a main history and potentially rejoining it after some work.</p>
             <h3 id="what-are-branches-">What are branches?</h3>
-            <p>In Git, a branch is a pointer to a specific commit in the repository's history. When you create a new branch, Git creates a new pointer and adds it to the repository's history. This allows you to work on a specific feature or bug fix without affecting the main codebase (typically referred to as the master branch).</p>
-            <p>For example, consider a repository with the following commit history:</p>
+            <p>A <strong>branch</strong> in Git is just a pointer to a specific commit. By default, Git starts with a main branch (often called <code>master</code> or <code>main</code>). Whenever you make a new commit, Git moves that branch pointer forward to track your latest changes.</p>
+            <p>When you create a new branch, you’re simply telling Git to mark a specific commit as a “starting point” for a separate line of development. Any commits you make in that branch won’t appear on the main branch until you decide to merge them back.</p>
+            <p>For instance, consider a history like this:</p>
             <p>
             <div>
-                <pre><code class="language-bash">A &lt;-- B &lt;-- C &lt;-- D</code></pre>
+                <pre><code class="language-shell">A &lt;-- B &lt;-- C &lt;-- D  (master)</code></pre>
             </div>
             </p>
-            <p>Here, the master branch is a pointer to the most recent commit (D). If we create a new branch at this point, Git will create a new pointer and add it to the history:</p>
+            <p>If you create a new branch at commit <code>D</code>, Git sets up a pointer for that branch:</p>
             <p>
             <div>
-                <pre><code class="language-bash">A &lt;-- B &lt;-- C &lt;-- D  &lt;-- new_branch
-            ^
-            |
-            master</code></pre>
+                <pre><code class="language-shell">A &lt;-- B &lt;-- C &lt;-- D
+                ^
+                |------( new_branch )
+                
+(master also points to D)</code></pre>
             </div>
             </p>
-            <p>Now, new_branch is a separate branch with its own pointer, and any new commits will be added to this branch's history instead of the master branch's history.</p>
-            <h2 id="how-do-branches-work-technically-">How do branches work technically?</h2>
-            <p>In Git, every commit has one or more parent commits, forming a directed acyclic graph (DAG) of snapshots. This means that each commit refers to one or more previous commits, allowing Git to track the history of the repository.</p>
-            <p>For example, consider a repository with the following commit history:</p>
+            <p>From here, any commits you make on <code>new_branch</code> won’t affect <code>master</code> until a merge happens.</p>
+            <h3 id="how-do-branches-work-technically-">How do branches work technically?</h3>
+            <p>Under the hood, Git uses commits that form a directed acyclic graph (DAG). Each commit knows its parent commit(s). When you branch, you’re just adding a new pointer to one of those commits.</p>
+            <p>If you make a commit on that new branch, Git records the parent commit as the one you branched from, forming a new path:</p>
             <p>
             <div>
-                <pre><code class="language-bash">A &lt;-- B &lt;-- C &lt;-- D</code></pre>
+                <pre><code class="language-shell">A &lt;-- B &lt;-- C &lt;-- D (master)
+                  \
+                   E (new_branch)</code></pre>
             </div>
             </p>
-            <p>Here, A is the first commit in the repository, and B, C, and D are subsequent commits with A as their parent.</p>
-            <p>If we create a new branch at this point and make a new commit, the history will look like this:</p>
+            <p>Here, <code>E</code> is a new commit. It only exists on <code>new_branch</code> unless or until you merge it back into <code>master</code>.</p>
+            <h3 id="when-to-create-branches">When to create branches</h3>
+            <p>A common question is: <strong>“When should I branch out?”</strong>. Here are some typical scenarios:</p>
+            <h4 id="bug-fixes">Bug fixes</h4>
+            <p>When you spot a bug, it’s often a good idea to create a new branch to fix it. You can then test the fix thoroughly without breaking the main code. If you’re not sure how long a fix will take (or it might cause unexpected side effects), isolating your changes on a new branch is safer.</p>
+            <h4 id="new-features">New features</h4>
+            <p>If you’re adding a new feature, do the work on a feature branch. This helps keep the main branch stable. You can experiment freely and only merge when your feature is ready to share with everyone else.</p>
+            <h4 id="long-lived-branches">Long-lived branches</h4>
+            <p>Some teams maintain long-running branches for major releases or specific versions. The <code>master</code> (or <code>main</code>) branch is usually considered stable, while a <code>dev</code> branch might be used to integrate features from multiple short-lived branches before they’re merged to <code>master</code>.</p>
+            <h4 id="continuous-integration">Continuous integration</h4>
+            <p>Teams often merge code into the main branch frequently—sometimes daily or even multiple times per day. The goal here is to keep the code in a “working” state and prevent large, unmerged branches from drifting too far behind. Smaller, more frequent merges reduce the risk of huge merge conflicts later.</p>
             <p>
             <div>
-                <pre><code class="language-bash">A &lt;-- B &lt;-- C &lt;-- D  &lt;-- new_branch
-            ^
-            |
-            master</code></pre>
+                <pre><code class="language-shell">(short_feature_branch)
+        /
+---A----B----C----D----E---(master)
+                \
+                 F----G----(another_feature_branch)</code></pre>
             </div>
             </p>
-            <p>Here, the new commit (new_branch) is added to the new_branch branch's history, but not to the master branch's history. This allows us to work on new features or bug fixes without affecting the main codebase.</p>
-            <h2 id="when-to-create-branches">When to create branches</h2>
-            <p>There are many situations where creating a new branch can be helpful. Some common scenarios include:</p>
-            <h3 id="bug-fixes">Bug fixes</h3>
-            <p>If you discover a bug in your code, creating a new branch allows you to work on a fix without affecting the main codebase. This is especially useful if you're not sure how long it will take to fix the bug or if the fix might break other parts of the code.</p>
-            <h3 id="new-features">New features</h3>
-            <p>If you're working on a new feature for your codebase, creating a new branch allows you to develop the feature without affecting the main codebase. This is useful if the feature is still in the early stages of development or if you're not sure if it will be successful.</p>
-            <h3 id="long-lived-branches">Long-lived branches</h3>
-            <p>In many projects, there are typically a few long-lived branches that are used for specific purposes. For example, the master branch is often used for the project's main codebase, while a dev branch is used for integrating various short-lived branches.</p>
-            <h3 id="continous-integration">Continous integration</h3>
-            <p>Many development teams practice continuous integration, which involves regularly merging short-lived branches into the main codebase (often at least once per day, and sometimes several times per day). </p>
-            <p>Remember that a few lines of code that can be promptly merged into the master branch are preferable than a complete feature that will be held on a separate branch for months only to be forgotten and never merged. </p>
-            <h2 id="listing-branches">Listing branches</h2>
-            <p>To see a list of all the branches in your repository, you can use the git branch command. This will show a list of all the local branches in the repository, with the current branch marked with an asterisk (*).</p>
-            <p>For example:</p>
+            <p>The shorter your branch’s lifespan, the smoother the merge back into the main line typically is.</p>
+            <h3 id="listing-branches">Listing branches</h3>
+            <p><strong>To list all local branches</strong>, you can run:</p>
             <p>
             <div>
-                <pre><code class="language-bash">$ git branch
-  branch1
+                <pre><code class="language-bash">git branch</code></pre>
+            </div>
+            </p>
+            <p>Git will print something like:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">branch1
 * branch2
   branch3</code></pre>
             </div>
             </p>
-            <p>To see a list of all branches, including remote branches, you can use the -a flag:</p>
+            <p>The asterisk (<code>*</code>) shows the branch you’re currently on.</p>
+            <p><strong>To list all branches (local and remote)</strong>, use:</p>
             <p>
             <div>
-                <pre><code class="language-bash">$ git branch -a
-  branch1
-* branch2
-  branch3
-  origin/branch1
-  origin/branch2
-  origin/branch3</code></pre>
+                <pre><code class="language-bash">git branch -a</code></pre>
             </div>
             </p>
-            <h2 id="creating-branches">Creating branches</h2>
-            <p>To create a new branch, use the git branch command followed by the name of the new branch. For example:</p>
+            <p>Output example:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">branch1
+* branch2
+  branch3
+  remotes/origin/branch1
+  remotes/origin/branch2
+  remotes/origin/branch3</code></pre>
+            </div>
+            </p>
+            <p>Remote branches typically show up as <code>remotes/origin/...</code>, indicating branches that live on the remote repository.</p>
+            <h3 id="creating-branches">Creating branches</h3>
+            <p><strong>To create a new branch</strong>, use:</p>
             <p>
             <div>
                 <pre><code class="language-bash">git branch new_branch</code></pre>
             </div>
             </p>
-            <p>This will create a new branch called new_branch, but it will not switch you to that branch. To switch to the new branch, you can use the git checkout command:</p>
+            <p>This creates the branch <code>new_branch</code> but <strong>doesn’t</strong> switch you to it. If you immediately check <code>git branch</code>, you’ll see <code>new_branch</code> listed, but it won’t have the asterisk next to it. To switch to that branch, run:</p>
             <p>
             <div>
                 <pre><code class="language-bash">git checkout new_branch</code></pre>
             </div>
             </p>
-            <p>You can also create a new branch and switch to it in one step using the git checkout -b command:</p>
+            <p>Alternatively, you can create and switch in one go:</p>
             <p>
             <div>
                 <pre><code class="language-bash">git checkout -b new_branch</code></pre>
             </div>
             </p>
-            <h2 id="switching-branches">Switching branches</h2>
-            <p>To switch to an existing branch, use the git checkout command followed by the name of the branch you want to switch to. For example:</p>
+            <p>That command says, “Make a new branch called <code>new_branch</code> and check it out right away.”</p>
+            <h3 id="switching-branches">Switching branches</h3>
+            <p>Once a branch exists, you switch to it with:</p>
             <p>
             <div>
                 <pre><code class="language-bash">git checkout branch1</code></pre>
             </div>
             </p>
-            <p>This will switch you to the branch1 branch, and any new commits you make will be added to this branch's history.</p>
-            <h2 id="merging-branches">Merging branches</h2>
-            <p>To merge one branch into another, first switch to the branch you want to merge into, then use the git merge command followed by the name of the branch you want to merge. For example, to merge branch1 into branch2, you would do the following:</p>
+            <p>Any commits you make now will belong to <code>branch1</code>. If you switch back to <code>master</code> (<code>git checkout master</code>), you’ll return to the previous state of the code in that branch.</p>
+            <h3 id="merging-branches">Merging branches</h3>
+            <p>When your work in a branch is ready to join another branch (often <code>master</code>), you’ll merge. <strong>First</strong>, switch to the branch you want to merge <strong>into</strong>:</p>
             <p>
             <div>
-                <pre><code class="language-bash">git checkout branch2
-git merge branch1</code></pre>
+                <pre><code class="language-bash">git checkout branch2</code></pre>
             </div>
             </p>
-            <p>This will create a new commit that combines the changes from both branches. If there are conflicts between the two branches, Git will ask you to resolve them before the merge can be completed.</p>
-            <h2 id="deleting-branches">Deleting branches</h2>
-            <p>To delete a branch, use the git branch -d command followed by the name of the branch you want to delete. For example:</p>
+            <p>Then run:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">git merge branch1</code></pre>
+            </div>
+            </p>
+            <p>This tells Git: “Take all the commits from <code>branch1</code> and merge them into <code>branch2</code>.” If everything goes smoothly, Git will create a new “merge commit.” Sometimes you’ll encounter conflicts if both branches changed the same lines in different ways. If that happens, Git will pause the merge and let you resolve the conflicts manually in the affected files.</p>
+            <p>Here’s an example merge flow and its typical output:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">$ git checkout master
+Switched to branch 'master'
+
+$ git merge new_branch
+Updating d34f00d..a1b2c3
+Fast-forward
+ file1.txt | 2 +-
+ file2.txt | 1 +
+ 2 files changed, 3 insertions(+), 1 deletion(-)</code></pre>
+            </div>
+            </p>
+            <p>In the output above, Git performed a <strong>fast-forward</strong> merge, which just moves the branch pointer forward because <code>master</code> was directly behind <code>new_branch</code>.</p>
+            <h3 id="deleting-branches">Deleting branches</h3>
+            <p>Once you’ve merged a branch (or if you decide it’s no longer needed), you can delete it:</p>
             <p>
             <div>
                 <pre><code class="language-bash">git branch -d branch1</code></pre>
             </div>
             </p>
-            <p>This will delete the branch1 branch, but only if it has already been merged into another branch. If the branch has not been merged, you will need to use the -D flag instead:</p>
+            <p>Git will warn you if the branch hasn’t been merged. In that case, you can force-delete with:</p>
             <p>
             <div>
                 <pre><code class="language-bash">git branch -D branch1</code></pre>
             </div>
             </p>
-            <h2 id="best-practices">Best practices</h2>
+            <p>But beware: forcing a delete can throw away commits that aren’t merged anywhere else. Make sure you don’t lose important work.</p>
+            <h3 id="best-practices">Best practices</h3>
             <p>When working with branches, it's important to follow a few best practices to keep your repository organized and easy to work with:</p>
             <ul>
                 <li>Keep branches short-lived: Long-lived branches can be difficult to merge and can lead to conflicts. Try to keep your branches short and merge them into the main codebase as soon as possible.</li>
@@ -184,27 +247,25 @@ git merge branch1</code></pre>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
-            <ol>
-                <li><a href="#git-branching">Git branching</a>
-                    <ol>
-                        <li><a href="#what-are-branches-">What are branches?</a></li>
-                    </ol>
-                </li>
-                <li><a href="#how-do-branches-work-technically-">How do branches work technically?</a></li>
-                <li><a href="#when-to-create-branches">When to create branches</a>
-                    <ol>
-                        <li><a href="#bug-fixes">Bug fixes</a></li>
-                        <li><a href="#new-features">New features</a></li>
-                        <li><a href="#long-lived-branches">Long-lived branches</a></li>
-                        <li><a href="#continous-integration">Continous integration</a></li>
-                    </ol>
-                </li>
-                <li><a href="#listing-branches">Listing branches</a></li>
-                <li><a href="#creating-branches">Creating branches</a></li>
-                <li><a href="#switching-branches">Switching branches</a></li>
-                <li><a href="#merging-branches">Merging branches</a></li>
-                <li><a href="#deleting-branches">Deleting branches</a></li>
-                <li><a href="#best-practices">Best practices</a></li>
+            <ol><a href="#git-branching">Git branching</a>
+                <ol>
+                    <li><a href="#what-are-branches-">What are branches?</a></li>
+                    <li><a href="#how-do-branches-work-technically-">How do branches work technically?</a></li>
+                    <li><a href="#when-to-create-branches">When to create branches</a>
+                        <ol>
+                            <li><a href="#bug-fixes">Bug fixes</a></li>
+                            <li><a href="#new-features">New features</a></li>
+                            <li><a href="#long-lived-branches">Long-lived branches</a></li>
+                            <li><a href="#continuous-integration">Continuous integration</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#listing-branches">Listing branches</a></li>
+                    <li><a href="#creating-branches">Creating branches</a></li>
+                    <li><a href="#switching-branches">Switching branches</a></li>
+                    <li><a href="#merging-branches">Merging branches</a></li>
+                    <li><a href="#deleting-branches">Deleting branches</a></li>
+                    <li><a href="#best-practices">Best practices</a></li>
+                </ol>
             </ol>
             <div id="related-articles">
                 <h2>Related Articles</h2>
@@ -277,6 +338,9 @@ git merge branch1</code></pre>
         </script>
         <script src="../../app.js"></script>
     </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
 </body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
