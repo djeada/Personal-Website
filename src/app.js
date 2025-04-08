@@ -78,16 +78,34 @@ function checkLogo() {
 // Mapping of section keys to GitHub repository base URLs.
 const GITHUB_BASE_REPOS = {
     "algorithms_and_data_structures": "https://github.com/djeada/Algorithms-And-Data-Structures",
-    "web_development": "https://github.com/djeada/WebDevRepo",
-    // Add more mappings as needed...
+    "frontend_notes": "https://github.com/djeada/Frontend-Notes",
+        "numerical_methods": "https://github.com/djeada/Numerical-Methods",
+    "database_notes": "https://github.com/djeada/Databases-Notes",
+    "git_notes": "https://github.com/djeada/Git-Notes",
+    "linux_notes": "https://github.com/djeada/Linux-Notes",
+    "numpy_tutorials": "https://github.com/djeada/Numpy-Tutorials",
+    "parallel_and_concurrent_programming": "https://github.com/djeada/Parallel-And-Concurrent-Programming",
+    "statistics_notes": "https://github.com/djeada/Statistics-Notes",
+    "kurs_podstaw_pythona": "https://github.com/djeada/Kurs-Podstaw-Pythona",
+    "od_c_do_cpp": "https://github.com/djeada/Od-C-do-Cpp",
+
 };
 
 // Mapping of section keys to additional path prepends within the repo.
 // For example, if the algorithms repository has its files under a "notes" folder.
 const PATH_PREPENDS = {
     "algorithms_and_data_structures": "notes",
-    "web_development": "tutorials",
-    // Add more mappings as needed...
+    "frontend_notes": "notes",
+    "numerical_methods": "notes",
+        "database_notes": "notes",
+    "git_notes": "notes",
+    "linux_notes": "notes",
+    "numpy_tutorials": "notes",
+    "parallel_and_concurrent_programming": "notes",
+    "statistics_notes": "notes",
+    "kurs_podstaw_pythona": "notatki",
+    "od_c_do_cpp": "notatki",
+
 };
 
 /**
