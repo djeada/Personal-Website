@@ -159,8 +159,14 @@ function getArticleGithubPath() {
         filePathInRepo = prependFolder + (filePathInRepo ? "/" + filePathInRepo : "");
     }
 
-    // Replace the file extension: change .html to .md.
-    filePathInRepo = filePathInRepo.replace(/\.html$/, ".md");
+ // Normalize the file extension:
+    // Replace a .html extension with .md or, if no extension exists, append .md.
+    if (filePathInRepo.match(/\.html$/)) {
+        filePathInRepo = filePathInRepo.replace(/\.html$/, ".md");
+    } else if (!/\.[^\/]+$/.test(filePathInRepo)) {
+        // If there is no extension in the last segment, append .md.
+        filePathInRepo += ".md";
+    }
 
     return {
         baseRepoUrl,
