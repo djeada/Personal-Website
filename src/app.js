@@ -122,7 +122,7 @@ const MAIN_BRANCH = {
     "statistics_notes": "main",
     "kurs_podstaw_pythona": "master",
     "od_c_do_cpp": "master",
-                "stanford_machine_learning": "master",
+                "stanford_machine_learning": "main",
 
 };
 
