@@ -88,7 +88,7 @@ const GITHUB_BASE_REPOS = {
     "statistics_notes": "https://github.com/djeada/Statistics-Notes",
     "kurs_podstaw_pythona": "https://github.com/djeada/Kurs-Podstaw-Pythona",
     "od_c_do_cpp": "https://github.com/djeada/Od-C-do-Cpp",
-        "stanford_machine_learning": "https://github.com/djeada/Stanford-Machine-Learning",
+    "stanford_machine_learning": "https://github.com/djeada/Stanford-Machine-Learning",
 
 };
 
@@ -105,7 +105,7 @@ const PATH_PREPENDS = {
     "statistics_notes": "notes",
     "kurs_podstaw_pythona": "notatki",
     "od_c_do_cpp": "notatki",
-            "stanford_machine_learning": "slides",
+    "stanford_machine_learning": "slides",
 
 };
 
@@ -122,8 +122,7 @@ const MAIN_BRANCH = {
     "statistics_notes": "main",
     "kurs_podstaw_pythona": "master",
     "od_c_do_cpp": "master",
-                "stanford_machine_learning": "main",
-
+    "stanford_machine_learning": "main",
 };
 
 /**
@@ -202,7 +201,11 @@ function handleSuggestEditClick() {
     if (!result) {
         return; // An error has been shown.
     }
-    const { sectionKey, baseRepoUrl, filePathInRepo } = result;
+    const {
+        sectionKey,
+        baseRepoUrl,
+        filePathInRepo
+    } = result;
     // Lookup the correct branch for the section using the MAIN_BRANCH mapping.
     const branch = MAIN_BRANCH.hasOwnProperty(sectionKey) ? MAIN_BRANCH[sectionKey] : "master";
     const editUrl = `${baseRepoUrl}/edit/${branch}/${filePathInRepo}`;
