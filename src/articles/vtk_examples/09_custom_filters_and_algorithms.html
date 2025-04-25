@@ -67,13 +67,13 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: June 04, 2023</i></p>
+            <p style="text-align: right;"><i>Last modified: April 25, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="developing-custom-filters-and-algorithms-in-vtk">Developing Custom Filters and Algorithms in VTK</h2>
             <p>Creating custom filters and algorithms in the Visualization Toolkit (VTK) opens up a world of possibilities for tailored data processing and visualization. By extending VTK's capabilities, you can carry out specialized techniques that meet the unique needs of your projects—whether it's for scientific research, engineering, medical imaging, or data analysis. </p>
             <p>VTK comes with a broad range of built-in filters and classes that cover many common visualization tasks, but there may be occasions when you need more specific functionality. For instance, you might need to process data from specialized scientific instruments, create a custom metric for point analysis, or experiment with novel geometry-manipulation algorithms. In these cases, developing a custom filter allows you to:</p>
             <ul>
-                <li>Seamlessly integrate your algorithm into the native VTK pipeline.</li>
+                <li>Easily integrate your algorithm into the native VTK pipeline.</li>
                 <li>Reuse existing VTK infrastructure for rendering, interaction, and I/O.</li>
                 <li>Use VTK’s optimized performance and memory management.</li>
                 <li>Keep your workflow consistent without needing to switch between external libraries.</li>
@@ -254,63 +254,62 @@ def RequestData(self, request, inInfo, outInfo):
                 <li>The calculated distance array is attached to the output as part of the point data. </li>
                 <li>The distance array is set as the active scalar to enable use in coloring or further pipeline processing.</li>
             </ul>
-            <h4 id="using-the-custom-filter">Using the Custom Filter</h4>
-            <p>Below is an example showing how to integrate this custom filter into a typical VTK pipeline. We’ll generate a simple sphere, apply our custom distance filter, and then visualize the results with a color map that reflects each point’s distance to the specified target.</p>
+            <h4 id="using-the-custom-distance-filter">Using the Custom Distance Filter</h4>
+            <p>This custom VTK filter calculates the Euclidean distance from each point in a vtkPolyData to a specified target point. Below is an example demonstrating how to use it with a sphere visualization.</p>
+            <p><strong>Creating and configuring the distance filter:</strong></p>
             <p>
             <div>
-                <pre><code class="language-python">import vtk
+                <pre><code class="language-python"># Create a sphere source for demonstration
+sphere = vtk.vtkSphereSource()
+sphere.SetRadius(1.0)
+sphere.SetThetaResolution(30)
+sphere.SetPhiResolution(30)
+sphere.Update()
 
-# 1. Create a sphere source as an example input (the "source" of data).
-sphere_source = vtk.vtkSphereSource()
-sphere_source.SetThetaResolution(30)
-sphere_source.SetPhiResolution(30)
-sphere_source.Update()  # Force the source to generate data so we can use it immediately
-
-# 2. Instantiate the custom distance filter.
-distance_filter = DistanceToPointFilter()
-distance_filter.SetInputConnection(sphere_source.GetOutputPort())  # Connect the pipeline
-distance_filter.SetTargetPoint(0.5, 0.0, 0.0)  # Calculate distance to (0.5, 0.0, 0.0)
-
-# 3. Update the filter to perform the computation.
-distance_filter.Update()
-
-# 4. Create a mapper that takes the output from the distance filter.
-mapper = vtk.vtkPolyDataMapper()
-mapper.SetInputConnection(distance_filter.GetOutputPort())
-
-# Optionally, set the scalar range so that the colors reflect the min and max distances.
-# By default, mapper will use the active scalars to color the object.
-distance_range = distance_filter.GetOutput().GetPointData().GetScalars().GetRange()
-mapper.SetScalarRange(distance_range)
-
-# 5. Create an actor to represent the processed data in the 3D scene.
-actor = vtk.vtkActor()
-actor.SetMapper(mapper)
-
-# 6. Set up the rendering environment: renderer, render window, and interactor.
-renderer = vtk.vtkRenderer()
-render_window = vtk.vtkRenderWindow()
-render_window.AddRenderer(renderer)
-
-interactor = vtk.vtkRenderWindowInteractor()
-interactor.SetRenderWindow(render_window)
-
-# 7. Add the actor to the scene and set a background color.
-renderer.AddActor(actor)
-renderer.SetBackground(0.1, 0.2, 0.4)  # A dark blue-ish background
-
-# 8. Render and start the interaction loop.
-render_window.SetSize(800, 600)  # Set the window size for better visibility
-render_window.Render()
-interactor.Start()</code></pre>
+# Create and configure the distance filter
+filter = DistanceToPointFilter()
+filter.SetInputData(sphere.GetOutput())
+filter.SetTargetPoint(2.0, 0.0, 0.0)  # Target point outside the sphere
+output_data = filter.ProcessDataObject(sphere.GetOutput())</code></pre>
             </div>
             </p>
+            <p><strong>Setting up the visualization pipeline with color mapping:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-python"># Create mapper and configure scalar visualization
+mapper = vtk.vtkPolyDataMapper()
+mapper.SetInputData(output_data)
+
+# Set up color mapping
+scalar_range = output_data.GetPointData().GetScalars().GetRange()
+lut = vtk.vtkLookupTable()
+lut.SetHueRange(0.667, 0.0)  # Blue to red color range
+lut.SetTableRange(scalar_range)
+lut.Build()
+mapper.SetLookupTable(lut)
+mapper.SetScalarRange(scalar_range)
+
+# Create actor and set up visualization
+actor = vtk.vtkActor()
+actor.SetMapper(mapper)</code></pre>
+            </div>
+            </p>
+            <p>The output will look similar to the following:</p>
+            <p><img alt="Side by side comparison" src="https://github.com/user-attachments/assets/a7e0dd03-2a27-457f-bd9d-b500b61deac1" /></p>
             <ul>
-                <li>The sphere will be displayed in the rendering window.</li>
-                <li>Each vertex on the sphere’s surface will be assigned a color based on how far it is from (0.5, 0.0, 0.0).</li>
-                <li>If you look closely, the point on the sphere closest to (0.5, 0.0, 0.0) will likely be tinted one color (e.g., blue), while the farthest point on the opposite side of the sphere might be another color (e.g., red), depending on the default color mapping.</li>
+                <li>Left: Original sphere </li>
+                <li>Right: Sphere colored by distance from target point (2.0, 0.0, 0.0)</li>
+                <li>Blue: Points closer to the target</li>
+                <li>Red: Points farther from the target</li>
+                <li>Smooth gradient between based on actual distances</li>
+                <li>Computes Euclidean distance from each point to a target point</li>
+                <li>Stores distances as scalar values in the output's point data</li>
+                <li>Supports visualization with customizable color mapping</li>
+                <li>Works with any vtkPolyData input</li>
+                <li>Adjust the target point location to highlight different distance patterns</li>
+                <li>Modify the lookup table's hue range for different color schemes</li>
+                <li>Use the orientation widget to better understand spatial relationships</li>
             </ul>
-            <p>Feel free to adjust the target point or the resolution of the sphere to see how the distance calculations change.</p>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
@@ -321,7 +320,7 @@ interactor.Start()</code></pre>
                     <li><a href="#example-creating-a-custom-filter-to-compute-point-distances">Example: Creating a Custom Filter to Compute Point Distances</a>
                         <ol>
                             <li><a href="#implementing-the-custom-filter">Implementing the Custom Filter</a></li>
-                            <li><a href="#using-the-custom-filter">Using the Custom Filter</a></li>
+                            <li><a href="#using-the-custom-distance-filter">Using the Custom Distance Filter</a></li>
                         </ol>
                     </li>
                 </ol>

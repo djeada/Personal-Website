@@ -297,18 +297,21 @@ function handleDownloadClick() {
 
 function initializeThreeJS() {
     const container = document.getElementById('threejs-container');
-    let darkMode   = getCookie("darkMode") === "true";
-    let bgColor    = darkMode ? 0x0a0a12 : 0xf0f0f0;
-    let fogColor   = bgColor;
-    let ringColor  = darkMode ? 0x3a5f79 : 0x336699;
-    let starColor  = darkMode ? 0xdddddd : 0x444444;
+    let darkMode = getCookie("darkMode") === "true";
+    let bgColor = darkMode ? 0x0a0a12 : 0xf0f0f0;
+    let fogColor = bgColor;
+    let ringColor = darkMode ? 0x3a5f79 : 0x336699;
+    let starColor = darkMode ? 0xdddddd : 0x444444;
 
     // Scene, camera, fog, renderer (unchanged)…
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(fogColor, 0.003);
     const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
     camera.position.set(0, 4, 20);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true
+    });
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.shadowMap.enabled = true;
@@ -330,12 +333,12 @@ function initializeThreeJS() {
     // …vertex-color crack setup as before…
     const colors = [];
     for (let i = 0; i < ringGeo.attributes.position.count; i++) {
-      const isCrack = Math.random() < 0.12;
-      colors.push(
-        isCrack ? 1 : ((ringColor >> 16) & 0xff) / 255,
-        isCrack ? 0.2 : ((ringColor >> 8) & 0xff) / 255,
-        isCrack ? 0   : ((ringColor)        & 0xff) / 255
-      );
+        const isCrack = Math.random() < 0.12;
+        colors.push(
+            isCrack ? 1 : ((ringColor >> 16) & 0xff) / 255,
+            isCrack ? 0.2 : ((ringColor >> 8) & 0xff) / 255,
+            isCrack ? 0 : ((ringColor) & 0xff) / 255
+        );
     }
     ringGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     const ringMat = new THREE.MeshPhysicalMaterial({
@@ -352,28 +355,28 @@ function initializeThreeJS() {
     ring.position.set(0, 5, 0);
     scene.add(ring);
 
- // ── Fiery pool hugging the ring’s underside ──
+    // ── Fiery pool hugging the ring’s underside ──
     const emberCount = 800;
-    const emberPos   = new Float32Array(emberCount * 3);
+    const emberPos = new Float32Array(emberCount * 3);
     for (let i = 0; i < emberCount; i++) {
-      const angle  = Math.random() * Math.PI * 2;
-      // around the *outer* radius of the torus (≈3), not its hole
-      const radius = THREE.MathUtils.randFloat(2.8, 3.2);
-      emberPos[i*3]   = Math.cos(angle) * radius;
-      // place *below* the ring’s bottom (ring.y=5, half-thickness=0.5 → bottom=4.5)
-      emberPos[i*3+1] = THREE.MathUtils.randFloat(3.5, 4.3);
-      emberPos[i*3+2] = Math.sin(angle) * radius;
+        const angle = Math.random() * Math.PI * 2;
+        // around the *outer* radius of the torus (≈3), not its hole
+        const radius = THREE.MathUtils.randFloat(2.8, 3.2);
+        emberPos[i * 3] = Math.cos(angle) * radius;
+        // place *below* the ring’s bottom (ring.y=5, half-thickness=0.5 → bottom=4.5)
+        emberPos[i * 3 + 1] = THREE.MathUtils.randFloat(3.5, 4.3);
+        emberPos[i * 3 + 2] = Math.sin(angle) * radius;
     }
     const emberGeo = new THREE.BufferGeometry();
     emberGeo.setAttribute('position', new THREE.BufferAttribute(emberPos, 3));
     const emberMat = new THREE.PointsMaterial({
-      size: 0.8,
-      sizeAttenuation: false,
-      color: 0xff6600,
-      transparent: true,
-      opacity: 0.95,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
+        size: 0.8,
+        sizeAttenuation: false,
+        color: 0xff6600,
+        transparent: true,
+        opacity: 0.95,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
     });
     const embers = new THREE.Points(emberGeo, emberMat);
     scene.add(embers);
@@ -381,92 +384,100 @@ function initializeThreeJS() {
 
     // Starfield (unchanged)…
     const starCount = 4000;
-    const starPos   = new Float32Array(starCount * 3);
+    const starPos = new Float32Array(starCount * 3);
     for (let i = 0; i < starCount; i++) {
-      starPos[i*3]   = (Math.random() - 0.5) * 800;
-      starPos[i*3+1] = (Math.random() - 0.5) * 800;
-      starPos[i*3+2] = (Math.random() - 0.5) * 800;
+        starPos[i * 3] = (Math.random() - 0.5) * 800;
+        starPos[i * 3 + 1] = (Math.random() - 0.5) * 800;
+        starPos[i * 3 + 2] = (Math.random() - 0.5) * 800;
     }
     const starsGeo = new THREE.BufferGeometry();
     starsGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
     const starsMat = new THREE.PointsMaterial({
-      size: 2.5,
-      sizeAttenuation: false,
-      color: starColor,
-      opacity: 0.7,
-      transparent: true
+        size: 2.5,
+        sizeAttenuation: false,
+        color: starColor,
+        opacity: 0.7,
+        transparent: true
     });
     const starField = new THREE.Points(starsGeo, starsMat);
     scene.add(starField);
 
     // Interaction & animation (unchanged, aside from ember motion):
-    let rotationSpeed    = 0.02;
-    let verticalVelocity = 0, gravity = -0.03, jumpVelocity = 1;
+    let rotationSpeed = 0.02;
+    let verticalVelocity = 0,
+        gravity = -0.03,
+        jumpVelocity = 1;
     const clock = new THREE.Clock();
 
     renderer.domElement.addEventListener('click', () => {
-      rotationSpeed = 0.1; setTimeout(() => rotationSpeed = 0.02, 600);
+        rotationSpeed = 0.1;
+        setTimeout(() => rotationSpeed = 0.02, 600);
     });
-    renderer.domElement.addEventListener('dblclick', () => { verticalVelocity = jumpVelocity; });
+    renderer.domElement.addEventListener('dblclick', () => {
+        verticalVelocity = jumpVelocity;
+    });
     window.addEventListener('resize', () => {
-      camera.aspect = container.clientWidth / container.clientHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(container.clientWidth, container.clientHeight);
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
     });
 
     function animate() {
-      requestAnimationFrame(animate);
-      const t = clock.getElapsedTime();
+        requestAnimationFrame(animate);
+        const t = clock.getElapsedTime();
 
-      // Palette switch + flame flicker (unchanged)…
-      const newDM = getCookie("darkMode") === "true";
-      if (newDM !== darkMode) {
-        darkMode = newDM;
-        bgColor  = darkMode ? 0x0a0a12 : 0xf0f0f0;
-        fogColor = bgColor;
-        ringColor= darkMode ? 0x3a5f79 : 0x336699;
-        starColor= darkMode ? 0xdddddd : 0x444444;
-        renderer.setClearColor(bgColor,1);
-        scene.fog.color.setHex(fogColor);
-        ambient.color.setHex(darkMode?0x444444:0xaaaaaa);
-        flameLight.color.setHex(darkMode?0xff2200:0xff3300);
-        ring.material.color.setHex(ringColor);
-        starsMat.color.setHex(starColor);
-      }
-      flameLight.intensity = 4.0 * (1 + 0.4 * Math.sin(t * 25 + Math.random() * 0.3));
-
-      // Ring physics/wobble/hue (unchanged)…
-      ring.position.y += verticalVelocity;
-      verticalVelocity += gravity;
-      if (ring.position.y < 5) { ring.position.y = 5; verticalVelocity = 0; }
-      ring.rotation.x += rotationSpeed;
-      ring.rotation.y += rotationSpeed * 0.8;
-      const wob = 1 + 0.05 * Math.sin(t * 3);
-      ring.scale.set(wob, wob, wob);
-      ring.material.color.setHSL((t * 0.08) % 1, 0.7, 0.5);
-
-      // Ember “fire” rising from below
-      const epos = embers.geometry.attributes.position.array;
-      for (let i = 0; i < emberCount; i++) {
-        epos[i*3+1] += 0.03 + 0.015 * Math.sin(t * 20 + i);
-        // once they fly too high, respawn just under the ring
-        if (epos[i*3+1] > 6) {
-          epos[i*3+1] = THREE.MathUtils.randFloat(3.5, 4.3);
+        // Palette switch + flame flicker (unchanged)…
+        const newDM = getCookie("darkMode") === "true";
+        if (newDM !== darkMode) {
+            darkMode = newDM;
+            bgColor = darkMode ? 0x0a0a12 : 0xf0f0f0;
+            fogColor = bgColor;
+            ringColor = darkMode ? 0x3a5f79 : 0x336699;
+            starColor = darkMode ? 0xdddddd : 0x444444;
+            renderer.setClearColor(bgColor, 1);
+            scene.fog.color.setHex(fogColor);
+            ambient.color.setHex(darkMode ? 0x444444 : 0xaaaaaa);
+            flameLight.color.setHex(darkMode ? 0xff2200 : 0xff3300);
+            ring.material.color.setHex(ringColor);
+            starsMat.color.setHex(starColor);
         }
-      }
-      embers.geometry.attributes.position.needsUpdate = true;
+        flameLight.intensity = 4.0 * (1 + 0.4 * Math.sin(t * 25 + Math.random() * 0.3));
 
-      // Stars twinkle (unchanged)…
-      starField.material.opacity = 0.7 + 0.2 * Math.sin(t * 0.2);
+        // Ring physics/wobble/hue (unchanged)…
+        ring.position.y += verticalVelocity;
+        verticalVelocity += gravity;
+        if (ring.position.y < 5) {
+            ring.position.y = 5;
+            verticalVelocity = 0;
+        }
+        ring.rotation.x += rotationSpeed;
+        ring.rotation.y += rotationSpeed * 0.8;
+        const wob = 1 + 0.05 * Math.sin(t * 3);
+        ring.scale.set(wob, wob, wob);
+        ring.material.color.setHSL((t * 0.08) % 1, 0.7, 0.5);
 
-      // Camera orbit & bob (unchanged)…
-      const radius = 20;
-      camera.position.x = Math.cos(t * 0.03) * radius;
-      camera.position.z = Math.sin(t * 0.03) * radius + 5;
-      camera.position.y = 4 + Math.sin(t * 0.6) * 1.5;
-      camera.lookAt(ring.position);
+        // Ember “fire” rising from below
+        const epos = embers.geometry.attributes.position.array;
+        for (let i = 0; i < emberCount; i++) {
+            epos[i * 3 + 1] += 0.03 + 0.015 * Math.sin(t * 20 + i);
+            // once they fly too high, respawn just under the ring
+            if (epos[i * 3 + 1] > 6) {
+                epos[i * 3 + 1] = THREE.MathUtils.randFloat(3.5, 4.3);
+            }
+        }
+        embers.geometry.attributes.position.needsUpdate = true;
 
-      renderer.render(scene, camera);
+        // Stars twinkle (unchanged)…
+        starField.material.opacity = 0.7 + 0.2 * Math.sin(t * 0.2);
+
+        // Camera orbit & bob (unchanged)…
+        const radius = 20;
+        camera.position.x = Math.cos(t * 0.03) * radius;
+        camera.position.z = Math.sin(t * 0.03) * radius + 5;
+        camera.position.y = 4 + Math.sin(t * 0.6) * 1.5;
+        camera.lookAt(ring.position);
+
+        renderer.render(scene, camera);
     }
     animate();
 }
