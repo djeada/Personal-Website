@@ -229,80 +229,80 @@ function handleCreateIssueClick() {
 
 
 function handleDownloadClick() {
-  const article = document.getElementById('article-body');
-  if (!article) return;
+    const article = document.getElementById('article-body');
+    if (!article) return;
 
-  const spinner = document.getElementById('pdf-spinner-overlay');
-  if (spinner) spinner.style.display = 'flex';
+    const spinner = document.getElementById('pdf-spinner-overlay');
+    if (spinner) spinner.style.display = 'flex';
 
-  // Clone and modify the article content
-  const cloned = article.cloneNode(true);
+    // Clone and modify the article content
+    const cloned = article.cloneNode(true);
 
-  // ----- NEW: strip out the top "action buttons + metadata" block -----
-  // Remove any .article-action-buttons divs
-  cloned.querySelectorAll('.article-action-buttons').forEach(el => el.remove());
+    // ----- NEW: strip out the top "action buttons + metadata" block -----
+    // Remove any .article-action-buttons divs
+    cloned.querySelectorAll('.article-action-buttons').forEach(el => el.remove());
 
-  // Remove any <p> whose text starts with "Last modified:" or "This article is written in:"
-  cloned.querySelectorAll('p').forEach(p => {
-    const txt = p.textContent.trim();
-    if (/^Last modified:/i.test(txt) || /^This article is written in:/i.test(txt)) {
-      p.remove();
-    }
-  });
-  // --------------------------------------------------------------------
-
-  // Remove all images
-  cloned.querySelectorAll('img').forEach(img => img.remove());
-
-  // Replace header content with your custom header markup
-  cloned.querySelectorAll('header').forEach(header => {
-    header.innerHTML = '<h1>Your Custom Header</h1>';
-  });
-
-  // Reserve extra space at the bottom to prevent cutting text
-  cloned.style.paddingBottom = '20px';
-
-  // Create a hidden container to hold the modified content
-  const container = document.createElement('div');
-  container.style.position = 'fixed';
-  container.style.top = '-9999px';
-  container.style.left = '-9999px';
-  container.appendChild(cloned);
-  document.body.appendChild(container);
-
-  // Configure html2pdf options with additional page-break setting and higher scale
-  const options = {
-    margin: 0.5,
-    filename: 'article.pdf',
-    image: {
-      type: 'jpeg',
-      quality: 1
-    },
-    html2canvas: {
-      scale: 0.95,
-      useCORS: true
-    },
-    jsPDF: {
-      unit: 'in',
-      format: 'letter',
-      orientation: 'portrait'
-    },
-    pagebreak: {
-      mode: 'avoid-all'
-    }
-  };
-
-  // Generate and download the PDF, then clean up
-  html2pdf().set(options).from(cloned).save()
-    .then(() => {
-      document.body.removeChild(container);
-      if (spinner) spinner.style.display = 'none';
-    })
-    .catch(error => {
-      console.error("PDF generation error:", error);
-      document.body.removeChild(container);
-      if (spinner) spinner.style.display = 'none';
+    // Remove any <p> whose text starts with "Last modified:" or "This article is written in:"
+    cloned.querySelectorAll('p').forEach(p => {
+        const txt = p.textContent.trim();
+        if (/^Last modified:/i.test(txt) || /^This article is written in:/i.test(txt)) {
+            p.remove();
+        }
     });
+    // --------------------------------------------------------------------
+
+    // Remove all images
+    cloned.querySelectorAll('img').forEach(img => img.remove());
+
+    // Replace header content with your custom header markup
+    cloned.querySelectorAll('header').forEach(header => {
+        header.innerHTML = '<h1>Your Custom Header</h1>';
+    });
+
+    // Reserve extra space at the bottom to prevent cutting text
+    cloned.style.paddingBottom = '20px';
+
+    // Create a hidden container to hold the modified content
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.top = '-9999px';
+    container.style.left = '-9999px';
+    container.appendChild(cloned);
+    document.body.appendChild(container);
+
+    // Configure html2pdf options with additional page-break setting and higher scale
+    const options = {
+        margin: 0.5,
+        filename: 'article.pdf',
+        image: {
+            type: 'jpeg',
+            quality: 1
+        },
+        html2canvas: {
+            scale: 0.95,
+            useCORS: true
+        },
+        jsPDF: {
+            unit: 'in',
+            format: 'letter',
+            orientation: 'portrait'
+        },
+        pagebreak: {
+            mode: 'avoid-all'
+        }
+    };
+
+    // Generate and download the PDF, then clean up
+    html2pdf().set(options).from(cloned).save()
+        .then(() => {
+            document.body.removeChild(container);
+            if (spinner) spinner.style.display = 'none';
+        })
+        .catch(error => {
+            console.error("PDF generation error:", error);
+            document.body.removeChild(container);
+            if (spinner) spinner.style.display = 'none';
+        });
 }
 
 function initializeThreeJS() {

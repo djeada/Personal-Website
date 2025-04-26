@@ -151,6 +151,7 @@ def get_category_url(file_path: Path) -> str:
 def get_current_date(
     file_path: Path, start_date: Optional[datetime.datetime] = None
 ) -> datetime.datetime:
+    remote_date = None
     # ——— Random-date branch ———
     if start_date is not None:
         now = datetime.datetime.now()
@@ -206,12 +207,22 @@ def get_current_date(
         local_date = extract_date(local_soup)
 
         # Strip the date paragraph before comparing content
-        strip_date = lambda txt: re.sub(
-            r'<p style="text-align: right;"><i>Last modified:.*?</i></p>',
-            "",
-            txt,
-            flags=re.DOTALL,
-        ).strip()
+        def strip_date(html_str):
+            # Parse the HTML fragment
+            soup = BeautifulSoup(html_str, "html.parser")
+
+            # Remove all <div class="article-action-buttons"> blocks
+            for div in soup.select("div.article-action-buttons"):
+                div.decompose()
+
+            # Remove any <p> whose text starts with the unwanted metadata prefixes
+            for p in soup.find_all("p"):
+                text = p.get_text(strip=True)
+                if re.match(r"^(Last modified:|This article is written in:)", text):
+                    p.decompose()
+
+            # Return the remaining HTML as a string (concatenate top-level nodes)
+            return "".join(str(elem) for elem in soup.contents).strip()
 
         if strip_date(remote_sec.decode_contents()) == strip_date(
             local_sec.decode_contents()
@@ -236,10 +247,10 @@ def get_current_date(
 
     except requests.RequestException as e:
         logging.error(f"Error fetching {url}: {e}")
-        return datetime.datetime.now()
+        return datetime.datetime.now() if not remote_date else remote_date
     except Exception as e:
         logging.error(f"Error processing {file_path}: {e}")
-        return datetime.datetime.now()
+        return datetime.datetime.now() if not remote_date else remote_date
 
 
 def generate_pages_for_articles(
