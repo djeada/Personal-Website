@@ -1,9 +1,10 @@
 import datetime
 import logging
 import multiprocessing
+import random
 import re
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import requests
 from bs4 import BeautifulSoup
@@ -14,7 +15,8 @@ import math
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
-
+START_DATE = None
+# START_DATE = datetime.datetime(2018, 1, 1)
 INPUT_DIR = "../src/articles"
 INPUT_FILE = "../src/articles/blog_1.html"
 ARTICLE_PER_PAGE = 35
@@ -146,111 +148,97 @@ def get_category_url(file_path: Path) -> str:
     return f"{relative_path.parent.stem}.html"
 
 
-def get_current_date(file_path: Path) -> datetime.datetime:
-    try:
-        # Calculate the relative path and remove the file extension
-        relative_path = file_path.relative_to("../src").with_suffix("")
+def get_current_date(
+    file_path: Path, start_date: Optional[datetime.datetime] = None
+) -> datetime.datetime:
+    # ——— Random-date branch ———
+    if start_date is not None:
+        now = datetime.datetime.now()
+        if start_date > now:
+            raise ValueError("start_date cannot be in the future")
+        # Compute a random offset in seconds
+        delta_secs = (now - start_date).total_seconds()
+        rand_offset = random.uniform(0, delta_secs)
+        rand_date = start_date + datetime.timedelta(seconds=rand_offset)
 
-        # Construct the URL
-        base_url = "https://adamdjellouli.com/"
-        url = base_url + str(relative_path)
-
-        # Download the URL content
-        response = requests.get(url)
-        response.raise_for_status()  # Raise an error for bad status codes
-
-        # Parse the HTML content from the URL
-        soup = BeautifulSoup(response.text, "html.parser")
-        remote_section = soup.find(id="article-body")
-        if not remote_section:
-            logging.error(
-                f"{url}: 'article-body' section not found in the HTML content."
-            )
-            return datetime.datetime.now()
-
-        # Fetch the HTML content of the local file
-        with file_path.open("r", encoding="utf-8") as file:
-            file_html = file.read()
-
-        # Parse the local HTML content
-        local_soup = BeautifulSoup(file_html, "html.parser")
-        local_section = local_soup.find(id="article-body")
-        if not local_section:
-            logging.error(
-                f"{file_path}: 'article-body' section not found in the local HTML content."
-            )
-            return datetime.datetime.now()
-
-        # Get the complete HTML content of the sections
-        remote_section_content = remote_section.decode_contents()
-        local_section_content = local_section.decode_contents()
-
-        # Find the paragraph with the specific style for date extraction in remote content
-        paragraph = soup.find("p", style="text-align: right;")
-        if paragraph:
-            # Extract the text and search for the date
-            date_text = paragraph.get_text()
-            match = re.search(r"Last modified: (\w+ \d+, \d+)", date_text)
-            if match:
-                # Convert to datetime
-                date_str = match.group(1)
-                date_from_url = datetime.datetime.strptime(date_str, "%B %d, %Y")
-
-                # Find the local date
-                local_paragraph = local_soup.find("p", style="text-align: right;")
-                local_date_from_html = None
-                if local_paragraph:
-                    local_date_text = local_paragraph.get_text()
-                    local_match = re.search(
-                        r"Last modified: (\w+ \d+, \d+)", local_date_text
-                    )
-                    if local_match:
-                        local_date_str = local_match.group(1)
-                        local_date_from_html = datetime.datetime.strptime(
-                            local_date_str, "%B %d, %Y"
-                        )
-
-                # Compare the full HTML contents of the specific section
-                cleaned_remote_section_content = re.sub(
-                    r'<p style="text-align: right;"><i>Last modified:.*?</i></p>',
-                    "",
-                    remote_section_content,
-                    flags=re.DOTALL,
-                ).strip()
-                cleaned_local_section_content = re.sub(
-                    r'<p style="text-align: right;"><i>Last modified:.*?</i></p>',
-                    "",
-                    local_section_content,
-                    flags=re.DOTALL,
-                ).strip()
-
-                if cleaned_remote_section_content == cleaned_local_section_content:
-                    # Replace the date in the local file with the date from the URL
-                    updated_file_html = re.sub(
-                        r"Last modified: \w+ \d+, \d+",
-                        f"Last modified: {date_str}",
-                        file_html,
-                    )
-                    with file_path.open("w", encoding="utf-8") as file:
-                        file.write(updated_file_html)
-
-                    logging.info(f"Everything ok for {file_path}")
-                    return date_from_url
-                else:
-                    # Return the local date if available
-                    if local_date_from_html:
-                        return local_date_from_html
-
-        # If date is not found in the content or HTML does not match
-        logging.error(
-            f"{url}: Date not found in the HTML content or HTML does not match."
+        # Read local HTML and replace the Last modified date
+        html = file_path.read_text(encoding="utf-8")
+        new_html = re.sub(
+            r"Last modified: \w+ \d+, \d+",
+            f"Last modified: {rand_date.strftime('%B %d, %Y')}",
+            html,
         )
+        file_path.write_text(new_html, encoding="utf-8")
+        logging.info(f"Set random date for {file_path}: {rand_date}")
+        return rand_date
+
+    # ——— Original fetch-and-compare logic ———
+    try:
+        # Build URL
+        relative = file_path.relative_to("../src").with_suffix("")
+        url = f"https://adamdjellouli.com/{relative}"
+
+        resp = requests.get(url)
+        resp.raise_for_status()
+        remote_soup = BeautifulSoup(resp.text, "html.parser")
+        remote_sec = remote_soup.find(id="article-body")
+        if remote_sec is None:
+            logging.error(f"{url}: 'article-body' not found.")
+            return datetime.datetime.now()
+
+        # Read local HTML
+        html = file_path.read_text(encoding="utf-8")
+        local_soup = BeautifulSoup(html, "html.parser")
+        local_sec = local_soup.find(id="article-body")
+        if local_sec is None:
+            logging.error(f"{file_path}: 'article-body' not found locally.")
+            return datetime.datetime.now()
+
+        # Helper to extract the last-modified date
+        def extract_date(soup_obj):
+            p = soup_obj.find("p", style="text-align: right;")
+            if not p:
+                return None
+            m = re.search(r"Last modified: (\w+ \d+, \d+)", p.get_text())
+            return datetime.datetime.strptime(m.group(1), "%B %d, %Y") if m else None
+
+        remote_date = extract_date(remote_soup)
+        local_date = extract_date(local_soup)
+
+        # Strip the date paragraph before comparing content
+        strip_date = lambda txt: re.sub(
+            r'<p style="text-align: right;"><i>Last modified:.*?</i></p>',
+            "",
+            txt,
+            flags=re.DOTALL,
+        ).strip()
+
+        if strip_date(remote_sec.decode_contents()) == strip_date(
+            local_sec.decode_contents()
+        ):
+            if remote_date:
+                # Update the local file's date
+                updated_html = re.sub(
+                    r"Last modified: \w+ \d+, \d+",
+                    f"Last modified: {remote_date.strftime('%B %d, %Y')}",
+                    html,
+                )
+                file_path.write_text(updated_html, encoding="utf-8")
+                logging.info(f"Updated date for {file_path}")
+                return remote_date
+
+        # Fallback to the local date if it exists
+        if local_date:
+            return local_date
+
+        logging.error(f"{url}: date not found or content mismatch.")
         return datetime.datetime.now()
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error fetching the URL {url}: {e}")
+
+    except requests.RequestException as e:
+        logging.error(f"Error fetching {url}: {e}")
         return datetime.datetime.now()
     except Exception as e:
-        logging.error(f"An error occurred {file_path}: {e}")
+        logging.error(f"Error processing {file_path}: {e}")
         return datetime.datetime.now()
 
 
@@ -284,7 +272,7 @@ def _extract_article_info(article: str) -> Tuple[str, str]:
     Extracts the necessary information from an article, including the date.
     Returns a tuple containing the article path and its date.
     """
-    current_date = get_current_date(article)
+    current_date = get_current_date(article, START_DATE)
     return (article, current_date)
 
 
