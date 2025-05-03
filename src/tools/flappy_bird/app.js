@@ -23,6 +23,7 @@ class Game {
         this.gameLoopTimer = null;
         this.backgroundX = 0;
         this.backgroundColor = '#70c5ce';
+        this.lastPipeX = null;
     }
 
     start() {
@@ -104,30 +105,38 @@ class Game {
     }
 
     spawnPipe() {
-        const gapHeight = 150 - this.level * 5;
+        const gapHeight = Math.max(100, 150 - this.level * 5); // floor the gap so it never gets too small
         const minHeight = 50;
         const maxHeight = canvas.height - gapHeight - minHeight;
         const topHeight = Math.floor(Math.random() * (maxHeight - minHeight + 1) + minHeight);
         const bottomY = topHeight + gapHeight;
 
-        // Determine pipeX value
-        let pipeX;
-        if (this.pipes.length === 0) {
-            pipeX = canvas.width;
-        } else {
-            const lastPipeX = this.pipes[this.pipes.length - 2].x;
-            pipeX = lastPipeX + Math.floor(Math.random() * (800 - 150 + 1)) + 100;
-        }
-        // Add new pipes to the array
-        this.pipes.push(new Pipe(pipeX, 0, topHeight, true)); // Top pipe
-        this.pipes.push(new Pipe(pipeX, bottomY, canvas.height - bottomY, false)); // Bottom pipe
+        // --- NEW: compute a base X so we always enforce a minimum spacing ---
+        const MIN_SPACING = 300; // in pixels: adjust this to taste
+        const EXTRA_SPREAD = 200; // add up to this many extra pixels randomly
+        let baseX = this.lastPipeX !== null ?
+            this.lastPipeX + MIN_SPACING :
+            canvas.width;
+        const randExtra = Math.random() * EXTRA_SPREAD;
+        const pipeX = baseX + randExtra;
+
+        // store it for next time
+        this.lastPipeX = pipeX;
+
+        // push both top & bottom pipes
+        this.pipes.push(new Pipe(pipeX, 0, topHeight, true));
+        this.pipes.push(new Pipe(pipeX, bottomY, canvas.height - bottomY, false));
     }
+
 
 
     levelUp() {
         this.level++;
         this.speed += 0.5;
         this.gravity += 0.1;
+        this.pipeInterval = Math.max(800, this.pipeInterval - 100);
+        clearInterval(this.spawnTimer);
+        this.spawnTimer = setInterval(() => this.spawnPipe(), this.pipeInterval);
         this.pipeInterval = Math.max(800, this.pipeInterval - 100);
         clearInterval(this.spawnTimer);
         this.spawnTimer = setInterval(() => this.spawnPipe(), this.pipeInterval);
@@ -169,6 +178,7 @@ class Bird {
         this.x = 100;
         this.y = canvas.height / 2 - this.height / 2;
         this.velocity = 0;
+        this.lastPipeX = null;
     }
 
     update(gravity) {
