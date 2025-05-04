@@ -193,25 +193,21 @@ class HtmlEnhancer:
 
     @classmethod
     def correct_math_blocks(cls, html: str) -> str:
-        # math blocks are defined by $$ and $$,
-        # find the blocks, and then // inside the blocks and replace them with ///
+        # Compile a pattern to find math blocks, including across newlines
+        math_pattern = re.compile(r"\$\$(.*?)\$\$", re.DOTALL)
 
-        # find all math blocks
-        math_start_pattern = re.compile(r"\$\$")
-        math_start_match = math_start_pattern.search(html)
-        while math_start_match is not None:
-            math_end_match = math_start_pattern.search(html, math_start_match.end())
-            if math_end_match is None:
-                break
-            start = math_start_match.start()
-            end = math_end_match.end()
-            math_block = html[start:end]
-            math_block = math_block.replace("\\\n", "\\\\\n")
-            html = html[:start] + math_block + html[end:]
-            math_start_match = math_start_pattern.search(
-                html, start + len(math_block) + 1
-            )
-        return html
+        def replacer(match):
+            # Extract the content inside $$...$$
+            math_content = match.group(1)
+            # Escape backslash-newlines
+            math_content = math_content.replace("\\\n", "\\\\\n")
+            # Replace anchor tags with [href-value]
+            math_content = re.sub(r'<a\s+href="([^"]+)">.*?</a>', r"[\1]", math_content)
+            # Re-wrap in $$
+            return f"$${math_content}$$"
+
+        # Substitute all math blocks using the replacer
+        return math_pattern.sub(replacer, html)
 
     @classmethod
     def apply_prism_for_code_samples(cls, html: str) -> str:
