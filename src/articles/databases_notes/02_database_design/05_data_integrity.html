@@ -67,11 +67,47 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 20, 2019</i></p>
+            <p style="text-align: right;"><i>Last modified: May 04, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="data-integrity-and-constraints">Data Integrity and Constraints</h2>
             <p>Data integrity is a fundamental concept in database design and management that ensures the accuracy, consistency, and reliability of the data stored within a database. Think of it as the foundation of a building; without a strong foundation, the entire structure is at risk. Similarly, without data integrity, any insights or decisions based on the database could be flawed.</p>
-            <p>Imagine managing a library's catalog system. If the information about books, authors, or borrowers is incorrect or inconsistent, it would lead to confusion and errors—books might be misplaced, borrowed books might not be tracked properly, and patrons could be frustrated. Data integrity ensures that such scenarios are avoided by maintaining the correctness and consistency of the data.</p>
+            <p>Imagine a library catalog where book entries lack a valid ISBN, loans aren’t tied to registered patrons, or publication dates accept impossible values. In such a system, volumes could be shelved in the wrong section because their categories are mistyped, borrowed books might never be marked as checked out, and fines could be calculated on phantom loans. By enforcing constraints—unique ISBNs, foreign keys linking loans to patrons, and checks on dates—you keep every record accurate and consistent, preventing misplaced books, billing errors, and frustrated patrons.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">BROKEN SYSTEM                                 ENFORCED CONSTRAINTS
+────────────────                              ────────────────────
+
+   [ Books ]                                    [ Books ]
++-------------+                              +-------------+
+| BookID      |                              | BookID  (PK)|
+| Title       |                              | Title       |
+| ISBN        |  &lt;– missing uniqueness       | ISBN   (UQ) |
+| AuthorID    |                              | AuthorID FK |
++------+------+                              +------+------+         
+       |                                           │
+       v                                           v
+   [ Loans ]                                     [ Loans ]
++-------------+                              +-------------+
+| LoanID      |                              | LoanID  (PK)|
+| BookID      | &lt;– orphaned reference        | BookID  FK  |
+| PatronID    |  (points to nothing)         | PatronID FK |
+| LoanDate    |                              | LoanDate    |
++------+------+                              +------+------+      
+       |                                           │
+       v                                           v
+  [ Patrons ]                                   [ Patrons ]
++-------------+                              +-------------+
+| PatronID    |                              | PatronID  PK|
+| Name        |                              | Name        |
+| Email       |                              | Email       |
++-------------+                              +-------------+
+
+COMMON ISSUES:  
+• Duplicate ISBNs → ambiguous look-ups  
+• Orphan loans → books never marked returned  
+• Invalid dates → negative or future loan dates  =</code></pre>
+            </div>
+            </p>
             <h3 id="understanding-data-integrity">Understanding Data Integrity</h3>
             <p>Data integrity involves a set of processes and constraints that protect data from being corrupted or becoming invalid. It ensures that the data remains accurate and consistent throughout its lifecycle, from creation to deletion.</p>
             <h4 id="types-of-data-integrity">Types of Data Integrity</h4>
@@ -85,12 +121,12 @@
             <p>Constraints are rules applied to database tables and columns that enforce data integrity. They prevent invalid data from being entered into the database, ensuring that the data adheres to the defined rules and relationships.</p>
             <h4 id="common-types-of-constraints">Common Types of Constraints</h4>
             <ul>
-                <li>The <strong>Primary Key Constraint</strong> uniquely identifies each record in a table, ensuring that no duplicate rows exist. </li>
-                <li>The <strong>Foreign Key Constraint</strong> enforces referential integrity by ensuring that a value in one table corresponds to a valid value in another related table. </li>
-                <li>The <strong>Unique Constraint</strong> ensures that all values in a specified column or set of columns are distinct, preventing duplicates. </li>
-                <li>The <strong>Not Null Constraint</strong> ensures that a column cannot have null values, requiring data to be entered for that field. </li>
-                <li>The <strong>Check Constraint</strong> validates that values in a column satisfy a specified condition, such as a range or format. </li>
-                <li>The <strong>Default Constraint</strong> assigns a predefined value to a column when no explicit value is provided during data insertion.</li>
+                <li>The <em>Primary Key Constraint</em> acts as a table’s fingerprint, uniquely identifying each row so that no two records can ever be the same.</li>
+                <li>With the <em>Foreign Key Constraint</em>, any value you enter must correspond to an existing record in another table, preserving your database’s referential integrity.</li>
+                <li>By applying a <em>Unique Constraint</em> to a column (or set of columns), you ensure that each value stored there is one-of-a-kind and duplicates are prevented.</li>
+                <li>When you declare a <em>Not Null Constraint</em> on a field, you’re insisting that every record provide a value for that column—no omissions allowed.</li>
+                <li>A <em>Check Constraint</em> serves as a gatekeeper, verifying that every entry meets a specified condition (for example, ensuring an age is at least 18).</li>
+                <li>If you’d like a column to fall back on a predefined value whenever you don’t supply one, the <em>Default Constraint</em> steps in and populates it automatically.</li>
             </ul>
             <h3 id="examples-of-data-integrity-and-constraints">Examples of Data Integrity and Constraints</h3>
             <p>Let's explore how constraints help maintain data integrity through some practical examples.</p>
@@ -271,7 +307,7 @@
 | Name           |          | OrderID PK     |
 | Email          |          | OrderDate      |
 +----------------+          | TotalAmount    |
-                           +----------------+</code></pre>
+                            +----------------+</code></pre>
             </div>
             </p>
             <ul>
