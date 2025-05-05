@@ -5,8 +5,8 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>Understanding Two-Phase Locking (2PL) in Databases</title>
-    <meta content="Two-Phase Locking (2PL) is a fundamental protocol used in database systems to ensure the consistency and serializability of transactions." name="description" />
+    <title>Two‑Phase Locking (2PL)</title>
+    <meta content="Two‑Phase Locking (2PL) is a scheduling rule built into database engines to keep concurrent transactions from stepping on each other." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -67,128 +67,256 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: July 29, 2020</i></p>
+            <p style="text-align: right;"><i>Last modified: May 05, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
-            <h2 id="understanding-two-phase-locking-2pl-in-databases">Understanding Two-Phase Locking (2PL) in Databases</h2>
-            <p>Two-Phase Locking (2PL) is a fundamental protocol used in database systems to ensure the consistency and serializability of transactions. By carefully managing how transactions acquire and release locks on resources, 2PL helps maintain data integrity when multiple transactions occur concurrently.</p>
-            <p>To visualize how 2PL works, imagine a transaction moving through two distinct phases: a growing phase where it acquires all the locks it needs, and a shrinking phase where it releases those locks.</p>
+            <h2 id="two-phase-locking-2pl-">Two‑Phase Locking (2PL)</h2>
+            <p>Two‑Phase Locking (2PL) is a <strong>scheduling rule</strong> built into database engines to keep concurrent transactions from stepping on each other. 2PL does <strong>not</strong> change <em>what</em> your application writes—it changes <em>when</em> each transaction is allowed to read or write shared data so that the overall result is the same as some serial order.</p>
+            <blockquote>
+                <p>Every transaction first grows its set of locks, hits a lock‑point, and only then starts giving locks back. Once it starts giving locks back it may never take another one.</p>
+            </blockquote>
+            <p>Real‑World Analogy:</p>
             <p>
             <div>
-                <pre><code class="language-shell">Transaction Lifecycle:
-
-[ Growing Phase ]
-      |
-      |-- Acquire Lock on Resource A
-      |
-      |-- Acquire Lock on Resource B
-      |
-[ Lock Point ]  &lt;--- No more locks acquired after this point
-      |
-[ Shrinking Phase ]
-      |
-      |-- Release Lock on Resource A
-      |
-      |-- Release Lock on Resource B</code></pre>
+                <pre><code class="language-shell">┌── Growing Phase ────┐         ┌── Shrinking Phase ──┐
+| Collect all library  |         | Start returning     |
+| books you need.      |  ===►   | books; you cannot   |
+| No returns allowed   |         | borrow more.        |
+└──────────────────────┘         └─────────────────────┘</code></pre>
             </div>
             </p>
-            <p>In this diagram, during the growing phase, the transaction locks Resource A and Resource B as needed. Once it has all the necessary locks (reaching the lock point), it moves into the shrinking phase, where it starts releasing the locks. After the lock point, no new locks can be acquired.</p>
-            <p>After reading the material, you should be able to answer the following questions:</p>
+            <p>While you hold a book, nobody else can annotate it. Once you drop it back, anyone may pick it up—but you may not take another.</p>
+            <p>After reading you should be able to answer…</p>
             <ol>
-                <li>What is Two-Phase Locking (2PL) in database systems, and what are its two distinct phases?</li>
-                <li>How does 2PL ensure serializability and maintain data consistency during concurrent transactions?</li>
-                <li>What are the different variations of Two-Phase Locking, such as Strict 2PL and Rigorous 2PL, and how do they differ from the basic 2PL protocol?</li>
-                <li>What challenges can arise when implementing 2PL, and what strategies can be used to mitigate issues like deadlocks?</li>
-                <li>Can you provide a practical example of how Two-Phase Locking is applied in a transaction, such as transferring funds between accounts?</li>
+                <li>What is Two‑Phase Locking (2PL) and what are its two phases?</li>
+                <li>How does 2PL guarantee serializability among concurrent transactions?</li>
+                <li>What extra rules do <em>Strict</em>, <em>Rigorous</em>, and <em>Conservative</em> 2PL add and why?</li>
+                <li>Which parts are handled automatically by the database engine, and which must the application developer code explicitly?</li>
+                <li>Show a concrete transfer‑funds example that follows 2PL.</li>
             </ol>
-            <h3 id="the-two-phases-of-2pl">The Two Phases of 2PL</h3>
-            <p>Two-phase locking operates through two distinct phases, ensuring consistency and isolation in transactions:</p>
-            <ul>
-                <li>During the <strong>growing phase</strong>, the transaction acquires locks on the resources it needs to proceed. It is allowed to obtain new locks in this phase but is restricted from releasing any locks until all required resources are secured. </li>
-                <li>In the <strong>shrinking phase</strong>, the transaction starts releasing locks after it has acquired all the necessary ones. Once this phase begins, the transaction is no longer permitted to obtain additional locks. </li>
-            </ul>
-            <p>2PL prevents scenarios where a transaction might release a lock and later need it again, which could lead to inconsistencies or conflicts with other transactions.</p>
-            <h3 id="variations-of-two-phase-locking">Variations of Two-Phase Locking</h3>
-            <p>There are several variations of 2PL, each designed to address specific concerns like preventing deadlocks or ensuring recoverability:</p>
-            <h4 id="strict-two-phase-locking">Strict Two-Phase Locking</h4>
-            <p>In strict 2PL, all exclusive (write) locks held by a transaction are released only after the transaction commits or aborts. This approach prevents other transactions from reading uncommitted data, thereby avoiding cascading aborts.</p>
-            <h4 id="rigorous-two-phase-locking">Rigorous Two-Phase Locking</h4>
-            <p>Rigorous 2PL takes it a step further by holding both shared (read) and exclusive (write) locks until the transaction commits or aborts. This ensures a high level of isolation but can reduce concurrency.</p>
-            <h4 id="conservative-two-phase-locking">Conservative Two-Phase Locking</h4>
-            <p>Also known as static 2PL, this variation requires a transaction to acquire all the locks it needs before it begins execution. If any lock cannot be obtained, the transaction waits. This method avoids deadlocks but can lead to reduced concurrency.</p>
-            <h3 id="an-example-of-two-phase-locking">An Example of Two-Phase Locking</h3>
-            <p>Consider a scenario where Transaction T1 wants to transfer funds from Account A to Account B in a banking database:</p>
+            <h3 id="overview">Overview</h3>
+            <p>Before diving into lock types and variations, it helps to see <strong>where 2-phase locking draws the line</strong> between <em>taking</em> locks and <em>releasing</em> them.
+                The timeline below exaggerates every step so the <strong>lock-point</strong> is unmistakable.</p>
             <p>
             <div>
-                <pre><code class="language-sql">BEGIN TRANSACTION;
--- Growing Phase
-LOCK TABLE Accounts IN EXCLUSIVE MODE;
-UPDATE Accounts SET balance = balance - 100 WHERE account_id = 'A';
-UPDATE Accounts SET balance = balance + 100 WHERE account_id = 'B';
--- Lock Point reached here
--- Shrinking Phase
-COMMIT;
--- Locks are released after commit</code></pre>
+                <pre><code class="language-text">┌────────────────────────────── Growing Phase ───────────────────────────────┐               ┌──────────── Shrinking Phase ───────────┐
+Timeline ► │  S(A)  │  X(B)  │  X(C)  │  S(D)  │  X(E)  │                               │  ----╂----    │  rel S(A) │  rel X(B) │  … │  rel X(E) │
+           └────────┴────────┴────────┴────────┴────────┴── lock-point ─────────────────┘               └────────────────────────────────────────┘
+                                        ▲
+                                        └── no new locks may be taken past this point
+
+Legend: S = shared/read lock  X = exclusive/write lock</code></pre>
             </div>
             </p>
-            <p>In this example, T1 acquires the necessary locks during the growing phase to prevent other transactions from modifying the involved accounts. After the updates are complete and the transaction commits, it enters the shrinking phase where the locks are released.</p>
+            <p>Your application decides <strong>which</strong> rows or tables to lock and <strong>when</strong> the transaction starts and ends.
+                The <strong>database engine</strong> enforces the arrows: once the transaction’s first lock is released it may <em>only</em> release—never again acquire—further locks.</p>
+            <h3 id="who-does-what-engine-vs-application-">Who Does What? (Engine vs Application)</h3>
+            <p>The <strong>clean hand‑off</strong> between your code and the engine is what makes two‑phase locking practical. Think of it like a film crew:</p>
+            <ul>
+                <li>Your <strong>application</strong> is the <strong>director</strong>—it decides the story: which rows/tables to touch and when the scene (transaction) starts and ends.</li>
+                <li>The <strong>database engine</strong> is the <strong>stage manager</strong>—it controls access to the set so no actor bumps into another mid‑scene.</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-shell">┌───────────────────────┐          BEGIN / COMMIT / ROLLBACK
+  │   Application Code    │ ───────────────────────────────────▶  starts &amp; ends txn
+  └───────────────────────┘                                      (defines scope)
+          ▲   SQL stmts / lock hints                               │
+          │                                                        ▼
+  ┌───────────────────────┐     grants / blocks        ┌──────────────────────────┐
+  │  DB Engine Scheduler  │◄───────────────────────────│  Lock Manager (2PL)      │
+  │   (2PL enforcer)      │                            └──────────────────────────┘
+  └───────────────────────┘              protects data while letting others run</code></pre>
+            </div>
+            </p>
+            <p>
+            <table>
+                <tr>
+                    <td>What needs to happen?</td>
+                    <td><strong>Handled inside the engine</strong></td>
+                    <td><strong>What <em>you</em> still write</strong></td>
+                </tr>
+                <tr>
+                    <td>Get &amp; hold the right locks</td>
+                    <td>Automatic per statement and current isolation level</td>
+                    <td>Optionally request extras (<code>SELECT … FOR UPDATE</code>, <code>LOCK TABLE …</code>)</td>
+                </tr>
+                <tr>
+                    <td>Detect / resolve deadlocks</td>
+                    <td>Wait‑for graph, timeouts, victim selection</td>
+                    <td>Decide retry/back‑off strategy; set <code>lock_timeout</code> if offered</td>
+                </tr>
+                <tr>
+                    <td>Mark txn start / finish</td>
+                    <td>—</td>
+                    <td><code>BEGIN</code>, <code>COMMIT</code>, <code>ROLLBACK</code></td>
+                </tr>
+                <tr>
+                    <td>Pick isolation level rules</td>
+                    <td>— (engine just applies them)</td>
+                    <td><code>SET TRANSACTION ISOLATION LEVEL …</code></td>
+                </tr>
+                <tr>
+                    <td>Choose lock granularity</td>
+                    <td>Engine picks row / page / table automatically</td>
+                    <td>Provide hints via DDL or options (<code>ROWLOCK</code>, <code>NOLOCK</code>)</td>
+                </tr>
+            </table>
+            </p>
+            <blockquote>
+                <p><strong>Rule of thumb:</strong> your code says <em>when</em> a transaction runs and <em>what</em> it does; the engine decides <em>how</em> to guard the data while it happens.</p>
+            </blockquote>
+            <h3 id="the-two-phases-of-2pl">The Two Phases of 2PL</h3>
+            <p>During the <strong>growing phase</strong> the engine takes every lock the transaction asks for. The instant the transaction releases its <strong>first</strong> lock it has crossed the <strong>lock‑point</strong> and entered the <strong>shrinking phase</strong>; from that moment no new locks are permitted.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">time ►  ─┬─── acquire S(A) ── acquire X(B) ──┬─ commit ─▶
+          │         (growing)                 │  (shrinking)
+          │                                   │
+       lock‑point ────────────────────────────┘</code></pre>
+            </div>
+            </p>
+            <p>Why it works: if every transaction follows that pattern, their critical sections never overlap in a way that produces a non‑serial schedule.</p>
+            <h3 id="variations-of-two-phase-locking">Variations of Two‑Phase Locking</h3>
+            <h4 id="strict-2pl-default-in-postgresql-mysql-innodb-sql-server-">Strict 2PL (default in PostgreSQL, MySQL‑InnoDB, SQL Server)</h4>
+            <blockquote>
+                <p>Keep <strong>X</strong> locks to the very end, release <strong>S</strong> locks earlier. Default in PostgreSQL, MySQL‑InnoDB, SQL Server</p>
+            </blockquote>
+            <p>
+            <div>
+                <pre><code class="language-shell">time ► ─────────────────────────────────────────────────────────────────────────────→
+              growing phase                                  shrinking phase
+Row A   S: ███████████▌ release
+Row A   X:            ████████████████████████████████████┐
+                                                          ├─ COMMIT ─► drop X locks
+Row B   S:     ███████▌ release                           │
+Row B   X:            ████████████████████████████████████┘</code></pre>
+            </div>
+            </p>
+            <p><em>Prevents</em> dirty reads &amp; cascading aborts while still letting read‑only transactions slip past once they no longer conflict.</p>
+            <h4 id="rigorous-2pl">Rigorous 2PL</h4>
+            <blockquote>
+                <p>Hold <strong>all</strong> locks (shared &amp; exclusive) until end of transaction.</p>
+            </blockquote>
+            <p>
+            <div>
+                <pre><code class="language-shell">time ► ─────────────────────────────────────────────────────────────────────────────→
+Row A   S: █████████████████████████████████████████████████┐
+Row A   X:           ███████████████████████████████████████│
+Row B   S:      ████████████████████████████████████████████│  COMMIT ─► drop every lock
+Row B   X:                  ████████████████████████████████┘</code></pre>
+            </div>
+            </p>
+            <p><em>Simplest</em> to reason about and fully recoverable, but <strong>worst concurrency</strong>: even read locks block everybody else until the very end.</p>
+            <h4 id="conservative-static-2pl">Conservative (Static) 2PL</h4>
+            <blockquote>
+                <p>Grab <strong>every</strong> lock you will ever need <strong>before</strong> doing any work. If a lock is unavailable, wait. Deadlock‑free at the cost of longer initial waits.</p>
+            </blockquote>
+            <p>
+            <div>
+                <pre><code class="language-shell">time ► ─────────────────────────────────────────────────────────────────────────────→
+try‑lock {A,B,C} ─╢ acquired ─┬────────────── work (reads/writes) ─────────────┬── COMMIT ─► release all
+                            Row A X: ██████████████████████████████████████████
+                            Row B X: ██████████████████████████████████████████
+                            Row C S: ██████████████████████████████████████████</code></pre>
+            </div>
+            </p>
+            <p>Because the transaction <em>first</em> waits until it can lock <strong>every</strong> object it will ever touch, no cycle of wait‑for edges can form—hence no deadlocks. The trade‑off is potential under‑utilisation while the big lock request is waiting.</p>
+            <h3 id="concrete-example-funds-transfer">Concrete Example – Funds Transfer</h3>
+            <p>Below is <strong>everything you write</strong> (application layer) versus what the <strong>engine</strong> does silently.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">-- application code ---------------------------------------------
+BEGIN TRANSACTION;           -- start growing phase
+SELECT balance               -- engine: S‑lock row A
+  FROM Accounts
+ WHERE id = 'A'
+ FOR UPDATE;                 -- engine upgrades to X‑lock row A
+
+SELECT balance               -- engine: S‑lock row B
+  FROM Accounts
+ WHERE id = 'B'
+ FOR UPDATE;                 -- engine upgrades to X‑lock row B
+
+UPDATE Accounts SET balance = balance - 100 WHERE id = 'A';
+UPDATE Accounts SET balance = balance + 100 WHERE id = 'B';
+COMMIT;                      -- locks released automatically (strict 2PL)</code></pre>
+            </div>
+            </p>
+            <p><strong>Under the hood (engine):</strong></p>
+            <ol>
+                <li>Acquires row‑level locks on <code>A</code> and <code>B</code> in exclusive mode (growing phase).</li>
+                <li>At <code>COMMIT</code> it flushes the log, marks the txn committed, then releases the locks (shrinking phase).</li>
+            </ol>
             <h3 id="how-2pl-ensures-serializability">How 2PL Ensures Serializability</h3>
-            <p>By controlling the acquisition and release of locks, 2PL ensures that the concurrent execution of transactions is serializable. This means the outcome is the same as if the transactions were executed one after the other in some order, eliminating issues like dirty reads, non-repeatable reads, and lost updates.</p>
-            <h3 id="potential-challenges-with-two-phase-locking-2pl-">Potential Challenges with Two-Phase Locking (2PL)</h3>
-            <p>While two-phase locking (2PL) is an effective protocol for ensuring consistency in transactions, it comes with its own set of challenges:</p>
+            <p>Imagine two transactions T1 and T2 that both read and write the same rows. Because each must hold a conflicting lock before proceeding, either T1 obtains the lock first (T2 waits) <strong>or</strong> T2 obtains the lock first (T1 waits). The executed order is therefore serial—even though the waits happen inside one schedule.</p>
+            <h3 id="challenges-remedies">Challenges &amp; Remedies</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Challenge</td>
+                    <td>Why it happens</td>
+                    <td>Common remedies</td>
+                </tr>
+                <tr>
+                    <td><strong>Deadlock</strong></td>
+                    <td>T1 holds A wants B; T2 holds B wants A</td>
+                    <td>① Lock ordering, ② short transactions, ③ automatic deadlock detection + retry</td>
+                </tr>
+                <tr>
+                    <td><strong>Reduced concurrency</strong></td>
+                    <td>Locks block readers/writers</td>
+                    <td>Choose proper isolation level (e.g. Snapshot/MVCC where possible), finer‑grained locks</td>
+                </tr>
+                <tr>
+                    <td><strong>Lock management overhead</strong></td>
+                    <td>High‑throughput workloads</td>
+                    <td>Batch writes, keep transactions lean, use multiversion techniques</td>
+                </tr>
+            </table>
+            </p>
+            <p>Deadlock Illustration:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Wait‑for graph
+  T1 ───► T2
+  ▲       │
+  └───────┘  (cycle ⇒ deadlock)</code></pre>
+            </div>
+            </p>
+            <h3 id="best-practices-when-coding-with-2pl">Best Practices When Coding with 2PL</h3>
             <ul>
-                <li>The risk of <strong>deadlocks</strong> arises when transactions wait indefinitely for each other to release locks, creating circular dependencies. </li>
-                <li><strong>Reduced concurrency</strong> is a concern, as locks held during strict or rigorous 2PL can prevent other transactions from progressing simultaneously. </li>
-                <li>The <strong>performance overhead</strong> of managing locks can be significant, especially in high-throughput systems where many transactions are executed concurrently. </li>
+                <li>Keep transactions <strong>small and quick</strong>.</li>
+                <li><strong>Access objects in a consistent order</strong> (e.g. alphabetical by primary key).</li>
+                <li>Use <strong><code>SELECT … FOR UPDATE</code></strong> only when you truly need exclusive access.</li>
+                <li>Prefer <strong>row‑level locks</strong> over table locks for write heavy systems.</li>
+                <li><strong>Monitor</strong> blocked/locking sessions (<code>pg_stat_activity</code>, <code>INFORMATION_SCHEMA.INNODB_TRX</code>, etc.).</li>
             </ul>
-            <h3 id="mitigating-deadlocks-in-2pl">Mitigating Deadlocks in 2PL</h3>
-            <p>Deadlocks are a frequent issue in 2PL implementations, but the following strategies can help reduce their impact:</p>
-            <ul>
-                <li>Employing <strong>lock ordering</strong> ensures that transactions acquire locks in a predefined sequence, which minimizes the possibility of circular waits. </li>
-                <li>Introducing <strong>timeouts</strong> for lock acquisition attempts allows the system to detect and handle potential deadlocks early by aborting and retrying stalled transactions. </li>
-                <li>Using <strong>deadlock detection algorithms</strong>, the database periodically examines the wait-for graph for cycles and resolves detected deadlocks by terminating one of the conflicting transactions. </li>
-            </ul>
-            <h3 id="best-practices-for-using-2pl">Best Practices for Using 2PL</h3>
-            <p>Effective use of 2PL requires adherence to best practices to balance consistency and performance while mitigating its drawbacks:</p>
-            <ul>
-                <li><strong>Short transactions</strong> should be prioritized to limit the duration of lock holding, reducing the chances of conflicts and improving overall system efficiency. </li>
-                <li>Transactions should <strong>acquire locks as late as possible</strong>, only when resources are immediately needed, to minimize lock contention. </li>
-                <li>Ensuring that locks are <strong>released promptly</strong> once resources are no longer required helps improve concurrency and throughput. </li>
-                <li>Following a <strong>consistent lock ordering</strong> across all transactions avoids circular waits, a common source of deadlocks. </li>
-                <li>Regularly <strong>monitoring lock contention</strong> with database tools enables identification of bottlenecks, allowing for targeted optimizations. </li>
-            </ul>
-            <h3 id="real-world-analogy">Real-World Analogy</h3>
-            <p>Two-phase locking can be likened to borrowing books from a library with strict rules:</p>
-            <ul>
-                <li>In the <strong>growing phase</strong>, you gather all the books (locks) you need for your research, ensuring no one else can access them while you're using them. </li>
-                <li>During the <strong>shrinking phase</strong>, you return all the books (release locks) once you're done, but you cannot check out additional books after you begin returning. </li>
-            </ul>
-            <p>This ensures that while you have the books, no one else can modify them (e.g., annotate them), and once you're done, others can access them.</p>
             <h3 id="further-reading">Further Reading</h3>
-            <p>To delve deeper into 2PL and related concepts, you might explore topics such as:</p>
             <ul>
-                <li><strong>Transaction Isolation Levels</strong></li>
-                <li><strong>Optimistic vs. Pessimistic Concurrency Control</strong></li>
-                <li><strong>Multiversion Concurrency Control (MVCC)</strong></li>
+                <li><strong>ANSI/ISO SQL Standard</strong> – isolation levels &amp; locking semantics</li>
+                <li>Bernstein &amp; Newcomer, <em>Principles of Transaction Processing</em></li>
+                <li>PostgreSQL docs – <em>Explicit Locking</em>, <em>Concurrency Control</em></li>
+                <li>Fekete et al., "Making Snapshot Isolation Serializable" (SIGMOD 2005)</li>
             </ul>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
-            <ol><a href="#understanding-two-phase-locking-2pl-in-databases">Understanding Two-Phase Locking (2PL) in Databases</a>
+            <ol><a href="#two-phase-locking-2pl-">Two‑Phase Locking (2PL)</a>
                 <ol>
+                    <li><a href="#overview">Overview</a></li>
+                    <li><a href="#who-does-what-engine-vs-application-">Who Does What? (Engine vs Application)</a></li>
                     <li><a href="#the-two-phases-of-2pl">The Two Phases of 2PL</a></li>
-                    <li><a href="#variations-of-two-phase-locking">Variations of Two-Phase Locking</a>
+                    <li><a href="#variations-of-two-phase-locking">Variations of Two‑Phase Locking</a>
                         <ol>
-                            <li><a href="#strict-two-phase-locking">Strict Two-Phase Locking</a></li>
-                            <li><a href="#rigorous-two-phase-locking">Rigorous Two-Phase Locking</a></li>
-                            <li><a href="#conservative-two-phase-locking">Conservative Two-Phase Locking</a></li>
+                            <li><a href="#strict-2pl-default-in-postgresql-mysql-innodb-sql-server-">Strict 2PL (default in PostgreSQL, MySQL‑InnoDB, SQL Server)</a></li>
+                            <li><a href="#rigorous-2pl">Rigorous 2PL</a></li>
+                            <li><a href="#conservative-static-2pl">Conservative (Static) 2PL</a></li>
                         </ol>
                     </li>
-                    <li><a href="#an-example-of-two-phase-locking">An Example of Two-Phase Locking</a></li>
+                    <li><a href="#concrete-example-funds-transfer">Concrete Example – Funds Transfer</a></li>
                     <li><a href="#how-2pl-ensures-serializability">How 2PL Ensures Serializability</a></li>
-                    <li><a href="#potential-challenges-with-two-phase-locking-2pl-">Potential Challenges with Two-Phase Locking (2PL)</a></li>
-                    <li><a href="#mitigating-deadlocks-in-2pl">Mitigating Deadlocks in 2PL</a></li>
-                    <li><a href="#best-practices-for-using-2pl">Best Practices for Using 2PL</a></li>
-                    <li><a href="#real-world-analogy">Real-World Analogy</a></li>
+                    <li><a href="#challenges-remedies">Challenges &amp; Remedies</a></li>
+                    <li><a href="#best-practices-when-coding-with-2pl">Best Practices When Coding with 2PL</a></li>
                     <li><a href="#further-reading">Further Reading</a></li>
                 </ol>
             </ol>
