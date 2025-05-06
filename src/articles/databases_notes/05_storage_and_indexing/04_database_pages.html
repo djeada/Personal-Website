@@ -67,7 +67,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: November 03, 2023</i></p>
+            <p style="text-align: right;"><i>Last modified: May 06, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="understanding-database-pages">Understanding Database Pages</h2>
             <p>Diving into the fundamentals of database systems reveals that database pages are essential units of storage used to organize and manage data on disk. They play a pivotal role in how efficiently data is stored, retrieved, and maintained within a Database Management System (DBMS). Let's explore what database pages are, how they function, and why they're crucial for database performance.</p>
@@ -92,7 +92,7 @@
             </div>
             </p>
             <p>In this diagram, the page consists of a header containing metadata, followed by multiple records and any remaining free space.</p>
-            <h3 id="key-characteristics-of-database-pages">Key Characteristics of Database Pages</h3>
+            <h3 id="characteristics-of-database-pages">Characteristics of Database Pages</h3>
             <h4 id="fixed-size">Fixed Size</h4>
             <p>Database pages typically have a fixed size, which can range from 2KB to 64KB, depending on the DBMS and its configuration. Common page sizes include 4KB, 8KB, and 16KB. The size of the page influences how data is stored and retrieved:</p>
             <ul>
@@ -139,19 +139,21 @@
             <h3 id="performance-considerations">Performance Considerations</h3>
             <h4 id="impact-of-page-size">Impact of Page Size</h4>
             <p>Choosing the appropriate page size can significantly affect database performance:</p>
+            <p><strong>Larger Pages</strong>:</p>
             <ul>
-                <li><strong>Larger Pages</strong>:</li>
                 <li>Reduce the number of I/O operations for large, sequential reads.</li>
                 <li>May lead to increased memory consumption and potential waste of space due to partially filled pages.</li>
-                <li><strong>Smaller Pages</strong>:</li>
+            </ul>
+            <p><strong>Smaller Pages</strong>:</p>
+            <ul>
                 <li>Minimize wasted space and can be more efficient for random access patterns.</li>
                 <li>Might require more I/O operations to read the same amount of data.</li>
             </ul>
             <p>Selecting the right page size involves balancing these trade-offs based on the specific workload and access patterns of your application.</p>
             <h4 id="managing-page-splits">Managing Page Splits</h4>
             <p>A page split occurs when a page becomes full, and the DBMS needs to split it to accommodate new data:</p>
+            <p><strong>Consequences of Page Splits</strong>:</p>
             <ul>
-                <li><strong>Consequences of Page Splits</strong>:</li>
                 <li>Can lead to fragmentation, where related data is spread across non-contiguous pages.</li>
                 <li>May degrade performance due to increased I/O operations and cache misses.</li>
             </ul>
@@ -160,57 +162,6 @@
                 <li><strong>Proper Indexing</strong>: Designing efficient indexes can reduce the likelihood of page splits by organizing data more effectively.</li>
                 <li><strong>Fill Factor Adjustment</strong>: Setting an appropriate fill factor reserves space within pages for future growth, delaying the need for splits.</li>
             </ul>
-            <h3 id="practical-examples-and-commands">Practical Examples and Commands</h3>
-            <h4 id="viewing-page-information-in-postgresql">Viewing Page Information in PostgreSQL</h4>
-            <p>You can inspect page-level details using PostgreSQL's <code>pageinspect</code> extension:</p>
-            <ol>
-                <li><strong>Enable the Extension</strong>:</li>
-            </ol>
-            <p>
-            <div>
-                <pre><code class="language-sql">CREATE EXTENSION pageinspect;</code></pre>
-            </div>
-            </p>
-            <ol>
-                <li><strong>Examine a Specific Page</strong>:</li>
-            </ol>
-            <p>
-            <div>
-                <pre><code class="language-sql">SELECT * FROM heap_page_items(get_raw_page('your_table', 0));</code></pre>
-            </div>
-            </p>
-            <p>This command retrieves information about the first page (<code>0</code>) of <code>your_table</code>.</p>
-            <p><strong>Interpreting the Output</strong>:</p>
-            <ul>
-                <li><strong>Item Offset</strong>: Position of the record within the page.</li>
-                <li><strong>Item Length</strong>: Size of the record in bytes.</li>
-                <li><strong>Heap Tuple Header</strong>: Metadata about the individual record.</li>
-                <li><strong>Data</strong>: Actual content of the record.</li>
-            </ul>
-            <p>Understanding this output helps in analyzing how data is stored and identifying potential space utilization issues.</p>
-            <h4 id="monitoring-page-splits-in-sql-server">Monitoring Page Splits in SQL Server</h4>
-            <p>In Microsoft SQL Server, you can track page splits using the <code>sys.dm_db_index_operational_stats</code> dynamic management view:</p>
-            <p>
-            <div>
-                <pre><code class="language-sql">SELECT 
-    OBJECT_NAME(object_id) AS TableName,
-    index_id,
-    leaf_insert_count,
-    leaf_delete_count,
-    leaf_update_count,
-    leaf_page_split_count
-FROM sys.dm_db_index_operational_stats(DB_ID(), NULL, NULL, NULL);</code></pre>
-            </div>
-            </p>
-            <p><strong>Output Interpretation</strong>:</p>
-            <ul>
-                <li><strong>TableName</strong>: Name of the table being monitored.</li>
-                <li><strong>Index_ID</strong>: Identifier for the index within the table.</li>
-                <li><strong>Leaf Page Split Count</strong>: Number of times a leaf-level page split has occurred.</li>
-            </ul>
-            <p>Monitoring these metrics helps in diagnosing performance issues related to page splits and guiding optimization efforts.</p>
-            <h3 id="ascii-diagrams-illustrating-concepts">ASCII Diagrams Illustrating Concepts</h3>
-            <h4 id="page-split-visualization">Page Split Visualization</h4>
             <p>Understanding how page splits affect data storage can be visualized as:</p>
             <p><strong>Before Split</strong>:</p>
             <p>
@@ -248,13 +199,56 @@ FROM sys.dm_db_index_operational_stats(DB_ID(), NULL, NULL, NULL);</code></pre>
             </div>
             </p>
             <p>The data is split between two pages, which can increase the number of I/O operations needed to retrieve related records.</p>
+            <h3 id="practical-examples-and-commands">Practical Examples and Commands</h3>
+            <h4 id="viewing-page-information-in-postgresql">Viewing Page Information in PostgreSQL</h4>
+            <p>You can inspect page-level details using PostgreSQL's <code>pageinspect</code> extension:</p>
+            <p>I. <strong>Enable the Extension</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">CREATE EXTENSION pageinspect;</code></pre>
+            </div>
+            </p>
+            <p>II. <strong>Examine a Specific Page</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">SELECT * FROM heap_page_items(get_raw_page('your_table', 0));</code></pre>
+            </div>
+            </p>
+            <p>This command retrieves information about the first page (<code>0</code>) of <code>your_table</code>.</p>
+            <ul>
+                <li><strong>Item Offset</strong>: Position of the record within the page.</li>
+                <li><strong>Item Length</strong>: Size of the record in bytes.</li>
+                <li><strong>Heap Tuple Header</strong>: Metadata about the individual record.</li>
+                <li><strong>Data</strong>: Actual content of the record.</li>
+            </ul>
+            <h4 id="monitoring-page-splits-in-sql-server">Monitoring Page Splits in SQL Server</h4>
+            <p>In Microsoft SQL Server, you can track page splits using the <code>sys.dm_db_index_operational_stats</code> dynamic management view:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">SELECT 
+    OBJECT_NAME(object_id) AS TableName,
+    index_id,
+    leaf_insert_count,
+    leaf_delete_count,
+    leaf_update_count,
+    leaf_page_split_count
+FROM sys.dm_db_index_operational_stats(DB_ID(), NULL, NULL, NULL);</code></pre>
+            </div>
+            </p>
+            <p><strong>Output Interpretation</strong>:</p>
+            <ul>
+                <li><strong>TableName</strong>: Name of the table being monitored.</li>
+                <li><strong>Index_ID</strong>: Identifier for the index within the table.</li>
+                <li><strong>Leaf Page Split Count</strong>: Number of times a leaf-level page split has occurred.</li>
+            </ul>
+            <p>Monitoring these metrics helps in diagnosing performance issues related to page splits and guiding optimization efforts.</p>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
             <ol><a href="#understanding-database-pages">Understanding Database Pages</a>
                 <ol>
                     <li><a href="#what-are-database-pages-">What Are Database Pages?</a></li>
-                    <li><a href="#key-characteristics-of-database-pages">Key Characteristics of Database Pages</a>
+                    <li><a href="#characteristics-of-database-pages">Characteristics of Database Pages</a>
                         <ol>
                             <li><a href="#fixed-size">Fixed Size</a></li>
                             <li><a href="#structured-organization">Structured Organization</a></li>
@@ -278,11 +272,6 @@ FROM sys.dm_db_index_operational_stats(DB_ID(), NULL, NULL, NULL);</code></pre>
                         <ol>
                             <li><a href="#viewing-page-information-in-postgresql">Viewing Page Information in PostgreSQL</a></li>
                             <li><a href="#monitoring-page-splits-in-sql-server">Monitoring Page Splits in SQL Server</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#ascii-diagrams-illustrating-concepts">ASCII Diagrams Illustrating Concepts</a>
-                        <ol>
-                            <li><a href="#page-split-visualization">Page Split Visualization</a></li>
                         </ol>
                     </li>
                 </ol>

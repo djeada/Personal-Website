@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Partitioning vs. Sharding</title>
-    <meta content="Partitioning and sharding are techniques used to handle large datasets efficiently." name="description" />
+    <meta content="When a database begins to sag under the weight of its own success, engineers reach for two closely-related remedies: partitioning and sharding." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -67,154 +67,289 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 24, 2018</i></p>
+            <p style="text-align: right;"><i>Last modified: May 06, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="partitioning-vs-sharding">Partitioning vs. Sharding</h2>
-            <p>Partitioning and sharding are techniques used to handle large datasets efficiently. While they share similarities in concept, they differ significantly in implementation, purpose, and use cases. Understanding their nuances is essential for designing scalable and performant database systems.</p>
+            <p>When a database begins to sag under the weight of its own success, engineers reach for two closely-related remedies: <em>partitioning</em> and <em>sharding</em>. Both techniques carve a huge dataset into smaller slices, yet they do so at very different depths of the stack. By the time you finish these notes you should feel comfortable answering why, when, and how each approach shines, along with the trade-offs hiding beneath the surface.</p>
             <p>After reading the material, you should be able to answer the following questions:</p>
             <ol>
-                <li>What are the primary differences between partitioning and sharding in database management?</li>
-                <li>What are the various types of partitioning methods, and in what scenarios are they most effectively applied?</li>
-                <li>What objectives does sharding aim to achieve, and what are the common strategies used to implement it?</li>
-                <li>How do partitioning and sharding compare in terms of scalability, complexity, and transaction management?</li>
-                <li>What best practices should be followed when deciding to use partitioning, sharding, or a combination of both in a database system?</li>
+                <li>In plain language, how does partition pruning differ from query routing in a sharded setup?</li>
+                <li>When would list partitioning outperform hash partitioning, and why?</li>
+                <li>What failure scenarios does sharding mitigate that partitioning alone cannot?</li>
+                <li>How does the two-phase commit protocol address multi-shard transaction consistency?</li>
+                <li>Imagine a write-heavy workload with seasonal spikes; sketch a hybrid design combining both techniques to tame those spikes.</li>
             </ol>
             <h3 id="partitioning">Partitioning</h3>
-            <p>Partitioning involves dividing a large database table into smaller, manageable pieces, known as partitions. These partitions are stored within the same database but are organized in a way that allows independent management and access.</p>
-            <p>Imagine a single table filled with rows of data:</p>
+            <p>Before diving into syntax or strategies, picture a single table stretching far beyond your screen. By splitting that table into <em>partitions</em> the database can prune irrelevant chunks during a query and treat maintenance tasks like backups or index rebuilds piece-by-piece rather than all-at-once. Think of it as shelving volumes in a giant library rather than piling every book on one table.</p>
             <p>
             <div>
-                <pre><code class="language-shell">+-------------------------------------------+
-Some Table
-Row 1: Data A1, B1, C1
-Row 2: Data A2, B2, C2
-Row 3: Data A3, B3, C3
-Row 4: Data A4, B4, C4
-Row 5: Data A5, B5, C5
-+-------------------------------------------+</code></pre>
+                <pre><code class="language-shell">┌─────────────────────────────┐
+│        big_sales            │
+│ ─────────────────────────── │
+│  2023-01-…  ▸ Partition p23 │
+│  2024-01-…  ▸ Partition p24 │
+│  2025-01-…  ▸ Partition p25 │
+└─────────────────────────────┘</code></pre>
             </div>
             </p>
-            <p>After partitioning, the table might be divided into logical groups:</p>
+            <h4 id="how-the-database-decides-where-a-row-lands">How the Database Decides Where a Row Lands</h4>
+            <p>Although every engine offers its own bells and whistles, five patterns dominate:</p>
+            <ul>
+                <li>Range partitioning slices by continuous spans such as dates or ID intervals, ideal when queries naturally filter by that range.</li>
+                <li>List partitioning corrals discrete categories—for example, country codes or product tiers—into their own sections.</li>
+                <li>Hash partitioning sends each row through a hash function, scattering hot spots and keeping partitions roughly the same size.</li>
+                <li>Key partitioning piggybacks on the primary key, guaranteeing uniqueness is preserved inside each fragment.</li>
+                <li>Composite partitioning layers one technique atop another (range → hash is common) for workloads with multiple access patterns.</li>
+            </ul>
+            <p>Mathematically you can model a simple range splitter with</p>
+            <p>$$
+                partition_{id} =
+                \left\lfloor
+                \frac{row_{value}-\min}{\Delta}
+                \right\rfloor$$</p>
+            <p>where $\Delta$ is the chosen interval width.</p>
+            <h4 id="hands-on-postgresql-range-partitioning">Hands-On: PostgreSQL Range Partitioning</h4>
+            <p>Let's take a look at some examples:</p>
+            <p><strong>Create the parent (partitioned) table</strong></p>
             <p>
             <div>
-                <pre><code class="language-shell">+-------------------------+-------------------------+-------------------------+
-Partition 1               | Partition 2             | Partition 3             
-------------------------- | ------------------------|-------------------------
-Row 1: Data A1, A2, A3    | Row 1: Data B1, B2, B3  | Row 1: Data C1, C2, C3  
-Row 2: Data A4, A5        | Row 2: Data B4, B5      | Row 2: Data C4, C5      
-+-------------------------+-------------------------+-------------------------+</code></pre>
+                <pre><code class="language-sql">CREATE TABLE orders (
+  id         bigint,
+  order_date date,
+  amount     numeric
+) PARTITION BY RANGE (order_date);</code></pre>
             </div>
             </p>
-            <p>Each partition contains a subset of the data based on specific criteria, such as ranges or categories, and remains part of the same database.</p>
-            <h4 id="goals-of-partitioning">Goals of Partitioning</h4>
-            <ul>
-                <li>Improved <strong>query performance</strong> is achieved because queries targeting specific subsets of data access only relevant partitions, reducing processing time. </li>
-                <li>Maintenance <strong>tasks</strong> such as backups, archiving, or indexing can be performed on individual partitions, which simplifies operations and reduces downtime. </li>
-                <li>Resource <strong>optimization</strong> becomes easier as partitions can be distributed across different storage or processing units, balancing the workload. </li>
-                <li>Data <strong>management</strong> flexibility increases since partitions can be added, removed, or modified independently without affecting the entire dataset. </li>
-                <li>Failure <strong>isolation</strong> is possible because issues in one partition do not affect others, enhancing system reliability. </li>
-            </ul>
-            <h4 id="types-of-partitioning">Types of Partitioning</h4>
-            <ul>
-                <li><strong>Range partitioning</strong> divides data based on a continuous range of values, such as dates or numeric ranges. </li>
-                <li><strong>List partitioning</strong> groups data using discrete values like categories, regions, or predefined labels. </li>
-                <li><strong>Hash partitioning</strong> determines the partition for each record using a hash function applied to a specific column. </li>
-                <li><strong>Key partitioning</strong> operates similarly to hash partitioning but is specifically based on primary key values. </li>
-                <li><strong>Composite partitioning</strong> combines two or more partitioning methods, such as range and hash, for handling complex datasets. </li>
-            </ul>
-            <h3 id="sharding">Sharding</h3>
-            <p>Sharding is a strategy for distributing a large dataset across multiple database systems, referred to as shards. Each shard operates as an independent database and contains a portion of the total data.</p>
-            <p>Consider a single database instance holding all data:</p>
+            <p><strong>psql output:</strong></p>
             <p>
             <div>
-                <pre><code class="language-shell">+------------------------------------------------+
-| Single Database Instance                       |
-|                                                |
-| - Data A1, A2, A3                              |
-| - Data B1, B2, B3                              |
-| - Data C1, C2, C3                              |
-|                                                |
-+------------------------------------------------+</code></pre>
+                <pre><code class="language-shell">CREATE TABLE</code></pre>
             </div>
             </p>
-            <p>After sharding, the data is distributed:</p>
+            <ul>
+                <li>By specifying <code>PARTITION BY RANGE (order_date)</code>, you tell PostgreSQL that <code>orders</code> won’t store rows itself but will route them to child tables based on the <code>order_date</code> value.</li>
+                <li>The parent table holds no data; it acts like an index on date ranges. Any insert into <code>orders</code> is automatically redirected to whichever child partition matches.</li>
+                <li>Useful when your data has a natural order (e.g., time series), so you can group rows into contiguous non‐overlapping spans—improving manageability and performance.</li>
+            </ul>
+            <p><strong>Define a specific partition for the year 2025</strong></p>
             <p>
             <div>
-                <pre><code class="language-shell">+-------------------+-------------------+-------------------+
-| Shard 1           | Shard 2           | Shard 3           |
-|                   |                   |                   |
-| - Data A1, A2, A3 | - Data B1, B2, B3 | - Data C1, C2, C3 |
-|                   |                   |                   |
-| (Database 1)      | (Database 2)      | (Database 3)      |
-+-------------------+-------------------+-------------------+</code></pre>
+                <pre><code class="language-sql">CREATE TABLE orders_2025
+  PARTITION OF orders
+  FOR VALUES FROM ('2025-01-01') TO ('2026-01-01');</code></pre>
             </div>
             </p>
-            <p>Each shard operates independently, which distributes the load and improves scalability.</p>
-            <h4 id="objectives-of-sharding">Objectives of Sharding</h4>
+            <p><strong>psql output:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">CREATE TABLE</code></pre>
+            </div>
+            </p>
             <ul>
-                <li><strong>Scalability</strong> is achieved by distributing data across multiple servers, enabling systems to handle large-scale datasets effectively. </li>
-                <li><strong>Performance</strong> improves by parallelizing queries across shards, reducing latency and increasing query throughput. </li>
-                <li><strong>Fault tolerance</strong> ensures that the failure of one shard does not disrupt the availability or integrity of the entire dataset. </li>
+                <li><code>orders_2025</code> is now a real table that will physically contain all rows whose <code>order_date</code> ≥ 2025-01-01 and &lt; 2026-01-01.</li>
+                <li>The <code>FROM</code> value is inclusive, the <code>TO</code> value is exclusive. This ensures partitions don’t overlap and every date is covered exactly once (assuming you add adjacent ranges).</li>
+                <li>From here on, any insertion like</li>
             </ul>
-            <h4 id="common-sharding-strategies">Common Sharding Strategies</h4>
+            <p>
+            <div>
+                <pre><code class="language-sql">INSERT INTO orders (id, order_date, amount)
+VALUES (123, '2025-05-05', 49.95);</code></pre>
+            </div>
+            </p>
+            <p>will go straight into <code>orders_2025</code> without touching other partitions.</p>
+            <p><strong>Verify partition pruning with an <code>EXPLAIN</code></strong></p>
+            <p>
+            <div>
+                <pre><code class="language-sql">EXPLAIN SELECT * FROM orders WHERE order_date = '2025-05-05';</code></pre>
+            </div>
+            </p>
+            <p><strong>psql output:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">-&gt;  Seq Scan on orders_2025  (cost=0.00..35.50 rows=5 width=...)</code></pre>
+            </div>
+            </p>
             <ul>
-                <li><strong>Range-based sharding</strong> involves distributing data by ranges of a key, such as user IDs or timestamps, to group logically related data together. </li>
-                <li><strong>Hash-based sharding</strong> uses a hash function to determine which shard a piece of data belongs to, ensuring even distribution across shards. </li>
-                <li><strong>List-based sharding</strong> assigns data to shards based on specific values, such as geographic regions or predefined categories. </li>
+                <li>Instead of scanning every partition in turn, PostgreSQL’s planner “prunes” away all that don’t match the <code>WHERE</code> clause at plan time.</li>
+                <li>You see only <code>orders_2025</code> in the plan, proving that lookups on <code>orders</code> automatically get optimized to target just the relevant partition.</li>
+                <li>Partition pruning can drastically reduce I/O and CPU work, especially when you have many partitions (e.g., one per month or year).</li>
             </ul>
-            <h3 id="key-differences-between-partitioning-and-sharding">Key Differences Between Partitioning and Sharding</h3>
             <p>
             <table>
                 <tr>
-                    <td>Feature</td>
+                    <td>Keyword / Option</td>
+                    <td>Meaning</td>
+                    <td>Typical Use-Case</td>
+                </tr>
+                <tr>
+                    <td><code>PARTITION BY RANGE (...)</code></td>
+                    <td>Chooses range strategy and the column(s)</td>
+                    <td>Time-series or numeric intervals</td>
+                </tr>
+                <tr>
+                    <td><code>FOR VALUES FROM () TO ()</code></td>
+                    <td>Declares the lower-inclusive, upper-exclusive bounds</td>
+                    <td>Adjacent partitions must not overlap</td>
+                </tr>
+                <tr>
+                    <td><code>DEFAULT PARTITION</code></td>
+                    <td>Catch-all for rows that fit no explicit slice</td>
+                    <td>Shields you from insert errors when ranges lag behind growth</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="why-teams-embrace-partitioning">Why Teams Embrace Partitioning</h4>
+            <p>Query latency drops because only relevant partitions are scanned. Maintenance windows shrink: vacuuming a quiet 2022 table can happen while 2025 receives writes. Resource allocation becomes flexible; you might place cold partitions on slower disks. Even fault isolation improves—a corrupt partition rarely topples the rest of the schema.</p>
+            <h3 id="sharding">Sharding</h3>
+            <p>While partitioning rearranges furniture within one house, sharding is more like buying extra houses in new neighborhoods. Each <em>shard</em> is a full database instance containing a subset of the rows, and together they form a loose federation under the application layer.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">┌───────────────┐
+     Client  ►  │ Router / API  │
+                └────┬───┬──────┘
+                     │   │
+        ┌────────────┘   └────────────┐
+   ┌─────────────┐               ┌─────────────┐
+   │  Shard A    │               │  Shard B    │   …
+   │ users 1-N/2 │               │ users N/2+1 │
+   └─────────────┘               └─────────────┘</code></pre>
+            </div>
+            </p>
+            <h4 id="motivations-that-push-teams-toward-shards">Motivations That Push Teams Toward Shards</h4>
+            <p>A single server inevitably runs out of CPU, memory, or I/O bandwidth. By sprinkling data across multiple machines the system gains horizontal scalability. Query throughput rises because shards answer requests in parallel. Resilience improves as well; if shard B disappears during a nightly redeploy shard A soldiers on, keeping part of the application available.</p>
+            <h4 id="popular-strategies-for-splitting-the-data">Popular Strategies for Splitting the Data</h4>
+            <ul>
+                <li>Range-based sharding collects logically adjacent rows (for example, user IDs 1–1 000 000) on the same host, which simplifies range queries at the cost of potential hot shards.</li>
+                <li>Hash-based sharding feeds the sharding key through a hash and assigns modulo-based buckets, making load nicely uniform but scattering neighbor records.</li>
+                <li>Directory-based sharding stores a mapping table (often called a <em>lookup service</em>) telling the router exactly where each key lives, favoring flexibility over pure mathematical routing.</li>
+            </ul>
+            <h4 id="hands-on-mongodb-hash-sharding">Hands-On: MongoDB Hash Sharding</h4>
+            <p>Below you’ll see each shell command, the trimmed MongoDB response, and an expanded explanation—still in a single‐level list for clarity.</p>
+            <p><strong>Enable sharding on the target database</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-js">sh.enableSharding("ecommerce");</code></pre>
+            </div>
+            </p>
+            <p><strong>Shell output:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-json">{ "ok" : 1 }</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>This tells the cluster’s config servers that the <code>ecommerce</code> database is now eligible to have its collections distributed across shards.</li>
+                <li>Existing collections remain untouched until you shard them explicitly.</li>
+                <li>You must enable sharding on a database before you can shard any of its collections.</li>
+            </ul>
+            <p><strong>Shard a specific collection using a hashed key</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-js">sh.shardCollection("ecommerce.orders", { "user_id" : "hashed" });</code></pre>
+            </div>
+            </p>
+            <p><strong>Shell output:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-json">{ "collectionsharded" : "ecommerce.orders", "ok" : 1 }</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>By choosing <code>{ user_id: "hashed" }</code>, you tell MongoDB to compute a hash of each document’s <code>user_id</code> field and use that to assign it to a chunk.</li>
+                <li>The system splits the key’s hash space into multiple chunks (default 2 per shard initially) to start distributing data.</li>
+                <li>
+                    <p>As data grows, the balancer process will migrate chunks among shards to even out storage and load.</p>
+                </li>
+                <li>
+                    <p><strong>Inspect how data is distributed across shards</strong></p>
+                </li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-js">db.orders.getShardDistribution();</code></pre>
+            </div>
+            </p>
+            <p><strong>Shell output:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Shard shard0000: 45% data
+Shard shard0001: 55% data</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>This utility reports the approximate percentage of documents or data size on each shard for the <code>orders</code> collection.</li>
+                <li>A near‐even split (45% vs 55%) confirms the hash function is effectively spreading user records across shards.</li>
+                <li>Use this periodically to catch hotspots; if one shard drifts too far in usage, you can trigger a manual rebalance or adjust chunk settings.</li>
+            </ul>
+            <p>
+            <table>
+                <tr>
+                    <td>Flag / Parameter</td>
+                    <td>What It Controls</td>
+                    <td>Insight</td>
+                </tr>
+                <tr>
+                    <td><code>"hashed"</code> in <code>shardCollection</code></td>
+                    <td>Routing is based on the hash of the key rather than raw value</td>
+                    <td>Avoids regional hot spots</td>
+                </tr>
+                <tr>
+                    <td><code>--chunkSize</code> in <code>mongos</code> config</td>
+                    <td>Maximum chunk (sub-shard) size in MB</td>
+                    <td>Smaller chunks migrate more smoothly</td>
+                </tr>
+                <tr>
+                    <td><code>balancerStopped</code></td>
+                    <td>Boolean to pause automatic rebalancing</td>
+                    <td>Handy during peak traffic windows</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="side-by-side-comparison">Side-by-Side Comparison</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Dimension</td>
                     <td>Partitioning</td>
                     <td>Sharding</td>
                 </tr>
                 <tr>
-                    <td>Definition</td>
-                    <td>Dividing a table into smaller parts within a single database.</td>
-                    <td>Splitting data across multiple database systems.</td>
+                    <td>Where data lives</td>
+                    <td>One database engine, multiple internal segments</td>
+                    <td>Many engines, each a self-contained database</td>
                 </tr>
                 <tr>
-                    <td>Data Location</td>
-                    <td>All partitions remain in the same database instance.</td>
-                    <td>Shards exist in separate database systems.</td>
+                    <td>Primary goal</td>
+                    <td>Speed up queries and maintenance</td>
+                    <td>Add capacity beyond a single server</td>
                 </tr>
                 <tr>
-                    <td>Query Target</td>
-                    <td>Queries are limited to specific partitions within the database.</td>
-                    <td>Queries can be distributed across multiple shards.</td>
+                    <td>Transaction scope</td>
+                    <td>Usually local and ACID-compliant across partitions</td>
+                    <td>Cross-shard transactions require 2PC or application logic</td>
                 </tr>
                 <tr>
-                    <td>Scalability</td>
-                    <td>Limited to the capacity of a single database.</td>
-                    <td>Enables horizontal scaling across multiple servers.</td>
+                    <td>Operational complexity</td>
+                    <td>Moderate—DDL and monitoring remain centralized</td>
+                    <td>Higher—orchestration, failover, and backups multiply</td>
                 </tr>
                 <tr>
-                    <td>Complexity</td>
-                    <td>Easier to implement and manage.</td>
-                    <td>Requires careful planning and management of distributed data.</td>
-                </tr>
-                <tr>
-                    <td>Transaction Management</td>
-                    <td>Simpler, as all data resides in a single database.</td>
-                    <td>More challenging, as transactions may span multiple shards.</td>
-                </tr>
-                <tr>
-                    <td>Redundancy</td>
-                    <td>Minimal, as data is centralized.</td>
-                    <td>Higher redundancy if shards are replicated.</td>
+                    <td>Growth path</td>
+                    <td>Vertical (bigger box) until vertical limits hit</td>
+                    <td>Horizontal from day one</td>
                 </tr>
             </table>
             </p>
-            <h3 id="best-practices">Best Practices</h3>
-            <p>Selecting between partitioning and sharding depends on the system’s specific needs, including the size of the dataset, traffic patterns, and scalability requirements.</p>
-            <ol>
-                <li>Use partitioning when dealing with large tables that can be logically divided within a single database for improved query performance and manageability.</li>
-                <li>Opt for sharding in systems requiring horizontal scalability, such as high-traffic applications or globally distributed datasets.</li>
-                <li>Combine partitioning and sharding in complex scenarios, leveraging the strengths of both techniques. For instance, partition data within shards to optimize queries while maintaining scalability.</li>
-                <li>Regularly monitor and adjust partitioning or sharding schemes as system requirements evolve to maintain optimal performance and efficiency.</li>
-            </ol>
+            <h3 id="blending-the-two">Blending the Two</h3>
+            <p>Large platforms often partition <em>inside</em> every shard, marrying the easy pruning of partitions with the elastic headroom of shards. For example, an e-commerce company might hash-shard by user ID and range-partition each shard’s <code>orders</code> table by month, yielding fast user look-ups <em>and</em> swift archival of old months.</p>
+            <h3 id="practical-guidance">Practical Guidance</h3>
+            <ul>
+                <li>Start with partitioning if the bottleneck is query latency over a single giant table or if maintenance tasks have become unwieldy.</li>
+                <li>Plan for sharding once you foresee the primary server exhausting resources even after aggressive tuning.</li>
+                <li>Prototype tooling and disaster-recovery workflows early; complexity compounds quickly once dozens of shards are in play.</li>
+                <li>Keep the sharding key stable—re-sharding live traffic is far more painful than migrating partitions.</li>
+                <li>Monitor chunk or partition skew by calculating the coefficient of variation ${\sigma}/{\mu}$; when that value drifts upward, rebalance before hotspots burn users.</li>
+            </ul>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
@@ -222,18 +357,21 @@ Row 2: Data A4, A5        | Row 2: Data B4, B5      | Row 2: Data C4, C5
                 <ol>
                     <li><a href="#partitioning">Partitioning</a>
                         <ol>
-                            <li><a href="#goals-of-partitioning">Goals of Partitioning</a></li>
-                            <li><a href="#types-of-partitioning">Types of Partitioning</a></li>
+                            <li><a href="#how-the-database-decides-where-a-row-lands">How the Database Decides Where a Row Lands</a></li>
+                            <li><a href="#hands-on-postgresql-range-partitioning">Hands-On: PostgreSQL Range Partitioning</a></li>
+                            <li><a href="#why-teams-embrace-partitioning">Why Teams Embrace Partitioning</a></li>
                         </ol>
                     </li>
                     <li><a href="#sharding">Sharding</a>
                         <ol>
-                            <li><a href="#objectives-of-sharding">Objectives of Sharding</a></li>
-                            <li><a href="#common-sharding-strategies">Common Sharding Strategies</a></li>
+                            <li><a href="#motivations-that-push-teams-toward-shards">Motivations That Push Teams Toward Shards</a></li>
+                            <li><a href="#popular-strategies-for-splitting-the-data">Popular Strategies for Splitting the Data</a></li>
+                            <li><a href="#hands-on-mongodb-hash-sharding">Hands-On: MongoDB Hash Sharding</a></li>
                         </ol>
                     </li>
-                    <li><a href="#key-differences-between-partitioning-and-sharding">Key Differences Between Partitioning and Sharding</a></li>
-                    <li><a href="#best-practices">Best Practices</a></li>
+                    <li><a href="#side-by-side-comparison">Side-by-Side Comparison</a></li>
+                    <li><a href="#blending-the-two">Blending the Two</a></li>
+                    <li><a href="#practical-guidance">Practical Guidance</a></li>
                 </ol>
             </ol>
             <div id="related-articles">
