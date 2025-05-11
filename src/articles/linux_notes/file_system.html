@@ -67,11 +67,11 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: November 11, 2021</i></p>
+            <p style="text-align: right;"><i>Last modified: May 11, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="files-and-filesystems">Files and Filesystems</h2>
             <p>In Unix, files and filesystems are important components of the operating system's structure. A file is a collection of data stored on disk, which can include anything from text documents and images to executable programs. Files are organized within directories in a hierarchical structure, allowing for efficient data management and retrieval.</p>
-            <p>A filesystem, on the other hand, is a method and data structure that the operating system uses to manage files on a disk or partition. It provides a way to store, retrieve, and organize files, supporting features like file permissions, links, and metadata. Common Unix filesystems include <code>ext4</code>, <code>XFS</code>, and <code>Btrfs</code>, each offering different capabilities and optimizations. Understanding these concepts is helpful for managing data and system resources effectively.</p>
+            <p>A filesystem, on the other hand, is a method and data structure that the operating system uses to manage files on a disk or partition. It provides a way to store, retrieve, and organize files, supporting features like file permissions, links, and metadata. Common Unix filesystems include <code>ext4</code>, <code>XFS</code>, and <code>Btrfs</code>, each offering different capabilities and optimizations.</p>
             <p>TODO:
                 - Add plot comparing read and write speed of various file systems also how it scales with parallel</p>
             <h3 id="types-of-files-in-a-unix-filesystem">Types of Files in a UNIX Filesystem</h3>
@@ -176,8 +176,9 @@
                 <li><strong>Visible files</strong> are displayed when you list the contents of a directory using commands like <code>ls</code>.</li>
                 <li><strong>Hidden files</strong> are not displayed in a standard directory listing. They start with a period (<code>.</code>) and typically store configuration data or system files. They can be revealed using the <code>ls -a</code> command.</li>
             </ol>
-            <h4 id="note-about-file-names">Note About File Names</h4>
-            <p>Filenames are case-sensitive. This means the operating system treats "Test," "TEST," and "test" as different files. Also, most file types in Linux are determined by file content and not by the file extension, unlike systems like Windows.</p>
+            <blockquote>
+                <p>Filenames are case-sensitive. This means the operating system treats "Test," "TEST," and "test" as different files. Also, most file types in Linux are determined by file content and not by the file extension, unlike systems like Windows.</p>
+            </blockquote>
             <h4 id="special-directory-names">Special Directory Names</h4>
             <p>In a filesystem, certain directory names have special meanings that simplify navigation and file management:</p>
             <ol>
@@ -185,117 +186,273 @@
                 <li>The <code>../</code> notation refers to the parent directory, which is the directory one level up from the current directory in the filesystem hierarchy. It is useful for navigating upwards in the directory structure. For example, if you are in <code>/home/user/Documents</code> and you use <code>cd ../</code>, you will move up to <code>/home/user</code>.</li>
                 <li>The <code>~/</code> notation is a shorthand for the current user's home directory. The home directory is a personal space allocated to a user where personal files and settings are stored. For example, <code>~/Documents</code> would refer to the <code>Documents</code> directory within the home directory of the current user. This is especially useful for referencing files and directories in a user's home space without needing to specify the full path.</li>
             </ol>
-            <p>These notations provide a convenient way to navigate and manage files and directories efficiently in a command-line environment. They are particularly useful in scripting and automation tasks, where paths need to be specified dynamically or relative to the current context.</p>
-            <h3 id="directory-structure">Directory Structure</h3>
-            <p>Linux organizes everything within a single directory hierarchy that starts with the root directory (<code>/</code>). </p>
+            <h3 id="blocks-superblocks-pages">Blocks, Superblocks &amp; Pages</h3>
+            <p>Blocks, pages, and the superblock are concepts in storage and memory management. A <strong>block</strong> is the smallest unit of data on disk used by file systems, while a <strong>page</strong> is the smallest unit of memory used in RAM by the operating system. The <strong>superblock</strong> holds metadata about the file system, such as its size and structure. While blocks manage how files are stored, pages manage how memory is accessed, and the superblock helps the system organize everything.</p>
+            <h4 id="block-the-atomic-on-disk-i-o-unit">Block — the Atomic On-Disk I/O Unit</h4>
+            <p>At the lowest level, a filesystem divides storage into fixed-size blocks. These blocks are the smallest units the disk and filesystem manage for both data and metadata.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Offset 0                                                  Offset 4095
+┌──────────────────────────────────────────────────────────────┐ 4 KiB
+│                       DISK BLOCK #42                        │  ← fixed at mkfs (1 KiB-64 KiB)
+└──────────────────────────────────────────────────────────────┘</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><strong>Fixed size</strong> chosen at <code>mkfs</code> (ext4 default = 4 KiB; must evenly divide the page size for DMA efficiency).</li>
+                <li>Every metadata/data region — bitmaps, inode tables, journal logs — is rounded to full blocks.</li>
+                <li>The block device layer (bio) aggregates multiple adjacent blocks into a single I/O to match device optimal I/O size.</li>
+            </ul>
+            <h4 id="superblock-volume-header-lifeline">Superblock — Volume Header &amp; Lifeline</h4>
+            <p>The superblock is the filesystem’s master record, storing global metadata and pointers to substructures. Redundancy ensures recovery if one copy becomes corrupted.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">LBA 0                                             LBA 8191  (4 KiB blocks shown)
+┌──────────────┬──────────────┬───────────────────╥───────────────────────────┐
+│ Boot sector  │  Padding     │ PRIMARY SUPERBLOCK║   Backup superblocks …    │
+└──────────────┴──────────────┴───────────────────╨───────────────────────────┘</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><strong>Primary copy</strong> at block <code>0</code> (ext4 uses block <code>1024</code> for historical alignment).</li>
+                <li><strong>Redundant copies</strong> at the start of each block group protect against header corruption.</li>
+                <li>Fields: FS UUID, block &amp; cluster sizes, group descriptors start, compatible/incompatible feature flags, journal root, last mount time, etc.</li>
+            </ul>
+            <h4 id="block-group-layout-ext-2-">Block Group Layout (EXT ≥ 2)</h4>
+            <p>Filesystems organize blocks into groups to localize related metadata, inodes, and file data, improving performance and reducing seek times.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">BLOCK GROUP N  (≈128 MiB @ 4 KiB blocks)
+┌──────────────────┬───────────────┬──────────────────────┬─────────────────┐
+│ Inode Bitmap (1) │ Block Bitmap (1) │ Inode Table (Nx) │  Data Blocks   │
+└──────────────────┴───────────────┴──────────────────────┴─────────────────┘</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Locality: The bitmaps + the inodes they describe + their data blocks live in the same neighborhood ⇒ fewer seeks on HDDs, hotter cache lines on SSD/NVMe.</li>
+                <li><strong>Group Descriptor Table</strong> (array in the superblock region) records the starting block + free-counts for each group.</li>
+            </ul>
+            <h4 id="inode-extent-trees">Inode &amp; Extent Trees</h4>
+            <p>Every file is represented by an inode, which points to extents—contiguous block runs—that efficiently map file data on disk.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">INODE #132 (regular file)
+┌──────────────────────────────────────────────────────────────┐
+│ mode, uid, size, mtime, …  |  EXTENT ROOT → depth = 1       │
+└──────────────────────────────────────────────────────────────┘
+                               │
+                 ┌─────────────┴─────────────┐
+                 ▼                           ▼
+        EXTENT (logical 0-255)       EXTENT (logical 256-511)
+     ┌───────────────────────┐     ┌───────────────────────┐
+     │ start = 8200, len=256 │ ... │ start = 8456, len=256 │
+     └───────────────────────┘     └───────────────────────┘</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>1 inode ↔ 1 file/dir.</li>
+                <li>Extents record <strong>contiguous</strong> physical block runs ⇒ bitmap compression, faster I/O submit, no indirect block b-tree lookup for large files.</li>
+                <li>Up to 4 extents inline in the inode; spill into extent index blocks when needed (depth ≤ 5 supports files ≈ 8 EiB).</li>
+            </ul>
+            <h4 id="directory-entries-dentry-blocks-">Directory Entries (dentry blocks)</h4>
+            <p>Directories are special files containing entries that map names to inode numbers. ext4 accelerates lookups with a hash-tree index for large directories.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">DIR DATA BLOCK
+┌── inode=2048 │ "config" │ rec_len  │ file_type ──┐
+│   ...        │ "lib"    │          │             │
+└── inode=2050 │ "logs"   │          │ END …       ┘</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Dir-files are just blocks of <code>(inode#, name, type)</code> pairs → ordinary read(2)/write(2) paths apply.</li>
+                <li><code>htree</code> index (ext4 dir_index) upgrades large dirs to O(log n) lookup.</li>
+            </ul>
+            <h4 id="journal-ordered-mode-">Journal (Ordered Mode)</h4>
+            <p>The journal provides write-ahead logging for metadata (and optionally data) to ensure filesystem consistency across crashes.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">RESERVED JOURNAL AREA
+┌─────────────────────────────────────────────────────────┐
+│  Descriptor → [block #42, block #99, …]                │
+│  Data payloads (shadow copies)                         │
+│  Commit block (checksum + tid)                         │
+└─────────────────────────────────────────────────────────┘</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Write-ahead log capturing <strong>metadata</strong> (and optionally data) before main-area overwrite.</li>
+                <li>Ext3/4 default <strong>ordered</strong> mode: data blocks reach media before the commit → no fs-checker sees stale metadata.</li>
+                <li>Replayed by <code>jbd2</code> on mount after unclean shutdown.</li>
+            </ul>
+            <h4 id="end-to-end-walk-through">End-to-End Walk-Through</h4>
+            <p>Here’s a high-level sequence tracing a read from the superblock through the block group into actual file data.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">[ Superblock ] → [ Group #0 bitmaps ] → [ Inode #132 ] → [ Extent 8200..8455 ] → [ File Data ]</code></pre>
+            </div>
+            </p>
+            <h4 id="from-disk-blocks-ram-pages-unified-page-cache-">From Disk Blocks → RAM Pages (Unified Page Cache)</h4>
+            <p>Once blocks are read from disk, they enter the unified page cache, serving both file I/O and memory mappings seamlessly.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">+---------------------------+
+                 |  FILE -&gt; mapping (address_space)      |
+                 +---------------------------+
+                              │
+              read(2)/mmap    │        writeback
+                              ▼
+                RAM phys addr 0x3f7e_0000
+            ┌──────────────────────────────┐ 4 KiB PAGE
+            │  page-&gt;mapping  -&gt; inode132  │───┐  state: Clean / Dirty
+            │  index = 2 (→ block #8202)   │   │
+            └──────────────────────────────┘   │
+                                               │ DMA/PIO
+                                   ┌───────────┴───────────────────┐
+                                   │        DISK BLOCK #8202       │
+                                   └───────────────────────────────┘</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><strong>Fault-on-first-touch</strong>: VFS sees a cache miss, allocates a free page, submits <code>bio</code> to read the 4 KiB block.</li>
+                <li>Subsequent I/O hits the in-RAM page; mmap’d code/data benefit identically — the cache is unified across read(), mmap(), readdir, etc.</li>
+                <li>Indexing: <code>page-&gt;index = logical_block_number</code> allows constant-time lookup in radix-tree/xarray.</li>
+            </ul>
+            <h4 id="dirty-pages-write-back-pipeline">Dirty Pages → Write-back Pipeline</h4>
+            <p>Modifications to pages become "dirty" and are eventually written back to disk in optimized batches by the kernel’s write-back machinery.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">USER SPACE write(2) / memcpy to mmap
+            │                     flusher thread / sync(2)
+            ▼                                    │
+   page-&gt;flags |= DIRTY                         │
+            │                                   ▼
+ ┌──────────┴────────────────┐       bio / blk-mq layer
+ │  ext4_writepages() merges │  ─────────────────────────►  Media
+ └───────────────────────────┘</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Dirty clustering (<code>writepages()</code>): adjacent dirty pages coalesced into single bio up to the device <code>queue_max_hw_sectors</code>.</li>
+                <li><strong>pdflush / bdi flusher</strong> wakes when <code>vm.dirty_ratio</code> or <code>dirty_expire_centisecs</code> thresholds fire.</li>
+                <li><code>sync</code>, <code>fsync</code>, <code>O_SYNC</code>, and journal commit barriers guarantee persistence semantics demanded by databases and userspace logs.</li>
+            </ul>
+            <h3 id="directory-hierarchy">Directory Hierarchy</h3>
+            <p>Linux follows the <strong>Filesystem Hierarchy Standard (FHS)</strong>: everything, including devices and running processes, lives somewhere under a single root directory <code>/</code>. This predictability lets administrators and software know exactly where to look for binaries, configuration files, logs, and users’ data.</p>
             <p>
             <div>
                 <pre><code class="language-shell">/
-├── bin
-├── boot
-├── dev
-├── etc
-│   ├── network
-│   └── ssh
-├── home
-│   └── [user]
-│       ├── Documents
-│       ├── Downloads
-│       ├── Music
-│       ├── Pictures
-│       ├── Videos
-│       └── Desktop
-├── lib
-├── media
-├── mnt
-├── opt
-├── proc
-├── root
-├── run
-├── sbin
-├── srv
-├── sys
-├── tmp
-├── usr
-│   ├── bin
-│   ├── include
-│   ├── lib
-│   ├── local
-│   └── share
-└── var
-    ├── cache
-    ├── lib
-    ├── local
-    ├── lock
-    ├── log
-    └── tmp</code></pre>
+├── bin/          → Core user commands (ls, cp)
+├── boot/         → Kernel, initramfs, bootloader
+├── dev/          → Device nodes (sda, tty0, random)
+├── etc/          → System-wide configuration
+│   ├── network/  → Networking configs
+│   └── ssh/      → OpenSSH server &amp; client settings
+├── home/
+│   └── &lt;user&gt;/   → Personal files &amp; dotfiles
+│       ├── Desktop/  ─┐
+│       ├── Documents/ ├─ XDG-defined user dirs
+│       └── …          ┘
+├── lib/          → Shared libs for /bin &amp; /sbin
+├── media/        → Auto-mount points (USB, DVD)
+├── mnt/          → Temporary/manual mounts
+├── opt/          → Optional add-on software
+├── proc/         → Kernel &amp; process pseudo-FS
+├── root/         → Superuser’s home (not “/”!)
+├── run/          → Volatile runtime data (PID files)
+├── sbin/         → Core system binaries (fsck, ip)
+├── srv/          → Data served by daemons (HTTP, FTP)
+├── sys/          → Kernel objects (sysfs pseudo-FS)
+├── tmp/          → World-writable temp space, cleared on reboot
+├── usr/
+│   ├── bin/      → Non-essential user programs
+│   ├── lib/      → Libraries for /usr/bin
+│   ├── sbin/     → System binaries not needed for early boot
+│   └── local/    → Admin-installed software (keeps pkg-mgr clean)
+└── var/
+    ├── cache/    → Application caches (dnf, apt)
+    ├── log/      → System &amp; service logs
+    ├── mail/     → Local mail spools
+    └── tmp/      → Persistent temp data between reboots</code></pre>
             </div>
             </p>
-            <p>Key directories within the Linux file system include:</p>
+            <p>Quick-Reference Table:</p>
             <p>
             <table>
                 <tr>
                     <td>Directory</td>
-                    <td>Description</td>
+                    <td>Typical Contents</td>
+                    <td>Why It Matters</td>
                 </tr>
                 <tr>
                     <td><code>/</code></td>
-                    <td>The root directory: the starting point of the file system hierarchy, all other directories branch off from here.</td>
+                    <td>The root of everything</td>
+                    <td>Removing this directory—or mounting the wrong thing over it—renders the OS unusable.</td>
                 </tr>
                 <tr>
-                    <td><code>/bin</code></td>
-                    <td>Essential low-level system utilities, executable by all users.</td>
+                    <td><code>/bin</code>, <code>/sbin</code></td>
+                    <td>Crucial commands and their companions (shell, cp, mount, fsck)</td>
+                    <td>Must be available <strong>early in boot</strong> and in <strong>single-user/emergency</strong> mode.</td>
                 </tr>
                 <tr>
-                    <td><code>/usr/bin</code></td>
-                    <td>A place for user commands and applications typically used after the system boot process.</td>
-                </tr>
-                <tr>
-                    <td><code>/sbin</code></td>
-                    <td>Contains system binaries crucial for booting, restoring, recovering, and/or repairing the system, supplementing the binaries in <code>/bin</code>.</td>
+                    <td><code>/usr/{bin, sbin, lib}</code></td>
+                    <td>The bulk of user-space packages</td>
+                    <td>Can be mounted read-only or even on a separate partition; not needed until the kernel hands control to init.</td>
                 </tr>
                 <tr>
                     <td><code>/lib</code></td>
-                    <td>Contains shared libraries essential for the binaries found in <code>/bin</code> and <code>/sbin</code>.</td>
-                </tr>
-                <tr>
-                    <td><code>/usr/lib</code></td>
-                    <td>Libraries necessary for <code>/usr/bin</code> binaries and applications.</td>
-                </tr>
-                <tr>
-                    <td><code>/tmp</code></td>
-                    <td>A directory for storing temporary files, which are usually cleared at each reboot.</td>
-                </tr>
-                <tr>
-                    <td><code>/home</code></td>
-                    <td>The home ground for personal directories of each user, where they can store their personal files.</td>
+                    <td>Loader (<code>ld-linux</code>) and libc-style libraries</td>
+                    <td>Without it, nothing in <code>/bin</code> or <code>/sbin</code> executes.</td>
                 </tr>
                 <tr>
                     <td><code>/etc</code></td>
-                    <td>A repository for system-wide configuration files and scripts utilized during the boot process.</td>
-                </tr>
-                <tr>
-                    <td><code>/dev</code></td>
-                    <td>A space hosting device nodes that correspond to hardware devices connected to the system.</td>
+                    <td>Human-readable config files</td>
+                    <td>Convention: one file per service (e.g., <code>ssh/sshd_config</code>). Avoid binaries or large data here.</td>
                 </tr>
                 <tr>
                     <td><code>/var</code></td>
-                    <td>Manages variable data such as system logs, mail and printer spool directories, alongside transient and temporary files.</td>
+                    <td>Changing data: logs, queues, databases</td>
+                    <td>Grows over time—monitor disk usage here first.</td>
+                </tr>
+                <tr>
+                    <td><code>/home</code></td>
+                    <td>Users’ personal space</td>
+                    <td>Keep on its own partition to let OS upgrades/re-installs leave user data untouched.</td>
+                </tr>
+                <tr>
+                    <td><code>/proc</code>, <code>/sys</code>, <code>/run</code></td>
+                    <td>Kernel-generated pseudo filesystems</td>
+                    <td>Expose live system state; no actual data on disk.</td>
+                </tr>
+                <tr>
+                    <td><code>/opt</code>, <code>/usr/local</code></td>
+                    <td>Third-party or locally built apps</td>
+                    <td>Keeps them separate from distro-managed packages—ideal for self-compiled software.</td>
+                </tr>
+                <tr>
+                    <td><code>/media</code>, <code>/mnt</code></td>
+                    <td>Mount points</td>
+                    <td><code>/media</code> is auto-managed by udev/udisks; <code>/mnt</code> is for you to mount test filesystems quickly.</td>
                 </tr>
                 <tr>
                     <td><code>/root</code></td>
-                    <td>Serves as the home directory for the root (superuser) account, distinct from the root directory (<code>/</code>).</td>
+                    <td>The <em>root</em> user’s home</td>
+                    <td>Allows root to function in rescue mode when <code>/home</code> might not be available.</td>
                 </tr>
                 <tr>
                     <td><code>/boot</code></td>
-                    <td>Stores files vital for the boot process, including the Linux kernel and the boot loader.</td>
-                </tr>
-                <tr>
-                    <td><code>/media</code> and <code>/mnt</code></td>
-                    <td>Serve as mount points for file systems and removable devices like CDs, USB drives, etc.</td>
+                    <td>Kernel(s), GRUB, EFI stubs</td>
+                    <td>Often on its own small, unencrypted partition so the firmware can read it.</td>
                 </tr>
             </table>
             </p>
+            <ul>
+                <li>Placing <code>/home</code>, <code>/var</code>, and <code>/usr</code> on separate partitions can improve security and recovery options.</li>
+                <li>Directories like <code>/proc</code>, <code>/sys</code>, and <code>/run</code> change dynamically—<em>never</em> store persistent files there.</li>
+                <li><code>/tmp</code> is world-writable (+t sticky bit) and routinely wiped at boot; use <code>/var/tmp</code> if you need temp files that survive reboots.</li>
+                <li>Don’t scatter personal scripts in <code>/usr/bin</code>; instead use <code>/usr/local/bin</code> or add a custom directory (e.g., <code>~/bin</code>) to your <code>$PATH</code>.</li>
+                <li>Most mainstream distros adhere closely to the FHS, but container images and embedded systems may simplify or rearrange parts of the hierarchy.</li>
+            </ul>
             <h3 id="file-system-types">File System Types</h3>
             <p>A file system is a method of organizing, storing, and retrieving data on a storage device, like a hard drive, SSD, or USB drive. It manages the available space on the device, keeping track of which sectors belong to which files and directories.</p>
             <p>Several types of file systems can be used on Linux systems, each designed with specific use-cases and features:</p>
@@ -958,11 +1115,23 @@ Verify passphrase:</code></pre>
                             <li><a href="#classification-based-on-purpose">Classification Based on Purpose</a></li>
                             <li><a href="#classification-based-on-storage">Classification Based on Storage</a></li>
                             <li><a href="#classification-based-on-visibility">Classification Based on Visibility</a></li>
-                            <li><a href="#note-about-file-names">Note About File Names</a></li>
                             <li><a href="#special-directory-names">Special Directory Names</a></li>
                         </ol>
                     </li>
-                    <li><a href="#directory-structure">Directory Structure</a></li>
+                    <li><a href="#blocks-superblocks-pages">Blocks, Superblocks &amp; Pages</a>
+                        <ol>
+                            <li><a href="#block-the-atomic-on-disk-i-o-unit">Block — the Atomic On-Disk I/O Unit</a></li>
+                            <li><a href="#superblock-volume-header-lifeline">Superblock — Volume Header &amp; Lifeline</a></li>
+                            <li><a href="#block-group-layout-ext-2-">Block Group Layout (EXT ≥ 2)</a></li>
+                            <li><a href="#inode-extent-trees">Inode &amp; Extent Trees</a></li>
+                            <li><a href="#directory-entries-dentry-blocks-">Directory Entries (dentry blocks)</a></li>
+                            <li><a href="#journal-ordered-mode-">Journal (Ordered Mode)</a></li>
+                            <li><a href="#end-to-end-walk-through">End-to-End Walk-Through</a></li>
+                            <li><a href="#from-disk-blocks-ram-pages-unified-page-cache-">From Disk Blocks → RAM Pages (Unified Page Cache)</a></li>
+                            <li><a href="#dirty-pages-write-back-pipeline">Dirty Pages → Write-back Pipeline</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#directory-hierarchy">Directory Hierarchy</a></li>
                     <li><a href="#file-system-types">File System Types</a></li>
                     <li><a href="#why-and-when-would-you-care-about-file-system-">Why And When Would You Care About File System?</a></li>
                     <li><a href="#managing-file-systems">Managing File Systems</a>

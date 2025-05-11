@@ -4,18 +4,18 @@ let grid;
 let shapes;
 let currentShape = null;
 let lastTime = 0;
-let accumulator = 0; // Accumulator for time elapsed
-const moveInterval = 1000; // Move down every 1000 milliseconds (1 second)
+let accumulator = 0;
+const moveInterval = 1000;
 let gameOver = false;
 let score = 0;
 
 function calculateCellSize() {
     const screenWidth = window.innerWidth;
-    let cellSize = 50; // Default size for large screens
+    let cellSize = 50;
 
-    if (screenWidth <= 600) { // Considered as a mobile device
+    if (screenWidth <= 600) {
         cellSize = 30;
-    } else if (screenWidth <= 1024) { // Considered as a tablet or small desktop
+    } else if (screenWidth <= 1024) {
         cellSize = 40;
     }
 
@@ -55,33 +55,28 @@ class Shape {
         );
     }
 
-    rotate() {
-        // Implement rotation logic specific to the shape
-    }
+    rotate() {}
 
     moveLeft() {
         if (this.positions.some(position => position.x <= 0) || checkCollisionForLeft(this)) {
-            return; // Do not move if it would go out of bounds or collide
+            return;
         }
         this.positions.forEach(position => position.moveLeft());
     }
 
     moveRight() {
         if (this.positions.some(position => position.x >= grid.width - 1) || checkCollisionForRight(this)) {
-            return; // Do not move if it would go out of bounds or collide
+            return;
         }
         this.positions.forEach(position => position.moveRight());
     }
 
     moveDown() {
-        // Check if any part of the shape would go out of the grid's bottom boundary
         if (this.positions.some(position => position.y >= grid.height - 1)) {
-            return; // Do not move if it would go out of bounds
+            return;
         }
         this.positions.forEach(position => position.moveDown());
     }
-
-
 }
 
 class TShape extends Shape {
@@ -93,21 +88,14 @@ class TShape extends Shape {
     }
 
     rotate() {
-        // Rotating each block around the pivot (the first block)
         const pivot = this.positions[0];
 
         for (let i = 1; i < this.positions.length; i++) {
             const pos = this.positions[i];
-
-            // Translate position relative to pivot, rotate, then translate back
             const x = pos.x - pivot.x;
             const y = pos.y - pivot.y;
-
-            // Applying 90 degree rotation transformation
             const rotatedX = -y;
             const rotatedY = x;
-
-            // Update position
             pos.x = rotatedX + pivot.x;
             pos.y = rotatedY + pivot.y;
         }
@@ -122,12 +110,8 @@ class SquareShape extends Shape {
         this.color = "#f98776";
     }
 
-    rotate() {
-
-    }
-
+    rotate() {}
 }
-
 
 class LineShape extends Shape {
     constructor(startX = 0, startY = 0) {
@@ -141,15 +125,11 @@ class LineShape extends Shape {
     }
 
     rotate() {
-        // Get the center position (pivot)
         const pivot = this.positions[0];
 
-        // Rotate the LineShape by 90 degrees
         for (let i = 1; i < this.positions.length; i++) {
             const relativeX = this.positions[i].x - pivot.x;
             const relativeY = this.positions[i].y - pivot.y;
-            // Rotate 90 degrees counterclockwise
-            // New X = -old Y, New Y = old X
             this.positions[i].x = pivot.x - relativeY;
             this.positions[i].y = pivot.y + relativeX;
         }
@@ -159,34 +139,32 @@ class LineShape extends Shape {
 class LShape extends Shape {
     constructor(startX = 0, startY = 0) {
         super(startX, startY, [
-            new Position(0, 0), // Center block (pivot)
-            new Position(-1, 0), // Tail of the 'L'
-            new Position(1, 0), // End of the line
-            new Position(1, -1) // Head of the 'L'
+            new Position(0, 0),
+            new Position(-1, 0),
+            new Position(1, 0),
+            new Position(1, -1)
         ]);
         this.rotationState = 0;
         this.color = "#d3d3d3";
     }
 
     rotate() {
-        // Rotate around the center block
         const pivot = this.positions[0];
 
-        // Define rotation states
         const rotationStates = [
-            [new Position(0, -1), new Position(0, 1), new Position(-1, 1)], // State 0 to 1
-            [new Position(1, 0), new Position(-1, 0), new Position(-1, -1)], // State 1 to 2
-            [new Position(0, 1), new Position(0, -1), new Position(1, -1)], // State 2 to 3
-            [new Position(-1, 0), new Position(1, 0), new Position(1, 1)] // State 3 to 0
+            [new Position(0, -1), new Position(0, 1), new Position(-1, 1)],
+            [new Position(1, 0), new Position(-1, 0), new Position(-1, -1)],
+            [new Position(0, 1), new Position(0, -1), new Position(1, -1)],
+            [new Position(-1, 0), new Position(1, 0), new Position(1, 1)]
         ];
 
-        // Update positions based on rotation state
         for (let i = 1; i < this.positions.length; i++) {
-            this.positions[i].update(pivot.x + rotationStates[this.rotationState][i - 1].x,
-                pivot.y + rotationStates[this.rotationState][i - 1].y);
+            this.positions[i].update(
+                pivot.x + rotationStates[this.rotationState][i - 1].x,
+                pivot.y + rotationStates[this.rotationState][i - 1].y
+            );
         }
 
-        // Update rotation state
         this.rotationState = (this.rotationState + 1) % 4;
     }
 }
@@ -194,44 +172,40 @@ class LShape extends Shape {
 class ReversedLShape extends Shape {
     constructor(startX = 0, startY = 0) {
         super(startX, startY, [
-            new Position(0, 0), // Center block (pivot)
-            new Position(-1, 0), // Left block
-            new Position(1, 0), // Right block
-            new Position(-1, -1) // Top left block
+            new Position(0, 0),
+            new Position(-1, 0),
+            new Position(1, 0),
+            new Position(-1, -1)
         ]);
         this.rotationState = 0;
-        this.color = "#f0a500"; // Choose a different color from LShape
+        this.color = "#f0a500";
     }
 
     rotate() {
-        // Rotate around the center block
         const pivot = this.positions[0];
 
-        // Define rotation states for the reversed L shape
         const rotationStates = [
-            [new Position(0, -1), new Position(0, 1), new Position(-1, -1)], // State 0 to 1
-            [new Position(-1, 0), new Position(1, 0), new Position(1, -1)], // State 1 to 2
-            [new Position(0, 1), new Position(0, -1), new Position(1, 1)], // State 2 to 3
-            [new Position(1, 0), new Position(-1, 0), new Position(-1, 1)] // State 3 to 0
+            [new Position(0, -1), new Position(0, 1), new Position(-1, -1)],
+            [new Position(-1, 0), new Position(1, 0), new Position(1, -1)],
+            [new Position(0, 1), new Position(0, -1), new Position(1, 1)],
+            [new Position(1, 0), new Position(-1, 0), new Position(-1, 1)]
         ];
 
-        // Update positions based on rotation state
         for (let i = 1; i < this.positions.length; i++) {
-            this.positions[i].update(pivot.x + rotationStates[this.rotationState][i - 1].x,
-                pivot.y + rotationStates[this.rotationState][i - 1].y);
+            this.positions[i].update(
+                pivot.x + rotationStates[this.rotationState][i - 1].x,
+                pivot.y + rotationStates[this.rotationState][i - 1].y
+            );
         }
 
-        // Update rotation state
         this.rotationState = (this.rotationState + 1) % 4;
     }
 }
-
 
 function createNewShape() {
     const shapeTypes = [TShape, SquareShape, LineShape, LShape, ReversedLShape];
     const randomIndex = Math.floor(Math.random() * shapeTypes.length);
     const shapeType = shapeTypes[randomIndex];
-    // Assuming the grid is wide enough, start in the middle at the top
     return new shapeType(Math.floor(grid.width / 2), 0);
 }
 
@@ -245,13 +219,13 @@ function checkCollisionWithOtherShapes(currentShape) {
             for (const pos of shape.positions) {
                 for (const currentPos of currentShape.positions) {
                     if (currentPos.x === pos.x && currentPos.y + 1 === pos.y) {
-                        return true; // Collision detected
+                        return true;
                     }
                 }
             }
         }
     }
-    return false; // No collision
+    return false;
 }
 
 function checkCollisionForLeft(currentShape) {
@@ -268,13 +242,13 @@ function checkCollisionWithDirection(currentShape, deltaX) {
             for (const pos of shape.positions) {
                 for (const currentPos of currentShape.positions) {
                     if (currentPos.x + deltaX === pos.x && currentPos.y === pos.y) {
-                        return true; // Collision detected
+                        return true;
                     }
                 }
             }
         }
     }
-    return false; // No collision
+    return false;
 }
 
 class Cell {
@@ -317,14 +291,12 @@ class Grid {
         }
     }
 
-    // Method to fill a cell with a specific color
     fillCell(x, y, color) {
         if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
             this.array[y][x].fill(color);
         }
     }
 
-    // Render the grid on the canvas
     render(context) {
         for (let y = 0; y < this.height; y++) {
             for (let x = 0; x < this.width; x++) {
@@ -338,19 +310,12 @@ class Grid {
 
 function adjustCanvas() {
     const rect = canvas.getBoundingClientRect();
-
-    // Calculate the number of cells that can fit in the current canvas size
     const gridWidthCells = Math.floor(rect.width / cellSize);
     const gridHeightCells = Math.floor(rect.height / cellSize);
-
-    // Adjust the canvas size to fit whole cells only
     canvas.width = gridWidthCells * cellSize;
     canvas.height = gridHeightCells * cellSize;
-
-    // Create a new grid with the adjusted size
     grid = new Grid(gridWidthCells, gridHeightCells);
 }
-
 
 function gameLoop(timestamp) {
     if (gameOver) {
@@ -381,57 +346,42 @@ function gameLoop(timestamp) {
     requestAnimationFrame(gameLoop);
     let fullRows = getFullRows();
     if (fullRows.length > 0) {
-        console.log(fullRows)
+        console.log(fullRows);
         clearFullRows(fullRows);
     }
 }
 
 function moveCurrentShapeDown() {
     if (hasReachedBottom(currentShape) || checkCollisionWithOtherShapes(currentShape)) {
-        // Fix the shape in place
         shapes.push(currentShape);
-
-        // Create a new shape without carrying over the previous shape's positions
         currentShape = createNewShape();
     } else {
-        // Move the current shape down
         currentShape.moveDown();
     }
 }
 
 function getFullRows() {
     let fullRows = [];
-
-    // Loop through each row
     for (let y = 0; y < grid.height; y++) {
         let isRowFull = true;
-
-        // Check each cell in the row
         for (let x = 0; x < grid.width; x++) {
             if (!grid.array[y][x].color || grid.array[y][x].color === getColorForMode('white', 'black')) {
-                // If any cell is not filled (or is white), the row is not full
                 isRowFull = false;
                 break;
             }
         }
-
         if (isRowFull) {
             fullRows.push(y);
         }
     }
-
     return fullRows;
 }
 
 function clearFullRows(fullRows) {
     for (let y of fullRows) {
-
-        // Remove the filled positions from all shapes
         for (let shape of shapes) {
             shape.positions = shape.positions.filter(pos => pos.y !== y);
         }
-
-        // Move down the positions above the cleared row
         for (let shape of shapes) {
             shape.positions.forEach(pos => {
                 if (pos.y < y) {
@@ -444,19 +394,16 @@ function clearFullRows(fullRows) {
 }
 
 function renderGameOverOverlay() {
-    context.fillStyle = 'rgba(128, 128, 128, 0.5)'; // Semi-transparent gray overlay
+    context.fillStyle = 'rgba(128, 128, 128, 0.5)';
     context.fillRect(0, 0, canvas.width, canvas.height);
-
     context.fillStyle = getColorForMode('black', 'white');
     context.font = '40px Arial';
     context.textAlign = 'center';
     context.fillText('Game Over', canvas.width / 2, canvas.height / 2);
 }
 
-
 function updateAndRender() {
     grid.reset();
-    // Draw all shapes including the current shape
     [currentShape, ...shapes].forEach(shape => {
         shape.positions.forEach(pos => {
             if (pos.x >= 0 && pos.x < grid.width && pos.y >= 0 && pos.y < grid.height) {
@@ -464,8 +411,6 @@ function updateAndRender() {
             }
         });
     });
-
-
     grid.render(context);
     renderScore();
 }
@@ -473,7 +418,7 @@ function updateAndRender() {
 function renderScore() {
     context.fillStyle = getColorForMode('black', 'white');
     context.font = '20px Arial';
-    context.fillText('Score: ' + score, 10, 30); // Positioned 10px from the top and left
+    context.fillText('Score: ' + score, 10, 30);
 }
 
 function restartGame() {
@@ -481,12 +426,11 @@ function restartGame() {
     score = 0;
     shapes = [];
     currentShape = createNewShape();
-    accumulator = 0; // Reset the accumulator
-    lastTime = 0; // Reset the lastTime
-    updateAndRender(); // Update and render the initial state
-    requestAnimationFrame(gameLoop); // Restart the game loop
+    accumulator = 0;
+    lastTime = 0;
+    updateAndRender();
+    requestAnimationFrame(gameLoop);
 }
-
 
 document.addEventListener('keydown', function(event) {
     switch (event.key) {
@@ -506,15 +450,12 @@ document.addEventListener('keydown', function(event) {
             event.preventDefault();
             break;
         case 'ArrowUp':
+        case ' ':
             currentShape.rotate();
             event.preventDefault();
             break;
-        case ' ':
-            currentShape.rotate(); // ' ' is the space bar
-            event.preventDefault();
-            break;
     }
-    updateAndRender(); // Update the game state immediately after input
+    updateAndRender();
 });
 
 document.getElementById('leftButton').addEventListener('touchstart', function() {
@@ -537,11 +478,9 @@ document.getElementById('rotateButton').addEventListener('touchstart', function(
     updateAndRender();
 });
 
-
 adjustCanvas();
 window.addEventListener('resize', adjustCanvas);
 
-// Start the game loop
 currentShape = createNewShape();
 shapes = [];
 

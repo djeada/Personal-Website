@@ -67,364 +67,378 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 28, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: May 11, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
-            <header>System Startup Process</header>
+            <h2 id="system-startup-process">System Startup Process</h2>
             <p>What happens between the time you push the power button and the time you see the login prompt?</p>
             <p>
             <div>
-                <pre><code class="language-shell">+------------------+          +-------------------+            +----------------------+
-|    BIOS/UEFI     |   ---&gt;   |     Boot Loader   |    ---&gt;    |   Kernel &amp; Initramfs |
-| (Basic firmware) |          | (e.g., GRUB, LILO)|            |(Initializes hardware)|
-+------------------+          +-------------------+            +----------------------+
-         |                              |                                  |
-         | System Startup               | Load the Kernel                  | Unpack Initramfs
-         v                              v                                  v
-+------------------+           +--------------------+           +----------------------+
-| Hardware Testing |           | OS Selection (GRUB)|           |    Kernel Execution  |
-| (POST sequence)  |           | and Kernel loading |           | (Mounts root FS and  |
-+------------------+           +--------------------+           |  starts Init process)|
-                                                                +----------------------+
-                                                                          |
-                                                                          | Launches System Services
-                                                                          v
-                                                                  +---------------------+
-                                                                  |      Systemd        |
-                                                                  | (or another init)   |
-                                                                  | (System &amp; Service   |
-                                                                  |  Management)        |
-                                                                  +---------------------+</code></pre>
+                <pre><code class="language-shell">[1] Power On
+       │
+       ▼
++--------------------------------+
+| [2] BIOS / UEFI                |
+|  • Load firmware from NVRAM    |
+|  • Run POST (Power-On Self Test) |
++--------------------------------+
+       │
+       ▼
++--------------------------------+
+| [3] Device Detection           |
+|  • Enumerate CPU, RAM, disks   |
+|  • Initialize bus controllers  |
++--------------------------------+
+       │
+       ▼
++--------------------------------+
+| [4] Boot-Device Selection      |
+|  • UEFI Boot Manager or MBR    |
+|  • Choose EFI partition or MBR |
++--------------------------------+
+       │
+       ▼
++--------------------------------+
+| [5] Bootloader (GRUB2 / LILO)  |
+|  • Read /boot/grub2/grub.cfg   |
+|  • Display menu (timeout/user) |
+|  • Load:                       |
+|     – vmlinuz-&lt;version&gt; (kernel) |
+|     – initramfs-&lt;version&gt;.img  |
+|     – Kernel cmdline args      |
++--------------------------------+
+       │
+       ▼
++-------------------------------------------------+
+| [6] Linux Kernel + Initramfs                   |
+|  • Decompress &amp; relocate kernel image           |
+|  • Mount initramfs (dracut/busybox)             |
+|  • Load early userspace tools &amp; modules (.ko)  |
+|  • Probe hardware &amp; mount real root FS         |
+|  • pivot_root/switch_root → exec /sbin/init    |
++-------------------------------------------------+
+       │
+       ▼
++-------------------------------------------------+
+| [7] systemd (PID 1)                             |
+|  • Execute /usr/lib/systemd/systemd             |
+|  • Read default.target → resolves into         |
+|      multi-user.target →                       |
+|        ├─ sysinit.target  (fsck, sysctl, kmod)  |
+|        ├─ basic.target    (journald, udev)      |
+|        └─ multi-user.target                     |
+|            ├─ getty@.service (login prompts)    |
+|            ├─ sshd.service                      |
+|            └─ network-online.target             |
+|    [opt] graphical.target → display-manager     |
++-------------------------------------------------+
+       │
+       ▼
++-------------------------------------------------+
+| [8] User‐Space Initialization                   |
+|  • systemd-login (logind)                       |
+|  • Shell startup: /etc/profile, ~/.bashrc       |
+|  • GUI login manager (gdm/kdm/xdm)              |
+|  → Finally: users can log in &amp; start sessions   |
++-------------------------------------------------+</code></pre>
             </div>
             </p>
-            <h2 id="1-bootup-process">1. Bootup Process</h2>
-            <p>The bootup process is a sequence of events that occurs when you power on a computer. It involves several stages including POST, boot loader execution, loading and initializing the operating system.</p>
-            <h3 id="1-1-power-on-self-test-post-">1.1 Power-On Self-Test (POST)</h3>
-            <p>When a computer is powered on, the BIOS or UEFI (Unified Extensible Firmware Interface) performs a Power-On Self-Test (POST). This test checks the integrity of the hardware components and ensures that everything is functioning correctly. In case of any errors, POST halts the boot process and sends out an error message.</p>
-            <h3 id="1-2-boot-loader-execution">1.2 Boot Loader Execution</h3>
-            <p>After successfully passing POST, BIOS/UEFI locates the bootable device. It then searches for, loads, and executes the first-stage boot loader. This boot loader is responsible for transitioning the computer from firmware services to the actual operating system. To modify the boot sequence, you may need to press a specific key (like F12 or F2) during this stage.</p>
-            <p><strong>Types of First-Stage Boot Loaders</strong></p>
-            <p>There are two primary types of first-stage boot loaders: </p>
+            <h3 id="bootup-process">Bootup Process</h3>
+            <p>The bootup process is the ordered set of steps a computer follows after power-on, moving from firmware control to a fully running operating system. At a high level it consists of:</p>
+            <ol>
+                <li><strong>Power-On Self-Test (POST)</strong></li>
+                <li><strong>Boot-loader discovery and first-stage execution</strong></li>
+                <li><strong>Second-stage boot loader / firmware boot manager</strong></li>
+                <li><strong>Kernel (and initramfs) loading</strong></li>
+                <li><strong>PID 1 initialization (SysV init or systemd)</strong></li>
+                <li><strong>Multi-user state (runlevels / targets)</strong></li>
+            </ol>
+            <h4 id="power-on-self-test-post-">Power-On Self-Test (POST)</h4>
+            <p>When power is applied the system firmware—either classic <strong>BIOS</strong> or modern <strong>UEFI (Unified Extensible Firmware Interface)</strong>—executes POST. POST verifies CPU registers, firmware integrity, system RAM, basic chipset functions, and often attached devices such as GPUs. Many firmwares emit diagnostic beep codes or on-screen messages if errors are found; fatal errors halt the boot process so that subsequent stages are never reached.</p>
+            <h4 id="boot-loader-execution">Boot Loader Execution</h4>
+            <p>After a successful POST the firmware locates a bootable <strong>device</strong> according to its configured boot order.</p>
+            <p><strong>On BIOS systems</strong></p>
             <ul>
-                <li><strong>BIOS</strong>: Basic Input Output System, an older version of the firmware.</li>
-                <li><strong>UEFI</strong>: Unified Extensible Firmware Interface, a more recent version with improved functionality and security.</li>
+                <li>The firmware reads the <strong>first 512-byte sector</strong> (Master Boot Record) of the selected disk into memory location 0x7C00 and jumps to it.</li>
+                <li>This sector contains a <em>very small</em> first-stage loader (≤ 446 bytes) whose only job is to locate and load a more capable second-stage loader.</li>
             </ul>
-            <p>Most computers either have BIOS or UEFI, not both.</p>
-            <h2 id="2-master-boot-record-mbr-">2. Master Boot Record (MBR)</h2>
-            <p>The Master Boot Record is the first sector of a bootable disk (e.g., /dev/sda or /dev/hda). It's typically 512 bytes in size and comprises:</p>
+            <p><strong>On UEFI systems</strong></p>
             <ul>
-                <li><strong>Boot Loader Information</strong>: Code to load the second-stage boot loader.</li>
-                <li><strong>Partition Table Information</strong>: Defines the organization of the disk into partitions.</li>
-                <li><strong>MBR Validation Check</strong>: A magic number for error checking.</li>
+                <li>There is <em>no</em> 512-byte MBR loader requirement. Instead, the firmware reads the FAT32-formatted <strong>EFI System Partition (ESP)</strong>, loads the configured <code>*.efi</code> executable (e.g. <code>\EFI\Microsoft\Boot\bootmgfw.efi</code>, <code>\EFI\debian\grubx64.efi</code>, or a <strong>shim</strong> in Secure Boot scenarios) and transfers control to it.</li>
+                <li>Boot order entries are stored in NVRAM and edited with tools such as <code>efibootmgr</code>.</li>
             </ul>
+            <p>To modify the boot sequence you usually press <strong>Esc, F2, F10, F12 or Del</strong> during POST; the key varies by vendor.</p>
+            <p><strong>Types of Firmware and First-Stage Code</strong></p>
+            <p>
+            <table>
+                <tr>
+                    <td>Firmware Model</td>
+                    <td>First-Stage Location</td>
+                    <td>Notes</td>
+                </tr>
+                <tr>
+                    <td><strong>BIOS</strong></td>
+                    <td>First 446 bytes of the disk’s MBR</td>
+                    <td>Limited space; must chain-load a second-stage loader (GRUB Legacy, LILO, Syslinux, etc.).</td>
+                </tr>
+                <tr>
+                    <td><strong>UEFI (without Secure Boot)</strong></td>
+                    <td>EFI executable on ESP</td>
+                    <td>Can load GRUB 2, systemd-boot, rEFInd, or the kernel directly.</td>
+                </tr>
+                <tr>
+                    <td><strong>UEFI (with Secure Boot)</strong></td>
+                    <td>Microsoft-signed <strong>shim</strong> → GRUB 2</td>
+                    <td>shim validates GRUB’s signature before handing off.</td>
+                </tr>
+            </table>
+            </p>
+            <p>Most modern x86 machines ship with UEFI; legacy BIOS mode is often still available for compatibility.</p>
+            <h3 id="master-boot-record-mbr-">Master Boot Record (MBR)</h3>
+            <p>The <strong>MBR</strong> is the first sector (LBA 0) of a traditional BIOS disk. By convention it is <strong>512 bytes</strong> and contains:</p>
+            <ul>
+                <li><strong>446 bytes</strong> – first-stage boot loader machine code</li>
+                <li><strong>64 bytes</strong> – primary partition table (four 16-byte entries)</li>
+                <li><strong>2 bytes</strong> – signature <code>0x55 AA</code> used by firmware to validate the read</li>
+            </ul>
+            <blockquote>
+                <p><strong>GPT note</strong> – On GUID Partition Table disks a <em>protective</em> MBR is still present for legacy tools, but real partition metadata lives in GPT headers and tables beyond LBA 0.</p>
+            </blockquote>
             <p>
             <div>
                 <pre><code class="language-shell">Computer Starts
                          |
                          v
               +---------------------+
-              |     BIOS/UEFI       |
-              | (Basic Input/Output |
-              |   System/Unified    |
-              | Extensible Firmware |
-              |     Interface)      |
+              |     BIOS / UEFI     |
               +---------------------+
                          |
-                         | Reads MBR
+                (if BIOS) Reads MBR
                          v
               +---------------------+
-              |                     |
               |   Master Boot       |
               |       Record        |
-              |                     |
               +---------------------+
                          |
-+------------------------+-----------------------+
-|                        |                       |
-|   Boot Loader Info     |   Partition Table     |
-|     (loads second      |  (organizes disk into |
-|     stage boot loader) |    partitions)        |
-|                        |                       |
-+------------------------+-----------------------+
+      +------------------+------------------+
+      |  First-Stage     |  Partition Table |
+      |   Loader (446B)  |   (4 entries)    |
+      +------------------+------------------+
                          |
-                         | MBR Validation Check
+                0x55AA Signature Check
                          v
               +---------------------+
-              |     Second Stage    |
-              |      Boot Loader    |
-              |   (e.g., GRUB, LILO)|
+              |  Second-Stage Boot  |
+              |      Loader         |
               +---------------------+</code></pre>
             </div>
             </p>
-            <h2 id="3-second-stage-boot-loader">3. Second-Stage Boot Loader</h2>
-            <p>This stage takes over after the first stage. One of the most common second-stage boot loaders is GRUB (Grand Unified Bootloader). GRUB allows users to choose which kernel image should be executed and displays a splash screen.</p>
-            <p>In addition, GRUB understands file system layouts and can load modules, such as those for USB or graphics card support, into the kernel. The newer version of GRUB is GRUB2.</p>
+            <h3 id="second-stage-boot-loader">Second-Stage Boot Loader</h3>
+            <p>The full-featured second stage (or, on UEFI, the firmware boot manager itself) understands filesystems and can present a menu.</p>
+            <p><strong>GRUB Legacy vs GRUB 2</strong></p>
             <p>
             <table>
                 <tr>
                     <td></td>
-                    <td>GRUB</td>
-                    <td>GRUB2</td>
+                    <td><strong>GRUB Legacy</strong></td>
+                    <td><strong>GRUB 2</strong></td>
                 </tr>
                 <tr>
-                    <td><strong>Version</strong></td>
-                    <td>Legacy</td>
-                    <td>Newer Version</td>
+                    <td>Main files</td>
+                    <td><code>stage1</code>, <code>stage2</code>, <code>menu.lst</code>, <code>grub.conf</code></td>
+                    <td><code>/boot/grub/grub.cfg</code> <em>(generated)</em></td>
                 </tr>
                 <tr>
-                    <td><strong>Configuration Files</strong></td>
-                    <td>menu.lst, grub.conf</td>
-                    <td>/boot/grub/grub.cfg</td>
+                    <td>Editing config</td>
+                    <td>Manual edit</td>
+                    <td>Edit <code>/etc/default/grub</code> + <code>grub-mkconfig</code></td>
                 </tr>
                 <tr>
-                    <td><strong>Ease of Modification</strong></td>
-                    <td>More Difficult</td>
-                    <td>Customize with /etc/default/grub</td>
+                    <td>Filesystem support</td>
+                    <td>ext2/3, iso9660 (limited)</td>
+                    <td>ext2-4, btrfs, xfs, ZFS, LVM, LUKS…</td>
                 </tr>
                 <tr>
-                    <td><strong>Live Boot Environments</strong></td>
-                    <td>No Support</td>
-                    <td>Can Boot from ISO or USB</td>
+                    <td>ISO/USB live boot</td>
+                    <td>No (patches existed)</td>
+                    <td>Native <code>loopback</code> / <code>search --file</code></td>
                 </tr>
                 <tr>
-                    <td><strong>Boot Menu Display</strong></td>
-                    <td>Usually Displays on Boot</td>
-                    <td>Hidden Boot Menu (Hold down SHIFT during boot)</td>
+                    <td>Menu visibility</td>
+                    <td>Always shown</td>
+                    <td>Hidden unless <strong>Esc/Shift</strong> pressed (configurable)</td>
                 </tr>
             </table>
             </p>
-            <p>
-            <div>
-                <pre><code class="language-shell">+-------------------+                  +-------------------+
-|                   |                  |                   |
-|    MBR / EFI      |                  |   Configuration   |
-| (Boot Instructions|-----------------&gt;|      Files        |
-|     from BIOS)    |   Input Stage    |  (e.g., grub.cfg) |
-|                   |                  |                   |
-+-------------------+                  +-------------------+
-                           |
-                           |
-                           v
-              +-------------------------------+
-              |        Boot Loader            |
-              |-------------------------------|
-              | Initializes and Checks Config |
-              | Identifies OS Options         |
-              | Displays Menu (if multi-boot) |
-              | Loads Selected OS Kernel      |
-              | Transfers Control to OS       |
-              +-------------------------------+
-                           |
-                           |
-                           v
-              +-------------------------------+
-              |          Operating            |
-              |           System              |
-              |   (Loaded and Ready to Run)   |
-              +-------------------------------+</code></pre>
-            </div>
-            </p>
-            <h3 id="4-kernel-initialization">4. Kernel Initialization</h3>
-            <p>After the bootloader has completed its tasks, the kernel is loaded and executed. The kernel plays a central role in managing the computer's resources, and is essentially the heart of the operating system. In a Linux system, the kernel is highly modular and efficient, adding to its flexibility and performance.</p>
-            <p><strong>Kernel Tasks</strong></p>
+            <p>Other popular loaders include <strong>systemd-boot</strong> (formerly <code>gummiboot</code>), <strong>rEFInd</strong>, and <strong>LILO/Syslinux</strong> on legacy systems.</p>
+            <h3 id="kernel-initialization">Kernel Initialization</h3>
+            <p>Once the loader selects a kernel it usually loads:</p>
+            <ol>
+                <li><strong>Kernel image</strong> (<code>vmlinuz-*</code>)</li>
+                <li><strong>initramfs / initrd</strong> – a compressed cpio archive that holds early-boot userspace and drivers needed to find the real root filesystem.</li>
+            </ol>
+            <p>After decompression the kernel:</p>
             <ul>
-                <li><strong>Mounts the Root File System</strong>: The kernel mounts the root filesystem to gain access to the entire filesystem hierarchy.</li>
-                <li><strong>Executes Init Process</strong>: The kernel then executes the init process (<code>/sbin/init</code>), which is typically run as a daemon with Process ID (PID) 1.</li>
-                <li><strong>Loads Modules</strong>: The kernel has access to all modules loaded into it, such as those for USB support or graphics cards. These modules are not part of the static kernel and are usually placed at <code>/lib/modules/</code>.</li>
+                <li>Enables paging, sets up memory management and CPU scheduling.</li>
+                <li>Initializes built-in and <strong>modules</strong> (<code>/lib/modules/$(uname -r)/</code>) drivers.</li>
+                <li>Mounts the root filesystem specified by the loader or by <code>root=</code> kernel parameter.</li>
+                <li>Executes <strong>PID 1</strong>:</li>
+                <li><strong><code>/sbin/init</code></strong> on SysV-init systems</li>
+                <li><strong><code>/usr/lib/systemd/systemd</code></strong> on the vast majority of modern distributions</li>
+                <li>Alternatives such as <strong>OpenRC</strong>, <strong>runit</strong>, <strong>s6-rc</strong>, etc.</li>
             </ul>
-            <h3 id="5-init-process">5. Init Process</h3>
-            <p>The init process, short for 'initialization', is the first process that starts on a Linux system. Init runs as a daemon with PID 1, marking the commencement of the user-space system.</p>
-            <p><strong>Responsibilities of the Init Process</strong></p>
+            <h3 id="init-process">Init Process</h3>
+            <p><code>init</code> (or <code>systemd</code>) is the <em>root of the user-space process tree</em>.</p>
             <ul>
-                <li><strong>Determines the Runlevel</strong>: The init process selects the runlevel, which defines the state in which the system will operate.</li>
-                <li><strong>Loads Startup Programs</strong>: The init process reads the configuration file (<code>/etc/inittab</code>) to determine which programs should be loaded at startup.</li>
+                <li><strong>SysV-init</strong> consults <code>/etc/inittab</code> and launches scripts in <code>/etc/rc.d/rc*.d/</code>.</li>
+                <li><strong>systemd</strong> reads declarative <strong>unit files</strong> in <code>/usr/lib/systemd/</code> and <code>/etc/systemd/</code>.</li>
             </ul>
-            <h3 id="6-runlevel">6. Runlevel</h3>
-            <p>The runlevel is a system mode that defines the services and processes that the system should run. Each runlevel corresponds to a different state of the machine, from halted state to single-user mode, to full multi-user with GUI and networking. </p>
+            <h3 id="runlevels">Runlevels</h3>
+            <p>(Only relevant to SysV-init or distributions that still provide compatibility.)</p>
             <p>
             <table>
                 <tr>
                     <td>Runlevel</td>
-                    <td>Description</td>
+                    <td>Traditional Meaning (Red Hat / Debian)*</td>
                 </tr>
                 <tr>
                     <td>0</td>
-                    <td>Halt, shutting down the system</td>
+                    <td>Halt / power-off</td>
                 </tr>
                 <tr>
                     <td>1</td>
-                    <td>Single-user mode, usually for system maintenance</td>
+                    <td>Single-user (rescue)</td>
                 </tr>
                 <tr>
                     <td>2</td>
-                    <td>Multiuser, without NFS (network file system)</td>
+                    <td>Multi-user (Debian: full network; Red Hat: unused)</td>
                 </tr>
                 <tr>
                     <td>3</td>
-                    <td>Full multiuser mode, with networking</td>
+                    <td>Multi-user, networking, no GUI</td>
                 </tr>
                 <tr>
                     <td>4</td>
-                    <td>Unused</td>
+                    <td>Undefined / custom</td>
                 </tr>
                 <tr>
                     <td>5</td>
-                    <td>Multiuser mode with GUI</td>
+                    <td>Multi-user + graphical login</td>
                 </tr>
                 <tr>
                     <td>6</td>
-                    <td>Reboot, restarting the system</td>
+                    <td>Reboot</td>
                 </tr>
             </table>
             </p>
-            <p><strong>Interacting with Runlevels</strong></p>
-            <p>You can display the current runlevel using the <code>runlevel</code> command:</p>
+            <p>Runlevel semantics vary slightly across families. Use <code>runlevel</code> to query, <code>telinit &lt;N&gt;</code> to switch, and edit <code>/etc/inittab</code> to change the default (if SysV-init is in use).</p>
             <p>
             <div>
-                <pre><code class="language-bash">runlevel</code></pre>
+                <pre><code class="language-bash"># Show current and previous runlevel
+runlevel
+# Switch to runlevel 3
+sudo telinit 3</code></pre>
             </div>
             </p>
-            <p>To switch to a different runlevel, for example runlevel 3, use the telinit command:</p>
-            <p>CODE_BLOCK_PLACEHOLDER
-                To set a default runlevel, you need to edit the /etc/inittab file. For example, to set runlevel 3 as the default, find and replace the following line:</p>
-            <p>
-            <div>
-                <pre><code class="language-bash">telinit 3</code></pre>
-            </div>
-            </p>
-            <p>Remember to be cautious when editing this file, as incorrect settings can prevent your system from booting correctly.</p>
-            <h3 id="7-targets-systemd-">7. Targets (SystemD)</h3>
-            <p>In Linux distributions that utilize <code>SystemD</code>, the concept of <code>runlevels</code> has been replaced by <code>targets</code>. Targets represent different states that the system can be in, and each target is associated with a specific set of services and units that are started or stopped to reach that state. This allows for more flexibility and control over the system's operational mode.</p>
+            <h3 id="targets-systemd-">Targets (systemd)</h3>
+            <p><code>systemd</code> replaces runlevels with <strong>targets</strong>, which can aggregate any number of services (units).</p>
             <p>
             <table>
                 <tr>
                     <td>Target</td>
-                    <td>Equivalent Runlevel</td>
-                    <td>Description</td>
+                    <td>Approx. Runlevel</td>
+                    <td>Purpose</td>
                 </tr>
                 <tr>
                     <td><code>poweroff.target</code></td>
-                    <td>Runlevel 0</td>
-                    <td>Halt, shutting down the system</td>
+                    <td>0</td>
+                    <td>Power-off</td>
                 </tr>
                 <tr>
                     <td><code>rescue.target</code></td>
-                    <td>Runlevel 1</td>
-                    <td>Single-user mode, usually for system maintenance</td>
+                    <td>1</td>
+                    <td>Single-user (basic services)</td>
                 </tr>
                 <tr>
                     <td><code>emergency.target</code></td>
-                    <td>Special</td>
-                    <td>Similar to rescue.target, but mounts the minimum number of file systems read-only</td>
+                    <td>—</td>
+                    <td>Root shell, minimal mounts (stricter than rescue)</td>
                 </tr>
                 <tr>
                     <td><code>multi-user.target</code></td>
-                    <td>Runlevel 3</td>
-                    <td>Multiuser mode, without GUI</td>
+                    <td>2/3</td>
+                    <td>Text-mode multi-user</td>
                 </tr>
                 <tr>
                     <td><code>graphical.target</code></td>
-                    <td>Runlevel 5</td>
-                    <td>Multiuser mode with GUI</td>
+                    <td>5</td>
+                    <td>GUI login manager + multi-user</td>
                 </tr>
                 <tr>
                     <td><code>reboot.target</code></td>
-                    <td>Runlevel 6</td>
-                    <td>Reboot, restarting the system</td>
+                    <td>6</td>
+                    <td>Reboot</td>
                 </tr>
             </table>
             </p>
-            <p>If you are using a <code>SystemD</code>-based distribution, the following command will list the symbolic links between the old runlevel targets and the new SystemD targets:</p>
             <p>
             <div>
-                <pre><code class="language-bash">id:3:initdefault:</code></pre>
+                <pre><code class="language-bash"># Show active targets
+systemctl list-units --type=target --state=active
+# Switch to graphical target
+sudo systemctl isolate graphical.target
+# Query / set default target
+systemctl get-default
+sudo systemctl set-default multi-user.target</code></pre>
             </div>
             </p>
-            <p>This will produce output similar to the following, showing how each runlevel is mapped to a corresponding SystemD target:</p>
+            <p>Symbolic links keep backward compatibility:</p>
             <p>
             <div>
                 <pre><code class="language-bash">ls -l /usr/lib/systemd/system/runlevel*.target</code></pre>
             </div>
             </p>
-            <h3 id="interacting-with-systemd-targets">Interacting with SystemD Targets</h3>
-            <p>You can display the current active target with the following command:</p>
-            <p>
-            <div>
-                <pre><code class="language-bash">/usr/lib/systemd/system/runlevel0.target -&gt; poweroff.target
-/usr/lib/systemd/system/runlevel1.target -&gt; rescue.target
-/usr/lib/systemd/system/runlevel2.target -&gt; multi-user.target
-/usr/lib/systemd/system/runlevel3.target -&gt; multi-user.target
-/usr/lib/systemd/system/runlevel4.target -&gt; multi-user.target
-/usr/lib/systemd/system/runlevel5.target -&gt; graphical.target
-/usr/lib/systemd/system/runlevel6.target -&gt; reboot.target</code></pre>
-            </div>
-            </p>
-            <p>To change to a different target, use the systemctl isolate command. For example, to switch to multi-user.target, use:</p>
-            <p>
-            <div>
-                <pre><code class="language-bash">systemctl list-units --type target --state active</code></pre>
-            </div>
-            </p>
-            <p>You can display the default target (the target that the system boots into by default) with this command:</p>
-            <p>
-            <div>
-                <pre><code class="language-bash">systemctl isolate multi-user.target</code></pre>
-            </div>
-            </p>
-            <p>And you can set a new default target with the systemctl set-default command. For instance, to make multi-user.target the default, use:</p>
-            <p>
-            <div>
-                <pre><code class="language-bash">systemctl get-default</code></pre>
-            </div>
-            </p>
-            <p>Once the services and units associated with the chosen target have been started, the system is ready for use. At this point, the login prompt is displayed, marking the end of the boot process.</p>
-            <h2 id="understanding-kernel-panic">Understanding Kernel Panic</h2>
-            <p>A Kernel panic is a fatal error condition detected by the Linux kernel, triggering a state where the operating system cannot continue to function safely. It is equivalent to a system crash, and its causes are varied, ranging from hardware malfunctions and software bugs to potential security vulnerabilities. When a Kernel panic occurs, the system typically prints an error message, dumps the kernel memory for post-mortem debugging, and then either waits for a reboot or attempts an automatic reboot depending on the kernel settings.</p>
-            <p><strong>Potential Causes of Kernel Panic</strong></p>
+            <h3 id="kernel-panic">Kernel Panic</h3>
+            <p>A <strong>kernel panic</strong> is an unrecoverable fault detected by the kernel (NULL pointer dereference, unhandled IRQ, corrupted stack, etc.). When it occurs the kernel prints a <em>panic stack trace</em>, optionally dumps memory to disk (kdump / crashkernel), and halts or reboots according to <code>kernel.panic</code> sysctl.</p>
+            <p><strong>Common causes</strong></p>
             <ul>
-                <li><strong>Hardware Errors</strong>: Faulty or incompatible hardware, such as RAM or hard drive, can often lead to a kernel panic. A common cause is bad memory modules.</li>
-                <li><strong>Software Errors</strong>: Kernel panic can also be triggered by software errors, such as bugs in the kernel itself, or problematic device drivers.</li>
-                <li><strong>File System Corruption</strong>: Corrupted file systems can cause the kernel to panic, particularly if the damage affects critical system files.</li>
+                <li><strong>Hardware:</strong> defective RAM, overheating CPU, failing storage controller.</li>
+                <li><strong>Software:</strong> buggy kernel module, out-of-tree driver, mis-compiled custom kernel.</li>
+                <li><strong>Filesystem:</strong> unrecoverable journal corruption, I/O errors on root FS.</li>
             </ul>
-            <p><strong>Handling Kernel Panic</strong></p>
-            <ul>
-                <li><strong>Single User Mode</strong>: If the root cause of the kernel panic isn't immediately clear, booting the system in single-user mode can be helpful. This mode allows you to access the system with root privileges, enabling you to run diagnostic commands and check system logs that might hint at the source of the problem.</li>
-                <li><strong>Hardware Diagnostics</strong>: If the kernel panic is potentially caused by a hardware issue, diagnostic software can be used to test various hardware components. If a faulty component is identified, replacement or repair may be necessary.</li>
-                <li><strong>Live CD/USB</strong>: If the system cannot boot normally due to kernel panic, booting from a live CD or USB stick is a good option. This provides a way to access the file system and potentially fix the issue or at least recover valuable data.</li>
-                <li><strong>Rescue Mode/Bootable System Repair Tools</strong>: Some distributions offer rescue modes or bootable system repair tools to diagnose and fix issues causing kernel panics. These tools can be invaluable for identifying and rectifying system problems.</li>
-                <li><strong>Backup</strong>: Regularly backing up your system is always a good practice. In case of severe issues like kernel panic, a reliable backup can save significant time and effort, providing a fallback point to restore the system.</li>
-            </ul>
-            <h2 id="essential-system-management-commands">Essential System Management Commands</h2>
+            <p><strong>Recovery steps</strong></p>
+            <ol>
+                <li><strong>Single-user / rescue mode</strong> – add <code>single</code> or <code>systemd.unit=rescue.target</code> to the kernel command line.</li>
+                <li><strong>Examine logs</strong> – review last lines of <code>dmesg</code>, <code>/var/log/kern.log</code>, or crash dumps.</li>
+                <li><strong>Hardware tests</strong> – run <code>memtest86+</code>, manufacturer disk diagnostics, or swap suspected components.</li>
+                <li><strong>Live USB</strong> – chroot into the installation to reinstall kernels or roll back updates.</li>
+                <li><strong>Backups</strong> – maintain verified backups so that a full reinstall remains a quick option if necessary.</li>
+            </ol>
+            <h3 id="system-management-commands">System Management Commands</h3>
             <p>In Linux, several command-line utilities allow you to manage your system effectively. Here are some of the most commonly used commands.</p>
-            <h3 id="managing-the-hostname">Managing the Hostname</h3>
+            <h4 id="managing-the-hostname">Managing the Hostname</h4>
             <p>A hostname is a unique name that identifies a system within a network. It's essential for communication in a network environment as it differentiates one machine from another.</p>
             <p>Viewing the hostname: Use the <code>hostname</code> command to print the current hostname of the system:</p>
-            <p>
-            <div>
-                <pre><code class="language-bash">systemctl set-default multi-user.target</code></pre>
-            </div>
-            </p>
-            <p>Setting the hostname: In SystemD-based systems, you can change the hostname using the hostnamectl command. Alternatively, you can manually modify the /etc/hostname file.</p>
             <p>
             <div>
                 <pre><code class="language-bash">hostname</code></pre>
             </div>
             </p>
-            <h3 id="checking-system-uptime">Checking System Uptime</h3>
-            <p>The uptime command is used to check how long the system has been running without rebooting. It also displays the current time, number of logged-in users, and system load averages over the last 1, 5, and 15 minutes.</p>
+            <p>Setting the hostname: In SystemD-based systems, you can change the hostname using the hostnamectl command. Alternatively, you can manually modify the /etc/hostname file.</p>
             <p>
             <div>
                 <pre><code class="language-shell">bash
 hostnamectl set-hostname your_new_name</code></pre>
             </div>
             </p>
-            <h3 id="rebooting-the-system">Rebooting the System</h3>
-            <p>Immediate reboot: Use the reboot command or systemctl reboot to restart the system immediately.</p>
+            <h4 id="checking-system-uptime">Checking System Uptime</h4>
+            <p>The uptime command is used to check how long the system has been running without rebooting. It also displays the current time, number of logged-in users, and system load averages over the last 1, 5, and 15 minutes.</p>
             <p>
             <div>
                 <pre><code class="language-bash">uptime</code></pre>
             </div>
             </p>
-            <p>Scheduled reboot: To reboot at a specific time, use the shutdown command with the -r option followed by the time in minutes. For instance, to reboot in 5 minutes:</p>
+            <h4 id="rebooting-the-system">Rebooting the System</h4>
+            <p>Immediate reboot: Use the reboot command or systemctl reboot to restart the system immediately.</p>
             <p>
             <div>
                 <pre><code class="language-bash"># Using reboot
@@ -434,14 +448,14 @@ reboot
 systemctl reboot</code></pre>
             </div>
             </p>
-            <h3 id="shutting-down-the-system">Shutting Down the System</h3>
-            <p>Immediate shutdown: The system can be shut down immediately using the shutdown now command or systemctl poweroff.</p>
+            <p>Scheduled reboot: To reboot at a specific time, use the shutdown command with the -r option followed by the time in minutes. For instance, to reboot in 5 minutes:</p>
             <p>
             <div>
                 <pre><code class="language-bash">shutdown -r +5</code></pre>
             </div>
             </p>
-            <p>Scheduled shutdown: A shutdown can be scheduled at a specific time using the shutdown command with the -h option followed by the time in minutes. For example, to shut down the system in 30 minutes:</p>
+            <h4 id="shutting-down-the-system">Shutting Down the System</h4>
+            <p>Immediate shutdown: The system can be shut down immediately using the shutdown now command or systemctl poweroff.</p>
             <p>
             <div>
                 <pre><code class="language-bash"># Using shutdown
@@ -451,8 +465,14 @@ shutdown now
 systemctl poweroff</code></pre>
             </div>
             </p>
+            <p>Scheduled shutdown: A shutdown can be scheduled at a specific time using the shutdown command with the -h option followed by the time in minutes. For example, to shut down the system in 30 minutes:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">shutdown -h +30</code></pre>
+            </div>
+            </p>
             <p>Understanding and correctly using these commands can be incredibly beneficial when managing Linux-based systems. It allows users to maintain control over their systems, schedule tasks, and keep track of their system's status.</p>
-            <h2 id="recovering-the-root-password">Recovering the Root Password</h2>
+            <h3 id="recovering-the-root-password">Recovering the Root Password</h3>
             <p>If you forget the root password on your Linux system, you can recover it by following these steps. We will interrupt the boot process to gain access to a shell, then change the root password.</p>
             <ol>
                 <li>
@@ -473,7 +493,7 @@ systemctl poweroff</code></pre>
             </ol>
             <p>
             <div>
-                <pre><code class="language-bash">shutdown -h +30</code></pre>
+                <pre><code class="language-bash">mount -o remount,rw /sysroot</code></pre>
             </div>
             </p>
             <ol>
@@ -481,7 +501,7 @@ systemctl poweroff</code></pre>
             </ol>
             <p>
             <div>
-                <pre><code class="language-bash">mount -o remount,rw /sysroot</code></pre>
+                <pre><code class="language-bash">chroot /sysroot</code></pre>
             </div>
             </p>
             <ol>
@@ -494,7 +514,7 @@ systemctl poweroff</code></pre>
             </ol>
             <p>
             <div>
-                <pre><code class="language-bash">chroot /sysroot</code></pre>
+                <pre><code class="language-bash">touch /.autorelabel</code></pre>
             </div>
             </p>
             <ol>
@@ -516,37 +536,32 @@ systemctl poweroff</code></pre>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
-            <ol>
-                <li><a href="#1-bootup-process">1. Bootup Process</a>
-                    <ol>
-                        <li><a href="#1-1-power-on-self-test-post-">1.1 Power-On Self-Test (POST)</a></li>
-                        <li><a href="#1-2-boot-loader-execution">1.2 Boot Loader Execution</a></li>
-                    </ol>
-                </li>
-                <li><a href="#2-master-boot-record-mbr-">2. Master Boot Record (MBR)</a></li>
-                <li><a href="#3-second-stage-boot-loader">3. Second-Stage Boot Loader</a>
-                    <ol>
-                        <li><a href="#4-kernel-initialization">4. Kernel Initialization</a></li>
-                        <li><a href="#5-init-process">5. Init Process</a></li>
-                        <li><a href="#6-runlevel">6. Runlevel</a></li>
-                        <li><a href="#7-targets-systemd-">7. Targets (SystemD)</a></li>
-                        <li><a href="#interacting-with-systemd-targets">Interacting with SystemD Targets</a></li>
-                    </ol>
-                </li>
-                <li><a href="#understanding-kernel-panic">Understanding Kernel Panic</a></li>
-                <li><a href="#essential-system-management-commands">Essential System Management Commands</a>
-                    <ol>
-                        <li><a href="#managing-the-hostname">Managing the Hostname</a></li>
-                        <li><a href="#checking-system-uptime">Checking System Uptime</a></li>
-                        <li><a href="#rebooting-the-system">Rebooting the System</a></li>
-                        <li><a href="#shutting-down-the-system">Shutting Down the System</a></li>
-                    </ol>
-                </li>
-                <li><a href="#recovering-the-root-password">Recovering the Root Password</a>
-                    <ol>
-                        <li><a href="#challenges">Challenges</a></li>
-                    </ol>
-                </li>
+            <ol><a href="#system-startup-process">System Startup Process</a>
+                <ol>
+                    <li><a href="#bootup-process">Bootup Process</a>
+                        <ol>
+                            <li><a href="#power-on-self-test-post-">Power-On Self-Test (POST)</a></li>
+                            <li><a href="#boot-loader-execution">Boot Loader Execution</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#master-boot-record-mbr-">Master Boot Record (MBR)</a></li>
+                    <li><a href="#second-stage-boot-loader">Second-Stage Boot Loader</a></li>
+                    <li><a href="#kernel-initialization">Kernel Initialization</a></li>
+                    <li><a href="#init-process">Init Process</a></li>
+                    <li><a href="#runlevels">Runlevels</a></li>
+                    <li><a href="#targets-systemd-">Targets (systemd)</a></li>
+                    <li><a href="#kernel-panic">Kernel Panic</a></li>
+                    <li><a href="#system-management-commands">System Management Commands</a>
+                        <ol>
+                            <li><a href="#managing-the-hostname">Managing the Hostname</a></li>
+                            <li><a href="#checking-system-uptime">Checking System Uptime</a></li>
+                            <li><a href="#rebooting-the-system">Rebooting the System</a></li>
+                            <li><a href="#shutting-down-the-system">Shutting Down the System</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#recovering-the-root-password">Recovering the Root Password</a></li>
+                    <li><a href="#challenges">Challenges</a></li>
+                </ol>
             </ol>
             <div id="related-articles">
                 <h2>Related Articles</h2>

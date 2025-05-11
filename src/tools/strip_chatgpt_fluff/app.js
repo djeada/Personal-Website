@@ -407,6 +407,8 @@ document.addEventListener("DOMContentLoaded", function() {
         editorText.value = newLines.join("\n");
     }
 
+    // TODO:
+    // - add remove ,\
     function correctLatex() {
         if (!latexCorrectionCheckbox.checked) return;
         saveState();
