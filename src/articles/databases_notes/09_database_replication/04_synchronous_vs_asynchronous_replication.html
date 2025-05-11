@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Synchronous and Asynchronous Replication</title>
-    <meta content="Replication is a vital concept in database systems, involving the copying of data from one database server, known as the primary, to one or more other servers called replicas." name="description" />
+    <meta content="Replication is an important concept in database systems, involving the copying of data from one database server, known as the primary, to one or more other servers called replicas." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -67,15 +67,15 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: July 16, 2019</i></p>
+            <p style="text-align: right;"><i>Last modified: May 11, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="synchronous-and-asynchronous-replication">Synchronous and Asynchronous Replication</h2>
-            <p>Replication is a vital concept in database systems, involving the copying of data from one database server, known as the primary, to one or more other servers called replicas. This process enhances data availability, fault tolerance, and load balancing across the system. Understanding the two main replication strategies—synchronous and asynchronous replication—is crucial for designing robust and efficient database architectures.</p>
-            <h3 id="understanding-replication-strategies">Understanding Replication Strategies</h3>
+            <p>Replication is an important concept in database systems, involving the copying of data from one database server, known as the primary, to one or more other servers called replicas. This process enhances data availability, fault tolerance, and load balancing across the system. Understanding the two main replication strategies—synchronous and asynchronous replication—is crucial for designing robust and efficient database architectures.</p>
+            <h3 id="replication-strategies">Replication Strategies</h3>
             <p>At its core, replication ensures that data is consistently available across multiple servers. The key difference between synchronous and asynchronous replication lies in how and when data changes are propagated from the primary server to the replicas.</p>
             <h4 id="synchronous-replication">Synchronous Replication</h4>
             <p>In synchronous replication, every write operation on the primary database is immediately propagated to the replicas. The primary server waits for acknowledgments from all replicas before confirming the transaction to the client. This means that data is consistent across all servers at any given moment.</p>
-            <p><strong>How Synchronous Replication Works:</strong></p>
+            <p><strong>How it works:</strong></p>
             <ol>
                 <li>A client sends a write request to the primary server.</li>
                 <li>The primary server writes the data and sends the changes to all replicas.</li>
@@ -84,46 +84,51 @@
             </ol>
             <p>
             <div>
-                <pre><code class="language-shell">Client Write Request
-          |
-          v
+                <pre><code class="language-shell">Client
+  |
+  | (1) Write Request
+  v
 +--------------------+
 |   Primary Server   |
 +---------+----------+
           |
-Sends Data to Replicas
-          |
+          | (2) Send Data to Replicas
           v
 +---------+----------+       +---------+----------+
 |    Replica 1       |       |    Replica 2       |
-+--------------------+       +--------------------+
-          ^                            ^
-          |                            |
-Acknowledgment from Replica 1          |
-          |                            |
-          +----------------------------+
-                       |
-Acknowledgment from Replica 2
-                       |
-                       v
-Transaction Confirmed to Client</code></pre>
++---------+----------+       +---------+----------+
+          | (3) Ack                    | (3) Ack
+          +-----------+----------------+
+                      |
+             (4) Confirm Transaction
+                      |
+                      v
+        Transaction Confirmed to Client</code></pre>
             </div>
             </p>
-            <p><strong>Advantages of Synchronous Replication:</strong></p>
-            <ul>
-                <li>Ensures strong data consistency across all servers.</li>
-                <li>Minimizes the risk of data loss since data is committed on all servers before confirmation.</li>
-                <li>Simplifies failover processes because replicas are always up-to-date.</li>
-            </ul>
-            <p><strong>Disadvantages of Synchronous Replication:</strong></p>
-            <ul>
-                <li>Increases latency because the primary server waits for acknowledgments from replicas.</li>
-                <li>May impact performance, especially in environments with high network latency.</li>
-                <li>Scalability can be limited due to the overhead of maintaining synchronization.</li>
-            </ul>
+            <p>
+            <table>
+                <tr>
+                    <td><strong>Advantages</strong></td>
+                    <td><strong>Disadvantages</strong></td>
+                </tr>
+                <tr>
+                    <td>Ensures strong data consistency across all servers</td>
+                    <td>Increases latency because the primary server waits for acknowledgments from replicas</td>
+                </tr>
+                <tr>
+                    <td>Minimizes the risk of data loss since data is committed on all servers before confirmation</td>
+                    <td>May impact performance, especially in environments with high network latency</td>
+                </tr>
+                <tr>
+                    <td>Simplifies failover processes because replicas are always up-to-date</td>
+                    <td>Scalability can be limited due to the overhead of maintaining synchronization</td>
+                </tr>
+            </table>
+            </p>
             <h4 id="asynchronous-replication">Asynchronous Replication</h4>
             <p>Asynchronous replication allows the primary server to confirm transactions without waiting for replicas to acknowledge the data writes. Data changes are sent to replicas after the transaction has been committed on the primary server, which means there may be a delay before replicas are updated.</p>
-            <p><strong>How Asynchronous Replication Works:</strong></p>
+            <p><strong>How it works:</strong></p>
             <ol>
                 <li>A client sends a write request to the primary server.</li>
                 <li>The primary server writes the data and immediately confirms the transaction to the client.</li>
@@ -132,53 +137,100 @@ Transaction Confirmed to Client</code></pre>
             </ol>
             <p>
             <div>
-                <pre><code class="language-shell">Client Write Request
-          |
-          v
+                <pre><code class="language-shell">Client
+  |
+  | (1) Write Request
+  v
 +--------------------+
 |   Primary Server   |
 +---------+----------+
+          | (2) Immediate ACK to Client
           |
-Transaction Confirmed to Client
-          |
-          v
-Data Changes Queued for Replication
-          |
+          | (3) Send Data to Replicas
           v
 +---------+----------+       +---------+----------+
 |    Replica 1       |       |    Replica 2       |
-+--------------------+       +--------------------+</code></pre>
++---------+----------+       +---------+----------+
+          | (4) ACK                    | (4) ACK
+          +-----------+----------------+
+                      |
+             [Replication Complete]</code></pre>
             </div>
             </p>
-            <p><strong>Advantages of Asynchronous Replication:</strong></p>
-            <ul>
-                <li>Reduces latency since the primary server doesn't wait for replicas.</li>
-                <li>Improves performance and throughput on the primary server.</li>
-                <li>More scalable in environments with high network latency or geographically distributed replicas.</li>
-            </ul>
-            <p><strong>Disadvantages of Asynchronous Replication:</strong></p>
-            <ul>
-                <li>Potential for data inconsistency between the primary and replicas.</li>
-                <li>Risk of data loss if the primary server fails before replication occurs.</li>
-                <li>More complex failover procedures may be required to ensure data integrity.</li>
-            </ul>
+            <p>
+            <table>
+                <tr>
+                    <td><strong>Advantages</strong></td>
+                    <td><strong>Disadvantages</strong></td>
+                </tr>
+                <tr>
+                    <td>Reduces latency since the primary server doesn't wait for replicas</td>
+                    <td>Potential for data inconsistency between the primary and replicas</td>
+                </tr>
+                <tr>
+                    <td>Improves performance and throughput on the primary server</td>
+                    <td>Risk of data loss if the primary server fails before replication occurs</td>
+                </tr>
+                <tr>
+                    <td>More scalable in environments with high network latency or geographically distributed replicas</td>
+                    <td>More complex failover procedures may be required to ensure data integrity</td>
+                </tr>
+            </table>
+            </p>
             <h3 id="choosing-between-synchronous-and-asynchronous-replication">Choosing Between Synchronous and Asynchronous Replication</h3>
             <p>Selecting the appropriate replication strategy depends on the specific needs of your application and infrastructure.</p>
-            <p><strong>When to Use Synchronous Replication:</strong></p>
-            <ul>
-                <li>Applications requiring strong data consistency and minimal risk of data loss, such as financial systems.</li>
-                <li>Environments where network latency is low, allowing for acceptable transaction speeds.</li>
-                <li>Systems where immediate failover without data loss is critical.</li>
-            </ul>
-            <p><strong>When to Use Asynchronous Replication:</strong></p>
-            <ul>
-                <li>Applications where performance and low latency are prioritized over immediate consistency.</li>
-                <li>Systems distributed across wide geographic areas with higher network latency.</li>
-                <li>Scenarios where some delay in data propagation is acceptable, such as content distribution networks.</li>
-            </ul>
-            <h3 id="best-practices-for-implementing-replication">Best Practices for Implementing Replication</h3>
+            <p>
+            <table>
+                <tr>
+                    <td><strong>Category</strong></td>
+                    <td><strong>Synchronous Replication</strong></td>
+                    <td><strong>Asynchronous Replication</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Data Consistency</strong></td>
+                    <td>Strong—writes are confirmed only once all replicas have committed, ensuring identical data across nodes.</td>
+                    <td>Eventual—primary confirms writes immediately; replicas catch up afterward, so briefly divergent states are possible.</td>
+                </tr>
+                <tr>
+                    <td><strong>Latency Impact</strong></td>
+                    <td>Higher—each transaction waits for replica acknowledgments, adding round-trip delays.</td>
+                    <td>Lower—primary does not wait, so transactions complete as soon as local commit is done.</td>
+                </tr>
+                <tr>
+                    <td><strong>Throughput &amp; Performance</strong></td>
+                    <td>Moderate—overall throughput can suffer under high-load or high-latency conditions due to synchronization overhead.</td>
+                    <td>High—primary server can handle more transactions per second without waiting on replicas.</td>
+                </tr>
+                <tr>
+                    <td><strong>Scalability</strong></td>
+                    <td>Limited—scaling to many or geographically distant replicas exacerbates latency and coordination costs.</td>
+                    <td>Excellent—replicas can be added anywhere without significantly affecting primary performance.</td>
+                </tr>
+                <tr>
+                    <td><strong>Failover Complexity</strong></td>
+                    <td>Simple—since replicas are up-to-date, promoting one to primary is straightforward.</td>
+                    <td>Complex—need to detect and reconcile any unreplicated transactions; risk of data loss on failover.</td>
+                </tr>
+                <tr>
+                    <td><strong>Risk of Data Loss</strong></td>
+                    <td>Minimal—as long as a majority (or all, depending on quorum) of replicas acknowledge, data is safe.</td>
+                    <td>Present—writes acknowledged by primary may not yet exist on replicas if a sudden failure occurs.</td>
+                </tr>
+                <tr>
+                    <td><strong>Typical Use Cases</strong></td>
+                    <td>● Financial transaction systems<br />● Order-entry platforms<br />● Catalog updates requiring atomicity</td>
+                    <td>● Global content distribution<br />● Analytics or logging pipelines<br />● High-performance web applications where slight lag is acceptable</td>
+                </tr>
+                <tr>
+                    <td><strong>Best Network Conditions</strong></td>
+                    <td>Low-latency, high-bandwidth links (e.g., within the same data center or region).</td>
+                    <td>Variable or high-latency networks (e.g., cross-continent, multi-cloud or edge deployments).</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="best-practices">Best Practices</h3>
             <p>Implementing replication effectively requires careful planning and consideration of several factors.</p>
-            <p><strong>Understanding Application Requirements:</strong></p>
+            <p><strong>Application Requirements:</strong></p>
             <ul>
                 <li>Assess the criticality of data consistency versus performance needs.</li>
                 <li>Determine acceptable levels of latency and potential data loss.</li>
@@ -202,74 +254,19 @@ Data Changes Queued for Replication
                 <li>Implement transaction logging to assist with recovery if needed.</li>
                 <li>Periodically validate data consistency between the primary and replicas.</li>
             </ul>
-            <h3 id="example-implementing-replication-in-postgresql">Example: Implementing Replication in PostgreSQL</h3>
-            <p>Let's explore how to set up both synchronous and asynchronous replication in PostgreSQL.</p>
-            <h4 id="setting-up-synchronous-replication">Setting Up Synchronous Replication</h4>
-            <p><strong>On the Primary Server:</strong></p>
-            <p>Edit the <code>postgresql.conf</code> file to include:</p>
-            <p>
-            <div>
-                <pre><code class="language-conf">wal_level = replica
-synchronous_commit = on
-synchronous_standby_names = 'replica1'
-max_wal_senders = 3</code></pre>
-            </div>
-            </p>
-            <p><strong>On the Replica Server:</strong></p>
-            <p>Edit the <code>postgresql.conf</code> file:</p>
-            <p>
-            <div>
-                <pre><code class="language-conf">hot_standby = on</code></pre>
-            </div>
-            </p>
-            <p>Create a <code>standby.signal</code> file in the data directory to enable standby mode.</p>
-            <p><strong>Starting Replication:</strong></p>
-            <ol>
-                <li>Take a base backup of the primary server using <code>pg_basebackup</code>.</li>
-                <li>Restore the backup on the replica server.</li>
-                <li>Start the replica server; it will connect to the primary and begin synchronous replication.</li>
-            </ol>
-            <p><strong>Behavior:</strong></p>
-            <ul>
-                <li>The primary server waits for the replica to acknowledge transactions.</li>
-                <li>Ensures data consistency but may introduce latency.</li>
-            </ul>
-            <h4 id="setting-up-asynchronous-replication">Setting Up Asynchronous Replication</h4>
-            <p><strong>On the Primary Server:</strong></p>
-            <p>Edit the <code>postgresql.conf</code> file:</p>
-            <p>
-            <div>
-                <pre><code class="language-conf">wal_level = replica
-synchronous_commit = off
-max_wal_senders = 3</code></pre>
-            </div>
-            </p>
-            <p><strong>On the Replica Server:</strong></p>
-            <p>Same as for synchronous replication.</p>
-            <p><strong>Behavior:</strong></p>
-            <ul>
-                <li>The primary server does not wait for the replica.</li>
-                <li>Reduces latency but introduces potential for data inconsistency.</li>
-            </ul>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
             <ol><a href="#synchronous-and-asynchronous-replication">Synchronous and Asynchronous Replication</a>
                 <ol>
-                    <li><a href="#understanding-replication-strategies">Understanding Replication Strategies</a>
+                    <li><a href="#replication-strategies">Replication Strategies</a>
                         <ol>
                             <li><a href="#synchronous-replication">Synchronous Replication</a></li>
                             <li><a href="#asynchronous-replication">Asynchronous Replication</a></li>
                         </ol>
                     </li>
                     <li><a href="#choosing-between-synchronous-and-asynchronous-replication">Choosing Between Synchronous and Asynchronous Replication</a></li>
-                    <li><a href="#best-practices-for-implementing-replication">Best Practices for Implementing Replication</a></li>
-                    <li><a href="#example-implementing-replication-in-postgresql">Example: Implementing Replication in PostgreSQL</a>
-                        <ol>
-                            <li><a href="#setting-up-synchronous-replication">Setting Up Synchronous Replication</a></li>
-                            <li><a href="#setting-up-asynchronous-replication">Setting Up Asynchronous Replication</a></li>
-                        </ol>
-                    </li>
+                    <li><a href="#best-practices">Best Practices</a></li>
                 </ol>
             </ol>
             <div id="related-articles">

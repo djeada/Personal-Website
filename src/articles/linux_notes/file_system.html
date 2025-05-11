@@ -72,8 +72,6 @@
             <h2 id="files-and-filesystems">Files and Filesystems</h2>
             <p>In Unix, files and filesystems are important components of the operating system's structure. A file is a collection of data stored on disk, which can include anything from text documents and images to executable programs. Files are organized within directories in a hierarchical structure, allowing for efficient data management and retrieval.</p>
             <p>A filesystem, on the other hand, is a method and data structure that the operating system uses to manage files on a disk or partition. It provides a way to store, retrieve, and organize files, supporting features like file permissions, links, and metadata. Common Unix filesystems include <code>ext4</code>, <code>XFS</code>, and <code>Btrfs</code>, each offering different capabilities and optimizations.</p>
-            <p>TODO:
-                - Add plot comparing read and write speed of various file systems also how it scales with parallel</p>
             <h3 id="types-of-files-in-a-unix-filesystem">Types of Files in a UNIX Filesystem</h3>
             <p>Unix and Unix-like systems, including Linux, organize files in a hierarchical structure called a filesystem. Files can be classified based on their purpose, storage method, and visibility.</p>
             <h4 id="classification-based-on-purpose">Classification Based on Purpose</h4>
@@ -189,48 +187,76 @@
             <h3 id="blocks-superblocks-pages">Blocks, Superblocks &amp; Pages</h3>
             <p>Blocks, pages, and the superblock are concepts in storage and memory management. A <strong>block</strong> is the smallest unit of data on disk used by file systems, while a <strong>page</strong> is the smallest unit of memory used in RAM by the operating system. The <strong>superblock</strong> holds metadata about the file system, such as its size and structure. While blocks manage how files are stored, pages manage how memory is accessed, and the superblock helps the system organize everything.</p>
             <h4 id="block-the-atomic-on-disk-i-o-unit">Block — the Atomic On-Disk I/O Unit</h4>
-            <p>At the lowest level, a filesystem divides storage into fixed-size blocks. These blocks are the smallest units the disk and filesystem manage for both data and metadata.</p>
             <p>
             <div>
-                <pre><code class="language-shell">Offset 0                                                  Offset 4095
-┌──────────────────────────────────────────────────────────────┐ 4 KiB
-│                       DISK BLOCK #42                        │  ← fixed at mkfs (1 KiB-64 KiB)
-└──────────────────────────────────────────────────────────────┘</code></pre>
+                <pre><code class="language-shell">Entire Disk (logical view divided into 4 KiB blocks)
+┌────────────────────────────────────────────────────────────────────────┐
+│ Block 0 │ Block 1 │ … │ Block 41 │ Block 42 │ Block 43 │ … │ Block N-1 │
+└────────────────────────────────────────────────────────────────────────┘
+                   ↑
+                   │
+            Single 4 KiB Block
+Offset 0     ┌───────────────────────────────────┐  Offset 4095
+             │          DISK BLOCK #42           │
+             └───────────────────────────────────┘</code></pre>
             </div>
             </p>
             <ul>
-                <li><strong>Fixed size</strong> chosen at <code>mkfs</code> (ext4 default = 4 KiB; must evenly divide the page size for DMA efficiency).</li>
-                <li>Every metadata/data region — bitmaps, inode tables, journal logs — is rounded to full blocks.</li>
-                <li>The block device layer (bio) aggregates multiple adjacent blocks into a single I/O to match device optimal I/O size.</li>
+                <li><strong>Fixed size</strong> chosen at <code>mkfs</code> (e.g. ext4 default = 4 KiB).</li>
+                <li>All filesystem metadata/data (bitmaps, inodes, journals) is laid out in whole blocks.</li>
+                <li>The block device layer (<code>bio</code>) can aggregate multiple blocks into one I/O.</li>
             </ul>
-            <h4 id="superblock-volume-header-lifeline">Superblock — Volume Header &amp; Lifeline</h4>
-            <p>The superblock is the filesystem’s master record, storing global metadata and pointers to substructures. Redundancy ensures recovery if one copy becomes corrupted.</p>
+            <h4 id="superblock-group-descriptor-table-block-groups">Superblock → Group Descriptor Table → Block Groups</h4>
             <p>
             <div>
-                <pre><code class="language-shell">LBA 0                                             LBA 8191  (4 KiB blocks shown)
-┌──────────────┬──────────────┬───────────────────╥───────────────────────────┐
-│ Boot sector  │  Padding     │ PRIMARY SUPERBLOCK║   Backup superblocks …    │
-└──────────────┴──────────────┴───────────────────╨───────────────────────────┘</code></pre>
+                <pre><code class="language-shell">Filesystem Layout (ext4, 4 KiB blocks)
+LBA 0           LBA 124      LBA 125                      LBA 126+  
+┌──────────┬─────────────┬────────────────────┬──────────────────────────┐
+│ Boot     │ Padding     │ Primary Superblock │ Group Descriptor Table   │
+│ Sector   │ (blocks)    │ (block 1024)       │ (blocks 1025…1025+GDT)   │
+└──────────┴─────────────┴────────────────────┴──────────────────────────┘
+                                  │
+                                  ▼
+              ┌───────────────────────────────────────────┐
+              │ GDT Entry #2 (for Block Group #2)         │
+              │  • start_block = 17,000                   │
+              │  • free_blocks, free_inodes, flags…       │
+              └───────────────────────────────────────────┘</code></pre>
             </div>
             </p>
             <ul>
-                <li><strong>Primary copy</strong> at block <code>0</code> (ext4 uses block <code>1024</code> for historical alignment).</li>
-                <li><strong>Redundant copies</strong> at the start of each block group protect against header corruption.</li>
-                <li>Fields: FS UUID, block &amp; cluster sizes, group descriptors start, compatible/incompatible feature flags, journal root, last mount time, etc.</li>
+                <li><strong>Superblock</strong> (at block 1024) holds global FS metadata plus a pointer (offset) to the start of the Group Descriptor Table (GDT).</li>
+                <li><strong>GDT</strong> is an array of one descriptor per block group; each descriptor records where that group begins, how many free blocks/inodes remain, etc.</li>
+                <li>When the kernel needs to read a block group’s metadata, it indexes into the GDT to find its on-disk location.</li>
             </ul>
-            <h4 id="block-group-layout-ext-2-">Block Group Layout (EXT ≥ 2)</h4>
-            <p>Filesystems organize blocks into groups to localize related metadata, inodes, and file data, improving performance and reducing seek times.</p>
+            <h4 id="block-group-layout-128-mib-4-kib-blocks-">Block Group Layout (≈128 MiB @ 4 KiB blocks)</h4>
             <p>
             <div>
-                <pre><code class="language-shell">BLOCK GROUP N  (≈128 MiB @ 4 KiB blocks)
-┌──────────────────┬───────────────┬──────────────────────┬─────────────────┐
-│ Inode Bitmap (1) │ Block Bitmap (1) │ Inode Table (Nx) │  Data Blocks   │
-└──────────────────┴───────────────┴──────────────────────┴─────────────────┘</code></pre>
+                <pre><code class="language-shell">Descriptor #2
+    ↓
+Block Group #2 Start
+┌───────────────────────────────────────────────────────────────────┐
+│ Inode Bitmap    [1 block]                                         │
+├───────────────────────────────────────────────────────────────────┤
+│ Block Bitmap    [1 block]                                         │
+├───────────────────────────────────────────────────────────────────┤
+│ Inode Table     [ (InodesPerGroup×InodeSize)/BlockSize blocks ]   │
+├───────────────────────────────────────────────────────────────────┤
+│ Data Blocks     [remaining blocks: actual file data]              │
+└───────────────────────────────────────────────────────────────────┘
+                         ↑
+                         │
+                    Block #42  ← lives here, inside this group’s Data Blocks</code></pre>
             </div>
             </p>
             <ul>
-                <li>Locality: The bitmaps + the inodes they describe + their data blocks live in the same neighborhood ⇒ fewer seeks on HDDs, hotter cache lines on SSD/NVMe.</li>
-                <li><strong>Group Descriptor Table</strong> (array in the superblock region) records the starting block + free-counts for each group.</li>
+                <li><strong>Inode &amp; Block Bitmaps</strong>: track which inodes/blocks are free or in use.</li>
+                <li><strong>Inode Table</strong>: fixed number of inodes allocated per group.</li>
+                <li><strong>Data Blocks</strong>: the lion’s share of the group, holding file contents and directory structures.</li>
+                <li>When you ask to read or write block 42, the filesystem:</li>
+                <li>Looks up block group via <code>42 / blocks_per_group</code> → group index.</li>
+                <li>Indexes into the GDT to get that group’s starting block.</li>
+                <li>Computes the offset within the group to reach block 42.</li>
             </ul>
             <h4 id="inode-extent-trees">Inode &amp; Extent Trees</h4>
             <p>Every file is represented by an inode, which points to extents—contiguous block runs—that efficiently map file data on disk.</p>
@@ -238,7 +264,7 @@
             <div>
                 <pre><code class="language-shell">INODE #132 (regular file)
 ┌──────────────────────────────────────────────────────────────┐
-│ mode, uid, size, mtime, …  |  EXTENT ROOT → depth = 1       │
+│ mode, uid, size, mtime, …  |  EXTENT ROOT → depth = 1        │
 └──────────────────────────────────────────────────────────────┘
                                │
                  ┌─────────────┴─────────────┐
@@ -273,11 +299,11 @@
             <p>
             <div>
                 <pre><code class="language-shell">RESERVED JOURNAL AREA
-┌─────────────────────────────────────────────────────────┐
-│  Descriptor → [block #42, block #99, …]                │
-│  Data payloads (shadow copies)                         │
-│  Commit block (checksum + tid)                         │
-└─────────────────────────────────────────────────────────┘</code></pre>
+┌────────────────────────────────────────────────────┐
+│  Descriptor → [block #42, block #99, …]            │
+│  Data payloads (shadow copies)                     │
+│  Commit block (checksum + tid)                     │
+└────────────────────────────────────────────────────┘</code></pre>
             </div>
             </p>
             <ul>
@@ -296,21 +322,21 @@
             <p>Once blocks are read from disk, they enter the unified page cache, serving both file I/O and memory mappings seamlessly.</p>
             <p>
             <div>
-                <pre><code class="language-shell">+---------------------------+
-                 |  FILE -&gt; mapping (address_space)      |
-                 +---------------------------+
-                              │
-              read(2)/mmap    │        writeback
-                              ▼
-                RAM phys addr 0x3f7e_0000
-            ┌──────────────────────────────┐ 4 KiB PAGE
-            │  page-&gt;mapping  -&gt; inode132  │───┐  state: Clean / Dirty
-            │  index = 2 (→ block #8202)   │   │
-            └──────────────────────────────┘   │
-                                               │ DMA/PIO
-                                   ┌───────────┴───────────────────┐
-                                   │        DISK BLOCK #8202       │
-                                   └───────────────────────────────┘</code></pre>
+                <pre><code class="language-shell">+----------------------------------+
+|  FILE -&gt; mapping (address_space) |
++----------------------------------+
+	        │
+read(2)/mmap    │        writeback
+	        ▼
+RAM phys addr 0x3f7e_0000
+┌──────────────────────────────┐ 4 KiB PAGE
+│  page-&gt;mapping  -&gt; inode132  │───┐  state: Clean / Dirty
+│  index = 2 (→ block #8202)   │   │
+└──────────────────────────────┘   │
+		                   │ DMA/PIO
+                       ┌───────────┴───────────────────┐
+	               │        DISK BLOCK #8202       │
+	               └───────────────────────────────┘</code></pre>
             </div>
             </p>
             <ul>
@@ -324,7 +350,7 @@
             <div>
                 <pre><code class="language-shell">USER SPACE write(2) / memcpy to mmap
             │                     flusher thread / sync(2)
-            ▼                                    │
+            ▼                                   │
    page-&gt;flags |= DIRTY                         │
             │                                   ▼
  ┌──────────┴────────────────┐       bio / blk-mq layer
@@ -621,6 +647,15 @@
                 <li>Concurrent operations, in which one process writes while another reads a file, may lead to inconsistent data access, and this situation exemplifies a potential <em>read-write conflict</em>.</li>
                 <li>When multiple processes perform write operations on the same file simultaneously without proper locking, the file may become corrupted, and this risk underscores the challenge of <em>simultaneous writing</em>.</li>
             </ul>
+            <p>Below is what the current public benchmark record shows when you compare today’s Linux files-systems on a single NVMe SSD or SATA SSD with their default mount options and no exotic tuning.</p>
+            <p><img alt="Filesystem scaling plot" src="https://github.com/user-attachments/assets/b2f741ab-c217-4b48-a2e1-72ca51fe4a00" /></p>
+            <ul>
+                <li><strong>EXT4 edges out XFS with a single thread</strong>, but</li>
+                <li><strong>XFS scales hardest</strong> once you pass ≈2 parallel writers/readers thanks to its per-allocation-group design — by eight workers it’s \~25 % faster than EXT4.</li>
+                <li><strong>F2FS slots in between</strong>: flash-optimised and quick at low-to-mid thread counts, but it can’t quite keep up with XFS’s metadata parallelism at the top end.</li>
+                <li><strong>ZFS and Btrfs trail</strong> because CoW, checksums and copy-on-write write-amplification cost throughput, especially as queue depth rises.</li>
+                <li><strong>With default settings on a single drive, EXT4 is measurably faster than both Btrfs and ZFS</strong>, and the public data going back years backs that up. But the moment you start using the advanced features that motivated those filesystems in the first place, their performance story changes—and sometimes surpasses EXT4 in the process.</li>
+            </ul>
             <p><strong>File Limits:</strong></p>
             <ul>
                 <li>The FAT32 file system supports up to <em>268,173,300 files per volume</em>, which outlines its capacity constraints for file storage.</li>
@@ -732,7 +767,7 @@ nodev   bdev
             </ul>
             <h4 id="ensuring-file-system-support">Ensuring File System Support</h4>
             <p>Before creating a new file system, ensure that your system has the necessary support for it. This involves checking for kernel module support, installing the required utilities, and verifying that your system is compatible with the file system you intend to use.</p>
-            <p><strong>1. Check Kernel Support</strong></p>
+            <p>I. <strong>Check Kernel Support</strong></p>
             <p>To confirm that your kernel supports the desired file system, check if the module is loaded:</p>
             <p>
             <div>
@@ -740,7 +775,7 @@ nodev   bdev
             </div>
             </p>
             <p>If the output includes lines referencing <code>xfs</code>, it indicates that the XFS module is loaded. If no output appears, the module isn’t loaded and may need to be installed or enabled.</p>
-            <p><strong>2. Install File System Utilities</strong></p>
+            <p>II. <strong>Install File System Utilities</strong></p>
             <p>Once kernel support is confirmed, install any necessary tools. For example, to manage the XFS file system, you need the <code>xfsprogs</code> package:</p>
             <p>
             <div>
@@ -761,7 +796,7 @@ Setting up xfsprogs (5.4.0-1ubuntu2) ...</code></pre>
             </div>
             </p>
             <p>This output indicates that <code>xfsprogs</code> has been successfully installed, and you can now proceed with XFS-specific file system tasks.</p>
-            <p><strong>3. Verify Compatibility</strong></p>
+            <p><strong>Verify Compatibility</strong></p>
             <p>Ensure that your system’s kernel and hardware support the file system by checking the module information:</p>
             <p>
             <div>
@@ -772,7 +807,7 @@ Setting up xfsprogs (5.4.0-1ubuntu2) ...</code></pre>
             <p>This command provides details on the XFS module, including its dependencies, supported versions, and any required firmware. Reviewing this information confirms compatibility with your current setup.</p>
             <h4 id="identifying-the-device">Identifying the Device</h4>
             <p>Accurate identification of the target device is crucial to avoid modifying the wrong disk, which could result in data loss. These commands will help you list and inspect block devices.</p>
-            <p><strong>1. List All Block Devices</strong></p>
+            <p>I. <strong>List All Block Devices</strong></p>
             <p>To get an overview of all attached storage devices, use:</p>
             <p>
             <div>
@@ -790,7 +825,7 @@ sdb      8:16   0  200G  0 disk
             </div>
             </p>
             <p>The <code>lsblk</code> output lists all block devices and their partitions, along with their sizes and mount points. This lets you identify the device you intend to work with (e.g., <code>/dev/sdb</code>).</p>
-            <p><strong>2. Detailed Device Information</strong></p>
+            <p>II. <strong>Detailed Device Information</strong></p>
             <p>To gather further details about each device and its partitions, use <code>fdisk</code>:</p>
             <p>
             <div>
@@ -806,11 +841,11 @@ Units: sectors of 1 * 512 = 512 bytes
             </div>
             </p>
             <p>This output provides detailed information on each disk, including size, sector count, and partitioning scheme. Use this to confirm the correct device before making any modifications.</p>
-            <p><strong>3. Identify Unpartitioned Space</strong></p>
+            <p>III. <strong>Identify Unpartitioned Space</strong></p>
             <p>If your target device is new and unpartitioned, you’ll need to partition it first. Use <code>fdisk</code>, <code>gdisk</code>, or <code>parted</code> to create new partitions.</p>
             <h4 id="unmounting-the-device-if-applicable-">Unmounting the Device (if applicable)</h4>
             <p>Before modifying a device, it’s essential to ensure that it is not in use. Unmounting prevents accidental data corruption during the process.</p>
-            <p><strong>1. Check if the Device is Mounted</strong></p>
+            <p>I. <strong>Check if the Device is Mounted</strong></p>
             <p>Determine if the target device is currently mounted:</p>
             <p>
             <div>
@@ -824,7 +859,7 @@ Units: sectors of 1 * 512 = 512 bytes
             </div>
             </p>
             <p>If the output lists the device, it means it’s mounted. Note the mount point (e.g., <code>/mnt/data</code>) so you can unmount it in the next step.</p>
-            <p><strong>2. Unmount the Device</strong></p>
+            <p>II. <strong>Unmount the Device</strong></p>
             <p>Unmount the device before making any changes:</p>
             <p>
             <div>
@@ -833,7 +868,7 @@ Units: sectors of 1 * 512 = 512 bytes
             </p>
             <p>Expected Output:</p>
             <p>No output indicates the device was unmounted successfully.</p>
-            <p><strong>3. Handle Busy Devices</strong></p>
+            <p>III. <strong>Handle Busy Devices</strong></p>
             <p>If you encounter a “device is busy” error, identify processes using the device:</p>
             <p>
             <div>
@@ -851,9 +886,9 @@ bash     1234 user cwd    DIR   8,17    4096   2 /mnt/data</code></pre>
             <p>Terminate these processes or stop the services to release the device, allowing it to be unmounted.</p>
             <h4 id="creating-a-file-system">Creating a File System</h4>
             <p>Once the target device is unmounted, you can proceed with creating the new file system. The file system type you choose will depend on factors like performance, reliability, and feature support.</p>
-            <p><strong>1. Choose the File System Type</strong></p>
+            <p>I. <strong>Choose the File System Type</strong></p>
             <p>Select a file system type that meets your needs. For example, <code>ext4</code> is commonly used for general-purpose storage due to its balance of performance and features. Alternatively, you may choose <code>xfs</code> for large filesystems or high-performance needs.</p>
-            <p><strong>2. Create the File System</strong></p>
+            <p>II. <strong>Create the File System</strong></p>
             <p>To format the device with a specific file system type, use the appropriate <code>mkfs</code> command. For <code>ext4</code>, for instance:</p>
             <p>
             <div>
@@ -888,7 +923,7 @@ Writing superblocks and filesystem accounting information: done</code></pre>
             <p>No output means the label was applied successfully. You can verify the label by running <code>sudo e2label /dev/sdb1</code>.</p>
             <h4 id="changing-existing-file-systems">Changing Existing File Systems</h4>
             <p>Modifying existing file systems requires extra caution. Backup any essential data before proceeding to avoid data loss. Here are common operations:</p>
-            <p><strong>1. Resizing a File System</strong></p>
+            <p>I. <strong>Resizing a File System</strong></p>
             <p>To resize a file system, unmount it first:</p>
             <p>
             <div>
@@ -910,7 +945,7 @@ The filesystem on /dev/sdb1 is now 13107200 (4k) blocks long.</code></pre>
             </div>
             </p>
             <p>This output confirms the new size of the file system. Note that shrinking can cause data loss if the specified size is smaller than the amount of data stored on the partition.</p>
-            <p><strong>2. Converting File Systems</strong></p>
+            <p>II. <strong>Converting File Systems</strong></p>
             <p>Some file systems support in-place conversions. For example, converting <code>ext2</code> to <code>ext3</code> to enable journaling can be done as follows:</p>
             <p>
             <div>
@@ -971,7 +1006,7 @@ This filesystem will be automatically checked every 29 mounts or 180 days, which
             <p>The output shows disk usage information for <code>/dev/sdb1</code>, confirming it is mounted on <code>/mnt/mydata</code>. You’re now ready to use the new file system for storage or data operations.</p>
             <h4 id="additional-considerations">Additional Considerations</h4>
             <p>When working with file systems, automating mounting, ensuring file system health, and managing permissions are essential practices. Here’s how to handle these additional considerations.</p>
-            <p><strong>1. Automate Mounting at Boot</strong></p>
+            <p>I. <strong>Automate Mounting at Boot</strong></p>
             <p>To ensure your new file system is automatically mounted at system startup, add it to the <code>/etc/fstab</code> file.</p>
             <p>First, edit the file:</p>
             <p>
@@ -1007,7 +1042,7 @@ This filesystem will be automatically checked every 29 mounts or 180 days, which
             </div>
             </p>
             <p>This output provides the UUID for <code>/dev/sdb1</code>. Use this identifier in the <code>/etc/fstab</code> entry to avoid issues if device names change on reboot. After adding this to <code>/etc/fstab</code>, the system will automatically mount the file system at <code>/mnt/mydata</code> on startup.</p>
-            <p><strong>2. File System Maintenance</strong></p>
+            <p>II. <strong>File System Maintenance</strong></p>
             <p>Keeping your file system healthy and monitored is crucial for data integrity and performance.</p>
             <p><strong>Check for Errors:</strong></p>
             <p>Use <code>fsck</code> to check the file system for errors and repair any issues. </p>
@@ -1040,7 +1075,7 @@ e2fsck 1.45.5 (07-Jan-2020)
             </div>
             </p>
             <p>This output shows disk usage for all mounted file systems, including the newly created one. Use this information to ensure the file system has enough space for your needs.</p>
-            <p><strong>3. Permissions and Ownership</strong></p>
+            <p>III. <strong>Permissions and Ownership</strong></p>
             <p>To control who can access your mounted file system, set ownership and permissions.</p>
             <p>Change ownership to a specific user and group:</p>
             <p>
@@ -1048,7 +1083,6 @@ e2fsck 1.45.5 (07-Jan-2020)
                 <pre><code class="language-bash">sudo chown user:group /mnt/mydata</code></pre>
             </div>
             </p>
-            <p>Expected Output:</p>
             <p>No output means the command succeeded.</p>
             <p>Set permissions:</p>
             <p>
@@ -1056,10 +1090,9 @@ e2fsck 1.45.5 (07-Jan-2020)
                 <pre><code class="language-bash">sudo chmod 755 /mnt/mydata</code></pre>
             </div>
             </p>
-            <p>Expected Output:</p>
             <p>Again, no output indicates success.</p>
             <p>These commands set the ownership of <code>/mnt/mydata</code> to a specified <code>user</code> and <code>group</code>. The <code>chmod</code> command assigns permissions, where <code>755</code> means the owner has read, write, and execute permissions, while others have read and execute only.</p>
-            <p><strong>4. Security Considerations</strong></p>
+            <p>IV. <strong>Security Considerations</strong></p>
             <p>When storing sensitive data, consider additional security measures, such as encryption and access control.</p>
             <p><strong>Encryption:</strong></p>
             <p>Use LUKS (Linux Unified Key Setup) to encrypt the partition:</p>
@@ -1088,7 +1121,6 @@ Verify passphrase:</code></pre>
                 <pre><code class="language-bash">sudo setfacl -m u:username:r /mnt/mydata</code></pre>
             </div>
             </p>
-            <p>Expected Output:</p>
             <p>No output, indicating success.</p>
             <p>This command grants <code>username</code> read-only access to <code>/mnt/mydata</code>. Use <code>getfacl</code> to verify ACLs or to modify permissions for other users as needed.</p>
             <h3 id="challenges">Challenges</h3>
@@ -1121,8 +1153,8 @@ Verify passphrase:</code></pre>
                     <li><a href="#blocks-superblocks-pages">Blocks, Superblocks &amp; Pages</a>
                         <ol>
                             <li><a href="#block-the-atomic-on-disk-i-o-unit">Block — the Atomic On-Disk I/O Unit</a></li>
-                            <li><a href="#superblock-volume-header-lifeline">Superblock — Volume Header &amp; Lifeline</a></li>
-                            <li><a href="#block-group-layout-ext-2-">Block Group Layout (EXT ≥ 2)</a></li>
+                            <li><a href="#superblock-group-descriptor-table-block-groups">Superblock → Group Descriptor Table → Block Groups</a></li>
+                            <li><a href="#block-group-layout-128-mib-4-kib-blocks-">Block Group Layout (≈128 MiB @ 4 KiB blocks)</a></li>
                             <li><a href="#inode-extent-trees">Inode &amp; Extent Trees</a></li>
                             <li><a href="#directory-entries-dentry-blocks-">Directory Entries (dentry blocks)</a></li>
                             <li><a href="#journal-ordered-mode-">Journal (Ordered Mode)</a></li>
