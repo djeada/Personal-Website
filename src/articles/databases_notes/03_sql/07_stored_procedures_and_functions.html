@@ -5,7 +5,7 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>Stored Procedures and Functions in SQL</title>
+    <title>Stored Procedures and Functions</title>
     <meta content="In the realm of relational databases, stored procedures and functions are powerful tools that allow developers to encapsulate reusable pieces of SQL code." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
@@ -67,217 +67,466 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: May 06, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: May 11, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
-            <h2 id="stored-procedures-and-functions-in-sql">Stored Procedures and Functions in SQL</h2>
-            <p>In the realm of relational databases, stored procedures and functions are powerful tools that allow developers to encapsulate reusable pieces of SQL code. They enhance performance, promote code reusability, and encapsulate business logic within the database itself. By understanding how to create and use stored procedures and functions, you can write more efficient and maintainable database applications.</p>
+            <h2 id="stored-procedures-and-functions">Stored Procedures and Functions</h2>
+            <p>In the realm of relational databases, stored procedures and functions are powerful tools that allow developers to encapsulate reusable pieces of SQL code. They enhance performance by caching execution plans, promote code reusability, and keep business logic close to the data. By understanding how to create and use stored procedures and functions, you can write more efficient and maintainable database applications.</p>
             <h3 id="stored-procedures">Stored Procedures</h3>
-            <p>A <strong>stored procedure</strong> is a precompiled collection of SQL statements and optional control-of-flow statements, stored under a name and processed as a unit. They can accept input parameters, return output parameters, and even return a result set of records. Stored procedures are primarily used for performing repetitive tasks and complex operations that involve multiple SQL statements.</p>
-            <h4 id="advantages-of-stored-procedures">Advantages of Stored Procedures</h4>
+            <p>A <strong>stored procedure</strong> is a pre-compiled collection of one or more SQL statements (plus optional control-of-flow logic) saved in the database under a single name. Procedures can</p>
             <ul>
-                <li>Stored procedures often execute faster than dynamic SQL queries because they are precompiled and stored in the database, improving performance.</li>
-                <li>They promote code reusability by allowing multiple applications to call the same procedure, reducing redundancy in code.</li>
-                <li>Security is enhanced as permissions can be granted directly on stored procedures, limiting access to underlying tables and data.</li>
-                <li>Maintainability is improved since business logic is centralized within the database, simplifying updates and ensuring consistency across applications.</li>
+                <li>accept <strong>input</strong> parameters,</li>
+                <li>return <strong>output</strong> parameters (scalars),</li>
+                <li>and/or return <strong>result sets</strong> (tables).</li>
             </ul>
-            <h4 id="creating-a-stored-procedure">Creating a Stored Procedure</h4>
-            <p>To create a stored procedure, you use the <code>CREATE PROCEDURE</code> statement. The exact syntax may vary slightly depending on the database system, but the general structure is as follows:</p>
+            <p>They shine when you need to run the same multi-statement operation repeatedly or enforce consistent business rules.</p>
+            <h4 id="advantages-of-stored-procedures">Advantages of Stored Procedures</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Benefit</td>
+                    <td>Why it matters</td>
+                </tr>
+                <tr>
+                    <td>Performance</td>
+                    <td>Execution plan is compiled once and reused, reducing parsing/optimization overhead.</td>
+                </tr>
+                <tr>
+                    <td>Reusability</td>
+                    <td>One definition can be called from many places (apps, jobs, other procs).</td>
+                </tr>
+                <tr>
+                    <td>Security</td>
+                    <td>GRANT rights on the procedure even if callers have no direct rights on the tables it touches.</td>
+                </tr>
+                <tr>
+                    <td>Maintainability</td>
+                    <td>Fix or extend business logic in one spot without redeploying application code.</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="example-schema-seed-data">Example Schema &amp; Seed Data</h4>
+            <p>To make our examples concrete, we’ll first create a simple <code>Customers</code> table and insert a couple of rows. This seed data will serve as the foundation for demonstrating stored procedure operations.</p>
             <p>
             <div>
-                <pre><code class="language-sql">CREATE PROCEDURE procedure_name
-    @param1 data_type,
-    @param2 data_type OUTPUT,
-    ...
-AS
-BEGIN
-    -- SQL statements
-    -- You can include control-of-flow statements like IF, WHILE, etc.
-END;</code></pre>
+                <pre><code class="language-sql">-- Customers table used in the examples
+CREATE TABLE dbo.Customers
+(
+    CustomerID INT IDENTITY(1,1) PRIMARY KEY,
+    FirstName  VARCHAR(50) NOT NULL,
+    LastName   VARCHAR(50) NOT NULL,
+    Email      VARCHAR(100) UNIQUE,
+    Phone      VARCHAR(20) NULL
+);
+
+-- A couple of starter rows
+INSERT INTO dbo.Customers (FirstName, LastName, Email, Phone) VALUES
+('Alice', 'Smith', 'alice.smith@example.com', '555-0100'),
+('Bob',   'Brown', 'bob.brown@example.com',  '555-0110');</code></pre>
             </div>
             </p>
-            <p><strong>Example:</strong></p>
-            <p>Suppose we have a <code>Customers</code> table, and we want to create a stored procedure to insert a new customer.</p>
+            <p><em>Current contents before we add anything else:</em></p>
+            <p>
+            <table>
+                <tr>
+                    <td>CustomerID</td>
+                    <td>FirstName</td>
+                    <td>LastName</td>
+                    <td>Email</td>
+                    <td>Phone</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>Alice</td>
+                    <td>Smith</td>
+                    <td><a href="mailto:alice.smith@example.com">alice.smith@example.com</a></td>
+                    <td>555-0100</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Bob</td>
+                    <td>Brown</td>
+                    <td><a href="mailto:bob.brown@example.com">bob.brown@example.com</a></td>
+                    <td>555-0110</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="creating-a-stored-procedure">Creating a Stored Procedure</h4>
+            <p>Creating a stored procedure involves specifying its name, parameters, and the logic to execute. The example below defines a procedure to insert a new customer and return its generated primary key.</p>
             <p>
             <div>
-                <pre><code class="language-sql">CREATE PROCEDURE AddCustomer
-    @FirstName VARCHAR(50),
-    @LastName VARCHAR(50),
-    @Email VARCHAR(100),
-    @CustomerID INT OUTPUT
+                <pre><code class="language-sql">CREATE PROCEDURE dbo.AddCustomer
+    @FirstName  VARCHAR(50),
+    @LastName   VARCHAR(50),
+    @Email      VARCHAR(100),
+    @CustomerID INT OUTPUT      -- Returns the newly created PK
 AS
 BEGIN
-    INSERT INTO Customers (FirstName, LastName, Email)
+    SET NOCOUNT ON;
+
+    INSERT INTO dbo.Customers (FirstName, LastName, Email)
     VALUES (@FirstName, @LastName, @Email);
 
+    -- Return the identity generated in THIS scope
     SET @CustomerID = SCOPE_IDENTITY();
 END;</code></pre>
             </div>
             </p>
             <ul>
-                <li><code>AddCustomer</code> is the name of the stored procedure.</li>
-                <li>It accepts <code>@FirstName</code>, <code>@LastName</code>, and <code>@Email</code> as input parameters.</li>
-                <li><code>@CustomerID</code> is an output parameter that returns the ID of the newly inserted customer.</li>
-                <li><code>SCOPE_IDENTITY()</code> retrieves the last identity value inserted into an identity column in the same scope.</li>
+                <li><code>SET NOCOUNT ON;</code> keeps the “(1 row affected)” message from interfering with client libraries expecting a clean result set.</li>
+                <li><code>SCOPE_IDENTITY()</code> is safer than <code>@@IDENTITY</code> because it ignores inserts done by triggers further down the chain.</li>
             </ul>
-            <h4 id="calling-a-stored-procedure">Calling a Stored Procedure</h4>
-            <p>To execute a stored procedure, you use the <code>EXEC</code> or <code>EXECUTE</code> statement (in some systems, you can also use <code>CALL</code>).</p>
-            <p><strong>Example:</strong></p>
+            <h4 id="calling-the-stored-procedure">Calling the Stored Procedure</h4>
+            <p>Once created, you invoke a stored procedure using <code>EXEC</code> (or <code>EXECUTE</code>). You can pass input values and capture any output parameters. The example below adds “John Doe” to our <code>Customers</code> table and retrieves the new ID.</p>
             <p>
             <div>
-                <pre><code class="language-sql">DECLARE @NewCustomerID INT;
+                <pre><code class="language-sql">DECLARE @NewID INT;
 
-EXEC AddCustomer
-    @FirstName = 'John',
-    @LastName = 'Doe',
-    @Email = 'john.doe@example.com',
-    @CustomerID = @NewCustomerID OUTPUT;
+EXEC dbo.AddCustomer
+     @FirstName  = 'John',
+     @LastName   = 'Doe',
+     @Email      = 'john.doe@example.com',
+     @CustomerID = @NewID OUTPUT;
 
-SELECT @NewCustomerID AS 'New Customer ID';</code></pre>
+SELECT @NewID AS NewCustomerID;</code></pre>
             </div>
             </p>
-            <ul>
-                <li>We declare a variable <code>@NewCustomerID</code> to receive the output parameter.</li>
-                <li>We execute the <code>AddCustomer</code> procedure, passing in the values for the new customer.</li>
-                <li>We specify <code>@CustomerID = @NewCustomerID OUTPUT</code> to capture the output parameter.</li>
-                <li>Finally, we select the new customer ID to verify the insertion.</li>
-            </ul>
+            <p><em>Sample output:</em></p>
+            <p>
+            <table>
+                <tr>
+                    <td>NewCustomerID</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                </tr>
+            </table>
+            </p>
+            <p><em>Table contents afterwards:</em></p>
+            <p>
+            <table>
+                <tr>
+                    <td>CustomerID</td>
+                    <td>FirstName</td>
+                    <td>LastName</td>
+                    <td>Email</td>
+                    <td>Phone</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>Alice</td>
+                    <td>Smith</td>
+                    <td><a href="mailto:alice.smith@example.com">alice.smith@example.com</a></td>
+                    <td>555-0100</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Bob</td>
+                    <td>Brown</td>
+                    <td><a href="mailto:bob.brown@example.com">bob.brown@example.com</a></td>
+                    <td>555-0110</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>John</td>
+                    <td>Doe</td>
+                    <td><a href="mailto:john.doe@example.com">john.doe@example.com</a></td>
+                    <td><strong>NULL</strong></td>
+                </tr>
+            </table>
+            </p>
             <h4 id="modifying-a-stored-procedure">Modifying a Stored Procedure</h4>
-            <p>If you need to change the logic inside a stored procedure, you can use the <code>ALTER PROCEDURE</code> statement.</p>
-            <p><strong>Example:</strong></p>
+            <p>As requirements evolve, you can alter an existing procedure to accept new parameters or change logic without dropping and recreating it. Here we add a <code>Phone</code> parameter so the procedure can store customer phone numbers as well.</p>
             <p>
             <div>
-                <pre><code class="language-sql">ALTER PROCEDURE AddCustomer
-    @FirstName VARCHAR(50),
-    @LastName VARCHAR(50),
-    @Email VARCHAR(100),
-    @Phone VARCHAR(20),          -- Added new parameter
+                <pre><code class="language-sql">ALTER PROCEDURE dbo.AddCustomer
+    @FirstName  VARCHAR(50),
+    @LastName   VARCHAR(50),
+    @Email      VARCHAR(100),
+    @Phone      VARCHAR(20),     -- NEW parameter
     @CustomerID INT OUTPUT
 AS
 BEGIN
-    INSERT INTO Customers (FirstName, LastName, Email, Phone)
+    SET NOCOUNT ON;
+
+    INSERT INTO dbo.Customers (FirstName, LastName, Email, Phone)
     VALUES (@FirstName, @LastName, @Email, @Phone);
 
     SET @CustomerID = SCOPE_IDENTITY();
 END;</code></pre>
             </div>
             </p>
-            <ul>
-                <li>We've added a new input parameter <code>@Phone</code>.</li>
-                <li>The <code>INSERT</code> statement now includes the <code>Phone</code> column.</li>
-            </ul>
-            <h4 id="deleting-a-stored-procedure">Deleting a Stored Procedure</h4>
-            <p>To remove a stored procedure from the database, you use the <code>DROP PROCEDURE</code> statement.</p>
-            <p><strong>Example:</strong></p>
+            <p><em>New call using the updated procedure:</em></p>
             <p>
             <div>
-                <pre><code class="language-sql">DROP PROCEDURE AddCustomer;</code></pre>
+                <pre><code class="language-sql">DECLARE @NewID INT;
+
+EXEC dbo.AddCustomer
+     @FirstName  = 'Carla',
+     @LastName   = 'Mendez',
+     @Email      = 'carla.mendez@example.com',
+     @Phone      = '555-0122',
+     @CustomerID = @NewID OUTPUT;
+
+SELECT @NewID AS NewCustomerID;</code></pre>
             </div>
             </p>
-            <p><strong>Caution:</strong> Dropping a stored procedure is irreversible, and any applications relying on it will fail unless the procedure is recreated.</p>
-            <h3 id="functions">Functions</h3>
-            <p>A <strong>function</strong> in SQL is a database object that encapsulates a set of SQL statements and returns a single value. Functions can be used in SQL statements wherever expressions are allowed, such as in <code>SELECT</code>, <code>WHERE</code>, or <code>HAVING</code> clauses. They are primarily used for computations and data retrieval.</p>
-            <h4 id="types-of-functions">Types of Functions</h4>
-            <ul>
-                <li><strong>Scalar functions</strong> return a single value, often used for tasks such as calculating tax or formatting dates.</li>
-                <li><strong>Table-valued</strong> functions return a table data type, allowing them to be used in <code>FROM</code> clauses as though they were tables.</li>
-            </ul>
-            <h4 id="advantages-of-functions">Advantages of Functions</h4>
-            <ul>
-                <li>Functions can be reused across multiple queries, which helps minimize code duplication and promotes consistency.</li>
-                <li>Complex calculations or logic can be encapsulated within functions, enhancing modularity and simplifying query design.</li>
-                <li>Functions can simplify queries by abstracting repetitive logic and, in certain scenarios, may improve performance by reducing redundant computation.</li>
-            </ul>
-            <h4 id="creating-a-scalar-function">Creating a Scalar Function</h4>
-            <p>To create a function, use the <code>CREATE FUNCTION</code> statement.</p>
-            <p><strong>Example:</strong></p>
-            <p>Suppose we need a function to calculate the sales tax for a given amount.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>NewCustomerID</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                </tr>
+            </table>
+            </p>
+            <p>
+            <table>
+                <tr>
+                    <td>CustomerID</td>
+                    <td>FirstName</td>
+                    <td>LastName</td>
+                    <td>Email</td>
+                    <td>Phone</td>
+                </tr>
+                <tr>
+                    <td>…</td>
+                    <td>…</td>
+                    <td>…</td>
+                    <td>…</td>
+                    <td>…</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>Carla</td>
+                    <td>Mendez</td>
+                    <td><a href="mailto:carla.mendez@example.com">carla.mendez@example.com</a></td>
+                    <td>555-0122</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="deleting-a-stored-procedure">Deleting a Stored Procedure</h4>
+            <p>If a stored procedure is no longer needed or must be replaced entirely, you can drop it from the database. Be cautious—dependent code will break until it’s recreated.</p>
             <p>
             <div>
-                <pre><code class="language-sql">CREATE FUNCTION CalculateTax
+                <pre><code class="language-sql">DROP PROCEDURE dbo.AddCustomer;</code></pre>
+            </div>
+            </p>
+            <blockquote>
+                <p><strong>Irreversible:</strong> once dropped, dependent code will fail until the procedure is recreated.</p>
+            </blockquote>
+            <h3 id="functions">Functions</h3>
+            <p>Functions in SQL Server let you encapsulate reusable logic that computes and returns a value or a table. Unlike stored procedures, functions can be embedded directly within queries—such as in <code>SELECT</code>, <code>WHERE</code>, or <code>JOIN</code> clauses—making them highly composable. They’re ideal for encapsulating calculations, formatting routines, or filtering logic that you want to reuse across multiple queries or views.</p>
+            <p>A <strong>function</strong> encapsulates logic that returns <strong>exactly one</strong> scalar value or a <strong>table</strong>. Unlike procedures, functions can be used inline in <code>SELECT</code>, <code>WHERE</code>, or <code>JOIN</code> clauses. They cannot use side-effects such as <code>INSERT</code>/<code>UPDATE</code> (with the exception of special CLR or system functions).</p>
+            <h4 id="types-of-functions">Types of Functions</h4>
+            <p>SQL Server supports several function types, each suited to different scenarios. Scalar functions return a single value, while table-valued functions return result sets that you can query as if they were regular tables or views. Multi-statement TVFs allow more complex row-by-row processing but can incur more overhead.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Type</td>
+                    <td>Returns</td>
+                    <td>Typical use-case</td>
+                </tr>
+                <tr>
+                    <td>Scalar</td>
+                    <td>Single value</td>
+                    <td>Calculations, formatting, lookups</td>
+                </tr>
+                <tr>
+                    <td>Inline table-valued (iTVF)</td>
+                    <td>Table defined by one <code>SELECT</code></td>
+                    <td>Reusable filtered views</td>
+                </tr>
+                <tr>
+                    <td>Multi-statement TVF</td>
+                    <td>Table assembled through multiple steps</td>
+                    <td>Complex row-by-row transformations</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="advantages-of-functions">Advantages of Functions</h4>
+            <p>Functions promote modularity and code reuse by abstracting complex computations behind a simple call. Inline TVFs, in particular, can yield performance benefits because the optimizer can expand them directly into the calling query.</p>
+            <ul>
+                <li><strong>Reusability &amp; abstraction</strong> – one central definition of complex math or business rules.</li>
+                <li><strong>Composable</strong> – drop straight into any expression, <code>JOIN</code>, or view.</li>
+                <li><strong>Potential performance win</strong> – especially inline TVFs, which the optimizer can treat almost like a view.</li>
+            </ul>
+            <h4 id="example-schema-seed-data-for-functions">Example Schema &amp; Seed Data for Functions</h4>
+            <p>To illustrate functions, we’ll create a basic <code>Orders</code> table linked to our <code>Customers</code> table and populate it with sample orders. This provides a dataset for demonstrating both scalar and table-valued functions.</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">-- Orders table used in the examples
+CREATE TABLE dbo.Orders
 (
-    @Amount DECIMAL(10, 2),
-    @TaxRate DECIMAL(4, 2)
+    OrderID    INT IDENTITY(1,1) PRIMARY KEY,
+    CustomerID INT       NOT NULL FOREIGN KEY REFERENCES dbo.Customers(CustomerID),
+    OrderDate  DATE      NOT NULL,
+    Amount     DECIMAL(10,2) NOT NULL
+);
+
+INSERT INTO dbo.Orders (CustomerID, OrderDate, Amount) VALUES
+(1, '2025-05-01', 120.00),
+(1, '2025-05-03',  60.50),
+(3, '2025-05-04', 210.75);</code></pre>
+            </div>
+            </p>
+            <p>
+            <table>
+                <tr>
+                    <td>OrderID</td>
+                    <td>CustomerID</td>
+                    <td>OrderDate</td>
+                    <td>Amount</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>1</td>
+                    <td>2025-05-01</td>
+                    <td>120.00</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>1</td>
+                    <td>2025-05-03</td>
+                    <td>60.50</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>3</td>
+                    <td>2025-05-04</td>
+                    <td>210.75</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="creating-a-scalar-function">Creating a <strong>Scalar</strong> Function</h4>
+            <p>Scalar functions let you encapsulate formulae or lookups that return a single value. In the example below, we calculate sales tax based on an amount and tax rate.</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">CREATE FUNCTION dbo.CalculateTax
+(
+    @Amount   DECIMAL(10,2),
+    @TaxRate  DECIMAL(5,2)   -- e.g. 8.25 means 8.25 %
 )
-RETURNS DECIMAL(10, 2)
+RETURNS DECIMAL(10,2)
 AS
 BEGIN
-    DECLARE @TaxAmount DECIMAL(10, 2);
-    SET @TaxAmount = @Amount * (@TaxRate / 100);
-    RETURN @TaxAmount;
+    RETURN @Amount * (@TaxRate / 100);
 END;</code></pre>
             </div>
             </p>
-            <ul>
-                <li><code>CalculateTax</code> is the name of the function.</li>
-                <li>It accepts <code>@Amount</code> and <code>@TaxRate</code> as input parameters.</li>
-                <li>It returns a <code>DECIMAL(10, 2)</code> value representing the calculated tax.</li>
-                <li>The function calculates the tax amount and returns it.</li>
-            </ul>
-            <h4 id="using-the-function-in-a-query">Using the Function in a Query</h4>
-            <p>You can use the function in SQL statements as follows:</p>
+            <p><em>Usage – compute sales tax in a query:</em></p>
             <p>
             <div>
-                <pre><code class="language-sql">SELECT OrderID, Amount, dbo.CalculateTax(Amount, 8.25) AS TaxAmount
-FROM Orders;</code></pre>
+                <pre><code class="language-sql">SELECT
+    OrderID,
+    Amount,
+    dbo.CalculateTax(Amount, 8.25) AS TaxAmount
+FROM dbo.Orders;</code></pre>
             </div>
             </p>
-            <p>For each order, we calculate the tax amount using the <code>CalculateTax</code> function with a tax rate of 8.25%.</p>
-            <h4 id="creating-a-table-valued-function">Creating a Table-Valued Function</h4>
-            <p>Table-valued functions return a table data type.</p>
-            <p><strong>Example:</strong></p>
-            <p>Suppose we want a function that returns all orders for a given customer.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>OrderID</td>
+                    <td>Amount</td>
+                    <td>TaxAmount</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>120.00</td>
+                    <td>9.90</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>60.50</td>
+                    <td>4.99</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>210.75</td>
+                    <td>17.38</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="creating-an-inline-table-valued-function">Creating an <strong>Inline Table-Valued</strong> Function</h4>
+            <p>Inline TVFs are essentially parameterized views. You define a single <code>SELECT</code> that returns a result set. The optimizer can integrate this directly into your queries for efficient execution.</p>
             <p>
             <div>
-                <pre><code class="language-sql">CREATE FUNCTION GetCustomerOrders
-(
-    @CustomerID INT
-)
+                <pre><code class="language-sql">CREATE FUNCTION dbo.GetCustomerOrders (@CustomerID INT)
 RETURNS TABLE
 AS
 RETURN
 (
     SELECT OrderID, OrderDate, Amount
-    FROM Orders
-    WHERE CustomerID = @CustomerID
+    FROM   dbo.Orders
+    WHERE  CustomerID = @CustomerID
 );</code></pre>
             </div>
             </p>
-            <p><strong>Using the Table-Valued Function:</strong></p>
+            <p><em>Querying orders for customer #1:</em></p>
             <p>
             <div>
-                <pre><code class="language-sql">SELECT * FROM dbo.GetCustomerOrders(123);</code></pre>
+                <pre><code class="language-sql">SELECT *
+FROM dbo.GetCustomerOrders(1);</code></pre>
             </div>
             </p>
+            <p>
+            <table>
+                <tr>
+                    <td>OrderID</td>
+                    <td>OrderDate</td>
+                    <td>Amount</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>2025-05-01</td>
+                    <td>120.00</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>2025-05-03</td>
+                    <td>60.50</td>
+                </tr>
+            </table>
+            </p>
             <h4 id="modifying-a-function">Modifying a Function</h4>
-            <p>To change a function, use the <code>ALTER FUNCTION</code> statement.</p>
-            <p><strong>Example:</strong></p>
+            <p>When you need to extend or tweak logic, you can alter an existing function. For example, adding a discount parameter to our tax calculation function allows for more flexible scenarios.</p>
             <p>
             <div>
-                <pre><code class="language-sql">ALTER FUNCTION CalculateTax
+                <pre><code class="language-sql">ALTER FUNCTION dbo.CalculateTax
 (
-    @Amount DECIMAL(10, 2),
-    @TaxRate DECIMAL(4, 2),
-    @Discount DECIMAL(10, 2) = 0      -- Added optional parameter with default value
+    @Amount    DECIMAL(10,2),
+    @TaxRate   DECIMAL(5,2),
+    @Discount  DECIMAL(10,2) = 0  -- default 0
 )
-RETURNS DECIMAL(10, 2)
+RETURNS DECIMAL(10,2)
 AS
 BEGIN
-    DECLARE @TaxAmount DECIMAL(10, 2);
-    SET @TaxAmount = (@Amount - @Discount) * (@TaxRate / 100);
-    RETURN @TaxAmount;
+    RETURN (@Amount - @Discount) * (@TaxRate / 100);
 END;</code></pre>
             </div>
             </p>
-            <ul>
-                <li>Added an optional parameter <code>@Discount</code>.</li>
-                <li>The tax is now calculated on the discounted amount.</li>
-            </ul>
-            <h4 id="deleting-a-function">Deleting a Function</h4>
-            <p>To remove a function, use the <code>DROP FUNCTION</code> statement.</p>
-            <p><strong>Example:</strong></p>
+            <p><em>Test the new logic:</em></p>
             <p>
             <div>
-                <pre><code class="language-sql">DROP FUNCTION CalculateTax;</code></pre>
+                <pre><code class="language-sql">SELECT dbo.CalculateTax(100.00, 8.25, 10.00) AS TaxOnDiscounted100;</code></pre>
+            </div>
+            </p>
+            <p>
+            <table>
+                <tr>
+                    <td>TaxOnDiscounted100</td>
+                </tr>
+                <tr>
+                    <td>7.43</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="deleting-a-function">Deleting a Function</h4>
+            <p>If a function is obsolete or must be replaced entirely, you can remove it with <code>DROP</code>. As with stored procedures, any dependent code will break until the function is recreated.</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">DROP FUNCTION dbo.CalculateTax;</code></pre>
             </div>
             </p>
             <h4 id="differences-between-stored-procedures-and-functions">Differences Between Stored Procedures and Functions</h4>
@@ -286,23 +535,29 @@ END;</code></pre>
                 <li>Functions can be directly used within SQL expressions, such as in <code>SELECT</code> or <code>WHERE</code> clauses, while stored procedures must be invoked independently and cannot be part of an SQL expression.</li>
                 <li>Stored procedures can have side effects as they can modify the database state through operations like <code>INSERT</code>, <code>UPDATE</code>, or <code>DELETE</code>, whereas functions are typically designed to be deterministic and avoid modifying database state.</li>
             </ul>
-            <h4 id="best-practices-for-using-stored-procedures-and-functions">Best Practices for Using Stored Procedures and Functions</h4>
+            <h4 id="best-practices">Best Practices</h4>
             <ul>
                 <li>Ensure naming conventions are consistent and descriptive, often beginning with verbs like <code>Get</code>, <code>Add</code>, <code>Update</code>, or <code>Calculate</code>, to clarify their purpose.</li>
                 <li>Validate all input parameters within the procedure or function to prevent errors and ensure proper operation.</li>
                 <li>Include robust error handling by using <code>TRY...CATCH</code> blocks to gracefully handle and log exceptions during execution.</li>
                 <li>Assign appropriate permissions to procedures and functions to ensure secure access and protect sensitive data from unauthorized use.</li>
+                <li><strong>Name objects with schema prefixes</strong> (<code>dbo.AddCustomer</code>) to avoid ambiguity.</li>
+                <li><strong>Use <code>SET NOCOUNT ON;</code></strong> inside procs to reduce unnecessary network traffic.</li>
+                <li><strong>Favor inline TVFs</strong> over multi-statement TVFs when possible; they integrate more cleanly with the optimizer.</li>
+                <li><strong>Keep business rules in one place</strong> – either in your procedures/functions <em>or</em> in application code, but avoid duplicating logic.</li>
+                <li><strong>Version-control your DDL</strong> just like application code so changes are traceable and repeatable.</li>
             </ul>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
-            <ol><a href="#stored-procedures-and-functions-in-sql">Stored Procedures and Functions in SQL</a>
+            <ol><a href="#stored-procedures-and-functions">Stored Procedures and Functions</a>
                 <ol>
                     <li><a href="#stored-procedures">Stored Procedures</a>
                         <ol>
                             <li><a href="#advantages-of-stored-procedures">Advantages of Stored Procedures</a></li>
+                            <li><a href="#example-schema-seed-data">Example Schema &amp; Seed Data</a></li>
                             <li><a href="#creating-a-stored-procedure">Creating a Stored Procedure</a></li>
-                            <li><a href="#calling-a-stored-procedure">Calling a Stored Procedure</a></li>
+                            <li><a href="#calling-the-stored-procedure">Calling the Stored Procedure</a></li>
                             <li><a href="#modifying-a-stored-procedure">Modifying a Stored Procedure</a></li>
                             <li><a href="#deleting-a-stored-procedure">Deleting a Stored Procedure</a></li>
                         </ol>
@@ -311,13 +566,13 @@ END;</code></pre>
                         <ol>
                             <li><a href="#types-of-functions">Types of Functions</a></li>
                             <li><a href="#advantages-of-functions">Advantages of Functions</a></li>
+                            <li><a href="#example-schema-seed-data-for-functions">Example Schema &amp; Seed Data for Functions</a></li>
                             <li><a href="#creating-a-scalar-function">Creating a Scalar Function</a></li>
-                            <li><a href="#using-the-function-in-a-query">Using the Function in a Query</a></li>
-                            <li><a href="#creating-a-table-valued-function">Creating a Table-Valued Function</a></li>
+                            <li><a href="#creating-an-inline-table-valued-function">Creating an Inline Table-Valued Function</a></li>
                             <li><a href="#modifying-a-function">Modifying a Function</a></li>
                             <li><a href="#deleting-a-function">Deleting a Function</a></li>
                             <li><a href="#differences-between-stored-procedures-and-functions">Differences Between Stored Procedures and Functions</a></li>
-                            <li><a href="#best-practices-for-using-stored-procedures-and-functions">Best Practices for Using Stored Procedures and Functions</a></li>
+                            <li><a href="#best-practices">Best Practices</a></li>
                         </ol>
                     </li>
                 </ol>

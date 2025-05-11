@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Materialized Views</title>
-    <meta content="Materialized views are a powerful database feature that allows you to store the result of a query physically on disk, much like a regular table." name="description" />
+    <meta content="Materialized views are a database feature that allows you to store the result of a query physically on disk, much like a regular table." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -67,10 +67,10 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: December 19, 2019</i></p>
+            <p style="text-align: right;"><i>Last modified: May 11, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="materialized-views">Materialized Views</h2>
-            <p>Materialized views are a powerful database feature that allows you to store the result of a query physically on disk, much like a regular table. Unlike standard views, which are virtual and execute the underlying query each time they are accessed, materialized views cache the query result and can be refreshed periodically. This approach significantly improves performance for complex queries, especially when dealing with large datasets or computationally intensive operations.</p>
+            <p>Materialized views are a database feature that allows you to store the result of a query physically on disk, much like a regular table. Unlike standard views, which are virtual and execute the underlying query each time they are accessed, materialized views cache the query result and can be refreshed periodically. This approach significantly improves performance for complex queries, especially when dealing with large datasets or computationally intensive operations.</p>
             <p>After reading the material, you should be able to answer the following questions:</p>
             <ol>
                 <li>What are materialized views, and how do they differ from standard (virtual) views in a database system?</li>
@@ -80,43 +80,53 @@
                 <li>How do materialized views enhance performance in data warehousing and reporting environments, and what trade-offs must be managed?</li>
                 <li>Can you explain how materialized views are created and maintained in PostgreSQL, Oracle Database, and Microsoft SQL Server, highlighting any system-specific features or commands?</li>
             </ol>
-            <h3 id="understanding-materialized-views">Understanding Materialized Views</h3>
+            <h3 id="overview">Overview</h3>
             <p>Imagine you have a complex query that aggregates sales data across multiple regions and products. Running this query every time can be time-consuming and resource-intensive. A materialized view lets you store the result of this query, so subsequent accesses are faster because the database doesn't have to re-execute the computation each time.</p>
-            <h4 id="how-materialized-views-work">How Materialized Views Work</h4>
+            <h4 id="how-it-works-">How it works?</h4>
             <p>Here's a simple representation of how materialized views fit into a database system:</p>
             <p>
             <div>
-                <pre><code class="language-shell">+-----------------------+
-|     Base Tables       |
-+----------+------------+
-          |
-Complex Query Execution
-          |
-          v
-+-----------------------+
-|   Materialized View   |
-+----------+------------+
-          |
- Query on Materialized View
-          |
-          v
-+-----------------------+
-|      Query Result     |
-+-----------------------+</code></pre>
+                <pre><code class="language-shell">────────────────────────────────────────────────────────────────
+ Phase 1: Materialized-View Refresh (periodic or on-demand)
+────────────────────────────────────────────────────────────────
+
+    +-----------------------+       [1] Complex aggregation
+    |     Base Tables       |  ────────────────────────────►
+    +-----------------------+                                 
+                    |                                       
+                    |                                       
+                    ▼                                       
+    +-----------------------+                                
+    |   Materialized View   |                                
+    +-----------------------+                                
+          (persisted snapshot of Base Tables)                
+
+────────────────────────────────────────────────────────────────
+ Phase 2: Query Phase (fast reads against the pre-computed view)
+────────────────────────────────────────────────────────────────
+
+    +-----------------------+       [2] Simple lookup/join
+    |   Materialized View   |  ────────────────────────────►
+    +-----------------------+                                
+                    |                                       
+                    |                                       
+                    ▼                                       
+    +-----------------------+                                
+    |      Query Result     |                                
+    +-----------------------+</code></pre>
             </div>
             </p>
-            <p>In this diagram:</p>
             <ul>
                 <li>The base tables contain the raw data.</li>
                 <li>A complex query is executed on these tables, and the result is stored in the materialized view.</li>
                 <li>When you query the materialized view, you retrieve data directly from it without re-executing the complex query.</li>
             </ul>
-            <h3 id="benefits-of-using-materialized-views">Benefits of Using Materialized Views</h3>
+            <h3 id="benefits">Benefits</h3>
             <p>Materialized views offer several advantages:</p>
             <ul>
-                <li><strong>Improved Performance</strong>: They speed up query execution by providing quick access to precomputed results.</li>
-                <li><strong>Reduced Load on Base Tables</strong>: Frequent querying of large tables can be resource-intensive; materialized views alleviate this by offloading queries.</li>
-                <li><strong>Simplified Data Access</strong>: They can simplify complex data structures, making it easier for applications and users to retrieve data.</li>
+                <li>They speed up query execution by providing quick access to precomputed results.</li>
+                <li>Frequent querying of large tables can be resource-intensive; materialized views alleviate this by offloading queries.</li>
+                <li>They can simplify complex data structures, making it easier for applications and users to retrieve data.</li>
             </ul>
             <h3 id="refreshing-materialized-views">Refreshing Materialized Views</h3>
             <p>Since data in the underlying tables can change, materialized views can become outdated. Refreshing a materialized view updates it with the latest data.</p>
@@ -184,9 +194,9 @@ GROUP BY region;</code></pre>
             <h3 id="considerations-and-best-practices">Considerations and Best Practices</h3>
             <p>While materialized views offer performance benefits, there are factors to consider:</p>
             <ul>
-                <li><strong>Storage Overhead</strong>: They consume additional disk space since they store data physically.</li>
-                <li><strong>Maintenance Effort</strong>: Regularly refreshing materialized views is necessary to keep data up-to-date.</li>
-                <li><strong>Data Freshness</strong>: There is a trade-off between performance and how current the data is; real-time data might require more frequent refreshes.</li>
+                <li>They consume additional disk space since they store data physically.</li>
+                <li>Regularly refreshing materialized views is necessary to keep data up-to-date.</li>
+                <li>There is a trade-off between performance and how current the data is; real-time data might require more frequent refreshes.</li>
             </ul>
             <h4 id="choosing-the-right-refresh-strategy">Choosing the Right Refresh Strategy</h4>
             <p>Your choice depends on how often the underlying data changes and how fresh you need the data in the materialized view to be.</p>
@@ -195,9 +205,11 @@ GROUP BY region;</code></pre>
                 <li><strong>Slow-Changing Data</strong>: Scheduled refreshes at longer intervals might suffice.</li>
             </ul>
             <h3 id="materialized-views-in-different-database-systems">Materialized Views in Different Database Systems</h3>
+            <p>Different database platforms have their own implementations and capabilities—ranging from simple indexed views to full-fledged materialized views with incremental refresh and query rewrite features. Below we explore how Oracle Database and Microsoft SQL Server approach materialized views.</p>
             <h4 id="oracle-database">Oracle Database</h4>
-            <p>Oracle has robust support for materialized views, including features like query rewrite and incremental refreshes.</p>
+            <p>Oracle Database offers robust support for materialized views, including features such as query rewrite, fast (incremental) refresh, and integration with advanced replication and data warehousing scenarios. These views can automatically refresh on demand or according to a schedule, and can even incorporate only the changes made since the last refresh for optimal performance.</p>
             <h5>Creating a Materialized View with Fast Refresh</h5>
+            <p>To create a materialized view that can be refreshed incrementally (also known as a fast refresh), you define it with <code>BUILD IMMEDIATE</code> to populate it immediately, and <code>REFRESH FAST ON DEMAND</code> so it can be refreshed on command, only applying changes since the last refresh:</p>
             <p>
             <div>
                 <pre><code class="language-sql">CREATE MATERIALIZED VIEW sales_mv
@@ -210,7 +222,7 @@ GROUP BY region;</code></pre>
             </div>
             </p>
             <h5>Setting Up a Materialized View Log</h5>
-            <p>To enable fast refreshes, you need to create a materialized view log on the base table:</p>
+            <p>Oracle requires a materialized view log on the base table to track changes (inserts, updates, deletes) so that a fast refresh can apply only the incremental differences. The log records rowids and specified columns, capturing new values when data changes:</p>
             <p>
             <div>
                 <pre><code class="language-sql">CREATE MATERIALIZED VIEW LOG ON sales
@@ -219,8 +231,9 @@ INCLUDING NEW VALUES;</code></pre>
             </div>
             </p>
             <h4 id="microsoft-sql-server">Microsoft SQL Server</h4>
-            <p>In SQL Server, materialized views are implemented as indexed views.</p>
+            <p>In Microsoft SQL Server, the equivalent of a materialized view is an <em>indexed view</em>. An indexed view physically materializes the results of a query by creating a unique clustered index on the view definition. Unlike Oracle, SQL Server does not natively support incremental refresh on demand—data changes to the underlying tables automatically propagate through the index during DML operations.</p>
             <h5>Creating an Indexed View</h5>
+            <p>To define an indexed view in SQL Server, you must use <code>WITH SCHEMABINDING</code> so the view is tied to the schema of the underlying tables, then create a unique clustered index on the view. This forces SQL Server to maintain the view’s data as the base tables change:</p>
             <p>
             <div>
                 <pre><code class="language-sql">CREATE VIEW dbo.sales_summary
@@ -233,7 +246,7 @@ GO
 CREATE UNIQUE CLUSTERED INDEX idx_sales_summary ON dbo.sales_summary(region);</code></pre>
             </div>
             </p>
-            <h3 id="limitations-of-materialized-views">Limitations of Materialized Views</h3>
+            <h3 id="limitations">Limitations</h3>
             <ul>
                 <li>They might not reflect the most recent data until refreshed.</li>
                 <li>Requires additional management for refreshing and maintaining.</li>
@@ -244,12 +257,12 @@ CREATE UNIQUE CLUSTERED INDEX idx_sales_summary ON dbo.sales_summary(region);</c
             <h2>Table of Contents</h2>
             <ol><a href="#materialized-views">Materialized Views</a>
                 <ol>
-                    <li><a href="#understanding-materialized-views">Understanding Materialized Views</a>
+                    <li><a href="#overview">Overview</a>
                         <ol>
-                            <li><a href="#how-materialized-views-work">How Materialized Views Work</a></li>
+                            <li><a href="#how-it-works-">How it works?</a></li>
                         </ol>
                     </li>
-                    <li><a href="#benefits-of-using-materialized-views">Benefits of Using Materialized Views</a></li>
+                    <li><a href="#benefits">Benefits</a></li>
                     <li><a href="#refreshing-materialized-views">Refreshing Materialized Views</a>
                         <ol>
                             <li><a href="#refresh-methods">Refresh Methods</a></li>
@@ -284,7 +297,7 @@ CREATE UNIQUE CLUSTERED INDEX idx_sales_summary ON dbo.sales_summary(region);</c
                             <li><a href="#microsoft-sql-server">Microsoft SQL Server</a></li>
                         </ol>
                     </li>
-                    <li><a href="#limitations-of-materialized-views">Limitations of Materialized Views</a></li>
+                    <li><a href="#limitations">Limitations</a></li>
                 </ol>
             </ol>
             <div id="related-articles">

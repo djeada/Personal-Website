@@ -67,7 +67,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: May 06, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: May 11, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="understanding-crash-recovery-in-databases">Understanding Crash Recovery in Databases</h2>
             <p>Crash recovery is a important component of database systems that ensures data consistency and durability despite unexpected events like power outages, hardware failures, or software crashes. By design, databases must be capable of returning to a reliable state after a failure occurs. This is largely accomplished through mechanisms like the Write-Ahead Log (WAL), which records changes before they are committed to the actual data files on disk.</p>
@@ -90,34 +90,39 @@
             </ul>
             <p>
             <div>
-                <pre><code class="language-shell">+----------------+          +----------------+          +----------------+
-|                |          |                |          |                |
-|  Application   |  ---&gt;    |   Write-Ahead  |  ---&gt;    |   Data Store   |
-|    Transaction |          |      Log (WAL) |          |   (Main DB)    |
-|                |          |                |          |                |
-+----------------+          +----------------+          +----------------+
-        |                           |                           |
-        |                           |                           |
-        |                           v                           |
-        |                   +---------------+                   |
-        |                   | Append Log    |                   |
-        |                   | Records to    |                   |
-        |                   | WAL on Disk   |                   |
-        |                   +---------------+                   |
-        |                           |                           |
-        |                           v                           |
-        |                   +---------------+                   |
-        |                   | Sync WAL to   |                   |
-        |                   | Disk          |                   |
-        |                   +---------------+                   |
-        |                           |                           |
-        |                           v                           |
-        |                   +---------------+                   |
-        |                   | Apply Changes |                   |
-        |                   | to Data Store |                   |
-        |                   +---------------+                   |
-        |                                                       |
-        +-------------------------------------------------------+</code></pre>
+                <pre><code class="language-shell">WAL:
+                           +----------------+
+                           |  Application   |
+                           |  Transaction   |
+                           +--------+-------+
+                                    |
+                                    | 1. Emit transaction
+                                    v
+                           +--------+-------+
+                           |  Write-Ahead   |
+                           |   Log (WAL)    |
+                           +--------+-------+
+                                    |
+    +-------------------------------+-------------------------------+
+    |                                                               |
+    | 2a. Append record to WAL buffer                               |
+    |                                                               |
+    |      +----------------+                   +----------------+  |
+    |      | WAL In-Memory  | --(write)--&gt;      | WAL On-Disk    |  |
+    |      |   Buffer       |                   | (log file)     |  |
+    |      +----------------+                   +----------------+  |
+    |               |                                     |         |
+    |               | 2b. Fsync (sync to durable storage) |         |
+    |               +------------------------------------&gt;+         |
+    |                                                               |
+    +---------------------------------------------------------------+
+                                    |
+                                    | 3. Apply logged changes
+                                    v
+                           +--------+-------+
+                           |   Data Store   |
+                           |   (Main DB)    |
+                           +----------------+</code></pre>
             </div>
             </p>
             <h3 id="wal-and-transaction-states">WAL and Transaction States</h3>
