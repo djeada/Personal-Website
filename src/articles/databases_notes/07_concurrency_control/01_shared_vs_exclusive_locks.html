@@ -5,8 +5,8 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>Shared and Exclusive Locks in Database Systems</title>
-    <meta content="Shared and exclusive locks are crucial in database systems for managing concurrent access to data." name="description" />
+    <title>Shared and Exclusive Locks</title>
+    <meta content="Shared and exclusive locks are used in database systems for managing concurrent access to data." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -67,15 +67,13 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: May 28, 2020</i></p>
+            <p style="text-align: right;"><i>Last modified: May 16, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
-            <h2 id="shared-and-exclusive-locks-in-database-systems">Shared and Exclusive Locks in Database Systems</h2>
-            <p>Shared and exclusive locks are crucial in database systems for managing concurrent access to data. They ensure that transactions occur without conflicting with each other, maintaining the integrity and consistency of the database.</p>
+            <h2 id="shared-and-exclusive-locks">Shared and Exclusive Locks</h2>
+            <p>Shared and exclusive locks are used in database systems for managing concurrent access to data. They ensure that transactions occur without conflicting with each other, maintaining the integrity and consistency of the database.</p>
             <p>
             <div>
-                <pre><code class="language-shell">Illustration of Lock Types:
-
-[Resource: Data Item X]
+                <pre><code class="language-shell">[Resource: Data Item X]
    |
    |-- Transaction A wants to READ --&gt; Acquires SHARED LOCK
    |-- Transaction B wants to READ --&gt; Acquires SHARED LOCK
@@ -107,47 +105,100 @@
             <h3 id="interaction-between-shared-and-exclusive-locks">Interaction Between Shared and Exclusive Locks</h3>
             <p>Understanding how shared and exclusive locks interact is essential for managing database concurrency effectively.</p>
             <p>
-            <div>
-                <pre><code class="language-shell">Lock Compatibility Matrix:
-
-                 | Shared Lock Requested | Exclusive Lock Requested
------------------|-----------------------|-------------------------
-Shared Lock Held | Allowed               | Not Allowed
-Exclusive Lock Held | Not Allowed        | Not Allowed</code></pre>
-            </div>
+            <table>
+                <tr>
+                    <td>Lock Held \ Requested</td>
+                    <td>Shared Lock Requested</td>
+                    <td>Exclusive Lock Requested</td>
+                </tr>
+                <tr>
+                    <td><strong>Shared Lock Held</strong></td>
+                    <td>Allowed</td>
+                    <td>Not Allowed</td>
+                </tr>
+                <tr>
+                    <td><strong>Exclusive Lock Held</strong></td>
+                    <td>Not Allowed</td>
+                    <td>Not Allowed</td>
+                </tr>
+            </table>
             </p>
-            <p>This matrix shows that:</p>
             <ul>
                 <li>When a shared lock is already held on a data item, other transactions can also acquire shared locks on it.</li>
                 <li>If a shared lock is held, an exclusive lock request will be blocked until all shared locks are released.</li>
                 <li>When an exclusive lock is held, all other lock requests (shared or exclusive) are blocked until the exclusive lock is released.</li>
             </ul>
             <h3 id="practical-examples-with-commands">Practical Examples with Commands</h3>
-            <p>Suppose we have a table <code>Employees</code> and two transactions are attempting to access it.</p>
-            <p><strong>Transaction 1: Reading Data</strong></p>
-            <p>
-            <div>
-                <pre><code class="language-sql">BEGIN TRANSACTION;
-SELECT * FROM Employees WHERE Department = 'Sales';
--- Shared lock is acquired on the rows where Department = 'Sales'
-COMMIT;</code></pre>
-            </div>
-            </p>
-            <p><strong>Transaction 2: Updating Data</strong></p>
-            <p>
-            <div>
-                <pre><code class="language-sql">BEGIN TRANSACTION;
-UPDATE Employees SET Salary = Salary * 1.05 WHERE Department = 'Sales';
--- Exclusive lock is requested on the same rows
--- Transaction 2 waits until Transaction 1 releases the shared lock
-COMMIT;</code></pre>
-            </div>
-            </p>
-            <p><strong>Interpretation of the Output:</strong></p>
+            <p>These examples illustrate row-level locking behavior common to most modern relational databases—<strong>PostgreSQL</strong>, <strong>MySQL/InnoDB</strong>, <strong>MariaDB</strong>, <strong>SQL Server</strong>, and <strong>Oracle</strong>—which support shared (S) and exclusive (X) locks at the row level. They do <strong>not</strong> apply to engines or table types without row-level locking (e.g., MySQL’s <strong>MyISAM</strong>), nor to NoSQL stores that use different concurrency controls.</p>
+            <h4 id="shared-vs-exclusive-locks-applicability">Shared vs. Exclusive Locks: Applicability</h4>
             <ul>
-                <li>Transaction 1 acquires a shared lock to read data without modifying it.</li>
-                <li>Transaction 2 tries to acquire an exclusive lock to update the data but must wait until Transaction 1 completes and releases its shared lock.</li>
-                <li>This ensures that Transaction 2 does not update data that is being read, maintaining data integrity.</li>
+                <li><strong>Supported</strong>: PostgreSQL, MySQL/InnoDB, MariaDB, SQL Server, Oracle.</li>
+                <li><strong>Not Supported</strong>: MySQL/MyISAM (table-level only), SQLite (uses database-level or page-level locks), many cloud-managed NoSQL databases.</li>
+            </ul>
+            <p>Locking behavior may vary slightly by isolation level and vendor syntax; the following examples assume the default <strong>READ COMMITTED</strong> isolation level.</p>
+            <h4 id="example-reading-data-shared-lock-">Example: Reading Data (Shared Lock)</h4>
+            <p>In databases with row-level locking, a <strong>shared lock</strong> (S) permits multiple transactions to read the same rows concurrently but prevents any transaction from modifying them until all shared locks are released.</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">-- Applies in PostgreSQL, MySQL/InnoDB, SQL Server, Oracle
+BEGIN TRANSACTION;
+SELECT * FROM Employees WHERE Department = 'Sales';
+-- Shared (S) lock on matching rows until COMMIT
+COMMIT;</code></pre>
+            </div>
+            </p>
+            <h4 id="example-updating-data-exclusive-lock-">Example: Updating Data (Exclusive Lock)</h4>
+            <p>An <strong>exclusive lock</strong> (X) is required for row modifications. If another transaction holds a shared or exclusive lock on the same row, the update waits (or may deadlock under certain patterns).</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">-- Applies in PostgreSQL, MySQL/InnoDB, SQL Server, Oracle
+BEGIN TRANSACTION;
+UPDATE Employees SET Salary = Salary * 1.05 WHERE Department = 'Sales';
+-- Request X lock: waits until no other S or X locks exist on those rows
+COMMIT;</code></pre>
+            </div>
+            </p>
+            <h4 id="lock-interaction-timeline">Lock Interaction Timeline</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Step</td>
+                    <td>Transaction</td>
+                    <td>Action</td>
+                    <td>Lock Held</td>
+                    <td>Outcome</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>T1 (Reader)</td>
+                    <td><code>SELECT ... FOR SHARE</code> (implicit)</td>
+                    <td>S on Sales rows</td>
+                    <td>Allows other S locks; blocks X locks</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>T2 (Updater)</td>
+                    <td><code>UPDATE ...</code></td>
+                    <td>Requests X on Sales rows</td>
+                    <td>Waits until T1 commits and releases its S lock</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>T1</td>
+                    <td><code>COMMIT</code></td>
+                    <td>Releases S</td>
+                    <td>T2 acquires X lock, performs update, then COMMIT</td>
+                </tr>
+            </table>
+            </p>
+            <blockquote>
+                <p><strong>Note</strong>: Some databases (e.g., Oracle) require explicit <code>SELECT ... FOR UPDATE</code> to acquire row locks for reads; others implicitly lock on <code>UPDATE</code>.</p>
+            </blockquote>
+            <h4 id="considerations-and-variations">Considerations and Variations</h4>
+            <ul>
+                <li>Under <strong>SERIALIZABLE</strong>, readers may acquire additional locks or trigger predicate locks. Under <strong>READ UNCOMMITTED</strong>, shared locks may be skipped (dirty reads).</li>
+                <li>MyISAM uses table-level locks, so the above does not apply. SQLite uses page or database locks.</li>
+                <li>If two transactions request locks in opposite order, a deadlock may occur. Most RDBMS detect and kill the victim.</li>
             </ul>
             <h3 id="balancing-concurrency-and-integrity">Balancing Concurrency and Integrity</h3>
             <p>Efficient database systems strive to balance the need for high concurrency with the necessity of maintaining data integrity. Locks play a pivotal role in achieving this balance. Here are the key concepts:</p>
@@ -198,12 +249,20 @@ Transaction 2:
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
-            <ol><a href="#shared-and-exclusive-locks-in-database-systems">Shared and Exclusive Locks in Database Systems</a>
+            <ol><a href="#shared-and-exclusive-locks">Shared and Exclusive Locks</a>
                 <ol>
                     <li><a href="#understanding-shared-locks">Understanding Shared Locks</a></li>
                     <li><a href="#exploring-exclusive-locks">Exploring Exclusive Locks</a></li>
                     <li><a href="#interaction-between-shared-and-exclusive-locks">Interaction Between Shared and Exclusive Locks</a></li>
-                    <li><a href="#practical-examples-with-commands">Practical Examples with Commands</a></li>
+                    <li><a href="#practical-examples-with-commands">Practical Examples with Commands</a>
+                        <ol>
+                            <li><a href="#shared-vs-exclusive-locks-applicability">Shared vs. Exclusive Locks: Applicability</a></li>
+                            <li><a href="#example-reading-data-shared-lock-">Example: Reading Data (Shared Lock)</a></li>
+                            <li><a href="#example-updating-data-exclusive-lock-">Example: Updating Data (Exclusive Lock)</a></li>
+                            <li><a href="#lock-interaction-timeline">Lock Interaction Timeline</a></li>
+                            <li><a href="#considerations-and-variations">Considerations and Variations</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#balancing-concurrency-and-integrity">Balancing Concurrency and Integrity</a></li>
                     <li><a href="#best-practices-for-using-locks">Best Practices for Using Locks</a></li>
                     <li><a href="#deadlocks-and-how-to-handle-them">Deadlocks and How to Handle Them</a></li>

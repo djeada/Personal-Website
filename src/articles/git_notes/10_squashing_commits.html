@@ -67,11 +67,51 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: July 12, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: May 16, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="squashing">Squashing</h2>
             <p>In Git, you might accumulate multiple small commits over the course of developing a new feature, fixing small bugs, or refactoring code. While these incremental commits are crucial during active development, they can clutter the project history in the long term. This clutter becomes especially evident when you merge your work into a primary branch like <code>main</code> or <code>master</code>.</p>
             <p><strong>Squashing</strong> is the process of compressing multiple commits into a single, consolidated commit. By doing so, you ensure that the branch’s history remains clean, succinct, and more understandable to collaborators who later need to review or track changes.</p>
+            <h3 id="visualising-a-commit-squash">Visualising a commit squash</h3>
+            <p>Before squashing <code>feature</code> into a single commit:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">main branch
+│
+A──B──C          ◄─ tip of main
+    \
+     D──E──F──G  ◄─ feature (4 commits)</code></pre>
+            </div>
+            </p>
+            <p>The four commits <strong>D → G</strong> capture one logical feature but were made in stages.</p>
+            <p>One-liner to squash everything on <code>feature</code> into a single commit:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash"># run from the feature branch
+git reset --soft $(git merge-base main HEAD) \
+  &amp;&amp; git commit --amend -m "feat: brief, imperative summary of the feature"</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><code>git merge-base main HEAD</code> finds the common ancestor (<strong>C</strong>) of <code>main</code> and <code>feature</code>.</li>
+                <li><code>reset --soft</code> moves <code>HEAD</code> back to <strong>C</strong> while keeping all changes staged.</li>
+                <li><code>commit --amend</code> creates the new squashed commit (<strong>H</strong>) with your message.</li>
+                <li>If the branch is already on a remote: <code>git push --force-with-lease</code>.</li>
+            </ul>
+            <p>After squashing:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">main branch
+│
+A──B──C
+    \
+     H              ◄─ feature (single squashed commit)</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><strong>H</strong> now contains the combined changes from <strong>D, E, F, G</strong>.</li>
+                <li>Write the commit message as a concise changelog entry for the entire feature (and reference issue IDs, e.g. <code>(#123)</code>).</li>
+            </ul>
             <h3 id="potential-advantages-of-squashing">Potential Advantages of Squashing</h3>
             <ul>
                 <li>Squashing results in a <strong>cleaner project history</strong>, reducing the number of commits in <code>git log</code> and making it easier to understand the evolution of the project.</li>
@@ -186,37 +226,12 @@ squash m3n4o5p6 Fourth commit message</code></pre>
             <p>After squashing, ensure your project still builds and all tests pass locally. The squashing itself shouldn’t break code, but always confirm to avoid introducing subtle errors or regressions.</p>
             <p>V. <strong>Communicate with Your Team</strong> </p>
             <p>If you do need to force push, post a heads-up in your team’s communication channel, or coordinate a short time window for rewriting history so that no one else is pushing or pulling on that branch.</p>
-            <h3 id="visualizing-squashing-with-an-example">Visualizing Squashing with an Example</h3>
-            <p>Before Squashing:</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">master branch
-    |
-A---B---C   &lt;--- Tip of master
-        \
-         D---E---F---G   &lt;--- feature branch with multiple commits</code></pre>
-            </div>
-            </p>
-            <p>The <code>feature</code> branch has four commits (D, E, F, G) that collectively represent the development of a single feature.</p>
-            <p>After Squashing:</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">master branch
-    |
-A---B---C
-        \
-         H   &lt;--- feature branch now has a single squashed commit</code></pre>
-            </div>
-            </p>
-            <ul>
-                <li>Commits D, E, F, and G are now replaced by a single commit H. </li>
-                <li>The resulting commit message for H should outline what was done in the entire feature.</li>
-            </ul>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
             <ol><a href="#squashing">Squashing</a>
                 <ol>
+                    <li><a href="#visualising-a-commit-squash">Visualising a commit squash</a></li>
                     <li><a href="#potential-advantages-of-squashing">Potential Advantages of Squashing</a></li>
                     <li><a href="#potential-drawbacks-of-squashing">Potential Drawbacks of Squashing</a></li>
                     <li><a href="#squashing-vs-merging">Squashing vs. Merging</a>
@@ -233,7 +248,6 @@ A---B---C
                     </li>
                     <li><a href="#dealing-with-remote-repositories">Dealing with Remote Repositories</a></li>
                     <li><a href="#best-practices-and-warnings">Best Practices and Warnings</a></li>
-                    <li><a href="#visualizing-squashing-with-an-example">Visualizing Squashing with an Example</a></li>
                 </ol>
             </ol>
             <div id="related-articles">

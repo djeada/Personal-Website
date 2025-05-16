@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Manipulating the Shape of Matrices and Arrays</title>
-    <meta content="In data manipulation and analysis, adjusting the shape or dimensionality of arrays and matrices is a common and essential task." name="description" />
+    <meta content="In data manipulation and analysis, adjusting the shape or dimensionality of arrays and matrices is a common task." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -67,10 +67,53 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: March 24, 2022</i></p>
+            <p style="text-align: right;"><i>Last modified: May 16, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="manipulating-the-shape-of-matrices-and-arrays">Manipulating the Shape of Matrices and Arrays</h2>
-            <p>In data manipulation and analysis, adjusting the shape or dimensionality of arrays and matrices is a common and essential task. Reshaping allows you to reorganize data without altering its underlying values, making it suitable for various applications such as data preprocessing, machine learning model input preparation, and visualization. Understanding how to effectively reshape arrays using NumPy's versatile functions is crucial for efficient data handling and computational performance.</p>
+            <p>In data manipulation and analysis, adjusting the shape or dimensionality of arrays and matrices is a common task. Reshaping allows you to reorganize data without altering its underlying values, making it suitable for various applications such as data preprocessing, machine learning model input preparation, and visualization. Understanding how to effectively reshape arrays using NumPy's versatile functions is crucial for efficient data handling and computational performance.</p>
+            <h3 id="a-mathematical-prelude">A Mathematical Prelude</h3>
+            <p>In linear-algebra terms, an <strong>\$k\$-dimensional array</strong> (or <em>tensor</em>) is just an ordered collection of scalars indexed by a Cartesian product of finite sets.
+                If</p>
+            <p>$$
+                \mathbf{A}=\bigl(a_{i_1,i_2,\dots ,i_k}\bigr)
+                \quad\text{with}\quad<br />
+                1\le i_j\le n_j,\; j=1,\dots ,k,
+                $$</p>
+            <p>we say that $shape(\mathbf{A})=(n_1,n_2,\dots ,n_k)$ and that the array lives in the vector space</p>
+            <p>$$
+                \mathbb{R}^{n_1\times n_2\times!\cdots!\times n_k}.
+                $$</p>
+            <h4 id="total-size-is-invariant">Total size is invariant</h4>
+            <p>The <em>cardinality</em> of the indexing set</p>
+            <p>$$
+                N\;=\;\prod_{j=1}^{k}n_j
+                $$</p>
+            <p>equals the number of stored scalars. Any operation that merely <em>reshapes</em> an array must preserve this product; it is therefore a <strong>bijection</strong></p>
+            <p>$$
+                \varphi:{1,\dots ,N}\;\longrightarrow\;{1,\dots ,m_1}\times\dots\times{1,\dots ,m_\ell}
+                \quad\text{with}\quad\prod_{r=1}^{\ell}m_r=N,
+                $$</p>
+            <p>where the left-hand side is usually taken to be the <em>flattened</em> (1-D) index. In NumPy, calling <code>arr.reshape(m₁,…,m_ℓ)</code> simply installs the mapping \$\varphi\$ without moving data in memory.</p>
+            <h4 id="rank-1-vs-higher-rank-views">Rank-1 vs. Higher-Rank Views</h4>
+            <p>A <strong>vector</strong> in \$\mathbb{R}^N\$ can be <em>viewed</em> as</p>
+            <ul>
+                <li>a row vector: \$\mathbb{R}^{1\times N}\$</li>
+                <li>a column vector: \$\mathbb{R}^{N\times 1}\$</li>
+            </ul>
+            <p>These are not new data structures—only different indexings of the same ordered list of \$N\$ scalars. Likewise, an RGB image of size \$H\times W\$ can be regarded as</p>
+            <ul>
+                <li>a matrix in \$\mathbb{R}^{H\times 3W}\$ (channel-concatenated), or</li>
+                <li>a 3-tensor in \$\mathbb{R}^{H\times W\times 3}\$ (height × width × channel),</li>
+            </ul>
+            <p>depending on what a downstream algorithm expects.</p>
+            <h4 id="reshaping-as-vector-space-isomorphism">Reshaping as Vector-Space Isomorphism</h4>
+            <p>Because reshaping is a bijection of index sets, it yields a linear isomorphism of vector spaces:</p>
+            <p>$$
+                \mathcal{R}:\mathbb{R}^{n_1\times!\cdots!\times n_k}\;\overset{\cong}{\longrightarrow}\;\mathbb{R}^{m_1\times!\cdots!\times m_\ell},
+                \qquad
+                \mathcal{R}\bigl(a_{i_1,\dots ,i_k}\bigr)=a_{\varphi^{-1}(j_1,\dots ,j_\ell)}.
+                $$</p>
+            <p>Hence <strong>no numerical information is lost or gained</strong>—only the <em>interpretation</em> of the indices changes.</p>
             <h3 id="the-basics-of-reshaping">The Basics of Reshaping</h3>
             <p>Reshaping an array involves changing its structure—such as the number of dimensions or the size of each dimension—while keeping the total number of elements unchanged. This transformation is vital for preparing data in the required format for different computational tasks.</p>
             <p>
@@ -90,11 +133,10 @@ print(reshaped_arr)</code></pre>
  [ 6  7  8  9 10]]</code></pre>
             </div>
             </p>
-            <p>Explanation:</p>
             <ul>
                 <li><code>arr.reshape(2, 5)</code> transforms the original 1D array of 10 elements into a 2x5 matrix.</li>
                 <li>The product of the new dimensions (2 * 5) matches the total number of elements in the original array, ensuring a valid reshape.</li>
-                <li><strong>Practical Use Case:</strong> Reshaping is useful when transitioning data between different formats, such as converting a flat list of features into a matrix suitable for machine learning algorithms that expect 2D input.</li>
+                <li>Reshaping is useful when transitioning data between different formats, such as converting a flat list of features into a matrix suitable for machine learning algorithms that expect 2D input.</li>
             </ul>
             <h3 id="from-one-dimension-to-many">From One Dimension to Many</h3>
             <p>Transforming 1D arrays into multi-dimensional structures is a frequent requirement, especially when dealing with data that inherently possesses multiple dimensions, such as images or time-series data.</p>
@@ -126,12 +168,11 @@ Column Vector:
  [6]]</code></pre>
             </div>
             </p>
-            <p>Explanation:</p>
             <ul>
                 <li>Using <code>-1</code> in the <code>reshape()</code> method allows NumPy to automatically determine the appropriate dimension size based on the total number of elements.</li>
                 <li><code>arr.reshape(1, -1)</code> converts the array into a row vector with 1 row and as many columns as needed.</li>
                 <li><code>arr.reshape(-1, 1)</code> converts the array into a column vector with as many rows as needed and 1 column.</li>
-                <li><strong>Practical Use Case:</strong> Reshaping arrays into row or column vectors is essential when performing matrix multiplications or when interfacing with libraries that require specific input shapes.</li>
+                <li>Reshaping arrays into row or column vectors is useful when performing matrix multiplications or when interfacing with libraries that require specific input shapes.</li>
             </ul>
             <h3 id="higher-dimensional-reshaping">Higher-Dimensional Reshaping</h3>
             <p>Reshaping isn't limited to two dimensions; NumPy allows the creation of arrays with three or more dimensions, which are useful in more complex data representations like 3D models, color images, or time-series data across multiple sensors.</p>
@@ -158,12 +199,11 @@ print("3D Array:\n", reshaped_3d)</code></pre>
   [10 11]]]</code></pre>
             </div>
             </p>
-            <p>Explanation:</p>
             <ul>
                 <li><code>np.arange(12)</code> creates a 1D array with elements from 0 to 11.</li>
                 <li><code>arr.reshape(2, 3, 2)</code> reshapes the array into a 3D structure with dimensions 2x3x2.</li>
                 <li>The total number of elements remains consistent (2 * 3 * 2 = 12).</li>
-                <li><strong>Practical Use Case:</strong> 3D reshaping is commonly used in image processing where images are represented as 3D arrays (height x width x color channels) or in processing volumetric data like medical scans.</li>
+                <li>3D reshaping is commonly used in image processing where images are represented as 3D arrays (height x width x color channels) or in processing volumetric data like medical scans.</li>
             </ul>
             <h3 id="flattening-arrays">Flattening Arrays</h3>
             <p>Converting multi-dimensional arrays back to a single dimension is known as flattening. This operation is useful when you need to preprocess data for algorithms that require input in a specific shape or when simplifying data for certain analyses.</p>
@@ -190,11 +230,10 @@ Using reshape:
  [1 2 3 4 5 6]</code></pre>
             </div>
             </p>
-            <p>Explanation:</p>
             <ul>
                 <li><code>arr.flatten()</code> creates a copy of the original array in a 1D format.</li>
                 <li><code>arr.reshape(-1)</code> reshapes the array into a 1D array without creating a copy, providing a view of the original data.</li>
-                <li><strong>Practical Use Case:</strong> Flattening is essential when preparing data for machine learning models that expect input features as flat vectors or when performing certain types of statistical analyses that require data in a single dimension.</li>
+                <li>Flattening can be used when preparing data for machine learning models that expect input features as flat vectors or when performing certain types of statistical analyses that require data in a single dimension.</li>
             </ul>
             <h3 id="practical-applications-and-considerations">Practical Applications and Considerations</h3>
             <p>Reshaping arrays is a fundamental skill in data science and machine learning, facilitating the preparation and transformation of data to fit various computational models and visualization requirements. Here are some practical applications and important considerations when reshaping arrays:</p>
@@ -225,11 +264,10 @@ except ValueError as e:
                 <pre><code class="language-shell">Error: cannot reshape array of size 6 into shape (3,3)</code></pre>
             </div>
             </p>
-            <p>Explanation:</p>
             <ul>
                 <li>The original array has 6 elements.</li>
                 <li>Attempting to reshape it into a 3x3 matrix requires 9 elements (3 * 3), which is not possible, resulting in a <code>ValueError</code>.</li>
-                <li><strong>Practical Use Case:</strong> This scenario emphasizes the importance of ensuring that the product of the new dimensions matches the total number of elements in the original array when reshaping.</li>
+                <li>This scenario emphasizes the importance of ensuring that the product of the new dimensions matches the total number of elements in the original array when reshaping.</li>
             </ul>
             <h4 id="example-reshaping-for-machine-learning">Example: Reshaping for Machine Learning</h4>
             <p>Machine learning models often require data in specific shapes. For example, convolutional neural networks expect image data with channel dimensions.</p>
@@ -250,11 +288,10 @@ print("Reshaped Images Shape:", images_reshaped.shape)</code></pre>
                 <pre><code class="language-shell">Reshaped Images Shape: (100, 28, 28, 1)</code></pre>
             </div>
             </p>
-            <p>Explanation:</p>
             <ul>
                 <li><code>np.random.rand(batch_size, 28, 28)</code> creates a batch of 100 grayscale images, each of size 28x28 pixels.</li>
                 <li><code>images.reshape(batch_size, 28, 28, 1)</code> adds a channel dimension, converting the shape to (100, 28, 28, 1), which is required by many deep learning frameworks.</li>
-                <li><strong>Practical Use Case:</strong> Adding or modifying dimensions is crucial when preparing image data for training convolutional neural networks, ensuring compatibility with the model's expected input shape.</li>
+                <li>Adding or modifying dimensions is crucial when preparing image data for training convolutional neural networks, ensuring compatibility with the model's expected input shape.</li>
             </ul>
             <h3 id="additional-reshaping-techniques">Additional Reshaping Techniques</h3>
             <p>Beyond the basic <code>reshape</code> and <code>flatten</code>, NumPy offers other methods to manipulate array shapes effectively:</p>
@@ -305,10 +342,9 @@ print(transposed)</code></pre>
  [3 6]]</code></pre>
             </div>
             </p>
-            <p>Explanation:</p>
             <ul>
                 <li>These additional methods provide more flexibility in manipulating array dimensions, allowing for complex data transformations required in various computational tasks.</li>
-                <li><strong>Practical Use Case:</strong> Transposing and swapping axes are commonly used in data preprocessing steps, such as preparing data for matrix multiplication or reorienting image data for different processing pipelines.</li>
+                <li>Transposing and swapping axes are commonly used in data preprocessing steps, such as preparing data for matrix multiplication or reorienting image data for different processing pipelines.</li>
             </ul>
             <h3 id="summary-table-for-manipulating-dimensions">Summary Table for Manipulating Dimensions</h3>
             <p>This table summarizes various operations for manipulating the dimensions of arrays in NumPy, along with examples and descriptions of each operation.</p>
@@ -398,6 +434,13 @@ print(transposed)</code></pre>
             <h2>Table of Contents</h2>
             <ol><a href="#manipulating-the-shape-of-matrices-and-arrays">Manipulating the Shape of Matrices and Arrays</a>
                 <ol>
+                    <li><a href="#a-mathematical-prelude">A Mathematical Prelude</a>
+                        <ol>
+                            <li><a href="#total-size-is-invariant">Total size is invariant</a></li>
+                            <li><a href="#rank-1-vs-higher-rank-views">Rank-1 vs. Higher-Rank Views</a></li>
+                            <li><a href="#reshaping-as-vector-space-isomorphism">Reshaping as Vector-Space Isomorphism</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#the-basics-of-reshaping">The Basics of Reshaping</a></li>
                     <li><a href="#from-one-dimension-to-many">From One Dimension to Many</a></li>
                     <li><a href="#higher-dimensional-reshaping">Higher-Dimensional Reshaping</a></li>

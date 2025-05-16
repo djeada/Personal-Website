@@ -67,7 +67,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: May 11, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: May 16, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="processes">Processes</h2>
             <p>In any operating system, a process is the fundamental unit of execution—a live instance of a program. Beyond its executable code (the text segment), a process encompasses its dynamic state: the program counter, CPU registers, call stack, heap, and other variable storage. To manage and schedule these tasks, the OS assigns each process a unique process identifier (PID).</p>
@@ -174,31 +174,7 @@ KiB Swap:  8388604 total,  8388604 free,        0 used. 11585756 avail Mem
             </p>
             <h3 id="process-life-cycle">Process life cycle</h3>
             <p>The life cycle of a process in an operating system is a critical concept. The provided diagram illustrates the various stages a process goes through:</p>
-            <p>
-            <div>
-                <pre><code class="language-shell"># process life cycle
-                        +---------+
-                        |         |
-                        | Created |
-                        |         |
-                        +----+----+
-                             |
-                             | Schedule
-                             v
-                        +----+----+
-                        |         |
-                        | Running |
-               -------- |         | ----------
-             /          +----+----+            \
-           /  Error           |        Complete  \ 
-          v                   |                   v
-  +-------+-----+     +-------+-------+     +---------+
-  |             |     |               |     |         |
-  | Terminated  |&lt;----| Interrupted   |&lt;----|  Exit   |
-  |             |     |               |     |         |
-  +-------------+     +---------------+     +---------+</code></pre>
-            </div>
-            </p>
+            <p><img alt="image" src="https://github.com/user-attachments/assets/ed119dd8-90c7-4f01-9c0b-e8268771876d" /></p>
             <ul>
                 <li>When a process is <strong>Created</strong>, it enters the system and is allocated the necessary resources, but it has not yet started running.</li>
                 <li>In the <strong>Running</strong> state, the process is actively executing instructions on the CPU.</li>
@@ -327,36 +303,108 @@ kill 0 -SIGTERM
 kill -2 -SIGTERM</code></pre>
             </div>
             </p>
-            <p>Using these special values carefully can help manage and control process groups effectively.</p>
-            <h3 id="methods-for-searching-processes">Methods for Searching Processes</h3>
-            <p>In a Linux environment, various methods are available to search for processes, depending on the granularity of information you require or your personal preference. The search can be done using commands such as <code>ps</code>, <code>grep</code>, <code>pgrep</code>, and <code>htop</code>.</p>
-            <h4 id="searching-processes-with-ps-and-grep">Searching Processes with <code>ps</code> and <code>grep</code></h4>
-            <p>The <code>ps</code> command displays a list of currently running processes. To search for processes by name, you can combine <code>ps</code> with the <code>grep</code> command. The following command:</p>
+            <h3 id="finding-processes">Finding Processes</h3>
+            <p>Whether you need a quick “What’s that PID?” or a detailed, real-time view, Linux gives you several handy tools</p>
+            <h4 id="ps-grep-the-classic-one-liner"><code>ps</code> + <code>grep</code> — the classic one-liner</h4>
+            <p>Command</p>
             <p>
             <div>
-                <pre><code class="language-bash">ps -ef | grep process_name</code></pre>
+                <pre><code class="language-bash">ps -ef | grep firefox</code></pre>
             </div>
             </p>
-            <p>searches and displays all processes containing the specified name (process_name in this example). Here, ps -ef lists all processes, and grep process_name filters the list to show only the processes with the specified name.</p>
-            <h4 id="searching-processes-with-pgrep">Searching Processes with pgrep</h4>
-            <p>The pgrep command offers a quick and direct method to search for processes by their names and display their PIDs. For instance, to find all running processes named chromium, you would use:</p>
+            <p>Typical output</p>
             <p>
             <div>
-                <pre><code class="language-bash">pgrep chromium</code></pre>
+                <pre><code class="language-shell">user      2345  1023  1 11:02 ?        00:00:03 /usr/lib/firefox/firefox
+user      2389  2345  0 11:02 ?        00:00:00 /usr/lib/firefox/firefox -contentproc -childID 1
+user      2411  2345  0 11:02 ?        00:00:00 /usr/lib/firefox/firefox -contentproc -childID 2</code></pre>
             </div>
             </p>
-            <p>This command displays the PIDs for all instances of chromium currently running on the system.</p>
-            <h4 id="searching-processes-with-htop">Searching Processes with htop</h4>
-            <p>htop provides a real-time, interactive view of all running processes in a system. It's a robust tool for process management, offering capabilities like process searching, sorting, and termination.</p>
-            <p>To search for processes in htop:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Column</td>
+                    <td>What it means (why you care)</td>
+                </tr>
+                <tr>
+                    <td><strong>user</strong></td>
+                    <td>Who owns the process. Useful when diagnosing multi-user boxes.</td>
+                </tr>
+                <tr>
+                    <td><strong>PID</strong></td>
+                    <td>The Process ID you’ll feed to <code>kill</code>, <code>strace</code>, etc.</td>
+                </tr>
+                <tr>
+                    <td><strong>PPID</strong></td>
+                    <td>Parent PID. Child PIDs tell you which tab/plugin crashed.</td>
+                </tr>
+                <tr>
+                    <td><strong>%CPU / %MEM</strong></td>
+                    <td>If you add the <code>-o %cpu,%mem</code> flags, you’ll see quick resource usage.</td>
+                </tr>
+                <tr>
+                    <td><strong>CMD</strong></td>
+                    <td>Full command line—helps confirm you’re looking at the right thing.</td>
+                </tr>
+            </table>
+            </p>
+            <blockquote>
+                <p><strong>Tip:</strong> End the pipeline with <code>grep -v grep</code> or use <code>ps -ef | grep [f]irefox</code> so the <code>grep</code> process doesn’t show up in the results.</p>
+            </blockquote>
+            <h4 id="pgrep-faster-script-friendly"><code>pgrep</code> — faster, script-friendly</h4>
+            <p>Command:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">pgrep -l nginx</code></pre>
+            </div>
+            </p>
+            <p><em><code>-l</code> prints the name along with each PID.</em></p>
+            <p>Typical output:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">1298 nginx
+1300 nginx</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><strong>1298</strong> and <strong>1300</strong> are the PIDs for the two master/worker processes.</li>
+                <li>Perfect when you need to embed the result in a script:</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-bash">for pid in $(pgrep nginx); do sudo strace -p "$pid"; done</code></pre>
+            </div>
+            </p>
+            <blockquote>
+                <p><strong>Why use <code>pgrep</code>?</strong>
+                    • No need for <code>ps</code> + <code>grep</code> gymnastics.
+                    • Supports extra filters (<code>-u user</code>, <code>-f</code> to match the full command line, <code>-n</code> for the newest PID).</p>
+            </blockquote>
+            <h4 id="htop-interactive-real-time-dashboard"><code>htop</code> — interactive, real-time dashboard</h4>
             <ol>
-                <li>Launch htop by typing <code>htop</code> in the terminal.</li>
-                <li>Once htop is open, press <code>F4</code> to activate the search bar.</li>
-                <li>Type the name of the process or the user you're searching for, then press Enter.</li>
-                <li>The list of processes will update to show only those matching your search criteria.</li>
+                <li><code>htop</code> ↵ to open the UI.</li>
+                <li>Press <strong>F4</strong> (or <code>/</code>) and start typing a name—e.g., <code>python</code>.</li>
+                <li>Matching rows highlight instantly; everything else is temporarily hidden.</li>
+                <li>Use the <strong>arrow keys</strong> to move, <strong>F9</strong> to send a signal if you need to kill/stop a misbehaving process.</li>
             </ol>
-            <h3 id="foreground-and-background-jobs">Foreground and Background Jobs</h3>
-            <p>The tasks running on your system can be in one of two states, either running in the 'foreground' or in the 'background'. These two states provide flexibility for multi-tasking and efficient system utilization.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">PID USER   PRI  NI VIRT   RES   SHR S CPU% MEM%   TIME+  Command
+ 4382 user    20   0 765M 145M  28M S  3.6  1.9  0:10.23 python my_script.py</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><strong>CPU% / MEM%</strong> columns update every couple of seconds, making it easy to spot spikes.</li>
+                <li>Hit <strong>F6</strong> to change the sort order (CPU, memory, etc.).</li>
+                <li>Press <strong>F2</strong> → <em>Columns</em> if you want to add or remove fields (I/O, Swap, etc.).</li>
+            </ul>
+            <blockquote>
+                <p><strong>Interpretation cheat-sheet</strong>
+                    • Green = user-space CPU, Red = kernel, Blue = low-priority, Orange = IRQ.
+                    • High “Load average” in the header plus many processes in state <strong>R</strong> (running) → possible CPU bottleneck.</p>
+            </blockquote>
+            <h3 id="foreground-vs-background-jobs">Foreground vs Background Jobs</h3>
+            <p>When you kick off a command in a shell, it either <em>grabs the terminal</em> (foreground) or quietly keeps working behind the scenes (background). Knowing how to juggle the two is essential for multitasking without spawning extra terminals.</p>
             <ul>
                 <li>When a process is running as a <strong>Foreground Process</strong>, it actively executes and interacts with the terminal's input and output. These are typically tasks that the user has initiated and is directly interacting with in the terminal.</li>
                 <li>In contrast, a <strong>Background Process</strong> operates without direct interaction with the terminal's input and output. This functionality enables users to run multiple processes at the same time, allowing them to initiate new tasks without waiting for the completion of others.</li>
@@ -389,35 +437,95 @@ kill -2 -SIGTERM</code></pre>
 +------------------------+</code></pre>
             </div>
             </p>
-            <h4 id="controlling-job-execution">Controlling Job Execution</h4>
-            <p>You can direct a program to run in the background right from its initiation by appending an ampersand <code>&amp;</code> operator after the command. Consider the following example:</p>
+            <h4 id="starting-a-job">Starting a Job</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>What you type</td>
+                    <td>What happens</td>
+                </tr>
+                <tr>
+                    <td><code>sleep 1000</code></td>
+                    <td>Sleeps 1 000 s <em>in the foreground</em> — your prompt is blocked.</td>
+                </tr>
+                <tr>
+                    <td><code>sleep 1000 &amp;</code></td>
+                    <td>Same command, but it <em>immediately</em> returns control, printing the job and PID.</td>
+                </tr>
+            </table>
+            </p>
+            <p>Typical background launch:</p>
             <p>
             <div>
-                <pre><code class="language-bash">sleep 1000 &amp;</code></pre>
+                <pre><code class="language-bash">$ sleep 1000 &amp;
+[1] 3241</code></pre>
             </div>
             </p>
-            <p>Here, the sleep command will operate in the background, waiting for 1000 seconds before terminating. The output typically resembles this:</p>
+            <ul>
+                <li><strong><code>[1]</code></strong> Job number (used by <code>fg</code>/<code>bg</code>).</li>
+                <li><strong><code>3241</code></strong> Process ID (PID) you’d feed to <code>kill</code>, <code>strace</code>, etc.</li>
+            </ul>
+            <h4 id="parking-a-foreground-job-mid-flight">Parking a Foreground Job mid-flight</h4>
+            <ol>
+                <li><strong>Ctrl + Z</strong> — sends <strong>SIGTSTP</strong>, pausing the job and parking it:</li>
+            </ol>
+            <p>CODE_BLOCK_PLACEHOLDER
+                2. <strong><code>bg %1</code></strong> — resumes that job <em>in the background</em>.
+                3. <strong><code>fg %1</code></strong> — yanks it back to the foreground whenever you’re ready.</p>
+            <blockquote>
+                <p><strong>Shortcut:</strong> If there’s only one stopped job, plain <code>bg</code> or <code>fg</code> is enough; <code>%1</code> is implied.</p>
+            </blockquote>
+            <h4 id="peeking-at-your-jobs">Peeking at Your Jobs</h4>
             <p>
             <div>
-                <pre><code class="language-bash">[1] 3241</code></pre>
+                <pre><code class="language-shell">^Z          # you pressed Ctrl+Z
+   [1]+  Stopped                 long_running_script.sh</code></pre>
             </div>
             </p>
-            <p>The number enclosed in square brackets (like <code>[1]</code>) represents the job number, while the subsequent number (like 3241) is the process ID (PID).</p>
-            <h4 id="job-and-process-management-commands">Job and Process Management Commands</h4>
-            <p>To view all active jobs in the system, use the <code>jobs</code> command.</p>
-            <p>If you wish to bring a background job to the foreground, utilize the fg command followed by the job number. For instance, to bring job number 3 to the foreground, you would use:</p>
+            <p>Column guide</p>
+            <ul>
+                <li><strong><code>+</code> / <code>-</code></strong> Current (+) and previous (–) jobs, used by <code>fg</code>/<code>bg</code> defaults.</li>
+                <li><strong>State</strong> <code>Running</code>, <code>Stopped</code>, or <code>Done</code>.</li>
+            </ul>
+            <h4 id="typical-workflow-cheat-sheet">Typical Workflow Cheat-Sheet</h4>
             <p>
-            <div>
-                <pre><code class="language-bash">fg 3</code></pre>
-            </div>
+            <table>
+                <tr>
+                    <td>Need to…</td>
+                    <td>Hit / Type</td>
+                </tr>
+                <tr>
+                    <td>Pause current task &amp; free prompt</td>
+                    <td><strong>Ctrl + Z</strong></td>
+                </tr>
+                <tr>
+                    <td>Let it keep running silently</td>
+                    <td><code>bg</code></td>
+                </tr>
+                <tr>
+                    <td>Check what’s in the background</td>
+                    <td><code>jobs</code></td>
+                </tr>
+                <tr>
+                    <td>Bring last job back up front</td>
+                    <td><code>fg</code></td>
+                </tr>
+                <tr>
+                    <td>Nudge a specific one</td>
+                    <td><code>fg %3</code>, <code>bg %2</code></td>
+                </tr>
+                <tr>
+                    <td>Kill misbehaving job</td>
+                    <td><code>kill %1</code> or <code>kill 3241</code></td>
+                </tr>
+            </table>
             </p>
-            <p>To convert a foreground process to a background process, you can use Ctrl+Z. This operation pauses the process and allows you to resume it in the background using the bg command followed by the job number. For instance:</p>
-            <p>
-            <div>
-                <pre><code class="language-bash">bg 1</code></pre>
-            </div>
-            </p>
-            <p>This command will resume job number 1 in the background. Understanding and managing foreground and background jobs helps to increase productivity and efficiency when working in a shell environment.</p>
+            <h4 id="what-to-watch-for">What to Watch For</h4>
+            <ul>
+                <li><strong>Accidental Ctrl + Z</strong> — Editors (<code>vim</code>, <code>nano</code>) freeze; a quick <code>fg</code> gets you back.</li>
+                <li><strong>Background output spam</strong> — Redirect stdout/stderr (<code>cmd &amp;&gt;log &amp;</code>) to avoid cluttering your prompt.</li>
+                <li><strong>Long-running daemons</strong> — For anything critical, use proper service managers (<code>systemd</code>, <code>tmux</code>, <code>screen</code>) instead of backgrounding from a login shell, which dies when your session closes.</li>
+            </ul>
             <h3 id="challenges">Challenges</h3>
             <ol>
                 <li>Find the process ID (PID) of a specific process by its name.</li>
@@ -452,17 +560,20 @@ kill -2 -SIGTERM</code></pre>
                             <li><a href="#special-pid-values-in-kill">Special PID Values in kill</a></li>
                         </ol>
                     </li>
-                    <li><a href="#methods-for-searching-processes">Methods for Searching Processes</a>
+                    <li><a href="#finding-processes">Finding Processes</a>
                         <ol>
-                            <li><a href="#searching-processes-with-ps-and-grep">Searching Processes with ps and grep</a></li>
-                            <li><a href="#searching-processes-with-pgrep">Searching Processes with pgrep</a></li>
-                            <li><a href="#searching-processes-with-htop">Searching Processes with htop</a></li>
+                            <li><a href="#ps-grep-the-classic-one-liner">ps + grep — the classic one-liner</a></li>
+                            <li><a href="#pgrep-faster-script-friendly">pgrep — faster, script-friendly</a></li>
+                            <li><a href="#htop-interactive-real-time-dashboard">htop — interactive, real-time dashboard</a></li>
                         </ol>
                     </li>
-                    <li><a href="#foreground-and-background-jobs">Foreground and Background Jobs</a>
+                    <li><a href="#foreground-vs-background-jobs">Foreground vs Background Jobs</a>
                         <ol>
-                            <li><a href="#controlling-job-execution">Controlling Job Execution</a></li>
-                            <li><a href="#job-and-process-management-commands">Job and Process Management Commands</a></li>
+                            <li><a href="#starting-a-job">Starting a Job</a></li>
+                            <li><a href="#parking-a-foreground-job-mid-flight">Parking a Foreground Job mid-flight</a></li>
+                            <li><a href="#peeking-at-your-jobs">Peeking at Your Jobs</a></li>
+                            <li><a href="#typical-workflow-cheat-sheet">Typical Workflow Cheat-Sheet</a></li>
+                            <li><a href="#what-to-watch-for">What to Watch For</a></li>
                         </ol>
                     </li>
                     <li><a href="#challenges">Challenges</a></li>
