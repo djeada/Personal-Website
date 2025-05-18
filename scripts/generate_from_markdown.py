@@ -203,6 +203,8 @@ class HtmlEnhancer:
             math_content = math_content.replace("\\\n", "\\\\\n")
             # Replace anchor tags with [href-value]
             math_content = re.sub(r'<a\s+href="([^"]+)">.*?</a>', r"[\1]", math_content)
+            # Replace HTML entity &amp; with &
+            math_content = math_content.replace("&amp;", "&")
             # Re-wrap in $$
             return f"$${math_content}$$"
 

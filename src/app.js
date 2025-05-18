@@ -99,6 +99,7 @@ const PATH_PREPENDS = {
     "numerical_methods": "notes",
     "databases_notes": "notes",
     "git_notes": "notes",
+    "vtk_examples": "notes",
     "linux_notes": "notes",
     "numpy_tutorials": "notes",
     "parallel_and_concurrent_programming": "notes",
