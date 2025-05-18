@@ -67,7 +67,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: December 06, 2019</i></p>
+            <p style="text-align: right;"><i>Last modified: May 18, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="handling-the-double-booking-problem-in-databases">Handling the Double-Booking Problem in Databases</h2>
             <p>The double-booking problem is a common issue in database systems, particularly in applications like booking platforms, reservation systems, and inventory management. It occurs when multiple transactions simultaneously attempt to reserve or modify the same resource, leading to conflicts and inconsistencies. This can result in overbooked flights, double-sold tickets, or oversold inventory, causing significant problems for both businesses and customers.</p>
@@ -109,185 +109,582 @@ T4                                      Book seat (available seats = -1)</code><
                 <li>Utilizing <strong>insufficient isolation levels</strong>, such as read-uncommitted, permits undesirable phenomena like dirty reads and non-repeatable reads, increasing the likelihood of data conflicts. </li>
                 <li><strong>Delayed writes</strong> occur when transactions read data, perform computations, and then write back changes after a delay, potentially overwriting updates made by other transactions in the interim. </li>
             </ul>
-            <h3 id="preventing-double-booking-with-concurrency-control">Preventing Double-Booking with Concurrency Control</h3>
-            <p>To address the double-booking problem, databases use concurrency control mechanisms to manage simultaneous transactions effectively.</p>
-            <h4 id="implementing-proper-locking">Implementing Proper Locking</h4>
-            <p>Locks are essential to control access to shared resources:</p>
-            <p>I. <strong>Exclusive Locks:</strong> </p>
-            <p>Prevent other transactions from reading or writing a resource while it's locked. When a transaction acquires an exclusive lock on a resource, other transactions must wait until the lock is released.</p>
-            <p><strong>Example:</strong></p>
+            <h3 id="preventing-double-booking">Preventing Double-Booking</h3>
+            <p>Preventing double-booking is essential for systems where concurrent users compete for limited resources. By implementing proper locking strategies and transaction controls, you can ensure data integrity and provide a reliable user experience even under high concurrency.</p>
+            <h4 id="use-the-right-lock-for-the-situation">Use the Right Lock for the Situation</h4>
+            <p>Locks allow you to control how multiple transactions interact with the same data. Choosing the right lock type helps balance concurrency and safety: exclusive locks prevent other operations from interfering, while shared locks permit safe reads from multiple transactions.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Lock type</td>
+                    <td>What it does</td>
+                    <td>Works in</td>
+                    <td>Typical syntax</td>
+                    <td>How to verify</td>
+                </tr>
+                <tr>
+                    <td><strong>Exclusive / Write</strong></td>
+                    <td>One writer, no readers.</td>
+                    <td>PostgreSQL, MySQL (InnoDB), SQL Server, Oracle</td>
+                    <td><code>SELECT … FOR UPDATE;</code> (PG/MariaDB)<br /><code>SELECT … LOCK IN SHARE MODE;</code> (MySQL 8.0+)<br /><code>SELECT … WITH (UPDLOCK, HOLDLOCK);</code> (SQL Server)</td>
+                    <td>Open two sessions. In session A run the locking <code>SELECT</code>. In session B run the same statement—observe it block (PG/SQL Server) or return instantly with an error (MySQL w/ NOWAIT).</td>
+                </tr>
+                <tr>
+                    <td><strong>Shared / Read</strong></td>
+                    <td>Many readers, no writers.</td>
+                    <td>Same engines as above</td>
+                    <td><code>SELECT … FOR SHARE;</code> (PG)<br /><code>LOCK TABLE tbl IN SHARE MODE;</code> (MySQL)<br /><code>SELECT … WITH (HOLDLOCK);</code> (SQL Server)</td>
+                    <td>Keep session A busy with <code>SELECT … FOR SHARE</code>, attempt an <code>UPDATE</code> in session B—update waits until session A commits.</td>
+                </tr>
+            </table>
+            </p>
+            <blockquote>
+                <p><strong>Tip for PostgreSQL:</strong> Inspect current locks with</p>
+                <p>
+                <div>
+                    <pre><code class="language-sql">&gt; SELECT pid, locktype, relation::regclass, mode, granted
+&gt; FROM pg_locks l JOIN pg_stat_activity a USING(pid);
+&gt;</code></pre>
+                </div>
+                </p>
+            </blockquote>
+            <h4 id="pick-an-isolation-level-you-can-live-with">Pick an Isolation Level You Can Live With</h4>
+            <p>Isolation levels define how visible changes in one transaction are to others. Stricter levels prevent more anomalies but can reduce performance by increasing locking and blocking. Choose the level that meets your consistency needs without unnecessarily hindering throughput.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Level</td>
+                    <td>Guarantees</td>
+                    <td>Supported by</td>
+                    <td>Set with</td>
+                    <td>Quick test</td>
+                </tr>
+                <tr>
+                    <td><strong>SERIALIZABLE</strong></td>
+                    <td>No dirty, non-repeatable or phantom reads. Behaves as if transactions ran one-after-another.</td>
+                    <td>PostgreSQL, SQL Server, Oracle, MySQL 8.0 (but uses extra locks → lower concurrency)</td>
+                    <td><code>SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;</code></td>
+                    <td>In two sessions insert into the same over-booked seat; one will roll back with <code>SQLSTATE 40001</code> (PG) or <code>ERROR 1213 (MySQL)</code>.</td>
+                </tr>
+                <tr>
+                    <td><strong>REPEATABLE READ</strong></td>
+                    <td>Same row value every time you read it; phantoms still possible (unless engine adds gap locks, e.g. MySQL). Default in MySQL.</td>
+                    <td>PostgreSQL, MySQL (InnoDB), MariaDB, SQL Server (<code>SNAPSHOT</code>)</td>
+                    <td><code>SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;</code></td>
+                    <td>Read seat count twice in one Tx while another session inserts a new seat. In MySQL you won’t see new rows (gap locks); in PostgreSQL you will—so use explicit <code>SELECT … FOR KEY SHARE</code> to block.</td>
+                </tr>
+            </table>
+            </p>
+            <p><em>Verification script for MySQL</em></p>
             <p>
             <div>
-                <pre><code class="language-shell">Transaction A locks Seat #42 exclusively.
-Transaction B tries to lock Seat #42 but must wait until Transaction A releases it.</code></pre>
+                <pre><code class="language-sql">-- Session A
+SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+START TRANSACTION;
+SELECT * FROM seats WHERE seat_id = 42 FOR UPDATE;
+
+-- Session B (should block or fail)
+START TRANSACTION;
+UPDATE seats SET user_id = 99 WHERE seat_id = 42;</code></pre>
             </div>
             </p>
-            <p>II. <strong>Shared Locks:</strong> </p>
-            <p>Allow multiple transactions to read a resource but prevent any from writing to it until all shared locks are released.</p>
-            <h4 id="setting-appropriate-isolation-levels">Setting Appropriate Isolation Levels</h4>
-            <p>Isolation levels determine how transaction integrity is visible to other transactions:</p>
-            <p>I. <strong>Serializable Isolation Level:</strong> </p>
-            <p>The highest level, ensuring transactions are completely isolated from each other, effectively preventing concurrent access issues.</p>
+            <h4 id="optimistic-concurrency-control-occ-">Optimistic Concurrency Control (OCC)</h4>
+            <p>When conflicts are rare, OCC lets you avoid heavy locking by using a version or timestamp column to detect concurrent updates. If a conflict is detected at commit time, the transaction retries, yielding higher throughput under low contention.</p>
             <p>
             <div>
-                <pre><code class="language-sql">SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
-BEGIN TRANSACTION;
--- Transaction operations
-COMMIT;</code></pre>
-            </div>
-            </p>
-            <p>This level prevents other transactions from inserting or updating data that would affect the current transaction.</p>
-            <p>II. <strong>Repeatable Read:</strong> </p>
-            <p>Ensures that if a transaction reads data multiple times, it will see the same data each time, preventing non-repeatable reads but not phantom reads.</p>
-            <h4 id="using-optimistic-concurrency-control">Using Optimistic Concurrency Control</h4>
-            <p>Optimistic Concurrency Control (OCC) assumes that transaction conflicts are rare and doesn't lock resources when reading:</p>
-            <ul>
-                <li>Transactions proceed without locking resources but validate data before committing.</li>
-                <li>If a conflict is detected (the data has changed since it was read), the transaction is rolled back.</li>
-            </ul>
-            <p><strong>Example with Versioning:</strong></p>
-            <p>
-            <div>
-                <pre><code class="language-sql">BEGIN TRANSACTION;
-SELECT quantity, version FROM inventory WHERE product_id = 101;
--- Perform operations using quantity
--- Before updating, check if version has changed
+                <pre><code class="language-sql">-- Works in: PostgreSQL, SQL Server (rowversion/timestamp), MySQL (generated col), Oracle
+BEGIN;
+SELECT quantity, version
+FROM inventory
+WHERE product_id = 101;
+
+-- business logic here …
+
 UPDATE inventory
-SET quantity = new_quantity, version = version + 1
-WHERE product_id = 101 AND version = old_version;
-IF @@ROWCOUNT = 0
-   -- Handle conflict (e.g., retry or abort)
+SET quantity = :new_qty,
+    version  = version + 1
+WHERE product_id = 101
+  AND version   = :old_version;      -- fails (0 rows) if someone changed it
 COMMIT;</code></pre>
             </div>
             </p>
-            <h4 id="applying-database-constraints">Applying Database Constraints</h4>
-            <p>Constraints at the database level can enforce rules to prevent double-booking:</p>
-            <p>I. <strong>Unique Constraints:</strong> </p>
-            <p>Ensure that a particular value or combination of values is unique across the table.</p>
+            <p><em>Verify it</em>:</p>
+            <ol>
+                <li>Run above block in two psql sessions simultaneously.</li>
+                <li>One commit succeeds, the other sees <code>UPDATE 0</code>, signaling a retry.</li>
+            </ol>
+            <h4 id="pessimistic-lock-first-work-later">Pessimistic Lock First, Work Later</h4>
+            <p>Sometimes you need to lock resources immediately to prevent any concurrent modifications. This approach acquires an exclusive lock up front, ensuring that no one else can read or write the locked rows until you commit.</p>
             <p>
             <div>
-                <pre><code class="language-sql">ALTER TABLE bookings
-ADD CONSTRAINT unique_booking UNIQUE (seat_number, flight_id);</code></pre>
-            </div>
-            </p>
-            <p>II. <strong>Check Constraints:</strong> </p>
-            <p>Validate data based on a logical expression.</p>
-            <p>
-            <div>
-                <pre><code class="language-sql">ALTER TABLE flights
-ADD CONSTRAINT seat_count_check CHECK (available_seats &gt;= 0);</code></pre>
-            </div>
-            </p>
-            <h3 id="best-practices-to-avoid-double-booking">Best Practices to Avoid Double-Booking</h3>
-            <p>To effectively prevent double-booking, consider the following strategies:</p>
-            <h4 id="design-transactions-carefully">Design Transactions Carefully</h4>
-            <p>Ensure that transactions are atomic and encapsulate all necessary operations:</p>
-            <ul>
-                <li>Upholding <strong>atomicity</strong> ensures that transactions are executed as all-or-nothing operations, preventing partial updates that could result in inconsistencies if a failure occurs. </li>
-                <li>Maintaining <strong>short transactions</strong> minimizes the duration of locks held, reducing contention and improving overall system throughput in high-concurrency environments. </li>
-            </ul>
-            <h4 id="use-pessimistic-locking-when-necessary">Use Pessimistic Locking When Necessary</h4>
-            <p>In environments with high contention for resources, pessimistic locking can prevent conflicts:</p>
-            <p>
-            <div>
-                <pre><code class="language-sql">BEGIN TRANSACTION;
-SELECT * FROM seats WITH (UPDLOCK, HOLDLOCK) WHERE seat_id = 101;
--- Proceed with booking
+                <pre><code class="language-sql">-- SQL Server style
+BEGIN TRAN;
+SELECT * FROM seats
+    WITH (UPDLOCK, HOLDLOCK)        -- upgrade immediately
+    WHERE seat_id = 101;
+/* proceed with booking */
 COMMIT;</code></pre>
             </div>
             </p>
-            <p>Lock the resource before reading to ensure no other transaction can modify it during the operation.</p>
-            <h4 id="implement-optimistic-locking">Implement Optimistic Locking</h4>
-            <p>In low-contention scenarios, implementing optimistic locking can significantly enhance performance by reducing the overhead associated with traditional locking mechanisms. This approach relies on the principle of detecting conflicts only at the time of writing. By checking for changes before committing updates—often using row versions or timestamps—it ensures that no other transaction has modified the data during the operation. This method works effectively when conflicts are infrequent, as it minimizes the need for locks while maintaining data integrity.</p>
-            <h4 id="consistent-lock-ordering">Consistent Lock Ordering</h4>
-            <p>To address deadlocks, adopting consistent lock ordering is a practical strategy. By establishing a global sequence for acquiring locks, all transactions follow the same order when accessing resources. This structured approach eliminates the possibility of cyclical dependencies, a common cause of deadlocks, ensuring smoother transaction execution and improved system stability.</p>
-            <h4 id="monitor-and-adjust-isolation-levels">Monitor and Adjust Isolation Levels</h4>
-            <p>Balance the need for data integrity with system performance:</p>
             <ul>
-                <li>Using <strong>higher isolation levels</strong> ensures greater consistency by preventing anomalies such as dirty reads, non-repeatable reads, and phantom reads, though it often comes at the cost of reduced concurrency. </li>
-                <li>Opting for <strong>lower isolation levels</strong> enhances concurrency by allowing more transactions to proceed simultaneously but may introduce anomalies like dirty reads, requiring careful consideration of the application's tolerance for inconsistencies. </li>
+                <li><strong>Where this shines:</strong> hotel room or flight-seat tables during a flash sale.</li>
+                <li><strong>Where it hurts:</strong> large report queries (locks too many rows &amp; slows everyone).</li>
+                <li><strong>Verification:</strong> Watch <code>sys.dm_tran_locks</code>; you’ll see an <code>X</code> lock on that row.</li>
             </ul>
-            <p>Choose the appropriate level based on the application's requirements.</p>
+            <h4 id="enforce-invariants-with-constraints-indexes">Enforce Invariants with Constraints &amp; Indexes</h4>
+            <p>Constraints and indexes enforce business rules at the database level, preventing invalid or conflicting data regardless of application logic. They serve as a final safety net against double-booking and other anomalies.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Technique</td>
+                    <td>Engines</td>
+                    <td>Sample SQL</td>
+                    <td>How to test</td>
+                </tr>
+                <tr>
+                    <td><strong>Unique constraint</strong> on <code>(seat_number, flight_id)</code></td>
+                    <td>All relational DBs; MongoDB via unique index</td>
+                    <td><code>ALTER TABLE bookings ADD CONSTRAINT u_flight_seat UNIQUE(seat_number, flight_id);</code></td>
+                    <td>Insert same seat twice ⇒ expect <code>ERROR: duplicate key value violates unique constraint</code>.</td>
+                </tr>
+                <tr>
+                    <td><strong>Check constraint</strong> to keep counters ≥ 0</td>
+                    <td>PostgreSQL, SQL Server, Oracle, MySQL 8.0+</td>
+                    <td><code>ALTER TABLE flights ADD CONSTRAINT chk_available_seats CHECK (available_seats &gt;= 0);</code></td>
+                    <td>Try manual <code>UPDATE flights SET available_seats = -1</code> ⇒ fails.</td>
+                </tr>
+                <tr>
+                    <td><strong>Partial / filtered unique index</strong> to ignore cancelled tickets</td>
+                    <td>PostgreSQL, SQL Server</td>
+                    <td><code>CREATE UNIQUE INDEX u_active_seat ON bookings(seat,flight_id) WHERE status='CONFIRMED';</code></td>
+                    <td>Insert two rows with <code>status='CONFIRMED'</code> ⇒ second insert fails.</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="consistent-lock-ordering-to-avoid-deadlocks">Consistent Lock Ordering to Avoid Deadlocks</h4>
+            <p>Deadlocks occur when transactions lock resources in different orders. By enforcing a global lock acquisition order in all your transactions, you eliminate the circular dependencies that lead to deadlocks.</p>
+            <ol>
+                <li>Decide on a global order (e.g., always lock <code>flights</code> before <code>seats</code>).</li>
+                <li>Code every transaction to follow that order.</li>
+                <li><strong>Verify:</strong> turn on deadlock logging (<code>log_lock_waits=on</code> in PostgreSQL) and run parallel stress tests; no deadlocks should appear.</li>
+            </ol>
+            <h3 id="monitor-tune-locking-in-production">Monitor &amp; Tune Locking in Production</h3>
+            <p><em>Proactive, continuous monitoring is the cheapest insurance you can buy against “everything-is-stuck” incidents. The goal is to notice lock contention </em><em>while it is still a warning sign</em><em>—long before users start calling, background jobs fall behind, or an outage page lights up.</em></p>
+            <h4 id="why-you-watch">Why you watch</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>What you’re looking for</td>
+                    <td>Why it matters</td>
+                    <td>Typical symptom in the app</td>
+                </tr>
+                <tr>
+                    <td><strong>Long-running transactions</strong></td>
+                    <td>They hold locks far beyond the “polite” window, slowing everyone else.</td>
+                    <td>Pages hang, batch jobs back up.</td>
+                </tr>
+                <tr>
+                    <td><strong>Lock-wait time &amp; blocked sessions</strong></td>
+                    <td>Indicates immediate pain and the exact sessions involved.</td>
+                    <td>Sudden latency spikes.</td>
+                </tr>
+                <tr>
+                    <td><strong>Deadlocks</strong></td>
+                    <td>Proof the workload has crossed a concurrency threshold where simple waiting will never resolve.</td>
+                    <td>Intermittent 400/500 errors, rolled-back work.</td>
+                </tr>
+                <tr>
+                    <td><strong>Changing hotspot objects</strong></td>
+                    <td>Which tables/rows/indexes get hotter over time?</td>
+                    <td>Emerging scalability bottlenecks.</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="instant-health-check-queries-engine-specifics-">Instant health-check queries (engine specifics)</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Engine</td>
+                    <td>Handy views / commands</td>
+                    <td>What to keep on the big screen</td>
+                    <td>Sample “grab-it-now” query</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><strong>PostgreSQL</strong></td>
+                    <td><code>pg_stat_activity</code>, <code>pg_locks</code>, <code>pg_blocking_pids()</code></td>
+                    <td>• Active vs idle in txn<br />• <code>wait_event = lock</code> count<br />• Blocking tree</td>
+                    <td><code>sql SELECT pid, state, now()-xact_start AS age, wait_event_type, wait_event, query FROM pg_stat_activity WHERE state = 'active' AND now()-xact_start &gt; interval '30s';</code></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><strong>SQL Server</strong></td>
+                    <td><code>sys.dm_exec_sessions</code>, <code>sys.dm_exec_requests</code>, <code>sys.dm_tran_locks</code>, <code>sys.dm_os_waiting_tasks</code></td>
+                    <td>• <code>waiting_tasks_count</code> on <strong>LCK_*</strong> waits<br />• Top blockers from <code>sys.dm_exec_sessions</code></td>
+                    <td><code>sql SELECT TOP 10 blocking_session_id, wait_time_ms, wait_type, [text] FROM sys.dm_exec_requests CROSS APPLY sys.dm_exec_sql_text(sql_handle) WHERE blocking_session_id &lt;&gt; 0 ORDER BY wait_time_ms DESC;</code></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><strong>MySQL / InnoDB</strong></td>
+                    <td><code>SHOW ENGINE INNODB STATUS\G</code>, <code>information_schema.innodb_trx / locks / lock_waits</code>, Performance Schema</td>
+                    <td>• “LATEST DETECTED DEADLOCK” section<br />• <code>trx_wait_started</code> age</td>
+                    <td><code>sql SELECT waiting_trx_id, waiting_pid, blocking_pid, waiting_query FROM information_schema.innodb_lock_waits\G</code></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><strong>Oracle</strong></td>
+                    <td><code>V$LOCK</code>, <code>V$SESSION</code>, <code>DBA_BLOCKERS</code>, <code>DBA_WAITERS</code>, <code>V$ASH</code></td>
+                    <td>• <code>BLOCKING_SESSION_STATUS</code> = ‘VALID’ count<br />• Session trees from <code>DBA_BLOCKERS</code></td>
+                    <td>
+                        <div>
+                            <pre><code class="language-sql">SELECT s.sid, s.serial#, l.id1                                                                                                                                                                   |   | ',' |   | l.id2 "Resource", s.seconds_in_wait FROM v\$session s JOIN v\$lock l ON s.sid = l.sid WHERE l.block = 1;</code></pre>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            </p>
+            <blockquote>
+                <p><strong>Tip</strong> Save each snippet in a “first-aid” script kit (one per engine) so on-call staff can paste-and-go.</p>
+            </blockquote>
+            <h4 id="alert-thresholds-that-catch-trouble-early-tune-for-your-sla-">Alert thresholds that catch trouble early (<em>tune for your SLA</em>)</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Symptom</td>
+                    <td>OLTP starting point</td>
+                    <td>Analytic/ETL starting point</td>
+                    <td>How to alert</td>
+                </tr>
+                <tr>
+                    <td><strong>Transaction age</strong></td>
+                    <td>30 s</td>
+                    <td>5 min</td>
+                    <td>gauge, page on P95&gt;threshold for 10 min</td>
+                </tr>
+                <tr>
+                    <td><strong>Lock wait</strong></td>
+                    <td>2 s</td>
+                    <td>30 s</td>
+                    <td>histogram + alert on &gt;N waits &gt; threshold / min</td>
+                </tr>
+                <tr>
+                    <td><strong>Deadlocks</strong></td>
+                    <td>1/min</td>
+                    <td>5/min</td>
+                    <td>count(*) from deadlock view over 5 min window</td>
+                </tr>
+                <tr>
+                    <td><strong>% time spent waiting on locks</strong></td>
+                    <td>5 %</td>
+                    <td>15 %</td>
+                    <td>ratio of lock-wait time to total session time</td>
+                </tr>
+            </table>
+            </p>
+            <p>A good rule of thumb: <strong>alert on a trend, not a single incident</strong>—except for deadlocks, which deserve immediate attention because they roll back user work.</p>
+            <h4 id="when-an-alert-fires-triage-playbook">When an alert fires—triage playbook</h4>
+            <p>I. <strong>Grab blocker details</strong> (queries above) and write them to an incident doc.</p>
+            <p>II. <strong>Decide: kill vs wait</strong></p>
+            <ul>
+                <li>OLTP? Kill or nudge the blocker; user impact is measured in seconds.</li>
+                <li>Batch/ETL? Often OK to wait unless the blocker exceeds a soft limit (e.g., 10 min).</li>
+            </ul>
+            <p>III. <strong>Collect forensic artefacts</strong></p>
+            <ul>
+                <li>PostgreSQL — enable <code>log_lock_waits</code>, <code>deadlock_timeout = 500ms</code> temporarily.</li>
+                <li>SQL Server — run an Extended Events session with <code>xml_deadlock_report</code>.</li>
+                <li>MySQL — dump <code>SHOW ENGINE INNODB STATUS</code> every 30 s until clear.</li>
+                <li>Oracle — generate an AWR or ASH report over the incident window.</li>
+            </ul>
+            <p>IV. <strong>Mitigate</strong></p>
+            <ul>
+                <li>Shorten transaction scopes (commit early, avoid open cursors).</li>
+                <li>Add or refine indexes so readers don’t escalate to page/extent locks.</li>
+                <li>Re-order statements to access tables in a consistent order.</li>
+                <li>Consider optimistic isolation (PostgreSQL <code>READ COMMITTED</code> + <code>statement_timeout</code>, SQL Server <code>READ_COMMITTED_SNAPSHOT</code>, Oracle <code>FOR UPDATE SKIP LOCKED</code>).</li>
+            </ul>
+            <h4 id="automating-the-watch">Automating the watch</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Layer</td>
+                    <td>Tooling ideas</td>
+                    <td>Notes &amp; nice-to-haves</td>
+                </tr>
+                <tr>
+                    <td><strong>DB native</strong></td>
+                    <td>PostgreSQL <code>pg_stat_statements</code>, <code>pgwatch2</code>; SQL Server Agent alerts + Query Store; MySQL Performance Schema; Oracle Enterprise Manager</td>
+                    <td>Fire alerts directly from the database when possible—latency-free and resilient to network loss.</td>
+                </tr>
+                <tr>
+                    <td><strong>Metrics/time-series</strong></td>
+                    <td>Prometheus + Grafana, Datadog DBM, New Relic, AWS CloudWatch RDS metrics</td>
+                    <td>Export <code>lock_wait_time</code>, <code>deadlocks_total</code>, <code>xact_age_seconds</code> as counters/gauges. Grafana’s state-timeline panel is perfect for showing blockers over time.</td>
+                </tr>
+                <tr>
+                    <td><strong>Notification</strong></td>
+                    <td>PagerDuty, Opsgenie, Slack/Teams webhook</td>
+                    <td>Include the SQL text &amp; locks held so the first responder can act without shell access.</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="continuous-improvement-loop">Continuous improvement loop</h4>
+            <ol>
+                <li><strong>Review weekly</strong> the “top ten longest blockers” list.</li>
+                <li><strong>Refactor</strong> high-contended code paths (break up batch jobs, swap row for key-value store where feasible).</li>
+                <li><strong>Tune thresholds</strong> as usage grows—successful apps outgrow yesterday’s idea of “long”.</li>
+                <li><strong>Educate developers</strong>: share post-mortems, highlight how small design choices (e.g., “always write parent then child”) prevent deadlocks entirely.</li>
+            </ol>
+            <blockquote>
+                <p><em>“A lock issue once a quarter is a blameless learning opportunity. The same lock issue every week is a monitoring failure.”</em></p>
+            </blockquote>
             <h3 id="real-world-example-ticket-booking-system">Real-World Example: Ticket Booking System</h3>
-            <p>Consider an online concert ticket booking system where multiple users attempt to purchase the last available ticket.</p>
-            <p><strong>Without Proper Concurrency Control:</strong></p>
+            <p>Below is a self-contained, “copy-paste-ready” walk-through you can run on your laptop to <strong>see the double-booking bug happen, then fix it, and finally prove the fix works</strong>.</p>
+            <h4 id="stack-prerequisites">Stack &amp; prerequisites</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Layer</td>
+                    <td>Why we pick it</td>
+                    <td>Other options</td>
+                </tr>
+                <tr>
+                    <td><strong>PostgreSQL ≥ 10</strong></td>
+                    <td>Mature row-level locks (<code>SELECT … FOR UPDATE</code>) and full ACID isolation levels.</td>
+                    <td>MySQL (InnoDB), SQL Server (<code>WITH (UPDLOCK)</code>), Oracle (<code>SELECT … FOR UPDATE</code>), MariaDB, CockroachDB, YugabyteDB</td>
+                </tr>
+                <tr>
+                    <td><strong>Python 3.9+</strong></td>
+                    <td>Quick to script concurrent threads; <code>psycopg2-binary</code> client is ubiquitous.</td>
+                    <td>Node.js + pg, Java + JDBC, Go + pgx</td>
+                </tr>
+                <tr>
+                    <td><strong>psycopg2-binary</strong></td>
+                    <td>PostgreSQL driver.</td>
+                    <td>pg-8000, asyncpg</td>
+                </tr>
+                <tr>
+                    <td><strong>Threading</strong> (not asyncio)</td>
+                    <td>Easiest to show true race with two parallel transactions in separate connections.</td>
+                    <td>multiprocessing, separate psql shells</td>
+                </tr>
+            </table>
+            </p>
+            <blockquote>
+                <p><strong>Install once</strong></p>
+                <p>
+                <div>
+                    <pre><code class="language-bash">&gt; pip install psycopg2-binary
+&gt; # PostgreSQL: brew install postgresql or apt install postgresql
+&gt;</code></pre>
+                </div>
+                </p>
+            </blockquote>
+            <p>The same SQL works, almost verbatim, on the other databases listed above (the locking keywords differ slightly—see § 5).</p>
+            <h4 id="build-a-miniature-ticket-system">Build a miniature ticket system</h4>
             <p>
             <div>
-                <pre><code class="language-shell">User 1 Transaction:
-- Checks available tickets: finds 1 ticket.
-- Decides to purchase the ticket.
+                <pre><code class="language-sql">-- file: setup.sql
+DROP TABLE IF EXISTS concerts CASCADE;
+CREATE TABLE concerts (
+    id          SERIAL PRIMARY KEY,
+    title       TEXT NOT NULL,
+    tickets_left INTEGER NOT NULL CHECK (tickets_left &gt;= 0)
+);
 
-User 2 Transaction:
-- Checks available tickets: also finds 1 ticket.
-- Decides to purchase the ticket.
+INSERT INTO concerts (title, tickets_left) VALUES ('RockFest 2025', 1);</code></pre>
+            </div>
+            </p>
+            <p>
+            <div>
+                <pre><code class="language-bash">psql -U postgres -f setup.sql</code></pre>
+            </div>
+            </p>
+            <p>We start with <strong>exactly one ticket</strong> left, which is the classic “last-seat” problem.</p>
+            <h4 id="reproduce-the-double-booking-bug">Reproduce the double-booking bug</h4>
+            <p>Create <code>race_demo.py</code>:</p>
+            <p>
+            <div>
+                <pre><code class="language-python">import psycopg2, threading, time, random
 
-Both users complete the purchase, resulting in overbooking.</code></pre>
-            </div>
-            </p>
-            <p><strong>With Proper Concurrency Control:</strong></p>
-            <p>
-            <div>
-                <pre><code class="language-shell">User 1 Transaction:
-- Begins transaction.
-- Locks the ticket record exclusively.
-- Confirms availability.
-- Purchases the ticket.
-- Commits transaction and releases lock.
+DSN = "dbname=postgres user=postgres host=localhost"
 
-User 2 Transaction:
-- Begins transaction.
-- Attempts to lock the ticket record but must wait.
-- After User 1's transaction commits, User 2 locks the record.
-- Confirms availability but finds no tickets left.
-- Transaction is aborted or informs the user of unavailability.</code></pre>
+def buy_ticket(name):
+    conn = psycopg2.connect(DSN)
+    conn.set_session(isolation_level='READ COMMITTED', autocommit=False)
+    cur = conn.cursor()
+
+    try:
+        cur.execute("BEGIN;")                         # open txn
+        cur.execute("SELECT tickets_left FROM concerts WHERE id = 1;")
+        tickets = cur.fetchone()[0]
+        print(f"{name}: saw {tickets} ticket(s) left")
+
+        if tickets &gt; 0:
+            # simulate user thinking
+            time.sleep(random.uniform(0.5, 1.5))
+            cur.execute("UPDATE concerts SET tickets_left = tickets_left - 1 WHERE id = 1;")
+            print(f"{name}: bought the ticket!")
+        else:
+            print(f"{name}: no tickets left")
+
+        conn.commit()
+    except Exception as e:
+        print(f"{name}: ERROR {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+
+threads = [threading.Thread(target=buy_ticket, args=(f"User{i}",)) for i in (1, 2)]
+for t in threads: t.start()
+for t in threads: t.join()
+
+with psycopg2.connect(DSN) as check_conn:
+    with check_conn.cursor() as cur:
+        cur.execute("SELECT tickets_left FROM concerts WHERE id = 1;")
+        print("After race, tickets_left =", cur.fetchone()[0])</code></pre>
             </div>
             </p>
-            <p>This approach ensures that only one user can purchase the last ticket, preventing double-booking.</p>
-            <h3 id="implementing-solutions-in-different-database-systems">Implementing Solutions in Different Database Systems</h3>
-            <p>Different databases offer various features to handle concurrency:</p>
-            <h4 id="sql-server-example">SQL Server Example</h4>
-            <p>Using hints to control locking behavior:</p>
+            <p>Run it twice:</p>
             <p>
             <div>
-                <pre><code class="language-sql">BEGIN TRANSACTION;
-SELECT * FROM seats WITH (ROWLOCK, XLOCK) WHERE seat_id = 101;
--- Proceed with booking
-UPDATE seats SET status = 'booked' WHERE seat_id = 101;
-COMMIT;</code></pre>
+                <pre><code class="language-bash">python race_demo.py</code></pre>
             </div>
             </p>
-            <ul>
-                <li><code>ROWLOCK</code>: Specifies row-level locking.</li>
-                <li><code>XLOCK</code>: Acquires an exclusive lock on the rows.</li>
-            </ul>
-            <h4 id="postgresql-example">PostgreSQL Example</h4>
-            <p>Relying on MVCC and explicit locking:</p>
+            <p><strong>Expected output without locks (typical run)</strong></p>
             <p>
             <div>
-                <pre><code class="language-sql">BEGIN TRANSACTION;
-SELECT * FROM seats WHERE seat_id = 101 FOR UPDATE;
--- Proceed with booking
-UPDATE seats SET status = 'booked' WHERE seat_id = 101;
-COMMIT;</code></pre>
+                <pre><code class="language-shell">User1: saw 1 ticket(s) left
+User2: saw 1 ticket(s) left
+User1: bought the ticket!
+User2: bought the ticket!
+After race, tickets_left = -1        &lt;-- Over-sale!</code></pre>
             </div>
             </p>
+            <p>Both threads decremented the same row because they <strong>read before each other updated</strong>, demonstrating a real-world overbooking.</p>
+            <h4 id="prevent-it-pessimistic-locking-">Prevent it (pessimistic locking)</h4>
+            <p>Patch the critical section with <code>SELECT … FOR UPDATE</code>:</p>
+            <p>
+            <div>
+                <pre><code class="language-python"># ---------- only the changed part ----------
+cur.execute("SELECT tickets_left FROM concerts WHERE id = 1 FOR UPDATE;")</code></pre>
+            </div>
+            </p>
+            <p>(Full fixed file: <code>race_demo_fixed.py</code> in the repo below.)</p>
+            <p>Reset stock then test again:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">psql -U postgres -c "UPDATE concerts SET tickets_left = 1 WHERE id = 1;"
+python race_demo_fixed.py</code></pre>
+            </div>
+            </p>
+            <p><strong>Expected output with lock</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">User1: saw 1 ticket(s) left
+User1: bought the ticket!
+User2: waiting for row lock...
+User2: saw 0 ticket(s) left
+User2: no tickets left
+After race, tickets_left = 0         &lt;-- Correct</code></pre>
+            </div>
+            </p>
+            <blockquote>
+                <p>In practice you’d intercept “no tickets left” on the application layer and return an <em>HTTP 409 – Sold Out</em>.</p>
+            </blockquote>
+            <p>Why it works:</p>
             <ul>
-                <li><code>FOR UPDATE</code>: Locks the selected rows against concurrent updates.</li>
+                <li><code>FOR UPDATE</code> grabs an <strong>exclusive row-level lock</strong>.</li>
+                <li>While User 1 holds it, User 2 blocks until the lock is released.</li>
+                <li>Once User 2 enters, the row value is <strong>already updated</strong>, so it sees <code>0</code> and aborts its purchase path.</li>
             </ul>
-            <h3 id="handling-high-concurrency-environments">Handling High Concurrency Environments</h3>
-            <p>Managing systems with a high volume of transactions requires strategies that ensure both efficiency and stability:</p>
+            <h4 id="at-a-glance-equivalents-in-other-engines">At a glance: equivalents in other engines</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Engine</td>
+                    <td>Pessimistic lock syntax</td>
+                    <td>Notes</td>
+                </tr>
+                <tr>
+                    <td>PostgreSQL</td>
+                    <td><code>SELECT … FOR UPDATE</code></td>
+                    <td>Recommended. Use <code>FOR NO KEY UPDATE</code> if only updating non-key cols.</td>
+                </tr>
+                <tr>
+                    <td>MySQL (InnoDB)</td>
+                    <td><code>SELECT … FOR UPDATE</code></td>
+                    <td>Works only in a transaction; default isolation <code>REPEATABLE READ</code>.</td>
+                </tr>
+                <tr>
+                    <td>SQL Server</td>
+                    <td><code>SELECT … WITH (UPDLOCK, ROWLOCK)</code></td>
+                    <td>Or table hint in <code>UPDATE …</code>.</td>
+                </tr>
+                <tr>
+                    <td>Oracle</td>
+                    <td><code>SELECT … FOR UPDATE</code></td>
+                    <td>Same behavior as Postgres.</td>
+                </tr>
+                <tr>
+                    <td>MongoDB</td>
+                    <td>Use a <strong>transaction</strong> plus an <code>$inc</code> with <code>$cond</code> or <code>findAndModify</code></td>
+                    <td>Replica sets/sharded clusters only.</td>
+                </tr>
+                <tr>
+                    <td>Redis</td>
+                    <td><code>EVAL</code> Lua script implementing <code>GET tickets; DECR ticket</code> atomically</td>
+                    <td>Single-threaded nature keeps atomicity.</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="alternative-optimistic-locking">Alternative: optimistic locking</h4>
+            <p>If you dislike blocking, add a <strong>version column</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">ALTER TABLE concerts ADD COLUMN version INTEGER NOT NULL DEFAULT 0;</code></pre>
+            </div>
+            </p>
+            <p>Application flow:</p>
+            <p>I. <code>SELECT tickets_left, version FROM concerts WHERE id = 1;</code></p>
+            <p>II. If tickets_left &gt; 0, run</p>
+            <p>
+            <div>
+                <pre><code class="language-sql">UPDATE concerts
+   SET tickets_left = tickets_left - 1,
+       version = version + 1
+ WHERE id = 1
+   AND version = :previous_version;</code></pre>
+            </div>
+            </p>
+            <p>III. Check <code>cursor.rowcount</code>:</p>
             <ul>
-                <li>Introducing <strong>queueing mechanisms</strong> helps serialize access to critical resources, preventing simultaneous conflicts and improving transaction order. </li>
-                <li>Employing <strong>caching and load balancing</strong> reduces the load on the database by serving frequently accessed data from cache and distributing traffic across multiple servers. </li>
-                <li>Adopting <strong>eventual consistency models</strong> allows temporary inconsistencies to improve performance in distributed systems, though this approach is best suited for applications where strong consistency is not critical. </li>
+                <li><code>1</code> → success</li>
+                <li><code>0</code> → someone modified the row first ⇒ retry or inform user.</li>
             </ul>
-            <h3 id="monitoring-and-testing">Monitoring and Testing</h3>
-            <p>Regular monitoring and proactive testing are essential for identifying and resolving concurrency issues effectively:</p>
+            <p>Works everywhere a single <code>UPDATE</code> can match on the old version.</p>
+            <h4 id="quick-checklist-for-your-project">Quick checklist for your project</h4>
+            <p>I. <strong>Pick your strategy</strong></p>
             <ul>
-                <li>Maintaining <strong>detailed logs and audits</strong> provides visibility into transaction activity, enabling the detection and analysis of conflicts or anomalies. </li>
-                <li>Tracking <strong>performance metrics</strong> such as lock wait times, deadlock occurrences, and transaction durations helps assess the efficiency of concurrency controls. </li>
-                <li>Conducting <strong>stress testing</strong> under simulated high-concurrency conditions validates the system’s capacity to handle load and reveals potential bottlenecks or weaknesses. </li>
+                <li>Low traffic → pessimistic lock is simplest.</li>
+                <li>High traffic / micro-services → optimistic retries scale better.</li>
             </ul>
+            <p>II. <strong>Keep the critical section tiny</strong> – read, validate, update, commit.</p>
+            <p>III. <strong>Always wrap in a transaction</strong>; otherwise <code>FOR UPDATE</code> does nothing.</p>
+            <p>IV. Add <strong>monitoring</strong>: alert if <code>tickets_left</code> ever &lt; 0 or if conflicts exceed a threshold.</p>
+            <p>V. Unit-test with <strong>concurrency harness</strong> (exactly like <code>race_demo.py</code>) in CI.</p>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
@@ -295,32 +692,37 @@ COMMIT;</code></pre>
                 <ol>
                     <li><a href="#understanding-the-double-booking-problem">Understanding the Double-Booking Problem</a></li>
                     <li><a href="#causes-of-the-double-booking-problem">Causes of the Double-Booking Problem</a></li>
-                    <li><a href="#preventing-double-booking-with-concurrency-control">Preventing Double-Booking with Concurrency Control</a>
+                    <li><a href="#preventing-double-booking">Preventing Double-Booking</a>
                         <ol>
-                            <li><a href="#implementing-proper-locking">Implementing Proper Locking</a></li>
-                            <li><a href="#setting-appropriate-isolation-levels">Setting Appropriate Isolation Levels</a></li>
-                            <li><a href="#using-optimistic-concurrency-control">Using Optimistic Concurrency Control</a></li>
-                            <li><a href="#applying-database-constraints">Applying Database Constraints</a></li>
+                            <li><a href="#use-the-right-lock-for-the-situation">Use the Right Lock for the Situation</a></li>
+                            <li><a href="#pick-an-isolation-level-you-can-live-with">Pick an Isolation Level You Can Live With</a></li>
+                            <li><a href="#optimistic-concurrency-control-occ-">Optimistic Concurrency Control (OCC)</a></li>
+                            <li><a href="#pessimistic-lock-first-work-later">Pessimistic Lock First, Work Later</a></li>
+                            <li><a href="#enforce-invariants-with-constraints-indexes">Enforce Invariants with Constraints &amp; Indexes</a></li>
+                            <li><a href="#consistent-lock-ordering-to-avoid-deadlocks">Consistent Lock Ordering to Avoid Deadlocks</a></li>
                         </ol>
                     </li>
-                    <li><a href="#best-practices-to-avoid-double-booking">Best Practices to Avoid Double-Booking</a>
+                    <li><a href="#monitor-tune-locking-in-production">Monitor &amp; Tune Locking in Production</a>
                         <ol>
-                            <li><a href="#design-transactions-carefully">Design Transactions Carefully</a></li>
-                            <li><a href="#use-pessimistic-locking-when-necessary">Use Pessimistic Locking When Necessary</a></li>
-                            <li><a href="#implement-optimistic-locking">Implement Optimistic Locking</a></li>
-                            <li><a href="#consistent-lock-ordering">Consistent Lock Ordering</a></li>
-                            <li><a href="#monitor-and-adjust-isolation-levels">Monitor and Adjust Isolation Levels</a></li>
+                            <li><a href="#why-you-watch">Why you watch</a></li>
+                            <li><a href="#instant-health-check-queries-engine-specifics-">Instant health-check queries (engine specifics)</a></li>
+                            <li><a href="#alert-thresholds-that-catch-trouble-early-tune-for-your-sla-">Alert thresholds that catch trouble early (tune for your SLA)</a></li>
+                            <li><a href="#when-an-alert-fires-triage-playbook">When an alert fires—triage playbook</a></li>
+                            <li><a href="#automating-the-watch">Automating the watch</a></li>
+                            <li><a href="#continuous-improvement-loop">Continuous improvement loop</a></li>
                         </ol>
                     </li>
-                    <li><a href="#real-world-example-ticket-booking-system">Real-World Example: Ticket Booking System</a></li>
-                    <li><a href="#implementing-solutions-in-different-database-systems">Implementing Solutions in Different Database Systems</a>
+                    <li><a href="#real-world-example-ticket-booking-system">Real-World Example: Ticket Booking System</a>
                         <ol>
-                            <li><a href="#sql-server-example">SQL Server Example</a></li>
-                            <li><a href="#postgresql-example">PostgreSQL Example</a></li>
+                            <li><a href="#stack-prerequisites">Stack &amp; prerequisites</a></li>
+                            <li><a href="#build-a-miniature-ticket-system">Build a miniature ticket system</a></li>
+                            <li><a href="#reproduce-the-double-booking-bug">Reproduce the double-booking bug</a></li>
+                            <li><a href="#prevent-it-pessimistic-locking-">Prevent it (pessimistic locking)</a></li>
+                            <li><a href="#at-a-glance-equivalents-in-other-engines">At a glance: equivalents in other engines</a></li>
+                            <li><a href="#alternative-optimistic-locking">Alternative: optimistic locking</a></li>
+                            <li><a href="#quick-checklist-for-your-project">Quick checklist for your project</a></li>
                         </ol>
                     </li>
-                    <li><a href="#handling-high-concurrency-environments">Handling High Concurrency Environments</a></li>
-                    <li><a href="#monitoring-and-testing">Monitoring and Testing</a></li>
                 </ol>
             </ol>
             <div id="related-articles">

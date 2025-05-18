@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Interpolation</title>
-    <meta content="Interpolation is a method of constructing new data points within the range of a discrete set of known data points." name="description" />
+    <meta content="Interpolation is the problem of reconstructing an unknown function from a finite set of exact data pairs" name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -67,34 +67,109 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 03, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: May 18, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="interpolation">Interpolation</h2>
-            <p>Interpolation is a method of constructing new data points within the range of a discrete set of known data points. It plays a crucial role in data analysis by helping to predict unknown values for any point within the given range.</p>
-            <p>Consider two arrays of numbers $X$ and $Y$. The array $X$ contains independent data points and $Y$ includes dependent data points $y_i, i=1,…,m$. The goal is to find a function $\hat{y}(x)$ that passes exactly through the given points. This function is known as the interpolating function or simply the interpolant.</p>
-            <p>Interpolation makes the following assumptions:</p>
+            <p>Interpolation is the problem of reconstructing an <strong>unknown function</strong> from a <em>finite</em> set of <strong>exact</strong> data pairs</p>
+            <p>$$
+                {(x_i,y_i)}_{i=0}^{n},\qquad x_0&lt; x_1&lt;\dots &lt;x_n,\qquad y_i=f(x_i).
+                $$</p>
+            <p>Given a query point $x$ in the closed interval $[x_0,x_n]$, the task is to compute an <em>interpolant</em> $\hat f(x)$ such that</p>
+            <p>$$
+                \hat f(x_i)=y_i \text{for every }i=0,\dots ,n,
+                \qquad\text{and}\qquad
+                \hat f(x)\approx f(x) \text{for }x\in[x_0,x_n].
+                $$</p>
+            <p>Because the nodes $x_i$ are <strong>distinct</strong>, the classical existence-and-uniqueness theorem guarantees that there is a unique algebraic polynomial $P_n$ of degree at most $n$ satisfying the interpolation conditions.</p>
+            <blockquote>
+                <p><strong>Extrapolation</strong> is the computation of $\hat f(x)$ for $x\notin[x_0,x_n]$ and is <em>not</em> covered by the uniqueness theorem; error growth can be dramatic.</p>
+            </blockquote>
+            <h3 id="assumptions">Assumptions</h3>
             <ul>
-                <li>The given data points are exact, meaning there are no measurement errors.</li>
-                <li>The given data points are distinct $x$ locations, i.e., there is a unique mapping from $x$ to $y$.</li>
-                <li>The independent variable values are ordered, i.e., $x_0 &lt; x_1 &lt; \ldots &lt; x_N.$</li>
+                <li><strong>Exact data</strong> No measurement error: $y_i=f(x_i)$ is taken as ground truth.</li>
+                <li><strong>Distinct, ordered abscissas</strong> $x_i\neq x_j$ for $i\neq j$ and $x_0&lt;x_1&lt;\dots &lt;x_n$.</li>
+                <li><strong>Smoothness of the underlying function</strong> Needed only when one wants <em>error bounds</em>; e.g. $f\in C^{n+1}[x_0,x_n]$ for polynomial-error formulas.</li>
             </ul>
-            <p>With the interpolant, we can estimate $y$ values at $x$ locations not given in the data. When these $x$ locations are within the range of known data points (i.e., for $x\in[\min{x_i},\max{x_i}]$), this process is termed interpolation. Conversely, when we seek new $y$ values at $x$ locations outside the data range, this is known as extrapolation.</p>
-            <h3 id="key-concepts">Key Concepts</h3>
-            <ul>
-                <li><strong>Linear Interpolation</strong>: The simplest form of interpolation where a straight line is drawn between two points, and the point of interest is estimated from this line.</li>
-                <li><strong>Polynomial Interpolation</strong>: A method that fits a polynomial of degree $n$ to a set of data points, allowing more complex curves to be fitted to the data.</li>
-                <li><strong>Spline Interpolation</strong>: An interpolation where small polynomials are fit to small sections of the data, making it particularly well-suited for large datasets.</li>
-                <li><strong>Radial Basis Function Interpolation</strong>: A method used when the function is known at a scattered set of points in some high-dimensional space, and one wishes to interpolate this function onto a grid.</li>
-            </ul>
-            <h3 id="mathematical-formulation">Mathematical Formulation</h3>
-            <p>The specific mathematical formulation of interpolation depends on the method used, but the general aim is to find an interpolating function $f(x)$ that passes through the given data points. For instance, in linear interpolation, the interpolating function is a straight line, while in polynomial interpolation, it's a polynomial of degree $n$.</p>
-            <h3 id="example">Example</h3>
-            <p>Consider a situation where you have the following data about the temperature of a place at different times:</p>
+            <h3 id="concepts">Concepts</h3>
             <p>
             <table>
                 <tr>
-                    <td>Time (hours)</td>
-                    <td>Temperature (°C)</td>
+                    <td>Method</td>
+                    <td>Essential idea</td>
+                    <td>Interpolant form</td>
+                    <td>Error behavior*</td>
+                    <td>Typical use-case</td>
+                </tr>
+                <tr>
+                    <td><strong>Linear</strong></td>
+                    <td>Join successive points by straight segments</td>
+                    <td>Piecewise degree-1</td>
+                    <td>$O(h^2)$</td>
+                    <td>Fast previews, computer graphics</td>
+                </tr>
+                <tr>
+                    <td><strong>Polynomial</strong></td>
+                    <td>Single poly of degree $n$ through all nodes</td>
+                    <td>Lagrange, Newton, barycentric, etc.</td>
+                    <td>$O(h^{n+1})$ but risk of <em>Runge</em> oscillations when $n$ is large</td>
+                    <td>Small $n$ on modest intervals</td>
+                </tr>
+                <tr>
+                    <td><strong>Spline</strong></td>
+                    <td>Glue low-degree polynomials with continuity constraints</td>
+                    <td>Piecewise degree-$k$ (usually 3)</td>
+                    <td>$O(h^{k+1})$ plus good shape control</td>
+                    <td>Smooth curves, CAD/CAM, statistics</td>
+                </tr>
+                <tr>
+                    <td><strong>Radial Basis Function (RBF)</strong></td>
+                    <td>Weighted radial kernels centered at nodes</td>
+                    <td>$\displaystyle \hat f(x)=\sum_{i=0}^{n} \lambda_i\,\phi(\</td>
+                    <td>x-x_i\</td>
+                    <td>)$</td>
+                    <td>Spectral for smooth $\phi$</td>
+                    <td>Scattered data, high-dimensional grids</td>
+                </tr>
+            </table>
+            </p>
+            <p>Assuming evenly spaced nodes with spacing $h=\max_i (x_{i+1}-x_i)$.</p>
+            <h3 id="mathematical-formulation">Mathematical Formulation</h3>
+            <p>I. <strong>Linear interpolation (piecewise)</strong></p>
+            <p>For $x\in[x_i,x_{i+1}]$</p>
+            <p>$$
+                \hat f(x)=y_i+\frac{y_{i+1}-y_i}{x_{i+1}-x_i}\,(x-x_i).
+                $$</p>
+            <p>II. <strong>Polynomial interpolation (global)</strong></p>
+            <p>Lagrange form</p>
+            <p>$$
+                P_n(x)=\sum_{i=0}^{n} y_i\,\ell_i(x),
+                \qquad
+                \ell_i(x)=\prod_{\substack{j=0 \ j\neq i}}^{n}
+                \frac{x-x_j}{x_i-x_j}.
+                $$</p>
+            <p><strong>Error bound</strong> (Peano form): if $f\in C^{n+1}$, then for some $\xi(x)\in[x_0,x_n]$</p>
+            <p>$$
+                f(x)-P_n(x)=\frac{f^{(n+1)}(\xi(x))}{(n+1)!}\prod_{i=0}^{n}(x-x_i).
+                $$</p>
+            <p>III. <strong>Natural cubic spline</strong></p>
+            <p>Solve the tridiagonal system</p>
+            <p>$$
+                h_{i-1}M_{i-1}+2(h_{i-1}+h_i)M_i+h_iM_{i+1}=6
+                \left(\frac{y_{i+1}-y_i}{h_i}-\frac{y_i-y_{i-1}}{h_{i-1}}\right),
+                $$</p>
+            <p>with $M_0=M_n=0$, where $h_i=x_{i+1}-x_i$.</p>
+            <p>Each piece is then</p>
+            <p>$$
+                S_i(x)=\frac{M_{i+1}(x-x_i)^3+M_i(x_{i+1}-x)^3}{6h_i}
+                +\frac{y_{i+1}}{h_i}(x-x_i)-\frac{y_i}{h_i}(x_{i+1}-x)
+                -\frac{h_i}{6}\bigl(M_{i+1}-M_i\bigr)(x-x_i).
+                $$</p>
+            <h3 id="example">Example</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Time (hh)</td>
+                    <td>Temp (°C)</td>
                 </tr>
                 <tr>
                     <td>9</td>
@@ -126,33 +201,40 @@
                 </tr>
             </table>
             </p>
-            <p>Suppose you are interested in estimating the temperature at 10:30 AM, but you don't have that data available. You can estimate the temperature by performing different types of interpolation.</p>
-            <p>I. <strong>Linear Interpolation</strong>: </p>
-            <p>This method will use the data points at 10 AM (22°C) and 11 AM (26°C) to estimate the temperature at 10:30 AM. The formula for linear interpolation is:</p>
-            <p>$$f(x) = f(a) + ((x - a) / (b - a)) * (f(b) - f(a))$$</p>
-            <p>Plugging the values in, we get:</p>
-            <p>$$f(10.5) = 22 + ((10.5 - 10) / (11 - 10)) * (26 - 22) = 24 °C$$</p>
-            <p>So, according to linear interpolation, the temperature at 10:30 AM would be 24°C.</p>
-            <p>II. <strong>Spline Interpolation</strong>: </p>
-            <p>This method will consider all the data points and fit a smooth curve to estimate the temperature at 10:30 AM. The curve is designed to minimize the overall curvature of the line, which can provide a more accurate estimate when the underlying data follows a non-linear trend. Performing spline interpolation typically involves complex mathematical computations and is often done using a statistical software or programming language. Let's assume the software returned an estimate of 24.8°C.</p>
-            <p>Given that the temperature pattern is non-linear (with a peak at noon), the spline interpolation would likely give a more accurate estimate of the temperature at 10:30 AM. This is because it takes into account the overall trend in the data, rather than just the immediate values at 10 AM and 11 AM. Thus, in this case, spline interpolation would be a more appropriate method.</p>
+            <p>Estimate $T(10.5)$.</p>
+            <p>I. <strong>Linear (segment 10 – 11)</strong></p>
+            <p>$$
+                T(10.5)=22+\frac{26-22}{11-10}(10.5-10)=24\text{ °C}.
+                $$</p>
+            <p>II. <strong>Natural cubic spline (all nodes)</strong></p>
+            <p>Solving the spline system yields second derivatives</p>
+            <p>$$
+                (M_0,\dots,M_6)\approx(0,\;2.4,\;3.6,\;0.6,\;-1.2,\;-0.6,\;0).
+                $$</p>
+            <p>From the $i=1$ piece (10–11 h) one obtains</p>
+            <p>$$
+                T(10.5)\approx 24.77\text{ °C}.
+                $$</p>
+            <p>Because the temperature rise slows near noon, the spline—by “seeing” the curvature—predicts a slightly higher value than the straight-line model.</p>
             <h3 id="advantages">Advantages</h3>
             <ul>
-                <li>Interpolation can be a very powerful tool when the data set is large and the underlying function is complex.</li>
-                <li>It is straightforward to understand and can be implemented quite easily.</li>
+                <li><strong>Locality &amp; smoothness control</strong> (splines, RBFs).</li>
+                <li><strong>Provable error bounds</strong> under mild differentiability assumptions.</li>
+                <li><strong>Exactness at data points</strong>—no bias at nodes.</li>
             </ul>
             <h3 id="limitations">Limitations</h3>
             <ul>
-                <li>Interpolation assumes the data is smooth between the known data points, which may not be the case.</li>
-                <li>It doesn't perform well with extrapolation, i.e., estimating values outside the known range.</li>
-                <li>It is sensitive to the choice of the interpolation method, as different methods can produce different results.</li>
+                <li><strong>Runge phenomenon</strong> for high-degree global polynomials on equispaced nodes.</li>
+                <li><strong>Error amplification outside $[x_0,x_n]$</strong> (extrapolation).</li>
+                <li><strong>Method sensitivity</strong> Different schemes yield different smoothness, boundary behavior, and error constants; choice must match the application.</li>
             </ul>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
             <ol><a href="#interpolation">Interpolation</a>
                 <ol>
-                    <li><a href="#key-concepts">Key Concepts</a></li>
+                    <li><a href="#assumptions">Assumptions</a></li>
+                    <li><a href="#concepts">Concepts</a></li>
                     <li><a href="#mathematical-formulation">Mathematical Formulation</a></li>
                     <li><a href="#example">Example</a></li>
                     <li><a href="#advantages">Advantages</a></li>

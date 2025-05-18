@@ -89,7 +89,7 @@ const GITHUB_BASE_REPOS = {
     "kurs_podstaw_pythona": "https://github.com/djeada/Kurs-Podstaw-Pythona",
     "od_c_do_cpp": "https://github.com/djeada/Od-C-do-Cpp",
     "stanford_machine_learning": "https://github.com/djeada/Stanford-Machine-Learning",
-
+    "vtk_examples": "https://github.com/djeada/Vtk-Examples"
 };
 
 // Mapping of section keys to additional path prepends within the repo.

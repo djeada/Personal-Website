@@ -67,7 +67,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: May 16, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: May 18, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="database-caching">Database Caching</h2>
             <p>Database caching is a powerful performance optimization technique that involves temporarily storing frequently accessed data in a cache for quick retrieval. By keeping commonly requested information readily available, caching reduces the time it takes to access data and lessens the load on the database server. This can significantly enhance the responsiveness and scalability of applications, leading to a better user experience.</p>
@@ -129,6 +129,39 @@
             <p>There are various techniques for implementing caching in database applications, each with its own advantages and use cases.</p>
             <h4 id="query-result-caching">Query Result Caching</h4>
             <p>Query result caching involves storing the results of frequently executed database queries. When the same query is requested again, the application retrieves the result from the cache instead of executing the query against the database. This reduces CPU and I/O usage on the database server and speeds up application response times.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">#
+                                 ┌──────────────────┐
+                                 │  Client Request  │
+                                 └────────┬─────────┘
+                                          │
+                                          ▼
+                                  ┌────────────────┐
+                                  │ Check Redis    │
+                                  │  (cache_key)   │
+                                  └───┬───────────┘
+                HIT? Yes ───────────│─────────┐ No
+                                  │         ▼
+          ┌───────────┐         ┌───────┐  ┌────────────────────┐
+          │ Return    │◀────────│Redis  │  │ Query Database     │
+          │ Cached    │         │Hit!   │  │ (SELECT * FROM ...)│
+          └───────────┘         └───────┘  └─────────┬──────────┘
+                                                     │
+                                                     ▼
+                                              ┌────────────┐
+                                              │ Store in   │
+                                              │ Redis      │
+                                              │ (ex=3600s) │
+                                              └────┬───────┘
+                                                   │
+                                                   ▼
+                                             ┌───────────┐
+                                             │ Return    │
+                                             │ DB Result │
+                                             └───────────┘</code></pre>
+            </div>
+            </p>
             <p><strong>Example in Python using Flask and Redis:</strong></p>
             <p>
             <div>
@@ -171,6 +204,38 @@ def get_products():
             </ul>
             <h4 id="object-caching">Object Caching</h4>
             <p>Object caching involves storing entire objects or data structures in the cache rather than just raw query results. This is especially useful in object-oriented applications where the same data object is used frequently.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">#
+      ┌────────────────────┐
+      │ getUserById(123)   │
+      └───────┬────────────┘
+              │
+              ▼
+       ┌───────────────┐
+       │ userCache.get │
+       │ (key = 123)   │
+       └───────┬───────┘
+ HIT? Yes ─────┤      No ──────────────────────┐
+              │                                │
+              ▼                                ▼
+       ┌─────────────┐                   ┌──────────────────┐
+       │ Return      │                   │ Fetch from       │
+       │ Cached User │                   │ Database         │
+       └─────────────┘                   └────────┬─────────┘
+                                                 │
+                                                 ▼
+                                         ┌──────────────────────┐
+                                         │ userCache.put(123,   │
+                                         │   &lt;user object=""&gt;)     │
+                                         └────────┬─────────────┘
+                                                  │
+                                                  ▼
+                                           ┌─────────────┐
+                                           │ Return User │
+                                           └─────────────┘</code></pre>
+            </div>
+            </p>
             <p><strong>Example in Java using Ehcache:</strong></p>
             <p>
             <div>
@@ -208,6 +273,29 @@ public class UserService {
             </ul>
             <h4 id="database-buffer-caching">Database Buffer Caching</h4>
             <p>Databases themselves often implement caching mechanisms to improve performance. Adjusting database configurations can enhance this caching.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">┌──────────────────────┐
+│ PostgreSQL Server    │
+└──────────┬───────────┘
+           │ shared_buffers
+           │  = 256MB
+           │
+           ▼
+┌────────────────────────────┐
+│ In‐Memory Buffer Cache     │
+│ ┌────────────────────────┐ │
+│ │ Data Pages             │ │
+│ └────────────────────────┘ │
+└──────────┬─────────────────┘
+           │
+           ▼
+┌────────────────────────────┐
+│ Disk I/O Reduced           │
+│ Faster Query Responses     │
+└────────────────────────────┘</code></pre>
+            </div>
+            </p>
             <p><strong>Configuring buffer cache in PostgreSQL:</strong></p>
             <p>In the <code>postgresql.conf</code> file:</p>
             <p>
@@ -219,6 +307,30 @@ shared_buffers = 256MB</code></pre>
             <p>By increasing the <code>shared_buffers</code> setting, PostgreSQL allocates more memory for caching data, which can reduce disk I/O operations and improve query performance.</p>
             <h4 id="prepared-statement-caching">Prepared Statement Caching</h4>
             <p>Caching prepared statements can reduce the overhead of parsing and planning SQL queries, especially for queries that are executed frequently with different parameters.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">┌───────────────────────────┐
+│ PREPARE get_users_by_age  │
+│   (INT) AS                │
+│ SELECT * FROM users       │
+│ WHERE age &gt; $1;           │
+└────────────┬──────────────┘
+             │
+             │   Subsequent EXECUTE calls:
+             ▼
+┌───────────────────┐      ┌───────────────────┐
+│ EXECUTE           │      │ EXECUTE           │
+│ get_users_by_age  │      │ get_users_by_age  │
+│ (30)              │      │ (40)              │
+└──────────┬────────┘      └───────────┬───────┘
+           │                           │
+           ▼                           ▼
+ ┌─────────────────┐         ┌─────────────────┐
+ │ Planner &amp; Exec  │         │ Planner &amp; Exec  │
+ │ (no re‐parse!)  │         │ (no re‐parse!)  │
+ └─────────────────┘         └─────────────────┘</code></pre>
+            </div>
+            </p>
             <p><strong>Example in PostgreSQL:</strong></p>
             <p>
             <div>
@@ -232,50 +344,347 @@ EXECUTE get_users_by_age(30);</code></pre>
             </p>
             <p>By preparing the statement once, subsequent executions with different parameters can be performed without re-parsing, which improves performance.</p>
             <h3 id="cache-invalidation-strategies">Cache Invalidation Strategies</h3>
-            <p>Ensuring that cached data remains consistent with the underlying database is a key challenge. There are several strategies to manage cache invalidation.</p>
+            <p>Keeping your cache coherent with the source of truth (the database) is one of the hardest problems in computer science. Below are three classic strategies, each with an ASCII diagram that shows <strong>who</strong> triggers the change and <strong>when</strong> the cached value is refreshed.</p>
             <h4 id="time-to-live-ttl-">Time-to-Live (TTL)</h4>
-            <p>Setting an expiration time for cached data ensures that it is refreshed periodically. This is simple to implement but may not always reflect the most recent data.</p>
-            <p><strong>Example in Redis:</strong></p>
+            <ol>
+                <li><strong>Write</strong> – when data is first fetched from the DB, it is inserted into the cache with a fixed expiration time.</li>
+                <li><strong>Serve-from-cache</strong> – until that timer “pops,” every read is a fast cache hit.</li>
+                <li><strong>Expire &amp; Refresh</strong> – after the TTL elapses, the next read is a miss, so the application reloads the data from the DB and starts a fresh timer.</li>
+            </ol>
             <p>
             <div>
-                <pre><code class="language-python">cache.set('user_123', user_data, ex=3600)  # Data expires after 1 hour</code></pre>
+                <pre><code class="language-shell">Time ─────────────────────────────────────────────────────────►
+
+ Client  ─►  Cache (HIT)   Cache (HIT)   Cache ✖ (MISS)   Cache (HIT)
+                 │             │               │               │
+                 │   TTL ticking down…         │               │
+                 └───────────────&lt;  TTL  &gt;─────┘               │
+                                         fetch ► DB ──► update │</code></pre>
+            </div>
+            </p>
+            <p><strong>Pros</strong></p>
+            <ul>
+                <li>Simple “set-and-forget”; no need to listen for update events.</li>
+                <li>Works even if the application has no write access to the cache layer (e.g., CDN).</li>
+            </ul>
+            <p><strong>Cons</strong></p>
+            <ul>
+                <li>Freshness is probabilistic: the <em>worst-case</em> staleness equals the TTL value.</li>
+                <li>Choosing the right TTL is tricky—too long gives stale data, too short kills performance.</li>
+            </ul>
+            <p><strong>Redis snippet</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-python">cache.set('user_123', user_data, ex=3600)  # expires in 1 h</code></pre>
             </div>
             </p>
             <h4 id="event-based-invalidation">Event-Based Invalidation</h4>
-            <p>Updating or invalidating the cache in response to specific events, such as data updates, ensures that the cache remains consistent.</p>
-            <p><strong>Example in Python:</strong></p>
+            <p>Every mutating operation (INSERT/UPDATE/DELETE) triggers a cache purge for the affected keys:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">#
+            ┌─────────────────────────────┐
+            │     UPDATE/INSERT/DELETE    │
+            └──────────────┬──────────────┘
+                           │ 1.  write to DB
+                           ▼
+┌───────────┐   2. delete(key)    ┌───────────┐
+│   Cache   │◄────────────────────│  App/API  │
+└───────────┘                     └───────────┘
+       ▲                              │
+       │ 3. next read = MISS          │
+       └───────────────◄──────────────┘
+                           fetch fresh row ► DB</code></pre>
+            </div>
+            </p>
+            <p><strong>Pros</strong></p>
+            <ul>
+                <li>Near-real-time consistency—staleness is only the network/processing delay after a write.</li>
+                <li>No guesswork about TTL values.</li>
+            </ul>
+            <p><strong>Cons</strong></p>
+            <ul>
+                <li>You must <strong>own every write path</strong>; a forgotten code path means stale data.</li>
+                <li>Extra complexity: publish/subscribe channels or message queues are common to broadcast events reliably.</li>
+            </ul>
             <p>
             <div>
                 <pre><code class="language-python">def update_user(user_id, new_data):
-    # Update the user in the database
-    database.update_user(user_id, new_data)
-    # Invalidate the cache for this user
-    cache.delete(f'user_{user_id}')</code></pre>
+    database.update_user(user_id, new_data)    # 1️⃣
+    cache.delete(f'user_{user_id}')            # 2️⃣</code></pre>
             </div>
             </p>
-            <p>By invalidating the cache when the data changes, the application forces a cache refresh on the next request.</p>
             <h4 id="manual-invalidation">Manual Invalidation</h4>
-            <p>Developers explicitly invalidate cache entries when they know that the underlying data has changed. This provides precise control but requires careful management to avoid stale data.</p>
-            <h3 id="best-practices-for-database-caching">Best Practices for Database Caching</h3>
-            <p>Implementing caching effectively requires careful consideration and ongoing management.</p>
+            <p>A human (or a one-off script) explicitly removes or refreshes cache entries when they know data changed unexpectedly—e.g., after a hotfix directly in the DB.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Administrator / Script
+        │  invalidate(key)
+        ▼
+┌────────────┐
+│   Cache    │─────────► subsequent read = MISS → DB
+└────────────┘</code></pre>
+            </div>
+            </p>
+            <p><strong>Pros</strong></p>
             <ul>
-                <li>Identify which data is frequently accessed and would benefit most from caching.</li>
-                <li>Balance between data freshness and cache hit rates by selecting suitable TTL values.</li>
-                <li>Use monitoring tools to track cache hit ratios, eviction rates, and latency.</li>
-                <li>Ensure that the caching solution can handle increased load as the application grows.</li>
-                <li>Implement proper security measures to protect sensitive information stored in caches.</li>
+                <li>Absolute control—great for emergency fixes, migrations, or ad-hoc cleanup.</li>
+                <li>Zero code overhead if you already have a cache CLI.</li>
             </ul>
+            <p><strong>Cons</strong></p>
+            <ul>
+                <li>Easy to forget: relies on tribal knowledge and discipline.</li>
+                <li>Does not scale for high-write or multi-service architectures.</li>
+            </ul>
+            <h3 id="choosing-a-strategy">Choosing a Strategy</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Scenario</td>
+                    <td>Recommended Approach</td>
+                </tr>
+                <tr>
+                    <td>Read-heavy, infrequent writes</td>
+                    <td><strong>TTL</strong> with a moderate timeout</td>
+                </tr>
+                <tr>
+                    <td>Latency-sensitive &amp; write-intensive</td>
+                    <td><strong>Event-based</strong> (often + short TTL)</td>
+                </tr>
+                <tr>
+                    <td>One-off data repair or migration</td>
+                    <td><strong>Manual</strong></td>
+                </tr>
+            </table>
+            </p>
+            <blockquote>
+                <p><strong>Hybrid in practice</strong> – Many production systems blend these techniques:
+                    <em>short TTL</em> as a safety net <strong>+</strong> <em>event-based</em> purging for critical objects. This “belt-and-suspenders” model keeps data fresh while guarding against missed events.
+                </p>
+            </blockquote>
+            <h3 id="best-practices">Best Practices</h3>
+            <p>Below is a “hands-on” playbook that teams actually use when they roll out a cache in front of a relational or NoSQL store. Feel free to cherry-pick the bits that fit your stack—everything is numbered so you can treat it like a checklist.</p>
+            <h4 id="pinpoint-the-hot-data-don-t-guess-">Pinpoint the “hot” data (don’t guess)</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Signal</td>
+                    <td>How to Capture It (examples)</td>
+                    <td>What You Learn</td>
+                </tr>
+                <tr>
+                    <td><strong>Query frequency</strong></td>
+                    <td><em>PostgreSQL:</em><br /><code>sql&lt;br/&gt;SELECT query, calls, total_exec_time/1000 AS seconds&lt;br/&gt;FROM pg_stat_statements&lt;br/&gt;ORDER BY calls DESC LIMIT 25;&lt;br/&gt;</code> <br /><em>MySQL 8+</em> <code>sql&lt;br/&gt;SELECT DIGEST_TEXT, COUNT_STAR AS calls&lt;br/&gt;FROM performance_schema.events_statements_summary_by_digest&lt;br/&gt;ORDER BY calls DESC LIMIT 25;&lt;br/&gt;</code></td>
+                    <td>Which exact SQL statements hammer the DB.</td>
+                </tr>
+                <tr>
+                    <td><strong>Row/block reads</strong></td>
+                    <td>Cloud watch, Azure Monitor, or <code>pg_stat_io</code>, <code>INNODB_METRICS</code></td>
+                    <td>Whether repeated reads are on the same few tables or indexes.</td>
+                </tr>
+                <tr>
+                    <td><strong>Application traces</strong></td>
+                    <td>App-side APM (OpenTelemetry/SkyWalking/New Relic/DataDog). Filter spans by <strong>percentage of total wall-clock time</strong> rather than pure count.</td>
+                    <td>Pinpoints functions / endpoints dominating user latency.</td>
+                </tr>
+                <tr>
+                    <td><strong>Object popularity</strong></td>
+                    <td>Log or stream every <strong>cache miss</strong> for a day into BigQuery/Redshift, run a <code>GROUP BY key_id ORDER BY cnt DESC</code>.</td>
+                    <td>Even after you add a cache, this tells you if the pattern changed.</td>
+                </tr>
+            </table>
+            </p>
+            <blockquote>
+                <p><strong>Rule of thumb:</strong> If a query or endpoint accounts for <strong>&gt;3 % of total DB CPU time</strong> or <strong>&gt;100 QPS</strong>, it’s a cache candidate.</p>
+            </blockquote>
+            <h4 id="segregate-reads-into-buckets-before-you-cache">Segregate “reads” into buckets before you cache</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Bucket</td>
+                    <td>Example pattern</td>
+                    <td>Caching tactic</td>
+                </tr>
+                <tr>
+                    <td><strong>Immutable</strong> for hours/days</td>
+                    <td>Product catalog, static config JSON</td>
+                    <td>Set TTL equal to typical update interval. No invalidation headaches.</td>
+                </tr>
+                <tr>
+                    <td><strong>Frequently read, occasionally updated</strong></td>
+                    <td>User profile, shopping-cart totals</td>
+                    <td><em>Write-through</em> cache + key version (<code>user:123:v5</code>). Bump version on update to guarantee freshness.</td>
+                </tr>
+                <tr>
+                    <td><strong>Write-heavy</strong></td>
+                    <td>Orders, ledger balances</td>
+                    <td>Usually <strong>don’t</strong> cache. If you must, use <em>read-through with short (≤5 s) TTL</em> and <em>striped locks</em> on cache miss.</td>
+                </tr>
+                <tr>
+                    <td><strong>Fan-out read</strong> (feeds, timelines)</td>
+                    <td>Top-N posts, leaderboard</td>
+                    <td>Cache the <strong>list</strong> separately from the <strong>objects</strong>. Invalidate the list on write; objects use a longer TTL.</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="decide-ttls-with-data-not-folklore">Decide TTLs with data—not folklore</h4>
+            <p>I. <strong>Pull update intervals</strong>: For each key type, compute the 95ᵗʰ percentile of “time between writes.”</p>
+            <p><em>Example Postgres:</em></p>
+            <p>
+            <div>
+                <pre><code class="language-sql">WITH history AS (
+SELECT user_id, lag(updated_at) OVER (PARTITION BY user_id ORDER BY updated_at) AS prev
+FROM user_profile_changes
+)
+SELECT percentile_cont(0.95) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (updated_at-prev)))
+FROM history WHERE prev IS NOT NULL;</code></pre>
+            </div>
+            </p>
+            <p>II. <strong>Pick TTL ≈ 50 – 80 % of that 95ᵗʰ percentile</strong>. </p>
+            <p>This maximizes hit rate while guaranteeing ≤5 % stale probability.</p>
+            <p>III. <strong>Review TTLs monthly</strong>—product changes often shorten or lengthen update cycles.</p>
+            <blockquote>
+                <p><strong>Advanced:</strong> Add <em>stale-while-revalidate</em> (serve stale for ≤X s while a background task refreshes). Redis 7’s <code>CLIENT TRACKING</code> with <code>BCAST</code> or a CDN’s <code>stale-while-revalidate</code> header make this easy.</p>
+            </blockquote>
+            <h4 id="wire-it-up-language-agnostic-pseudocode-">Wire it up (language-agnostic pseudocode)</h4>
+            <p>
+            <div>
+                <pre><code class="language-python">cache = Redis(..., client_tracking=True)   # enables auto-invalidation messages
+db    = PostgreSQL(...)
+
+def get_user(user_id):
+    version = db.fetch_value(
+        "SELECT cache_version FROM user WHERE id = %s", [user_id]
+    )
+    key = f"user:{user_id}:v{version}"
+    
+    if (data := cache.get(key)) is not None:
+        metrics.hit.inc()
+        return deserialise(data)
+    
+    # Miss: lock per-key to avoid stampede
+    with cache.lock(f"lock:{key}", timeout=3):
+        if (data := cache.get(key)) is not None:  # double-check
+            return deserialise(data)
+
+        row = db.fetch_row("SELECT ... FROM user WHERE id = %s", [user_id])
+        cache.setex(key, ttl_user, serialise(row))
+        metrics.miss.inc()
+        return row</code></pre>
+            </div>
+            </p>
+            <p><em>Why the version column?</em> An update transaction simply increments <code>cache_version</code>, guaranteeing the next read builds a new key and the old value expires naturally.</p>
+            <h4 id="monitor-like-a-sre-not-like-a-developer">Monitor like a SRE, not like a developer</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Metric</td>
+                    <td>Target</td>
+                    <td>Alert when…</td>
+                </tr>
+                <tr>
+                    <td><strong>Cache hit ratio</strong> <code>(hits / (hits+misses))</code></td>
+                    <td>&gt; 0.8 for read-through</td>
+                    <td>Drops 10 % in 5 min ⇒ cold keys.</td>
+                </tr>
+                <tr>
+                    <td><strong>p99 latency</strong> (cache &amp; DB)</td>
+                    <td>Cache p99 ≤ 3 ms; DB p99 ≤ read SLA</td>
+                    <td>Cache ≥ 20 ms ⇒ network, serialization, or swap.</td>
+                </tr>
+                <tr>
+                    <td><strong>Evictions per minute</strong></td>
+                    <td>0 on provisioned RAM</td>
+                    <td>&gt; 1 % of set rate ⇒ resize or add LRU tiers.</td>
+                </tr>
+                <tr>
+                    <td><strong>Hot key balance</strong></td>
+                    <td>No single key &gt; 5 % of gets</td>
+                    <td>If violated, consider sharding that key or using <em>local in-process</em> cache for it.</td>
+                </tr>
+            </table>
+            </p>
+            <p>Grafana dashboards that plot <strong>hit ratio vs. TTL</strong> and <strong>evictions vs. memory used</strong> are the fastest way to validate sizing.</p>
+            <h4 id="scale-harden">Scale &amp; harden</h4>
+            <ul>
+                <li>Redis Cluster or Memcached’s client-side consistent hashing. Keep <em>slot</em> count ≥ 160 × nodes to smooth key re-distribution.</li>
+                <li>For read-only or “mostly read” keys, add an in-process LRU (Guava, Caffeine, <code>functools.lru_cache</code>) sized for 5 – 10 % memory of the app pod.</li>
+                <li>TLS everywhere (<code>requirepass</code>, <code>auth</code>, or ACLs).</li>
+                <li>Key namespaces (<code>app1:*</code>) to stop accidental collisions.</li>
+                <li>Encrypt sensitive blobs → envelope encryption (<code>AES-GCM</code>) before putting them in cache.</li>
+            </ul>
+            <h4 id="why-it-differs-by-app">Why it differs by app</h4>
+            <ul>
+                <li><strong>E-commerce</strong>: product listings (immutable) vs. cart totals (write-through). TTL for product ≈ catalog update frequency (often 30 min – 1 h).</li>
+                <li><strong>SaaS CRUD</strong> apps: user &amp; org objects updated sporadically—TTL can be hours. Focus more on <em>invalidation correctness</em> than raw hit rate.</li>
+                <li><strong>Social feed</strong>: massive read amplification. Split feed metadata (list of IDs) and item bodies, use fan-out on write or “pull with cache”.</li>
+            </ul>
+            <p>Each app’s <em>write cadence</em> and <em>staleness tolerance</em> ultimately dictate TTL and invalidation strategy—use the measurement steps above to quantify both before you start tweaking configs.</p>
             <h3 id="potential-challenges-and-solutions">Potential Challenges and Solutions</h3>
-            <p>While caching offers significant benefits, it also introduces challenges that need to be managed.</p>
-            <h4 id="stale-data">Stale Data</h4>
-            <p>Cached data can become outdated if the underlying data changes.</p>
-            <p><strong>Solution:</strong> Implement appropriate cache invalidation strategies, such as TTL or event-based invalidation, to keep the cache in sync with the database.</p>
-            <h4 id="cache-miss-penalties">Cache Miss Penalties</h4>
-            <p>When data is not in the cache (cache miss), retrieving it from the database can cause delays, especially if multiple cache misses occur simultaneously.</p>
-            <p><strong>Solution:</strong> Pre-warm the cache with commonly accessed data and optimize database queries to handle cache misses efficiently.</p>
-            <h4 id="increased-complexity">Increased Complexity</h4>
-            <p>Caching adds layers of complexity to the application architecture, which can make development and maintenance more challenging.</p>
-            <p><strong>Solution:</strong> Use caching libraries and frameworks to manage complexity, and ensure thorough documentation of caching logic and configurations.</p>
+            <p>While caching can slash response times from ~50 ms to sub‑5 ms and offload 80‑90 % of read traffic, it introduces its own pitfalls.</p>
+            <h4 id="stale-data-cache-db-drift-">Stale Data (Cache‑DB Drift)</h4>
+            <p>
+            <div>
+                <pre><code class="language-shell">Time ---&gt;
+
+ [DB   ] v2  ──────────────┐
+ [Cache] v1 ──┐            │  (TTL 30 s)
+              └─&gt;  *Stale* │
+ update()                 invalidate()</code></pre>
+            </div>
+            </p>
+            <p><em>Scenario</em>: A product’s price changes from €29.99 to €24.99 at <strong>13:05:12</strong> but users keep seeing the old price for up to 30 s because that’s the TTL.</p>
+            <p><strong>Mitigations</strong></p>
+            <ul>
+                <li><strong>Short‑lived TTLs</strong> on volatile entities (e.g. prices 30 s, user sessions 15 min, catalog 1 h).</li>
+                <li><strong>Write‑through / write‑behind</strong> patterns so the cache is updated in the same transaction that touches the DB.</li>
+                <li><strong>Event‑driven invalidation</strong>: emit a <code>product.updated</code> event from the write service; consumers delete or refresh the key in Redis immediately.</li>
+                <li><strong>Background refresh</strong> ("refresh‑ahead") so popular keys are re‑fetched a few seconds <em>before</em> they expire.</li>
+            </ul>
+            <h4 id="cache-miss-penalties-thundering-herd-">Cache Miss Penalties (Thundering Herd)</h4>
+            <p>
+            <div>
+                <pre><code class="language-shell">┌───────────────┐
+│  Cache (hit)  │  1 ms
+└───────────────┘
+     △
+     │ miss
+     ▼
+┌──────────────────┐
+│  Primary DB      │  ~40 ms
+└──────────────────┘</code></pre>
+            </div>
+            </p>
+            <p><em>Scenario</em>: After a deploy, the cache is cold. 5 k rps hits the DB, which briefly spikes to 90 % CPU causing p99 latency to jump from 60 ms ⇒ 1 s.</p>
+            <p><strong>Mitigations</strong></p>
+            <ul>
+                <li><strong>Warm‑up scripts</strong> at deploy time (<code>redis-cli MSET $(cat hot_keys.json)</code>).</li>
+                <li><strong>Probabilistic early refresh</strong> (e.g. ["lazy expiring"] where the first thread refreshes while others keep serving the old value).</li>
+                <li><strong>Request coalescing</strong> / <em>single‑flight</em>: the first miss locks the key; other requests wait for the result instead of hammering the DB.</li>
+                <li><strong>Read replicas</strong> or CQRS read stores to share the load when misses inevitably happen.</li>
+            </ul>
+            <h4 id="increased-complexity-operational-overhead-">Increased Complexity (Operational Overhead)</h4>
+            <p>
+            <div>
+                <pre><code class="language-shell">┌────────┐   ┌────────┐   ┌────────────┐   ┌────────┐
+│Client  │──▶│ Service│──▶│   Cache    │──▶│Database│
+└────────┘   └────────┘   └────────────┘   └────────┘
+                   ▲
+             eviction policy,
+           replication, metrics</code></pre>
+            </div>
+            </p>
+            <p><em>Pain Points</em>: extra moving parts (Redis cluster + Sentinel), failure modes (cache down ≠ DB down), and cognitive load for new devs who must understand eviction policies.</p>
+            <p><strong>Mitigations</strong></p>
+            <ul>
+                <li><strong>Leverage frameworks</strong> (<code>Spring @Cacheable</code>, <code>NestJS cache‑manager</code>, Django’s <code>cache</code> API) so most logic is declarative.</li>
+                <li>Keep TTLs, eviction policies, and key naming conventions in a single module.</li>
+                <li>Emit <em>hit</em>, <em>miss</em>, <em>eviction</em>, <em>latency</em> metrics; dashboard them next to DB metrics.</li>
+                <li>Periodically turn off the cache in staging to prove the app still works (albeit slower).</li>
+            </ul>
+            <blockquote>
+                <p><strong>Tip</strong>: Treat the cache as <em>a copy</em> of the source of truth, never the truth itself. Design every code path to <em>degrade gracefully</em> when the cache is empty or unreachable.</p>
+            </blockquote>
             <h3 id="real-world-use-cases">Real-World Use Cases</h3>
             <p>Database caching is used extensively in various applications to improve performance and scalability.</p>
             <h4 id="high-traffic-web-applications">High-Traffic Web Applications</h4>
@@ -316,12 +725,23 @@ EXECUTE get_users_by_age(30);</code></pre>
                             <li><a href="#manual-invalidation">Manual Invalidation</a></li>
                         </ol>
                     </li>
-                    <li><a href="#best-practices-for-database-caching">Best Practices for Database Caching</a></li>
+                    <li><a href="#choosing-a-strategy">Choosing a Strategy</a></li>
+                    <li><a href="#best-practices">Best Practices</a>
+                        <ol>
+                            <li><a href="#pinpoint-the-hot-data-don-t-guess-">Pinpoint the “hot” data (don’t guess)</a></li>
+                            <li><a href="#segregate-reads-into-buckets-before-you-cache">Segregate “reads” into buckets before you cache</a></li>
+                            <li><a href="#decide-ttls-with-data-not-folklore">Decide TTLs with data—not folklore</a></li>
+                            <li><a href="#wire-it-up-language-agnostic-pseudocode-">Wire it up (language-agnostic pseudocode)</a></li>
+                            <li><a href="#monitor-like-a-sre-not-like-a-developer">Monitor like a SRE, not like a developer</a></li>
+                            <li><a href="#scale-harden">Scale &amp; harden</a></li>
+                            <li><a href="#why-it-differs-by-app">Why it differs by app</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#potential-challenges-and-solutions">Potential Challenges and Solutions</a>
                         <ol>
-                            <li><a href="#stale-data">Stale Data</a></li>
-                            <li><a href="#cache-miss-penalties">Cache Miss Penalties</a></li>
-                            <li><a href="#increased-complexity">Increased Complexity</a></li>
+                            <li><a href="#stale-data-cache-db-drift-">Stale Data (Cache‑DB Drift)</a></li>
+                            <li><a href="#cache-miss-penalties-thundering-herd-">Cache Miss Penalties (Thundering Herd)</a></li>
+                            <li><a href="#increased-complexity-operational-overhead-">Increased Complexity (Operational Overhead)</a></li>
                         </ol>
                     </li>
                     <li><a href="#real-world-use-cases">Real-World Use Cases</a>

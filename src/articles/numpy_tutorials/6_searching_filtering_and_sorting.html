@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Searching, Filtering and Sorting</title>
-    <meta content="NumPy provides a comprehensive set of functions for searching, filtering, and sorting arrays." name="description" />
+    <meta content="NumPy provides a set of functions for searching, filtering, and sorting arrays." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -67,10 +67,61 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: August 14, 2022</i></p>
+            <p style="text-align: right;"><i>Last modified: May 18, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="searching-filtering-and-sorting">Searching, Filtering and Sorting</h2>
-            <p>NumPy provides a comprehensive set of functions for searching, filtering, and sorting arrays. These operations are essential for efficiently managing and preprocessing large datasets, enabling you to extract meaningful information, organize data, and prepare it for further analysis or machine learning tasks. This guide covers the fundamental functions for searching within arrays, filtering elements based on conditions, and sorting arrays, along with practical examples to demonstrate their usage.</p>
+            <p>NumPy provides a set of functions for searching, filtering, and sorting arrays. These operations are helpful for efficiently managing and preprocessing large datasets, enabling you to extract meaningful information, organize data, and prepare it for further analysis or machine learning tasks. This guide covers the fundamental functions for searching within arrays, filtering elements based on conditions, and sorting arrays, along with practical examples to demonstrate their usage.</p>
+            <h3 id="mathematical-intro">Mathematical Intro</h3>
+            <p>From an abstract viewpoint, <strong>searching, filtering, and sorting</strong> all act on an array $A$ by <em>transforming</em> or <em>re-indexing</em> its discrete domain. For a 1-D array $A:{0,\dots ,n-1}!\to!\mathbb F$ let</p>
+            <p>$$
+                I_{!\phi} = {\,i \mid \phi!\bigl(A_i\bigr) = \mathrm{True}}
+                $$</p>
+            <p>$$
+                \chi_{!\phi}(i) =
+                \begin{cases}
+                1, &amp; i \in I_{!\phi},\\
+                0, &amp; \text{otherwise}
+                \end{cases}
+                $$</p>
+            <p>where $\phi$ is any Boolean predicate (e.g.\ “$A_i&gt;3$” or “$A_i=v$”).</p>
+            <ul>
+                <li><strong>Searching</strong> computes the <em>index set</em> $I_{!\phi}$.</li>
+                <li><strong>Filtering</strong> forms the <em>sub-vector</em> $(A_i)<em>{i\in I</em>{!\phi}}$ , which in NumPy is written <code>A[χ_φ==1]</code>.</li>
+                <li><strong>Sorting</strong> finds a <em>permutation</em> $\pi\in S_n$ such that $A_{\pi(0)}\le A_{\pi(1)}\le\cdots\le A_{\pi(n-1)}$; in matrix notation this is $A^{\uparrow}=P_{\pi}A$ with permutation matrix $P_{\pi}$.</li>
+            </ul>
+            <p>
+            <div>
+                <pre><code class="language-shell"># 1-D vector: illustrate search &amp; filter for A_i &gt; 3
+Index →  0   1   2   3   4   5
+Value  [ 2 | 3 | 5 | 4 | 1 | 6 ]
+Mask   [ 0   0   1   1   0   1 ]   ← χφ
+             ↑   ↑       ↑
+Search:  Iφ = {2, 3, 5}
+Filter:  A[χφ==1] → [5, 4, 6]</code></pre>
+            </div>
+            </p>
+            <p>
+            <div>
+                <pre><code class="language-shell"># Sorting the same vector (ascending)
+Unsorted: [ 2 | 3 | 5 | 4 | 1 | 6 ]
+           0   1   2   3   4   5   ← original indices
+Permutation π = (4,0,1,3,2,5)
+Sorted:    [ 1 | 2 | 3 | 4 | 5 | 6 ]
+           4   0   1   3   2   5   ← original positions after Pπ</code></pre>
+            </div>
+            </p>
+            <p>
+            <div>
+                <pre><code class="language-shell"># 2-D array: search for value 1
+        columns →
+        0   1   2
+row 0 [ 0 | 1 | 7 ]
+row 1 [ 1 | 5 | 1 ]
+row 2 [ 4 | 1 | 3 ]
+
+Matches at (0,1), (1,0), (1,2), (2,1)</code></pre>
+            </div>
+            </p>
             <h3 id="searching">Searching</h3>
             <p>Searching within arrays involves locating the indices of elements that meet specific criteria or contain particular values. NumPy's <code>np.where()</code> function is a powerful tool for this purpose, allowing you to identify the positions of elements that satisfy given conditions.</p>
             <h4 id="example-with-1d-array">Example with 1D Array</h4>
@@ -88,11 +139,10 @@ selected_values = array[np.where((array &gt; 1) &amp; (array &lt; 4))]
 print(selected_values)  # Expected: [2, 3]</code></pre>
             </div>
             </p>
-            <p>Explanation:</p>
             <ul>
                 <li><code>np.where(array == 2)</code>: This function scans the array and returns the indices where the condition <code>array == 2</code> is <code>True</code>. In this case, it finds that the value <code>2</code> is located at index <code>2</code>.</li>
                 <li><code>np.where((array &gt; 1) &amp; (array &lt; 4))</code>: This compound condition searches for elements greater than <code>1</code> and less than <code>4</code>. The <code>&amp;</code> operator combines both conditions, and <code>np.where</code> returns the indices of elements that satisfy both.</li>
-                <li><strong>Practical Use Case:</strong> Searching is useful when you need to locate specific data points within a dataset, such as finding all instances of a particular value or identifying data points that fall within a certain range for further analysis.</li>
+                <li>Searching is useful when you need to locate specific data points within a dataset, such as finding all instances of a particular value or identifying data points that fall within a certain range for further analysis.</li>
             </ul>
             <h4 id="example-with-2d-array">Example with 2D Array</h4>
             <p>
@@ -105,11 +155,10 @@ for row, col in zip(indices[0], indices[1]):
     print(f"Value 1 found at row {row}, column {col}")  # Expected: Three occurrences</code></pre>
             </div>
             </p>
-            <p>Explanation:</p>
             <ul>
                 <li><code>np.where(array_2D == 1)</code>: This function searches the 2D array for all elements equal to <code>1</code> and returns their row and column indices.</li>
                 <li><code>zip(indices[0], indices[1])</code>: Combines the row and column indices into pairs, allowing iteration over each position where the value <code>1</code> is found.</li>
-                <li><strong>Practical Use Case:</strong> In applications like image processing, searching can help identify specific pixel values or regions of interest within an image matrix.</li>
+                <li>In applications like image processing, searching can help identify specific pixel values or regions of interest within an image matrix.</li>
             </ul>
             <h3 id="filtering">Filtering</h3>
             <p>Filtering involves extracting elements from an array that meet certain conditions. NumPy's boolean indexing enables you to create masks based on conditions and use these masks to filter the array efficiently.</p>
@@ -122,11 +171,10 @@ filtered_array = array[(array &gt; 1) &amp; (array &lt; 4)]
 print(filtered_array)  # Expected: [2, 3]</code></pre>
             </div>
             </p>
-            <p>Explanation:</p>
             <ul>
                 <li><code>(array &gt; 1) &amp; (array &lt; 4)</code>: This creates a boolean mask where each element is <code>True</code> if it satisfies both conditions (greater than <code>1</code> and less than <code>4</code>) and <code>False</code> otherwise.</li>
                 <li><code>array[boolean_mask]</code>: Applying the boolean mask to the array extracts only the elements where the mask is <code>True</code>.</li>
-                <li><strong>Practical Use Case:</strong> Filtering is commonly used in data preprocessing to select subsets of data that meet specific criteria, such as selecting all records within a certain age range or filtering out outliers in a dataset.</li>
+                <li>Filtering is commonly used in data preprocessing to select subsets of data that meet specific criteria, such as selecting all records within a certain age range or filtering out outliers in a dataset.</li>
             </ul>
             <h3 id="sorting">Sorting</h3>
             <p>Sorting arrays arranges the elements in a specified order, either ascending or descending. NumPy's <code>np.sort()</code> function sorts the array and returns a new sorted array, leaving the original array unchanged. Sorting is fundamental for organizing data, preparing it for search algorithms, and enhancing the readability of datasets.</p>
@@ -139,10 +187,9 @@ sorted_array = np.sort(array)
 print(sorted_array)  # Expected: [1, 2, 3, 4, 5]</code></pre>
             </div>
             </p>
-            <p>Explanation:</p>
             <ul>
                 <li><code>np.sort(array)</code>: This function sorts the elements of the array in ascending order and returns a new sorted array.</li>
-                <li><strong>Practical Use Case:</strong> Sorting is useful when preparing data for binary search operations, generating ordered lists for reporting, or organizing data for visualization purposes.</li>
+                <li>Sorting is useful when preparing data for binary search operations, generating ordered lists for reporting, or organizing data for visualization purposes.</li>
             </ul>
             <h4 id="example-with-2d-array">Example with 2D Array</h4>
             <p>
@@ -161,10 +208,9 @@ print(sorted_array_2D)</code></pre>
  [5 2]]</code></pre>
             </div>
             </p>
-            <p>Explanation:</p>
             <ul>
                 <li><code>np.sort(array_2D, axis=0)</code>: The <code>axis=0</code> parameter specifies that the sort should be performed along the first axis (i.e., down each column). Each column is sorted independently.</li>
-                <li><strong>Practical Use Case:</strong> Sorting along specific axes is useful in scenarios where you need to order data within rows or columns, such as organizing features in a dataset or preparing data matrices for statistical analysis.</li>
+                <li>Sorting along specific axes is useful in scenarios where you need to order data within rows or columns, such as organizing features in a dataset or preparing data matrices for statistical analysis.</li>
             </ul>
             <h3 id="advanced-examples-and-techniques">Advanced Examples and Techniques</h3>
             <p>Beyond basic searching, filtering, and sorting, NumPy offers more advanced techniques to handle complex data manipulation tasks efficiently.</p>
@@ -187,10 +233,9 @@ print("Sorted along axis 1:\n", sorted_array_2D_axis1)</code></pre>
  [0 5]]</code></pre>
             </div>
             </p>
-            <p>Explanation:</p>
             <ul>
                 <li><code>np.sort(array_2D, axis=1)</code>: The <code>axis=1</code> parameter specifies that the sort should be performed along the second axis (i.e., across each row). Each row is sorted independently.</li>
-                <li><strong>Practical Use Case:</strong> Sorting rows can be useful when each row represents a separate entity, and you need to order elements within each entity, such as sorting scores for different students.</li>
+                <li>Sorting rows can be useful when each row represents a separate entity, and you need to order elements within each entity, such as sorting scores for different students.</li>
             </ul>
             <h4 id="using-argsort">Using Argsort</h4>
             <p>The <code>np.argsort()</code> function returns the indices that would sort an array. This is particularly useful for indirect sorting or when you need to sort one array based on the ordering of another.</p>
@@ -211,11 +256,10 @@ Array sorted using indices:
 [1 2 3 4 5]</code></pre>
             </div>
             </p>
-            <p>Explanation:</p>
             <ul>
                 <li><code>np.argsort(array)</code>: This function returns an array of indices that would sort the original array. In this case, it indicates that the smallest element <code>1</code> is at index <code>1</code>, followed by <code>2</code> at index <code>3</code>, and so on.</li>
                 <li><code>array[sorted_indices]</code>: Using the sorted indices to reorder the original array results in a sorted array.</li>
-                <li><strong>Practical Use Case:</strong> <code>argsort</code> is useful when you need to sort multiple arrays based on the order of one array, such as sorting a list of names based on corresponding scores.</li>
+                <li><code>argsort</code> is useful when you need to sort multiple arrays based on the order of one array, such as sorting a list of names based on corresponding scores.</li>
             </ul>
             <h4 id="complex-filtering">Complex Filtering</h4>
             <p>Combining multiple conditions allows for more sophisticated filtering of array elements, enabling the extraction of subsets that meet all specified criteria.</p>
@@ -227,32 +271,30 @@ complex_filtered_array = array[(array &gt; 1) &amp; (array &lt; 4) &amp; (array 
 print(complex_filtered_array)  # Expected: [2]</code></pre>
             </div>
             </p>
-            <p>Explanation:</p>
             <ul>
                 <li><code>(array &gt; 1) &amp; (array &lt; 4) &amp; (array % 2 == 0)</code>: This creates a boolean mask that is <code>True</code> only for elements that are greater than <code>1</code>, less than <code>4</code>, and even.</li>
                 <li><code>array[boolean_mask]</code>: Applying the complex boolean mask filters the array to include only elements that satisfy all three conditions.</li>
-                <li><strong>Practical Use Case:</strong> Complex filtering is essential in data analysis tasks where multiple criteria must be met simultaneously, such as selecting records within a specific range and meeting a particular category or status.</li>
+                <li>Complex filtering is essential in data analysis tasks where multiple criteria must be met simultaneously, such as selecting records within a specific range and meeting a particular category or status.</li>
             </ul>
             <h3 id="practical-applications">Practical Applications</h3>
-            <p>Understanding how to search, filter, and sort arrays is crucial for various data manipulation tasks, including:</p>
             <ul>
-                <li><strong>Data cleaning</strong> is essential for filtering out invalid or unwanted data points.</li>
-                <li><strong>Feature selection</strong> involves sorting and selecting important features based on statistical criteria.</li>
-                <li>Data analysis benefits greatly from extracting subsets of data that meet specific <strong>conditions</strong> for deeper insights.</li>
-                <li>Optimized searching allows for quickly locating <strong>data points</strong> or patterns within large datasets.</li>
-                <li>Efficient data processing relies on the ability to search through arrays to find <strong>relevant information</strong>.</li>
-                <li><strong>Sorting arrays</strong> helps in organizing data in a meaningful order, making it easier to read and interpret.</li>
-                <li>Filtering arrays enables the <strong>isolation</strong> of specific data points that match given criteria, improving data relevance.</li>
-                <li>Large-scale data manipulation often requires robust methods for searching, filtering, and sorting to handle the <strong>volume</strong> effectively.</li>
-                <li>Developing <strong>algorithms</strong> for array manipulation can enhance performance in data-intensive applications.</li>
-                <li>Understanding different <strong>search algorithms</strong>, such as linear and binary search, helps in selecting the most appropriate method for the task.</li>
-                <li>Various <strong>filtering techniques</strong>, including range checks and conditional filtering, can be applied to refine data sets.</li>
-                <li><strong>Sorting algorithms</strong>, such as quicksort and mergesort, play a significant role in data organization and retrieval speed.</li>
-                <li>Combining search, filter, and sort functions can streamline complex <strong>data processing</strong> workflows.</li>
-                <li>Array manipulation skills are fundamental for implementing <strong>machine learning</strong> models and preparing data for training.</li>
-                <li>Advanced data analysis tasks, such as <strong>time series analysis</strong>, often depend on precise filtering and sorting of data.</li>
-                <li>Optimizing search and sort operations can significantly reduce <strong>computational costs</strong> and improve application performance.</li>
-                <li>Search and filter capabilities are critical for <strong>real-time data processing</strong> and analytics in various industries.</li>
+                <li>When you start a project, the first step is to <strong>clean your data</strong>—that means spotting and removing anything that’s clearly wrong or out of place.</li>
+                <li>Next, you’ll want to <strong>pick the right features</strong>: look at which variables really move the needle and leave out the rest.</li>
+                <li>Sometimes you only need a slice of your dataset—<strong>pull out subsets</strong> that match certain conditions to zoom in on what matters.</li>
+                <li>In big collections of data, a smart <strong>search strategy</strong> can save you hours by pinpointing patterns or specific values fast.</li>
+                <li>Efficient workflows often rely on <strong>scanning arrays</strong> quickly to find exactly the information you need.</li>
+                <li>To make sense of a jumble of numbers, <strong>sorting</strong> puts them in order—chronological, alphabetical, or by size—so you can read them at a glance.</li>
+                <li>If you only care about items above a certain threshold (say, sales over $1,000), <strong>filtering</strong> helps you isolate those entries.</li>
+                <li>When your dataset balloons to millions of rows, you’ll need <strong>robust search, filter, and sort tools</strong> that keep things speedy.</li>
+                <li>Writing your own <strong>array-manipulation routines</strong> can give you extra speed and custom options beyond builtin functions.</li>
+                <li>Understanding the difference between a <strong>linear search</strong> (checking one by one) and a <strong>binary search</strong> (splitting the list in half) lets you choose what’s quickest for your data size.</li>
+                <li>Simple <strong>range filters</strong> (e.g., keep values between 0 and 100) or more complex <strong>conditional checks</strong> can both be part of your toolbox.</li>
+                <li>Popular <strong>sorting methods</strong> like quicksort or mergesort each have their own pros and cons when it comes to speed and memory use.</li>
+                <li>By <strong>combining</strong> search, filter, and sort steps in the right order, you can turn a slow, clunky process into a smooth pipeline.</li>
+                <li>These array skills aren’t just academic—they’re what you’ll use to <strong>prep data for machine-learning</strong> models, too.</li>
+                <li>If you’re working with data over time (stock prices, sensor readings), precise <strong>filtering and ordering</strong> are crucial for any meaningful <strong>time-series analysis</strong>.</li>
+                <li>Every millisecond counts at scale, so <strong>tuning your search and sort operations</strong> can drastically cut computational load.</li>
+                <li>In fields from finance to IoT, having fast <strong>real-time search and filtering</strong> capabilities is becoming non-negotiable.</li>
             </ul>
             <h3 id="summary-table">Summary Table</h3>
             <p>
@@ -327,6 +369,7 @@ print(complex_filtered_array)  # Expected: [2]</code></pre>
             <h2>Table of Contents</h2>
             <ol><a href="#searching-filtering-and-sorting">Searching, Filtering and Sorting</a>
                 <ol>
+                    <li><a href="#mathematical-intro">Mathematical Intro</a></li>
                     <li><a href="#searching">Searching</a>
                         <ol>
                             <li><a href="#example-with-1d-array">Example with 1D Array</a></li>
