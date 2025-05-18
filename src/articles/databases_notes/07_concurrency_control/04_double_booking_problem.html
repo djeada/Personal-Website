@@ -308,50 +308,30 @@ COMMIT;</code></pre>
                     <td>Handy views / commands</td>
                     <td>What to keep on the big screen</td>
                     <td>Sample “grab-it-now” query</td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
                 </tr>
                 <tr>
                     <td><strong>PostgreSQL</strong></td>
                     <td><code>pg_stat_activity</code>, <code>pg_locks</code>, <code>pg_blocking_pids()</code></td>
                     <td>• Active vs idle in txn<br />• <code>wait_event = lock</code> count<br />• Blocking tree</td>
-                    <td><code>sql SELECT pid, state, now()-xact_start AS age, wait_event_type, wait_event, query FROM pg_stat_activity WHERE state = 'active' AND now()-xact_start &gt; interval '30s';</code></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
+                    <td><code>SELECT pid, state, now() - xact_start AS age, wait_event_type, wait_event, query FROM pg_stat_activity WHERE state = 'active' AND now() - xact_start &gt; interval '30s';</code></td>
                 </tr>
                 <tr>
                     <td><strong>SQL Server</strong></td>
                     <td><code>sys.dm_exec_sessions</code>, <code>sys.dm_exec_requests</code>, <code>sys.dm_tran_locks</code>, <code>sys.dm_os_waiting_tasks</code></td>
-                    <td>• <code>waiting_tasks_count</code> on <strong>LCK_*</strong> waits<br />• Top blockers from <code>sys.dm_exec_sessions</code></td>
-                    <td><code>sql SELECT TOP 10 blocking_session_id, wait_time_ms, wait_type, [text] FROM sys.dm_exec_requests CROSS APPLY sys.dm_exec_sql_text(sql_handle) WHERE blocking_session_id &lt;&gt; 0 ORDER BY wait_time_ms DESC;</code></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
+                    <td>• <code>waiting_tasks_count</code> on <strong>LCK_</strong>* waits<br />• Top blockers from <code>sys.dm_exec_sessions</code></td>
+                    <td><code>SELECT TOP 10 blocking_session_id, wait_time_ms, wait_type, [text] FROM sys.dm_exec_requests CROSS APPLY sys.dm_exec_sql_text(sql_handle) WHERE blocking_session_id &lt;&gt; 0 ORDER BY wait_time_ms DESC;</code></td>
                 </tr>
                 <tr>
                     <td><strong>MySQL / InnoDB</strong></td>
-                    <td><code>SHOW ENGINE INNODB STATUS\G</code>, <code>information_schema.innodb_trx / locks / lock_waits</code>, Performance Schema</td>
+                    <td><code>SHOW ENGINE INNODB STATUS\G</code>, <code>information_schema.innodb_trx</code> / <code>innodb_locks</code> / <code>innodb_lock_waits</code>, Performance Schema</td>
                     <td>• “LATEST DETECTED DEADLOCK” section<br />• <code>trx_wait_started</code> age</td>
-                    <td><code>sql SELECT waiting_trx_id, waiting_pid, blocking_pid, waiting_query FROM information_schema.innodb_lock_waits\G</code></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
+                    <td><code>SELECT waiting_trx_id, waiting_pid, blocking_pid, waiting_query FROM information_schema.innodb_lock_waits;</code></td>
                 </tr>
                 <tr>
                     <td><strong>Oracle</strong></td>
                     <td><code>V$LOCK</code>, <code>V$SESSION</code>, <code>DBA_BLOCKERS</code>, <code>DBA_WAITERS</code>, <code>V$ASH</code></td>
-                    <td>• <code>BLOCKING_SESSION_STATUS</code> = ‘VALID’ count<br />• Session trees from <code>DBA_BLOCKERS</code></td>
-                    <td>
-                        <div>
-                            <pre><code class="language-sql">SELECT s.sid, s.serial#, l.id1                                                                                                                                                                   |   | ',' |   | l.id2 "Resource", s.seconds_in_wait FROM v\$session s JOIN v\$lock l ON s.sid = l.sid WHERE l.block = 1;</code></pre>
-                        </div>
-                    </td>
+                    <td>• <code>BLOCKING_SESSION_STATUS = 'VALID'</code> count<br />• Session trees from <code>DBA_BLOCKERS</code></td>
+                    <td><code>SELECT s.sid, s.serial#, l.id1 AS resource1, l.id2 AS resource2, s.seconds_in_wait FROM v$session s JOIN v$lock l ON s.sid = l.sid WHERE l.block = 1;</code></td>
                 </tr>
             </table>
             </p>
