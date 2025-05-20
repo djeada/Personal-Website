@@ -5,24 +5,28 @@ let shapes;
 let currentShape = null;
 let lastTime = 0;
 let accumulator = 0;
-const moveInterval = 1000;
+const DEFAULT_GRID_WIDTH  = 10;
+const DEFAULT_GRID_HEIGHT = 20;          // height is 2 × width
+let moveInterval = 1000;
 let gameOver = false;
 let score = 0;
+let lockInput = false;
 
-function calculateCellSize() {
-    const screenWidth = window.innerWidth;
-    let cellSize = 50;
+function calculateCellSize () {
+  const maxBoardW = window.innerWidth  * 0.8;
+  const maxBoardH = window.innerHeight * 0.8;
 
-    if (screenWidth <= 600) {
-        cellSize = 30;
-    } else if (screenWidth <= 1024) {
-        cellSize = 40;
-    }
-
-    return cellSize;
+  // choose the *smaller* dimension so the board never overflows
+  return Math.floor(
+    Math.min(
+      maxBoardW / DEFAULT_GRID_WIDTH,
+      maxBoardH / DEFAULT_GRID_HEIGHT
+    )
+  );
 }
 
-const cellSize = calculateCellSize();
+
+let cellSize = calculateCellSize();
 
 class Position {
     constructor(x, y) {
@@ -55,7 +59,31 @@ class Shape {
         );
     }
 
-    rotate() {}
+    rotate() {
+        // Default: do nothing
+    }
+
+    tryRotate() {
+        // Try to rotate, but revert if out of bounds or collides
+        const oldPositions = this.positions.map(p => ({ x: p.x, y: p.y }));
+        this.rotate();
+        if (this.positions.some(pos => pos.x < 0 || pos.x >= grid.width || pos.y < 0 || pos.y >= grid.height) ||
+            checkCollisionWithOtherShapes(this)) {
+            // Try wall kick (shift left/right)
+            for (let dx of [-1, 1, -2, 2]) {
+                this.positions.forEach((pos, i) => pos.x = oldPositions[i].x + dx);
+                if (!this.positions.some(pos => pos.x < 0 || pos.x >= grid.width || pos.y < 0 || pos.y >= grid.height) &&
+                    !checkCollisionWithOtherShapes(this)) {
+                    return;
+                }
+            }
+            // Revert
+            this.positions.forEach((pos, i) => {
+                pos.x = oldPositions[i].x;
+                pos.y = oldPositions[i].y;
+            });
+        }
+    }
 
     moveLeft() {
         if (this.positions.some(position => position.x <= 0) || checkCollisionForLeft(this)) {
@@ -308,13 +336,17 @@ class Grid {
     }
 }
 
-function adjustCanvas() {
-    const rect = canvas.getBoundingClientRect();
-    const gridWidthCells = Math.floor(rect.width / cellSize);
-    const gridHeightCells = Math.floor(rect.height / cellSize);
-    canvas.width = gridWidthCells * cellSize;
-    canvas.height = gridHeightCells * cellSize;
-    grid = new Grid(gridWidthCells, gridHeightCells);
+function adjustCanvas () {
+  cellSize     = Math.max(5, calculateCellSize());     // 5 px safety floor
+  canvas.width = cellSize * DEFAULT_GRID_WIDTH;
+  canvas.height= cellSize * DEFAULT_GRID_HEIGHT;
+
+  // (Re-)create your grid with the new dimensions
+  grid = new Grid(DEFAULT_GRID_WIDTH, DEFAULT_GRID_HEIGHT);
+
+  // Optional: centre the board with CSS so it looks good on desktop
+  canvas.style.display = 'block';
+  canvas.style.margin  = '0 auto';
 }
 
 function gameLoop(timestamp) {
@@ -328,8 +360,15 @@ function gameLoop(timestamp) {
     accumulator += deltaTime;
 
     if (accumulator > moveInterval) {
+        lockInput = true;
         if (hasReachedBottom(currentShape) || checkCollisionWithOtherShapes(currentShape)) {
             shapes.push(currentShape);
+            let fullRows = getFullRows();
+            if (fullRows.length > 0) {
+                clearFullRows(fullRows);
+                // Increase speed as score increases
+                moveInterval = Math.max(100, 1000 - score * 30);
+            }
             currentShape = createNewShape();
             if (checkCollisionWithOtherShapes(currentShape)) {
                 gameOver = true;
@@ -340,6 +379,7 @@ function gameLoop(timestamp) {
             currentShape.moveDown();
         }
         accumulator -= moveInterval;
+        lockInput = false;
     }
 
     updateAndRender();
@@ -379,11 +419,24 @@ function getFullRows() {
 
 function clearFullRows(fullRows) {
     for (let y of fullRows) {
+        // Remove positions in cleared row from all shapes (including currentShape if landed)
         for (let shape of shapes) {
             shape.positions = shape.positions.filter(pos => pos.y !== y);
         }
+        // Also check currentShape if it just landed
+        if (currentShape) {
+            currentShape.positions = currentShape.positions.filter(pos => pos.y !== y);
+        }
+        // Drop above blocks
         for (let shape of shapes) {
             shape.positions.forEach(pos => {
+                if (pos.y < y) {
+                    pos.y += 1;
+                }
+            });
+        }
+        if (currentShape) {
+            currentShape.positions.forEach(pos => {
                 if (pos.y < y) {
                     pos.y += 1;
                 }
@@ -433,6 +486,7 @@ function restartGame() {
 }
 
 document.addEventListener('keydown', function(event) {
+    if (lockInput || gameOver) return;
     switch (event.key) {
         case 'Escape':
             restartGame();
@@ -451,7 +505,7 @@ document.addEventListener('keydown', function(event) {
             break;
         case 'ArrowUp':
         case ' ':
-            currentShape.rotate();
+            currentShape.tryRotate();
             event.preventDefault();
             break;
     }
@@ -459,27 +513,29 @@ document.addEventListener('keydown', function(event) {
 });
 
 document.getElementById('leftButton').addEventListener('touchstart', function() {
+    if (lockInput || gameOver) return;
     currentShape.moveLeft();
     updateAndRender();
 });
-
 document.getElementById('rightButton').addEventListener('touchstart', function() {
+    if (lockInput || gameOver) return;
     currentShape.moveRight();
     updateAndRender();
 });
-
 document.getElementById('downButton').addEventListener('touchstart', function() {
+    if (lockInput || gameOver) return;
     moveCurrentShapeDown();
     updateAndRender();
 });
-
 document.getElementById('rotateButton').addEventListener('touchstart', function() {
-    currentShape.rotate();
+    if (lockInput || gameOver) return;
+    currentShape.tryRotate();
     updateAndRender();
 });
 
-adjustCanvas();
+adjustCanvas();                   // first pass
 window.addEventListener('resize', adjustCanvas);
+window.addEventListener('orientationchange', adjustCanvas);  // iOS/Android
 
 currentShape = createNewShape();
 shapes = [];
