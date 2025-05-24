@@ -1,4 +1,5 @@
 import json
+import re
 import logging
 import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -11,7 +12,10 @@ import requests
 # Map each quiz URL to exactly one category
 URL_TO_CATEGORY: Dict[str, str] = {
     "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/quizzes/intro.md": "parallel_programming",
+    # Frontend
     "https://raw.githubusercontent.com/djeada/Frontend-Notes/main/quizzes/html.md": "frontend",
+    "https://raw.githubusercontent.com/djeada/Frontend-Notes/main/quizzes/css.md": "frontend",
+    "https://raw.githubusercontent.com/djeada/Frontend-Notes/main/quizzes/js.md": "frontend",
     # Linux quizzes
     "https://raw.githubusercontent.com/djeada/Linux-Notes/main/quizzes/partitions_and_logical_volumes.md": "linux",
     "https://raw.githubusercontent.com/djeada/Linux-Notes/main/quizzes/files.md": "linux",
@@ -29,22 +33,25 @@ logger = logging.getLogger(__name__)
 
 # Markdown parsing
 def parse_markdown_question(md: str) -> Optional[Dict[str, Any]]:
-    """
-    Extract question text, options, and correct index from a markdown block.
-    Returns None if block is not a valid question.
-    """
-    import re
-
-    q_match = re.search(r"Q\.\s*(.+?)(?:\n{2,}|\Z)", md, re.IGNORECASE | re.DOTALL)
+    # 1) Extract the Q. line
+    q_match = re.search(
+        r"Q\.\s*(.+?)(?=\n[\*\-]\s*\[)",
+        md,
+        re.IGNORECASE | re.DOTALL,
+    )
     if not q_match:
         logger.warning("Skipping block: no question found.")
         return None
-
     text = q_match.group(1).strip()
+
+    # 2) Extract all [ ]/[x] options, allowing * or - bullets
     options: List[str] = []
     correct_idx: int = -1
-
-    for idx, m in enumerate(re.finditer(r"- \[( |x)\]\s*(.+)", md)):
+    for idx, m in enumerate(re.finditer(
+            r"^[\*\-]\s*\[([ x])\]\s*(.+)$",
+            md,
+            re.IGNORECASE | re.MULTILINE,
+        )):
         marker, opt_text = m.groups()
         options.append(opt_text.strip())
         if marker.lower() == 'x' and correct_idx == -1:
@@ -54,8 +61,11 @@ def parse_markdown_question(md: str) -> Optional[Dict[str, Any]]:
         logger.warning(f"No correct option marked for question: '{text}'")
         return None
 
-    return {"text": text, "options": options, "correctOptionIndex": correct_idx}
-
+    return {
+        "text": text,
+        "options": options,
+        "correctOptionIndex": correct_idx,
+    }
 
 def parse_questions_from_markdown(md: str) -> List[Dict[str, Any]]:
     """

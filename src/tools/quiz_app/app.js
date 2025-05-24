@@ -1,194 +1,169 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const categorySelect = document.getElementById('categorySelect');
-    const maxQuestionsInput = document.getElementById('maxQuestionsInput');
-    const reloadQuestionsButton = document.getElementById('reloadQuestionsButton');
-    const quizContainer = document.getElementById('quizContainer');
-    const submitButton = document.getElementById('submitButton');
+  // ─── Element refs ────────────────────────────────────────────────────────────
+  const categorySelect    = document.getElementById('categorySelect');
+  const maxQuestionsInput = document.getElementById('maxQuestionsInput');
+  const reloadBtn         = document.getElementById('reloadQuestionsButton');
+  const submitBtn         = document.getElementById('submitButton');
+  const quizContainer     = document.getElementById('quizContainer');
+  const spinner           = document.getElementById('loadingSpinner');
 
-    let currentCategory = null;
-    let questions = [];
-    let userAnswers = [];
-    let maxQuestions = 12;
-    let categoryCache = {};
+  // ─── State ──────────────────────────────────────────────────────────────────
+  let currentCategoryData = null;
+  let displayedQuestions  = [];
+  let userAnswers         = [];
+  const categoryCache     = new Map();
 
-    maxQuestionsInput.value = 12;
+  // Initialize default
+  maxQuestionsInput.value = 12;
 
-    const proxyUrl = 'https://api.allorigins.win/get?url=';
+  // ─── Helpers ─────────────────────────────────────────────────────────────────
+  const PROXY = 'https://api.allorigins.win/get?url=';
 
-    const fetchJson = async (url) => {
-        try {
-            const response = await fetch(proxyUrl + encodeURIComponent(url));
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            const data = await response.json();
-            console.log("Raw data contents:", data.contents); // Log raw data
-            if (!data.contents) {
-                throw new Error("No data received or empty response.");
-            }
-            try {
-                const parsedData = JSON.parse(data.contents);
-                return parsedData;
-            } catch (parseError) {
-                console.error("Error parsing JSON data:", parseError);
-                throw parseError;
-            }
-        } catch (error) {
-            console.error('Error fetching JSON data:', error);
-            return null;
-        }
-    };
+  async function fetchJson(url) {
+    try {
+      const resp = await fetch(PROXY + encodeURIComponent(url));
+      if (!resp.ok) throw new Error(`Status ${resp.status}`);
+      const { contents } = await resp.json();
+      return JSON.parse(contents);
+    } catch (err) {
+      console.error('Fetch error:', err);
+      return null;
+    }
+  }
 
-    const toSnakeCase = (str) => {
-        return str
-            .toLowerCase() // Convert to lowercase
-            .replace(/\s+/g, '_') // Replace spaces with underscores
-            .replace(/[^\w]/g, '_'); // Replace non-alphanumeric characters with underscores
+  const toSnake = str =>
+    str.trim().toLowerCase().replace(/\W+/g, '_');
+
+  function pickRandom(arr, n) {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy.slice(0, n);
+  }
+
+  const showSpinner = () => { spinner.style.display = 'block'; };
+  const hideSpinner = () => { spinner.style.display = 'none'; };
+
+  // ─── Load Categories ─────────────────────────────────────────────────────────
+  async function loadCategories() {
+    const categories = await fetchJson('https://adamdjellouli.com/tools/quiz_app/categories.json');
+    if (!Array.isArray(categories)) {
+      console.error('Invalid categories');
+      return;
     }
 
-    const loadCategories = async () => {
-        const categoriesUrl = 'https://adamdjellouli.com/tools/quiz_app/categories.json';
-        const categories = await fetchJson(categoriesUrl);
+    categories.forEach(cat => {
+      const opt = new Option(cat.name, cat.name);
+      categorySelect.add(opt);
+    });
 
-        if (categories && Array.isArray(categories)) {
-            categories.forEach((category, index) => {
-                const option = document.createElement('option');
-                option.value = category.name;
-                option.textContent = category.name;
-                categorySelect.appendChild(option);
-            });
+    // Auto-select from URL slug or default to first
+    const slug = window.location.pathname.split('/').pop();
+    const match = categories.find(c => toSnake(c.name) === toSnake(slug));
+    categorySelect.value = match?.name || categories[0].name;
 
-            // Check URL for category path
-            const defaultCategory = categories[0].name;
-            const path = window.location.pathname.split('/').filter(Boolean);
-            const urlCategory = path[path.length - 1];
-            const matchedCategory = categories.find(category => toSnakeCase(category.name) === toSnakeCase(urlCategory));
-            const initialCategory = matchedCategory ? matchedCategory.name : defaultCategory;
+    await loadCategoryData(categorySelect.value);
+  }
 
-            // Set the category select value and load the initial category
-            categorySelect.value = initialCategory;
-            loadCategoryData(initialCategory);
-        } else {
-            console.error('Invalid categories data:', categories);
-        }
-    };
+  // ─── Load a Single Category ─────────────────────────────────────────────────
+  async function loadCategoryData(categoryName) {
+    showSpinner();
 
-    const loadCategoryData = async (categoryName) => {
-        showLoadingMessage(); // Show spinner while loading
+    if (!categoryCache.has(categoryName)) {
+      const slug = toSnake(categoryName);
+      const data = await fetchJson(
+        `https://adamdjellouli.com/tools/quiz_app/${slug}.json`
+      );
+      if (data) categoryCache.set(categoryName, data);
+      else console.error('Invalid category data');
+    }
 
-        if (categoryCache[categoryName]) {
-            // Use cached data if available
-            const data = categoryCache[categoryName];
-            processCategoryData(data);
-        } else {
-            // Fetch data if not in cache
-            const categoryNameFormatted = toSnakeCase(categoryName);
-            const categoryUrl = `https://adamdjellouli.com/tools/quiz_app/${categoryNameFormatted}.json`;
-            const data = await fetchJson(categoryUrl);
+    currentCategoryData = categoryCache.get(categoryName) || { questions: [] };
+    setupQuiz();
+    hideSpinner();
+  }
 
-            if (data) {
-                categoryCache[categoryName] = data; // Cache the data
-                processCategoryData(data);
-            } else {
-                console.error('Invalid category data:', data);
-            }
-        }
-        hideLoadingMessage(); // Hide spinner once done
-    };
+  // ─── Quiz Setup & Rendering ─────────────────────────────────────────────────
+  function setupQuiz() {
+    const maxQ   = parseInt(maxQuestionsInput.value, 10) || 20;
+    const allQs  = currentCategoryData.questions;
+    displayedQuestions = pickRandom(allQs, maxQ);
+    userAnswers        = Array(displayedQuestions.length).fill(null);
+    renderQuestions();
+  }
 
+  function renderQuestions() {
+    quizContainer.innerHTML = '';
 
-    const processCategoryData = (data) => {
-        currentCategory = data;
-        maxQuestions = parseInt(maxQuestionsInput.value) || 20; // Default to 20 if input is empty or not defined
-        questions = getRandomQuestions(data.questions, maxQuestions);
-        userAnswers = Array(questions.length).fill(null);
-        displayQuestions();
-        hideLoadingMessage();
-    };
+    displayedQuestions.forEach((q, i) => {
+      const qDiv = document.createElement('div');
+      qDiv.className = 'question';
 
-    const getRandomQuestions = (questions, maxQuestions) => {
-        const shuffled = questions.sort(() => 0.5 - Math.random());
-        return shuffled.slice(0, maxQuestions);
-    };
+      const p = document.createElement('p');
+      p.textContent = q.text;
+      qDiv.appendChild(p);
 
-    const showLoadingMessage = () => {
-        const loadingSpinner = document.getElementById('loadingSpinner');
-        loadingSpinner.style.display = 'block';
-    };
+      const ul = document.createElement('ul');
+      ul.className = 'options';
 
-    const hideLoadingMessage = () => {
-        const loadingSpinner = document.getElementById('loadingSpinner');
-        loadingSpinner.style.display = 'none';
-    };
-
-
-    const displayQuestions = () => {
-        quizContainer.innerHTML = '';
-        questions.forEach((question, index) => {
-            const questionDiv = document.createElement('div');
-            questionDiv.className = 'question';
-            const questionText = document.createElement('div');
-            questionText.textContent = question.text;
-            questionDiv.appendChild(questionText);
-
-            const optionsList = document.createElement('ul');
-            optionsList.className = 'options';
-            question.options.forEach((option, optionIndex) => {
-                const li = document.createElement('li');
-                const radio = document.createElement('input');
-                radio.type = 'radio';
-                radio.name = `question-${index}`;
-                radio.value = optionIndex;
-                radio.addEventListener('change', () => {
-                    userAnswers[index] = optionIndex;
-                });
-                li.appendChild(radio);
-                li.appendChild(document.createTextNode(option));
-                optionsList.appendChild(li);
-            });
-            questionDiv.appendChild(optionsList);
-            quizContainer.appendChild(questionDiv);
+      q.options.forEach((opt, idx) => {
+        const li = document.createElement('li');
+        const input = document.createElement('input');
+        input.type  = 'radio';
+        input.name  = `q${i}`;
+        input.value = idx;
+        input.addEventListener('change', () => {
+          userAnswers[i] = idx;
         });
-    };
 
-    const submitAnswers = () => {
-        let score = 0;
-        questions.forEach((question, index) => {
-            const questionDiv = quizContainer.children[index];
-            const optionsList = questionDiv.querySelector('.options');
-            const selectedOptionIndex = userAnswers[index];
-            optionsList.querySelectorAll('li').forEach((li, optionIndex) => {
-                li.classList.remove('correct', 'incorrect');
-                if (selectedOptionIndex === optionIndex) {
-                    if (optionIndex === question.correctOptionIndex) {
-                        li.classList.add('correct');
-                        score++;
-                    } else {
-                        li.classList.add('incorrect');
-                    }
-                }
-                if (optionIndex === question.correctOptionIndex) {
-                    li.classList.add('correct');
-                }
-            });
-        });
-        alert(`Quiz submitted! Your score is ${score}/${questions.length}. Check the answers marked in green and red.`);
-    };
+        li.append(input, document.createTextNode(opt));
+        ul.appendChild(li);
+      });
 
-    categorySelect.addEventListener('change', (event) => {
-        loadCategoryData(event.target.value);
+      qDiv.appendChild(ul);
+      quizContainer.appendChild(qDiv);
+    });
+  }
+
+  // ─── Submit & Score ──────────────────────────────────────────────────────────
+  function submitQuiz() {
+    let score = 0;
+
+    displayedQuestions.forEach((q, i) => {
+      const correctIdx = q.correctOptionIndex;
+      const selected   = userAnswers[i];
+      const inputs     = quizContainer.querySelectorAll(`input[name="q${i}"]`);
+
+      inputs.forEach(input => {
+        const li = input.parentElement;
+        li.classList.remove('correct', 'incorrect');
+        const idx = Number(input.value);
+
+        if (idx === correctIdx) {
+          li.classList.add('correct');
+        }
+        if (idx === selected && selected !== correctIdx) {
+          li.classList.add('incorrect');
+        }
+      });
+
+      if (selected === correctIdx) score++;
     });
 
-    maxQuestionsInput.addEventListener('input', () => {
-        maxQuestions = parseInt(maxQuestionsInput.value) || 20;
-    });
+    alert(`Your score: ${score} / ${displayedQuestions.length}`);
+  }
 
-    reloadQuestionsButton.addEventListener('click', () => {
-        questions = getRandomQuestions(currentCategory.questions, maxQuestions);
-        displayQuestions();
-    });
+  // ─── Event Listeners ─────────────────────────────────────────────────────────
+  categorySelect.addEventListener('change', () =>
+    loadCategoryData(categorySelect.value)
+  );
 
-    submitButton.addEventListener('click', submitAnswers);
+  maxQuestionsInput.addEventListener('input', setupQuiz);
+  reloadBtn.addEventListener('click', setupQuiz);
+  submitBtn.addEventListener('click', submitQuiz);
 
-    loadCategories();
+  // ─── Start ───────────────────────────────────────────────────────────────────
+  loadCategories();
 });
