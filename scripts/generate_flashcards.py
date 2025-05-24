@@ -2,7 +2,7 @@ import json
 import logging
 import tempfile
 import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from time import sleep
 from typing import Any, Dict, List, Optional, Tuple, Set
@@ -113,7 +113,7 @@ def group_cards_by_subcategory(content: str, fallback: str) -> Dict[str, List[Di
 def merge_flashcards(existing: Dict[str, List[Dict[str, str]]], new: Dict[str, List[Dict[str, str]]]) -> Dict[str, List[Dict[str, str]]]:
     """Merge and dedupe flashcards into existing subcategories."""
     for sub, new_cards in new.items():
-        combined = (existing.get(sub, []) + new_cards)
+        combined = existing.get(sub, []) + new_cards
         existing[sub] = dedupe(combined)
     return existing
 
@@ -173,15 +173,19 @@ def main() -> None:
         categories.add(info['category'])
 
     total = 0
+    # Process categories concurrently, but collect in fixed order
     with ThreadPoolExecutor(max_workers=min(8, len(cat_map))) as executor:
-        futures = {executor.submit(process_category, cat, urls): cat for cat, urls in cat_map.items()}
-        for f in as_completed(futures):
-            cat = futures[f]
+        future_by_cat = {
+            cat: executor.submit(process_category, cat, urls)
+            for cat, urls in cat_map.items()
+        }
+        for cat in cat_map:
             try:
-                count = f.result()
+                count = future_by_cat[cat].result()
                 total += count
             except Exception as e:
                 logger.error(f"Error processing category '{cat}': {e}")
+
     logger.info(f"Total flashcards processed: {total}")
 
     update_categories(categories)

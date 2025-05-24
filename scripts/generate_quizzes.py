@@ -2,7 +2,7 @@ import json
 import re
 import logging
 import tempfile
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -31,7 +31,7 @@ LOG_FORMAT = "%(asctime)s [%(levelname)s] %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
 
-# Markdown parsing
+
 def parse_markdown_question(md: str) -> Optional[Dict[str, Any]]:
     # 1) Extract the Q. line
     q_match = re.search(
@@ -67,6 +67,7 @@ def parse_markdown_question(md: str) -> Optional[Dict[str, Any]]:
         "correctOptionIndex": correct_idx,
     }
 
+
 def parse_questions_from_markdown(md: str) -> List[Dict[str, Any]]:
     """
     Splits markdown into question blocks and parses each one.
@@ -80,7 +81,7 @@ def parse_questions_from_markdown(md: str) -> List[Dict[str, Any]]:
     logger.info(f"Parsed {len(questions)} questions.")
     return questions
 
-# I/O operations
+
 def download_markdown(url: str, session: requests.Session) -> str:
     """
     Download raw markdown text from the given URL.
@@ -105,7 +106,7 @@ def write_json(data: Any, path: Path) -> None:
     temp_name.replace(path)
     logger.info(f"Wrote JSON to {path}")
 
-# Workflow
+
 def process_url(url: str, session: requests.Session) -> Tuple[str, List[Dict[str, Any]]]:
     """
     Download and parse a single URL, returning its category and associated questions.
@@ -125,15 +126,22 @@ def main() -> None:
     aggregated: Dict[str, List[Dict[str, Any]]] = {}
 
     with requests.Session() as session:
-        with ThreadPoolExecutor(max_workers=min(32, len(URL_TO_CATEGORY))) as executor:
-            futures = {executor.submit(process_url, url, session): url for url in URL_TO_CATEGORY}
-            for future in as_completed(futures):
-                url = futures[future]
-                try:
-                    category, questions = future.result()
-                    aggregated.setdefault(category, []).extend(questions)
-                except Exception as e:
-                    logger.error(f"Error processing {url}: {e}")
+        # submit all jobs in a fixed URL order
+        future_by_url = {
+            url: ThreadPoolExecutor(max_workers=1).submit(process_url, url, session)
+            for url in URL_TO_CATEGORY
+        }
+        # collect results in the same URL order
+        for url in URL_TO_CATEGORY:
+            try:
+                category, questions = future_by_url[url].result()
+                aggregated.setdefault(category, []).extend(questions)
+            except Exception as e:
+                logger.error(f"Error processing {url}: {e}")
+
+    # ensure each category’s questions are in a stable order
+    for category, questions in aggregated.items():
+        aggregated[category] = sorted(questions, key=lambda q: q['text'])
 
     # Write per-category files in sorted order
     for category in sorted(aggregated):
@@ -144,6 +152,7 @@ def main() -> None:
     write_json(categories_list, CATEGORIES_FILE)
 
     logger.info("Conversion process completed.")
+
 
 if __name__ == "__main__":
     main()
