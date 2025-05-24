@@ -32,6 +32,22 @@ logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
 
 
+def markdown_to_html(text: str) -> str:
+    """
+    Convert basic Markdown in a string to HTML:
+    - Inline code: `code` → <code>code</code>
+    - Bold: **text** → <strong>text</strong>
+    - Italic: *text* → <em>text</em>
+    """
+    # Convert inline code first to avoid processing stars inside code
+    text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
+    # Bold (**...**)
+    text = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", text)
+    # Italic (*...*)
+    text = re.sub(r"\*([^*]+)\*", r"<em>\1</em>", text)
+    return text
+
+
 def parse_markdown_question(md: str) -> Optional[Dict[str, Any]]:
     # 1) Extract the Q. line
     q_match = re.search(
@@ -42,19 +58,24 @@ def parse_markdown_question(md: str) -> Optional[Dict[str, Any]]:
     if not q_match:
         logger.warning("Skipping block: no question found.")
         return None
-    text = q_match.group(1).strip()
+    # Apply HTML conversion to question text
+    text = markdown_to_html(q_match.group(1).strip())
 
     # 2) Extract all [ ]/[x] options, allowing * or - bullets
     options: List[str] = []
     correct_idx: int = -1
-    for idx, m in enumerate(re.finditer(
+    for idx, m in enumerate(
+        re.finditer(
             r"^[\*\-]\s*\[([ x])\]\s*(.+)$",
             md,
             re.IGNORECASE | re.MULTILINE,
-        )):
+        )
+    ):
         marker, opt_text = m.groups()
-        options.append(opt_text.strip())
-        if marker.lower() == 'x' and correct_idx == -1:
+        # Convert HTML formatting in option text
+        opt_html = markdown_to_html(opt_text.strip())
+        options.append(opt_html)
+        if marker.lower() == "x" and correct_idx == -1:
             correct_idx = idx
 
     if correct_idx == -1:
@@ -100,14 +121,18 @@ def write_json(data: Any, path: Path) -> None:
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     # Write to temp file and rename for atomicity
-    with tempfile.NamedTemporaryFile('w', delete=False, dir=path.parent, suffix='.tmp', encoding='utf-8') as tmp:
+    with tempfile.NamedTemporaryFile(
+        "w", delete=False, dir=path.parent, suffix=".tmp", encoding="utf-8"
+    ) as tmp:
         json.dump(data, tmp, indent=4, sort_keys=True, ensure_ascii=False)
         temp_name = Path(tmp.name)
     temp_name.replace(path)
     logger.info(f"Wrote JSON to {path}")
 
 
-def process_url(url: str, session: requests.Session) -> Tuple[str, List[Dict[str, Any]]]:
+def process_url(
+    url: str, session: requests.Session
+) -> Tuple[str, List[Dict[str, Any]]]:
     """
     Download and parse a single URL, returning its category and associated questions.
     """
@@ -141,14 +166,16 @@ def main() -> None:
 
     # ensure each category’s questions are in a stable order
     for category, questions in aggregated.items():
-        aggregated[category] = sorted(questions, key=lambda q: q['text'])
+        aggregated[category] = sorted(questions, key=lambda q: q["text"])
 
     # Write per-category files in sorted order
     for category in sorted(aggregated):
         write_json({"questions": aggregated[category]}, OUTPUT_DIR / f"{category}.json")
 
     # Generate categories file sorted by name
-    categories_list = [{"name": cat.replace('_', ' ').title()} for cat in sorted(aggregated)]
+    categories_list = [
+        {"name": cat.replace("_", " ").title()} for cat in sorted(aggregated)
+    ]
     write_json(categories_list, CATEGORIES_FILE)
 
     logger.info("Conversion process completed.")
