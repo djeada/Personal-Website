@@ -1,272 +1,191 @@
 import json
-import re
-import requests
 import logging
-import markdown
+import tempfile
+import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from multiprocessing import Pool
-from urllib.parse import urlparse, unquote
 from time import sleep
-from typing import List, Dict, Tuple, Optional
+from typing import Any, Dict, List, Optional, Tuple, Set
+from urllib.parse import urlparse, unquote
 
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+import markdown
+import requests
 
-# Constants
-URLS = [
-    {
-        "url": "https://raw.githubusercontent.com/djeada/Frontend-Notes/main/notes/12_quizes.md",
-        "category": "Web Development",
-    },
-    {
-        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/flashcards/probability.md",
-        "category": "Statistics",
-    },
-    {
-        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/flashcards/correlation_and_regression.md",
-        "category": "Statistics",
-    },
-    {
-        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/flashcards/descriptive_statistics.md",
-        "category": "Statistics",
-    },
-    {
-        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/flashcards/statistical_inference.md",
-        "category": "Statistics",
-    },
-    {
-        "url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/flashcards/time_series_analysis.md",
-        "category": "Statistics",
-    },
+# Configuration
+URLS_INFO: List[Dict[str, str]] = [
+    {"url": "https://raw.githubusercontent.com/djeada/Frontend-Notes/main/notes/12_quizes.md", "category": "Web Development"},
+    {"url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/flashcards/probability.md", "category": "Statistics"},
+    {"url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/flashcards/correlation_and_regression.md", "category": "Statistics"},
+    {"url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/flashcards/descriptive_statistics.md", "category": "Statistics"},
+    {"url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/flashcards/statistical_inference.md", "category": "Statistics"},
+    {"url": "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/flashcards/time_series_analysis.md", "category": "Statistics"},
 ]
+OUTPUT_DIR: Path = Path("../src/tools/flash_cards")
+CATEGORIES_FILE: Path = OUTPUT_DIR / "categories.json"
+RETRY_LIMIT: int = 3
+TIMEOUT: int = 10
+LOG_FORMAT = "%(asctime)s [%(levelname)s] %(message)s"
+logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
+logger = logging.getLogger(__name__)
 
-OUTPUT_DIR = Path("../src/tools/flash_cards")
-CATEGORIES_FILE = Path("../src/tools/flash_cards/categories.json")
-RETRY_LIMIT = 3
-TIMEOUT = 10
-FLASHCARD_PATTERN = re.compile(
-    r"<details>\s*<summary>(.*?)</summary><br>\s*(.*?)\s*</details>", re.DOTALL
-)
+# Regex patterns
+FLASHCARD_PATTERN = re.compile(r"<details>\s*<summary>(.*?)</summary><br>\s*(.*?)\s*</details>", re.DOTALL)
 HEADER_PATTERN = re.compile(r"^(#{2,6})\s*(.+)$", re.MULTILINE)
 
-# Set this to True to enable verbose logging
-VERBOSE = False
-if VERBOSE:
-    logging.getLogger().setLevel(logging.DEBUG)
+# Utilities
+def atomic_write_json(data: Any, path: Path) -> None:
+    """Atomically write JSON to the given path with stable formatting."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile('w', delete=False, dir=path.parent, suffix='.tmp', encoding='utf-8') as tmp:
+        json.dump(data, tmp, indent=4, sort_keys=True, ensure_ascii=False)
+        temp_path = Path(tmp.name)
+    temp_path.replace(path)
+    logger.info(f"Wrote JSON to {path}")
 
 
-def download_flashcards(url: str, retries: int = RETRY_LIMIT) -> Optional[str]:
-    for attempt in range(retries):
+def retry_get(url: str, retries: int = RETRY_LIMIT) -> Optional[str]:
+    """Download content with exponential backoff up to retries."""
+    for attempt in range(1, retries + 1):
         try:
-            logging.info(f"Downloading flashcards from {url} (attempt {attempt + 1})")
-            response = requests.get(url, timeout=TIMEOUT)
-            response.raise_for_status()
-            return response.text
+            logger.info(f"Fetching {url} (attempt {attempt})")
+            resp = requests.get(url, timeout=TIMEOUT)
+            resp.raise_for_status()
+            return resp.text
         except requests.RequestException as e:
-            logging.warning(f"Attempt {attempt + 1} failed: {e}")
-            sleep(2**attempt)
-    logging.error(f"Failed to download flashcards from {url} after {retries} attempts")
+            logger.warning(f"Attempt {attempt} failed: {e}")
+            sleep(2 ** (attempt - 1))
+    logger.error(f"Failed to fetch {url} after {retries} attempts")
     return None
 
 
-def markdown_to_html(text: str) -> str:
-    # Use the markdown module for robust markdown to HTML conversion
-    html = markdown.markdown(text, extensions=["extra", "codehilite"])
-    return html
-
-
-def parse_flashcards(content: str) -> List[Dict[str, str]]:
-    flashcards = [
-        {
-            "front": markdown_to_html(front.strip()),
-            "back": markdown_to_html(back.strip()),
-        }
-        for front, back in FLASHCARD_PATTERN.findall(content)
-    ]
-    return deduplicate_cards(flashcards)
+def markdown_to_html(md_text: str) -> str:
+    """Convert markdown text to HTML."""
+    return markdown.markdown(md_text, extensions=["extra", "codehilite"])
 
 
 def extract_subcategories_and_sections(content: str) -> List[Tuple[str, str]]:
+    """Split markdown into (header, content) sections; default if none."""
     headers = list(HEADER_PATTERN.finditer(content))
     if not headers:
         return [("Default", content)]
-
-    sections = []
-    for i, match in enumerate(headers):
-        _, subcategory_name = match.groups()
-        start_pos = match.end()
-
-        if i + 1 < len(headers):
-            end_pos = headers[i + 1].start()
-        else:
-            end_pos = len(content)
-
-        section_content = content[start_pos:end_pos]
-        sections.append((subcategory_name.strip(), section_content))
-
+    sections: List[Tuple[str, str]] = []
+    for i, m in enumerate(headers):
+        name = m.group(2).strip()
+        start = m.end()
+        end = headers[i+1].start() if i+1 < len(headers) else len(content)
+        sections.append((name, content[start:end]))
     return sections
 
 
-def generate_filename_from_category(category: str) -> str:
-    return f"{category.replace(' ', '_').lower()}.json"
+def parse_flashcards(section: str) -> List[Dict[str, str]]:
+    """Extract flashcards from a markdown section."""
+    cards: List[Dict[str, str]] = []
+    for front, back in FLASHCARD_PATTERN.findall(section):
+        cards.append({"front": markdown_to_html(front.strip()), "back": markdown_to_html(back.strip())})
+    return dedupe(cards)
 
 
-def deduplicate_cards(cards_list: List[Dict[str, str]]) -> List[Dict[str, str]]:
+def dedupe(cards: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    """Remove duplicate flashcards by front+back."""
     seen = set()
-    unique_cards = []
-    for card in cards_list:
-        card_tuple = (card["front"], card["back"])
-        if card_tuple not in seen:
-            seen.add(card_tuple)
-            unique_cards.append(card)
-    return unique_cards
+    unique: List[Dict[str, str]] = []
+    for c in cards:
+        key = (c['front'], c['back'])
+        if key not in seen:
+            seen.add(key)
+            unique.append(c)
+    return unique
 
 
-def merge_flashcards(
-    existing_data: Dict[str, List[Dict[str, str]]],
-    new_data: Dict[str, List[Dict[str, str]]],
-) -> Dict:
-    # Merge and deduplicate flashcards into existing subcategories
-    for subcategory, new_cards in new_data.items():
-        if subcategory in existing_data:
-            combined_cards = existing_data[subcategory] + new_cards
-            existing_data[subcategory] = deduplicate_cards(combined_cards)
-        else:
-            existing_data[subcategory] = deduplicate_cards(new_cards)
-    return existing_data
+def group_cards_by_subcategory(content: str, fallback: str) -> Dict[str, List[Dict[str, str]]]:
+    """Organize flashcards by subcategory; fallback if none."""
+    sections = extract_subcategories_and_sections(content)
+    by_sub: Dict[str, List[Dict[str, str]]] = {}
+    for name, sec in sections:
+        cards = parse_flashcards(sec)
+        if cards:
+            by_sub[name] = cards
+    if not by_sub:
+        by_sub[fallback] = []
+    return by_sub
+
+
+def merge_flashcards(existing: Dict[str, List[Dict[str, str]]], new: Dict[str, List[Dict[str, str]]]) -> Dict[str, List[Dict[str, str]]]:
+    """Merge and dedupe flashcards into existing subcategories."""
+    for sub, new_cards in new.items():
+        combined = (existing.get(sub, []) + new_cards)
+        existing[sub] = dedupe(combined)
+    return existing
 
 
 def save_to_json(
     cards_by_subcategory: Dict[str, List[Dict[str, str]]],
     category: str,
     output_path: Path,
-) -> None:
+) -> int:
+    """Merge with existing file if present, write JSON, and return total cards."""
     if output_path.exists():
-        # Load existing data if the file already exists
-        logging.info(f"Loading existing data from {output_path}")
-        existing_data = json.loads(output_path.read_text(encoding="utf-8"))
-
-        # Convert the subcategories list back into a dictionary for easier merging
-        existing_subcategories = {
-            subcategory["name"]: subcategory["cards"]
-            for subcategory in existing_data.get("subcategories", [])
-        }
-
-        # Merge new cards with existing ones
-        cards_by_subcategory = merge_flashcards(
-            existing_subcategories, cards_by_subcategory
-        )
-
-    # Convert the dictionary back into the format for saving
+        logger.info(f"Loading existing data from {output_path}")
+        existing = json.loads(output_path.read_text(encoding='utf-8'))
+        existing_sub = {s['name']: s['cards'] for s in existing.get('subcategories', [])}
+        cards_by_subcategory = merge_flashcards(existing_sub, cards_by_subcategory)
     data = {
-        "category": category,
-        "subcategories": [
-            {"name": subcategory, "cards": cards}
-            for subcategory, cards in cards_by_subcategory.items()
+        'category': category,
+        'subcategories': [
+            {'name': sub, 'cards': cards_by_subcategory[sub]}
+            for sub in sorted(cards_by_subcategory)
         ],
     }
-
-    logging.info(f"Saving flashcards to {output_path}")
-    output_path.write_text(
-        json.dumps(data, indent=4, ensure_ascii=False), encoding="utf-8"
-    )
+    atomic_write_json(data, output_path)
+    return sum(len(cards_by_subcategory[sub]) for sub in cards_by_subcategory)
 
 
-def group_cards_by_subcategory(
-    content: str, fallback_subcategory: str
-) -> Dict[str, List[Dict[str, str]]]:
-    sections = extract_subcategories_and_sections(content)
-    cards_by_subcategory = {}
-    for subcategory, section_content in sections:
-        subcategory_cards = parse_flashcards(section_content)
-        if subcategory_cards:
-            cards_by_subcategory[subcategory] = subcategory_cards
-    return cards_by_subcategory if cards_by_subcategory else {fallback_subcategory: []}
-
-
-def process_category(urls_info: List[Dict[str, str]]) -> int:
-    """Process all URLs for a single category."""
-    if not urls_info:
-        return 0
-
-    category = urls_info[0][
-        "category"
-    ]  # All URLs in this list belong to the same category
-    logging.info(f"Processing category {category} with {len(urls_info)} URLs")
-
-    output_filename = generate_filename_from_category(category)
-    output_path = OUTPUT_DIR / output_filename
-    output_path.unlink(missing_ok=True)
-
-    # Download and process flashcards for all URLs in this category
-    all_cards_by_subcategory = {}
-    total_cards = 0
-
-    for url_info in urls_info:
-        url = url_info["url"]
-        content = download_flashcards(url)
+def process_category(category: str, urls: List[str]) -> int:
+    """Process all URLs for one category; returns number of flashcards."""
+    logger.info(f"Processing category '{category}' with {len(urls)} URLs")
+    all_cards: Dict[str, List[Dict[str, str]]] = {}
+    for url in urls:
+        content = retry_get(url)
         if content:
-            fallback_subcategory = Path(unquote(urlparse(url).path)).stem.replace(
-                "_", " "
-            )
-            cards_by_subcategory = group_cards_by_subcategory(
-                content, fallback_subcategory
-            )
-            # Merge cards from different URLs under the same category
-            all_cards_by_subcategory = merge_flashcards(
-                all_cards_by_subcategory, cards_by_subcategory
-            )
-
-    # Save the accumulated flashcards to the JSON file
-    save_to_json(all_cards_by_subcategory, category, output_path)
-
-    # Count total cards
-    for cards in all_cards_by_subcategory.values():
-        total_cards += len(cards)
-
-    return total_cards
+            path = unquote(urlparse(url).path)
+            fallback = Path(path).stem.replace('_', ' ')
+            grouped = group_cards_by_subcategory(content, fallback)
+            all_cards = merge_flashcards(all_cards, grouped)
+    output_file = OUTPUT_DIR / (category.replace(' ', '_').lower() + '.json')
+    return save_to_json(all_cards, category, output_file)
 
 
-def update_categories(categories: set) -> None:
-    def to_snake_case(s: str) -> str:
-        return re.sub(r"\W+", "_", s).strip("_").lower()
-
-    # Convert categories to lowercase and snake case
-    categories_list = [to_snake_case(category) for category in categories]
-
-    logging.info(f"Updating categories in {CATEGORIES_FILE}")
-
-    # Write the updated categories to the file
-    with open(CATEGORIES_FILE, "w", encoding="utf-8") as f:
-        json.dump(categories_list, f, indent=4, ensure_ascii=False)
+def update_categories(categories: Set[str]) -> None:
+    """Write categories.json as snake_case list."""
+    def to_snake(s: str) -> str:
+        return re.sub(r"\W+", '_', s).strip('_').lower()
+    cats = sorted(to_snake(c) for c in categories)
+    atomic_write_json(cats, CATEGORIES_FILE)
 
 
 def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    categories = set()
+    # Organize URLs by category
+    cat_map: Dict[str, List[str]] = {}
+    categories: Set[str] = set()
+    for info in URLS_INFO:
+        cat_map.setdefault(info['category'], []).append(info['url'])
+        categories.add(info['category'])
 
-    # Group URLs by category
-    category_url_map = {}
-    for url_info in URLS:
-        category = url_info["category"]
-        categories.add(category)
-        if category not in category_url_map:
-            category_url_map[category] = []
-        category_url_map[category].append(url_info)
+    total = 0
+    with ThreadPoolExecutor(max_workers=min(8, len(cat_map))) as executor:
+        futures = {executor.submit(process_category, cat, urls): cat for cat, urls in cat_map.items()}
+        for f in as_completed(futures):
+            cat = futures[f]
+            try:
+                count = f.result()
+                total += count
+            except Exception as e:
+                logger.error(f"Error processing category '{cat}': {e}")
+    logger.info(f"Total flashcards processed: {total}")
 
-    # Process each category and collect statistics
-    total_cards_processed = 0
-    with Pool() as pool:
-        results = pool.map(process_category, category_url_map.values())
-
-    total_cards_processed = sum(results)
-    logging.info(f"Total cards processed: {total_cards_processed}")
-
-    # Update categories in categories.json
     update_categories(categories)
+    logger.info("Flashcards generation complete.")
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
