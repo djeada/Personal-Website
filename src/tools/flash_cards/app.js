@@ -1,44 +1,54 @@
 function resizeText(name) {
     let cardElement = document.getElementById(name);
 
-    // Check if the container exists
     if (!cardElement) {
-        console.error('Container with id "flashcardBack" not found.');
+        console.error(`Container with id "${name}" not found.`);
         return;
     }
 
-    // Select all <p> elements within the card element
     let textElements = cardElement.querySelectorAll('p');
-
-    // Check if there are any <p> elements to resize
     if (textElements.length === 0) {
-        console.error('No text elements found inside #flashcardBack');
+        console.error(`No text elements found inside #${name}`);
         return;
     }
 
-    // Get the initial font size from the first <p> element
-    let fontSize = parseFloat(window.getComputedStyle(textElements[0], null).getPropertyValue('font-size'));
+    let fontSize = parseFloat(window.getComputedStyle(textElements[0]).getPropertyValue('font-size'));
     let targetFontSize = fontSize;
-
-    // Apply resizing logic to all <p> elements together
     let totalHeight;
+
     do {
-        // Set the font size for all <p> elements
-        textElements.forEach(textElement => {
-            textElement.style.fontSize = targetFontSize + 'px';
-        });
-
-        // Calculate the total height of all <p> elements
-        totalHeight = Array.from(textElements).reduce((acc, textElement) => acc + textElement.scrollHeight, 0);
-
-        // Decrease font size if the content is too tall
+        textElements.forEach(el => el.style.fontSize = targetFontSize + 'px');
+        totalHeight = Array.from(textElements).reduce((sum, el) => sum + el.scrollHeight, 0);
         targetFontSize -= 1;
     } while (totalHeight > cardElement.clientHeight * 0.8 && targetFontSize > 2);
 }
 
-
-
 document.addEventListener('DOMContentLoaded', () => {
+    // Create or grab an error banner
+    let errorDiv = document.getElementById('errorMessage');
+    if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.id = 'errorMessage';
+        Object.assign(errorDiv.style, {
+            color: 'white',
+            backgroundColor: '#e74c3c',
+            padding: '10px',
+            textAlign: 'center',
+            display: 'none'
+        });
+        document.body.prepend(errorDiv);
+    }
+
+    function displayError(msg) {
+        errorDiv.textContent = msg;
+        errorDiv.style.display = 'block';
+    }
+
+    function clearError() {
+        errorDiv.textContent = '';
+        errorDiv.style.display = 'none';
+    }
+
     const categorySelect = document.getElementById('categorySelect');
     const subcategoriesDiv = document.getElementById('subcategories');
     const flashcard = document.getElementById('flashcard');
@@ -47,8 +57,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const flipButton = document.getElementById('flipButton');
     const knowButton = document.getElementById('knowButton');
     const nextButton = document.getElementById('nextButton');
-    const shuffleAllButton = document.getElementById('shuffleAllButton'); // Single shuffle button for all
+    const shuffleAllButton = document.getElementById('shuffleAllButton');
     const questionsTableBody = document.getElementById('questionsTable').querySelector('tbody');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+
+    const proxyUrl = 'https://api.allorigins.win/get?url=';
 
     let currentCategory = null;
     let currentSubcategories = new Set();
@@ -56,101 +69,100 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentCardIndex = 0;
     let cardStatus = [];
 
-    const proxyUrl = 'https://api.allorigins.win/get?url=';
-
-    const fetchJson = async (url) => {
-        document.getElementById('loadingSpinner').style.display = 'block';
+    async function fetchJson(url) {
+        clearError();
+        loadingSpinner.style.display = 'block';
         try {
             const response = await fetch(proxyUrl + encodeURIComponent(url));
-            const data = await response.json();
-            const parsedData = JSON.parse(data.contents);
-            return parsedData;
-        } catch (error) {
-            console.error('Error fetching JSON data:', error);
+            if (!response.ok) throw new Error(`Network response was ${response.status}`);
+            const wrapper = await response.json();
+            const data = JSON.parse(wrapper.contents);
+            return data;
+        } catch (err) {
+            console.error('Error fetching JSON data:', err);
+            displayError('❌ Failed to load data. Please check your connection and try again.');
             return null;
         } finally {
-            document.getElementById('loadingSpinner').style.display = 'none';
+            loadingSpinner.style.display = 'none';
         }
-    };
+    }
 
-    const loadCategories = async () => {
-        document.getElementById('loadingSpinner').style.display = 'block';
+    async function loadCategories() {
+        clearError();
+        loadingSpinner.style.display = 'block';
+
         const categoriesUrl = 'https://adamdjellouli.com/tools/flash_cards/categories.json';
         const categories = await fetchJson(categoriesUrl);
 
         if (categories && Array.isArray(categories)) {
-            categories.forEach((category, index) => {
-                const option = document.createElement('option');
-                option.value = category;
-                option.textContent = category.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
-                categorySelect.appendChild(option);
-
-                if (index === 0) {
-                    option.selected = true;
-                    loadCategoryData(category);
-                }
+            categorySelect.innerHTML = '';
+            categories.forEach((cat, i) => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                categorySelect.appendChild(opt);
+                if (i === 0) opt.selected = true;
             });
+            await loadCategoryData(categorySelect.value);
         } else {
-            console.error('Invalid categories data:', categories);
+            displayError('❌ Could not load category list.');
         }
-        document.getElementById('loadingSpinner').style.display = 'none';
-    };
 
-    const loadCategoryData = async (category) => {
-        document.getElementById('loadingSpinner').style.display = 'block';
+        loadingSpinner.style.display = 'none';
+    }
+
+    async function loadCategoryData(category) {
+        clearError();
+        loadingSpinner.style.display = 'block';
+
         const categoryUrl = `https://adamdjellouli.com/tools/flash_cards/${category}.json`;
         const data = await fetchJson(categoryUrl);
 
-        if (data) {
+        if (data && data.subcategories) {
             currentCategory = data;
             populateSubcategories();
             selectAllSubcategories();
             filterCards();
         } else {
-            console.error('Invalid category data:', data);
+            displayError('❌ Invalid category data received.');
         }
-        document.getElementById('loadingSpinner').style.display = 'none';
-    };
 
-    const populateSubcategories = () => {
+        loadingSpinner.style.display = 'none';
+    }
+
+    function populateSubcategories() {
         subcategoriesDiv.innerHTML = '';
-        currentCategory.subcategories.forEach(subcategory => {
+        currentCategory.subcategories.forEach(sc => {
             const label = document.createElement('label');
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.value = subcategory.name;
-            checkbox.addEventListener('change', handleSubcategoryChange);
-            label.appendChild(checkbox);
-            label.appendChild(document.createTextNode(subcategory.name));
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.value = sc.name;
+            cb.checked = true;
+            cb.addEventListener('change', handleSubcategoryChange);
+            label.append(cb, document.createTextNode(sc.name));
             subcategoriesDiv.appendChild(label);
+            currentSubcategories.add(sc.name);
         });
-    };
+    }
 
-    const selectAllSubcategories = () => {
-        const checkboxes = subcategoriesDiv.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = true;
-            currentSubcategories.add(checkbox.value);
-        });
-    };
+    function selectAllSubcategories() {
+        currentSubcategories = new Set(currentCategory.subcategories.map(sc => sc.name));
+        subcategoriesDiv.querySelectorAll('input').forEach(cb => cb.checked = true);
+    }
 
-    const handleSubcategoryChange = (event) => {
-        const subcategory = event.target.value;
-        if (event.target.checked) {
-            currentSubcategories.add(subcategory);
-        } else {
-            currentSubcategories.delete(subcategory);
-        }
+    function handleSubcategoryChange(e) {
+        if (e.target.checked) currentSubcategories.add(e.target.value);
+        else currentSubcategories.delete(e.target.value);
         filterCards();
-    };
+    }
 
-    const filterCards = () => {
+    function filterCards() {
         cards = [];
-        currentCategory.subcategories.forEach(subcategory => {
-            if (currentSubcategories.has(subcategory.name)) {
-                cards = cards.concat(subcategory.cards.map(card => ({
+        currentCategory.subcategories.forEach(sc => {
+            if (currentSubcategories.has(sc.name)) {
+                cards.push(...sc.cards.map(card => ({
                     ...card,
-                    subcategory: subcategory.name
+                    subcategory: sc.name
                 })));
             }
         });
@@ -158,39 +170,44 @@ document.addEventListener('DOMContentLoaded', () => {
         currentCardIndex = 0;
         showCard();
         populateQuestionsTable();
-    };
+    }
 
-    const shuffleAll = () => {
-        currentCategory.subcategories.forEach(subcategory => {
-            if (currentSubcategories.has(subcategory.name)) {
-                subcategory.cards = shuffleArray(subcategory.cards);
+    function shuffleAll() {
+        currentCategory.subcategories.forEach(sc => {
+            if (currentSubcategories.has(sc.name)) {
+                sc.cards = shuffleArray(sc.cards);
             }
         });
-        filterCards(); // Refresh the cards with the new shuffled order
-    };
+        filterCards();
+    }
 
-    const shuffleArray = (array) => {
-        for (let i = array.length - 1; i > 0; i--) {
+    function shuffleArray(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
+            [arr[i], arr[j]] = [arr[j], arr[i]];
         }
-        return array;
-    };
+        return arr;
+    }
 
-    const showCard = () => {
-        let initialIndex = currentCardIndex;
-        let cardFound = false;
+    function showCard() {
+        if (!cards.length) {
+            flashcardFront.innerHTML = '<p>No cards available</p>';
+            flashcardBack.innerHTML = '';
+            return;
+        }
 
+        let start = currentCardIndex,
+            found = false;
         do {
             if (cardStatus[currentCardIndex]) {
-                cardFound = true;
+                found = true;
                 break;
             }
             currentCardIndex = (currentCardIndex + 1) % cards.length;
-        } while (currentCardIndex !== initialIndex);
+        } while (currentCardIndex !== start);
 
-        if (!cardFound) {
-            flashcardFront.innerHTML = '<p>No more cards available</p>';
+        if (!found) {
+            flashcardFront.innerHTML = '<p>All done!</p>';
             flashcardBack.innerHTML = '';
         } else {
             flashcardFront.innerHTML = `<p>${cards[currentCardIndex].front}</p>`;
@@ -200,72 +217,61 @@ document.addEventListener('DOMContentLoaded', () => {
         flashcard.classList.remove('flipped');
         resizeText('flashcardBack');
         resizeText('flashcardFront');
-
         if (window.MathJax) {
-            MathJax.typesetPromise().catch((err) => console.error('MathJax rendering error:', err));
+            MathJax.typesetPromise().catch(err => console.error('MathJax error:', err));
         }
-    };
+    }
 
-    const populateQuestionsTable = () => {
+    function populateQuestionsTable() {
         questionsTableBody.innerHTML = '';
-        cards.forEach((card, index) => {
+        cards.forEach((card, idx) => {
             const row = document.createElement('tr');
-            const indexCell = document.createElement('td');
-            const questionCell = document.createElement('td');
-            const subcategoryCell = document.createElement('td');
-            const statusCell = document.createElement('td');
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.checked = cardStatus[index];
-            checkbox.addEventListener('change', () => {
-                cardStatus[index] = checkbox.checked;
+            const idxTd = document.createElement('td');
+            const qTd = document.createElement('td');
+            const subTd = document.createElement('td');
+            const statTd = document.createElement('td');
+            const cb = document.createElement('input');
+
+            idxTd.textContent = idx + 1;
+            qTd.innerHTML = card.front;
+            subTd.innerHTML = card.subcategory;
+            cb.type = 'checkbox';
+            cb.checked = cardStatus[idx];
+            cb.addEventListener('change', () => {
+                cardStatus[idx] = cb.checked;
                 showCard();
             });
+            statTd.appendChild(cb);
 
-            indexCell.textContent = index + 1;
-            // Using innerHTML to render HTML content in the question and subcategory cells
-            questionCell.innerHTML = card.front;
-            subcategoryCell.innerHTML = card.subcategory;
-            statusCell.appendChild(checkbox);
-            row.appendChild(indexCell);
-            row.appendChild(questionCell);
-            row.appendChild(subcategoryCell);
-            row.appendChild(statusCell);
+            row.append(idxTd, qTd, subTd, statTd);
             questionsTableBody.appendChild(row);
         });
-    };
+    }
 
-
-    categorySelect.addEventListener('change', (event) => {
-        loadCategoryData(event.target.value);
-    });
-
+    // Event listeners
+    categorySelect.addEventListener('change', e => loadCategoryData(e.target.value));
     flipButton.addEventListener('click', () => {
         flashcard.classList.toggle('flipped');
         resizeText('flashcardBack');
         resizeText('flashcardFront');
     });
-
     knowButton.addEventListener('click', () => {
-        if (cards.length > 0) {
+        if (cards.length) {
             cardStatus[currentCardIndex] = false;
             populateQuestionsTable();
             showCard();
         }
     });
-
     nextButton.addEventListener('click', () => {
-        if (cards.length > 0) {
-            let initialIndex = currentCardIndex;
-            do {
-                currentCardIndex = (currentCardIndex + 1) % cards.length;
-            } while (!cardStatus[currentCardIndex] && currentCardIndex !== initialIndex);
-
-            showCard();
-        }
+        if (!cards.length) return;
+        let start = currentCardIndex;
+        do {
+            currentCardIndex = (currentCardIndex + 1) % cards.length;
+        } while (!cardStatus[currentCardIndex] && currentCardIndex !== start);
+        showCard();
     });
+    shuffleAllButton.addEventListener('click', shuffleAll);
 
-    shuffleAllButton.addEventListener('click', shuffleAll); // Single event listener for shuffling
-
+    // Kick things off
     loadCategories();
 });

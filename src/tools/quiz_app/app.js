@@ -86,24 +86,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ─── Load a Single Category ─────────────────────────────────────────────────
-async function loadCategoryData(categoryName) {
-  showSpinner();
+    async function loadCategoryData(categoryName) {
+        showSpinner();
 
-  // give the browser a chance to paint the spinner
-  await new Promise(requestAnimationFrame);
+        // give the browser a chance to paint the spinner
+        await new Promise(requestAnimationFrame);
 
-  if (!categoryCache.has(categoryName)) {
-    const slug = toSnake(categoryName);
-    const data = await fetchJson(
-      `https://adamdjellouli.com/tools/quiz_app/${slug}.json`
-    );
-    if (data) categoryCache.set(categoryName, data);
-  }
+        if (!categoryCache.has(categoryName)) {
+            const slug = toSnake(categoryName);
+            const data = await fetchJson(
+                `https://adamdjellouli.com/tools/quiz_app/${slug}.json`
+            );
+            if (data) categoryCache.set(categoryName, data);
+        }
 
-  currentCategoryData = categoryCache.get(categoryName) || { questions: [] };
-  setupQuiz();
-  hideSpinner();
-}
+        currentCategoryData = categoryCache.get(categoryName) || {
+            questions: []
+        };
+        setupQuiz();
+        hideSpinner();
+    }
 
 
 
