@@ -23,6 +23,13 @@ URL_TO_CATEGORY: Dict[str, str] = {
     "https://raw.githubusercontent.com/djeada/Linux-Notes/main/quizzes/networking.md": "linux",
     "https://raw.githubusercontent.com/djeada/Linux-Notes/main/quizzes/tools.md": "linux",
     "https://raw.githubusercontent.com/djeada/Linux-Notes/main/quizzes/users.md": "linux",
+    # Statistics
+    "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/quizzes/correlation_and_regression.md": "statistics",
+    "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/quizzes/descriptive_statistics.md": "statistics",
+    "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/quizzes/intro_probability.md": "statistics",
+    "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/quizzes/probability_distributions.md": "statistics",
+    "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/quizzes/statistical_inference.md": "statistics",
+    "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/quizzes/time_series.md": "statistics",
 }
 
 OUTPUT_DIR: Path = Path("../src/tools/quiz_app")
@@ -47,14 +54,16 @@ def parse_markdown_question(md: str) -> Optional[Dict[str, Any]]:
     # 2) Extract all [ ]/[x] options, allowing * or - bullets
     options: List[str] = []
     correct_idx: int = -1
-    for idx, m in enumerate(re.finditer(
+    for idx, m in enumerate(
+        re.finditer(
             r"^[\*\-]\s*\[([ x])\]\s*(.+)$",
             md,
             re.IGNORECASE | re.MULTILINE,
-        )):
+        )
+    ):
         marker, opt_text = m.groups()
         options.append(opt_text.strip())
-        if marker.lower() == 'x' and correct_idx == -1:
+        if marker.lower() == "x" and correct_idx == -1:
             correct_idx = idx
 
     if correct_idx == -1:
@@ -100,14 +109,18 @@ def write_json(data: Any, path: Path) -> None:
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     # Write to temp file and rename for atomicity
-    with tempfile.NamedTemporaryFile('w', delete=False, dir=path.parent, suffix='.tmp', encoding='utf-8') as tmp:
+    with tempfile.NamedTemporaryFile(
+        "w", delete=False, dir=path.parent, suffix=".tmp", encoding="utf-8"
+    ) as tmp:
         json.dump(data, tmp, indent=4, sort_keys=True, ensure_ascii=False)
         temp_name = Path(tmp.name)
     temp_name.replace(path)
     logger.info(f"Wrote JSON to {path}")
 
 
-def process_url(url: str, session: requests.Session) -> Tuple[str, List[Dict[str, Any]]]:
+def process_url(
+    url: str, session: requests.Session
+) -> Tuple[str, List[Dict[str, Any]]]:
     """
     Download and parse a single URL, returning its category and associated questions.
     """
@@ -141,14 +154,16 @@ def main() -> None:
 
     # ensure each category’s questions are in a stable order
     for category, questions in aggregated.items():
-        aggregated[category] = sorted(questions, key=lambda q: q['text'])
+        aggregated[category] = sorted(questions, key=lambda q: q["text"])
 
     # Write per-category files in sorted order
     for category in sorted(aggregated):
         write_json({"questions": aggregated[category]}, OUTPUT_DIR / f"{category}.json")
 
     # Generate categories file sorted by name
-    categories_list = [{"name": cat.replace('_', ' ').title()} for cat in sorted(aggregated)]
+    categories_list = [
+        {"name": cat.replace("_", " ").title()} for cat in sorted(aggregated)
+    ]
     write_json(categories_list, CATEGORIES_FILE)
 
     logger.info("Conversion process completed.")

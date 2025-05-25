@@ -23,7 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const resp = await fetch(PROXY + encodeURIComponent(url));
             if (!resp.ok) throw new Error(`Status ${resp.status}`);
-            const { contents } = await resp.json();
+            const {
+                contents
+            } = await resp.json();
             return JSON.parse(contents);
         } catch (err) {
             console.error('Fetch error:', err);
@@ -43,8 +45,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return copy.slice(0, n);
     }
 
-    const showSpinner = () => { spinner.style.display = 'block'; };
-    const hideSpinner = () => { spinner.style.display = 'none'; };
+    const showSpinner = () => {
+        spinner.style.display = 'block';
+    };
+    const hideSpinner = () => {
+        spinner.style.display = 'none';
+    };
 
     // ─── Markdown Parsing ────────────────────────────────────────────────────────
     function escapeHtml(str) {
@@ -89,7 +95,9 @@ document.addEventListener('DOMContentLoaded', () => {
             );
             if (data) categoryCache.set(categoryName, data);
         }
-        currentCategoryData = categoryCache.get(categoryName) || { questions: [] };
+        currentCategoryData = categoryCache.get(categoryName) || {
+            questions: []
+        };
         setupQuiz();
         hideSpinner();
     }
