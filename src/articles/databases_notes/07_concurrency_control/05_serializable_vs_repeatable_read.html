@@ -67,7 +67,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: October 14, 2019</i></p>
+            <p style="text-align: right;"><i>Last modified: June 01, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="serializable-and-repeatable-read-in-database-systems">Serializable and Repeatable Read in Database Systems</h2>
             <p>Transaction isolation levels are essential for maintaining data integrity and managing concurrency in database systems. Two of the highest isolation levels are <strong>Serializable</strong> and <strong>Repeatable Read</strong>, each offering different guarantees to prevent anomalies that can occur when multiple transactions interact with the same data concurrently.</p>
@@ -84,22 +84,38 @@
             <h3 id="serializable-isolation-level">Serializable Isolation Level</h3>
             <p>The Serializable isolation level is the strictest level, ensuring that transactions are completely isolated from each other. It guarantees that the outcome of executing transactions concurrently is the same as if they were executed sequentially in some order.</p>
             <p>
-            <div>
-                <pre><code class="language-shell">Time | Transaction T1                | Transaction T2
---------------------------------------------------------------
-T1   | BEGIN TRANSACTION             |
-     | SELECT SUM(balance) FROM accounts; (Total = $10,000) |
-     |                                |
-T2   |                                | BEGIN TRANSACTION
-     |                                | INSERT INTO accounts (id, balance) VALUES (101, $1,000);
-     |                                |
-T3   |                                | (Blocked until T1 completes)
-     |                                |
-T4   | COMMIT                         |
-     |                                |
-T5   |                                | INSERT completes
-     |                                | COMMIT</code></pre>
-            </div>
+            <table>
+                <tr>
+                    <td>Time</td>
+                    <td>Transaction T1</td>
+                    <td>Transaction T2</td>
+                </tr>
+                <tr>
+                    <td>T1</td>
+                    <td><strong>BEGIN TRANSACTION</strong><br />SELECT SUM(balance) FROM accounts; <br /> <em>(Total = \$10,000)</em></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>T2</td>
+                    <td></td>
+                    <td><strong>BEGIN TRANSACTION</strong><br />INSERT INTO accounts (id, balance) <br />VALUES (101, \$1,000);</td>
+                </tr>
+                <tr>
+                    <td>T3</td>
+                    <td></td>
+                    <td><em>(Blocked: waiting for T1 to complete)</em></td>
+                </tr>
+                <tr>
+                    <td>T4</td>
+                    <td><strong>COMMIT</strong></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>T5</td>
+                    <td></td>
+                    <td><em>(Unblocked)</em> INSERT completes<br /><strong>COMMIT</strong></td>
+                </tr>
+            </table>
             </p>
             <p>In this scenario:</p>
             <ul>
@@ -111,20 +127,33 @@ T5   |                                | INSERT completes
             <h3 id="repeatable-read-isolation-level">Repeatable Read Isolation Level</h3>
             <p>The Repeatable Read isolation level ensures that if a transaction reads a row, it will see the same data throughout the transaction, even if other transactions modify it. However, it doesn't prevent new rows (phantoms) from being inserted by other transactions.</p>
             <p>
-            <div>
-                <pre><code class="language-shell">Time | Transaction T1                  | Transaction T2
------------------------------------------------------------------
-T1   | BEGIN TRANSACTION               |
-     | SELECT * FROM orders WHERE customer_id = 1; (Returns 5 rows) |
-     |                                 |
-T2   |                                 | BEGIN TRANSACTION
-     |                                 | INSERT INTO orders (order_id, customer_id) VALUES (101, 1);
-     |                                 | COMMIT
-     |                                 |
-T3   | SELECT * FROM orders WHERE customer_id = 1; (Returns 5 rows) |
-     |                                 |
-T4   | COMMIT                          |</code></pre>
-            </div>
+            <table>
+                <tr>
+                    <td>Time</td>
+                    <td>Transaction T1</td>
+                    <td>Transaction T2</td>
+                </tr>
+                <tr>
+                    <td>T1</td>
+                    <td><strong>BEGIN TRANSACTION</strong><br />SELECT * FROM orders WHERE customer_id = 1;<br /><em>(Returns 5 rows)</em></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>T2</td>
+                    <td></td>
+                    <td><strong>BEGIN TRANSACTION</strong><br />INSERT INTO orders (order_id, customer_id) VALUES (101, 1);<br /><strong>COMMIT</strong></td>
+                </tr>
+                <tr>
+                    <td>T3</td>
+                    <td>SELECT * FROM orders WHERE customer_id = 1;<br /><em>(Returns 5 rows)</em></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>T4</td>
+                    <td><strong>COMMIT</strong></td>
+                    <td></td>
+                </tr>
+            </table>
             </p>
             <p>In this example:</p>
             <ul>
@@ -184,25 +213,57 @@ COMMIT;</code></pre>
                 <li>Considering optimistic concurrency control can improve concurrency without sacrificing data <strong>integrity</strong> by using techniques that detect conflicts at commit time.</li>
             </ul>
             <h3 id="understanding-phantom-reads">Understanding Phantom Reads</h3>
-            <p>Phantom reads occur when a transaction reads a set of rows that satisfy a condition and, upon re-reading, finds additional rows due to inserts by other transactions.</p>
-            <p><strong>Example of Phantom Read under Repeatable Read:</strong></p>
+            <p>Here’s a revised section that fixes the table layout and adds an explicit <strong>Database State</strong> column, plus a clear narrative of what each transaction is trying to achieve and what actually happens:</p>
+            <h3 id="understanding-phantom-reads">Understanding Phantom Reads</h3>
+            <p><em>Phantom reads</em> happen when Transaction T1 re-executes a query and sees <strong>new</strong> rows inserted by another transaction (T2), despite using Repeatable Read.</p>
             <p>
-            <div>
-                <pre><code class="language-shell">Time | Transaction T1                  | Transaction T2
------------------------------------------------------------------
-T1   | BEGIN TRANSACTION               |
-     | SELECT COUNT(*) FROM products WHERE category = 'Electronics'; (Returns 10) |
-     |                                 |
-T2   |                                 | BEGIN TRANSACTION
-     |                                 | INSERT INTO products (product_id, category) VALUES (201, 'Electronics');
-     |                                 | COMMIT
-     |                                 |
-T3   | SELECT COUNT(*) FROM products WHERE category = 'Electronics'; (Returns 11) |
-     |                                 |
-T4   | COMMIT                          |</code></pre>
-            </div>
+            <table>
+                <tr>
+                    <td>Time</td>
+                    <td>Transaction T1 (T1’s view)</td>
+                    <td>Transaction T2</td>
+                    <td>Database State (Electronics)</td>
+                </tr>
+                <tr>
+                    <td>:--:</td>
+                    <td>:--------------------------------------------------------------------------------</td>
+                    <td>:------------------------------------------------------------------------------------------------------------</td>
+                    <td>:-----------------------------</td>
+                </tr>
+                <tr>
+                    <td>T1</td>
+                    <td><strong>BEGIN TRANSACTION</strong><br />– Reads count of Electronics products:<br /> <code>COUNT = 10</code></td>
+                    <td></td>
+                    <td>10 rows (<em>IDs: 101–110</em>)</td>
+                </tr>
+                <tr>
+                    <td>T2</td>
+                    <td></td>
+                    <td><strong>BEGIN TRANSACTION</strong><br />– Inserts a new Electronics product:<br /> <code>INSERT (201,'Electronics')</code><br /><strong>COMMIT</strong></td>
+                    <td>11 rows (<em>IDs: 101–110, 201</em>)</td>
+                </tr>
+                <tr>
+                    <td>T3</td>
+                    <td>Re-reads same query:<br /> <code>SELECT COUNT(*) ... = 11</code><br /><strong>(Phantom row!)</strong></td>
+                    <td></td>
+                    <td>11 rows (<em>IDs: 101–110, 201</em>)</td>
+                </tr>
+                <tr>
+                    <td>T4</td>
+                    <td><strong>COMMIT</strong></td>
+                    <td></td>
+                    <td>Final state preserved: 11 rows</td>
+                </tr>
+            </table>
             </p>
-            <p>Even under Repeatable Read, T1 sees the new product inserted by T2 when it re-executes the query, leading to a phantom read.</p>
+            <p><strong>What T1 intended:</strong>
+                T1 began under Repeatable Read to get a stable snapshot of “all Electronics” and expected any re-reads to still return 10. Its purpose might be to calculate inventory before placing a bulk order or generating a report.</p>
+            <p><strong>What actually happened:</strong>
+                Because T2 committed an insert of a new Electronics product before T1 re-ran its <code>SELECT</code>, T1’s second read sees 11 rows. That extra “phantom” row wasn’t visible on the first read, breaking T1’s expectation of repeatability.</p>
+            <ul>
+                <li><em>Repeatable Read</em> prevents non-repeatable reads of <strong>existing</strong> rows (you can’t see updates twice), but it does <strong>not</strong> stop other transactions from inserting new rows that match your <code>WHERE</code> clause. Those new rows show up as phantoms.</li>
+                <li>To guard against phantoms, you must use <strong>Serializable</strong> isolation, which effectively locks the range of possible rows or aborts conflicting transactions.</li>
+            </ul>
             <h3 id="strategies-to-prevent-phantom-reads">Strategies to Prevent Phantom Reads</h3>
             <p>If phantom reads pose a problem, consider using the Serializable isolation level or implementing additional locking mechanisms.</p>
             <p><strong>Using Serializable Isolation Level:</strong></p>
@@ -227,6 +288,7 @@ COMMIT;</code></pre>
                     <li><a href="#practical-examples-and-commands">Practical Examples and Commands</a></li>
                     <li><a href="#when-to-use-each-isolation-level">When to Use Each Isolation Level</a></li>
                     <li><a href="#balancing-performance-and-consistency">Balancing Performance and Consistency</a></li>
+                    <li><a href="#understanding-phantom-reads">Understanding Phantom Reads</a></li>
                     <li><a href="#understanding-phantom-reads">Understanding Phantom Reads</a></li>
                     <li><a href="#strategies-to-prevent-phantom-reads">Strategies to Prevent Phantom Reads</a></li>
                 </ol>

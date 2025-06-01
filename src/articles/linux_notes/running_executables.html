@@ -67,7 +67,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: July 31, 2020</i></p>
+            <p style="text-align: right;"><i>Last modified: June 01, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="how-the-linux-kernel-executes-programs">How the Linux Kernel Executes Programs</h2>
             <p>We'll explore the inner workings of the Linux kernel, focusing on how it loads and executes binaries. We'll dive into the <code>execve</code> system call, build a custom kernel, and use debugging tools to see the execution process in action. Whether you're a seasoned developer or just curious about operating systems, this walkthrough aims to shed light on the fascinating journey from a command to a running program.</p>
@@ -99,17 +99,25 @@
             <p>To truly understand how the kernel executes programs, we can build our own version of the Linux kernel. This allows us to customize it for debugging and explore its internals.</p>
             <h4 id="cloning-the-kernel-source-code">Cloning the Kernel Source Code</h4>
             <p>Start by cloning the official Linux kernel repository:</p>
-            <p>CODE_BLOCK_PLACEHOLDER
-                This command downloads the entire kernel source code into a directory named <code>linux</code>. Navigate into this directory:</p>
             <p>
             <div>
                 <pre><code class="language-bash">git clone https://github.com/torvalds/linux.git</code></pre>
             </div>
             </p>
+            <p>This command downloads the entire kernel source code into a directory named <code>linux</code>. Navigate into this directory:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">cd linux</code></pre>
+            </div>
+            </p>
             <h4 id="configuring-the-kernel">Configuring the Kernel</h4>
             <p>Before compiling, we need to configure the kernel to suit our needs. We can generate a default configuration as a starting point:</p>
-            <p>CODE_BLOCK_PLACEHOLDER
-                This command creates a standard configuration file based on your system's architecture.</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">make defconfig</code></pre>
+            </div>
+            </p>
+            <p>This command creates a standard configuration file based on your system's architecture.</p>
             <h4 id="customizing-for-debugging">Customizing for Debugging</h4>
             <p>To make debugging easier and reduce compilation time, we'll adjust some settings:</p>
             <p>I. <strong>Disable Address Space Layout Randomization (KASLR)</strong>: KASLR randomizes the memory address where the kernel is loaded, which can complicate debugging. To disable it:</p>
@@ -128,21 +136,21 @@
             <ul>
                 <li>Enable <strong>Compile the kernel with debug info</strong>.</li>
                 <li>Enable <strong>Provide GDB scripts for kernel debugging</strong>.</li>
-                <li>kernel debugger**.
-                    After making these changes, save your configuration and exit the menu.</li>
+                <li>kernel debugger**.</li>
             </ul>
+            <p>After making these changes, save your configuration and exit the menu.</p>
             <h4 id="compiling-the-kernel">Compiling the Kernel</h4>
             <p>Now we're ready to compile the kernel:</p>
             <p>
             <div>
-                <pre><code class="language-bash">cd linux</code></pre>
+                <pre><code class="language-bash">make -j$(nproc)</code></pre>
             </div>
             </p>
             <p>The <code>-j$(nproc)</code> option tells <code>make</code> to use all available CPU cores, speeding up the process. Compiling the kernel can take some time, so feel free to take a break while it builds.</p>
             <p>Once compilation is complete, generate the GDB scripts:</p>
             <p>
             <div>
-                <pre><code class="language-bash">make defconfig</code></pre>
+                <pre><code class="language-bash">make scripts_gdb</code></pre>
             </div>
             </p>
             <p>These scripts help GDB (the GNU Debugger) understand kernel data structures during debugging sessions.</p>
@@ -153,34 +161,34 @@
             <p>I. <strong>Download BusyBox</strong>: BusyBox combines tiny versions of many common UNIX utilities into a single small executable.</p>
             <p>
             <div>
-                <pre><code class="language-bash">make -j$(nproc)</code></pre>
+                <pre><code class="language-bash">wget https://busybox.net/downloads/busybox-1.35.0.tar.bz2
+tar -xjf busybox-1.35.0.tar.bz2
+cd busybox-1.35.0</code></pre>
             </div>
             </p>
             <p>II. <strong>Configure for Static Linking</strong>:</p>
             <p>
             <div>
-                <pre><code class="language-bash">make scripts_gdb</code></pre>
+                <pre><code class="language-bash">make defconfig</code></pre>
             </div>
             </p>
             <p>Then, edit the <code>.config</code> file or run:</p>
             <p>
             <div>
-                <pre><code class="language-bash">wget https://busybox.net/downloads/busybox-1.35.0.tar.bz2
-tar -xjf busybox-1.35.0.tar.bz2
-cd busybox-1.35.0</code></pre>
+                <pre><code class="language-bash">make menuconfig</code></pre>
             </div>
             </p>
             <p>Under <strong>BusyBox Settings</strong>, ensure <strong>Build BusyBox as a static binary (no shared libs)</strong> is enabled.</p>
             <p>III. <strong>Compile BusyBox</strong>:</p>
             <p>
             <div>
-                <pre><code class="language-bash">make defconfig</code></pre>
+                <pre><code class="language-bash">make -j$(nproc)</code></pre>
             </div>
             </p>
             <p>IV. <strong>Install BusyBox</strong>:</p>
             <p>
             <div>
-                <pre><code class="language-bash">make menuconfig</code></pre>
+                <pre><code class="language-bash">make install</code></pre>
             </div>
             </p>
             <p>This installs BusyBox into a <code>_install</code> directory.</p>
@@ -188,29 +196,16 @@ cd busybox-1.35.0</code></pre>
             <p>Create a directory to hold the initramfs contents:</p>
             <p>
             <div>
-                <pre><code class="language-bash">make -j$(nproc)</code></pre>
+                <pre><code class="language-bash">mkdir -p ../initramfs/{bin,sbin,etc,proc,sys,usr/{bin,sbin}}</code></pre>
             </div>
             </p>
             <p>Copy BusyBox into the initramfs:</p>
             <p>
             <div>
-                <pre><code class="language-bash">make install</code></pre>
-            </div>
-            </p>
-            <p>Create a simple <code>init</code> script that the kernel will execute first:</p>
-            <p>
-            <div>
-                <pre><code class="language-bash">mkdir -p ../initramfs/{bin,sbin,etc,proc,sys,usr/{bin,sbin}}</code></pre>
-            </div>
-            </p>
-            <p>Make the script executable:</p>
-            <p>
-            <div>
                 <pre><code class="language-bash">cp -r _install/* ../initramfs/</code></pre>
             </div>
             </p>
-            <h4 id="adding-a-sample-program">Adding a Sample Program</h4>
-            <p>Let's create a simple C program to test:</p>
+            <p>Create a simple <code>init</code> script that the kernel will execute first:</p>
             <p>
             <div>
                 <pre><code class="language-bash">cat &gt; ../initramfs/init &lt;&lt; 'EOF'
@@ -224,14 +219,14 @@ exec /bin/sh
 EOF</code></pre>
             </div>
             </p>
-            <p>Compile the program statically:</p>
+            <p>Make the script executable:</p>
             <p>
             <div>
                 <pre><code class="language-bash">chmod +x ../initramfs/init</code></pre>
             </div>
             </p>
-            <h4 id="creating-the-initramfs-archive">Creating the Initramfs Archive</h4>
-            <p>Finally, create the initramfs cpio archive:</p>
+            <h4 id="adding-a-sample-program">Adding a Sample Program</h4>
+            <p>Let's create a simple C program to test:</p>
             <p>
             <div>
                 <pre><code class="language-bash">cat &gt; ../initramfs/hello.c &lt;&lt; 'EOF'
@@ -248,6 +243,21 @@ int main() {
 EOF</code></pre>
             </div>
             </p>
+            <p>Compile the program statically:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">gcc -static -o ../initramfs/bin/hello ../initramfs/hello.c</code></pre>
+            </div>
+            </p>
+            <h4 id="creating-the-initramfs-archive">Creating the Initramfs Archive</h4>
+            <p>Finally, create the initramfs cpio archive:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">cd ../initramfs
+find . -print0 | cpio --null -ov --format=newc | gzip -9 &gt; ../initramfs.cpio.gz
+cd ..</code></pre>
+            </div>
+            </p>
             <p>This command finds all files in the initramfs directory, creates a cpio archive in the <code>newc</code> format, and compresses it with gzip.</p>
             <h3 id="booting-the-custom-kernel-with-qemu">Booting the Custom Kernel with QEMU</h3>
             <p>Now that we have a custom kernel and initramfs, we can boot them using QEMU, an open-source emulator that supports virtualization.</p>
@@ -255,7 +265,12 @@ EOF</code></pre>
             <p>Run the following command:</p>
             <p>
             <div>
-                <pre><code class="language-bash">gcc -static -o ../initramfs/bin/hello ../initramfs/hello.c</code></pre>
+                <pre><code class="language-bash">qemu-system-x86_64 \
+-kernel linux/arch/x86/boot/bzImage \
+-initrd initramfs.cpio.gz \
+-append "console=ttyS0" \
+-nographic \
+-s -S</code></pre>
             </div>
             </p>
             <p>Here's what the options mean:</p>
@@ -273,20 +288,13 @@ EOF</code></pre>
             <p>In a new terminal window, navigate to the kernel source directory and start GDB:</p>
             <p>
             <div>
-                <pre><code class="language-bash">cd ../initramfs
-find . -print0 | cpio --null -ov --format=newc | gzip -9 &gt; ../initramfs.cpio.gz
-cd ..</code></pre>
+                <pre><code class="language-bash">gdb linux/vmlinux</code></pre>
             </div>
             </p>
             <p>Within GDB, connect to QEMU:</p>
             <p>
             <div>
-                <pre><code class="language-bash">qemu-system-x86_64 \
--kernel linux/arch/x86/boot/bzImage \
--initrd initramfs.cpio.gz \
--append "console=ttyS0" \
--nographic \
--s -S</code></pre>
+                <pre><code class="language-gdb">(gdb) target remote :1234</code></pre>
             </div>
             </p>
             <p>The kernel is now paused and ready for debugging.</p>
@@ -294,13 +302,13 @@ cd ..</code></pre>
             <p>Let's set a breakpoint at the <code>do_execve</code> function:</p>
             <p>
             <div>
-                <pre><code class="language-bash">gdb linux/vmlinux</code></pre>
+                <pre><code class="language-gdb">(gdb) break do_execve</code></pre>
             </div>
             </p>
             <p>Then, continue execution:</p>
             <p>
             <div>
-                <pre><code class="language-gdb">(gdb) target remote :1234</code></pre>
+                <pre><code class="language-gdb">(gdb) continue</code></pre>
             </div>
             </p>
             <p>Switch back to the QEMU terminal. The kernel should now boot and drop into our custom shell.</p>
@@ -308,7 +316,7 @@ cd ..</code></pre>
             <p>In the QEMU shell, run our sample program:</p>
             <p>
             <div>
-                <pre><code class="language-gdb">(gdb) break do_execve</code></pre>
+                <pre><code class="language-bash">./hello</code></pre>
             </div>
             </p>
             <p>Because we set a breakpoint at <code>do_execve</code>, GDB will pause execution when the kernel attempts to execute <code>hello</code>.</p>
@@ -316,7 +324,7 @@ cd ..</code></pre>
             <p>Back in GDB, we can step through the <code>do_execve</code> function to observe how the kernel handles the execution request:</p>
             <p>
             <div>
-                <pre><code class="language-gdb">(gdb) continue</code></pre>
+                <pre><code class="language-gdb">(gdb) step</code></pre>
             </div>
             </p>
             <p>As you step through, pay attention to how the kernel prepares the binary for execution, including loading the executable, setting up memory spaces, and initializing the process environment.</p>
@@ -324,7 +332,7 @@ cd ..</code></pre>
             <p>We can inspect variables and structures to understand the state of the kernel. For example, to view the binary parameters:</p>
             <p>
             <div>
-                <pre><code class="language-bash">./hello</code></pre>
+                <pre><code class="language-gdb">(gdb) print *bprm</code></pre>
             </div>
             </p>
             <p>This displays the contents of the <code>linux_binprm</code> structure, which holds information about the binary being executed.</p>
@@ -334,13 +342,14 @@ cd ..</code></pre>
             <p>The function <code>search_binary_handler</code> is responsible for finding the appropriate handler for the binary:</p>
             <p>
             <div>
-                <pre><code class="language-gdb">(gdb) step</code></pre>
+                <pre><code class="language-gdb">(gdb) break search_binary_handler
+(gdb) continue</code></pre>
             </div>
             </p>
             <p>When the breakpoint hits, you can examine the available handlers:</p>
             <p>
             <div>
-                <pre><code class="language-gdb">(gdb) print *bprm</code></pre>
+                <pre><code class="language-gdb">(gdb) print fmt-&gt;name</code></pre>
             </div>
             </p>
             <p>By continuing execution and checking the handler's name, you can see how the kernel selects the ELF handler for our compiled program.</p>
@@ -350,8 +359,7 @@ cd ..</code></pre>
             <p>Continue stepping through the code:</p>
             <p>
             <div>
-                <pre><code class="language-gdb">(gdb) break search_binary_handler
-(gdb) continue</code></pre>
+                <pre><code class="language-gdb">(gdb) step</code></pre>
             </div>
             </p>
             <p>Within <code>load_elf_binary</code>, the kernel reads the ELF header, sets up memory mappings, and prepares the process for execution.</p>
@@ -359,7 +367,7 @@ cd ..</code></pre>
             <p>You can examine the ELF header:</p>
             <p>
             <div>
-                <pre><code class="language-gdb">(gdb) print fmt-&gt;name</code></pre>
+                <pre><code class="language-gdb">(gdb) print elf_ex.e_ident</code></pre>
             </div>
             </p>
             <p>This should display the magic numbers identifying the file as an ELF executable.</p>
@@ -375,7 +383,7 @@ cd ..</code></pre>
             <p>Check the instruction pointer:</p>
             <p>
             <div>
-                <pre><code class="language-gdb">(gdb) print elf_ex.e_ident</code></pre>
+                <pre><code class="language-gdb">(gdb) print/x regs-&gt;ip</code></pre>
             </div>
             </p>
             <p>This address should correspond to the entry point of our <code>hello</code> program.</p>
@@ -383,7 +391,7 @@ cd ..</code></pre>
             <p>To confirm, you can check the entry point in the compiled binary:</p>
             <p>
             <div>
-                <pre><code class="language-gdb">(gdb) step</code></pre>
+                <pre><code class="language-bash">readelf -h hello</code></pre>
             </div>
             </p>
             <p>Look for the <strong>Entry point address</strong> and compare it to the instruction pointer value from GDB.</p>
@@ -391,16 +399,40 @@ cd ..</code></pre>
             <p>Once the setup is complete, we can allow the program to run:</p>
             <p>
             <div>
-                <pre><code class="language-gdb">(gdb) print/x regs-&gt;ip</code></pre>
+                <pre><code class="language-gdb">(gdb) continue</code></pre>
             </div>
             </p>
             <p>Switch back to the QEMU terminal. You should see the message from our program:</p>
             <p>
             <div>
-                <pre><code class="language-bash">readelf -h hello</code></pre>
+                <pre><code class="language-shell">Hello from the custom kernel!</code></pre>
             </div>
             </p>
             <p>This indicates that the kernel successfully executed our program.</p>
+            <h3 id="challenges">Challenges</h3>
+            <ol>
+                <li>Write a simple C program called <code>exec_test.c</code> that calls <code>execve</code> to run <code>/bin/echo</code> with arguments <code>echo HelloWorld</code>. Compile it and run it. Then, modify it to print a message before and after the <code>execve</code> call. Observe and explain why the “after” message never appears. Reflect on how <code>execve</code> replaces the current process image.</li>
+                <li>Use <code>strace</code> to trace a command that invokes a shell script (e.g., <code>./myscript.sh</code>). In your script, have one line that executes another binary (e.g., <code>/bin/ls</code>). Run <code>strace -e execve ./myscript.sh</code> and identify each <code>execve</code> call in the output. Discuss how the kernel prepares and hands off execution at each stage.</li>
+                <li>Clone the official Linux kernel repository (<code>git clone https://github.com/torvalds/linux.git</code>) into a directory of your choice. Navigate into it and run <code>make defconfig</code>. Without compiling the entire kernel, open the generated <code>.config</code> file and locate the configuration option for KASLR. Explain in your own words what KASLR does and why disabling it aids in kernel debugging.</li>
+                <li>Perform a partial kernel configuration tweak: run <code>make menuconfig</code>, disable KASLR under <strong>Processor type and features</strong>, disable loadable module support, and disable networking support. Save the configuration and exit. Then, write a short paragraph (in a text file called <code>config_changes.txt</code>) describing each change you made and why it speeds up or simplifies debugging.</li>
+                <li>In the kernel source directory, run <code>make -j$(nproc)</code> to compile the kernel (or at least start the compile until you feel comfortable pausing). While it’s building, investigate where the resulting <code>bzImage</code> and <code>vmlinux</code> files will reside once compilation completes. After compilation, locate and list the paths to those two files, then explain the difference between them (<code>bzImage</code> versus <code>vmlinux</code>).</li>
+                <li>Download BusyBox (e.g., <code>wget https://busybox.net/downloads/busybox-1.35.0.tar.bz2</code>), extract it, and configure it for static linking (<code>make defconfig</code> + enable static in <code>menuconfig</code>). Build BusyBox statically and install it into a directory named <code>busybox_root</code>. Then, inspect the resulting BusyBox binary with <code>ldd busybox_root/bin/busybox</code> to verify it is truly statically linked, and write a brief note about why static linking matters for an initramfs.</li>
+                <li>Create an <code>initramfs</code> directory structure (<code>mkdir -p initramfs/{bin,sbin,etc,proc,sys,usr/{bin,sbin}}</code>). Copy your static BusyBox files into <code>initramfs</code>. Write a minimal <code>init</code> script in <code>initramfs/init</code> that mounts <code>/proc</code> and <code>/sys</code>, prints “Custom Initramfs Loaded!”, and then invokes <code>/bin/sh</code>. Make the <code>init</code> script executable. Finally, create the cpio archive (<code>cd initramfs &amp;&amp; find . -print0 | cpio --null -ov --format=newc | gzip -9 &gt; ../initramfs.cpio.gz</code>). Verify the archive exists and note its size.</li>
+                <li>Write a simple “Hello” C program (<code>hello.c</code>) in your <code>initramfs/bin</code> folder that prints “Hello from initramfs!”. Compile it statically (<code>gcc -static -o initramfs/bin/hello hello.c</code>). Verify via <code>file initramfs/bin/hello</code> that it is an ELF binary. Explain why the kernel will be able to run this program without any userspace libraries.</li>
+                <li>In your GDB session, set a breakpoint at the kernel’s <code>do_execve</code> function (<code>break do_execve</code>) and continue. In the QEMU serial console, run <code>/bin/hello</code>. When GDB breaks at <code>do_execve</code>, step through (<code>step</code>) a few instructions and use <code>print *bprm</code> to inspect the <code>linux_binprm</code> structure. Write a short explanation (in a file called <code>gdb_inspection.txt</code>) of what <code>bprm</code> contains and how the kernel uses it to prepare the <code>hello</code> binary for execution.</li>
+                <li>Install QEMU on your system (or verify it’s installed). Boot your newly compiled <code>bzImage</code> with your <code>initramfs.cpio.gz</code> using:</li>
+            </ol>
+            <p>
+            <div>
+                <pre><code class="language-bash">qemu-system-x86_64 \
+ -kernel path/to/arch/x86/boot/bzImage \
+ -initrd initramfs.cpio.gz \
+ -append "console=ttyS0" \
+ -nographic \
+ -s -S</code></pre>
+            </div>
+            </p>
+            <p>Once QEMU is waiting for a debugger connection, open another terminal, navigate to your kernel source, and run <code>gdb vmlinux</code>. In GDB, do <code>target remote :1234</code> and then <code>continue</code>. Describe what you see on the QEMU console and why you’re dropped into your initramfs shell.</p>
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
@@ -459,6 +491,7 @@ cd ..</code></pre>
                         </ol>
                     </li>
                     <li><a href="#resuming-execution">Resuming Execution</a></li>
+                    <li><a href="#challenges">Challenges</a></li>
                 </ol>
             </ol>
             <div id="related-articles">
