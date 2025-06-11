@@ -2,6 +2,8 @@
 
 Welcome to the GitHub repository for [adamdjellouli.com](https://adamdjellouli.com)! Your feedback, comments, and suggestions for improvements are highly appreciated. Your support is invaluable to me.
 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/5a8f7823-3cef-4732-807d-6cb1838b9d4c/deploy-status)](https://app.netlify.com/projects/goofy-brahmagupta-0a14f0/deploys)
+
 ## 📖 Overview
 
 This repository hosts the code for my personal website. It's a space where I share my thoughts, projects, and various topics that spark my interest. The site is meticulously crafted using HTML, CSS, and TypeScript, augmented with custom Python scripts for updating common elements across pages.
