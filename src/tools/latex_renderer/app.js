@@ -20,6 +20,11 @@ class LatexRenderer {
         this.wrapDisplayBtn = document.getElementById('wrap-display-btn');
         this.downloadBtn = document.getElementById('download-btn');
         this.shareBtn = document.getElementById('share-btn');
+    // Drawing controls
+    this.penBtn = document.getElementById('pen-btn');
+    this.highlightBtn = document.getElementById('highlight-btn');
+    this.eraserBtn = document.getElementById('eraser-btn');
+    this.drawColorInput = document.getElementById('draw-color');
     // Quick reference elements
     this.quickRefFilter = document.getElementById('quick-ref-filter');
     this.quickRefList = document.getElementById('quick-ref-list');
@@ -32,7 +37,7 @@ class LatexRenderer {
         this.divider = document.getElementById('divider');
 
         // State
-        this.isRendering = false;
+        this.isRendering = false; 
         this.renderTimeout = null;
         this.saveTimeout = null;
         this.storageKey = 'latex_renderer_content_v1';
@@ -86,9 +91,15 @@ class LatexRenderer {
             }
         });
 
+    // Drawing events
+    if(this.penBtn) this.penBtn.addEventListener('click', ()=> this.toggleDrawingMode('pen'));
+    if(this.highlightBtn) this.highlightBtn.addEventListener('click', ()=> this.toggleDrawingMode('highlight'));
+    if(this.eraserBtn) this.eraserBtn.addEventListener('click', ()=> this.toggleDrawingMode('eraser'));
+
         // Resizing
         this.initResizing();
     this.initQuickReference();
+    this.initDrawingLayer();
     }
 
     syncScroll() {
@@ -101,13 +112,17 @@ class LatexRenderer {
 
     renderLatex() {
         const inputText = this.input.value.trim();
-        if (!inputText) { this.showPlaceholder(); return; }
+    if (!inputText) { this.showPlaceholder(); return; }
+    // Clear previous diagnostics before new validation/render cycle
+    this.clearDiagnostics();
         this.setStatus('Rendering...', 'rendering');
         this.isRendering = true;
     // Validate before rendering
     const issues = this.validateLatex(this.input.value);
     this.renderDiagnostics(issues);
         this.output.innerHTML = this.processLatexContent(inputText);
+    // Reattach drawing layer after content refresh
+    if(this.drawingWrapper){ this.output.appendChild(this.drawingWrapper); this.resizeDrawingCanvas(); }
         this.updateURLState(inputText);
         if (window.MathJax && window.MathJax.typesetPromise) {
             window.MathJax.typesetPromise([this.output])
@@ -119,7 +134,14 @@ class LatexRenderer {
     }
 
     processLatexContent(content) {
-        return content.split('\n').map(line => {
+        // 1. Squash multi-line $$...$$ blocks into single-line display math
+        const squashed = content.replace(/\$\$([\s\S]*?)\$\$/g, (m, inner) => {
+            // Preserve internal double backslashes for line breaks inside matrix environments; just remove raw newlines
+            const cleaned = inner.replace(/\r?\n+/g, ' ').trim();
+            return `$$${cleaned}$$`;
+        });
+        // 2. Map each line to simple HTML wrappers (unchanged logic from earlier version)
+        return squashed.split('\n').map(line => {
             if (!line.trim()) return '<br>';
             if (line.includes('$$')) return `<div class="display-math">${line}</div>`;
             if (this.isLatexEnvironment(line)) return `<div class="latex-environment">${line}</div>`;
@@ -192,16 +214,22 @@ class LatexRenderer {
 
     renderDiagnostics(issues){
         if(!this.diagnosticsEl) return;
-        if(!issues.length){
-            this.diagnosticsEl.classList.add('empty');
-            this.diagnosticsEl.innerHTML='';
-            return;
-        }
+        // De-duplicate issues (line + message)
+        const seen=new Set();
+        const unique=[];
+        for(const i of issues){
+            const key=`${i.line}|${i.message}`;
+            if(!seen.has(key)){ seen.add(key); unique.push(i);} }
+        if(!unique.length){ this.clearDiagnostics(); return; }
         this.diagnosticsEl.classList.remove('empty');
-        const items=issues.map(i=>`<li class="${i.severity}"><span class="badge">${i.severity.toUpperCase()}</span><span>Line ${i.line}: ${i.message}</span></li>`).join('');
+        const items=unique.map(i=>`<li class="${i.severity}"><span class="badge">${i.severity.toUpperCase()}</span><span>Line ${i.line}: ${i.message}</span></li>`).join('');
         this.diagnosticsEl.innerHTML=`<ul>${items}</ul>`;
         const mostSevere=issues.find(i=>i.severity==='error')||issues[0];
         this.announce(`${issues.length} issues detected. First: ${mostSevere.message}`);
+    }
+
+    clearDiagnostics(){
+        if(!this.diagnosticsEl) return; this.diagnosticsEl.innerHTML=''; this.diagnosticsEl.classList.add('empty');
     }
 
     isLatexEnvironment(line) {
@@ -214,7 +242,7 @@ class LatexRenderer {
     updateLineNumbers() { if (!this.lineNumbers) return; const lines = this.input.value.split('\n').length; this.lineNumbers.innerHTML = Array.from({length: lines}, () => '<div></div>').join(''); this.syncScroll(); }
     setStatus(msg, type='ready') { this.status.textContent = msg; this.status.className = `status ${type}`; if (type === 'rendering') this.status.innerHTML = `<span class="loading"></span> ${msg}`; }
 
-    clearContent() { if (confirm('Clear all content?')) { this.input.value=''; this.updateCharCount(); this.updateLineNumbers(); this.showPlaceholder(); this.saveState(); this.announce('Cleared content'); } }
+    clearContent() { if (confirm('Clear all content (including drawings)?')) { this.input.value=''; this.updateCharCount(); this.updateLineNumbers(); this.showPlaceholder(); this.saveState(); this.clearDrawing(true); this.announce('Cleared content and drawings'); } }
 
     loadExample() {
         const examples = [
@@ -270,7 +298,20 @@ class LatexRenderer {
     }
 
     insertSnippet(snippet){
-        if(!snippet) return; this.insertAtCursor(snippet); this.debounceRender(); this.debounceSave(); this.announce('Inserted snippet'); this.input.focus();
+    if(!snippet) return;
+    // Decode minimal HTML entities (&amp;)
+    snippet = snippet.replace(/&amp;/g,'&');
+    // Replace accidental double backslashes (from HTML attribute escaping) with single
+    // Preserve \\ (line breaks) inside environments by temporarily marking them
+    const LINE_BREAK_TOKEN = '__BR__TOKEN__';
+    snippet = snippet.replace(/\\\\/g, LINE_BREAK_TOKEN); // mark real \\ first
+    snippet = snippet.replace(/\\{2,}/g,'\\'); // collapse remaining doubles
+    snippet = snippet.replace(new RegExp(LINE_BREAK_TOKEN,'g'),'\\\\'); // restore
+    // Decide if should wrap with $ ... $
+    const needsWrap = !/\\begin\{/.test(snippet) && !/\$/.test(snippet) && !/^\s*$/.test(snippet) && snippet.length < 40 && !/\\(sum|int|prod|lim|begin)/.test(snippet) && !snippet.includes('\\\\');
+    const finalSnippet = needsWrap ? `$${snippet}$` : snippet;
+    this.insertAtCursor(finalSnippet);
+    this.debounceRender(); this.debounceSave(); this.announce('Inserted snippet'); this.input.focus();
     }
 
     filterQuickRef(){
@@ -312,6 +353,153 @@ class LatexRenderer {
             count=this.quickRefList.querySelectorAll('.latex-snippet').length;
         }
         this.quickRefCount.textContent = `${count} snippet${count===1?'':'s'}${this.quickRefFilter && this.quickRefFilter.value? ' match' : ''}`;
+    }
+    initDrawingLayer(){
+        this.drawingMode = null; // 'pen' | 'highlight' | null
+        this.isDrawing = false;
+    this.activeCtx = null;
+        this.drawingWrapper = document.createElement('div');
+        this.drawingWrapper.className='drawing-canvas-wrapper';
+        // Separate canvases to avoid highlight compounding with pen lines
+        this.highlightCanvas = document.createElement('canvas');
+        this.highlightCanvas.className='drawing-canvas highlight-layer';
+        this.penCanvas = document.createElement('canvas');
+        this.penCanvas.className='drawing-canvas pen-layer';
+    // Offscreen mask for highlight to keep constant opacity regardless of overlaps
+    this.highlightMaskCanvas = document.createElement('canvas');
+    this.highlightMaskCtx = this.highlightMaskCanvas.getContext('2d');
+        this.highlightCtx = this.highlightCanvas.getContext('2d');
+        this.penCtx = this.penCanvas.getContext('2d');
+        this.drawingWrapper.appendChild(this.highlightCanvas);
+        this.drawingWrapper.appendChild(this.penCanvas);
+        if(this.output){ this.output.appendChild(this.drawingWrapper); }
+        this.resizeDrawingCanvas = ()=>{
+            if(!(this.highlightCanvas && this.penCanvas && this.output)) return;
+            // Use clientWidth for visible width (exclude potential scrollbars), scrollHeight for full vertical drawing space
+            const w = this.output.clientWidth;
+            const h = this.output.scrollHeight; // allow drawing over full rendered content
+            // Preserve existing mask by copying before resize
+            const oldMask = document.createElement('canvas');
+            oldMask.width = this.highlightMaskCanvas.width;
+            oldMask.height = this.highlightMaskCanvas.height;
+            if(oldMask.width && oldMask.height){
+                oldMask.getContext('2d').drawImage(this.highlightMaskCanvas,0,0);
+            }
+            [this.highlightCanvas, this.penCanvas, this.highlightMaskCanvas].forEach(c=>{
+                if(c.width !== w) c.width = w;
+                if(c.height !== h) c.height = h;
+                c.style.width = w + 'px';
+                c.style.height = h + 'px';
+            });
+            // Restore mask content scaled if different size (simple drawImage auto-scales)
+            if(oldMask.width && oldMask.height){
+                this.highlightMaskCtx.drawImage(oldMask,0,0,w,h);
+                this.renderHighlightTint();
+            }
+        };
+        if(window.ResizeObserver){ new ResizeObserver(()=> this.resizeDrawingCanvas()).observe(this.output); }
+        window.addEventListener('resize', ()=> this.resizeDrawingCanvas());
+        this.output.addEventListener('scroll', ()=> {/* reserved */});
+        this.resizeDrawingCanvas();
+        const start = (e)=>{
+            if(!this.drawingMode) return; this.isDrawing=true;
+            const {x,y} = this.getPointerPos(e);
+            if(this.drawingMode==='eraser'){
+                this.eraserTargets=[this.penCtx,this.highlightMaskCtx];
+                this.eraserTargets.forEach(c=>{ c.save(); c.lineCap='round'; c.lineJoin='round'; c.globalAlpha=1; c.strokeStyle='#000'; c.lineWidth=30; c.globalCompositeOperation='destination-out'; c.beginPath(); c.moveTo(x,y); });
+                this.renderHighlightTint();
+                this.activeCtx=this.penCtx;
+            } else {
+                const ctx = this.drawingMode==='highlight'? this.highlightMaskCtx : this.penCtx;
+                ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round'; const size=2;
+                if(this.drawingMode==='highlight') { ctx.globalAlpha=1; ctx.strokeStyle='#000'; ctx.lineWidth=14; ctx.globalCompositeOperation='source-over'; ctx.beginPath(); ctx.moveTo(x,y); this.renderHighlightTint(); }
+                else { ctx.globalAlpha=1; ctx.strokeStyle=this.drawColorInput?.value||'#ff0000'; ctx.lineWidth=size; ctx.globalCompositeOperation='source-over'; this._penPoints=[{x,y}]; }
+                this.activeCtx=ctx;
+            }
+            this.lastDrawPoint={x,y}; e.preventDefault();
+        };
+        const move = (e)=>{
+            if(!this.isDrawing) return; const {x,y}=this.getPointerPos(e);
+            if(this.drawingMode==='pen'){
+                this._penPoints.push({x,y}); const pts=this._penPoints; const n=pts.length;
+                if(n===2){ this.penCtx.beginPath(); this.penCtx.moveTo(pts[0].x,pts[0].y); this.penCtx.lineTo(pts[1].x,pts[1].y); this.penCtx.stroke(); }
+                else if(n>=3){ const p0=pts[n-3], p1=pts[n-2], p2=pts[n-1]; const m1x=(p0.x+p1.x)/2,m1y=(p0.y+p1.y)/2,m2x=(p1.x+p2.x)/2,m2y=(p1.y+p2.y)/2; this.penCtx.beginPath(); this.penCtx.moveTo(m1x,m1y); this.penCtx.quadraticCurveTo(p1.x,p1.y,m2x,m2y); this.penCtx.stroke(); }
+            } else if(this.drawingMode==='eraser'){
+                (this.eraserTargets||[]).forEach(c=>{ c.lineTo(x,y); c.stroke(); }); this.renderHighlightTint();
+            } else if(this.drawingMode==='highlight'){
+                this.activeCtx.lineTo(x,y); this.activeCtx.stroke(); this.renderHighlightTint();
+            }
+            this.lastDrawPoint={x,y}; e.preventDefault();
+        };
+        const end = ()=>{ if(this.isDrawing){
+            if(this.drawingMode==='pen' && this._penPoints && this._penPoints.length>=3){ const pts=this._penPoints; const n=pts.length; const pLast=pts[n-1]; const pPrev=pts[n-2]; this.penCtx.beginPath(); this.penCtx.moveTo(pPrev.x,pPrev.y); this.penCtx.lineTo(pLast.x,pLast.y); this.penCtx.stroke(); }
+            else if(this.drawingMode==='highlight'){ try{ this.activeCtx.closePath(); }catch(_){} this.renderHighlightTint(); }
+            else if(this.drawingMode==='eraser'){ (this.eraserTargets||[]).forEach(c=>{ try{ c.closePath(); c.restore(); }catch(_){}}); this.renderHighlightTint(); this.eraserTargets=null; }
+            if(this.drawingMode!=='eraser' && this.activeCtx){ try{ this.activeCtx.restore(); }catch(_){}}; this.isDrawing=false; this.activeCtx=null; this._penPoints=null; }
+        };
+        // Attach to both canvases (pointer may start on either)
+        ;[this.highlightCanvas, this.penCanvas].forEach(c=>{
+            c.addEventListener('mousedown', start);
+            c.addEventListener('mousemove', move);
+            c.addEventListener('touchstart', start, {passive:false});
+            c.addEventListener('touchmove', move, {passive:false});
+            c.addEventListener('touchend', end);
+        });
+        window.addEventListener('mouseup', end);
+        document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && this.drawingMode){ this.toggleDrawingMode(null); }});
+    }
+    getPointerPos(e){
+    const rect = this.output.getBoundingClientRect();
+        let clientX, clientY;
+        if(e.touches && e.touches[0]){ clientX=e.touches[0].clientX; clientY=e.touches[0].clientY; }
+        else { clientX=e.clientX; clientY=e.clientY; }
+        const scrollLeft = this.output.scrollLeft;
+        const scrollTop = this.output.scrollTop;
+    // Use raw client offset plus scroll; padding remains part of drawable region
+    return { x: clientX - rect.left + scrollLeft, y: clientY - rect.top + scrollTop };
+    }
+    toggleDrawingMode(mode){
+        if(this.drawingMode === mode) mode = null; // toggle off
+        this.drawingMode = mode;
+        const active = !!mode;
+        this.output.classList.toggle('drawing-active', active);
+        this.output.classList.toggle('drawing-layer-active', active);
+        document.body.classList.toggle('drawing-toolbar-active', active);
+        if(this.penBtn) this.penBtn.classList.toggle('active', this.drawingMode==='pen');
+        if(this.highlightBtn) this.highlightBtn.classList.toggle('active', this.drawingMode==='highlight');
+    if(this.eraserBtn) this.eraserBtn.classList.toggle('active', this.drawingMode==='eraser');
+        this.announce(this.drawingMode? `${this.drawingMode} mode enabled` : 'Drawing mode off');
+    }
+    clearDrawing(silent){
+        if(!(this.highlightCtx && this.penCtx)) return;
+        this.highlightCtx.clearRect(0,0,this.highlightCanvas.width,this.highlightCanvas.height);
+        if(this.highlightMaskCtx) this.highlightMaskCtx.clearRect(0,0,this.highlightMaskCanvas.width,this.highlightMaskCanvas.height);
+        this.penCtx.clearRect(0,0,this.penCanvas.width,this.penCanvas.height);
+        if(!silent) this.announce('Cleared drawings');
+    }
+    renderHighlightTint(){
+        if(!(this.highlightCtx && this.highlightMaskCanvas)) return;
+        const w = this.highlightCanvas.width, h = this.highlightCanvas.height;
+        const color = this.drawColorInput?.value || '#ffff00';
+        // Clear visible highlight layer
+        this.highlightCtx.clearRect(0,0,w,h);
+        // Draw mask
+        this.highlightCtx.drawImage(this.highlightMaskCanvas,0,0);
+        // Apply tint with fixed alpha via source-in
+        this.highlightCtx.globalCompositeOperation='source-in';
+        this.highlightCtx.globalAlpha=0.25;
+        this.highlightCtx.fillStyle=color;
+        this.highlightCtx.fillRect(0,0,w,h);
+        // Reset comp mode
+        this.highlightCtx.globalCompositeOperation='source-over';
+        this.highlightCtx.globalAlpha=1;
+    }
+
+    /* ================= Fullscreen ================= */
+    toggleFullscreen(){
+        const el = this.previewPanel || this.output;
+        if(!document.fullscreenElement){ el.requestFullscreen?.(); this.announce('Entered fullscreen'); }
+        else { document.exitFullscreen?.(); this.announce('Exited fullscreen'); }
     }
 }
 
