@@ -242,7 +242,31 @@ class LatexRenderer {
     updateLineNumbers() { if (!this.lineNumbers) return; const lines = this.input.value.split('\n').length; this.lineNumbers.innerHTML = Array.from({length: lines}, () => '<div></div>').join(''); this.syncScroll(); }
     setStatus(msg, type='ready') { this.status.textContent = msg; this.status.className = `status ${type}`; if (type === 'rendering') this.status.innerHTML = `<span class="loading"></span> ${msg}`; }
 
-    clearContent() { if (confirm('Clear all content (including drawings)?')) { this.input.value=''; this.updateCharCount(); this.updateLineNumbers(); this.showPlaceholder(); this.saveState(); this.clearDrawing(true); this.announce('Cleared content and drawings'); } }
+    clearContent() {
+        if (confirm('Clear all content (including drawings)?')) {
+            this.input.value='';
+            this.updateCharCount();
+            this.updateLineNumbers();
+            this.showPlaceholder();
+            // Remove share/compressed content param from URL so refresh stays empty
+            this.removeURLContentParam();
+            // Allow subsequent edits to start updating URL again
+            this.initializedFromURL = false;
+            this.saveState();
+            this.clearDrawing(true);
+            this.announce('Cleared content, drawings, and URL parameter');
+        }
+    }
+
+    removeURLContentParam(){
+        try {
+            const url = new URL(location.href);
+            if(url.searchParams.has('c')){
+                url.searchParams.delete('c');
+                history.replaceState(null,'',url.toString());
+            }
+        } catch(_) { /* noop */ }
+    }
 
     loadExample() {
         const examples = [
