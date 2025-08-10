@@ -20,6 +20,10 @@ class LatexRenderer {
         this.wrapDisplayBtn = document.getElementById('wrap-display-btn');
         this.downloadBtn = document.getElementById('download-btn');
         this.shareBtn = document.getElementById('share-btn');
+    // Quick reference elements
+    this.quickRefFilter = document.getElementById('quick-ref-filter');
+    this.quickRefList = document.getElementById('quick-ref-list');
+    this.quickRefCount = document.getElementById('quick-ref-count');
 
         // Layout elements
         this.splitContainer = document.getElementById('split-container');
@@ -84,6 +88,7 @@ class LatexRenderer {
 
         // Resizing
         this.initResizing();
+    this.initQuickReference();
     }
 
     syncScroll() {
@@ -248,6 +253,65 @@ class LatexRenderer {
         if((e.ctrlKey||e.metaKey)&&e.key==='b'){ e.preventDefault(); this.wrapSelection('$','$'); }
         if((e.ctrlKey||e.metaKey)&&e.key==='m'){ e.preventDefault(); this.wrapSelection('$$\n','\n$$'); }
         if(e.key==='Tab'){ e.preventDefault(); const s=this.input.selectionStart; const epos=this.input.selectionEnd; this.input.value=this.input.value.substring(0,s)+'    '+this.input.value.substring(epos); this.input.selectionStart=this.input.selectionEnd=s+4; this.updateLineNumbers(); }
+    }
+
+    initQuickReference(){
+        if(!this.quickRefList) return;
+        // Make each snippet clickable / focusable
+        this.quickRefList.querySelectorAll('.latex-snippet').forEach(el=>{
+            el.setAttribute('tabindex','0');
+            el.addEventListener('click',()=>{ this.insertSnippet(el.dataset.snippet); });
+            el.addEventListener('keydown',e=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); this.insertSnippet(el.dataset.snippet); }});
+        });
+        if(this.quickRefFilter){
+            this.quickRefFilter.addEventListener('input',()=> this.filterQuickRef());
+        }
+        this.updateQuickRefCount();
+    }
+
+    insertSnippet(snippet){
+        if(!snippet) return; this.insertAtCursor(snippet); this.debounceRender(); this.debounceSave(); this.announce('Inserted snippet'); this.input.focus();
+    }
+
+    filterQuickRef(){
+        const q=(this.quickRefFilter.value||'').trim().toLowerCase();
+        const cols=[...this.quickRefList.querySelectorAll('.help-column')];
+        let visibleSnippets=0;
+        cols.forEach(col=>{
+            let anyVisible=false;
+            col.querySelectorAll('.latex-snippet').forEach(sn=>{
+                const text=sn.textContent.toLowerCase();
+                if(!q || text.includes(q)){
+                    sn.style.display='inline-block';
+                    anyVisible=true; visibleSnippets++;
+                    // simple highlight
+                    if(q){
+                        const raw=sn.textContent; const idx=raw.toLowerCase().indexOf(q);
+                        if(idx!==-1){
+                            const before=raw.slice(0,idx); const match=raw.slice(idx,idx+q.length); const after=raw.slice(idx+q.length);
+                            // Only wrap outside of code tag label part to avoid breaking formatting
+                            sn.innerHTML = sn.innerHTML.replace(/<code>[\s\S]*?<\/code>(.*)/, (m,rest)=>{
+                                return m.replace(rest, before+ '<mark>'+match+'</mark>' + after);
+                            });
+                        }
+                    } else {
+                        // remove marks
+                        sn.innerHTML = sn.innerHTML.replace(/<mark>(.*?)<\/mark>/g,'$1');
+                    }
+                } else {
+                    sn.style.display='none';
+                }
+            });
+            col.classList.toggle('hidden', !anyVisible);
+        });
+        this.updateQuickRefCount(visibleSnippets);
+    }
+
+    updateQuickRefCount(count){
+        if(!this.quickRefCount) return; if(count===undefined){
+            count=this.quickRefList.querySelectorAll('.latex-snippet').length;
+        }
+        this.quickRefCount.textContent = `${count} snippet${count===1?'':'s'}${this.quickRefFilter && this.quickRefFilter.value? ' match' : ''}`;
     }
 }
 
