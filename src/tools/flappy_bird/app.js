@@ -186,8 +186,9 @@ class Game {
   }
 
   renderScore() {
-    ctx.fillStyle = 'white';
-    ctx.font = '30px Arial';
+  ctx.fillStyle = 'white';
+  ctx.font = '30px Arial';
+  ctx.textAlign = 'left';
     ctx.fillText(`Score: ${this.score}`, 100, 40);
     ctx.fillText(`Level: ${this.level}`, 100, 80);
     ctx.fillText(`High Score: ${highScore}`, 100, 120);
