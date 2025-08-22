@@ -67,7 +67,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: June 01, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: August 22, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="file-permissions">File Permissions</h2>
             <p>File permissions are crucial in any Unix-like operating systems, including Linux, which employ several mechanisms for controlling access to files and directories. These mechanisms include standard permissions, special permissions, and access control lists (ACLs).</p>
@@ -240,12 +240,12 @@ r w x     r w x      r w x
             </div>
             </p>
             <p>This command sets the permissions of the file path/to/file.txt to 771, as explained above.</p>
-            <h2 id="understanding-default-permissions">Understanding Default Permissions</h2>
+            <h3 id="default-permissions">Default Permissions</h3>
             <p>In Linux, when you create a new file or directory, it is assigned a set of default permissions. These permissions define what types of access are allowed for the owner of the file, members of the group that owns the file, and all other users.</p>
-            <h3 id="default-file-and-directory-permissions">Default File and Directory Permissions</h3>
+            <h4 id="default-file-and-directory-permissions">Default File and Directory Permissions</h4>
             <p>By default, new files are created with the permissions <code>rw-rw-rw-</code>, equivalent to the numeric value <code>666</code>. This allows any user to read and write to the file, but not execute it.</p>
             <p>New directories, on the other hand, are created with the permissions <code>rwxrwxrwx</code> or <code>777</code>. This allows any user to read, write, and execute within the directory.</p>
-            <h3 id="using-umask-to-change-default-permissions">Using Umask to Change Default Permissions</h3>
+            <h4 id="using-umask-to-change-default-permissions">Using Umask to Change Default Permissions</h4>
             <p>The <code>umask</code> command is used to determine the default permissions for newly created files and directories. It's a three-digit number that specifies which permissions should be removed or "masked" when new files and directories are created. </p>
             <p>For example, a <code>umask</code> value of <code>0022</code> subtracts write permissions for group and others from the default permissions, resulting in default permissions of <code>rw-r--r--</code> (<code>644</code>) for new files and <code>rwxr-xr-x</code> (<code>755</code>) for new directories.</p>
             <p>To view the current <code>umask</code> value, simply use the <code>umask</code> command:</p>
@@ -261,7 +261,7 @@ r w x     r w x      r w x
             </div>
             </p>
             <p>This will set the umask value to 0022, and new files and directories will be created with the corresponding default permissions. It's important to note that the umask value only affects new files and directories, not existing ones.</p>
-            <h3 id="examples-of-umask-values-and-their-effects">Examples of Umask Values and Their Effects</h3>
+            <h4 id="examples-of-umask-values-and-their-effects">Examples of Umask Values and Their Effects</h4>
             <p>Here are some common umask values and the resulting default permissions for files and directories:</p>
             <p>
             <table>
@@ -300,7 +300,7 @@ r w x     r w x      r w x
             </div>
             </p>
             <p>This command configures the umask such that new files and directories will have the permissions specified.</p>
-            <h2 id="understanding-special-permissions-setuid-setgid-and-the-sticky-bit">Understanding Special Permissions: setuid, setgid, and the Sticky Bit</h2>
+            <h3 id="special-permissions-setuid-setgid-and-the-sticky-bit">Special Permissions: setuid, setgid, and the Sticky Bit</h3>
             <p>In addition to standard permissions, Linux offers special permissions known as setuid, setgid, and the sticky bit. These permissions provide additional control over access to files and directories and can be used to enhance both functionality and security.</p>
             <p>
             <div>
@@ -320,50 +320,162 @@ rws     rws     rwt
 +---------- Read</code></pre>
             </div>
             </p>
-            <h3 id="setuid">Setuid</h3>
-            <p>The setuid or 'Set User ID' permission allows a user to execute an executable file with the permissions of the file's owner. This is especially useful for allowing users to run specific programs with elevated privileges, even if they don't have direct access permissions to the file.</p>
-            <p>To set the setuid bit on a file, use the <code>chmod</code> command with the <code>u+s</code> flag:</p>
+            <h4 id="setuid">Setuid</h4>
+            <p>The setuid (“set user ID”) bit causes a program to run with the file owner’s user permissions, rather than with the permissions of the user who launched it. In practice, this allows ordinary users to execute specific tasks with elevated privileges—most commonly, root-level privileges—without giving them full root access.</p>
+            <p><strong>Why it matters:</strong></p>
+            <ul>
+                <li>The <code>passwd</code> command needs to modify <code>/etc/shadow</code>, which is owned by root. By marking <code>/usr/bin/passwd</code> as setuid root, any user can change their own password despite not having write access to the shadow file.</li>
+                <li>If a setuid binary is vulnerable (e.g., buffer overflow), an attacker might exploit it to gain root. Always audit and minimize setuid programs.</li>
+            </ul>
+            <p><strong>How to set the setuid bit:</strong></p>
             <p>
             <div>
-                <pre><code class="language-bash">chmod u+s /path/to/file</code></pre>
+                <pre><code class="language-bash">chmod u+s /path/to/program</code></pre>
             </div>
             </p>
-            <p>To remove the setuid bit from a file, use the chmod command with the u-s flag:</p>
+            <ul>
+                <li>This adds the “s” in the owner’s execute field.</li>
+                <li>Octal equivalent: <code>chmod 4755 /path/to/program</code>.</li>
+            </ul>
+            <p><strong>How to remove the setuid bit:</strong></p>
             <p>
             <div>
-                <pre><code class="language-bash">chmod u-s /path/to/file</code></pre>
+                <pre><code class="language-bash">chmod u-s /path/to/program</code></pre>
             </div>
             </p>
-            <h3 id="setgid">Setgid</h3>
-            <p>The setgid or 'Set Group ID' permission enables an executable file to be run with the permissions of the file's group. This can be useful when you want to share access to a program or a set of files with a group of users without granting them individual access permissions to those files.</p>
-            <p>To set the setgid bit on a file or directory, use the chmod command with the g+s flag:</p>
+            <ul>
+                <li>Removes the “s”, reverting to a normal execute bit.</li>
+                <li>Octal equivalent: <code>chmod 0755 /path/to/program</code>.</li>
+            </ul>
+            <p><strong>How to verify if setuid is in place:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">ls -l /path/to/program</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><em>Set:</em> <code>-rwsr-xr-x</code> → the owner’s <code>x</code> is replaced by <code>s</code>.</li>
+                <li><em>Not set (counter-example):</em> <code>-rwxr-xr-x</code>.</li>
+            </ul>
+            <p><strong>Find all setuid files:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">find / -perm /4000 -type f 2&gt;/dev/null</code></pre>
+            </div>
+            </p>
+            <p>Lists every file on the system with the setuid bit.</p>
+            <h4 id="setgid">Setgid</h4>
+            <p>The setgid (“set group ID”) bit causes an executable to run with the group permissions of the file’s group owner, or on a directory, causes newly created files within to inherit the directory’s group. This facilitates controlled collaboration among group members.</p>
+            <p><strong>Why it matters:</strong></p>
+            <ul>
+                <li>A backup script owned by group <code>backup</code> can be run by any user in that group, with file-creation operations done under the <code>backup</code> group, ensuring correct group ownership of backup archives.</li>
+                <li>On <code>/srv/shared</code>, setgid makes new files inherit the <code>shared</code> group, so every team member automatically has group write permission on new files.</li>
+                <li>A setgid program with flaws could let a non-group member escalate privileges to that group, potentially accessing sensitive group-owned resources.</li>
+            </ul>
+            <p><strong>How to set the setgid bit:</strong></p>
             <p>
             <div>
                 <pre><code class="language-bash">chmod g+s /path/to/file_or_directory</code></pre>
             </div>
             </p>
-            <p>To remove the setgid bit from a file or directory, use the chmod command with the g-s flag:</p>
+            <ul>
+                <li><em>Octal equivalent (file):</em> <code>chmod 2755 /path/to/file</code></li>
+                <li><em>Octal equivalent (directory):</em> <code>chmod 2775 /path/to/directory</code></li>
+            </ul>
+            <p><strong>How to remove the setgid bit:</strong></p>
             <p>
             <div>
                 <pre><code class="language-bash">chmod g-s /path/to/file_or_directory</code></pre>
             </div>
             </p>
-            <h3 id="sticky-bit">Sticky Bit</h3>
-            <p>The sticky bit is a permission that can be set on directories. When the sticky bit is set on a directory, only the owner of a file within that directory (or the root user) can delete or rename the file. This is particularly useful for shared directories where you want to prevent users from deleting or altering files they do not own.</p>
-            <p>To set the sticky bit on a directory, use the chmod command with the +t flag:</p>
+            <p>Octal equivalent: <code>chmod 0755 /path/to/file</code> or <code>chmod 0775 /path/to/directory</code></p>
+            <p><strong>How to verify if setgid is in place:</strong></p>
             <p>
             <div>
-                <pre><code class="language-bash">chmod +t /path/to/dir</code></pre>
+                <pre><code class="language-bash">ls -ld /path/to/file_or_directory</code></pre>
             </div>
             </p>
-            <p>To remove the sticky bit from a directory, use the chmod command with the -t flag:</p>
+            <ul>
+                <li><em>Executable with setgid:</em> <code>-rwxr-sr-x</code> (the group’s <code>x</code> is replaced by <code>s</code>).</li>
+                <li><em>Directory with setgid:</em> <code>drwxrwsr-x</code>.</li>
+                <li><em>Not set (counter-example):</em> <code>-rwxr-xr-x</code> or <code>drwxr-xr-x</code>.</li>
+            </ul>
+            <p><strong>Find all setgid files/directories:</strong></p>
             <p>
             <div>
-                <pre><code class="language-bash">chmod -t /path/to/dir</code></pre>
+                <pre><code class="language-bash">find / -perm /2000 -type f -or -type d 2&gt;/dev/null</code></pre>
             </div>
             </p>
-            <p>It's important to handle these special permissions with care. When misused, they can potentially create security risks. For instance, a program with the setuid bit set, if it has a vulnerability, might be exploited to gain unauthorized privileges on the system.</p>
-            <h2 id="understanding-access-control-lists-acls-">Understanding Access Control Lists (ACLs)</h2>
+            <p>Searches for the setgid bit in both files and directories.</p>
+            <h4 id="sticky-bit">Sticky Bit</h4>
+            <p>When set on a directory, the sticky bit ensures that within that directory, only the file’s owner (or root) may delete or rename their files. It prevents users from removing or renaming other users’ files in a shared directory.</p>
+            <p><strong>Why it matters:</strong></p>
+            <ul>
+                <li>On <code>/tmp</code>, the sticky bit prevents user A from deleting user B’s temporary files, even though <code>/tmp</code> is world-writable.</li>
+                <li>Without the sticky bit on a shared directory like <code>/shared</code>, any user with write permission could delete or rename another user’s files, leading to accidental or malicious data loss.</li>
+            </ul>
+            <p><strong>How to set the sticky bit:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">chmod +t /path/to/directory</code></pre>
+            </div>
+            </p>
+            <p>Octal equivalent: <code>chmod 1777 /path/to/directory</code> (common for <code>/tmp</code>).</p>
+            <p><strong>How to remove the sticky bit:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">chmod -t /path/to/directory</code></pre>
+            </div>
+            </p>
+            <p>Octal equivalent, restoring typical permissions: <code>chmod 0777 /path/to/directory</code>.</p>
+            <p><strong>How to verify if the sticky bit is in place:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">ls -ld /path/to/directory</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li><em>Set:</em> <code>drwxrwxrwt</code> – the others’ execute bit is replaced by <code>t</code>.</li>
+                <li><em>Not set (counter-example):</em> <code>drwxrwxrwx</code>.</li>
+            </ul>
+            <p><strong>Find all sticky directories:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">find / -type d -perm /1000 2&gt;/dev/null</code></pre>
+            </div>
+            </p>
+            <p>Lists all directories that have the sticky bit set.</p>
+            <h4 id="quick-reference-table">Quick Reference Table</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Permission</td>
+                    <td>Symbol in <code>ls -l</code></td>
+                    <td>Octal Mask</td>
+                    <td>Common Use Case</td>
+                </tr>
+                <tr>
+                    <td>setuid</td>
+                    <td><code>-rws------</code></td>
+                    <td>4xxx</td>
+                    <td><code>passwd</code> (user password changes)</td>
+                </tr>
+                <tr>
+                    <td>setgid</td>
+                    <td><code>-rwxr-s---</code> or <code>drwxrws---</code></td>
+                    <td>2xxx</td>
+                    <td>Shared project dirs, group-run executables</td>
+                </tr>
+                <tr>
+                    <td>sticky</td>
+                    <td><code>drwxrwxrwt</code></td>
+                    <td>1xxx</td>
+                    <td><code>/tmp</code>, other world-writable shared dirs</td>
+                </tr>
+            </table>
+            </p>
+            <p>Use these checks and examples to ensure each special permission is applied correctly and safely. Keywords for <code>find</code> (4000 for setuid, 2000 for setgid, 1000 for sticky) will help audit your system comprehensively.</p>
+            <h3 id="access-control-lists-acls-">Access Control Lists (ACLs)</h3>
             <p>Access Control Lists (ACLs) are an additional layer of discretionary access control provided by many Linux systems. They allow for more fine-grained control over file and directory access, extending beyond the standard user, group, and other permissions.</p>
             <p>ACLs are not supported by all tools, but modern 'mke2fs' typically enables ACLs in the default mount options during filesystem creation in enterprise Linux distributions. To utilize ACLs, the filesystem must be mounted with the 'acl' option.</p>
             <p>
@@ -377,7 +489,7 @@ rws     rws     rwt
     +--------------------- User (u), Group (g), Others (o), Mask (m)</code></pre>
             </div>
             </p>
-            <h3 id="setting-acls-with-setfacl">Setting ACLs with <code>setfacl</code></h3>
+            <h4 id="setting-acls-with-setfacl">Setting ACLs with <code>setfacl</code></h4>
             <p>The <code>setfacl</code> command is used to manage ACLs on a file or directory. It can set, modify, or remove ACL entries. If no path is provided, it takes file and directory names from the standard input (stdin). Each line of input should contain one path name.</p>
             <p>To modify ACLs, use the <code>-m</code> flag followed by the ACL specification. For example, the following command grants read and write permissions to a specific group on a directory:</p>
             <p>
@@ -391,14 +503,14 @@ rws     rws     rwt
                 <pre><code class="language-bash">setfacl -x g:group_name /opt/test</code></pre>
             </div>
             </p>
-            <h3 id="viewing-acls-with-getfacl">Viewing ACLs with getfacl</h3>
+            <h4 id="viewing-acls-with-getfacl">Viewing ACLs with getfacl</h4>
             <p>The getfacl command is used to display the ACLs of a file or directory. Use the -l flag to list the ACLs:</p>
             <p>
             <div>
                 <pre><code class="language-bash">getfacl /opt/test</code></pre>
             </div>
             </p>
-            <h3 id="acl-specifications">ACL Specifications</h3>
+            <h4 id="acl-specifications">ACL Specifications</h4>
             <p>ACL specifications define who has what kind of access to a file or directory. Here are some common examples:</p>
             <ul>
                 <li><code>u:user_name:rwx</code> : Grants read, write, and execute permissions to a specific user.</li>
@@ -426,36 +538,35 @@ rws     rws     rwt
         </section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
-            <ol>
-                <li><a href="#file-permissions">File Permissions</a>
-                    <ol>
-                        <li><a href="#standard-permissions">Standard Permissions</a></li>
-                        <li><a href="#symbolic-file-permissions">Symbolic File Permissions</a></li>
-                        <li><a href="#numeric-file-permissions">Numeric File Permissions</a></li>
-                    </ol>
-                </li>
-                <li><a href="#understanding-default-permissions">Understanding Default Permissions</a>
-                    <ol>
-                        <li><a href="#default-file-and-directory-permissions">Default File and Directory Permissions</a></li>
-                        <li><a href="#using-umask-to-change-default-permissions">Using Umask to Change Default Permissions</a></li>
-                        <li><a href="#examples-of-umask-values-and-their-effects">Examples of Umask Values and Their Effects</a></li>
-                    </ol>
-                </li>
-                <li><a href="#understanding-special-permissions-setuid-setgid-and-the-sticky-bit">Understanding Special Permissions: setuid, setgid, and the Sticky Bit</a>
-                    <ol>
-                        <li><a href="#setuid">Setuid</a></li>
-                        <li><a href="#setgid">Setgid</a></li>
-                        <li><a href="#sticky-bit">Sticky Bit</a></li>
-                    </ol>
-                </li>
-                <li><a href="#understanding-access-control-lists-acls-">Understanding Access Control Lists (ACLs)</a>
-                    <ol>
-                        <li><a href="#setting-acls-with-setfacl">Setting ACLs with setfacl</a></li>
-                        <li><a href="#viewing-acls-with-getfacl">Viewing ACLs with getfacl</a></li>
-                        <li><a href="#acl-specifications">ACL Specifications</a></li>
-                        <li><a href="#challenges">Challenges</a></li>
-                    </ol>
-                </li>
+            <ol><a href="#file-permissions">File Permissions</a>
+                <ol>
+                    <li><a href="#standard-permissions">Standard Permissions</a></li>
+                    <li><a href="#symbolic-file-permissions">Symbolic File Permissions</a></li>
+                    <li><a href="#numeric-file-permissions">Numeric File Permissions</a></li>
+                    <li><a href="#default-permissions">Default Permissions</a>
+                        <ol>
+                            <li><a href="#default-file-and-directory-permissions">Default File and Directory Permissions</a></li>
+                            <li><a href="#using-umask-to-change-default-permissions">Using Umask to Change Default Permissions</a></li>
+                            <li><a href="#examples-of-umask-values-and-their-effects">Examples of Umask Values and Their Effects</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#special-permissions-setuid-setgid-and-the-sticky-bit">Special Permissions: setuid, setgid, and the Sticky Bit</a>
+                        <ol>
+                            <li><a href="#setuid">Setuid</a></li>
+                            <li><a href="#setgid">Setgid</a></li>
+                            <li><a href="#sticky-bit">Sticky Bit</a></li>
+                            <li><a href="#quick-reference-table">Quick Reference Table</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#access-control-lists-acls-">Access Control Lists (ACLs)</a>
+                        <ol>
+                            <li><a href="#setting-acls-with-setfacl">Setting ACLs with setfacl</a></li>
+                            <li><a href="#viewing-acls-with-getfacl">Viewing ACLs with getfacl</a></li>
+                            <li><a href="#acl-specifications">ACL Specifications</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#challenges">Challenges</a></li>
+                </ol>
             </ol>
             <div id="related-articles">
                 <h2>Related Articles</h2>
