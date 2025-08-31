@@ -67,7 +67,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: October 18, 2022</i></p>
+            <p style="text-align: right;"><i>Last modified: August 31, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="graphs">Graphs</h2>
             <p>In many areas of life, we come across systems where elements are deeply interconnected—whether through physical routes, digital networks, or abstract relationships. Graphs offer a flexible way to represent and make sense of these connections.</p>
@@ -122,15 +122,24 @@
                 <li>Common algorithms on graphs include methods for finding shortest paths (Bellman-Ford, Dijkstra's algorithm), discovering minimum spanning trees (Kruskal’s, Prim’s algorithm), and graph traversal (DFS, BFS). These algorithms help solve important graph-related problems in computing and operations research.</li>
             </ul>
             <h3 id="representation-of-graphs-in-computer-memory">Representation of Graphs in Computer Memory</h3>
-            <p>Graphs, with their versatile applications in numerous domains, necessitate efficient storage and manipulation mechanisms in computer memory. The choice of representation often depends on the graph's characteristics, such as sparsity, and the specific operations to be performed. Among the various methods available, the adjacency matrix and the adjacency list are the most prevalent.</p>
+            <p>Graphs, with their versatile applications in numerous domains, necessitate efficient storage and manipulation mechanisms in computer memory. The choice of representation often depends on the graph's characteristics (e.g., dense vs. sparse, directed vs. undirected, weighted vs. unweighted) and the specific operations to be performed. Among the various methods available, the adjacency matrix and the adjacency list are the most prevalent.</p>
             <h4 id="adjacency-matrix">Adjacency Matrix</h4>
-            <p>An adjacency matrix represents a graph $G$ as a two-dimensional matrix. Given $V$ vertices, it utilizes a $V \times V$ matrix $A$. The rows and columns correspond to the graph's vertices, and each cell $A_{ij}$ holds:</p>
+            <p>An adjacency matrix represents a graph $G$ with $V$ vertices as a two-dimensional matrix $A$ of size $V \times V$. The rows and columns correspond to vertices, and each cell $A_{ij}$ holds:</p>
             <ul>
-                <li><code>1</code> if there is an edge between vertex $i$ and vertex $j$</li>
+                <li><code>1</code> if there is an edge between vertex $i$ and vertex $j$ (or specifically $i \to j$ in a directed graph)</li>
                 <li><code>0</code> if no such edge exists</li>
+                <li>For weighted graphs, $A_{ij}$ contains the <strong>weight</strong> of the edge; often <code>0</code> or <code>∞</code> (or <code>None</code>) indicates “no edge”</li>
             </ul>
-            <p>For graphs with edge weights, $A_{ij}$ contains the weight of the edge between vertices $i$ and $j$.</p>
-            <p>Example:</p>
+            <p><strong>Same graph used throughout (undirected 4-cycle A–B–C–D–A):</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">(A)------(B)
+         |        |
+         |        |
+        (D)------(C)</code></pre>
+            </div>
+            </p>
+            <p><strong>Matrix (table form):</strong></p>
             <p>
             <table>
                 <tr>
@@ -171,19 +180,73 @@
             </table>
             </p>
             <p>Here, the matrix indicates a graph with vertices A to D. For instance, vertex A connects with vertices B and D, hence the respective 1s in the matrix.</p>
-            <p><strong>Benefits</strong>:</p>
+            <p><strong>Matrix:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">4x4
+            Columns →
+          A   B   C   D
+        +---+---+---+---+
+Row   A | 0 | 1 | 0 | 1 |
+↓     B | 1 | 0 | 1 | 0 |
+      C | 0 | 1 | 0 | 1 |
+      D | 1 | 0 | 1 | 0 |
+        +---+---+---+---+</code></pre>
+            </div>
+            </p>
+            <p><strong>Notes &amp; Variants</strong></p>
             <ul>
-                <li>Fixed-time ( $O(1)$ ) edge existence checks.</li>
-                <li>Particularly suitable for dense graphs, where the edge-to-vertex ratio is high.</li>
+                <li>When an <em>undirected graph</em> is represented, the adjacency matrix is symmetric because the connection from node $i$ to node $j$ also implies a connection from node $j$ to node $i$; if this property is omitted, the matrix will misrepresent mutual relationships, such as a road existing in both directions between two cities.</li>
+                <li>In the case of a <em>directed graph</em>, the adjacency matrix does not need to be symmetric since an edge from node $i$ to node $j$ does not guarantee a reverse edge; without this rule, one might incorrectly assume bidirectional links, such as mistakenly treating a one-way street as two-way.</li>
+                <li>A <em>self-loop</em> appears as a nonzero entry on the diagonal of the adjacency matrix, indicating that a node is connected to itself; if ignored, the representation will overlook scenarios like a website containing a hyperlink to its own homepage.</li>
             </ul>
-            <p><strong>Drawbacks</strong>:</p>
+            <p><strong>Benefits</strong></p>
             <ul>
-                <li>Consumes more space for sparse graphs.</li>
-                <li>Traversing neighbors can be slower due to the need to check all vertices.</li>
+                <li>An <em>edge existence check</em> in an adjacency matrix takes constant time $O(1)$ because the presence of an edge is determined by directly inspecting a single cell; if this property is absent, the lookup could require scanning a list, as in adjacency list representations where finding whether two cities are directly connected may take longer.</li>
+                <li>With <em>simple, compact indexing</em>, the adjacency matrix aligns well with array-based structures, which makes it helpful for GPU optimizations or bitset operations; without this feature, algorithms relying on linear algebra techniques, such as computing paths with matrix multiplication, become less efficient.</li>
+            </ul>
+            <p><strong>Drawbacks</strong></p>
+            <ul>
+                <li>The <em>space</em> requirement of an adjacency matrix is always $O(V^2)$, meaning memory usage grows with the square of the number of vertices even if only a few edges exist; if this property is overlooked, sparse networks such as social graphs with millions of users but relatively few connections will be stored inefficiently.</li>
+                <li>For <em>neighbor iteration</em>, each vertex requires $O(V)$ time because the entire row of the matrix must be scanned to identify adjacent nodes; without recognizing this cost, tasks like finding all friends of a single user in a large social network could become unnecessarily slow.</li>
+            </ul>
+            <p><strong>Common Operations (Adjacency Matrix)</strong></p>
+            <p>
+            <table>
+                <tr>
+                    <td>Operation</td>
+                    <td>Time</td>
+                </tr>
+                <tr>
+                    <td>Check if edge $u\leftrightarrow v$</td>
+                    <td>$O(1)$</td>
+                </tr>
+                <tr>
+                    <td>Add/remove edge</td>
+                    <td>$O(1)$</td>
+                </tr>
+                <tr>
+                    <td>Iterate neighbors of $u$</td>
+                    <td>$O(V)$</td>
+                </tr>
+                <tr>
+                    <td>Compute degree of $u$ (undirected)</td>
+                    <td>$O(V)$</td>
+                </tr>
+                <tr>
+                    <td>Traverse all edges</td>
+                    <td>$O(V^2)$</td>
+                </tr>
+            </table>
+            </p>
+            <p><strong>Space Tips</strong></p>
+            <ul>
+                <li>Using a <em>boolean or bitset matrix</em> allows each adjacency entry to be stored in just one bit, which reduces memory consumption by a factor of eight compared to storing each entry as a byte; if this method is not applied, representing even moderately sized graphs, such as a network of 10,000 nodes, can require far more storage than necessary.</li>
+                <li>The approach is most useful when the graph is <em>dense</em>, the number of vertices is relatively small, or constant-time edge queries are the primary operation; without these conditions, such as in a sparse graph with millions of vertices, the $V^2$ bit requirement remains wasteful and alternative representations like adjacency lists become more beneficial.</li>
             </ul>
             <h4 id="adjacency-list">Adjacency List</h4>
-            <p>An adjacency list uses a collection (often an array or a linked list) to catalog the neighbors of each vertex. Each vertex points to its own list, enumerating its direct neighbors.</p>
-            <p>Example:</p>
+            <p>An adjacency list stores, for each vertex, the list of its neighbors. It’s usually implemented as an array/vector of lists (or vectors), hash sets, or linked structures. For weighted graphs, each neighbor entry also stores the weight.</p>
+            <p><strong>Same graph (A–B–C–D–A) as lists:</strong></p>
             <p>
             <div>
                 <pre><code class="language-shell">A -&gt; [B, D]
@@ -192,85 +255,182 @@ C -&gt; [B, D]
 D -&gt; [A, C]</code></pre>
             </div>
             </p>
-            <p>This list reflects the same graph as our matrix example. Vertex A's neighbors, for instance, are B and D.</p>
-            <p><strong>Benefits</strong>:</p>
+            <p><strong>“In-memory” view (array of heads + per-vertex chains):</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Vertices (index) →   0     1     2     3
+Names              [ A ] [ B ] [ C ] [ D ]
+                     |     |     |     |
+                     v     v     v     v
+A-list:  head -&gt; [B] -&gt; [D] -&gt; NULL
+B-list:  head -&gt; [A] -&gt; [C] -&gt; NULL
+C-list:  head -&gt; [B] -&gt; [D] -&gt; NULL
+D-list:  head -&gt; [A] -&gt; [C] -&gt; NULL</code></pre>
+            </div>
+            </p>
+            <p><strong>Variants &amp; Notes</strong></p>
             <ul>
-                <li>Space-efficient for sparse graphs, where edges are relatively fewer.</li>
-                <li>Facilitates faster traversal of a vertex's neighbors since the direct neighbors are listed without extraneous checks.</li>
+                <li>In an <em>undirected graph</em> stored as adjacency lists, each edge is represented twice—once in the list of each endpoint—so that both directions can be traversed easily; if this duplication is omitted, traversing from one node to its neighbor may be possible in one direction but not in the other, as with a friendship relation that should be mutual but is stored only once.</li>
+                <li>For a <em>directed graph</em>, only out-neighbors are recorded in each vertex’s list, meaning that edges can be followed in their given direction; without a separate structure for in-neighbors, tasks like finding all users who link to a webpage require inefficient scanning of every adjacency list.</li>
+                <li>In a <em>weighted graph</em>, each adjacency list entry stores both the neighbor and the associated weight, such as $(\text{destination}, \text{distance})$; if weights are not included, algorithms like Dijkstra’s shortest path cannot be applied correctly.</li>
+                <li>The <em>order of neighbors</em> in adjacency lists may be arbitrary, though keeping them sorted allows faster checks for membership; if left unsorted, testing whether two people are directly connected in a social network could require scanning the entire list rather than performing a quicker search.</li>
             </ul>
-            <p><strong>Drawbacks</strong>:</p>
+            <p><strong>Benefits</strong></p>
             <ul>
-                <li>Edge existence checks can take up to $O(V)$ time in the worst case.</li>
-                <li>Potentially consumes more space for dense graphs.</li>
+                <li>The representation is <em>space-efficient for sparse graphs</em> because it requires $O(V+E)$ storage, growing only with the number of vertices and edges; without this property, a graph with millions of vertices but relatively few edges, such as a road network, would consume far more memory if stored as a dense matrix.</li>
+                <li>For <em>neighbor iteration</em>, the time cost is $O(\deg(u))$, since only the actual neighbors of vertex $u$ are examined; if this benefit is absent, each query would need to scan through all possible vertices, as happens in adjacency matrices when identifying a node’s connections.</li>
+                <li>In <em>edge traversals and searches</em>, adjacency lists support breadth-first search and depth-first search efficiently on sparse graphs because only existing edges are processed; without this design, traversals would involve wasted checks on non-edges, making exploration of large but sparsely connected networks, like airline routes, much slower.</li>
             </ul>
+            <p><strong>Drawbacks</strong></p>
+            <ul>
+                <li>An <em>edge existence check</em> in adjacency lists requires $O(\deg(u))$ time in the worst case because the entire neighbor list may need to be scanned; if a hash set is used for each vertex, the expected time improves to $O(1)$, though at the cost of extra memory and overhead, as seen in fast membership tests within large social networks.</li>
+                <li>With respect to <em>cache locality</em>, adjacency lists often rely on pointers or scattered memory, which reduces their efficiency on modern hardware; without this drawback, as in dense matrix storage, sequential memory access patterns make repeated operations such as matrix multiplication more beneficial.</li>
+            </ul>
+            <p><strong>Common Operations (Adjacency List)</strong></p>
+            <p>
+            <table>
+                <tr>
+                    <td>Operation</td>
+                    <td>Time (typical)</td>
+                </tr>
+                <tr>
+                    <td>Check if edge $u\leftrightarrow v$</td>
+                    <td>$O(\deg(u))$ (or expected $O(1)$ with hash)</td>
+                </tr>
+                <tr>
+                    <td>Add edge</td>
+                    <td>Amortized $O(1)$ (append to list(s))</td>
+                </tr>
+                <tr>
+                    <td>Remove edge</td>
+                    <td>$O(\deg(u))$ (find &amp; delete)</td>
+                </tr>
+                <tr>
+                    <td>Iterate neighbors of $u$</td>
+                    <td>$O(\deg(u))$</td>
+                </tr>
+                <tr>
+                    <td>Traverse all edges</td>
+                    <td>$O(V + E)$</td>
+                </tr>
+            </table>
+            </p>
             <p>The choice between these (and other) representations often depends on the graph's characteristics and the specific tasks or operations envisioned.</p>
-            <h3 id="planarity">Planarity</h3>
-            <p>Planarity examines whether a graph can be drawn on a flat surface (a plane) without any of its edges crossing. This idea holds significant importance in areas such as circuit design, urban planning, and geography.</p>
-            <h4 id="what-is-a-planar-graph-">What is a Planar Graph?</h4>
-            <p>A graph is considered <strong>planar</strong> if there exists a representation (also called a drawing) of it on a two-dimensional plane where its edges intersect only at their vertices and nowhere else. Even if a graph is initially drawn with overlaps or crossings, it may still be planar if it is possible to <strong>redraw</strong> (or <strong>rearrange</strong>) it so that no edges intersect in the interior of the drawing.</p>
-            <p>An important theoretical result related to planarity is <strong>Kuratowski’s Theorem</strong>, which states that a graph is planar if and only if it does not contain a subgraph that is a subdivision of either $K_5$ (the complete graph on five vertices) or $K_{3,3}$ (the complete bipartite graph on six vertices, partitioned into sets of three). </p>
-            <h4 id="planar-embedding">Planar Embedding</h4>
-            <p>A <strong>planar embedding</strong> refers to a specific way of drawing a graph on a plane so that none of its edges cross each other in the interior. If such a crossing-free drawing exists, the graph is planar. A related fact is <strong>Euler’s Formula</strong> for planar graphs:</p>
-            <p>$$|V| - |E| + |F| = 2$$</p>
-            <p>where:</p>
             <ul>
-                <li>$|V|$ is the number of vertices,</li>
-                <li>$|E|$ is the number of edges,</li>
-                <li>$|F|$ is the number of faces (including the "outer" infinite face).</li>
+                <li>Choosing an <em>adjacency matrix</em> is helpful when the graph is dense, the number of vertices is moderate, and constant-time edge queries or linear-algebra formulations are beneficial; if this choice is ignored, operations such as repeatedly checking flight connections in a fully connected air network may become slower or harder to express mathematically.</li>
+                <li>Opting for an <em>adjacency list</em> is useful when the graph is sparse or when neighbor traversal dominates, as in breadth-first search or shortest-path algorithms; without this structure, exploring a large but lightly connected road network would waste time scanning nonexistent edges.</li>
+            </ul>
+            <p><strong>Hybrids/Alternatives:</strong></p>
+            <ul>
+                <li>With <em>CSR/CSC (Compressed Sparse Row/Column)</em> formats, all neighbors of a vertex are stored contiguously in memory, which improves cache locality and enables fast traversals; without this layout, as in basic pointer-based adjacency lists, high-performance analytics on graphs like web link networks would suffer from slower memory access.</li>
+                <li>An <em>edge list</em> stores edges simply as $(u,v)$ pairs, making it convenient for graph input, output, and algorithms like Kruskal’s minimum spanning tree; if used for queries such as checking whether two nodes are adjacent, the lack of structure forces scanning the entire list, which becomes inefficient in large graphs.</li>
+                <li>In <em>hash-based adjacency</em> structures, each vertex’s neighbor set is managed as a hash table, enabling expected $O(1)$ membership tests; without this tradeoff, checking connections in dense social networks requires linear scans, while the hash-based design accelerates lookups at the cost of extra memory.</li>
+            </ul>
+            <h3 id="planarity">Planarity</h3>
+            <p><strong>Planarity</strong> asks: can a graph be drawn on a flat plane so that edges only meet at their endpoints (no crossings)?</p>
+            <p>Why it matters: layouts of circuits, road networks, maps, and data visualizations often rely on planar drawings.</p>
+            <h4 id="what-is-a-planar-graph-">What is a planar graph?</h4>
+            <p>A graph is <strong>planar</strong> if it has <strong>some</strong> drawing in the plane with <strong>no edge crossings</strong>. A messy drawing with crossings doesn’t disqualify it—if you can <strong>redraw</strong> it without crossings, it’s planar.</p>
+            <ul>
+                <li>A crossing-free drawing of a planar graph is called a <strong>planar embedding</strong> (or <strong>plane graph</strong> once embedded).</li>
+                <li>In a planar embedding, the plane is divided into <strong>faces</strong> (regions), including the unbounded <strong>outer face</strong>.</li>
+            </ul>
+            <p><strong>Euler’s Formula (connected planar graphs):</strong></p>
+            <p>$$
+                |V| - |E| + |F| = 2 \quad
+                \text{(for (c) connected components: } |V|-|E|+|F|=1+c)
+                $$</p>
+            <h4 id="kuratowski-s-wagner-s-characterizations">Kuratowski’s &amp; Wagner’s characterizations</h4>
+            <ul>
+                <li>According to <em>Kuratowski’s Theorem</em>, a graph is planar if and only if it does not contain a subgraph that is a subdivision of $K_5$ or $K_{3,3}$; if this condition is not respected, as in a network with five nodes all mutually connected, the graph cannot be drawn on a plane without edge crossings.</li>
+                <li>By <em>Wagner’s Theorem</em>, a graph is planar if and only if it has no $K_5$ or $K_{3,3}$ minor, meaning such structures cannot be formed through edge deletions, vertex deletions, or edge contractions; without ruling out these minors, a graph like the complete bipartite structure of three stations each linked to three others cannot be embedded in the plane without overlaps.</li>
+            </ul>
+            <p>These are equivalent “forbidden pattern” views.</p>
+            <h4 id="handy-planar-edge-bounds-quick-tests-">Handy planar edge bounds (quick tests)</h4>
+            <p>For a <strong>simple</strong> planar graph with $|V|\ge 3$:</p>
+            <ul>
+                <li>$|E| \le 3|V| - 6$.</li>
+                <li>If the graph is <strong>bipartite</strong>, then $|E| \le 2|V| - 4$.</li>
+            </ul>
+            <p>These give fast non-planarity proofs:</p>
+            <ul>
+                <li>$K_5$: $|V|=5, |E|=10 &gt; 3\cdot5-6=9$ ⇒ <strong>non-planar</strong>.</li>
+                <li>$K_{3,3}$: $|V|=6, |E|=9 &gt; 2\cdot6-4=8$ ⇒ <strong>non-planar</strong>.</li>
             </ul>
             <h4 id="examples">Examples</h4>
-            <p>I. <strong>Cycle Graphs</strong> </p>
-            <p>Simple cycle graphs (triangles, squares, pentagons, hexagons, etc.) are planar because you can easily draw them without any edges crossing. In the square cycle graph $C_4$ example below, there are no intersecting edges:</p>
+            <p><strong>I. Cycle graphs $C_n$ (always planar)</strong></p>
+            <p>A 4-cycle $C_4$:</p>
             <p>
             <div>
-                <pre><code class="language-shell">A-----B
-|     |
-C-----D</code></pre>
+                <pre><code class="language-shell">A───B
+│   │
+D───C</code></pre>
             </div>
             </p>
-            <p>II. <strong>Complete Graph with Four Vertices ($K_4$)</strong></p>
-            <p>This graph has every vertex connected to every other vertex. Despite having 6 edges, $K_4$ is planar. Its planar drawing can resemble a tetrahedron (triangular pyramid) flattened onto a plane:</p>
+            <p>No crossings; faces: 2 (inside + outside).</p>
+            <p><strong>II. Complete graph on four vertices $K_4$ (planar)</strong></p>
+            <p>A planar embedding places one vertex inside a triangle:</p>
             <p>
             <div>
                 <pre><code class="language-shell">A
-  / \
- B---C
+   / \
+  B───C
+   \ /
+    D</code></pre>
+            </div>
+            </p>
+            <p>All edges meet only at vertices; no crossings.</p>
+            <p><strong>III. Complete graph on five vertices $K_5$ (non-planar)</strong></p>
+            <p>No drawing avoids crossings. Even a “best effort” forces at least one:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">A───B
+│╲ ╱│
+│ ╳ │   (some crossing is unavoidable)
+│╱ ╲│
+D───C
   \ /
-   D</code></pre>
-            </div>
-            </p>
-            <p>III. <strong>Complete Graph with Five Vertices ($K_5$)</strong></p>
-            <p>$K_5$ has every one of its five vertices connected to the other four, making a total of 10 edges. This graph is <strong>non-planar</strong>: no matter how you try to arrange the vertices and edges, there will always be at least one pair of edges that must cross. A rough sketch illustrating its inherent crossing is shown below:</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">A
-  /|\
- / | \
-B--+--C
- \ | /
-  \|/
-   D
-   |
    E</code></pre>
             </div>
             </p>
-            <p>Attempting to avoid one crossing in $K_5$ inevitably forces another crossing elsewhere, confirming its non-planarity.</p>
-            <h4 id="strategies-for-assessing-planarity">Strategies for Assessing Planarity</h4>
+            <p>The edge bound $10&gt;9$ (above) certifies non-planarity.</p>
+            <p><strong>IV. Complete bipartite $K_{3,3}$ (non-planar)</strong></p>
+            <p>Two sets ${u_1,u_2,u_3}$ and ${v_1,v_2,v_3}$, all cross-set pairs connected:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">u1   u2   u3
+│ \  │ \  │ \
+│  \ │  \ │  \
+v1───v2───v3  (many edges must cross in the plane)</code></pre>
+            </div>
+            </p>
+            <p>The bipartite bound $9&gt;8$ proves non-planarity.</p>
+            <h4 id="how-to-check-planarity-in-practice">How to check planarity in practice</h4>
+            <p><strong>For small graphs</strong></p>
+            <ol>
+                <li>Rearrange vertices and try to remove crossings.</li>
+                <li>Look for $K_5$ / $K_{3,3}$ (or their subdivisions/minors).</li>
+                <li>Apply the edge bounds above for quick eliminations.</li>
+            </ol>
+            <p><strong>For large graphs (efficient algorithms)</strong></p>
             <ul>
-                <li>The <strong>planarity</strong> of a graph refers to whether it can be drawn on a flat surface without any edges crossing each other.</li>
-                <li><strong>Small graphs</strong> can be tested for planarity by manually rearranging their vertices and edges to check if a crossing-free drawing is possible.</li>
-                <li><strong>Kuratowski's theorem</strong> states that a graph is planar if it does not contain a subgraph that can be transformed into $K_5$ (a graph with five vertices all connected to each other) or $K_{3,3}$ (a graph with two groups of three vertices, where every vertex in one group connects to every vertex in the other).</li>
-                <li><strong>$K_5$</strong> is a complete graph with five vertices where every pair of vertices has a direct edge connecting them.</li>
-                <li><strong>$K_{3,3}$</strong> is a bipartite graph where two sets of three vertices are connected such that each vertex in the first set is connected to all vertices in the second set, with no edges within the same set.</li>
-                <li><strong>Wagner’s theorem</strong> provides an alternative way to determine planarity, stating that a graph is planar if it does not have $K_5$ or $K_{3,3}$ as a "minor." A minor is a smaller graph formed by deleting edges, deleting vertices, or merging connected vertices.</li>
-                <li>For <strong>larger graphs</strong>, manual testing becomes impractical, and planarity algorithms are often used instead.</li>
-                <li>The <strong>Hopcroft-Tarjan algorithm</strong> is a linear-time method for testing planarity. It uses depth-first search to efficiently decide if a graph can be drawn without crossing edges.</li>
-                <li>The <strong>Boyer-Myrvold algorithm</strong> is another linear-time approach that tests planarity and can also provide an embedding of the graph (a specific way to draw it without crossings) if it is planar.</li>
-                <li>Both <strong>algorithms</strong> are widely used in computer science for applications that involve networks, circuit design, and data visualization, where planarity helps simplify complex structures.</li>
+                <li>The <em>Hopcroft–Tarjan</em> algorithm uses a depth-first search approach to decide planarity in linear time; without such an efficient method, testing whether a circuit layout can be drawn without wire crossings would take longer on large graphs.</li>
+                <li>The <em>Boyer–Myrvold</em> algorithm also runs in linear time but, in addition to deciding planarity, it produces a planar embedding when one exists; if this feature is absent, as in Hopcroft–Tarjan, a separate procedure would be required to actually construct a drawing of a planar transportation network.</li>
             </ul>
+            <p>Both are widely used in graph drawing, EDA (circuit layout), GIS, and network visualization.</p>
             <h3 id="traversals">Traversals</h3>
+            <p>What does it mean to traverse a graph?</p>
+            <p>Graph traversal <strong>can</strong> be done in a way that visits <em>all</em> vertices and edges (like a full DFS/BFS), but it doesn’t <em>have to</em>.</p>
             <ul>
-                <li>When we <strong>traverse</strong> a graph, we visit its vertices in an organized way to make sure we don’t miss any vertices or edges.</li>
+                <li>If you start DFS or BFS from a single source vertex, you’ll only reach the <strong>connected component</strong> containing that vertex. Any vertices in other components won’t be visited.</li>
+                <li>Some algorithms (like shortest path searches, A*, or even partial DFS) intentionally stop early, meaning not all vertices or edges are visited.</li>
+                <li>In weighted or directed graphs, you may also skip certain edges depending on the traversal rules.</li>
+            </ul>
+            <p>So the precise way to answer that question is:</p>
+            <blockquote>
+                <p><strong>Graph traversal is a systematic way of exploring vertices and edges, often ensuring complete coverage of the reachable part of the graph — but whether all vertices/edges are visited depends on the algorithm and stopping conditions.</strong></p>
+            </blockquote>
+            <ul>
                 <li>Graphs, unlike <strong>trees</strong>, don’t have a single starting point like a root. This means we either need to be given a starting vertex or pick one randomly.</li>
                 <li>Let’s say we start from a specific vertex, like <strong>$i$</strong>. From there, the traversal explores all connected vertices according to the rules of the chosen method.</li>
                 <li>In both <strong>breadth-first search (BFS)</strong> and <strong>depth-first search (DFS)</strong>, the order of visiting vertices depends on how the algorithm is implemented.</li>
@@ -278,622 +438,783 @@ B--+--C
                 <li>Because of this flexibility, we talk about <strong>a result</strong> of BFS or DFS, rather than <strong>the result</strong>, since different implementations might visit vertices in different orders.</li>
             </ul>
             <h4 id="breadth-first-search-bfs-">Breadth-First Search (BFS)</h4>
-            <p>Breadth-First Search (BFS) is a fundamental graph traversal algorithm that explores the vertices of a graph in layers, starting from a specified source vertex. It progresses by visiting all immediate neighbors of the starting point, then the neighbors of those neighbors, and so on.</p>
+            <p>Breadth-First Search (BFS) is a fundamental graph traversal algorithm that explores a graph <strong>level by level</strong> from a specified start vertex. It first visits all vertices at distance 1 from the start, then all vertices at distance 2, and so on. This makes BFS the natural choice whenever “closest in number of edges” matters.</p>
             <p>To efficiently keep track of the traversal, BFS employs two primary data structures:</p>
             <ul>
-                <li>A queue, typically named <code>unexplored</code> or <code>queue</code>, to store nodes that are pending exploration.</li>
-                <li>A hash table or a set called <code>visited</code> to ensure that we do not revisit nodes.</li>
+                <li>A <strong>queue</strong> (often named <code>queue</code> or <code>unexplored</code>) that stores vertices pending exploration in <strong>first-in, first-out (FIFO)</strong> order.</li>
+                <li>A <strong><code>visited</code> set</strong> (or boolean array) that records which vertices have already been discovered to prevent revisiting.</li>
             </ul>
-            <h5>Algorithm Steps</h5>
+            <p><em>Useful additions in practice:</em></p>
+            <ul>
+                <li>An optional <strong><code>parent</code> map</strong> to reconstruct shortest paths (store <code>parent[child] = current</code> when you first discover <code>child</code>).</li>
+                <li>An optional <strong><code>dist</code> map</strong> to record the edge-distance from the start (<code>dist[start] = 0</code>, and when discovering <code>v</code> from <code>u</code>, set <code>dist[v] = dist[u] + 1</code>).</li>
+            </ul>
+            <p><strong>Algorithm Steps</strong></p>
             <ol>
-                <li>Begin from a starting vertex, $i$.</li>
-                <li>Mark the vertex $i$ as visited.</li>
-                <li>Explore each of its neighbors. If the neighbor hasn't been visited yet, mark it as visited and enqueue it in <code>unexplored</code>.</li>
-                <li>Dequeue the front vertex from <code>unexplored</code> and repeat step 3.</li>
-                <li>Continue this process until the <code>unexplored</code> queue becomes empty.</li>
+                <li>Pick a start vertex $i$.</li>
+                <li>Set <code>visited = {i}</code>, <code>parent[i] = None</code>, optionally <code>dist[i] = 0</code>, and enqueue $i$ into <code>queue</code>.</li>
+                <li>While <code>queue</code> is nonempty, repeat steps 4–5.</li>
+                <li>Dequeue the front vertex <code>u</code>.</li>
+                <li>For each neighbor <code>v</code> of <code>u</code>, if <code>v</code> is not in <code>visited</code>, add it to <code>visited</code>, set <code>parent[v] = u</code> (and <code>dist[v] = dist[u] + 1</code> if tracking), and enqueue <code>v</code>.</li>
+                <li>Stop when the queue is empty.</li>
             </ol>
-            <p>To ensure the algorithm doesn't fall into an infinite loop due to cycles in the graph, it could be useful to mark nodes as visited as soon as they are enqueued. This prevents them from being added to the queue multiple times.</p>
-            <h5>Example</h5>
+            <p>Marking nodes as <strong>visited at the moment they are enqueued</strong> (not when dequeued) is crucial: it prevents the same node from being enqueued multiple times in graphs with cycles or multiple incoming edges.</p>
+            <p><em>Reference pseudocode (adjacency-list graph):</em></p>
             <p>
             <div>
-                <pre><code class="language-shell">Queue: Empty          Visited: A, B, C, D, E
+                <pre><code class="language-shell">BFS(G, i):
+    visited = {i}
+    parent  = {i: None}
+    dist    = {i: 0}            # optional
+    queue   = [i]
 
-   A
-  / \
- B   C
- |   |
- D   E</code></pre>
+    order = []                  # optional: visitation order
+
+    while queue:
+        u = queue.pop(0)        # dequeue
+        order.append(u)
+
+        for v in G[u]:          # iterate neighbors
+            if v not in visited:
+                visited.add(v)
+                parent[v] = u
+                dist[v] = dist[u] + 1   # if tracking
+                queue.append(v)
+
+    return order, parent, dist</code></pre>
             </div>
             </p>
-            <p>In this example, BFS started at the top of the graph and worked its way down, visiting nodes in order of their distance from the starting node. The ASCII representation provides a step-by-step visualization of BFS using a queue and a list of visited nodes.</p>
-            <h5>Applications</h5>
-            <p>BFS is not only used for simple graph traversal. Its applications span multiple domains:</p>
-            <ol>
-                <li>BFS can determine the <strong>shortest path</strong> in an unweighted graph from a source to all other nodes.</li>
-                <li>To find all <strong>connected components</strong> in an undirected graph, you can run BFS on every unvisited node.</li>
-                <li>BFS mirrors the propagation in broadcasting networks, where a message is forwarded to neighboring nodes, and they subsequently forward it to their neighbors.</li>
-                <li>If during BFS traversal, an already visited node is encountered (and it's not the parent of the current node in traversal), then there exists a cycle in the graph.</li>
-            </ol>
-            <h5>Implementation</h5>
+            <p><em>Sanity notes:</em></p>
+            <ul>
+                <li>The <em>time</em> complexity of breadth-first search is $O(V+E)$ because each vertex is enqueued once and each edge is examined once; if this property is overlooked, one might incorrectly assume that exploring a large social graph requires quadratic time rather than scaling efficiently with its size.</li>
+                <li>The <em>space</em> requirement is $O(V)$ since the algorithm maintains a queue and a visited array, with optional parent or distance arrays if needed; without accounting for this, applying BFS to a network of millions of nodes could be underestimated in memory cost.</li>
+                <li>The order in which BFS visits vertices depends on the <em>neighbor iteration order</em>, meaning that traversal results can vary between implementations; if this variation is not recognized, two runs on the same graph—such as exploring a road map—may appear inconsistent even though both are correct BFS traversals.</li>
+            </ul>
+            <p><strong>Example</strong></p>
+            <p>Graph (undirected) with start at <strong>A</strong>:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">┌─────┐
+           │  A  │
+           └──┬──┘
+          ┌───┘ └───┐
+        ┌─▼─┐     ┌─▼─┐
+        │ B │     │ C │
+        └─┬─┘     └─┬─┘
+        ┌─▼─┐     ┌─▼─┐
+        │ D │     │ E │
+        └───┘     └───┘
+
+Edges: A–B, A–C, B–D, C–E</code></pre>
+            </div>
+            </p>
+            <p><em>Queue/Visited evolution (front → back):</em></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Step | Dequeued | Action                                   | Queue            | Visited
+-----+----------+-------------------------------------------+------------------+----------------
+0    | —        | enqueue A                                 | [A]              | {A}
+1    | A        | discover B, C; enqueue both               | [B, C]           | {A, B, C}
+2    | B        | discover D; enqueue                       | [C, D]           | {A, B, C, D}
+3    | C        | discover E; enqueue                       | [D, E]           | {A, B, C, D, E}
+4    | D        | no new neighbors                          | [E]              | {A, B, C, D, E}
+5    | E        | no new neighbors                          | []               | {A, B, C, D, E}</code></pre>
+            </div>
+            </p>
+            <p><em>BFS tree and distances from A:</em></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">dist[A]=0
+A → B (1), A → C (1)
+B → D (2), C → E (2)
+
+Parents: parent[B]=A, parent[C]=A, parent[D]=B, parent[E]=C
+Shortest path A→E: backtrack E→C→A  ⇒  A - C - E</code></pre>
+            </div>
+            </p>
+            <p><strong>Applications</strong></p>
+            <ul>
+                <li>In <em>shortest path computation on unweighted graphs</em>, BFS finds the minimum number of edges from a source to all reachable nodes and allows path reconstruction via a parent map; without this approach, one might incorrectly use Dijkstra’s algorithm, which is slower for unweighted networks such as social connections.</li>
+                <li>For identifying <em>connected components in undirected graphs</em>, BFS is run repeatedly from unvisited vertices, with each traversal discovering one full component; without this method, components in a road map or friendship network may remain undetected.</li>
+                <li>When modeling <em>broadcast or propagation</em>, BFS naturally mirrors wavefront-like spreading, such as message distribution or infection spread; ignoring this property makes it harder to simulate multi-hop communication in networks.</li>
+                <li>During BFS-based <em>cycle detection in undirected graphs</em>, encountering a visited neighbor that is not the current vertex’s parent signals a cycle; without this check, cycles in structures like utility grids may be overlooked.</li>
+                <li>For <em>bipartite testing</em>, BFS alternates colors by level, and the appearance of an edge connecting same-colored nodes disproves bipartiteness; without this strategy, verifying whether a task-assignment graph can be split into two groups becomes more complicated.</li>
+                <li>In <em>multi-source searches</em>, initializing the queue with several start nodes at distance zero allows efficient nearest-facility queries, such as finding the closest hospital from multiple candidate sites; without this, repeated single-source BFS runs would be less efficient.</li>
+                <li>In <em>topological sorting of DAGs</em>, a BFS-like procedure processes vertices of indegree zero using a queue, producing a valid ordering; without this method, scheduling tasks with dependency constraints may require less efficient recursive DFS approaches.</li>
+            </ul>
+            <p><strong>Implementation</strong></p>
             <ul>
                 <li><a href="https://github.com/djeada/Algorithms-And-Data-Structures/tree/master/src/graphs/cpp/bfs">C++</a></li>
                 <li><a href="https://github.com/djeada/Algorithms-And-Data-Structures/tree/master/src/graphs/python/bfs">Python</a></li>
             </ul>
+            <p><em>Implementation tip:</em> For dense graphs or when memory locality matters, an adjacency <strong>matrix</strong> can be used, but the usual adjacency <strong>list</strong> representation is more space- and time-efficient for sparse graphs.</p>
             <h4 id="depth-first-search-dfs-">Depth-First Search (DFS)</h4>
-            <p>Depth-First Search (DFS) is another fundamental graph traversal algorithm, but unlike BFS which traverses level by level, DFS dives deep into the graph, exploring as far as possible along each branch before backtracking.</p>
-            <p>To implement DFS, we use two main data structures:</p>
+            <p>Depth-First Search (DFS) is a fundamental graph traversal algorithm that explores <strong>as far as possible</strong> along each branch before backtracking. Starting from a source vertex, it dives down one neighbor, then that neighbor’s neighbor, and so on—only backing up when it runs out of new vertices to visit.</p>
+            <p>To track the traversal efficiently, DFS typically uses:</p>
             <ul>
-                <li>A stack, either implicitly using the call stack through recursion or explicitly using a data structure. This stack is responsible for tracking vertices that are to be explored.</li>
-                <li>A hash table or set called <code>visited</code> to ensure nodes aren't revisited.</li>
+                <li>A <strong>call stack</strong> via <strong>recursion</strong> <em>or</em> an explicit <strong>stack</strong> data structure (LIFO).</li>
+                <li>A <strong><code>visited</code> set</strong> (or boolean array) to avoid revisiting vertices.</li>
             </ul>
-            <h5>Algorithm Steps</h5>
+            <p><em>Useful additions in practice:</em></p>
+            <ul>
+                <li>A <strong><code>parent</code> map</strong> to reconstruct paths and build the DFS tree (<code>parent[child] = current</code> on discovery).</li>
+                <li>Optional <strong>timestamps</strong> (<code>tin[u]</code> on entry, <code>tout[u]</code> on exit) to reason about edge types, topological order, and low-link computations.</li>
+                <li>Optional <strong><code>order</code> lists</strong>: pre-order (on entry) and post-order (on exit).</li>
+            </ul>
+            <p><strong>Algorithm Steps</strong></p>
             <ol>
-                <li>Begin from a starting vertex, $i$.</li>
-                <li>Mark vertex $i$ as visited.</li>
-                <li>Visit an unvisited neighbor of $i$, mark it as visited, and move to that vertex.</li>
-                <li>Repeat the above step until the current vertex has no unvisited neighbors.</li>
-                <li>Backtrack to the previous vertex and explore other unvisited neighbors.</li>
-                <li>Continue this process until you've visited all vertices connected to the initial start vertex.</li>
+                <li>Pick a start vertex $i$.</li>
+                <li>Initialize <code>visited[v]=False</code> for all $v$; optionally set <code>parent[v]=None</code>; set a global timer <code>t=0</code>.</li>
+                <li>Start a DFS from $i$ (recursive or with an explicit stack).</li>
+                <li>On entry to a vertex $u$: set <code>visited[u]=True</code>, record <code>tin[u]=t++</code> (and keep <code>parent[u]=None</code> if $u=i$).</li>
+                <li>Scan neighbors $v$ of $u$; whenever <code>visited[v]=False</code>, set <code>parent[v]=u</code> and visit $v$ (recurse/push), then resume scanning $u$’s neighbors.</li>
+                <li>After all neighbors of $u$ are processed, record <code>tout[u]=t++</code> and backtrack (return or pop).</li>
+                <li>When the DFS from $i$ finishes, if any vertex remains unvisited, choose one and repeat steps 4–6 to cover disconnected components.</li>
+                <li>Stop when no unvisited vertices remain.</li>
             </ol>
-            <p>Marking nodes as visited as soon as you encounter them is important to avoid infinite loops, particularly in graphs with cycles.</p>
-            <h5>Example</h5>
+            <p>Mark vertices <strong>when first discovered</strong> (on entry/push) to prevent infinite loops in cyclic graphs.</p>
+            <p><em>Pseudocode (recursive, adjacency list):</em></p>
             <p>
             <div>
-                <pre><code class="language-shell">Stack: Empty          Visited: A, B, D, C, E
+                <pre><code class="language-shell">time = 0
 
-   A
-  / \
- B   C
- |   |
- D   E</code></pre>
+DFS(G, i):
+    visited = set()
+    parent  = {i: None}
+    tin     = {}
+    tout    = {}
+    pre     = []       # optional: order on entry
+    post    = []       # optional: order on exit
+
+    def explore(u):
+        nonlocal time
+        visited.add(u)
+        time += 1
+        tin[u] = time
+        pre.append(u)               # preorder
+
+        for v in G[u]:
+            if v not in visited:
+                parent[v] = u
+                explore(v)
+
+        time += 1
+        tout[u] = time
+        post.append(u)              # postorder
+
+    explore(i)
+    return pre, post, parent, tin, tout</code></pre>
             </div>
             </p>
-            <p>In this example, DFS explored as deep as possible along the left side (branch with B and D) of the graph before backtracking and moving to the right side (branch with C and E). The ASCII representation provides a step-by-step visualization of DFS using a stack and a list of visited nodes.</p>
-            <h5>Applications</h5>
-            <p>DFS, with its inherent nature of diving deep, has several intriguing applications:</p>
-            <ol>
-                <li>Topological Sorting is used in scheduling tasks, where one task should be completed before another starts.</li>
-                <li>To find all strongly connected components in a directed graph.</li>
-                <li>DFS can be employed to find a path between two nodes, though it might not guarantee the shortest path.</li>
-                <li>If during DFS traversal, an already visited node is encountered (and it's not the direct parent of the current node in traversal), then there's a cycle in the graph.</li>
-            </ol>
-            <h5>Implementation</h5>
+            <p><em>Pseudocode (iterative, traversal order only):</em></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">DFS_iter(G, i):
+    visited = set()
+    parent  = {i: None}
+    order   = []
+    stack   = [i]
+
+    while stack:
+        u = stack.pop()             # take the top
+        if u in visited: 
+            continue
+        visited.add(u)
+        order.append(u)
+
+        # Push neighbors in reverse of desired visiting order
+        for v in reversed(G[u]):
+            if v not in visited:
+                parent[v] = u
+                stack.append(v)
+
+    return order, parent</code></pre>
+            </div>
+            </p>
+            <p><em>Sanity notes:</em></p>
+            <ul>
+                <li>The <em>time</em> complexity of DFS is $O(V+E)$ because every vertex and edge is processed a constant number of times; if this property is ignored, one might incorrectly assume exponential growth when analyzing networks like citation graphs.</li>
+                <li>The <em>space</em> complexity is $O(V)$, coming from the visited array and the recursion stack (or an explicit stack in iterative form); without recognizing this, applying DFS to very deep structures such as long linked lists could risk stack overflow unless the iterative approach is used.</li>
+            </ul>
+            <p><strong>Example</strong></p>
+            <p>Same graph as the BFS section, start at <strong>A</strong>; assume neighbor order: <code>B</code> before <code>C</code>, and for <code>B</code> the neighbor <code>D</code>; for <code>C</code> the neighbor <code>E</code>.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">┌─────────┐
+                 │    A    │
+                 └───┬─┬───┘
+                     │ │
+           ┌─────────┘ └─────────┐
+           ▼                     ▼
+      ┌─────────┐           ┌─────────┐
+      │    B    │           │    C    │
+      └───┬─────┘           └───┬─────┘
+          │                     │
+          ▼                     ▼
+     ┌─────────┐           ┌─────────┐
+     │    D    │           │    E    │
+     └─────────┘           └─────────┘
+
+Edges: A–B, A–C, B–D, C–E  (undirected)</code></pre>
+            </div>
+            </p>
+            <p><em>Recursive DFS trace (pre-order):</em></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">call DFS(A)
+  visit A
+    -&gt; DFS(B)
+         visit B
+           -&gt; DFS(D)
+                visit D
+                return D
+         return B
+    -&gt; DFS(C)
+         visit C
+           -&gt; DFS(E)
+                visit E
+                return E
+         return C
+  return A</code></pre>
+            </div>
+            </p>
+            <p><em>Discovery/finish times (one valid outcome):</em></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Vertex | tin | tout | parent
+-------+-----+------+---------
+A      |  1  | 10   | None
+B      |  2  |  5   | A
+D      |  3  |  4   | B
+C      |  6  |  9   | A
+E      |  7  |  8   | C</code></pre>
+            </div>
+            </p>
+            <p><em>Stack/Visited evolution (iterative DFS, top = right):</em></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Step | Action                       | Stack                 | Visited
+-----+------------------------------+-----------------------+-----------------
+0    | push A                       | [A]                   | {}
+1    | pop A; visit                 | []                    | {A}
+     | push C, B                    | [C, B]                | {A}
+2    | pop B; visit                 | [C]                   | {A, B}
+     | push D                       | [C, D]                | {A, B}
+3    | pop D; visit                 | [C]                   | {A, B, D}
+4    | pop C; visit                 | []                    | {A, B, D, C}
+     | push E                       | [E]                   | {A, B, D, C}
+5    | pop E; visit                 | []                    | {A, B, D, C, E}</code></pre>
+            </div>
+            </p>
+            <p><em>DFS tree (tree edges shown), with preorder: A, B, D, C, E</em></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">A
+├── B
+│   └── D
+└── C
+    └── E</code></pre>
+            </div>
+            </p>
+            <p><strong>Applications</strong></p>
+            <ul>
+                <li>In <em>path existence and reconstruction</em>, DFS records parent links so that after reaching a target node, the path can be backtracked to the source; without this, finding an explicit route through a maze-like graph would require re-running the search.</li>
+                <li>For <em>topological sorting of DAGs</em>, running DFS and outputting vertices in reverse postorder yields a valid order; if this step is omitted, dependencies in workflows such as build systems cannot be properly sequenced.</li>
+                <li>During <em>cycle detection</em>, DFS in undirected graphs reports a cycle when a visited neighbor is not the parent, while in directed graphs the discovery of a back edge to an in-stack node reveals a cycle; without these checks, feedback loops in control systems or task dependencies may go unnoticed.</li>
+                <li>To identify <em>connected components in undirected graphs</em>, DFS is launched from every unvisited vertex, with each traversal discovering one component; without this method, clusters in social or biological networks remain hidden.</li>
+                <li>Using <em>low-link values</em> in DFS enables detection of bridges (edges whose removal disconnects the graph) and articulation points (vertices whose removal increases components); if these are not identified, critical links in communication or power networks may be overlooked.</li>
+                <li>In <em>strongly connected components</em> of directed graphs, algorithms like Tarjan’s and Kosaraju’s use DFS to group vertices where every node is reachable from every other; ignoring this method prevents reliable partitioning of web link graphs or citation networks.</li>
+                <li>For <em>backtracking and state-space search</em>, DFS systematically explores decision trees and reverses when hitting dead ends, as in solving puzzles like Sudoku or N-Queens; without DFS, these problems would be approached less efficiently with blind trial-and-error.</li>
+                <li>With <em>edge classification in directed graphs</em>, DFS timestamps allow edges to be labeled as tree, back, forward, or cross, which helps analyze structure and correctness; without this classification, reasoning about graph algorithms such as detecting cycles or proving properties becomes more difficult.</li>
+            </ul>
+            <p><strong>Implementation</strong></p>
             <ul>
                 <li><a href="https://github.com/djeada/Algorithms-And-Data-Structures/tree/master/src/graphs/cpp/dfs">C++</a></li>
                 <li><a href="https://github.com/djeada/Algorithms-And-Data-Structures/tree/master/src/graphs/python/dfs">Python</a></li>
             </ul>
+            <p><em>Implementation tips:</em></p>
+            <ul>
+                <li>For <strong>very deep</strong> or skewed graphs, prefer the <strong>iterative</strong> form to avoid recursion limits.</li>
+                <li>If neighbor order matters (e.g., lexicographic traversal), control push order (push in reverse for stacks) or sort adjacency lists.</li>
+                <li>For sparse graphs, adjacency <strong>lists</strong> are preferred over adjacency matrices for time/space efficiency.</li>
+            </ul>
             <h3 id="shortest-paths">Shortest paths</h3>
             <p>A common task when dealing with weighted graphs is to find the shortest route between two vertices, such as from vertex $A$ to vertex $B$. Note that there might not be a unique shortest path, since several paths could have the same length.</p>
-            <h4 id="dijkstra-s-algorithm">Dijkstra's Algorithm</h4>
+            <h4 id="dijkstra-s-algorithm">Dijkstra’s Algorithm</h4>
+            <p>Dijkstra’s algorithm computes <strong>shortest paths</strong> from a specified start vertex in a graph with <strong>non-negative edge weights</strong>. It grows a “settled” region outward from the start, always choosing the unsettled vertex with the <strong>smallest known distance</strong> and relaxing its outgoing edges to improve neighbors’ distances.</p>
+            <p>To efficiently keep track of the traversal, Dijkstra’s algorithm employs two primary data structures:</p>
             <ul>
-                <li><strong>Dijkstra's algorithm</strong> is a method to find the shortest paths from a starting vertex to all other vertices in a weighted graph.</li>
-                <li>A <strong>weighted graph</strong> is one where each edge has a numerical value (cost, distance, or time).</li>
-                <li>The algorithm starts at a <strong>starting vertex</strong>, often labeled <strong>A</strong>, and computes the shortest path to every other vertex.</li>
-                <li>It keeps a <strong>tentative distance</strong> for each vertex, representing the current known shortest distance from the start.</li>
-                <li>It repeatedly <strong>selects the vertex</strong> with the smallest tentative distance that hasn't been finalized (or "finished") yet.</li>
-                <li>Once a vertex is selected, the algorithm <strong>relaxes all its edges</strong>: it checks if going through this vertex offers a shorter path to its neighbors.</li>
-                <li>This continues until all vertices are processed, yielding the shortest paths from the starting vertex to every other vertex.</li>
-                <li><strong>Important</strong>: Dijkstra’s algorithm requires <strong>non-negative edge weights</strong>, or else results can be incorrect.</li>
+                <li>A <strong>min-priority queue</strong> (often named <code>pq</code>, <code>open</code>, or <code>unexplored</code>) keyed by each vertex’s current best known distance from the start.</li>
+                <li>A <strong><code>dist</code> map</strong> storing the best known distance to each vertex (∞ initially, except the start), a <strong><code>visited</code>/<code>finalized</code> set</strong> to mark vertices whose shortest distance is proven, and a <strong><code>parent</code> map</strong> to reconstruct paths.</li>
             </ul>
-            <h5>Algorithm Steps</h5>
-            <p><strong>Input</strong></p>
+            <p><em>Useful additions in practice:</em></p>
             <ul>
-                <li>A weighted graph where each edge has a cost or distance</li>
-                <li>A starting vertex <code>A</code></li>
+                <li>A <em>target-aware early stop</em> allows Dijkstra’s algorithm to halt once the target vertex is extracted from the priority queue, saving work compared to continuing until all distances are finalized; without this optimization, computing the shortest route between two cities would require processing the entire network unnecessarily.</li>
+                <li>With <em>decrease-key or lazy insertion</em> strategies, priority queues that lack a decrease-key operation can still work by inserting updated entries and discarding outdated ones when popped; without this adjustment, distance updates in large road networks would be inefficient or require a more complex data structure.</li>
+                <li>Adding optional <em>predecessor lists</em> enables reconstruction of multiple optimal paths or counting the number of shortest routes; if these lists are not maintained, applications like enumerating all equally fast routes between transit stations cannot be supported.</li>
             </ul>
-            <p><strong>Output</strong></p>
-            <ul>
-                <li>An array <code>distances</code> where <code>distances[v]</code> is the shortest distance from <code>A</code> to vertex <code>v</code></li>
-            </ul>
-            <p><strong>Containers and Data Structures</strong></p>
-            <ul>
-                <li>An array <code>distances</code>, initialized to <code>∞</code> for all vertices except <code>A</code>, which is set to <code>0</code></li>
-                <li>A hash table <code>finished</code> to mark vertices with confirmed shortest paths</li>
-                <li>A priority queue to efficiently select the vertex with the smallest current distance</li>
-            </ul>
-            <p><strong>Steps</strong></p>
-            <p>I. Initialize <code>distances[A]</code> to <code>0</code></p>
-            <p>II. Initialize <code>distances[v]</code> to <code>∞</code> for every other vertex <code>v</code></p>
-            <p>III. While not all vertices are marked as finished</p>
-            <ul>
-                <li>Select vertex <code>u</code> with the smallest <code>distances[u]</code> among unfinished vertices</li>
-                <li>Mark <code>finished[u]</code> as <code>true</code></li>
-                <li>For each neighbor <code>w</code> of <code>u</code>, if <code>distances[u] + weights[u][w]</code> is less than <code>distances[w]</code>, update <code>distances[w]</code> to <code>distances[u] + weights[u][w]</code></li>
-            </ul>
-            <h5>Step by Step Example</h5>
-            <p>Consider a graph with vertices A, B, C, D, and E, and edges:</p>
+            <p><strong>Algorithm Steps</strong></p>
+            <ol>
+                <li>Pick a start vertex $i$.</li>
+                <li>Set <code>dist[i] = 0</code> and <code>parent[i] = None</code>; for all other vertices $v \ne i$, set <code>dist[v] = ∞</code>.</li>
+                <li>Push $i$ into a min-priority queue keyed by <code>dist[·]</code>.</li>
+                <li>While the priority queue is nonempty, repeat steps 5–8.</li>
+                <li>Extract the vertex $u$ with the smallest <code>dist[u]</code>.</li>
+                <li>If $u$ is already finalized, continue to step 4; otherwise mark $u$ as finalized.</li>
+                <li>For each neighbor $v$ of $u$ with edge weight $w(u,v) \ge 0$, test whether <code>dist[u] + w(u,v) &lt; dist[v]</code>.</li>
+                <li>If true, set <code>dist[v] = dist[u] + w(u,v)</code>, set <code>parent[v] = u</code>, and push $v$ into the priority queue keyed by the new <code>dist[v]</code>.</li>
+                <li>Stop when the queue is empty (all reachable vertices finalized) or, if you have a target, when that target is finalized.</li>
+                <li>Reconstruct any shortest path by following <code>parent[·]</code> backward from the target to $i$.</li>
+            </ol>
+            <p>Vertices are <strong>finalized when they are dequeued</strong> (popped) from the priority queue. With <strong>non-negative</strong> weights, once a vertex is popped the recorded <code>dist</code> is <strong>provably optimal</strong>.</p>
+            <p><em>Reference pseudocode (adjacency-list graph):</em></p>
             <p>
             <div>
-                <pre><code class="language-shell">A-B: 4
-A-C: 2
-C-B: 1
-B-D: 5
-C-D: 8
-C-E: 10
-D-E: 2</code></pre>
+                <pre><code class="language-shell">Dijkstra(G, i, target=None):
+    INF = +infinity
+    dist   = defaultdict(lambda: INF)
+    parent = {i: None}
+    dist[i] = 0
+
+    pq = MinPriorityQueue()
+    pq.push(i, 0)
+
+    finalized = set()
+
+    while pq:
+        u, du = pq.pop_min()                 # smallest current distance
+        if u in finalized:                   # ignore stale entries
+            continue
+
+        finalized.add(u)
+
+        if target is not None and u == target:
+            break                            # early exit: target finalized
+
+        for (v, w_uv) in G[u]:               # w_uv &gt;= 0
+            alt = du + w_uv
+            if alt &lt; dist[v]:
+                dist[v]   = alt
+                parent[v] = u
+                pq.push(v, alt)              # decrease-key or lazy insert
+
+    return dist, parent
+
+# Reconstruct path i -&gt; t (if t reachable):
+reconstruct(parent, t):
+    path = []
+    while t is not None:
+        path.append(t)
+        t = parent.get(t)
+    return list(reversed(path))</code></pre>
             </div>
             </p>
-            <p>The adjacency matrix looks like this (∞ means no direct edge):</p>
-            <p>
-            <table>
-                <tr>
-                    <td></td>
-                    <td>A</td>
-                    <td>B</td>
-                    <td>C</td>
-                    <td>D</td>
-                    <td>E</td>
-                </tr>
-                <tr>
-                    <td><strong>A</strong></td>
-                    <td>0</td>
-                    <td>4</td>
-                    <td>2</td>
-                    <td>∞</td>
-                    <td>∞</td>
-                </tr>
-                <tr>
-                    <td><strong>B</strong></td>
-                    <td>4</td>
-                    <td>0</td>
-                    <td>1</td>
-                    <td>5</td>
-                    <td>∞</td>
-                </tr>
-                <tr>
-                    <td><strong>C</strong></td>
-                    <td>2</td>
-                    <td>1</td>
-                    <td>0</td>
-                    <td>8</td>
-                    <td>10</td>
-                </tr>
-                <tr>
-                    <td><strong>D</strong></td>
-                    <td>∞</td>
-                    <td>5</td>
-                    <td>8</td>
-                    <td>0</td>
-                    <td>2</td>
-                </tr>
-                <tr>
-                    <td><strong>E</strong></td>
-                    <td>∞</td>
-                    <td>∞</td>
-                    <td>10</td>
-                    <td>2</td>
-                    <td>0</td>
-                </tr>
-            </table>
-            </p>
-            <p><strong>Starting from A</strong>, here’s how Dijkstra’s algorithm proceeds:</p>
-            <p>I. Initialize all distances with ∞ except A=0:</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">A: 0
-B: ∞
-C: ∞
-D: ∞
-E: ∞</code></pre>
-            </div>
-            </p>
-            <p>II. From A (distance 0), update neighbors:</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">A: 0
-B: 4  (via A)
-C: 2  (via A)
-D: ∞
-E: ∞</code></pre>
-            </div>
-            </p>
-            <p>III. Pick the smallest unvisited vertex (C with distance 2). Update its neighbors:</p>
+            <p><em>Sanity notes:</em></p>
             <ul>
-                <li>B can be updated to 3 if 2 + 1 &lt; 4 </li>
-                <li>D can be updated to 10 if 2 + 8 &lt; ∞ </li>
-                <li>E can be updated to 12 if 2 + 10 &lt; ∞</li>
+                <li>The <em>time</em> complexity of Dijkstra’s algorithm depends on the priority queue: $O((V+E)\log V)$ with a binary heap, $O(E+V\log V)$ with a Fibonacci heap, and $O(V^2)$ with a plain array; without this distinction, one might wrongly assume that all implementations scale equally on dense versus sparse road networks.</li>
+                <li>The <em>space</em> complexity is $O(V)$, needed to store distance values, parent pointers, and priority queue bookkeeping; if underestimated, running Dijkstra on very large graphs such as nationwide transit systems may exceed available memory.</li>
+                <li>The <em>precondition</em> is that all edge weights must be nonnegative, since the algorithm assumes distances only improve as edges are relaxed; if negative weights exist, as in certain financial models with losses, the computed paths can be incorrect and Bellman–Ford must be used instead.</li>
+                <li>In terms of <em>ordering</em>, the sequence in which neighbors are processed does not affect correctness, only the handling of ties and slight performance differences; without recognizing this, variations in output order between implementations might be mistakenly interpreted as errors.</li>
             </ul>
+            <p><strong>Example</strong></p>
+            <p>Weighted, undirected graph; start at <strong>A</strong>. Edge weights are on the links.</p>
             <p>
             <div>
-                <pre><code class="language-shell">A: 0
-B: 3  (via C)
-C: 2
-D: 10 (via C)
-E: 12 (via C)</code></pre>
+                <pre><code class="language-shell">┌────────┐
+                          │   A    │
+                          └─┬──┬───┘
+                         4/   │1
+                       ┌──    │    ──┐
+                 ┌─────▼──┐  │     ┌▼──────┐
+                 │   B    │──┘2    │   C   │
+                 └───┬────┘        └──┬────┘
+                   1 │               4 │
+                     │                 │
+                 ┌───▼────┐      3  ┌──▼───┐
+                 │   E    │────────│   D   │
+                 └────────┘         └──────┘
+
+Edges: A–B(4), A–C(1), C–B(2), B–E(1), C–D(4), D–E(3)</code></pre>
             </div>
             </p>
-            <p>IV. Pick the next smallest unvisited vertex (B with distance 3). Update its neighbors:</p>
-            <ul>
-                <li>D becomes 8 if 3 + 5 &lt; 10 </li>
-                <li>E remains 12 (no direct edge from B to E)</li>
-            </ul>
+            <p><em>Priority queue / Finalized evolution (front = smallest key):</em></p>
             <p>
             <div>
-                <pre><code class="language-shell">A: 0
-B: 3
-C: 2
-D: 8  (via B)
-E: 12</code></pre>
+                <pre><code class="language-shell">Step | Pop (u,dist) | Relaxations (v: new dist, parent)         | PQ after push                   | Finalized
+-----+--------------+--------------------------------------------+----------------------------------+----------------
+0    | —            | init A: dist[A]=0                          | [(A,0)]                          | {}
+1    | (A,0)        | B:4←A  , C:1←A                             | [(C,1), (B,4)]                   | {A}
+2    | (C,1)        | B:3←C  , D:5←C                             | [(B,3), (B,4), (D,5)]            | {A,C}
+3    | (B,3)        | E:4←B                                      | [(E,4), (B,4), (D,5)]            | {A,C,B}
+4    | (E,4)        | D:7 via E  (no improve; current 5)         | [(B,4), (D,5)]                   | {A,C,B,E}
+5    | (B,4) stale  | (ignore; B already finalized)              | [(D,5)]                          | {A,C,B,E}
+6    | (D,5)        | —                                          | []                               | {A,C,B,E,D}</code></pre>
             </div>
             </p>
-            <p>V. Pick the next smallest unvisited vertex (D with distance 8). Update its neighbors:</p>
-            <ul>
-                <li>E becomes 10 if 8 + 2 &lt; 12</li>
-            </ul>
+            <p><em>Distances and parents (final):</em></p>
             <p>
             <div>
-                <pre><code class="language-shell">A: 0
-B: 3
-C: 2
-D: 8
-E: 10 (via D)</code></pre>
+                <pre><code class="language-shell">dist[A]=0 (—)
+dist[C]=1 (A)
+dist[B]=3 (C)
+dist[E]=4 (B)
+dist[D]=5 (C)
+
+Shortest path A→E: A → C → B → E  (total cost 4)</code></pre>
             </div>
             </p>
-            <p>VI. The only remaining vertex is E (distance 10). No further updates are possible.</p>
-            <p><strong>Final shortest paths from A</strong>:</p>
+            <p><em>Big-picture view of the expanding frontier:</em></p>
             <p>
             <div>
-                <pre><code class="language-shell">A: 0
-B: 3
-C: 2
-D: 8
-E: 10</code></pre>
+                <pre><code class="language-shell">Settled set grows outward from A by increasing distance.
+   After Step 1: {A}
+   After Step 2: {A, C}
+   After Step 3: {A, C, B}
+   After Step 4: {A, C, B, E}
+   After Step 6: {A, C, B, E, D}  (all reachable nodes done)</code></pre>
             </div>
             </p>
-            <h5>Optimizing Time Complexity</h5>
+            <p><strong>Applications</strong></p>
             <ul>
-                <li>A basic (array-based) implementation of Dijkstra's algorithm runs in <strong>O(n^2)</strong> time.</li>
-                <li>Using a priority queue (min-heap) to select the vertex with the smallest distance reduces the complexity to <strong>O((V+E) log V)</strong>, where <strong>V</strong> is the number of vertices and <strong>E</strong> is the number of edges.</li>
+                <li>In <em>single-source shortest paths</em> with non-negative edge weights, Dijkstra’s algorithm efficiently finds minimum-cost routes in settings like roads, communication networks, or transit systems; without it, travel times or costs could not be computed reliably when distances vary.</li>
+                <li>For <em>navigation and routing</em>, stopping the search as soon as the destination is extracted from the priority queue avoids unnecessary work; without this early stop, route planning in a road map continues exploring irrelevant regions of the network.</li>
+                <li>In <em>network planning and quality of service (QoS)</em>, Dijkstra selects minimum-latency or minimum-cost routes when weights are additive and non-negative; without this, designing efficient data or logistics paths becomes more error-prone.</li>
+                <li>As a <em>building block</em>, Dijkstra underlies algorithms like A* (with zero heuristic), Johnson’s algorithm for all-pairs shortest paths in sparse graphs, and $k$-shortest path variants; without it, these higher-level methods would lack a reliable core procedure.</li>
+                <li>In <em>multi-source Dijkstra</em>, initializing the priority queue with several starting nodes at distance zero solves nearest-facility queries, such as finding the closest hospital; without this extension, repeated single-source runs would waste time.</li>
+                <li>As a <em>label-setting baseline</em>, Dijkstra provides the reference solution against which heuristics like A*, ALT landmarks, or contraction hierarchies are compared; without this baseline, heuristic correctness and performance cannot be properly evaluated.</li>
+                <li>For <em>grid pathfinding with terrain costs</em>, Dijkstra handles non-negative cell costs when no admissible heuristic is available; without it, finding a least-effort path across weighted terrain would require less efficient exhaustive search.</li>
             </ul>
-            <h5>Applications</h5>
-            <ul>
-                <li><strong>Internet routing</strong> protocols use it to determine efficient paths for data packets.</li>
-                <li><strong>Mapping software</strong> (e.g., Google Maps, Waze) employ variations of Dijkstra to compute driving routes.</li>
-                <li><strong>Telecommunication networks</strong> use it to determine paths with minimal cost.</li>
-            </ul>
-            <h5>Implementation</h5>
+            <p><strong>Implementation</strong></p>
             <ul>
                 <li><a href="https://github.com/djeada/Algorithms-And-Data-Structures/tree/master/src/graphs/cpp/dijkstra">C++</a></li>
                 <li><a href="https://github.com/djeada/Algorithms-And-Data-Structures/tree/master/src/graphs/python/dijkstra">Python</a></li>
             </ul>
-            <h4 id="bellman-ford-algorithm">Bellman-Ford Algorithm</h4>
+            <p><em>Implementation tip:</em> If your PQ has no decrease-key, <strong>push duplicates</strong> on improvement and, when popping a vertex, <strong>skip it</strong> if it’s already finalized or if the popped key doesn’t match <code>dist[u]</code>. This “lazy” approach is simple and fast in practice.</p>
+            <h4 id="bellman-ford-algorithm">Bellman–Ford Algorithm</h4>
+            <p>Bellman–Ford computes <strong>shortest paths</strong> from a start vertex in graphs that may have <strong>negative edge weights</strong> (but no negative cycles reachable from the start). It works by repeatedly <strong>relaxing</strong> every edge; each full pass can reduce some distances until they stabilize. A final check detects <strong>negative cycles</strong>: if an edge can still be relaxed after $(V-1)$ passes, a reachable negative cycle exists.</p>
+            <p>To efficiently keep track of the computation, Bellman–Ford employs two primary data structures:</p>
             <ul>
-                <li><strong>Bellman-Ford algorithm</strong> is a method for finding the shortest paths from a single starting vertex to all other vertices in a weighted graph.</li>
-                <li>Unlike <strong>Dijkstra’s algorithm</strong>, Bellman-Ford can handle <strong>negative edge weights</strong>, making it more flexible for certain types of graphs.</li>
-                <li>The algorithm works by <strong>repeatedly relaxing all edges</strong> in the graph. Relaxing an edge means updating the current shortest distance to a vertex if a shorter path is found via another vertex.</li>
-                <li>The algorithm performs this <strong>relaxation process</strong> exactly <strong>$V - 1$ times</strong>, where $V$ is the number of vertices. This ensures that every possible shortest path is discovered.</li>
-                <li>After completing $V - 1$ relaxations, the algorithm does one more pass to detect <strong>negative weight cycles</strong>. If any edge can still be relaxed, a negative cycle exists and no finite shortest path is defined.</li>
-                <li>Bellman-Ford’s time complexity is <strong>$O(V \times E)$</strong>, which is generally slower than Dijkstra’s algorithm for large graphs.</li>
+                <li>A <strong><code>dist</code> map</strong> (or array) with the best-known distance to each vertex (initialized to ∞ except the start).</li>
+                <li>A <strong><code>parent</code> map</strong> to reconstruct shortest paths (store <code>parent[v] = u</code> when relaxing edge $u!\to!v$).</li>
             </ul>
-            <h5>Algorithm Steps</h5>
-            <p><strong>Input</strong></p>
+            <p><em>Useful additions in practice:</em></p>
             <ul>
-                <li>A weighted graph with possible negative edge weights</li>
-                <li>A starting vertex <code>A</code></li>
+                <li>With an <em>edge list</em>, iterating directly over edges simplifies implementation and keeps updates fast, even if the graph is stored in adjacency lists; without this practice, repeatedly scanning adjacency structures adds unnecessary overhead in each relaxation pass.</li>
+                <li>Using an <em>early exit</em> allows termination once a full iteration over edges yields no updates, improving efficiency; without this check, the algorithm continues all $V-1$ passes even on graphs like road networks where distances stabilize early.</li>
+                <li>For <em>negative-cycle extraction</em>, if an update still occurs on the $V$-th pass, backtracking through parent links reveals a cycle; without this step, applications such as financial arbitrage detection cannot identify opportunities caused by negative cycles.</li>
+                <li>Adding a <em>reachability guard</em> skips edges from vertices with infinite distance, avoiding wasted work on unreached nodes; without this filter, the algorithm needlessly inspects irrelevant edges in disconnected parts of the graph.</li>
             </ul>
-            <p><strong>Output</strong></p>
-            <ul>
-                <li>An array <code>distances</code> where <code>distances[v]</code> represents the shortest path from <code>A</code> to vertex <code>v</code></li>
-            </ul>
-            <p><strong>Containers and Data Structures</strong></p>
-            <ul>
-                <li>An array <code>distances</code>, set to <code>∞</code> for all vertices except the start vertex (set to <code>0</code>)</li>
-                <li>A <code>predecessor</code> array to help reconstruct the actual shortest path</li>
-            </ul>
-            <p><strong>Steps</strong></p>
-            <p>I. Initialize <code>distances[A]</code> to <code>0</code> and <code>distances[v]</code> to <code>∞</code> for all other vertices <code>v</code></p>
-            <p>II. Repeat <code>V - 1</code> times</p>
-            <ul>
-                <li>For every edge <code>(u, v)</code> with weight <code>w</code>, if <code>distances[u] + w &lt; distances[v]</code>, update <code>distances[v]</code> to <code>distances[u] + w</code> and <code>predecessor[v]</code> to <code>u</code></li>
-            </ul>
-            <p>III. Check for negative cycles by iterating over all edges <code>(u, v)</code> again</p>
-            <ul>
-                <li>If <code>distances[u] + w &lt; distances[v]</code> for any edge, a negative weight cycle exists</li>
-            </ul>
-            <h5>Step by Step Example</h5>
-            <p>We have vertices A, B, C, D, and E. The edges and weights (including a self-loop on E):</p>
+            <p><strong>Algorithm Steps</strong></p>
+            <ol>
+                <li>Pick a start vertex $i$.</li>
+                <li>Set <code>dist[i] = 0</code> and <code>parent[i] = None</code>; for all other vertices $v \ne i$, set <code>dist[v] = ∞</code>.</li>
+                <li>Do up to $V-1$ passes: in each pass, scan every directed edge $(u,v,w)$; if <code>dist[u] + w &lt; dist[v]</code>, set <code>dist[v] = dist[u] + w</code> and <code>parent[v] = u</code>. If a full pass makes no changes, stop early.</li>
+                <li>(Optional) Detect negative cycles: if any edge $(u,v,w)$ still satisfies <code>dist[u] + w &lt; dist[v]</code>, a reachable negative cycle exists. To extract one, follow <code>parent</code> from $v$ for $V$ steps to enter the cycle, then continue until a vertex repeats, collecting the cycle.</li>
+                <li>To get a shortest path to a target $t$ (when no relevant negative cycle exists), follow <code>parent[t]</code> backward to $i$.</li>
+            </ol>
+            <p><em>Reference pseudocode (edge list):</em></p>
             <p>
             <div>
-                <pre><code class="language-shell">A-B: 6
-A-C: 7
-B-C: 8
-B-D: -4
-B-E: 5
-C-E: -3
-D-A: 2
-D-C: 7
-E-E: 9</code></pre>
+                <pre><code class="language-shell">BellmanFord(V, E, i):                 # V: set/list of vertices
+    INF = +infinity                   # E: list of (u, v, w) edges
+    dist   = {v: INF for v in V}
+    parent = {v: None for v in V}
+    dist[i] = 0
+
+    # (V-1) relaxation passes
+    for _ in range(len(V) - 1):
+        changed = False
+        for (u, v, w) in E:
+            if dist[u] != INF and dist[u] + w &lt; dist[v]:
+                dist[v] = dist[u] + w
+                parent[v] = u
+                changed = True
+        if not changed:
+            break
+
+    # Negative-cycle check
+    cycle_vertex = None
+    for (u, v, w) in E:
+        if dist[u] != INF and dist[u] + w &lt; dist[v]:
+            cycle_vertex = v
+            break
+
+    return dist, parent, cycle_vertex     # cycle_vertex=None if no neg cycle
+
+# Reconstruct shortest path i -&gt; t (if safe):
+reconstruct(parent, t):
+    path = []
+    while t is not None:
+        path.append(t)
+        t = parent[t]
+    return list(reversed(path))</code></pre>
             </div>
             </p>
-            <p>Adjacency matrix (∞ means no direct edge):</p>
-            <p>
-            <table>
-                <tr>
-                    <td></td>
-                    <td>A</td>
-                    <td>B</td>
-                    <td>C</td>
-                    <td>D</td>
-                    <td>E</td>
-                </tr>
-                <tr>
-                    <td><strong>A</strong></td>
-                    <td>0</td>
-                    <td>6</td>
-                    <td>7</td>
-                    <td>∞</td>
-                    <td>∞</td>
-                </tr>
-                <tr>
-                    <td><strong>B</strong></td>
-                    <td>∞</td>
-                    <td>0</td>
-                    <td>8</td>
-                    <td>-4</td>
-                    <td>5</td>
-                </tr>
-                <tr>
-                    <td><strong>C</strong></td>
-                    <td>∞</td>
-                    <td>∞</td>
-                    <td>0</td>
-                    <td>∞</td>
-                    <td>-3</td>
-                </tr>
-                <tr>
-                    <td><strong>D</strong></td>
-                    <td>2</td>
-                    <td>∞</td>
-                    <td>7</td>
-                    <td>0</td>
-                    <td>∞</td>
-                </tr>
-                <tr>
-                    <td><strong>E</strong></td>
-                    <td>∞</td>
-                    <td>∞</td>
-                    <td>∞</td>
-                    <td>∞</td>
-                    <td>9</td>
-                </tr>
-            </table>
-            </p>
-            <p><strong>Initialization</strong>:</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">dist[A] = 0
-dist[B] = ∞
-dist[C] = ∞
-dist[D] = ∞
-dist[E] = ∞</code></pre>
-            </div>
-            </p>
-            <p><strong>Iteration 1</strong> (relax edges from A):</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">dist[B] = 6
-dist[C] = 7</code></pre>
-            </div>
-            </p>
-            <p><strong>Iteration 2</strong> (relax edges from B, then C):</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">dist[D] = 2        (6 + (-4))
-dist[E] = 11       (6 + 5)
-dist[E] = 4        (7 + (-3))  // C → E is better</code></pre>
-            </div>
-            </p>
-            <p><strong>Iteration 3</strong> (relax edges from D):</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">dist[A] = 4        (2 + 2)
-(No update for C since dist[C]=7 is already &lt; 9)</code></pre>
-            </div>
-            </p>
-            <p><strong>Iteration 4</strong>:</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">No changes in this round</code></pre>
-            </div>
-            </p>
-            <p><strong>Final distances from A</strong>:</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">dist[A] = 0
-dist[B] = 6
-dist[C] = 7
-dist[D] = 2
-dist[E] = 4</code></pre>
-            </div>
-            </p>
-            <h5>Special Characteristics</h5>
+            <p><em>Sanity notes:</em></p>
             <ul>
-                <li>It can manage <strong>negative edge weights</strong> but cannot produce valid results when <strong>negative cycles</strong> are present.</li>
-                <li>It is often used when edges can be negative, though it is slower than Dijkstra’s algorithm.</li>
+                <li>The <em>time</em> complexity of Bellman–Ford is $O(VE)$ because each of the $V-1$ relaxation passes scans all edges; without this understanding, one might underestimate the cost of running it on dense graphs with many edges.</li>
+                <li>The <em>space</em> complexity is $O(V)$, needed for storing distance estimates and parent pointers; if this is not accounted for, memory use may be underestimated in large-scale applications such as road networks.</li>
+                <li>The algorithm <em>handles negative weights</em> correctly and can also <em>detect negative cycles</em> that are reachable from the source; without this feature, Dijkstra’s algorithm would produce incorrect results on graphs with negative edge costs.</li>
+                <li>When a reachable <em>negative cycle</em> exists, shortest paths to nodes that can be reached from it are undefined, effectively taking value $-\infty$; without recognizing this, results such as infinitely decreasing profit in arbitrage graphs would be misinterpreted as valid finite paths.</li>
             </ul>
-            <h5>Applications</h5>
+            <p><strong>Example</strong></p>
+            <p>Directed, weighted graph; start at <strong>A</strong>. (Negative edges allowed; <strong>no</strong> negative cycles here.)</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">┌─────────┐
+                               │    A    │
+                               └──┬───┬──┘
+                              4  │   │  2
+                                 │   │
+                      ┌──────────▼───┐   -1    ┌─────────┐
+                      │      B       │ ───────►│    C    │
+                      └──────┬───────┘          └──┬─────┘
+                           2 │                     5│
+                             │                      │
+                      ┌──────▼──────┐    -3    ┌───▼─────┐
+                      │      D       │ ◄────── │    E    │
+                      └──────────────┘          └─────────┘
+
+Also:
+A → C (2)
+C → B (1)
+C → E (3)
+(Edges shown with weights on arrows)</code></pre>
+            </div>
+            </p>
+            <p><em>Edges list:</em></p>
+            <p><code>A→B(4), A→C(2), B→C(-1), B→D(2), C→B(1), C→D(5), C→E(3), D→E(-3)</code></p>
+            <p><em>Relaxation trace (dist after each full pass; start A):</em></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Init (pass 0):
+  dist[A]=0, dist[B]=∞, dist[C]=∞, dist[D]=∞, dist[E]=∞
+
+After pass 1:
+  A=0, B=3, C=2, D=6, E=3
+    (A→B=4, A→C=2; C→B improved B to 3; B→D=5? (via B gives 6); D→E=-3 gives E=3)
+
+After pass 2:
+  A=0, B=3, C=2, D=5, E=2
+    (B→D improved D to 5; D→E improved E to 2)
+
+After pass 3:
+  A=0, B=3, C=2, D=5, E=2   (no changes → early stop)</code></pre>
+            </div>
+            </p>
+            <p><em>Parents / shortest paths (one valid set):</em></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">parent[A]=None
+parent[C]=A
+parent[B]=C
+parent[D]=B
+parent[E]=D
+
+Example shortest path A→E:
+A → C → B → D → E   with total cost 2 + 1 + 2 + (-3) = 2</code></pre>
+            </div>
+            </p>
+            <p><em>Negative-cycle detection (illustration):</em>
+                If we <strong>add</strong> an extra edge <code>E→C(-4)</code>, the cycle <code>C → D → E → C</code> has total weight <code>5 + (-3) + (-4) = -2</code> (negative).
+                Bellman–Ford would perform a $V$-th pass and still find an improvement (e.g., relaxing <code>E→C(-4)</code>), so it reports a <strong>reachable negative cycle</strong>.</p>
+            <p><strong>Applications</strong></p>
             <ul>
-                <li><strong>Financial arbitrage</strong> detection in currency exchange markets.</li>
-                <li><strong>Routing</strong> in networks where edges might have negative costs.</li>
-                <li><strong>Game development</strong> scenarios with penalties or negative terrain effects.</li>
+                <li>In <em>shortest path problems with negative edges</em>, Bellman–Ford is applicable where Dijkstra or A* fail, such as road networks with toll credits; without this method, these graphs cannot be handled correctly.</li>
+                <li>For <em>arbitrage detection</em> in currency or financial markets, converting exchange rates into $\log$ weights makes profit loops appear as negative cycles; without Bellman–Ford, such opportunities cannot be systematically identified.</li>
+                <li>In solving <em>difference constraints</em> of the form $x_v - x_u \leq w$, the algorithm checks feasibility by detecting whether any negative cycles exist; without this check, inconsistent scheduling or timing systems may go unnoticed.</li>
+                <li>As a <em>robust baseline</em>, Bellman–Ford verifies results of faster algorithms or initializes methods like Johnson’s for all-pairs shortest paths; without it, correctness guarantees in sparse-graph all-pairs problems would be weaker.</li>
+                <li>For <em>graphs with penalties or credits</em>, where some transitions decrease accumulated cost, Bellman–Ford models these adjustments accurately; without it, such systems—like transport discounts or energy recovery paths—cannot be represented properly.</li>
             </ul>
             <h5>Implementation</h5>
             <ul>
                 <li><a href="https://github.com/djeada/Algorithms-And-Data-Structures/tree/master/src/graphs/cpp/bellman_ford">C++</a></li>
                 <li><a href="https://github.com/djeada/Algorithms-And-Data-Structures/tree/master/src/graphs/python/bellman_ford">Python</a></li>
             </ul>
+            <p><em>Implementation tip:</em> For <strong>all-pairs</strong> on sparse graphs with possible negative edges, use <strong>Johnson’s algorithm</strong>: run Bellman–Ford once from a super-source to reweight edges (no negatives), then run <strong>Dijkstra</strong> from each vertex.</p>
             <h4 id="a-a-star-algorithm">A* (A-Star) Algorithm</h4>
+            <p>A<em> is a best-first search that finds a </em><em>least-cost path</em>* from a start to a goal by minimizing</p>
+            <p>$$
+                f(n) = g(n) + h(n),
+                $$</p>
+            <p>where:</p>
             <ul>
-                <li><strong>A*</strong> is an informed search algorithm used for <strong>pathfinding</strong> and <strong>graph traversal</strong>.</li>
-                <li>It is a <strong>best-first search</strong> because it prioritizes the most promising paths first, combining known and estimated costs.</li>
-                <li>The algorithm relies on:</li>
-                <li><strong>g(n)</strong>: The actual cost from the start node to the current node <strong>n</strong>.</li>
-                <li><strong>h(n)</strong>: A <strong>heuristic</strong> estimating the cost from <strong>n</strong> to the goal.</li>
-                <li>The total cost function is <strong>f(n) = g(n) + h(n)</strong>, guiding the search toward a potentially optimal path.</li>
-                <li>At each step, A<em> expands the node with the </em><em>lowest f(n)</em>* in the priority queue.</li>
-                <li>The heuristic <strong>h(n)</strong> must be <strong>admissible</strong> (never overestimates the real cost) to guarantee an optimal result.</li>
-                <li>A<em> terminates when it either reaches the </em><em>goal</em>* or exhausts all possibilities if no solution exists.</li>
-                <li>It is efficient for many applications because it balances <strong>exploration</strong> with being <strong>goal-directed</strong>, but its performance depends on the heuristic quality.</li>
-                <li>A<em> is broadly used in </em><em>games</em><em>, </em><em>robotics</em><em>, and </em><em>navigation</em>* due to its effectiveness in real-world pathfinding.</li>
+                <li>$g(n)$ = cost from start to $n$ (so far),</li>
+                <li>$h(n)$ = heuristic estimate of the remaining cost from $n$ to the goal.</li>
             </ul>
-            <h5>Algorithm Steps</h5>
-            <p><strong>Input</strong></p>
+            <p>If $h$ is <strong>admissible</strong> (never overestimates) and <strong>consistent</strong> (triangle inequality), A<em> is </em><em>optimal</em>* and never needs to “reopen” closed nodes.</p>
+            <p><strong>Core data structures</strong></p>
             <ul>
-                <li>A graph</li>
-                <li>A start vertex <code>A</code></li>
-                <li>A goal vertex <code>B</code></li>
-                <li>A heuristic function <code>h(v)</code> that estimates the cost from <code>v</code> to <code>B</code></li>
+                <li>The <em>open set</em> is a min-priority queue keyed by the evaluation function $f=g+h$, storing nodes pending expansion; without it, selecting the next most promising state in pathfinding would require inefficient linear scans.</li>
+                <li>The <em>closed set</em> contains nodes already expanded and finalized, preventing reprocessing; if omitted, the algorithm may revisit the same grid cells or graph states repeatedly, wasting time.</li>
+                <li>The <em>$g$ map</em> tracks the best known cost-so-far to each node, ensuring paths are only updated when improvements are found; without it, the algorithm cannot correctly accumulate and compare path costs.</li>
+                <li>The <em>parent map</em> stores predecessors so that a complete path can be reconstructed once the target is reached; if absent, the algorithm would output only a final distance without the actual route.</li>
+                <li>An optional <em>heuristic cache</em> and <em>tie-breaker</em> (such as preferring larger $g$ or smaller $h$ when $f$ ties) can improve efficiency and consistency; without these, the search may expand more nodes than necessary or return different paths under equivalent conditions.</li>
             </ul>
-            <p><strong>Output</strong></p>
+            <p><strong>Algorithm Steps</strong></p>
+            <ol>
+                <li>Put <code>start</code> in <code>open</code> (a min-priority queue by <code>f</code>); set <code>g[start]=0</code>, <code>f[start]=h(start)</code>, <code>parent[start]=None</code>; initialize <code>closed = ∅</code>.</li>
+                <li>While <code>open</code> is nonempty, repeat steps 3–7.</li>
+                <li>Pop the node <code>u</code> with the smallest <code>f(u)</code> from <code>open</code>.</li>
+                <li>If <code>u</code> is the goal, reconstruct the path by following <code>parent</code> back to <code>start</code> and return it.</li>
+                <li>Add <code>u</code> to <code>closed</code>.</li>
+                <li>For each neighbor <code>v</code> of <code>u</code> with edge cost $w(u,v) \ge 0$, set <code>tentative = g[u] + w(u,v)</code>.</li>
+                <li>If <code>v</code> not in <code>g</code> or <code>tentative &lt; g[v]</code>, set <code>parent[v]=u</code>, <code>g[v]=tentative</code>, <code>f[v]=g[v]+h(v)</code>, and push <code>v</code> into <code>open</code> (even if it was already there with a worse key).</li>
+                <li>If the loop ends because <code>open</code> is empty, no path exists.</li>
+            </ol>
+            <p><em>Mark neighbors </em><em>when you enqueue them</em><em> (by storing their best <code>g</code>) to avoid duplicate work; with </em><em>consistent</em><em> $h$, any node popped from <code>open</code> is final and will not improve later.</em></p>
+            <p><strong>Reference pseudocode</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">A_star(G, start, goal, h):
+    open = MinPQ()                        # keyed by f = g + h
+    open.push(start, h(start))
+    g = {start: 0}
+    parent = {start: None}
+    closed = set()
+
+    while open:
+        u = open.pop_min()                # node with smallest f
+        if u == goal:
+            return reconstruct_path(parent, goal), g[goal]
+
+        closed.add(u)
+
+        for (v, w_uv) in G.neighbors(u):  # w_uv &gt;= 0
+            tentative = g[u] + w_uv
+            if v in closed and tentative &gt;= g.get(v, +inf):
+                continue
+
+            if tentative &lt; g.get(v, +inf):
+                parent[v] = u
+                g[v] = tentative
+                f_v = tentative + h(v)
+                open.push(v, f_v)         # decrease-key OR push new entry
+
+    return None, +inf
+
+reconstruct_path(parent, t):
+    path = []
+    while t is not None:
+        path.append(t)
+        t = parent[t]
+    return list(reversed(path))</code></pre>
+            </div>
+            </p>
+            <p><em>Sanity notes:</em></p>
             <ul>
-                <li>The shortest path from <code>A</code> to <code>B</code> if one exists</li>
+                <li>The <em>time</em> complexity of A* is worst-case exponential, though in practice it runs much faster when the heuristic $h$ provides useful guidance; without an informative heuristic, the search can expand nearly the entire graph, as in navigating a large grid without directional hints.</li>
+                <li>The <em>space</em> complexity is $O(V)$, covering the priority queue and bookkeeping maps, which makes A* memory-intensive; without recognizing this, applications such as robotics pathfinding may exceed available memory on large maps.</li>
+                <li>In <em>special cases</em>, A<em> reduces to Dijkstra’s algorithm when $h \equiv 0$, and further reduces to BFS when all edges have cost 1 and $h \equiv 0$; without this perspective, one might overlook how A</em> generalizes these familiar shortest-path algorithms.</li>
             </ul>
-            <p><strong>Used Data Structures</strong></p>
-            <p>I. <strong>g(n)</strong>: The best-known cost from the start vertex to vertex <code>n</code></p>
-            <p>II. <strong>h(n)</strong>: The heuristic estimate from vertex <code>n</code> to the goal</p>
-            <p>III. <strong>f(n) = g(n) + h(n)</strong>: The estimated total cost from start to goal via <code>n</code></p>
-            <p>IV. <strong>openSet</strong>: Starting with the initial node, contains nodes to be evaluated</p>
-            <p>V. <strong>closedSet</strong>: Contains nodes already fully evaluated</p>
-            <p>VI. <strong>cameFrom</strong>: Structure to record the path taken</p>
-            <p><strong>Steps</strong></p>
-            <p>I. Add the starting node to the <strong>openSet</strong></p>
-            <p>II. While the <strong>openSet</strong> is not empty</p>
+            <p><strong>Visual walkthrough (grid with 4-neighborhood, Manhattan $h$)</strong></p>
+            <p>Legend: <code>S</code> start, <code>G</code> goal, <code>#</code> wall, <code>.</code> free, <code>◉</code> expanded (closed), <code>•</code> frontier (open), <code>×</code> final path</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Row/Col →    1  2  3  4  5  6  7  8  9
+           ┌────────────────────────────┐
+         1 │ S  .  .  .  .  #  .  .  .  │
+         2 │ .  #  #  .  .  #  .  #  .  │
+         3 │ .  .  .  .  .  .  .  #  .  │
+         4 │ #  .  #  #  .  #  .  .  .  │
+         5 │ .  .  .  #  .  .  .  #  G  │
+           └────────────────────────────┘
+Movement cost = 1 per step; 4-dir moves; h = Manhattan distance</code></pre>
+            </div>
+            </p>
+            <p><strong>Early expansion snapshot (conceptual):</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Step 0:
+Open: [(S, g=0, h=|S-G|, f=g+h)]         Closed: {}
+Grid: S is • (on frontier)
+
+Step 1: pop S → expand neighbors
+Open: [((1,2), g=1, h=?, f=?), ((2,1), g=1, h=?, f=?)]
+Closed: {S}
+Marks: S→ ◉, its valid neighbors → •
+
+Step 2..k:
+A* keeps popping the lowest f, steering toward G.
+Nodes near the straight line to G are preferred over detours around '#'.</code></pre>
+            </div>
+            </p>
+            <p><strong>When goal is reached, reconstruct the path:</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Final path (example rendering):
+Row/Col →     1  2  3  4  5  6  7  8  9
+           ┌─────────────────────────────┐
+         1 │  ×  ×  ×  ×  .  #  .  .  .  │
+         2 │  ×  #  #  ×  ×  #  .  #  .  │
+         3 │  ×  ×  ×  ×  ×  ×  ×  #  .  │
+         4 │  #  .  #  #  ×  #  ×  ×  ×  │
+         5 │  .  .  .  #  ×  ×  ×  #  G  │
+           └─────────────────────────────┘
+Path length (g at G) equals number of × steps (optimal with admissible/consistent h).</code></pre>
+            </div>
+            </p>
+            <p><strong>Priority queue evolution (toy example)</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Step | Popped u | Inserted neighbors (v: g,h,f)                  | Note
+-----+----------+-------------------------------------------------+---------------------------
+0    | —        | push S: g=0, h=14, f=14                        | S at (1,1), G at (5,9)
+1    | S        | (1,2): g=1,h=13,f=14 ; (2,1): g=1,h=12,f=13    | pick (2,1) next
+2    | (2,1)    | (3,1): g=2,h=11,f=13 ; (2,2) blocked           | ...
+3    | (3,1)    | (4,1) wall; (3,2): g=3,h=10,f=13               | still f=13 band
+…    | …        | frontier slides along the corridor toward G    | A* hugs the beeline</code></pre>
+            </div>
+            </p>
+            <p>(Exact numbers depend on the specific grid and walls; shown for intuition.)</p>
+            <p><strong>Heuristic design</strong></p>
+            <p>For <strong>grids</strong>:</p>
             <ul>
-                <li>Get the node <code>current</code> in <strong>openSet</strong> with the lowest <strong>f(n)</strong></li>
-                <li>If <code>current</code> is the goal node, reconstruct the path and return it</li>
-                <li>Remove <code>current</code> from <strong>openSet</strong> and add it to <strong>closedSet</strong></li>
-                <li>For each neighbor <code>n</code> of <code>current</code>, skip it if it is in <strong>closedSet</strong></li>
-                <li>If <code>n</code> is not in <strong>openSet</strong>, add it and compute <strong>g(n)</strong>, <strong>h(n)</strong>, and <strong>f(n)</strong></li>
-                <li>If a better path to <code>n</code> is found, update <strong>cameFrom</strong> for <code>n</code></li>
+                <li><em>4-dir moves:</em> $h(n)=|x_n-x_g|+|y_n-y_g|$ (Manhattan).</li>
+                <li><em>8-dir (diag cost √2):</em> <strong>Octile</strong>: $h=\Delta_{\max} + (\sqrt{2}-1)\Delta_{\min}$.</li>
+                <li><em>Euclidean</em> when motion is continuous and diagonal is allowed.</li>
             </ul>
-            <p>III. If the algorithm terminates without finding the goal, no path exists</p>
-            <h5>Step by Step Example</h5>
-            <p>We have a graph with vertices A, B, C, D, and E:</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">A-B: 1
-A-C: 2
-B-D: 3
-C-D: 2
-D-E: 1</code></pre>
-            </div>
-            </p>
-            <p>Heuristic estimates to reach E:</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">h(A) = 3
-h(B) = 2
-h(C) = 2
-h(D) = 1
-h(E) = 0</code></pre>
-            </div>
-            </p>
-            <p>Adjacency matrix (∞ = no direct path):</p>
-            <p>
-            <table>
-                <tr>
-                    <td></td>
-                    <td>A</td>
-                    <td>B</td>
-                    <td>C</td>
-                    <td>D</td>
-                    <td>E</td>
-                </tr>
-                <tr>
-                    <td><strong>A</strong></td>
-                    <td>0</td>
-                    <td>1</td>
-                    <td>2</td>
-                    <td>∞</td>
-                    <td>∞</td>
-                </tr>
-                <tr>
-                    <td><strong>B</strong></td>
-                    <td>∞</td>
-                    <td>0</td>
-                    <td>∞</td>
-                    <td>3</td>
-                    <td>∞</td>
-                </tr>
-                <tr>
-                    <td><strong>C</strong></td>
-                    <td>∞</td>
-                    <td>∞</td>
-                    <td>0</td>
-                    <td>2</td>
-                    <td>∞</td>
-                </tr>
-                <tr>
-                    <td><strong>D</strong></td>
-                    <td>∞</td>
-                    <td>∞</td>
-                    <td>∞</td>
-                    <td>0</td>
-                    <td>1</td>
-                </tr>
-                <tr>
-                    <td><strong>E</strong></td>
-                    <td>∞</td>
-                    <td>∞</td>
-                    <td>∞</td>
-                    <td>∞</td>
-                    <td>0</td>
-                </tr>
-            </table>
-            </p>
-            <p><strong>Initialization</strong>:</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">g(A) = 0
-f(A) = g(A) + h(A) = 0 + 3 = 3
-openSet = [A]
-closedSet = []</code></pre>
-            </div>
-            </p>
-            <p>Expand <strong>A</strong>:</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">f(B) = 0 + 1 + 2 = 3
-f(C) = 0 + 2 + 2 = 4</code></pre>
-            </div>
-            </p>
-            <p>Expand <strong>B</strong> next (lowest f=3):</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">f(D) = g(B) + cost(B,D) + h(D) = 1 + 3 + 1 = 5</code></pre>
-            </div>
-            </p>
-            <p>Next lowest is <strong>C</strong> (f=4):</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">f(D) = g(C) + cost(C,D) + h(D) = 2 + 2 + 1 = 5 (no improvement)</code></pre>
-            </div>
-            </p>
-            <p>Expand <strong>D</strong> (f=5):</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">f(E) = g(D) + cost(D,E) + h(E) = 5 + 1 + 0 = 6
-E is the goal; algorithm stops.</code></pre>
-            </div>
-            </p>
-            <p>Resulting path: <strong>A -&gt; B -&gt; D -&gt; E</strong> with total cost <strong>5</strong>.</p>
-            <h5>Special Characteristics</h5>
+            <p>For <strong>sliding puzzles (e.g., 8/15-puzzle)</strong>:</p>
+            <p><em><em>Misplaced tiles</em> (admissible, weak).
+                    * </em>Manhattan sum<em> (stronger).
+                    * </em>Linear conflict / pattern databases* (even stronger).</p>
+            <p><strong>Admissible vs. consistent</strong></p>
             <ul>
-                <li><strong>A*</strong> finds an optimal path if the heuristic is <strong>admissible</strong>.</li>
-                <li>Edges must have <strong>non-negative weights</strong> for A* to work correctly.</li>
-                <li>A good heuristic drastically improves its efficiency.</li>
+                <li>An <em>admissible</em> heuristic satisfies $h(n) \leq h^<em>(n)$, meaning it never overestimates the true remaining cost, which guarantees that A</em> finds an optimal path; without admissibility, the algorithm may return a suboptimal route, such as a longer-than-necessary driving path.</li>
+                <li>A <em>consistent (monotone)</em> heuristic obeys $h(u) \leq w(u,v) + h(v)$ for every edge, ensuring that $f$-values do not decrease along paths and that once a node is removed from the open set, its $g$-value is final; without consistency, nodes may need to be reopened, increasing complexity in searches like grid navigation.</li>
             </ul>
-            <h5>Applications</h5>
+            <p><strong>Applications</strong></p>
             <ul>
-                <li>Used in <strong>video games</strong> for enemy AI or player navigation.</li>
-                <li>Employed in <strong>robotics</strong> for motion planning.</li>
-                <li>Integral to <strong>mapping</strong> and <strong>GPS</strong> systems for shortest route calculations.</li>
+                <li>In <em>pathfinding</em> for maps, games, and robotics, A* computes shortest or least-risk routes by combining actual travel cost with heuristic guidance; without it, movement planning in virtual or physical environments becomes slower or less efficient.</li>
+                <li>For <em>route planning</em> with road metrics such as travel time, distance, or tolls, A* incorporates these costs and constraints into its evaluation; without heuristic search, navigation systems must fall back to slower methods like plain Dijkstra.</li>
+                <li>In <em>planning and scheduling</em> tasks, A* serves as a general shortest-path algorithm in abstract state spaces, supporting AI decision-making; without it, solving resource allocation or task sequencing problems may require less efficient exhaustive search.</li>
+                <li>In <em>puzzle solving</em> domains such as the 8-puzzle or Sokoban, A* uses problem-specific heuristics to guide the search efficiently; without heuristics, the state space may grow exponentially and become impractical to explore.</li>
+                <li>For <em>network optimization</em> problems with nonnegative edge costs, A* applies whenever a useful heuristic is available to speed convergence; without heuristics, computations on communication or logistics networks may take longer than necessary.</li>
             </ul>
-            <h5>Implementation</h5>
+            <p><strong>Variants &amp; practical tweaks</strong></p>
+            <ul>
+                <li>Viewing <em>Dijkstra</em> as A<em> with $h \equiv 0$ shows that A</em> generalizes the classic shortest-path algorithm; without this equivalence, the connection between uninformed and heuristic search may be overlooked.</li>
+                <li>In <em>Weighted A</em>*, the evaluation function becomes $f = g + \varepsilon h$ with $\varepsilon &gt; 1$, trading exact optimality for faster performance with bounded suboptimality; without this variant, applications needing quick approximate routing, like logistics planning, would run slower.</li>
+                <li>The <em>A</em>ε / Anytime A** approach begins with $\varepsilon &gt; 1$ for speed and gradually reduces it to converge toward optimal paths; without this strategy, incremental refinement in real-time systems like navigation aids is harder to achieve.</li>
+                <li>With <em>IDA</em><em> (Iterative Deepening A</em>), the search is conducted by gradually increasing an $f$-cost threshold, greatly reducing memory usage but sometimes increasing runtime; without it, problems like puzzle solving could exceed memory limits.</li>
+                <li><em>RBFS and Fringe Search</em> are memory-bounded alternatives that manage recursion depth or fringe sets more carefully; without these, large state spaces in AI planning can overwhelm storage.</li>
+                <li>In <em>tie-breaking</em>, preferring larger $g$ or smaller $h$ when $f$ ties reduces unnecessary re-expansions; without careful tie-breaking, searches on uniform-cost grids may explore more nodes than needed.</li>
+                <li>For the <em>closed-set policy</em>, when heuristics are inconsistent, nodes must be reopened if a better $g$ value is found; without allowing this, the algorithm may miss shorter paths, as in road networks with varying travel times.</li>
+            </ul>
+            <p><strong>Pitfalls &amp; tips</strong></p>
+            <ul>
+                <li>The algorithm requires <em>non-negative edge weights</em> because A* assumes $w(u,v) \ge 0$; without this, negative costs can cause nodes to be expanded too early, breaking correctness in applications like navigation.</li>
+                <li>If the heuristic <em>overestimates</em> actual costs, A* loses its guarantee of optimality; without enforcing admissibility, a routing system may return a path that is faster to compute but longer in distance.</li>
+                <li>With <em>floating-point precision issues</em>, comparisons of $f$-values should include small epsilons to avoid instability; without this safeguard, two nearly equal paths may lead to inconsistent queue ordering in large-scale searches.</li>
+                <li>In <em>state hashing</em>, equivalent states must hash identically so duplicates are merged properly; without this, search in puzzles or planning domains may blow up due to treating the same state as multiple distinct ones.</li>
+                <li>While <em>neighbor order</em> does not affect correctness, it influences performance and the aesthetics of the returned path trace; without considering this, two identical problems might yield very different expansion sequences or outputs.</li>
+            </ul>
+            <p><strong>Implementation</strong></p>
             <ul>
                 <li><a href="https://github.com/djeada/Algorithms-And-Data-Structures/tree/master/src/graphs/cpp/a_star">C++</a></li>
                 <li><a href="https://github.com/djeada/Algorithms-And-Data-Structures/tree/master/src/graphs/python/a_star">Python</a></li>
             </ul>
+            <p><em>Implementation tip:</em> If your PQ lacks decrease-key, <strong>push duplicates</strong> with improved keys and ignore stale entries when popped (check if popped <code>g</code> matches current <code>g[u]</code>). This is simple and fast in practice.</p>
             <h3 id="minimal-spanning-trees">Minimal Spanning Trees</h3>
             <p>Suppose we have a graph that represents a network of houses. Weights represent the distances between vertices, which each represent a single house. All houses must have water, electricity, and internet, but we want the cost of installation to be as low as possible. We need to identify a subgraph of our graph with the following properties:</p>
             <ul>
@@ -902,304 +1223,433 @@ E is the goal; algorithm stops.</code></pre>
                 <li>The total sum of weights is minimum.</li>
             </ul>
             <p>Such a subgraph is called a minimal spanning tree.</p>
-            <h4 id="prim-s-algorithm">Prim's Algorithm</h4>
+            <h4 id="prim-s-algorithm">Prim’s Algorithm</h4>
+            <p>Prim’s algorithm builds a <strong>minimum spanning tree (MST)</strong> of a <strong>weighted, undirected</strong> graph by growing a tree from a start vertex. At each step it adds the <strong>cheapest edge</strong> that connects a vertex <strong>inside</strong> the tree to a vertex <strong>outside</strong> the tree.</p>
+            <p>To efficiently keep track of the construction, Prim’s algorithm employs two primary data structures:</p>
             <ul>
-                <li><strong>Prim's Algorithm</strong> is used to find a <strong>minimum spanning tree (MST)</strong>, which is a subset of a graph that connects all its vertices with the smallest total edge weight. </li>
-                <li>It works on a <strong>weighted undirected graph</strong>, meaning the edges have weights, and the direction of edges doesn’t matter. </li>
-                <li>It starts with an <strong>arbitrary vertex</strong> and grows the MST by adding one edge at a time. </li>
-                <li>At each step, it chooses the <strong>smallest weight edge</strong> that connects a vertex in the MST to a vertex not yet in the MST (a <strong>greedy</strong> approach). </li>
-                <li>This process continues until <strong>all vertices</strong> are included. </li>
-                <li>The resulting MST is <strong>connected</strong>, ensuring a path between any two vertices, and the total edge weight is minimized. </li>
-                <li>Using a <strong>priority queue</strong> (min-heap), it can achieve a time complexity of <strong>O(E log V)</strong> with adjacency lists, where E is the number of edges and V is the number of vertices. </li>
-                <li>With an adjacency matrix, the algorithm can be implemented in <strong>O(V^2)</strong> time.</li>
+                <li>A <strong>min-priority queue</strong> (often named <code>pq</code>, <code>open</code>, or <code>unexplored</code>) keyed by a vertex’s <strong>best known connection cost</strong> to the current tree.</li>
+                <li>A <strong><code>in_mst</code>/<code>visited</code> set</strong> to mark vertices already added to the tree, plus a <strong><code>parent</code> map</strong> to record the chosen incoming edge for each vertex.</li>
             </ul>
-            <h5>Algorithm Steps</h5>
-            <p><strong>Input</strong></p>
+            <p><em>Useful additions in practice:</em></p>
             <ul>
-                <li>A connected, undirected graph with weighted edges</li>
-                <li>A start vertex <code>A</code></li>
+                <li>A <em>key map</em> stores, for each vertex, the lightest edge weight connecting it to the current spanning tree, initialized to infinity except for the starting vertex at zero; without this, Prim’s algorithm cannot efficiently track which edges should be added next to grow the tree.</li>
+                <li>With <em>lazy updates</em>, when the priority queue lacks a decrease-key operation, improved entries are simply pushed again and outdated ones are skipped upon popping; without this adjustment, priority queues become harder to manage, slowing down minimum spanning tree construction.</li>
+                <li>For <em>component handling</em>, if the graph is disconnected, Prim’s algorithm must either restart from each unvisited vertex or seed multiple starts with key values of zero to produce a spanning forest; without this, the algorithm would stop after one component, leaving parts of the graph unspanned.</li>
             </ul>
-            <p><strong>Output</strong></p>
-            <ul>
-                <li>A minimum spanning tree, which is a subset of the edges that connects all vertices together without any cycles and with the minimum total edge weight</li>
-            </ul>
-            <p><strong>Containers and Data Structures</strong></p>
-            <ul>
-                <li>An array <code>key[]</code> to store the minimum reachable edge weight for each vertex. Initially, <code>key[v] = ∞</code> for all <code>v</code> except the first chosen vertex (set to <code>0</code>)</li>
-                <li>A boolean array <code>mstSet[]</code> to keep track of whether a vertex is included in the MST. Initially, all values are <code>false</code></li>
-                <li>An array <code>parent[]</code> to store the MST. Each <code>parent[v]</code> indicates the vertex connected to <code>v</code> in the MST</li>
-            </ul>
-            <p><strong>Steps</strong></p>
-            <p>I. Start with an arbitrary node as the initial MST node</p>
-            <p>II. While there are vertices not yet included in the MST</p>
-            <ul>
-                <li>Pick a vertex <code>v</code> with the smallest <code>key[v]</code></li>
-                <li>Include <code>v</code> in <code>mstSet[]</code></li>
-                <li>For each neighboring vertex <code>u</code> of <code>v</code> not in the MST</li>
-                <li>If the weight of edge <code>(u, v)</code> is less than <code>key[u]</code>, update <code>key[u]</code> and set <code>parent[u]</code> to <code>v</code></li>
-            </ul>
-            <p>III. The MST is formed using the <code>parent[]</code> array once all vertices are included</p>
-            <h5>Step by Step Example</h5>
-            <p>Consider a simple graph with vertices <strong>A</strong>, <strong>B</strong>, <strong>C</strong>, <strong>D</strong>, and <strong>E</strong>. The edges with weights are:</p>
+            <p><strong>Algorithm Steps</strong></p>
+            <ol>
+                <li>Pick a start vertex $i$.</li>
+                <li>Set <code>key[i] = 0</code>, <code>parent[i] = None</code>; for all other vertices $v \ne i$, set <code>key[v] = ∞</code>; push $i$ into a min-priority queue keyed by <code>key</code>.</li>
+                <li>While the priority queue is nonempty, repeat steps 4–6.</li>
+                <li>Extract the vertex $u$ with the smallest <code>key[u]</code>.</li>
+                <li>If $u$ is already in the MST, continue; otherwise add $u$ to the MST and, if <code>parent[u] ≠ None</code>, record the tree edge <code>(parent[u], u)</code>.</li>
+                <li>For each neighbor $v$ of $u$ with weight $w(u,v)$, if $v$ is not in the MST and $w(u,v) &lt; key[v]$, set <code>key[v] = w(u,v)</code>, set <code>parent[v] = u</code>, and push $v$ into the priority queue keyed by the new <code>key[v]</code>.</li>
+                <li>Stop when the queue is empty or when all vertices are in the MST (for a connected graph).</li>
+                <li>The edges ${(parent[v], v) : v \ne i}$ form an MST; the MST total weight equals $\sum key[v]$ at the moments when each $v$ is added.</li>
+            </ol>
+            <p>Vertices are <strong>finalized when they are dequeued</strong>: at that moment, <code>key[u]</code> is the <strong>minimum</strong> cost to connect <code>u</code> to the growing tree (by the <strong>cut property</strong>).</p>
+            <p><em>Reference pseudocode (adjacency-list graph):</em></p>
             <p>
             <div>
-                <pre><code class="language-shell">A-B: 2
-A-C: 3
-B-D: 1
-B-E: 3
-C-D: 4
-C-E: 5
-D-E: 2</code></pre>
+                <pre><code class="language-shell">Prim(G, i):
+    INF = +infinity
+    key    = defaultdict(lambda: INF)
+    parent = {i: None}
+    key[i] = 0
+
+    pq = MinPriorityQueue()              # holds (key[v], v)
+    pq.push((0, i))
+
+    in_mst = set()
+    mst_edges = []
+
+    while pq:
+        ku, u = pq.pop_min()             # smallest key
+        if u in in_mst:
+            continue
+        in_mst.add(u)
+
+        if parent[u] is not None:
+            mst_edges.append((parent[u], u, ku))
+
+        for (v, w_uv) in G[u]:           # undirected: each edge seen twice
+            if v not in in_mst and w_uv &lt; key[v]:
+                key[v] = w_uv
+                parent[v] = u
+                pq.push((key[v], v))     # decrease-key or lazy insert
+
+    return mst_edges, parent, sum(w for (_,_,w) in mst_edges)</code></pre>
             </div>
             </p>
-            <p>The adjacency matrix for the graph (using ∞ where no direct edge exists) is:</p>
-            <p>
-            <table>
-                <tr>
-                    <td></td>
-                    <td>A</td>
-                    <td>B</td>
-                    <td>C</td>
-                    <td>D</td>
-                    <td>E</td>
-                </tr>
-                <tr>
-                    <td><strong>A</strong></td>
-                    <td>0</td>
-                    <td>2</td>
-                    <td>3</td>
-                    <td>∞</td>
-                    <td>∞</td>
-                </tr>
-                <tr>
-                    <td><strong>B</strong></td>
-                    <td>2</td>
-                    <td>0</td>
-                    <td>∞</td>
-                    <td>1</td>
-                    <td>3</td>
-                </tr>
-                <tr>
-                    <td><strong>C</strong></td>
-                    <td>3</td>
-                    <td>∞</td>
-                    <td>0</td>
-                    <td>4</td>
-                    <td>5</td>
-                </tr>
-                <tr>
-                    <td><strong>D</strong></td>
-                    <td>∞</td>
-                    <td>1</td>
-                    <td>4</td>
-                    <td>0</td>
-                    <td>2</td>
-                </tr>
-                <tr>
-                    <td><strong>E</strong></td>
-                    <td>∞</td>
-                    <td>3</td>
-                    <td>5</td>
-                    <td>2</td>
-                    <td>0</td>
-                </tr>
-            </table>
-            </p>
-            <p>Run Prim's algorithm starting from vertex <strong>A</strong>:</p>
-            <p>I. <strong>Initialization</strong> </p>
-            <p>
-            <div>
-                <pre><code class="language-shell">Chosen vertex: A  
-Not in MST: B, C, D, E</code></pre>
-            </div>
-            </p>
-            <p>II. <strong>Pick the smallest edge from A</strong> </p>
-            <p>
-            <div>
-                <pre><code class="language-shell">Closest vertex is B with a weight of 2.  
-MST now has: A, B  
-Not in MST: C, D, E</code></pre>
-            </div>
-            </p>
-            <p>III. <strong>From A and B, pick the smallest edge</strong> </p>
-            <p>
-            <div>
-                <pre><code class="language-shell">Closest vertex is D (from B) with a weight of 1.  
-MST now has: A, B, D  
-Not in MST: C, E</code></pre>
-            </div>
-            </p>
-            <p>IV. <strong>Next smallest edge from A, B, or D</strong> </p>
-            <p>
-            <div>
-                <pre><code class="language-shell">Closest vertex is E (from D) with a weight of 2.  
-MST now has: A, B, D, E  
-Not in MST: C</code></pre>
-            </div>
-            </p>
-            <p>V. <strong>Pick the final vertex</strong> </p>
-            <p>
-            <div>
-                <pre><code class="language-shell">The closest remaining vertex is C (from A) with a weight of 3.  
-MST now has: A, B, D, E, C</code></pre>
-            </div>
-            </p>
-            <p>The MST includes the edges: <strong>A-B (2), B-D (1), D-E (2),</strong> and <strong>A-C (3)</strong>, with a total weight of <strong>8</strong>.</p>
-            <h5>Special Characteristics</h5>
+            <p><em>Sanity notes:</em></p>
             <ul>
-                <li>It always selects the smallest edge that can connect a new vertex to the existing MST. </li>
-                <li>Different choices of starting vertex can still result in the same total MST weight (though the exact edges might differ if multiple edges have the same weight). </li>
-                <li>With adjacency lists and a priority queue, the time complexity is <strong>O(E log V)</strong>; with an adjacency matrix, it is <strong>O(V^2)</strong>.</li>
+                <li>The <em>time</em> complexity of Prim’s algorithm is $O(E \log V)$ with a binary heap, $O(E + V \log V)$ with a Fibonacci heap, and $O(V^2)$ for the dense-graph adjacency-matrix variant; without knowing this, one might apply the wrong implementation and get poor performance on sparse or dense networks.</li>
+                <li>The <em>space</em> complexity is $O(V)$, required for storing the key values, parent pointers, and bookkeeping to build the minimum spanning tree; without this allocation, the algorithm cannot track which edges belong to the MST.</li>
+                <li>The <em>graph type</em> handled is a weighted, undirected graph with no restrictions on edge weights being positive; without this flexibility, graphs with negative costs, such as energy-saving transitions, could not be processed.</li>
+                <li>In terms of <em>uniqueness</em>, if all edge weights are distinct, the minimum spanning tree is unique; without distinct weights, multiple MSTs may exist, such as in networks where two equally light connections are available.</li>
             </ul>
-            <h5>Applications</h5>
+            <p><strong>Example</strong></p>
+            <p>Undirected, weighted graph; start at <strong>A</strong>. Edge weights shown on links.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">┌────────┐
+                           │   A    │
+                           └─┬──┬───┘
+                            4│  │1
+                             │  │
+                 ┌───────────┘  └───────────┐
+                 │                          │
+            ┌────▼────┐                ┌────▼────┐
+            │   B     │◄──────2────────│   C     │
+            └───┬─────┘                └─────┬───┘
+              1 │                          4 │
+                │                            │
+            ┌───▼────┐      3           ┌────▼───┐
+            │   E    │─────────────────▶│   D    │
+            └────────┘                  └────────┘
+
+Edges: A–B(4), A–C(1), C–B(2), B–E(1), C–D(4), D–E(3)</code></pre>
+            </div>
+            </p>
+            <p><em>Frontier (keys) / In-tree evolution (min at front):</em></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Legend: key[v] = cheapest known connection to tree; parent[v] = chosen neighbor
+
+Step | Action                          | PQ (key:vertex) after push         | In MST | Updated keys / parents
+-----+---------------------------------+------------------------------------+--------+-------------------------------
+0    | init at A                       | [0:A]                               | {}     | key[A]=0, others=∞
+1    | pop A → add                     | [1:C, 4:B]                          | {A}    | key[C]=1 (A), key[B]=4 (A)
+2    | pop C → add                     | [2:B, 4:D, 4:B]                     | {A,C}  | key[B]=min(4,2)=2 (C), key[D]=4 (C)
+3    | pop B(2) → add                  | [1:E, 4:D, 4:B]                     | {A,C,B}| key[E]=1 (B)
+4    | pop E(1) → add                  | [3:D, 4:D, 4:B]                     | {A,C,B,E}| key[D]=min(4,3)=3 (E)
+5    | pop D(3) → add                  | [4:D, 4:B]                          | {A,C,B,E,D}| done</code></pre>
+            </div>
+            </p>
+            <p><em>MST edges chosen (with weights):</em></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">A—C(1), C—B(2), B—E(1), E—D(3)
+Total weight = 1 + 2 + 1 + 3 = 7</code></pre>
+            </div>
+            </p>
+            <p><em>Resulting MST (tree edges only):</em></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">A
+└── C (1)
+    └── B (2)
+        └── E (1)
+            └── D (3)</code></pre>
+            </div>
+            </p>
+            <p><strong>Applications</strong></p>
             <ul>
-                <li><strong>Network design</strong>: Building telecommunication networks with minimal cable length. </li>
-                <li><strong>Road infrastructure</strong>: Constructing roads, tunnels, or bridges at minimal total cost. </li>
-                <li><strong>Utility services</strong>: Designing water, electrical, or internet infrastructure to connect all locations at minimum cost.</li>
+                <li>In <em>network design</em>, Prim’s or Kruskal’s MST construction connects all sites such as offices, cities, or data centers with the least total cost of wiring, piping, or fiber; without using MSTs, infrastructure plans risk including redundant and more expensive links.</li>
+                <li>As an <em>approximation for the traveling salesman problem (TSP)</em>, building an MST and performing a preorder walk of it yields a tour within twice the optimal length for metric TSP; without this approach, even approximate solutions for large instances may be much harder to obtain.</li>
+                <li>In <em>clustering with single linkage</em>, removing the $k-1$ heaviest edges of the MST partitions the graph into $k$ clusters; without this technique, hierarchical clustering may require recomputing pairwise distances repeatedly.</li>
+                <li>For <em>image processing and segmentation</em>, constructing an MST over pixels or superpixels highlights low-contrast boundaries as cut edges; without MST-based grouping, segmentations may fail to respect natural intensity or color edges.</li>
+                <li>In <em>map generalization and simplification</em>, the MST preserves a connectivity backbone with minimal redundancy, reducing complexity while maintaining essential routes; without this, simplified maps may show excessive or unnecessary detail.</li>
+                <li>In <em>circuit design and VLSI</em>, MSTs minimize interconnect length under simple wiring models, supporting efficient layouts; without this method, chip designs may consume more area and power due to avoidable wiring overhead.</li>
             </ul>
             <h5>Implementation</h5>
             <ul>
                 <li><a href="https://github.com/djeada/Algorithms-And-Data-Structures/tree/master/src/graphs/cpp/prim">C++</a></li>
                 <li><a href="https://github.com/djeada/Algorithms-And-Data-Structures/tree/master/src/graphs/python/prim">Python</a></li>
             </ul>
-            <h4 id="kruskal-s-algorithm">Kruskal's Algorithm</h4>
+            <p><em>Implementation tip:</em>
+                For <strong>dense graphs</strong> ($E \approx V^2$), skip heaps: store <code>key</code> in an array and, at each step, scan all non-MST vertices to pick the minimum <code>key</code> in $O(V)$. Overall $O(V^2)$ but often <strong>faster in practice</strong> on dense inputs due to low overhead.</p>
+            <h4 id="kruskal-s-algorithm">Kruskal’s Algorithm</h4>
+            <p>Kruskal’s algorithm builds a <strong>minimum spanning tree (MST)</strong> for a <strong>weighted, undirected</strong> graph by sorting all edges by weight (lightest first) and repeatedly adding the next lightest edge that <strong>does not create a cycle</strong>. It grows the MST as a forest of trees that gradually merges until all vertices are connected.</p>
+            <p>To efficiently keep track of the construction, Kruskal’s algorithm employs two primary data structures:</p>
             <ul>
-                <li><strong>Kruskal's Algorithm</strong> is used to find a <strong>minimum spanning tree (MST)</strong> in a connected, undirected graph with weighted edges. </li>
-                <li>It <strong>sorts all edges</strong> from smallest to largest by weight. </li>
-                <li>It <strong>adds edges</strong> one by one to the MST if they do not form a cycle. </li>
-                <li><strong>Cycle detection</strong> is managed by a <strong>disjoint-set</strong> (union-find) data structure, which helps quickly determine if two vertices belong to the same connected component. </li>
-                <li>If adding an edge connects two different components, it is safe to include; if both vertices are already in the same component, including that edge would create a cycle and is skipped. </li>
-                <li>The process continues until the MST has <strong>V-1</strong> edges, where <strong>V</strong> is the number of vertices. </li>
-                <li>Its time complexity is <strong>O(E \log E)</strong>, dominated by sorting the edges, while union-find operations typically take near-constant time (<strong>O(α(V))</strong>, where α is the inverse Ackermann function).</li>
+                <li>A <em>sorted edge list</em> arranged in ascending order of weights ensures that Kruskal’s algorithm always considers the lightest available edge next; without this ordering, the method cannot guarantee that the resulting spanning tree has minimum total weight.</li>
+                <li>A <em>Disjoint Set Union (DSU)</em>, or Union–Find structure, tracks which vertices belong to the same tree and prevents cycles by only uniting edges from different sets; without this mechanism, the algorithm could inadvertently form cycles instead of building a spanning tree.</li>
             </ul>
-            <h5>Algorithm Steps</h5>
-            <p><strong>Input</strong></p>
+            <p><em>Useful additions in practice:</em></p>
             <ul>
-                <li>A connected, undirected graph with weighted edges</li>
+                <li>Using <em>Union–Find with path compression and union by rank/size</em> enables near-constant-time merge and find operations, making Kruskal’s algorithm efficient; without these optimizations, edge processing in large graphs such as communication networks would slow down significantly.</li>
+                <li>Applying an <em>early stop</em> allows the algorithm to terminate once $V-1$ edges have been added in a connected graph, since the MST is then complete; without this, unnecessary edges are still considered, adding avoidable work.</li>
+                <li>Enforcing <em>deterministic tie-breaking</em> ensures that when multiple edges share equal weights, the same MST is consistently produced; without this, repeated runs on the same weighted graph might yield different but equally valid spanning trees, complicating reproducibility.</li>
+                <li>On <em>disconnected graphs</em>, Kruskal’s algorithm naturally outputs a minimum spanning forest with one tree per component; without this property, handling graphs such as multiple separate road systems would require additional adjustments.</li>
             </ul>
-            <p><strong>Output</strong></p>
-            <ul>
-                <li>A subset of edges forming a MST, ensuring all vertices are connected with no cycles and minimal total weight</li>
-            </ul>
-            <p><strong>Containers and Data Structures</strong></p>
-            <ul>
-                <li>A list or priority queue to sort the edges by weight</li>
-                <li>A <code>disjoint-set (union-find)</code> structure to manage and merge connected components</li>
-            </ul>
-            <p><strong>Steps</strong></p>
-            <p>I. Sort all edges in increasing order of their weights</p>
-            <p>II. Initialize a forest where each vertex is its own tree</p>
-            <p>III. Iterate through the sorted edges</p>
-            <ul>
-                <li>If the edge <code>(u, v)</code> connects two different components, include it in the MST and perform a <code>union</code> of the sets</li>
-                <li>If it connects vertices in the same component, skip it</li>
-            </ul>
-            <p>IV. Once <code>V-1</code> edges have been added, the MST is complete</p>
-            <h5>Step by Step Example</h5>
-            <p>Consider a graph with vertices <strong>A</strong>, <strong>B</strong>, <strong>C</strong>, <strong>D</strong>, and <strong>E</strong>. The weighted edges are:</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">A-B: 2
-A-C: 3
-B-D: 1
-B-E: 3
-C-D: 4
-C-E: 5
-D-E: 2</code></pre>
-            </div>
-            </p>
-            <p>The adjacency matrix (∞ indicates no direct edge):</p>
-            <p>
-            <table>
-                <tr>
-                    <td></td>
-                    <td>A</td>
-                    <td>B</td>
-                    <td>C</td>
-                    <td>D</td>
-                    <td>E</td>
-                </tr>
-                <tr>
-                    <td><strong>A</strong></td>
-                    <td>0</td>
-                    <td>2</td>
-                    <td>3</td>
-                    <td>∞</td>
-                    <td>∞</td>
-                </tr>
-                <tr>
-                    <td><strong>B</strong></td>
-                    <td>2</td>
-                    <td>0</td>
-                    <td>∞</td>
-                    <td>1</td>
-                    <td>3</td>
-                </tr>
-                <tr>
-                    <td><strong>C</strong></td>
-                    <td>3</td>
-                    <td>∞</td>
-                    <td>0</td>
-                    <td>4</td>
-                    <td>5</td>
-                </tr>
-                <tr>
-                    <td><strong>D</strong></td>
-                    <td>∞</td>
-                    <td>1</td>
-                    <td>4</td>
-                    <td>0</td>
-                    <td>2</td>
-                </tr>
-                <tr>
-                    <td><strong>E</strong></td>
-                    <td>∞</td>
-                    <td>3</td>
-                    <td>5</td>
-                    <td>2</td>
-                    <td>0</td>
-                </tr>
-            </table>
-            </p>
-            <p><strong>Sort edges</strong> by weight:</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">B-D: 1
-A-B: 2
-D-E: 2
-A-C: 3
-B-E: 3
-C-D: 4
-C-E: 5</code></pre>
-            </div>
-            </p>
+            <p><strong>Algorithm Steps</strong></p>
             <ol>
-                <li><strong>Pick B-D (1)</strong>: Include it. MST has {B-D}, weight = 1. </li>
-                <li><strong>Pick A-B (2)</strong>: Include it. MST has {B-D, A-B}, weight = 3. </li>
-                <li><strong>Pick D-E (2)</strong>: Include it. MST has {B-D, A-B, D-E}, weight = 5. </li>
-                <li><strong>Pick A-C (3)</strong>: Include it. MST has {B-D, A-B, D-E, A-C}, weight = 8. </li>
-                <li><strong>Pick B-E (3)</strong>: Would form a cycle (B, D, E already connected), skip. </li>
-                <li><strong>Pick C-D (4)</strong>: Would form a cycle (C, D already connected), skip. </li>
-                <li><strong>Pick C-E (5)</strong>: Would form a cycle as well, skip. </li>
+                <li>Gather all edges $E={(u,v,w)}$ and sort them by weight $w$ in ascending order.</li>
+                <li>Initialize a DSU with each vertex in its own set: <code>parent[v]=v</code>, <code>rank[v]=0</code>.</li>
+                <li>Traverse the edges in the sorted order.</li>
+                <li>For the current edge $(u,v,w)$, compute <code>ru = find(u)</code> and <code>rv = find(v)</code> in the DSU.</li>
+                <li>If <code>ru ≠ rv</code>, add $(u,v,w)$ to the MST and <code>union(ru, rv)</code>.</li>
+                <li>If <code>ru = rv</code>, skip the edge (it would create a cycle).</li>
+                <li>Continue until $V-1$ edges have been chosen (connected graph) or until all edges are processed (forest).</li>
+                <li>The chosen edges form the MST; the total weight is the sum of their weights.</li>
             </ol>
-            <p>The MST edges are <strong>B-D, A-B, D-E, and A-C</strong>, total weight = <strong>8</strong>.</p>
-            <h5>Special Characteristics</h5>
+            <p>By the <strong>cycle</strong> and <strong>cut</strong> properties of MSTs, selecting the minimum-weight edge that crosses any cut between components is always safe; rejecting edges that close a cycle preserves optimality.</p>
+            <p><em>Reference pseudocode (edge list + DSU):</em></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Kruskal(V, E):
+    # V: iterable of vertices
+    # E: list of edges (u, v, w) for undirected graph
+
+    sort E by weight ascending
+
+    make_set(v) for v in V        # DSU init: parent[v]=v, rank[v]=0
+
+    mst_edges = []
+    total = 0
+
+    for (u, v, w) in E:
+        if find(u) != find(v):
+            union(u, v)
+            mst_edges.append((u, v, w))
+            total += w
+            if len(mst_edges) == len(V) - 1:   # early stop if connected
+                break
+
+    return mst_edges, total
+
+# Union-Find helpers (path compression + union by rank):
+find(x):
+    if parent[x] != x:
+        parent[x] = find(parent[x])
+    return parent[x]
+
+union(x, y):
+    rx, ry = find(x), find(y)
+    if rx == ry: return
+    if rank[rx] &lt; rank[ry]:
+        parent[rx] = ry
+    elif rank[rx] &gt; rank[ry]:
+        parent[ry] = rx
+    else:
+        parent[ry] = rx
+        rank[rx] += 1</code></pre>
+            </div>
+            </p>
+            <p><em>Sanity notes:</em></p>
             <ul>
-                <li>It always picks the <strong>smallest available edge</strong> that won't create a cycle. </li>
-                <li>In case of a <strong>tie</strong>, any equally weighted edge can be chosen. </li>
-                <li>The approach is particularly efficient for <strong>sparse graphs</strong>. </li>
-                <li>Sorting edges takes <strong>O(E \log E)</strong> time, and disjoint-set operations can be considered almost <strong>O(1)</strong> on average.</li>
+                <li>The <em>time</em> complexity of Kruskal’s algorithm is dominated by sorting edges, which takes $O(E \log E)$, or equivalently $O(E \log V)$, while DSU operations run in near-constant amortized time; without recognizing this, one might wrongly attribute the main cost to the union–find structure rather than sorting.</li>
+                <li>The <em>space</em> complexity is $O(V)$ for the DSU arrays and $O(E)$ to store the edges; without this allocation, the algorithm cannot track connectivity or efficiently access candidate edges.</li>
+                <li>With respect to <em>weights</em>, Kruskal’s algorithm works on undirected graphs with either negative or positive weights; without this flexibility, cases like networks where some connections represent cost reductions could not be handled.</li>
+                <li>Regarding <em>uniqueness</em>, if all edge weights are distinct, the MST is guaranteed to be unique; without distinct weights, multiple equally valid minimum spanning trees may exist, such as in graphs where two different links have identical costs.</li>
             </ul>
-            <h5>Applications</h5>
+            <p><strong>Example</strong></p>
+            <p>Undirected, weighted graph (we’ll draw the key edges clearly and list the rest).
+                Start with all vertices as separate sets: <code>{A} {B} {C} {D} {E} {F}</code>.</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Top row:       A────────4────────B────────2────────C
+               │                 │                 │
+               │                 │                 │
+               7                 3                 5
+               │                 │                 │
+Bottom row:    F────────1────────E────────6────────D
+
+Other edges (not all drawn to keep the picture clean):
+A–C(4), B–D(5), C–E(5), D–E(6), D–F(2)</code></pre>
+            </div>
+            </p>
+            <p><em>Sorted edge list (ascending):</em>
+                <code>E–F(1), B–C(2), D–F(2), B–E(3), A–B(4), A–C(4), B–D(5), C–D(5), C–E(5), D–E(6), A–F(7)</code>
+            </p>
+            <p><em>Union–Find / MST evolution (take the edge if it connects different sets):</em></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Step | Edge (w)  | Find(u), Find(v) | Action     | Components after union            | MST so far                 | Total
+-----+-----------+-------------------+------------+-----------------------------------+----------------------------+------
+ 1   | E–F (1)   | {E}, {F}          | TAKE       | {E,F} {A} {B} {C} {D}            | [E–F(1)]                   | 1
+ 2   | B–C (2)   | {B}, {C}          | TAKE       | {E,F} {B,C} {A} {D}              | [E–F(1), B–C(2)]           | 3
+ 3   | D–F (2)   | {D}, {E,F}        | TAKE       | {B,C} {D,E,F} {A}                | [E–F(1), B–C(2), D–F(2)]   | 5
+ 4   | B–E (3)   | {B,C}, {D,E,F}    | TAKE       | {A} {B,C,D,E,F}                  | [..., B–E(3)]              | 8
+ 5   | A–B (4)   | {A}, {B,C,D,E,F}  | TAKE       | {A,B,C,D,E,F} (all connected)    | [..., A–B(4)]              | 12
+     | (stop: we have V−1 = 5 edges for 6 vertices)</code></pre>
+            </div>
+            </p>
+            <p><em>Resulting MST edges and weight:</em></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">E–F(1), B–C(2), D–F(2), B–E(3), A–B(4)    ⇒  Total = 1 + 2 + 2 + 3 + 4 = 12</code></pre>
+            </div>
+            </p>
+            <p><em>Clean MST view (tree edges only):</em></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">A
+└── B (4)
+    ├── C (2)
+    └── E (3)
+        └── F (1)
+            └── D (2)</code></pre>
+            </div>
+            </p>
+            <p><strong>Applications</strong></p>
             <ul>
-                <li><strong>Network design</strong>: Connecting servers or cities using minimal cable length. </li>
-                <li><strong>Infrastructure</strong>: Building road systems, water lines, or power grids with the smallest total cost. </li>
-                <li><strong>Any MST requirement</strong>: Ensuring connectivity among all nodes at minimum cost.</li>
+                <li>In <em>network design</em>, Kruskal’s algorithm builds the least-cost backbone, such as roads, fiber, or pipelines, that connects all sites with minimal total expense; without MST construction, the resulting infrastructure may include redundant and costlier links.</li>
+                <li>For <em>clustering with single linkage</em>, constructing the MST and then removing the $k-1$ heaviest edges partitions the graph into $k$ clusters; without this method, grouping data points into clusters may require repeated and slower distance recalculations.</li>
+                <li>In <em>image segmentation</em>, applying Kruskal’s algorithm to pixel or superpixel graphs groups regions by intensity or feature similarity through MST formation; without MST-based grouping, boundaries between regions may be less well aligned with natural contrasts.</li>
+                <li>As an <em>approximation for the metric traveling salesman problem</em>, building an MST and performing a preorder walk (with shortcutting) yields a tour at most twice the optimal length; without this approach, near-optimal solutions would be harder to compute efficiently.</li>
+                <li>In <em>circuit and VLSI layout</em>, Kruskal’s algorithm finds minimal interconnect length under simplified wiring models; without this, designs may require more area and energy due to unnecessarily long connections.</li>
+                <li>For <em>maze generation</em>, a randomized Kruskal process selects edges in random order while maintaining acyclicity, producing mazes that remain connected without loops; without this structure, generated mazes could contain cycles or disconnected regions.</li>
             </ul>
-            <h5>Implementation</h5>
+            <p><strong>Implementation</strong></p>
             <ul>
                 <li><a href="https://github.com/djeada/Algorithms-And-Data-Structures/tree/master/src/graphs/cpp/kruskal">C++</a></li>
                 <li><a href="https://github.com/djeada/Algorithms-And-Data-Structures/tree/master/src/graphs/python/kruskal">Python</a></li>
+            </ul>
+            <p><em>Implementation tip:</em>
+                On huge graphs that <strong>stream from disk</strong>, you can <strong>external-sort</strong> edges by weight, then perform a single pass with DSU. For reproducibility across platforms, <strong>stabilize</strong> sorting by <code>(weight, min(u,v), max(u,v))</code>.</p>
+            <h3 id="topological-sort">Topological Sort</h3>
+            <p>Topological sort orders the vertices of a <strong>directed acyclic graph (DAG)</strong> so that <strong>every directed edge</strong> $u \rightarrow v$ goes <strong>from left to right</strong> in the order (i.e., $u$ appears before $v$). It’s the canonical tool for scheduling tasks with dependencies.</p>
+            <p>To efficiently keep track of the process (Kahn’s algorithm), we use:</p>
+            <ul>
+                <li>A <strong>queue</strong> (or min-heap if you want lexicographically smallest order) holding all vertices with <strong>indegree = 0</strong> (no unmet prerequisites).</li>
+                <li>An <strong><code>indegree</code> map/array</strong> that counts for each vertex how many prerequisites remain.</li>
+                <li>An <strong><code>order</code> list</strong> to append vertices as they are “emitted.”</li>
+            </ul>
+            <p><em>Useful additions in practice:</em></p>
+            <ul>
+                <li>Maintaining a <em>visited count</em> or tracking the length of the output order lets you detect cycles, since producing fewer than $V$ vertices indicates that some could not be placed due to a cycle; without this check, algorithms like Kahn’s may silently return incomplete results on cyclic task graphs.</li>
+                <li>Using a <em>min-heap</em> instead of a simple FIFO queue ensures that, among available candidates, the smallest-indexed vertex is always chosen, yielding the lexicographically smallest valid topological order; without this modification, the output order depends on arbitrary queueing, which may vary between runs.</li>
+                <li>A <em>DFS-based alternative</em> computes a valid topological order by recording vertices in reverse postorder, also in $O(V+E)$ time, while detecting cycles via a three-color marking or recursion stack; without DFS, cycle detection must be handled separately in Kahn’s algorithm.</li>
+            </ul>
+            <p><strong>Algorithm Steps (Kahn’s algorithm)</strong></p>
+            <ol>
+                <li>Compute <code>indegree[v]</code> for every vertex $v$; set <code>order = []</code>.</li>
+                <li>Initialize a queue <code>Q</code> with all vertices of indegree 0.</li>
+                <li>While <code>Q</code> is nonempty, repeat steps 4–6.</li>
+                <li>Dequeue a vertex <code>u</code> from <code>Q</code> and append it to <code>order</code>.</li>
+                <li>For each outgoing edge <code>u → v</code>, decrement <code>indegree[v]</code> by 1.</li>
+                <li>If <code>indegree[v]</code> becomes 0, enqueue <code>v</code> into <code>Q</code>.</li>
+                <li>If <code>len(order) &lt; V</code> at the end, a cycle exists and no topological order; otherwise <code>order</code> is a valid topological ordering.</li>
+            </ol>
+            <p><em>Reference pseudocode (adjacency-list graph):</em></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">TopoSort_Kahn(G):
+    # G[u] = iterable of neighbors v with edge u -&gt; v
+    V = all_vertices(G)
+    indeg = {v: 0 for v in V}
+    for u in V:
+        for v in G[u]:
+            indeg[v] += 1
+
+    Q = Queue()
+    for v in V:
+        if indeg[v] == 0:
+            Q.enqueue(v)
+
+    order = []
+
+    while not Q.empty():
+        u = Q.dequeue()
+        order.append(u)
+        for v in G[u]:
+            indeg[v] -= 1
+            if indeg[v] == 0:
+                Q.enqueue(v)
+
+    if len(order) != len(V):
+        return None    # cycle detected
+    return order</code></pre>
+            </div>
+            </p>
+            <p><em>Sanity notes:</em></p>
+            <ul>
+                <li>The <em>time</em> complexity of topological sorting is $O(V+E)$ because each vertex is enqueued exactly once and every edge is processed once when its indegree decreases; without this efficiency, ordering tasks in large dependency graphs would be slower.</li>
+                <li>The <em>space</em> complexity is $O(V)$, required for storing indegree counts, the processing queue, and the final output order; without allocating this space, the algorithm cannot track which vertices are ready to be placed.</li>
+                <li>The required <em>input</em> is a directed acyclic graph (DAG), since if a cycle exists, no valid topological order is possible; without this restriction, attempts to schedule cyclic dependencies, such as tasks that mutually depend on each other, will fail.</li>
+            </ul>
+            <p><strong>Example</strong></p>
+            <p>DAG; we’ll start with all indegree-0 vertices. (Edges shown as arrows.)</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">┌───────┐
+                           │   A   │
+                           └───┬───┘
+                               │
+                               │
+        ┌───────┐          ┌───▼───┐          ┌───────┐
+        │   B   │──────────│   C   │──────────│   D   │
+        └───┬───┘          └───┬───┘          └───┬───┘
+            │                  │                  │
+            │                  │                  │
+            │              ┌───▼───┐              │
+            │              │   E   │──────────────┘
+            │              └───┬───┘
+            │                  │
+            │                  │
+        ┌───▼───┐          ┌───▼───┐
+        │   G   │          │   F   │
+        └───────┘          └───────┘
+
+Edges:
+A→C, B→C, C→D, C→E, E→D, B→G</code></pre>
+            </div>
+            </p>
+            <p><em>Initial indegrees:</em></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">indeg[A]=0, indeg[B]=0, indeg[C]=2, indeg[D]=2, indeg[E]=1, indeg[F]=0, indeg[G]=1</code></pre>
+            </div>
+            </p>
+            <p><em>Queue/Indegree evolution (front → back; assume we keep the queue </em><em>lexicographically</em><em> by using a min-heap):</em></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Step | Pop u | Emit order         | Decrease indeg[...]         | Newly 0 → Enqueue | Q after
+-----+-------+--------------------+------------------------------+-------------------+-----------------
+0    | —     | []                 | —                            | A, B, F           | [A, B, F]
+1    | A     | [A]                | C:2→1                        | —                 | [B, F]
+2    | B     | [A, B]             | C:1→0, G:1→0                | C, G              | [C, F, G]
+3    | C     | [A, B, C]          | D:2→1, E:1→0                | E                 | [E, F, G]
+4    | E     | [A, B, C, E]       | D:1→0                       | D                 | [D, F, G]
+5    | D     | [A, B, C, E, D]    | —                            | —                 | [F, G]
+6    | F     | [A, B, C, E, D, F] | —                            | —                 | [G]
+7    | G     | [A, B, C, E, D, F, G] | —                         | —                 | []</code></pre>
+            </div>
+            </p>
+            <p><em>A valid topological order:</em>
+                <code>A, B, C, E, D, F, G</code> (others like <code>B, A, C, E, D, F, G</code> are also valid.)
+            </p>
+            <p><em>Clean left-to-right view (one possible ordering):</em></p>
+            <p>
+            <div>
+                <pre><code class="language-shell">A   B   F   C   E   D   G
+│   │       │   │   │
+└──►└──►    └──►└──►└──►   (all arrows go left→right)</code></pre>
+            </div>
+            </p>
+            <p><strong>Cycle detection (why it fails on cycles)</strong></p>
+            <p>If there’s a cycle, some vertices <strong>never</strong> reach indegree 0. Example:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">┌─────┐      ┌─────┐
+   │  X  │ ───► │  Y  │
+   └──┬──┘      └──┬──┘
+      └───────────►┘
+        (Y ───► X creates a cycle)</code></pre>
+            </div>
+            </p>
+            <p>Here <code>indeg[X]=indeg[Y]=1</code> initially; <code>Q</code> starts empty ⇒ <code>order=[]</code> and <code>len(order) &lt; V</code> ⇒ <strong>cycle reported</strong>.</p>
+            <p><strong>Applications</strong></p>
+            <ul>
+                <li>In <em>build systems and compilation</em>, topological sorting ensures that each file is compiled only after its prerequisites are compiled; without it, a build may fail by trying to compile a module before its dependencies are available.</li>
+                <li>For <em>course scheduling</em>, topological order provides a valid sequence in which to take courses respecting prerequisite constraints; without it, students may be assigned courses they are not yet eligible to take.</li>
+                <li>In <em>data pipelines and DAG workflows</em> such as Airflow or Spark, tasks are executed when their inputs are ready by following a topological order; without this, pipeline stages might run prematurely and fail due to missing inputs.</li>
+                <li>For <em>dependency resolution</em> in package managers or container systems, topological sorting installs components in an order that respects their dependencies; without it, software may be installed in the wrong sequence and break.</li>
+                <li>In <em>dynamic programming on DAGs</em>, problems like longest path, shortest path, or path counting are solved efficiently by processing vertices in topological order; without this ordering, subproblems may be computed before their dependencies are solved.</li>
+                <li>For <em>circuit evaluation or spreadsheets</em>, topological order ensures that each cell or net is evaluated only after its referenced inputs; without it, computations could use undefined or incomplete values.</li>
+            </ul>
+            <p><strong>Implementation</strong></p>
+            <ul>
+                <li><a href="https://github.com/djeada/Algorithms-And-Data-Structures/tree/master/src/graphs/cpp/topological_sort">C++</a></li>
+                <li><a href="https://github.com/djeada/Algorithms-And-Data-Structures/tree/master/src/graphs/topological_sort/kruskal">Python</a></li>
+            </ul>
+            <p><em>Implementation tips:</em></p>
+            <ul>
+                <li>Use a <strong>deque</strong> for FIFO behavior; use a <strong>min-heap</strong> to get the <strong>lexicographically smallest</strong> topological order.</li>
+                <li>When the graph is large and sparse, store adjacency as <strong>lists</strong> and compute indegrees in one pass for $O(V+E)$.</li>
+                <li><strong>DFS variant</strong> (brief): color states <code>0=unseen,1=visiting,2=done</code>; on exploring <code>u</code>, mark <code>1</code>; DFS to neighbors; if you see <code>1</code> again, there’s a cycle; on finish, push <code>u</code> to a stack. Reverse the stack for the order.</li>
             </ul>
         </section>
         <div id="table-of-contents">
@@ -1215,10 +1665,11 @@ C-E: 5</code></pre>
                     </li>
                     <li><a href="#planarity">Planarity</a>
                         <ol>
-                            <li><a href="#what-is-a-planar-graph-">What is a Planar Graph?</a></li>
-                            <li><a href="#planar-embedding">Planar Embedding</a></li>
+                            <li><a href="#what-is-a-planar-graph-">What is a planar graph?</a></li>
+                            <li><a href="#kuratowski-s-wagner-s-characterizations">Kuratowski’s &amp; Wagner’s characterizations</a></li>
+                            <li><a href="#handy-planar-edge-bounds-quick-tests-">Handy planar edge bounds (quick tests)</a></li>
                             <li><a href="#examples">Examples</a></li>
-                            <li><a href="#strategies-for-assessing-planarity">Strategies for Assessing Planarity</a></li>
+                            <li><a href="#how-to-check-planarity-in-practice">How to check planarity in practice</a></li>
                         </ol>
                     </li>
                     <li><a href="#traversals">Traversals</a>
@@ -1229,17 +1680,18 @@ C-E: 5</code></pre>
                     </li>
                     <li><a href="#shortest-paths">Shortest paths</a>
                         <ol>
-                            <li><a href="#dijkstra-s-algorithm">Dijkstra's Algorithm</a></li>
-                            <li><a href="#bellman-ford-algorithm">Bellman-Ford Algorithm</a></li>
+                            <li><a href="#dijkstra-s-algorithm">Dijkstra’s Algorithm</a></li>
+                            <li><a href="#bellman-ford-algorithm">Bellman–Ford Algorithm</a></li>
                             <li><a href="#a-a-star-algorithm">A* (A-Star) Algorithm</a></li>
                         </ol>
                     </li>
                     <li><a href="#minimal-spanning-trees">Minimal Spanning Trees</a>
                         <ol>
-                            <li><a href="#prim-s-algorithm">Prim's Algorithm</a></li>
-                            <li><a href="#kruskal-s-algorithm">Kruskal's Algorithm</a></li>
+                            <li><a href="#prim-s-algorithm">Prim’s Algorithm</a></li>
+                            <li><a href="#kruskal-s-algorithm">Kruskal’s Algorithm</a></li>
                         </ol>
                     </li>
+                    <li><a href="#topological-sort">Topological Sort</a></li>
                 </ol>
             </ol>
             <div id="related-articles">
@@ -1251,6 +1703,9 @@ C-E: 5</code></pre>
                     <li><a href="https://adamdjellouli.com/articles/algorithms_and_data_structures/data_structures.html">Data Structures</a></li>
                     <li><a href="https://adamdjellouli.com/articles/algorithms_and_data_structures/dynamic_programming.html">Dynamic Programming</a></li>
                     <li><a href="https://adamdjellouli.com/articles/algorithms_and_data_structures/graphs.html">Graphs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/algorithms_and_data_structures/greedy_algorithms.html">Greedy Algorithms</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/algorithms_and_data_structures/matrices.html">Matrices</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/algorithms_and_data_structures/searching.html">Searching</a></li>
                     <li><a href="https://adamdjellouli.com/articles/algorithms_and_data_structures/sorting.html">Sorting</a></li>
                 </ol>
             </div>
