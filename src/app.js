@@ -532,6 +532,80 @@ function main() {
     if (downloadButton) {
         downloadButton.addEventListener('click', handleDownloadClick);
     }
+
+    // Enhanced mobile nav UX: overlay, focus trap, and close interactions
+    const navToggle = document.getElementById('navbar-toggle');
+    const navMenu = navToggle ? navToggle.nextElementSibling : null; // <ul>
+    if (navToggle && navMenu && navMenu.tagName === 'UL') {
+        // Ensure ARIA linkage
+        if (!navMenu.id) {
+            navMenu.id = 'main-menu';
+        }
+        navToggle.setAttribute('aria-controls', navMenu.id);
+
+        // Create overlay once
+        let overlay = document.querySelector('.nav-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'nav-overlay';
+            document.body.appendChild(overlay);
+        }
+
+        const updateOpenState = () => {
+            const open = navToggle.checked;
+            document.body.classList.toggle('nav-open', open);
+            document.body.style.overflow = open ? 'hidden' : '';
+            navMenu.setAttribute('aria-hidden', open ? 'false' : 'true');
+            navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            if (open) {
+                // Move focus to first focusable in menu for accessibility
+                const firstFocusable = navMenu.querySelector('a, button, input, [tabindex]:not([tabindex="-1"])');
+                if (firstFocusable) firstFocusable.focus({ preventScroll: true });
+            }
+        };
+
+        updateOpenState();
+
+        navToggle.addEventListener('change', updateOpenState);
+        overlay.addEventListener('click', () => {
+            navToggle.checked = false;
+            updateOpenState();
+        });
+
+        // Close with ESC
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && navToggle.checked) {
+                navToggle.checked = false;
+                updateOpenState();
+                navToggle.focus();
+            }
+        });
+
+        // Basic focus trap when open
+        document.addEventListener('keydown', (e) => {
+            if (!navToggle.checked || e.key !== 'Tab') return;
+            const focusables = navMenu.querySelectorAll('a, button, input, [tabindex]:not([tabindex="-1"])');
+            if (!focusables.length) return;
+            const first = focusables[0];
+            const last = focusables[focusables.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        });
+
+        // Close on navigation link click (improves UX on mobile)
+        navMenu.addEventListener('click', (e) => {
+            const target = e.target;
+            if (target && target.closest('a')) {
+                navToggle.checked = false;
+                updateOpenState();
+            }
+        });
+    }
 }
 
 // Run `main` after DOM is ready
