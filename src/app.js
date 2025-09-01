@@ -310,49 +310,79 @@ function initializeThreeJS() {
     const container = document.getElementById('threejs-container');
     let darkMode = getCookie("darkMode") === "true";
 
+    // Mobile detection
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                     window.innerWidth <= 768;
+
+    // Adjust quality settings for mobile
+    const qualitySettings = {
+        particles: isMobile ? 300 : 1200,
+        stars: isMobile ? 2000 : 6000,
+        shadowMap: isMobile ? 512 : 2048,
+        pixelRatio: isMobile ? 1 : Math.min(window.devicePixelRatio, 2),
+        antialias: !isMobile, // Disable antialiasing on mobile for performance
+        fog: isMobile ? 0.004 : 0.002, // Denser fog on mobile to hide lower detail
+        ringDetail: isMobile ? [16, 64] : [32, 128] // Lower geometry detail on mobile
+    };
+
     // Enhanced color palettes for better contrast
-let bgColor = darkMode ? 0x0a0a12 : 0xf8f9fa;
-let fogColor = darkMode ? bgColor : 0xc8d0e0; // Light blue-gray fog for light mode
+    let bgColor = darkMode ? 0x0a0a12 : 0xf8f9fa;
+    let fogColor = darkMode ? bgColor : 0xc8d0e0;
     let ringColor = darkMode ? 0x4a90e2 : 0x2c5aa0;
     let starColor = darkMode ? 0xffffff : 0x2a2a2a;
 
-    // Scene setup with improved fog
+    // Scene setup with mobile-optimized fog
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(fogColor, 0.002);
+    scene.fog = new THREE.FogExp2(fogColor, qualitySettings.fog);
 
-    const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 2000);
-    camera.position.set(0, 8, 25);
+    const camera = new THREE.PerspectiveCamera(
+        isMobile ? 85 : 75, // Wider FOV on mobile for better view
+        container.clientWidth / container.clientHeight,
+        0.1,
+        2000
+    );
+    camera.position.set(0, 8, isMobile ? 20 : 25); // Closer camera on mobile
 
-    // Enhanced renderer settings
+    // Mobile-optimized renderer settings
     const renderer = new THREE.WebGLRenderer({
-        antialias: true,
+        antialias: qualitySettings.antialias,
         alpha: true,
-        powerPreference: "high-performance"
+        powerPreference: isMobile ? "default" : "high-performance"
     });
     renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.setPixelRatio(qualitySettings.pixelRatio);
+
+    // Conditional shadow settings
+    if (!isMobile) {
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    }
+
     renderer.setClearColor(bgColor, 1);
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    if (!isMobile) {
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+    }
     container.appendChild(renderer.domElement);
 
-    // Improved lighting system
-    const ambient = new THREE.AmbientLight(darkMode ? 0x404040 : 0xc0c0c0, 0.6);
+    // Mobile-optimized lighting system
+    const ambient = new THREE.AmbientLight(darkMode ? 0x404040 : 0xc0c0c0, isMobile ? 0.8 : 0.6);
     scene.add(ambient);
 
-    const sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    const sunLight = new THREE.DirectionalLight(0xffffff, isMobile ? 0.8 : 1.0);
     sunLight.position.set(20, 30, 20);
-    sunLight.castShadow = true;
-    sunLight.shadow.mapSize.width = 2048;
-    sunLight.shadow.mapSize.height = 2048;
-    sunLight.shadow.camera.near = 0.5;
-    sunLight.shadow.camera.far = 100;
-    sunLight.shadow.camera.left = -50;
-    sunLight.shadow.camera.right = 50;
-    sunLight.shadow.camera.top = 50;
-    sunLight.shadow.camera.bottom = -50;
+
+    if (!isMobile) {
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = qualitySettings.shadowMap;
+        sunLight.shadow.mapSize.height = qualitySettings.shadowMap;
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 100;
+        sunLight.shadow.camera.left = -50;
+        sunLight.shadow.camera.right = 50;
+        sunLight.shadow.camera.top = 50;
+        sunLight.shadow.camera.bottom = -50;
+    }
     scene.add(sunLight);
 
     // Dynamic point light for energy visualization
@@ -360,55 +390,65 @@ let fogColor = darkMode ? bgColor : 0xc8d0e0; // Light blue-gray fog for light m
     energyLight.position.set(0, 10, 0);
     scene.add(energyLight);
 
-    // Enhanced ring geometry with better detail
-    const ringGeo = new THREE.TorusGeometry(4, 0.3, 32, 128);
+    // Mobile-optimized ring geometry
+    const ringGeo = new THREE.TorusGeometry(4, 0.3, qualitySettings.ringDetail[0], qualitySettings.ringDetail[1]);
 
-    // Procedural surface details
+    // Simplified procedural surface details for mobile
     const colors = [];
-    const normals = ringGeo.attributes.normal.array;
-    for (let i = 0; i < ringGeo.attributes.position.count; i++) {
-        const stress = Math.random();
-        const isCrack = stress < 0.08;
-        const isWorn = stress < 0.25;
+    const colorCount = isMobile ? ringGeo.attributes.position.count / 4 : ringGeo.attributes.position.count;
 
-        if (isCrack) {
-            colors.push(1, 0.1, 0); // Red cracks
-        } else if (isWorn) {
-            colors.push(0.8, 0.8, 0.9); // Worn areas
-        } else {
+    for (let i = 0; i < ringGeo.attributes.position.count; i++) {
+        if (isMobile && i > colorCount) {
+            // Use base color for remaining vertices on mobile
             colors.push(
                 ((ringColor >> 16) & 0xff) / 255,
                 ((ringColor >> 8) & 0xff) / 255,
                 ((ringColor) & 0xff) / 255
             );
+        } else {
+            const stress = Math.random();
+            const isCrack = stress < 0.08;
+            const isWorn = stress < 0.25;
+
+            if (isCrack) {
+                colors.push(1, 0.1, 0);
+            } else if (isWorn) {
+                colors.push(0.8, 0.8, 0.9);
+            } else {
+                colors.push(
+                    ((ringColor >> 16) & 0xff) / 255,
+                    ((ringColor >> 8) & 0xff) / 255,
+                    ((ringColor) & 0xff) / 255
+                );
+            }
         }
     }
     ringGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
-    // Realistic material properties
+    // Mobile-optimized material properties
     const ringMat = new THREE.MeshPhysicalMaterial({
         vertexColors: true,
-        metalness: 0.8,
-        roughness: 0.3,
-        clearcoat: 0.5,
+        metalness: isMobile ? 0.6 : 0.8,
+        roughness: isMobile ? 0.4 : 0.3,
+        clearcoat: isMobile ? 0.3 : 0.5,
         clearcoatRoughness: 0.1,
-        reflectivity: 0.9,
-        envMapIntensity: 1.0
+        reflectivity: isMobile ? 0.7 : 0.9,
+        envMapIntensity: isMobile ? 0.8 : 1.0
     });
 
     const ring = new THREE.Mesh(ringGeo, ringMat);
-    ring.castShadow = true;
-    ring.receiveShadow = true;
+    ring.castShadow = !isMobile;
+    ring.receiveShadow = !isMobile;
     ring.position.set(0, 10, 0);
     scene.add(ring);
 
-    // Physics variables - realistic values with limits
-    const GRAVITY = -9.81 * 0.5; // Scaled gravity
+    // Physics variables with mobile adjustments
+    const GRAVITY = -9.81 * 0.5;
     const GROUND_LEVEL = 2;
-    const MAX_LAUNCH_VELOCITY = 20; // Limit max launch speed
-    const MAX_HORIZONTAL_DISTANCE = 40; // Maximum distance from center
-    const VELOCITY_DAMPING_GROUND = 0.85; // Damping when on ground
-    const MIN_BOUNCE_VELOCITY = 0.5; // Minimum velocity to bounce
+    const MAX_LAUNCH_VELOCITY = isMobile ? 15 : 20; // Reduced for mobile
+    const MAX_HORIZONTAL_DISTANCE = isMobile ? 30 : 40;
+    const VELOCITY_DAMPING_GROUND = 0.85;
+    const MIN_BOUNCE_VELOCITY = 0.5;
 
     let ringVelocity = { x: 0, y: 0, z: 0 };
     let ringPosition = { x: 0, y: 10, z: 0 };
@@ -416,8 +456,8 @@ let fogColor = darkMode ? bgColor : 0xc8d0e0; // Light blue-gray fog for light m
     let baseRotationSpeed = 0.005;
     let ringOnGround = false;
 
-    // Enhanced particle system for energy visualization
-    const particleCount = 1200;
+    // Mobile-optimized particle system
+    const particleCount = qualitySettings.particles;
     const particlePositions = new Float32Array(particleCount * 3);
     const particleVelocities = new Float32Array(particleCount * 3);
     const particleLife = new Float32Array(particleCount);
@@ -441,20 +481,20 @@ let fogColor = darkMode ? bgColor : 0xc8d0e0; // Light blue-gray fog for light m
     const particleGeo = new THREE.BufferGeometry();
     particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
 
-const particleMat = new THREE.PointsMaterial({
-    size: 1.5,
-    sizeAttenuation: true,
-    color: darkMode ? 0x66aaff : 0x404040, // Much darker for light mode
-    transparent: true,
-    opacity: darkMode ? 0.8 : 0.6, // Lower opacity in light mode
-    blending: THREE.SubtractiveBlending, // Try this blending mode
-    depthWrite: false
-});
+    const particleMat = new THREE.PointsMaterial({
+        size: isMobile ? 1.0 : 1.5,
+        sizeAttenuation: true,
+        color: darkMode ? 0x66aaff : 0x404040,
+        transparent: true,
+        opacity: darkMode ? (isMobile ? 0.6 : 0.8) : (isMobile ? 0.4 : 0.6),
+        blending: THREE.SubtractiveBlending,
+        depthWrite: false
+    });
     const particles = new THREE.Points(particleGeo, particleMat);
     scene.add(particles);
 
-    // Enhanced starfield with depth
-    const starCount = 6000;
+    // Mobile-optimized starfield
+    const starCount = qualitySettings.stars;
     const starPositions = new Float32Array(starCount * 3);
     const starSizes = new Float32Array(starCount);
 
@@ -463,7 +503,7 @@ const particleMat = new THREE.PointsMaterial({
         starPositions[i3] = (Math.random() - 0.5) * 1000;
         starPositions[i3 + 1] = (Math.random() - 0.5) * 1000;
         starPositions[i3 + 2] = (Math.random() - 0.5) * 1000;
-        starSizes[i] = Math.random() * 3 + 1;
+        starSizes[i] = Math.random() * (isMobile ? 2 : 3) + 1;
     }
 
     const starsGeo = new THREE.BufferGeometry();
@@ -471,10 +511,10 @@ const particleMat = new THREE.PointsMaterial({
     starsGeo.setAttribute('size', new THREE.BufferAttribute(starSizes, 1));
 
     const starsMat = new THREE.PointsMaterial({
-        size: 2,
+        size: isMobile ? 1.5 : 2,
         sizeAttenuation: true,
         color: starColor,
-        opacity: 0.8,
+        opacity: isMobile ? 0.6 : 0.8,
         transparent: true,
         vertexColors: false
     });
@@ -482,31 +522,83 @@ const particleMat = new THREE.PointsMaterial({
     const starField = new THREE.Points(starsGeo, starsMat);
     scene.add(starField);
 
-    // Ground plane for shadows
-    const groundGeo = new THREE.PlaneGeometry(100, 100);
-    const groundMat = new THREE.MeshLambertMaterial({
-        color: darkMode ? 0x1a1a1a : 0xe0e0e0,
-        transparent: true,
-        opacity: 0.3
-    });
-    const ground = new THREE.Mesh(groundGeo, groundMat);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = GROUND_LEVEL;
-    ground.receiveShadow = true;
-    scene.add(ground);
+    // Ground plane for shadows (only on desktop)
+    if (!isMobile) {
+        const groundGeo = new THREE.PlaneGeometry(100, 100);
+        const groundMat = new THREE.MeshLambertMaterial({
+            color: darkMode ? 0x1a1a1a : 0xe0e0e0,
+            transparent: true,
+            opacity: 0.3
+        });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = GROUND_LEVEL;
+        ground.receiveShadow = true;
+        scene.add(ground);
+    }
 
-    // Enhanced interactivity
+    // Enhanced interactivity with touch support
     let isMouseDown = false;
+    let isTouching = false;
     let mouseForce = { x: 0, y: 0 };
     let cameraAutoRotate = true;
     let cameraAngle = 0;
     let energyLevel = 0;
     let keysPressed = {};
+    let lastTouchTime = 0;
+    let touchStartPos = { x: 0, y: 0 };
 
     const clock = new THREE.Clock();
     let time = 0;
 
-    // Event listeners with improved responsiveness
+    // Touch event handlers for mobile
+    renderer.domElement.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        isTouching = true;
+        cameraAutoRotate = false;
+        const touch = e.touches[0];
+        const rect = renderer.domElement.getBoundingClientRect();
+        touchStartPos.x = touch.clientX - rect.left;
+        touchStartPos.y = touch.clientY - rect.top;
+
+        const currentTime = Date.now();
+        if (currentTime - lastTouchTime < 300) {
+            // Double tap detected
+            handleDoubleTap();
+        }
+        lastTouchTime = currentTime;
+    }, { passive: false });
+
+    renderer.domElement.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        isTouching = false;
+        setTimeout(() => cameraAutoRotate = true, 2000);
+
+        // Single tap launch
+        if (e.changedTouches.length === 1) {
+            setTimeout(() => {
+                if (Date.now() - lastTouchTime > 300) {
+                    handleSingleTap();
+                }
+            }, 300);
+        }
+    }, { passive: false });
+
+    renderer.domElement.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (!isTouching) return;
+
+        const touch = e.touches[0];
+        const rect = renderer.domElement.getBoundingClientRect();
+        const currentX = touch.clientX - rect.left;
+        const currentY = touch.clientY - rect.top;
+
+        // Apply force based on touch movement
+        mouseForce.x = ((currentX - touchStartPos.x) / rect.width) * 0.03;
+        mouseForce.y = ((currentY - touchStartPos.y) / rect.height) * -0.03;
+    }, { passive: false });
+
+    // Mouse event handlers (for desktop)
     renderer.domElement.addEventListener('mousedown', (e) => {
         isMouseDown = true;
         cameraAutoRotate = false;
@@ -521,79 +613,136 @@ const particleMat = new THREE.PointsMaterial({
         if (!isMouseDown) return;
 
         const rect = renderer.domElement.getBoundingClientRect();
-        mouseForce.x = ((e.clientX - rect.left) / rect.width - 0.5) * 0.05; // Reduced force
+        mouseForce.x = ((e.clientX - rect.left) / rect.width - 0.5) * 0.05;
         mouseForce.y = ((e.clientY - rect.top) / rect.height - 0.5) * -0.05;
     });
 
     renderer.domElement.addEventListener('click', (e) => {
-        // Apply limited impulse force
-        const impulse = Math.min(12, MAX_LAUNCH_VELOCITY * 0.6); // Limited launch power
+        if (!isMobile) {
+            handleSingleTap();
+        }
+    });
+
+    renderer.domElement.addEventListener('dblclick', (e) => {
+        if (!isMobile) {
+            handleDoubleTap();
+        }
+    });
+
+    function handleSingleTap() {
+        const impulse = Math.min(isMobile ? 10 : 12, MAX_LAUNCH_VELOCITY * 0.6);
         ringVelocity.y += impulse;
         angularVelocity.x += (Math.random() - 0.5) * 0.2;
         angularVelocity.y += (Math.random() - 0.5) * 0.2;
         energyLevel = Math.max(energyLevel, 40);
         ringOnGround = false;
 
-        // Visual feedback
         energyLight.intensity = 5;
         setTimeout(() => energyLight.intensity = 0, 200);
-    });
+    }
 
-    renderer.domElement.addEventListener('dblclick', () => {
-        // Super jump with limited power
-        ringVelocity.y = Math.min(18, MAX_LAUNCH_VELOCITY * 0.9);
+    function handleDoubleTap() {
+        ringVelocity.y = Math.min(isMobile ? 15 : 18, MAX_LAUNCH_VELOCITY * 0.9);
         angularVelocity.x = (Math.random() - 0.5) * 0.5;
         angularVelocity.y = (Math.random() - 0.5) * 0.5;
         angularVelocity.z = (Math.random() - 0.5) * 0.5;
         energyLevel = 80;
         ringOnGround = false;
-    });
+    }
 
-    // Enhanced keyboard controls
-    window.addEventListener('keydown', (e) => {
-        keysPressed[e.code] = true;
+    // Keyboard controls (desktop only)
+    if (!isMobile) {
+        window.addEventListener('keydown', (e) => {
+            keysPressed[e.code] = true;
 
-        switch(e.code) {
-            case 'Space':
-                e.preventDefault();
-                if (ringOnGround) {
-                    ringVelocity.y += 6;
-                    ringOnGround = false;
-                }
-                break;
-            case 'KeyR':
-                // Reset ring
-                ringPosition = { x: 0, y: 10, z: 0 };
-                ringVelocity = { x: 0, y: 0, z: 0 };
-                angularVelocity = { x: 0, y: 0, z: 0 };
-                ringOnGround = false;
-                break;
-        }
-    });
+            switch(e.code) {
+                case 'Space':
+                    e.preventDefault();
+                    if (ringOnGround) {
+                        ringVelocity.y += 6;
+                        ringOnGround = false;
+                    }
+                    break;
+                case 'KeyR':
+                    resetRing();
+                    break;
+            }
+        });
 
-    window.addEventListener('keyup', (e) => {
-        keysPressed[e.code] = false;
-    });
+        window.addEventListener('keyup', (e) => {
+            keysPressed[e.code] = false;
+        });
+    }
 
-    window.addEventListener('resize', () => {
-        camera.aspect = container.clientWidth / container.clientHeight;
+    function resetRing() {
+        ringPosition = { x: 0, y: 10, z: 0 };
+        ringVelocity = { x: 0, y: 0, z: 0 };
+        angularVelocity = { x: 0, y: 0, z: 0 };
+        ringOnGround = false;
+    }
+
+    // Responsive resize handler
+    function handleResize() {
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+
+        camera.aspect = width / height;
         camera.updateProjectionMatrix();
-        renderer.setSize(container.clientWidth, container.clientHeight);
-    });
+        renderer.setSize(width, height);
+
+        // Update mobile detection on resize
+        const wasMobile = isMobile;
+        const nowMobile = window.innerWidth <= 768;
+
+        if (wasMobile !== nowMobile) {
+            // Reload if mobile status changed
+            location.reload();
+        }
+    }
+
+    window.addEventListener('resize', handleResize);
+
+    // Performance monitoring for mobile
+    let frameCount = 0;
+    let lastFPSCheck = performance.now();
+    let lowFPSCount = 0;
 
     function animate() {
         requestAnimationFrame(animate);
         const deltaTime = clock.getDelta();
         time += deltaTime;
 
-        // Handle continuous key presses for camera control
-        if (keysPressed['ArrowLeft'] || keysPressed['KeyA']) {
-            cameraAngle -= deltaTime * 2;
-            cameraAutoRotate = false;
+        // FPS monitoring on mobile
+        if (isMobile) {
+            frameCount++;
+            const now = performance.now();
+            if (now - lastFPSCheck >= 1000) {
+                const fps = frameCount;
+                frameCount = 0;
+                lastFPSCheck = now;
+
+                if (fps < 25) {
+                    lowFPSCount++;
+                    if (lowFPSCount >= 3) {
+                        // Reduce quality further if consistently low FPS
+                        particleMat.opacity *= 0.8;
+                        starsMat.opacity *= 0.8;
+                        lowFPSCount = 0;
+                    }
+                }
+            }
         }
-        if (keysPressed['ArrowRight'] || keysPressed['KeyD']) {
-            cameraAngle += deltaTime * 2;
-            cameraAutoRotate = false;
+
+        // Handle continuous key presses for camera control (desktop only)
+        if (!isMobile) {
+            if (keysPressed['ArrowLeft'] || keysPressed['KeyA']) {
+                cameraAngle -= deltaTime * 2;
+                cameraAutoRotate = false;
+            }
+            if (keysPressed['ArrowRight'] || keysPressed['KeyD']) {
+                cameraAngle += deltaTime * 2;
+                cameraAutoRotate = false;
+            }
         }
 
         // Theme switching
@@ -602,31 +751,31 @@ const particleMat = new THREE.PointsMaterial({
             darkMode = newDarkMode;
             bgColor = darkMode ? 0x0a0a12 : 0xf8f9fa;
             fogColor = darkMode ? bgColor : 0xc8d0e0;
-             ringColor = darkMode ? 0x4a90e2 : 0x2c5aa0;
+            ringColor = darkMode ? 0x4a90e2 : 0x2c5aa0;
             starColor = darkMode ? 0xffffff : 0x2a2a2a;
 
             renderer.setClearColor(bgColor, 1);
             scene.fog.color.setHex(fogColor);
             ambient.color.setHex(darkMode ? 0x404040 : 0xc0c0c0);
             starsMat.color.setHex(starColor);
-            groundMat.color.setHex(darkMode ? 0x1a1a1a : 0xe0e0e0);
+            if (!isMobile) {
+                groundMat.color.setHex(darkMode ? 0x1a1a1a : 0xe0e0e0);
+            }
         }
 
-        // Enhanced physics simulation
-        if (isMouseDown && !ringOnGround) {
+        // Physics simulation
+        if ((isMouseDown || isTouching) && !ringOnGround) {
             ringVelocity.x += mouseForce.x;
             ringVelocity.z += mouseForce.y;
         }
 
-        // Apply gravity only when not on ground
         if (!ringOnGround) {
             ringVelocity.y += GRAVITY * deltaTime;
         }
 
-        // Boundary enforcement - keep ring within reasonable distance
+        // Boundary enforcement
         const distanceFromCenter = Math.sqrt(ringPosition.x * ringPosition.x + ringPosition.z * ringPosition.z);
         if (distanceFromCenter > MAX_HORIZONTAL_DISTANCE) {
-            // Apply force back toward center
             const returnForce = 0.02;
             ringVelocity.x -= (ringPosition.x / distanceFromCenter) * returnForce;
             ringVelocity.z -= (ringPosition.z / distanceFromCenter) * returnForce;
@@ -637,32 +786,28 @@ const particleMat = new THREE.PointsMaterial({
         ringVelocity.y = Math.max(-MAX_LAUNCH_VELOCITY * 1.5, Math.min(MAX_LAUNCH_VELOCITY * 1.5, ringVelocity.y));
         ringVelocity.z = Math.max(-MAX_LAUNCH_VELOCITY, Math.min(MAX_LAUNCH_VELOCITY, ringVelocity.z));
 
-        // Update position only when not on ground or moving upward
+        // Update position
         if (!ringOnGround) {
             ringPosition.x += ringVelocity.x * deltaTime * 10;
             ringPosition.y += ringVelocity.y * deltaTime * 10;
             ringPosition.z += ringVelocity.z * deltaTime * 10;
 
-            // Air resistance when flying
             ringVelocity.x *= 0.985;
             ringVelocity.z *= 0.985;
         } else {
-            // Ground friction when on ground
             ringVelocity.x *= VELOCITY_DAMPING_GROUND;
             ringVelocity.z *= VELOCITY_DAMPING_GROUND;
         }
 
-        // Ground collision - no bouncing, just stop
+        // Ground collision
         if (ringPosition.y <= GROUND_LEVEL + 0.3) {
             ringPosition.y = GROUND_LEVEL + 0.3;
 
             if (ringVelocity.y < 0) {
                 if (Math.abs(ringVelocity.y) > MIN_BOUNCE_VELOCITY && !ringOnGround) {
-                    // Only small bounce on first impact
                     ringVelocity.y *= -0.3;
                     energyLevel = Math.max(energyLevel, 15);
                 } else {
-                    // Stop bouncing, ring is now on ground
                     ringVelocity.y = 0;
                     ringOnGround = true;
                 }
@@ -670,7 +815,7 @@ const particleMat = new THREE.PointsMaterial({
         }
 
         // Update angular velocity and rotation
-        angularVelocity.x *= 0.995; // Angular damping
+        angularVelocity.x *= 0.995;
         angularVelocity.y *= 0.995;
         angularVelocity.z *= 0.995;
 
@@ -678,34 +823,30 @@ const particleMat = new THREE.PointsMaterial({
         ring.rotation.y += (angularVelocity.y + baseRotationSpeed * 0.7) * deltaTime * 10;
         ring.rotation.z += angularVelocity.z * deltaTime * 10;
 
-        // Apply position to ring
         ring.position.set(ringPosition.x, ringPosition.y, ringPosition.z);
 
         // Energy-based effects
         energyLevel = Math.max(0, energyLevel - deltaTime * 15);
         const energyFactor = energyLevel / 100;
 
-        // Dynamic material properties based on energy
         ringMat.emissive.setHSL(0.6, energyFactor * 0.8, energyFactor * 0.3);
         ringMat.emissiveIntensity = energyFactor * 2;
 
-        // Energy light intensity
         energyLight.intensity = energyFactor * 3;
         energyLight.position.set(ringPosition.x, ringPosition.y + 2, ringPosition.z);
 
-        // Enhanced particle system
-        for (let i = 0; i < particleCount; i++) {
+        // Particle system update (with mobile optimizations)
+        const particleUpdateStep = isMobile ? 2 : 1; // Update every other particle on mobile
+        for (let i = 0; i < particleCount; i += particleUpdateStep) {
             const i3 = i * 3;
 
-            // Update particle physics
-            particleVelocities[i3 + 1] += 0.001; // Slight upward drift
+            particleVelocities[i3 + 1] += 0.001;
             particlePositions[i3] += particleVelocities[i3];
             particlePositions[i3 + 1] += particleVelocities[i3 + 1];
             particlePositions[i3 + 2] += particleVelocities[i3 + 2];
 
             particleLife[i] -= deltaTime * 0.5;
 
-            // Respawn particles
             if (particleLife[i] <= 0 || particlePositions[i3 + 1] > ringPosition.y + 5) {
                 const angle = Math.random() * Math.PI * 2;
                 const radius = THREE.MathUtils.randFloat(3.2, 4.8);
@@ -724,30 +865,48 @@ const particleMat = new THREE.PointsMaterial({
         particles.geometry.attributes.position.needsUpdate = true;
         particleMat.opacity = 0.3 + energyFactor * 0.5;
 
-        // Enhanced star twinkling
-        starsMat.opacity = 0.6 + 0.3 * Math.sin(time * 0.5) + energyFactor * 0.2;
-
-        // Enhanced camera system with manual control
-        if (cameraAutoRotate) {
-            cameraAngle = time * 0.05;
+        // Star twinkling (reduced frequency on mobile)
+        if (!isMobile || frameCount % 2 === 0) {
+            starsMat.opacity = 0.6 + 0.3 * Math.sin(time * 0.5) + energyFactor * 0.2;
         }
 
-        const radius = 25 + Math.sin(time * 0.3) * 5;
+        // Camera system
+        if (cameraAutoRotate) {
+            cameraAngle = time * (isMobile ? 0.03 : 0.05); // Slower on mobile
+        }
+
+        const radius = (isMobile ? 20 : 25) + Math.sin(time * 0.3) * (isMobile ? 3 : 5);
         camera.position.x = Math.cos(cameraAngle) * radius;
-        camera.position.z = Math.sin(cameraAngle) * radius + 10;
+        camera.position.z = Math.sin(cameraAngle) * radius + (isMobile ? 8 : 10);
         camera.position.y = 8 + Math.sin(time * 0.2) * 3 + (ringPosition.y - 10) * 0.2;
 
         camera.lookAt(ring.position);
 
-        // Render
         renderer.render(scene, camera);
     }
 
     animate();
 
-    // Persistent instructions overlay with enhanced controls
+    // Mobile-optimized instructions overlay
     const instructions = document.createElement('div');
-    instructions.style.cssText = `
+    const instructionStyle = isMobile ? `
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 10px;
+        border-radius: 6px;
+        font-family: 'Arial', sans-serif;
+        font-size: 11px;
+        pointer-events: none;
+        z-index: 1000;
+        border: 1px solid rgba(255,255,255,0.2);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        max-height: 120px;
+        overflow: hidden;
+    ` : `
         position: absolute;
         top: 15px;
         left: 15px;
@@ -762,7 +921,17 @@ const particleMat = new THREE.PointsMaterial({
         border: 1px solid rgba(255,255,255,0.2);
         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     `;
-    instructions.innerHTML = `
+
+    instructions.style.cssText = instructionStyle;
+
+    instructions.innerHTML = isMobile ? `
+        <strong style="color: #44aaff;">🎮 RING PHYSICS</strong><br>
+        <span style="color: #ffaa44;">Controls:</span><br>
+        • Tap: Launch ring<br>
+        • Double-tap: Super jump<br>
+        • Drag: Apply force in flight<br>
+        <span style="color: #44ff44;">Optimized for mobile</span>
+    ` : `
         <strong style="color: #44aaff;">🎮 RING PHYSICS CONTROLS</strong><br><br>
         <span style="color: #ffaa44;">Launch:</span><br>
         • Click: Launch ring<br>
@@ -775,7 +944,33 @@ const particleMat = new THREE.PointsMaterial({
         • R: Reset position<br><br>
         <span style="color: #44ff44;">Physics: Realistic gravity & boundaries</span>
     `;
+
     container.appendChild(instructions);
+
+    // Add mobile-specific reset button
+    if (isMobile) {
+        const resetButton = document.createElement('button');
+        resetButton.style.cssText = `
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(68, 170, 255, 0.8);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 1001;
+            touch-action: manipulation;
+        `;
+        resetButton.textContent = 'RESET';
+        resetButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            resetRing();
+        });
+        container.appendChild(resetButton);
+    }
 }
 
 
