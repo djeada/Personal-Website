@@ -312,7 +312,7 @@ function initializeThreeJS() {
 
     // Mobile detection
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-                     window.innerWidth <= 768;
+        window.innerWidth <= 768;
 
     // Adjust quality settings for mobile
     const qualitySettings = {
@@ -450,9 +450,21 @@ function initializeThreeJS() {
     const VELOCITY_DAMPING_GROUND = 0.85;
     const MIN_BOUNCE_VELOCITY = 0.5;
 
-    let ringVelocity = { x: 0, y: 0, z: 0 };
-    let ringPosition = { x: 0, y: 10, z: 0 };
-    let angularVelocity = { x: 0, y: 0, z: 0 };
+    let ringVelocity = {
+        x: 0,
+        y: 0,
+        z: 0
+    };
+    let ringPosition = {
+        x: 0,
+        y: 10,
+        z: 0
+    };
+    let angularVelocity = {
+        x: 0,
+        y: 0,
+        z: 0
+    };
     let baseRotationSpeed = 0.005;
     let ringOnGround = false;
 
@@ -540,13 +552,19 @@ function initializeThreeJS() {
     // Enhanced interactivity with touch support
     let isMouseDown = false;
     let isTouching = false;
-    let mouseForce = { x: 0, y: 0 };
+    let mouseForce = {
+        x: 0,
+        y: 0
+    };
     let cameraAutoRotate = true;
     let cameraAngle = 0;
     let energyLevel = 0;
     let keysPressed = {};
     let lastTouchTime = 0;
-    let touchStartPos = { x: 0, y: 0 };
+    let touchStartPos = {
+        x: 0,
+        y: 0
+    };
 
     const clock = new THREE.Clock();
     let time = 0;
@@ -567,7 +585,9 @@ function initializeThreeJS() {
             handleDoubleTap();
         }
         lastTouchTime = currentTime;
-    }, { passive: false });
+    }, {
+        passive: false
+    });
 
     renderer.domElement.addEventListener('touchend', (e) => {
         e.preventDefault();
@@ -582,7 +602,9 @@ function initializeThreeJS() {
                 }
             }, 300);
         }
-    }, { passive: false });
+    }, {
+        passive: false
+    });
 
     renderer.domElement.addEventListener('touchmove', (e) => {
         e.preventDefault();
@@ -596,7 +618,9 @@ function initializeThreeJS() {
         // Apply force based on touch movement
         mouseForce.x = ((currentX - touchStartPos.x) / rect.width) * 0.03;
         mouseForce.y = ((currentY - touchStartPos.y) / rect.height) * -0.03;
-    }, { passive: false });
+    }, {
+        passive: false
+    });
 
     // Mouse event handlers (for desktop)
     renderer.domElement.addEventListener('mousedown', (e) => {
@@ -655,7 +679,7 @@ function initializeThreeJS() {
         window.addEventListener('keydown', (e) => {
             keysPressed[e.code] = true;
 
-            switch(e.code) {
+            switch (e.code) {
                 case 'Space':
                     e.preventDefault();
                     if (ringOnGround) {
@@ -675,9 +699,21 @@ function initializeThreeJS() {
     }
 
     function resetRing() {
-        ringPosition = { x: 0, y: 10, z: 0 };
-        ringVelocity = { x: 0, y: 0, z: 0 };
-        angularVelocity = { x: 0, y: 0, z: 0 };
+        ringPosition = {
+            x: 0,
+            y: 10,
+            z: 0
+        };
+        ringVelocity = {
+            x: 0,
+            y: 0,
+            z: 0
+        };
+        angularVelocity = {
+            x: 0,
+            y: 0,
+            z: 0
+        };
         ringOnGround = false;
     }
 
@@ -1039,7 +1075,9 @@ function main() {
             if (open) {
                 // Move focus to first focusable in menu for accessibility
                 const firstFocusable = navMenu.querySelector('a, button, input, [tabindex]:not([tabindex="-1"])');
-                if (firstFocusable) firstFocusable.focus({ preventScroll: true });
+                if (firstFocusable) firstFocusable.focus({
+                    preventScroll: true
+                });
             }
         };
 
