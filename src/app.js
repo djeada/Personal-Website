@@ -309,124 +309,272 @@ function handleDownloadClick() {
 function initializeThreeJS() {
     const container = document.getElementById('threejs-container');
     let darkMode = getCookie("darkMode") === "true";
-    let bgColor = darkMode ? 0x0a0a12 : 0xf0f0f0;
-    let fogColor = bgColor;
-    let ringColor = darkMode ? 0x3a5f79 : 0x336699;
-    let starColor = darkMode ? 0xdddddd : 0x444444;
 
-    // Scene, camera, fog, renderer (unchanged)…
+    // Enhanced color palettes for better contrast
+let bgColor = darkMode ? 0x0a0a12 : 0xf8f9fa;
+let fogColor = darkMode ? bgColor : 0xc8d0e0; // Light blue-gray fog for light mode
+    let ringColor = darkMode ? 0x4a90e2 : 0x2c5aa0;
+    let starColor = darkMode ? 0xffffff : 0x2a2a2a;
+
+    // Scene setup with improved fog
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(fogColor, 0.003);
-    const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
-    camera.position.set(0, 4, 20);
+    scene.fog = new THREE.FogExp2(fogColor, 0.002);
+
+    const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 2000);
+    camera.position.set(0, 8, 25);
+
+    // Enhanced renderer settings
     const renderer = new THREE.WebGLRenderer({
         antialias: true,
-        alpha: true
+        alpha: true,
+        powerPreference: "high-performance"
     });
     renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.setClearColor(bgColor, 1);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
     container.appendChild(renderer.domElement);
 
-    // Lights (unchanged)…
-    const ambient = new THREE.AmbientLight(darkMode ? 0x444444 : 0xaaaaaa, 1.2);
+    // Improved lighting system
+    const ambient = new THREE.AmbientLight(darkMode ? 0x404040 : 0xc0c0c0, 0.6);
     scene.add(ambient);
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
-    dirLight.position.set(10, 20, 10);
-    scene.add(dirLight);
-    const flameLight = new THREE.PointLight(0xff3300, 4.0, 80, 2);
-    flameLight.position.set(-2, 6, 0);
-    scene.add(flameLight);
 
-    // Ring (unchanged)…
-    const ringGeo = new THREE.TorusGeometry(3, 0.5, 64, 200);
-    // …vertex-color crack setup as before…
+    const sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    sunLight.position.set(20, 30, 20);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.camera.near = 0.5;
+    sunLight.shadow.camera.far = 100;
+    sunLight.shadow.camera.left = -50;
+    sunLight.shadow.camera.right = 50;
+    sunLight.shadow.camera.top = 50;
+    sunLight.shadow.camera.bottom = -50;
+    scene.add(sunLight);
+
+    // Dynamic point light for energy visualization
+    const energyLight = new THREE.PointLight(0x44aaff, 0, 100, 1.5);
+    energyLight.position.set(0, 10, 0);
+    scene.add(energyLight);
+
+    // Enhanced ring geometry with better detail
+    const ringGeo = new THREE.TorusGeometry(4, 0.3, 32, 128);
+
+    // Procedural surface details
     const colors = [];
+    const normals = ringGeo.attributes.normal.array;
     for (let i = 0; i < ringGeo.attributes.position.count; i++) {
-        const isCrack = Math.random() < 0.12;
-        colors.push(
-            isCrack ? 1 : ((ringColor >> 16) & 0xff) / 255,
-            isCrack ? 0.2 : ((ringColor >> 8) & 0xff) / 255,
-            isCrack ? 0 : ((ringColor) & 0xff) / 255
-        );
+        const stress = Math.random();
+        const isCrack = stress < 0.08;
+        const isWorn = stress < 0.25;
+
+        if (isCrack) {
+            colors.push(1, 0.1, 0); // Red cracks
+        } else if (isWorn) {
+            colors.push(0.8, 0.8, 0.9); // Worn areas
+        } else {
+            colors.push(
+                ((ringColor >> 16) & 0xff) / 255,
+                ((ringColor >> 8) & 0xff) / 255,
+                ((ringColor) & 0xff) / 255
+            );
+        }
     }
     ringGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+    // Realistic material properties
     const ringMat = new THREE.MeshPhysicalMaterial({
         vertexColors: true,
-        emissive: 0xff3300,
-        emissiveIntensity: 1.2,
-        metalness: 0.7,
-        roughness: 0.5,
-        transmission: 0.1,
-        clearcoat: 0.3
+        metalness: 0.8,
+        roughness: 0.3,
+        clearcoat: 0.5,
+        clearcoatRoughness: 0.1,
+        reflectivity: 0.9,
+        envMapIntensity: 1.0
     });
+
     const ring = new THREE.Mesh(ringGeo, ringMat);
-    ring.castShadow = ring.receiveShadow = true;
-    ring.position.set(0, 5, 0);
+    ring.castShadow = true;
+    ring.receiveShadow = true;
+    ring.position.set(0, 10, 0);
     scene.add(ring);
 
-    // ── Fiery pool hugging the ring’s underside ──
-    const emberCount = 800;
-    const emberPos = new Float32Array(emberCount * 3);
-    for (let i = 0; i < emberCount; i++) {
+    // Physics variables - realistic values with limits
+    const GRAVITY = -9.81 * 0.5; // Scaled gravity
+    const GROUND_LEVEL = 2;
+    const MAX_LAUNCH_VELOCITY = 20; // Limit max launch speed
+    const MAX_HORIZONTAL_DISTANCE = 40; // Maximum distance from center
+    const VELOCITY_DAMPING_GROUND = 0.85; // Damping when on ground
+    const MIN_BOUNCE_VELOCITY = 0.5; // Minimum velocity to bounce
+
+    let ringVelocity = { x: 0, y: 0, z: 0 };
+    let ringPosition = { x: 0, y: 10, z: 0 };
+    let angularVelocity = { x: 0, y: 0, z: 0 };
+    let baseRotationSpeed = 0.005;
+    let ringOnGround = false;
+
+    // Enhanced particle system for energy visualization
+    const particleCount = 1200;
+    const particlePositions = new Float32Array(particleCount * 3);
+    const particleVelocities = new Float32Array(particleCount * 3);
+    const particleLife = new Float32Array(particleCount);
+
+    for (let i = 0; i < particleCount; i++) {
         const angle = Math.random() * Math.PI * 2;
-        // around the *outer* radius of the torus (≈3), not its hole
-        const radius = THREE.MathUtils.randFloat(2.8, 3.2);
-        emberPos[i * 3] = Math.cos(angle) * radius;
-        // place *below* the ring’s bottom (ring.y=5, half-thickness=0.5 → bottom=4.5)
-        emberPos[i * 3 + 1] = THREE.MathUtils.randFloat(3.5, 4.3);
-        emberPos[i * 3 + 2] = Math.sin(angle) * radius;
+        const radius = THREE.MathUtils.randFloat(3.5, 4.5);
+        const i3 = i * 3;
+
+        particlePositions[i3] = Math.cos(angle) * radius;
+        particlePositions[i3 + 1] = ringPosition.y - 2;
+        particlePositions[i3 + 2] = Math.sin(angle) * radius;
+
+        particleVelocities[i3] = (Math.random() - 0.5) * 0.02;
+        particleVelocities[i3 + 1] = Math.random() * 0.05;
+        particleVelocities[i3 + 2] = (Math.random() - 0.5) * 0.02;
+
+        particleLife[i] = Math.random();
     }
-    const emberGeo = new THREE.BufferGeometry();
-    emberGeo.setAttribute('position', new THREE.BufferAttribute(emberPos, 3));
-    const emberMat = new THREE.PointsMaterial({
-        size: 0.8,
-        sizeAttenuation: false,
-        color: 0xff6600,
-        transparent: true,
-        opacity: 0.95,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
-    });
-    const embers = new THREE.Points(emberGeo, emberMat);
-    scene.add(embers);
 
+    const particleGeo = new THREE.BufferGeometry();
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
 
-    // Starfield (unchanged)…
-    const starCount = 4000;
-    const starPos = new Float32Array(starCount * 3);
+const particleMat = new THREE.PointsMaterial({
+    size: 1.5,
+    sizeAttenuation: true,
+    color: darkMode ? 0x66aaff : 0x404040, // Much darker for light mode
+    transparent: true,
+    opacity: darkMode ? 0.8 : 0.6, // Lower opacity in light mode
+    blending: THREE.SubtractiveBlending, // Try this blending mode
+    depthWrite: false
+});
+    const particles = new THREE.Points(particleGeo, particleMat);
+    scene.add(particles);
+
+    // Enhanced starfield with depth
+    const starCount = 6000;
+    const starPositions = new Float32Array(starCount * 3);
+    const starSizes = new Float32Array(starCount);
+
     for (let i = 0; i < starCount; i++) {
-        starPos[i * 3] = (Math.random() - 0.5) * 800;
-        starPos[i * 3 + 1] = (Math.random() - 0.5) * 800;
-        starPos[i * 3 + 2] = (Math.random() - 0.5) * 800;
+        const i3 = i * 3;
+        starPositions[i3] = (Math.random() - 0.5) * 1000;
+        starPositions[i3 + 1] = (Math.random() - 0.5) * 1000;
+        starPositions[i3 + 2] = (Math.random() - 0.5) * 1000;
+        starSizes[i] = Math.random() * 3 + 1;
     }
+
     const starsGeo = new THREE.BufferGeometry();
-    starsGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+    starsGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+    starsGeo.setAttribute('size', new THREE.BufferAttribute(starSizes, 1));
+
     const starsMat = new THREE.PointsMaterial({
-        size: 2.5,
-        sizeAttenuation: false,
+        size: 2,
+        sizeAttenuation: true,
         color: starColor,
-        opacity: 0.7,
-        transparent: true
+        opacity: 0.8,
+        transparent: true,
+        vertexColors: false
     });
+
     const starField = new THREE.Points(starsGeo, starsMat);
     scene.add(starField);
 
-    // Interaction & animation (unchanged, aside from ember motion):
-    let rotationSpeed = 0.02;
-    let verticalVelocity = 0,
-        gravity = -0.03,
-        jumpVelocity = 1;
-    const clock = new THREE.Clock();
+    // Ground plane for shadows
+    const groundGeo = new THREE.PlaneGeometry(100, 100);
+    const groundMat = new THREE.MeshLambertMaterial({
+        color: darkMode ? 0x1a1a1a : 0xe0e0e0,
+        transparent: true,
+        opacity: 0.3
+    });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = GROUND_LEVEL;
+    ground.receiveShadow = true;
+    scene.add(ground);
 
-    renderer.domElement.addEventListener('click', () => {
-        rotationSpeed = 0.1;
-        setTimeout(() => rotationSpeed = 0.02, 600);
+    // Enhanced interactivity
+    let isMouseDown = false;
+    let mouseForce = { x: 0, y: 0 };
+    let cameraAutoRotate = true;
+    let cameraAngle = 0;
+    let energyLevel = 0;
+    let keysPressed = {};
+
+    const clock = new THREE.Clock();
+    let time = 0;
+
+    // Event listeners with improved responsiveness
+    renderer.domElement.addEventListener('mousedown', (e) => {
+        isMouseDown = true;
+        cameraAutoRotate = false;
     });
+
+    renderer.domElement.addEventListener('mouseup', () => {
+        isMouseDown = false;
+        setTimeout(() => cameraAutoRotate = true, 2000);
+    });
+
+    renderer.domElement.addEventListener('mousemove', (e) => {
+        if (!isMouseDown) return;
+
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouseForce.x = ((e.clientX - rect.left) / rect.width - 0.5) * 0.05; // Reduced force
+        mouseForce.y = ((e.clientY - rect.top) / rect.height - 0.5) * -0.05;
+    });
+
+    renderer.domElement.addEventListener('click', (e) => {
+        // Apply limited impulse force
+        const impulse = Math.min(12, MAX_LAUNCH_VELOCITY * 0.6); // Limited launch power
+        ringVelocity.y += impulse;
+        angularVelocity.x += (Math.random() - 0.5) * 0.2;
+        angularVelocity.y += (Math.random() - 0.5) * 0.2;
+        energyLevel = Math.max(energyLevel, 40);
+        ringOnGround = false;
+
+        // Visual feedback
+        energyLight.intensity = 5;
+        setTimeout(() => energyLight.intensity = 0, 200);
+    });
+
     renderer.domElement.addEventListener('dblclick', () => {
-        verticalVelocity = jumpVelocity;
+        // Super jump with limited power
+        ringVelocity.y = Math.min(18, MAX_LAUNCH_VELOCITY * 0.9);
+        angularVelocity.x = (Math.random() - 0.5) * 0.5;
+        angularVelocity.y = (Math.random() - 0.5) * 0.5;
+        angularVelocity.z = (Math.random() - 0.5) * 0.5;
+        energyLevel = 80;
+        ringOnGround = false;
     });
+
+    // Enhanced keyboard controls
+    window.addEventListener('keydown', (e) => {
+        keysPressed[e.code] = true;
+
+        switch(e.code) {
+            case 'Space':
+                e.preventDefault();
+                if (ringOnGround) {
+                    ringVelocity.y += 6;
+                    ringOnGround = false;
+                }
+                break;
+            case 'KeyR':
+                // Reset ring
+                ringPosition = { x: 0, y: 10, z: 0 };
+                ringVelocity = { x: 0, y: 0, z: 0 };
+                angularVelocity = { x: 0, y: 0, z: 0 };
+                ringOnGround = false;
+                break;
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        keysPressed[e.code] = false;
+    });
+
     window.addEventListener('resize', () => {
         camera.aspect = container.clientWidth / container.clientHeight;
         camera.updateProjectionMatrix();
@@ -435,64 +583,200 @@ function initializeThreeJS() {
 
     function animate() {
         requestAnimationFrame(animate);
-        const t = clock.getElapsedTime();
+        const deltaTime = clock.getDelta();
+        time += deltaTime;
 
-        // Palette switch + flame flicker (unchanged)…
-        const newDM = getCookie("darkMode") === "true";
-        if (newDM !== darkMode) {
-            darkMode = newDM;
-            bgColor = darkMode ? 0x0a0a12 : 0xf0f0f0;
-            fogColor = bgColor;
-            ringColor = darkMode ? 0x3a5f79 : 0x336699;
-            starColor = darkMode ? 0xdddddd : 0x444444;
+        // Handle continuous key presses for camera control
+        if (keysPressed['ArrowLeft'] || keysPressed['KeyA']) {
+            cameraAngle -= deltaTime * 2;
+            cameraAutoRotate = false;
+        }
+        if (keysPressed['ArrowRight'] || keysPressed['KeyD']) {
+            cameraAngle += deltaTime * 2;
+            cameraAutoRotate = false;
+        }
+
+        // Theme switching
+        const newDarkMode = getCookie("darkMode") === "true";
+        if (newDarkMode !== darkMode) {
+            darkMode = newDarkMode;
+            bgColor = darkMode ? 0x0a0a12 : 0xf8f9fa;
+            fogColor = darkMode ? bgColor : 0xc8d0e0;
+             ringColor = darkMode ? 0x4a90e2 : 0x2c5aa0;
+            starColor = darkMode ? 0xffffff : 0x2a2a2a;
+
             renderer.setClearColor(bgColor, 1);
             scene.fog.color.setHex(fogColor);
-            ambient.color.setHex(darkMode ? 0x444444 : 0xaaaaaa);
-            flameLight.color.setHex(darkMode ? 0xff2200 : 0xff3300);
-            ring.material.color.setHex(ringColor);
+            ambient.color.setHex(darkMode ? 0x404040 : 0xc0c0c0);
             starsMat.color.setHex(starColor);
+            groundMat.color.setHex(darkMode ? 0x1a1a1a : 0xe0e0e0);
         }
-        flameLight.intensity = 4.0 * (1 + 0.4 * Math.sin(t * 25 + Math.random() * 0.3));
 
-        // Ring physics/wobble/hue (unchanged)…
-        ring.position.y += verticalVelocity;
-        verticalVelocity += gravity;
-        if (ring.position.y < 5) {
-            ring.position.y = 5;
-            verticalVelocity = 0;
+        // Enhanced physics simulation
+        if (isMouseDown && !ringOnGround) {
+            ringVelocity.x += mouseForce.x;
+            ringVelocity.z += mouseForce.y;
         }
-        ring.rotation.x += rotationSpeed;
-        ring.rotation.y += rotationSpeed * 0.8;
-        const wob = 1 + 0.05 * Math.sin(t * 3);
-        ring.scale.set(wob, wob, wob);
-        ring.material.color.setHSL((t * 0.08) % 1, 0.7, 0.5);
 
-        // Ember “fire” rising from below
-        const epos = embers.geometry.attributes.position.array;
-        for (let i = 0; i < emberCount; i++) {
-            epos[i * 3 + 1] += 0.03 + 0.015 * Math.sin(t * 20 + i);
-            // once they fly too high, respawn just under the ring
-            if (epos[i * 3 + 1] > 6) {
-                epos[i * 3 + 1] = THREE.MathUtils.randFloat(3.5, 4.3);
+        // Apply gravity only when not on ground
+        if (!ringOnGround) {
+            ringVelocity.y += GRAVITY * deltaTime;
+        }
+
+        // Boundary enforcement - keep ring within reasonable distance
+        const distanceFromCenter = Math.sqrt(ringPosition.x * ringPosition.x + ringPosition.z * ringPosition.z);
+        if (distanceFromCenter > MAX_HORIZONTAL_DISTANCE) {
+            // Apply force back toward center
+            const returnForce = 0.02;
+            ringVelocity.x -= (ringPosition.x / distanceFromCenter) * returnForce;
+            ringVelocity.z -= (ringPosition.z / distanceFromCenter) * returnForce;
+        }
+
+        // Velocity limits
+        ringVelocity.x = Math.max(-MAX_LAUNCH_VELOCITY, Math.min(MAX_LAUNCH_VELOCITY, ringVelocity.x));
+        ringVelocity.y = Math.max(-MAX_LAUNCH_VELOCITY * 1.5, Math.min(MAX_LAUNCH_VELOCITY * 1.5, ringVelocity.y));
+        ringVelocity.z = Math.max(-MAX_LAUNCH_VELOCITY, Math.min(MAX_LAUNCH_VELOCITY, ringVelocity.z));
+
+        // Update position only when not on ground or moving upward
+        if (!ringOnGround) {
+            ringPosition.x += ringVelocity.x * deltaTime * 10;
+            ringPosition.y += ringVelocity.y * deltaTime * 10;
+            ringPosition.z += ringVelocity.z * deltaTime * 10;
+
+            // Air resistance when flying
+            ringVelocity.x *= 0.985;
+            ringVelocity.z *= 0.985;
+        } else {
+            // Ground friction when on ground
+            ringVelocity.x *= VELOCITY_DAMPING_GROUND;
+            ringVelocity.z *= VELOCITY_DAMPING_GROUND;
+        }
+
+        // Ground collision - no bouncing, just stop
+        if (ringPosition.y <= GROUND_LEVEL + 0.3) {
+            ringPosition.y = GROUND_LEVEL + 0.3;
+
+            if (ringVelocity.y < 0) {
+                if (Math.abs(ringVelocity.y) > MIN_BOUNCE_VELOCITY && !ringOnGround) {
+                    // Only small bounce on first impact
+                    ringVelocity.y *= -0.3;
+                    energyLevel = Math.max(energyLevel, 15);
+                } else {
+                    // Stop bouncing, ring is now on ground
+                    ringVelocity.y = 0;
+                    ringOnGround = true;
+                }
             }
         }
-        embers.geometry.attributes.position.needsUpdate = true;
 
-        // Stars twinkle (unchanged)…
-        starField.material.opacity = 0.7 + 0.2 * Math.sin(t * 0.2);
+        // Update angular velocity and rotation
+        angularVelocity.x *= 0.995; // Angular damping
+        angularVelocity.y *= 0.995;
+        angularVelocity.z *= 0.995;
 
-        // Camera orbit & bob (unchanged)…
-        const radius = 20;
-        camera.position.x = Math.cos(t * 0.03) * radius;
-        camera.position.z = Math.sin(t * 0.03) * radius + 5;
-        camera.position.y = 4 + Math.sin(t * 0.6) * 1.5;
+        ring.rotation.x += (angularVelocity.x + baseRotationSpeed) * deltaTime * 10;
+        ring.rotation.y += (angularVelocity.y + baseRotationSpeed * 0.7) * deltaTime * 10;
+        ring.rotation.z += angularVelocity.z * deltaTime * 10;
+
+        // Apply position to ring
+        ring.position.set(ringPosition.x, ringPosition.y, ringPosition.z);
+
+        // Energy-based effects
+        energyLevel = Math.max(0, energyLevel - deltaTime * 15);
+        const energyFactor = energyLevel / 100;
+
+        // Dynamic material properties based on energy
+        ringMat.emissive.setHSL(0.6, energyFactor * 0.8, energyFactor * 0.3);
+        ringMat.emissiveIntensity = energyFactor * 2;
+
+        // Energy light intensity
+        energyLight.intensity = energyFactor * 3;
+        energyLight.position.set(ringPosition.x, ringPosition.y + 2, ringPosition.z);
+
+        // Enhanced particle system
+        for (let i = 0; i < particleCount; i++) {
+            const i3 = i * 3;
+
+            // Update particle physics
+            particleVelocities[i3 + 1] += 0.001; // Slight upward drift
+            particlePositions[i3] += particleVelocities[i3];
+            particlePositions[i3 + 1] += particleVelocities[i3 + 1];
+            particlePositions[i3 + 2] += particleVelocities[i3 + 2];
+
+            particleLife[i] -= deltaTime * 0.5;
+
+            // Respawn particles
+            if (particleLife[i] <= 0 || particlePositions[i3 + 1] > ringPosition.y + 5) {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = THREE.MathUtils.randFloat(3.2, 4.8);
+
+                particlePositions[i3] = Math.cos(angle) * radius + ringPosition.x;
+                particlePositions[i3 + 1] = ringPosition.y - 1;
+                particlePositions[i3 + 2] = Math.sin(angle) * radius + ringPosition.z;
+
+                particleVelocities[i3] = (Math.random() - 0.5) * 0.02;
+                particleVelocities[i3 + 1] = Math.random() * 0.03 + energyFactor * 0.05;
+                particleVelocities[i3 + 2] = (Math.random() - 0.5) * 0.02;
+
+                particleLife[i] = 1;
+            }
+        }
+        particles.geometry.attributes.position.needsUpdate = true;
+        particleMat.opacity = 0.3 + energyFactor * 0.5;
+
+        // Enhanced star twinkling
+        starsMat.opacity = 0.6 + 0.3 * Math.sin(time * 0.5) + energyFactor * 0.2;
+
+        // Enhanced camera system with manual control
+        if (cameraAutoRotate) {
+            cameraAngle = time * 0.05;
+        }
+
+        const radius = 25 + Math.sin(time * 0.3) * 5;
+        camera.position.x = Math.cos(cameraAngle) * radius;
+        camera.position.z = Math.sin(cameraAngle) * radius + 10;
+        camera.position.y = 8 + Math.sin(time * 0.2) * 3 + (ringPosition.y - 10) * 0.2;
+
         camera.lookAt(ring.position);
 
+        // Render
         renderer.render(scene, camera);
     }
-    animate();
-}
 
+    animate();
+
+    // Persistent instructions overlay with enhanced controls
+    const instructions = document.createElement('div');
+    instructions.style.cssText = `
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+        pointer-events: none;
+        z-index: 1000;
+        border: 1px solid rgba(255,255,255,0.2);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    `;
+    instructions.innerHTML = `
+        <strong style="color: #44aaff;">🎮 RING PHYSICS CONTROLS</strong><br><br>
+        <span style="color: #ffaa44;">Launch:</span><br>
+        • Click: Launch ring<br>
+        • Double-click: Super jump<br>
+        • Space: Small jump (ground only)<br><br>
+        <span style="color: #ffaa44;">Camera:</span><br>
+        • ← → or A/D: Rotate view<br>
+        • Drag: Apply force (in flight)<br><br>
+        <span style="color: #ffaa44;">Reset:</span><br>
+        • R: Reset position<br><br>
+        <span style="color: #44ff44;">Physics: Realistic gravity & boundaries</span>
+    `;
+    container.appendChild(instructions);
+}
 
 
 // --------------
