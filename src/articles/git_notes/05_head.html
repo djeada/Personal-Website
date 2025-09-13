@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Understanding HEAD</title>
-    <meta content="HEAD is Git’s pointer to the snapshot of your project you’re currently working on." name="description" />
+    <meta content="HEAD is Git’s pointer to the snapshot you’re currently working on—the bookmark of your checkout." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -50,8 +50,7 @@
             </li>
         </ul>
     </nav>
-    <div id="article-wrapper">
-        <section id="article-body">
+    <div id="article-wrapper"><article-section id="article-body">
             <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
                     <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
                         <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
@@ -67,45 +66,62 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: September 23, 2023</i></p>
+            <p style="text-align: right;"><i>Last modified: September 13, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="understanding-head">Understanding HEAD</h2>
-            <p><code>HEAD</code> is Git’s pointer to the snapshot of your project you’re currently working on. Think of it as the “current location” in your repository’s history. Typically, <code>HEAD</code> points to the tip of a branch (like <code>master</code> or <code>main</code>). When you commit, <code>HEAD</code> moves to your newly created commit, keeping track of exactly where you are.</p>
+            <p><code>HEAD</code> is Git’s pointer to the snapshot you’re currently working on—the <strong>bookmark of your checkout</strong>. Most of the time, <code>HEAD</code> points to the tip of a branch (like <code>master</code> or <code>main</code>). When you commit, <code>HEAD</code> (and that branch) advance to the new commit.</p>
             <ul>
-                <li>Behind the scenes, <code>HEAD</code> is a simple reference in the <code>.git/HEAD</code> file. If you run <code>cat .git/HEAD</code>, you might see a line like <code>ref: refs/heads/master</code>. That means <code>HEAD</code> is pointing to the branch named <code>master</code>.</li>
-                <li>When you switch or “check out” another branch, <code>HEAD</code> changes to point to that branch. Understanding how this pointer moves makes it easier to navigate, branch off, and merge code.</li>
+                <li>Under the hood, <code>HEAD</code> is a tiny text file: <code>.git/HEAD</code>. Running <code>cat .git/HEAD</code> might show <code>ref: refs/heads/master</code>, meaning <code>HEAD</code> points to the branch named <code>master</code>. If it shows a raw commit hash instead, <code>HEAD</code> is detached (explained below).</li>
+                <li>Switching branches (via <code>git switch</code> or <code>git checkout</code>) moves <code>HEAD</code> to point at the target branch. Knowing where <code>HEAD</code> points makes branching, merging, and navigating history far more predictable.</li>
             </ul>
             <p>
             <div>
-                <pre><code class="language-shell">ASCII ART EXAMPLE:
+                <pre><code class="language-shell">Time →                                                     (commits left→right)
 
-       (branch: master)
-                |
-  C0 &lt;-- C1 &lt;-- C2 (HEAD)
+                 ┌───────────── Merge ──────────────┐
+main        ──●──┼──●───────────●───────────●───────●────────▶
+               A1    A2         M1          A3     A4     (branch tip: main)
+                 \               ^                   \
+                  \              │                    \
+feature/login      ●───●───●─────┘                     ●─────●──▶
+                  F1   F2  F3                          M2    F4   (HEAD -&gt; feature/login)
 
-C2 is the latest commit on the master branch, and HEAD currently references it.</code></pre>
+hotfix/urgent           ●────●─────────────────────────┘
+                       H1   H2
+
+Tags/Remotes:
+  (origin/main) at A3     (v1.2) tag at M1
+
+Legend:
+  ●   = commit node
+  A*, F*, H* = commit short IDs (on main, feature/login, hotfix/urgent)
+  M*  = merge commits
+  HEAD -&gt; &lt;branch&gt; means your working tree points to that branch’s tip</code></pre>
             </div>
             </p>
-            <h3 id="the-concept-of-a-detached-head">The Concept of a Detached HEAD</h3>
-            <p>A <strong>detached HEAD</strong> happens if <code>HEAD</code> points directly to a commit instead of pointing to the tip of a branch. This usually happens when you check out a specific commit by its hash or a tag rather than a branch name.</p>
             <ul>
-                <li>When <code>HEAD</code> is detached, any new commits you make won’t be on a recognized branch. That means they’re easy to lose if you move <code>HEAD</code> elsewhere.</li>
-                <li>If you do create commits in a detached state but want to keep them, you need to attach them to a branch (either by creating a new branch at that commit or merging them into an existing branch).</li>
+                <li><code>HEAD -&gt; feature/login</code> (on the <strong>feature/login</strong> row) tells you your current checkout is at <strong>F4</strong>. New commits will extend <strong>feature/login</strong>.</li>
+                <li>If you <code>git switch main</code> (or <code>git checkout main</code>), <code>HEAD</code> moves to <strong>A4</strong>, and the indicator becomes <code>HEAD -&gt; main</code>.</li>
             </ul>
+            <h3 id="detached-head">Detached HEAD</h3>
+            <p>A <strong>detached HEAD</strong> is when <code>HEAD</code> points <strong>directly to a commit</strong> instead of to a branch tip—usually after checking out a specific commit hash or a tag.</p>
+            <ul>
+                <li>In a detached state, any new commits aren’t on a named branch. They’re easy to lose if you move <code>HEAD</code> elsewhere because nothing points to them.</li>
+                <li>If you commit while detached and want to keep that work, attach it to a branch: create one at that commit (<code>git switch -c my-work</code>) or merge/cherry-pick it into an existing branch. (You can often recover recent detached commits with <code>git reflog</code> if you move away accidentally.)</li>
+            </ul>
+            <p>This is what it looks like when you check out a specific commit:</p>
             <p>
             <div>
-                <pre><code class="language-shell">A &lt;-- B &lt;-- C &lt;-- D &lt;-- E (master, HEAD)
+                <pre><code class="language-shell">main        ──●──●──●──●──●──▶
+               A1  A2  A3  A4
 
-Initially, HEAD is pointing to E (the tip of master).
-If you check out commit C:
-
-A &lt;-- B &lt;-- C (HEAD) &lt;-- D &lt;-- E (master)
-
-Now HEAD is detached, pointing directly to commit C.</code></pre>
+(HEAD) ----------------^
+                     (checked out at commit A3, no branch name)</code></pre>
             </div>
             </p>
+            <p>Here <code>HEAD</code> points to <strong>A3</strong> itself, not a branch. New commits would form an orphaned line unless you first make a branch, e.g. <code>git switch -c temp-work</code>.</p>
             <h3 id="what-happens-when-you-commit-on-a-detached-head">What Happens When You Commit on a Detached HEAD</h3>
-            <p>If you make a new commit (let’s call it F) while your HEAD is detached at commit C, your commit history forks:</p>
+            <p>If you commit (F) while <code>HEAD</code> is detached at commit C, history forks:</p>
             <p>
             <div>
                 <pre><code class="language-shell">A &lt;-- B &lt;-- C (HEAD) &lt;-- F
@@ -113,9 +129,9 @@ Now HEAD is detached, pointing directly to commit C.</code></pre>
               D &lt;-- E (master)</code></pre>
             </div>
             </p>
-            <p>Commit F is not on <code>master</code>. If you leave F floating like this and switch back to <code>master</code>, there’s no direct link to F unless you explicitly merge or branch it. If you don’t attach commit F to a branch somehow, it may be lost later when Git does garbage collection.</p>
+            <p>Commit <strong>F</strong> is <strong>not</strong> on <code>master</code>. If you switch back to <code>master</code>, there’s no branch reference to <strong>F</strong> unless you merge, cherry-pick, or create a branch pointing to it. If left unattached, <strong>F</strong> can be garbage-collected once unreachable.</p>
             <h3 id="detaching-head-switching-to-a-specific-commit">Detaching HEAD: Switching to a Specific Commit</h3>
-            <p>You can enter a detached HEAD state by telling Git to check out a specific commit hash or tag. Suppose you want to check out the commit with hash <code>b4d373k8990g2b5de30a37bn843b2f51fks2b40</code>:</p>
+            <p>You enter a detached HEAD state by checking out a commit hash or tag. For example:</p>
             <p>
             <div>
                 <pre><code class="language-bash">git switch b4d373k8990g2b5de30a37bn843b2f51fks2b40</code></pre>
@@ -127,7 +143,7 @@ Now HEAD is detached, pointing directly to commit C.</code></pre>
                 <pre><code class="language-bash">git checkout b4d373k8990g2b5de30a37bn843b2f51fks2b40</code></pre>
             </div>
             </p>
-            <p><code>HEAD</code> now points to that exact commit instead of a branch tip. You might see something like:</p>
+            <p><code>HEAD</code> now points to that exact commit rather than a branch tip. Git will say:</p>
             <p>
             <div>
                 <pre><code class="language-shell">Note: switching to 'b4d373k8990g2b5de30a37bn843b2f51fks2b40'.
@@ -137,9 +153,9 @@ changes and commit them, and you can discard any commits you make in this
 state without impacting any branches by switching back to a branch.</code></pre>
             </div>
             </p>
-            <p>This is Git letting you know you’ve detached <code>HEAD</code>. Any commits you make now will be off in their own world unless you later attach them to a branch.</p>
+            <p>That’s your cue: commits made now live off to the side until you attach them to a branch (e.g., <code>git switch -c keep-this</code>).</p>
             <h3 id="creating-a-branch-from-a-detached-head">Creating a Branch from a Detached HEAD</h3>
-            <p>Sometimes you realize you’ve made valuable commits while detached and want to keep them. To do this safely, create a new branch that starts at your current commit:</p>
+            <p>Sometimes you realize you’ve made valuable commits while detached and want to keep them. The safe fix is to create a branch <strong>at the commit you’re on</strong> and then switch to it.</p>
             <p>
             <div>
                 <pre><code class="language-bash">git branch new_branch</code></pre>
@@ -151,7 +167,7 @@ state without impacting any branches by switching back to a branch.</code></pre>
                 <pre><code class="language-bash">git switch new_branch</code></pre>
             </div>
             </p>
-            <p>Now your <code>new_branch</code> includes all commits made while <code>HEAD</code> was detached. You’re no longer detached since <code>HEAD</code> is pointing to a branch tip again. The commit history is preserved and attached to <code>new_branch</code>.</p>
+            <p>Now <code>new_branch</code> contains all commits you made while <code>HEAD</code> was detached, and you’re no longer detached—<code>HEAD</code> points to the branch tip again. Your work is preserved and anchored to <code>new_branch</code>.</p>
             <p>
             <div>
                 <pre><code class="language-shell">Before:
@@ -160,27 +176,29 @@ A &lt;-- B &lt;-- C (HEAD) &lt;-- F
 After creating and switching to new_branch:
 A &lt;-- B &lt;-- C &lt;-- F (new_branch, HEAD)
 
-F is no longer “floating;” it’s anchored to the new_branch branch.</code></pre>
+F is no longer “floating”; it’s anchored to the new_branch branch.</code></pre>
             </div>
             </p>
+            <p><em>Tip:</em> You can do this in one step with <code>git switch -c new_branch</code>. Verify where you are with <code>git status</code> or <code>git branch --show-current</code>.</p>
             <h3 id="preventing-a-detached-head-state">Preventing a Detached HEAD State</h3>
-            <p>It’s generally cleaner to avoid a detached HEAD unless you really need to peek at an old commit. The safer approach is to create a branch at that commit if you plan to make changes.</p>
-            <p><strong>Example Scenario</strong>: You want to check out an older commit to experiment with some debugging or older version behavior.</p>
-            <p>I. Create a branch named <code>old_version</code> at that commit: </p>
+            <p>It’s cleaner to avoid a detached <code>HEAD</code> unless you’re only <strong>looking</strong>. If you intend to make changes, create a branch at that commit first so new work has a name and a home.</p>
+            <p><strong>Example Scenario</strong>: You want to check out an older commit to debug or reproduce behavior.</p>
+            <p>I. Create a branch named <code>old_version</code> at that commit:</p>
             <p>
             <div>
                 <pre><code class="language-bash">git branch old_version b4d373k8990g2b5de30a37bn843b2f51fks2b40</code></pre>
             </div>
             </p>
-            <p>II. Switch to <code>old_version</code>: </p>
+            <p>II. Switch to <code>old_version</code>:</p>
             <p>
             <div>
                 <pre><code class="language-bash">git switch old_version</code></pre>
             </div>
             </p>
-            <p>This way, you’re always on a branch, so no commits float in limbo. If you do make new commits, they’ll stay on <code>old_version</code>.</p>
+            <p>Now, any commits you make stay on <code>old_version</code>—no work drifts unreferenced.</p>
+            <p><em>Tip:</em> One-step variant: <code>git switch -c old_version b4d373k8990g2b5de30a37bn843b2f51fks2b40</code>.</p>
             <h3 id="switching-back-to-a-branch-from-a-detached-head">Switching Back to a Branch from a Detached HEAD</h3>
-            <p>To return to a standard branch (like <code>master</code>) after poking around in a detached commit, just switch back:</p>
+            <p>When you’re done exploring a detached commit, just jump back to a normal branch (like <code>master</code>):</p>
             <p>
             <div>
                 <pre><code class="language-bash">git switch master</code></pre>
@@ -192,30 +210,34 @@ F is no longer “floating;” it’s anchored to the new_branch branch.</code><
                 <pre><code class="language-bash">git checkout master</code></pre>
             </div>
             </p>
-            <p>You’ll rejoin the commit history where <code>master</code> was last pointing. Any commits made in a detached state and not saved to a branch will remain isolated.</p>
+            <p>You’ll be right where <code>master</code> last pointed. If you made commits while detached and haven’t put them on a branch yet, do so <strong>before</strong> switching—or recover them later via <code>git reflog</code> and then create a branch to keep them.</p>
             <h3 id="merging-changes-from-a-detached-head-into-a-branch">Merging Changes from a Detached HEAD into a Branch</h3>
-            <p>Let’s say you made some great changes while detached and now want them in <code>master</code>. You can merge those commits into <code>master</code> by referencing the commit’s hash:</p>
+            <p>You’ve made useful commits while detached and want them on <code>master</code>. The trick is to merge <strong>the commit that contains your work</strong> (usually the latest one on that detached line) into <code>master</code>.</p>
             <p>I. Switch to <code>master</code> (the branch you want to bring changes into):</p>
             <p>
             <div>
                 <pre><code class="language-bash">git switch master</code></pre>
             </div>
             </p>
-            <p>(Or <code>git checkout master</code>.)</p>
-            <p>II. Merge the detached commit:</p>
+            <p>(Or <code>git checkout master</code>.)
+                <em>Tip:</em> If your default branch is <code>main</code>, substitute accordingly.
+            </p>
+            <p>II. Merge the detached commit (use the <strong>tip</strong> commit’s hash):</p>
             <p>
             <div>
-                <pre><code class="language-bash">git merge b4d373k8990g2b5de30a37bn843b2f51fks2b40</code></pre>
+                <pre><code class="language-bash">git merge b4d373c8990a2b5de30a37bf843b2f51f5c2b400</code></pre>
             </div>
             </p>
-            <p>If Git detects conflicts, you’ll see files with markers you need to resolve. After resolving them, run:</p>
+            <p>This creates a merge commit tying your detached line into <code>master</code>. You’re effectively stitching that “loose thread” back into the main history. If Git reports conflicts:</p>
             <p>
             <div>
-                <pre><code class="language-bash">git add &lt;file_with_conflicts&gt;
-git commit</code></pre>
+                <pre><code class="language-bash">git status               # see which files need attention
+# resolve conflicts in your editor
+git add &lt;file_with_conflicts&gt;
+git merge --continue     # or: git commit</code></pre>
             </div>
             </p>
-            <p>Now your detached changes are merged into <code>master</code> with a new merge commit that ties everything together.</p>
+            <p>Now your detached changes are part of <code>master</code>, recorded with a merge commit.</p>
             <p>
             <div>
                 <pre><code class="language-shell">(master)                (HEAD detached)
@@ -224,15 +246,20 @@ git commit</code></pre>
     \                      /
      ------ Merge Commit --
 
-Resulting in a single continuous history where the changes in F are incorporated into master.</code></pre>
+Result: a single continuous history where F’s changes are integrated into master.</code></pre>
             </div>
             </p>
-        </section>
+            <p><em>Notes</em></p>
+            <ul>
+                <li>Merging a specific commit brings in that commit <strong>and its unique history</strong> up to that point.</li>
+                <li>If you only want a subset of commits from the detached line, use <code>git cherry-pick &lt;hash&gt;</code> instead.</li>
+            </ul>
+        </article-section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
             <ol><a href="#understanding-head">Understanding HEAD</a>
                 <ol>
-                    <li><a href="#the-concept-of-a-detached-head">The Concept of a Detached HEAD</a></li>
+                    <li><a href="#detached-head">Detached HEAD</a></li>
                     <li><a href="#what-happens-when-you-commit-on-a-detached-head">What Happens When You Commit on a Detached HEAD</a></li>
                     <li><a href="#detaching-head-switching-to-a-specific-commit">Detaching HEAD: Switching to a Specific Commit</a></li>
                     <li><a href="#creating-a-branch-from-a-detached-head">Creating a Branch from a Detached HEAD</a></li>
@@ -259,6 +286,8 @@ Resulting in a single continuous history where the changes in F are incorporated
                     <li><a href="https://adamdjellouli.com/articles/git_notes/13_points_of_confusion.html">Points of Confusion</a></li>
                     <li><a href="https://adamdjellouli.com/articles/git_notes/14_branching_strategies.html">Branching Strategies</a></li>
                     <li><a href="https://adamdjellouli.com/articles/git_notes/15_mono_and_multi_repo.html">Mono and Multi Repo</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/git_notes/16_dangerous_commands.html">Dangerous Commands</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/git_notes/17_git_internals.html">Git Internals</a></li>
                 </ol>
             </div>
         </div>

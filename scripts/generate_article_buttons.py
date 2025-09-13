@@ -16,9 +16,9 @@ def inject_article_buttons(html: str) -> str:
     soup = BeautifulSoup(html, "html.parser")
 
     # 1. Find the article body
-    article_body = soup.find("section", {"id": "article-body"})
+    article_body = soup.find("article-section", {"id": "article-body"})
     if not article_body:
-        return html  # No <section id="article-body"> found, return as-is
+        return html
 
     # 2. Create container for the buttons
     button_container = soup.new_tag("div", attrs={"class": "article-action-buttons"})

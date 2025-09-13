@@ -280,7 +280,7 @@ class HtmlEnhancer:
         body_content = html[body_start + 6 : body_end]
         html = (
             html[: body_start + 6]
-            + f'\n<section id="article-body">\n{body_content}\n</section>\n'
+            + f'\n<article-section id="article-body">\n{body_content}\n</article-section>\n'
             + html[body_end:]
         )
         return html
@@ -335,7 +335,7 @@ class HtmlEnhancer:
     @classmethod
     def add_language_info(cls, html: str, language: str = "en") -> str:
         """Adds a language information paragraph."""
-        insertion_point = re.search(r"<section id=\"article-body\">", html)
+        insertion_point = re.search(r"<article-section id=\"article-body\">", html)
         if insertion_point:
             insert_at = insertion_point.end()
             info_paragraph = f"\n<p style='text-align: right;'><i>This article is written in: {language}</i></p>\n"
@@ -345,7 +345,7 @@ class HtmlEnhancer:
     @classmethod
     def add_date_info(cls, html: str) -> str:
         """Adds a date information paragraph."""
-        insertion_point = re.search(r"<section id=\"article-body\">", html)
+        insertion_point = re.search(r"<article-section id=\"article-body\">", html)
         if insertion_point:
             insert_at = insertion_point.end()
             current_date = datetime.now().strftime("%B %d, %Y")

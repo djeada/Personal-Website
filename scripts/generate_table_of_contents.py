@@ -28,7 +28,7 @@ def move_specific_section(soup: BeautifulSoup) -> None:
 
 def create_toc_entries(soup: BeautifulSoup) -> Tag:
     """Generate ordered list of table of contents based on headers."""
-    body = soup.find("section", {"id": "article-body"})
+    body = soup.find("article-section", {"id": "article-body"})
     headers = body.find_all(["h1", "h2", "h3", "h4"])
 
     # Initial root ordered list
@@ -102,8 +102,10 @@ def wrap_article_and_toc(soup: BeautifulSoup, toc_wrapper: Tag) -> None:
     """Wrap the article and table of contents in a common wrapper."""
     article_wrapper = soup.new_tag("div", id="article-wrapper")
 
-    article_body_copy = soup.new_tag("section", id="article-body")
-    article_body_copy.extend(soup.find("section", {"id": "article-body"}).contents)
+    article_body_copy = soup.new_tag("article-section", id="article-body")
+    article_body_copy.extend(
+        soup.find("article-section", {"id": "article-body"}).contents
+    )
 
     article_wrapper.extend([article_body_copy, toc_wrapper])
 
@@ -115,7 +117,7 @@ def wrap_article_and_toc(soup: BeautifulSoup, toc_wrapper: Tag) -> None:
 def generate_table_of_contents(html: str) -> str:
     """Generate the table of contents for a given HTML."""
     soup = BeautifulSoup(html, "html.parser")
-    article_body = soup.find("section", {"id": "article-body"})
+    article_body = soup.find("article-section", {"id": "article-body"})
 
     if not article_body:
         return html
@@ -136,7 +138,7 @@ def generate_table_of_contents(html: str) -> str:
 
 def remove_empty_tags(html: str) -> str:
     soup = BeautifulSoup(html, "html.parser")
-    section = soup.find("section", id="article-body")
+    section = soup.find("article-section", id="article-body")
     if len(list(section.children)) == 0:
         section.decompose()
     return str(soup)

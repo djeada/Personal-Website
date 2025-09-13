@@ -50,8 +50,7 @@
             </li>
         </ul>
     </nav>
-    <div id="article-wrapper">
-        <section id="article-body">
+    <div id="article-wrapper"><article-section id="article-body">
             <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
                     <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
                         <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
@@ -67,14 +66,14 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: August 31, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: September 13, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="staging-committing-and-undoing-actions">Staging, Committing, and Undoing Actions</h2>
             <p>The three core actions you’ll perform most often in Git are <strong>staging</strong>, <strong>committing</strong>, and <strong>undoing changes</strong>.</p>
             <ul>
-                <li><strong>Staging</strong> decides <em>what</em> will be included in your next snapshot (commit).</li>
-                <li><strong>Committing</strong> actually creates that snapshot in the repository’s history.</li>
-                <li><strong>Undoing</strong> lets you roll back or adjust if you staged or committed something by mistake.</li>
+                <li>Staging determines <em>what</em> changes go into the next snapshot, while skipping staging means everything modified risks being included; for example, adding only updated tests to the stage keeps unrelated edits out of the commit.</li>
+                <li>Committing records a permanent <em>snapshot</em> in the repository history, while avoiding commits leaves work untracked and easy to lose; for example, committing code after a bug fix preserves it as part of the project timeline.</li>
+                <li>Undoing provides ways to <em>adjust</em> mistakes in staging or committing, while without it errors remain baked into history; for example, un-staging a file or amending a commit message fixes small slip-ups quickly.</li>
             </ul>
             <h3 id="staging-files">Staging Files</h3>
             <p>To prepare changes for a commit, we "stage" them. Staging involves selecting which changes in your working directory you want to include in your next commit. The staging area, also known as the index, acts as an intermediary between your working directory and your repository (commit history).</p>
@@ -286,43 +285,112 @@ git push --force</code></pre>
             </div>
             </p>
             <p>This process ensures that your commit history remains clean and that older commits have accurate and meaningful messages.</p>
-            <h3 id="removing-commits">Removing Commits</h3>
-            <p>If you need to undo one or more commits, Git provides commands to help you do so safely:</p>
-            <p>Removing commits can help maintain a tidy and relevant project history. Whether you're removing erroneous commits or cleaning up your commit log, Git offers tools to manage and refine your commits effectively.</p>
-            <p>I. <strong>Remove the Last <code>N</code> Commits:</strong></p>
-            <p>To remove the last <code>N</code> commits, use the <code>git reset</code> command followed by the number of commits you want to go back. Then, push the changes to the remote repository.</p>
+            <h3 id="removing-commits-in-git">Removing Commits in Git</h3>
+            <p>Sometimes you realize you committed something by mistake — maybe the wrong file, maybe an incomplete feature. Git gives you a couple of ways to remove commits from your history.</p>
+            <h4 id="removing-the-last-n-commits">Removing the last <code>N</code> commits</h4>
+            <p>The command you’ll use is <code>git reset</code>.</p>
+            <p>Here’s the general form:</p>
             <p>
             <div>
-                <pre><code class="language-bash">git reset HEAD~N
-git push origin +HEAD</code></pre>
+                <pre><code class="language-bash">git reset HEAD~N</code></pre>
             </div>
             </p>
-            <p>Example: To remove the last 2 commits, you would run:</p>
+            <ul>
+                <li><code>HEAD</code> means “the commit you’re currently on.”</li>
+                <li><code>~N</code> means “go back N commits.” For example, <code>HEAD~2</code> means “go back two commits.”</li>
+            </ul>
+            <p>So if you want to remove the last two commits, you’d run:</p>
             <p>
             <div>
-                <pre><code class="language-bash">git reset HEAD~2
-git push origin +HEAD</code></pre>
+                <pre><code class="language-bash">git reset HEAD~2</code></pre>
             </div>
             </p>
-            <p>This method allows you to eliminate recent commits while preserving the underlying work in your working directory.</p>
+            <p>At this point, Git has moved the branch pointer back in time. The commits are no longer part of your branch history. But the actual <em>changes</em> from those commits are still sitting in your working directory — as if you had just made them but hadn’t committed yet.</p>
+            <h4 id="what-this-looks-like">What this looks like</h4>
+            <p>Let’s say your history was:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">commit a1b2c3d (HEAD -&gt; main)
+commit e4f5g6h
+commit i7j8k9l</code></pre>
+            </div>
+            </p>
+            <p>After running:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">git reset HEAD~2</code></pre>
+            </div>
+            </p>
+            <p>The history now looks like:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">commit i7j8k9l (HEAD -&gt; main)</code></pre>
+            </div>
+            </p>
+            <p>And the changes from <code>e4f5g6h</code> and <code>a1b2c3d</code> are now unstaged in your working directory, ready to be re-committed (or edited, or discarded).</p>
+            <h4 id="pushing-to-a-remote">Pushing to a remote</h4>
+            <p>If your branch is connected to a remote (like GitHub), you’ll need to force-push to overwrite the history there:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">git push origin +HEAD</code></pre>
+            </div>
+            </p>
+            <p>The <code>+</code> sign tells Git you really want to replace the remote branch with your local branch, even though the histories don’t match anymore.</p>
+            <p>⚠️ Be careful with this — if anyone else has already pulled those commits, this will cause conflicts for them.</p>
             <h3 id="cleaning-up-your-commit-history">Cleaning Up Your Commit History</h3>
-            <p>If you need to remove sensitive data or a large file from your commit history, use the <code>git filter-branch</code> command. This command rewrites the commit history, so use it with caution.</p>
-            <p>Cleaning up your commit history is essential when dealing with sensitive information or optimizing repository size. By removing unwanted files or data, you can ensure that your repository remains secure and efficient.</p>
-            <p>I. <strong>Remove a File from the Commit History:</strong></p>
-            <p>To remove a specific file from the entire commit history, use the following command:</p>
+            <p>Every now and then, you might commit something you regret — a password, an API key, or maybe a massive file that doesn’t belong in Git. The tricky part is that even if you delete the file in a later commit, it’s still hanging around in the <em>history</em>. Anyone who digs into past commits (or clones the repo) can still find it.</p>
+            <p>That’s where <code>git filter-branch</code> comes in. This command lets you rewrite the history of your repo and strip out files completely. Think of it as a “surgical cleanup.” But use it carefully: since it rewrites history, it can mess with collaborators’ repos if they’ve already pulled from yours.</p>
+            <h4 id="step-1-remove-the-file-from-history">Step 1. Remove the file from history</h4>
+            <p>Here’s the general command:</p>
             <p>
             <div>
                 <pre><code class="language-bash">git filter-branch --index-filter 'git rm -r --cached --ignore-unmatch file_to_remove' HEAD</code></pre>
             </div>
             </p>
-            <p>Example: To remove a file named <code>secret.txt</code> from the commit history, you would run:</p>
+            <p>Replace <code>file_to_remove</code> with the actual filename.</p>
+            <p>For example, if you accidentally committed a file called <code>secret.txt</code>:</p>
             <p>
             <div>
                 <pre><code class="language-bash">git filter-branch --index-filter 'git rm -r --cached --ignore-unmatch secret.txt' HEAD</code></pre>
             </div>
             </p>
-            <p>This command effectively erases the specified file from all past commits, ensuring that it is no longer part of the repository's history.</p>
-        </section>
+            <p>When you run this, Git will go through all commits in your current branch (<code>HEAD</code>) and strip out that file.</p>
+            <h4 id="step-2-what-you-ll-see">Step 2. What you’ll see</h4>
+            <p>The output looks something like this:</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Rewrite 1a2b3c4d5e6f7g8h9i0 (1/100) (0 seconds passed, remaining 0 predicted)    
+Rewrite 2b3c4d5e6f7g8h9i0j1 (2/100) (1 seconds passed, remaining 49 predicted)    
+...  
+Ref 'refs/heads/main' was rewritten</code></pre>
+            </div>
+            </p>
+            <p>Git is basically replaying your commit history without the unwanted file.</p>
+            <h4 id="step-3-verify-the-cleanup">Step 3. Verify the cleanup</h4>
+            <p>Once it finishes, check the history to make sure the file is gone:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">git log --stat</code></pre>
+            </div>
+            </p>
+            <p>You should no longer see <code>secret.txt</code> listed in any commit.</p>
+            <p>If you want to be extra sure, try:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">git grep "secret.txt" $(git rev-list --all)</code></pre>
+            </div>
+            </p>
+            <p>If nothing shows up, the file is fully removed.</p>
+            <h4 id="step-4-push-the-rewritten-history">Step 4. Push the rewritten history</h4>
+            <p>If this repo is on a remote (like GitHub), you’ll need to force-push, since you’ve rewritten history:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">git push origin main --force</code></pre>
+            </div>
+            </p>
+            <p>⚠️ Warning: this will cause problems for anyone else using the repo — they’ll have to re-clone or reset their local copy.</p>
+            <p>That’s the full cleanup process. It’s a bit heavy-handed, but it’s the standard way to remove a file from Git’s history.</p>
+        </article-section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
             <ol><a href="#staging-committing-and-undoing-actions">Staging, Committing, and Undoing Actions</a>
@@ -337,8 +405,21 @@ git push origin +HEAD</code></pre>
                             <li><a href="#modify-an-older-commit-message">Modify an Older Commit Message</a></li>
                         </ol>
                     </li>
-                    <li><a href="#removing-commits">Removing Commits</a></li>
-                    <li><a href="#cleaning-up-your-commit-history">Cleaning Up Your Commit History</a></li>
+                    <li><a href="#removing-commits-in-git">Removing Commits in Git</a>
+                        <ol>
+                            <li><a href="#removing-the-last-n-commits">Removing the last N commits</a></li>
+                            <li><a href="#what-this-looks-like">What this looks like</a></li>
+                            <li><a href="#pushing-to-a-remote">Pushing to a remote</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#cleaning-up-your-commit-history">Cleaning Up Your Commit History</a>
+                        <ol>
+                            <li><a href="#step-1-remove-the-file-from-history">Step 1. Remove the file from history</a></li>
+                            <li><a href="#step-2-what-you-ll-see">Step 2. What you’ll see</a></li>
+                            <li><a href="#step-3-verify-the-cleanup">Step 3. Verify the cleanup</a></li>
+                            <li><a href="#step-4-push-the-rewritten-history">Step 4. Push the rewritten history</a></li>
+                        </ol>
+                    </li>
                 </ol>
             </ol>
             <div id="related-articles">
@@ -359,6 +440,8 @@ git push origin +HEAD</code></pre>
                     <li><a href="https://adamdjellouli.com/articles/git_notes/13_points_of_confusion.html">Points of Confusion</a></li>
                     <li><a href="https://adamdjellouli.com/articles/git_notes/14_branching_strategies.html">Branching Strategies</a></li>
                     <li><a href="https://adamdjellouli.com/articles/git_notes/15_mono_and_multi_repo.html">Mono and Multi Repo</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/git_notes/16_dangerous_commands.html">Dangerous Commands</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/git_notes/17_git_internals.html">Git Internals</a></li>
                 </ol>
             </div>
         </div>

@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Git Archive</title>
-    <meta content="git archive is a command for creating compressed archives of a repository’s tracked files at a specific point in time." name="description" />
+    <meta content="git archive is your clean-room packager." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -50,8 +50,7 @@
             </li>
         </ul>
     </nav>
-    <div id="article-wrapper">
-        <section id="article-body">
+    <div id="article-wrapper"><article-section id="article-body">
             <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
                     <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
                         <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
@@ -67,12 +66,12 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: August 22, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: September 13, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="git-archive">Git Archive</h2>
-            <p><code>git archive</code> is a command for creating compressed archives of a repository’s tracked files at a specific point in time. It’s a quick way to package your project’s current state without including Git’s version history or untracked files. The result is a clean, self-contained snapshot you can share, back up, or deploy.</p>
-            <p>Unlike copying a project folder manually, <code>git archive</code> ensures the archive contains only what Git tracks—no <code>.git</code> directory, no local build artifacts, and no accidental temporary files.</p>
-            <p>For example, say you’re working on a software project and need to send the latest stable version to a collaborator. You don’t want to send your full Git history or other unrelated files—just the working files from a specific commit. <code>git archive</code> does exactly that, packaging them neatly into formats like <code>tar</code> or <code>zip</code>.</p>
+            <p><code>git archive</code> is your clean-room packager. It snapshots exactly what Git tracks at a commit—no <code>.git</code> folder, no stray build junk, no temp files. This means you can hand someone a tidy source bundle or ship code to a server without dragging history along.</p>
+            <p>Think of it as a camera: you point it at a commit, click, and get a tar/zip of only the files that belong in that picture. It’s great for releases, vendor handoffs, monorepo subtrees, and “just give me the code” moments.</p>
+            <p>Because the archive is created from the repository’s tree, not your working directory, it’s consistent and repeatable, which makes ops and audits much happier.</p>
             <p>
             <div>
                 <pre><code class="language-shell">+------------------------+                   +------------------------+
@@ -84,38 +83,46 @@
 +------------------------+                   +------------------------+</code></pre>
             </div>
             </p>
-            <p>The left box is your Git repository, including <code>.git</code> (history/metadata) and working files. The right box is the resulting archive—<code>.git</code> is gone, leaving only the project files you want.</p>
-            <h3 id="creating-archives-for-a-snapshot-of-the-repository">Creating Archives for a Snapshot of the Repository</h3>
-            <p>You can archive files from a specific commit, branch, or tag. The <code>.git</code> directory and untracked files are excluded automatically, so the archive stays clean.</p>
-            <p>Example: create a <code>zip</code> archive of the latest commit on the current branch:</p>
+            <p>The left box is your repo with history + working files; the right box is the clean export—no <code>.git</code>, only tracked content as of the chosen commit.</p>
+            <h3 id="quick-snapshots-branch-tag-or-commit-">Quick snapshots (branch, tag, or commit)</h3>
+            <p>You pick a point in time (HEAD, a branch, a tag, a SHA), and you get a bundle. This is the “just give me today’s code” path.</p>
             <p>
             <div>
-                <pre><code class="language-bash">git archive -o archive_name.zip HEAD</code></pre>
+                <pre><code class="language-bash"># Zip of whatever you're on now
+git archive -o project.zip HEAD
+
+# Tar.gz from a release tag, with a friendly top-level folder name
+git archive --format=tar --prefix=project-1.4.2/ v1.4.2 | gzip &gt; project-1.4.2.tar.gz
+
+# Peek inside without extracting
+tar -tzf project-1.4.2.tar.gz | head
+# output (example):
+# project-1.4.2/
+# project-1.4.2/README.md
+# project-1.4.2/src/main.py
+# project-1.4.2/src/utils/__init__.py</code></pre>
             </div>
             </p>
-            <p>Here:</p>
-            <ul>
-                <li><code>HEAD</code> means “current commit of the current branch.”</li>
-                <li>You can replace <code>HEAD</code> with a branch name, tag, or commit hash to target a different point in history.</li>
-            </ul>
-            <p>By default, <code>git archive</code> writes to standard output (stdout). This lets you pipe it directly to another process—like compressing with <code>gzip</code> or sending over SSH—without creating a file first:</p>
+            <p>A tiny mental model:</p>
             <p>
             <div>
-                <pre><code class="language-bash">git archive branch_name | gzip | ssh user@host "cat &gt; project.tar.gz"</code></pre>
+                <pre><code class="language-shell">commit (tree) ──► reproducible source package
+      ^
+      └── HEAD / tag / SHA you chose</code></pre>
             </div>
             </p>
-            <p>This:</p>
-            <ol>
-                <li>Creates an archive of <code>branch_name</code>.</li>
-                <li>Compresses it with <code>gzip</code>.</li>
-                <li>Streams it straight to a remote server.</li>
-            </ol>
-            <h3 id="exporting-specific-files-or-directories">Exporting Specific Files or Directories</h3>
-            <p>If you only need part of a repository, <code>git archive</code> can target individual files or folders.</p>
-            <p>Example: archive only <code>config.yml</code> from the current commit:</p>
+            <h3 id="partial-exports">Partial exports</h3>
+            <p>You don’t have to ship the whole repo. Target a file, a folder, or a pattern and keep the archive lean.</p>
             <p>
             <div>
-                <pre><code class="language-bash">git archive -o config.zip HEAD config.yml</code></pre>
+                <pre><code class="language-bash"># One file from HEAD
+git archive -o config.zip HEAD config.yml
+
+# One directory
+git archive -o api.zip HEAD services/api/
+
+# Glob patterns (quote so your shell doesn’t expand it)
+git archive -o py-src.zip HEAD ':(glob)src/**/*.py'</code></pre>
             </div>
             </p>
             <p>Visualization:</p>
@@ -128,16 +135,13 @@
 +------------------------+                     +-----------------------+</code></pre>
             </div>
             </p>
-            <p>The resulting archive contains only <code>config.yml</code> as it exists in that commit. The same works for directories—just provide the path.</p>
-            <hr />
-            <h3 id="customizing-the-archive-with-prefixes-and-filters">Customizing the Archive with Prefixes and Filters</h3>
-            <p>You can add a path prefix to every file in the archive. This is useful for avoiding filename collisions or preparing files for deployment into a subfolder.</p>
+            <h3 id="prefixes-that-keep-things-organized">Prefixes that keep things organized</h3>
+            <p>A prefix puts everything under a single folder inside the archive—super handy for releases and avoiding file collisions when someone extracts.</p>
             <p>
             <div>
                 <pre><code class="language-bash">git archive --prefix=project-name/ -o project.zip HEAD</code></pre>
             </div>
             </p>
-            <p>Visualization:</p>
             <p>
             <div>
                 <pre><code class="language-shell">+------------------------+                   +------------------------------+
@@ -149,81 +153,122 @@
 +------------------------+                   +------------------------------+</code></pre>
             </div>
             </p>
-            <p>You can also filter which files are included using patterns. For example, to archive only Python files from a specific folder:</p>
+            <h3 id="stream-it-no-temp-files-even-to-another-box-">Stream it (no temp files, even to another box)</h3>
+            <p>Because <code>git archive</code> writes to stdout by default, you can compress and ship in one go. Great for deployments or quick backups.</p>
             <p>
             <div>
-                <pre><code class="language-bash">git archive -o source_code.zip HEAD -- path/to/code/*.py</code></pre>
+                <pre><code class="language-bash">archive_name="project-$(date +%F).tar.gz"
+git archive main | gzip | ssh user@host "cat &gt; /deploy/$archive_name"
+# output (local):
+# (no local file created; archive landed on remote host)</code></pre>
             </div>
             </p>
-            <p>Visualization:</p>
+            <p>Remote server view:</p>
             <p>
             <div>
-                <pre><code class="language-shell">+------------------------+     git archive     +-----------------------+
-|      BRANCH HEAD       |    ============&gt;    | python_files.zip      |
-| src/   file1.py        |                     | src/   file1.py       |
-| lib/   helper.py       |                     | lib/   helper.py      |
-| docs/  guide.txt       |                     |                       |
-+------------------------+                     +-----------------------+</code></pre>
+                <pre><code class="language-shell">[repo @ dev box] --stdout--&gt; [gzip] --ssh--&gt; [/deploy/project-2025-09-13.tar.gz]</code></pre>
             </div>
             </p>
-            <h3 id="supported-formats-for-archiving">Supported Formats for Archiving</h3>
-            <p>By default, <code>git archive</code> produces <code>tar</code> files, but you can request other formats:</p>
-            <p>
-            <table>
-                <tr>
-                    <td>Format</td>
-                    <td>Description</td>
-                    <td>Example Output</td>
-                </tr>
-                <tr>
-                    <td><code>tar</code></td>
-                    <td>Uncompressed tarball</td>
-                    <td><code>project.tar</code></td>
-                </tr>
-                <tr>
-                    <td><code>tar.gz</code></td>
-                    <td>Gzip-compressed tarball</td>
-                    <td><code>project.tar.gz</code></td>
-                </tr>
-                <tr>
-                    <td><code>zip</code></td>
-                    <td>Zip-compressed archive</td>
-                    <td><code>project.zip</code></td>
-                </tr>
-            </table>
-            </p>
-            <p>The format can be set explicitly with <code>--format</code> or inferred from the file extension in <code>-o</code>.</p>
-            <h3 id="example-workflow-deployment">Example Workflow: Deployment</h3>
-            <p>You want to deploy the latest <code>main</code> branch to a server:</p>
-            <p>I. Create a tar archive of <code>main</code>:</p>
+            <h3 id="real-world-flows-that-come-up-all-the-time">Real-world flows that come up all the time</h3>
+            <p><strong>1) Release tarball from a tag, nice folder name inside</strong></p>
             <p>
             <div>
-                <pre><code class="language-bash">git archive --format=tar main &gt; project.tar</code></pre>
+                <pre><code class="language-bash">git archive --format=tar --prefix=myapp-2.0.0/ v2.0.0 | gzip &gt; myapp-2.0.0.tar.gz</code></pre>
             </div>
             </p>
-            <p>II. Compress it:</p>
+            <p><strong>2) Monorepo: ship just one service</strong></p>
             <p>
             <div>
-                <pre><code class="language-bash">gzip project.tar</code></pre>
+                <pre><code class="language-bash">git archive -o payments.zip HEAD services/payments/</code></pre>
             </div>
             </p>
-            <p>III. Transfer it to the server:</p>
+            <p><strong>3) Vendor handoff: exclude dev-only stuff using <code>.gitattributes</code></strong>
+                Create rules once, every archive stays clean.</p>
             <p>
             <div>
-                <pre><code class="language-bash">scp project.tar.gz user@server:/deployments</code></pre>
+                <pre><code class="language-bash"># .gitattributes (commit this)
+docs/private/**    export-ignore
+*.psd              export-ignore
+scripts/dev/**     export-ignore
+VERSION            export-subst</code></pre>
             </div>
             </p>
-            <p>Result: the server gets a compact package with only the files it needs, ready to extract and use.</p>
-        </section>
+            <p>And if <code>VERSION</code> contains a placeholder, it gets filled when you archive:</p>
+            <p>
+            <div>
+                <pre><code class="language-text"># VERSION file in repo
+MyApp $Format:%h$ ($Format:%ci$)</code></pre>
+            </div>
+            </p>
+            <p>
+            <div>
+                <pre><code class="language-bash">git archive -o clean.zip HEAD
+# After extracting clean.zip, VERSION might read:
+# MyApp 9f3a1c2 (2025-09-13 09:45:12 +0000)</code></pre>
+            </div>
+            </p>
+            <p><strong>4) Zero-clone archive from a remote (server does the packing)</strong>
+                Useful when you don’t want a local checkout.</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">git archive --remote=ssh://git@yourserver/opt/git/myrepo.git v1.4.2 | gzip &gt; myrepo-1.4.2.tar.gz
+# note: the remote must allow git-upload-archive over SSH</code></pre>
+            </div>
+            </p>
+            <h3 id="formats-you-ll-actually-use">Formats you’ll actually use</h3>
+            <ul>
+                <li><code>tar</code> → <code>project.tar</code> (uncompressed, fast on server-to-server)</li>
+                <li><code>tar.gz</code> → <code>project.tar.gz</code> (common for releases)</li>
+                <li><code>zip</code> → <code>project.zip</code> (nice for Windows users)</li>
+            </ul>
+            <p>Pick explicitly, or let <code>-o</code>’s extension do the talking:</p>
+            <p>
+            <div>
+                <pre><code class="language-bash">git archive --format=zip -o src.zip HEAD
+git archive --format=tar HEAD &gt; project.tar</code></pre>
+            </div>
+            </p>
+            <h3 id="deployment-example-end-to-end">Deployment example, end-to-end</h3>
+            <p>You want the latest <code>main</code> on a server, clean and quick.</p>
+            <p>
+            <div>
+                <pre><code class="language-bash"># I. create tar from main and compress
+git archive --format=tar main | gzip &gt; project.tar.gz
+
+# II. ship it
+scp project.tar.gz user@server:/deployments
+
+# III. unpack on the server
+ssh user@server 'mkdir -p /apps/project &amp;&amp; tar -xzf /deployments/project.tar.gz -C /apps/project'</code></pre>
+            </div>
+            </p>
+            <p>Result: server gets only the tracked sources, with the exact tree from <code>main</code>.</p>
+            <h3 id="sanity-checks-and-small-gotchas">Sanity checks and small gotchas</h3>
+            <p>
+            <div>
+                <pre><code class="language-bash"># List contents of a tar.gz without extracting
+tar -tzf project.tar.gz | head -10</code></pre>
+            </div>
+            </p>
+            <ul>
+                <li>Untracked or ignored files are not included. If you rely on built assets, either track them (not ideal) or build on the target machine after extracting.</li>
+                <li>Submodules aren’t pulled in automatically; they appear as empty directories in archives. Package them separately or run a build step that fetches their sources.</li>
+                <li>Remote archiving depends on the server allowing <code>git-upload-archive</code> over SSH; most self-hosted setups do, some hosted platforms disable it.</li>
+                <li>Executable bits are preserved; extended attributes aren’t. If permissions matter in production, set them in your deploy scripts.</li>
+            </ul>
+        </article-section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
             <ol><a href="#git-archive">Git Archive</a>
                 <ol>
-                    <li><a href="#creating-archives-for-a-snapshot-of-the-repository">Creating Archives for a Snapshot of the Repository</a></li>
-                    <li><a href="#exporting-specific-files-or-directories">Exporting Specific Files or Directories</a></li>
-                    <li><a href="#customizing-the-archive-with-prefixes-and-filters">Customizing the Archive with Prefixes and Filters</a></li>
-                    <li><a href="#supported-formats-for-archiving">Supported Formats for Archiving</a></li>
-                    <li><a href="#example-workflow-deployment">Example Workflow: Deployment</a></li>
+                    <li><a href="#quick-snapshots-branch-tag-or-commit-">Quick snapshots (branch, tag, or commit)</a></li>
+                    <li><a href="#partial-exports">Partial exports</a></li>
+                    <li><a href="#prefixes-that-keep-things-organized">Prefixes that keep things organized</a></li>
+                    <li><a href="#stream-it-no-temp-files-even-to-another-box-">Stream it (no temp files, even to another box)</a></li>
+                    <li><a href="#real-world-flows-that-come-up-all-the-time">Real-world flows that come up all the time</a></li>
+                    <li><a href="#formats-you-ll-actually-use">Formats you’ll actually use</a></li>
+                    <li><a href="#deployment-example-end-to-end">Deployment example, end-to-end</a></li>
+                    <li><a href="#sanity-checks-and-small-gotchas">Sanity checks and small gotchas</a></li>
                 </ol>
             </ol>
             <div id="related-articles">
@@ -244,6 +289,8 @@
                     <li><a href="https://adamdjellouli.com/articles/git_notes/13_points_of_confusion.html">Points of Confusion</a></li>
                     <li><a href="https://adamdjellouli.com/articles/git_notes/14_branching_strategies.html">Branching Strategies</a></li>
                     <li><a href="https://adamdjellouli.com/articles/git_notes/15_mono_and_multi_repo.html">Mono and Multi Repo</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/git_notes/16_dangerous_commands.html">Dangerous Commands</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/git_notes/17_git_internals.html">Git Internals</a></li>
                 </ol>
             </div>
         </div>

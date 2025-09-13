@@ -50,8 +50,7 @@
             </li>
         </ul>
     </nav>
-    <div id="article-wrapper">
-        <section id="article-body">
+    <div id="article-wrapper"><article-section id="article-body">
             <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
                     <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
                         <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
@@ -67,7 +66,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: October 09, 2018</i></p>
+            <p style="text-align: right;"><i>Last modified: September 13, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="multithreading">Multithreading</h2>
             <p><strong>Multithreading</strong> refers to the capability of a CPU, or a single core within a multi-core processor, to execute multiple threads concurrently. A thread is the smallest unit of processing that can be scheduled by an operating system. In a multithreaded environment, a program, or process, can perform multiple tasks at the same time, as each thread runs in the same shared memory space. This can be useful for tasks that are IO-bound, as threads can be used to keep the CPU busy while waiting for IO operations to complete. However, because threads share the same memory, they must be carefully synchronized to avoid issues like race conditions, where two threads attempt to modify the same data concurrently, leading to unpredictable outcomes.</p>
@@ -716,6 +715,163 @@ int main() {
                 <li>Legacy codebases are existing applications that were not designed with multithreading in mind, where retrofitting multithreading could be risky or impractical.</li>
                 <li>Energy-constrained devices are battery-powered or low-energy devices where the additional power consumption from managing multiple threads is a concern.</li>
             </ul>
+            <h4 id="typical-applications">Typical Applications</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Use case</td>
+                    <td>Pattern summary</td>
+                    <td>C++ (preferred)</td>
+                    <td>Python (preferred)</td>
+                    <td>Why this choice</td>
+                    <td>Shutdown behavior</td>
+                </tr>
+                <tr>
+                    <td>High-throughput web server: handle many requests</td>
+                    <td>Worker pool reuses threads for each request</td>
+                    <td>Thread pool (joinable)</td>
+                    <td>ThreadPoolExecutor (joinable)</td>
+                    <td>Limits thread count, good control of lifecycle, back-pressure via queue</td>
+                    <td>Stop accepting work, drain queue, join pool</td>
+                </tr>
+                <tr>
+                    <td>Background logging/telemetry uploader</td>
+                    <td>Fire-and-forget uploader reading from a queue</td>
+                    <td>jthread (auto-join)</td>
+                    <td>Daemon thread</td>
+                    <td>Non-critical work; jthread lets you cancel; daemon won’t block exit</td>
+                    <td>On shutdown, try flush; daemons may drop work</td>
+                </tr>
+                <tr>
+                    <td>Periodic metrics/health pinger</td>
+                    <td>Loop with sleep to send heartbeats</td>
+                    <td>jthread (auto-join)</td>
+                    <td>Daemon thread</td>
+                    <td>Runs for app lifetime; easy cancel/stop; ok if it ends abruptly</td>
+                    <td>Signal stop, allow one last send if needed</td>
+                </tr>
+                <tr>
+                    <td>GUI app: offload long task (keep UI responsive)</td>
+                    <td>Worker thread performs blocking work, reports progress</td>
+                    <td>Joinable thread (or QThread)</td>
+                    <td>Joinable thread</td>
+                    <td>Ensure task finishes/cleans up before closing app</td>
+                    <td>Signal cancel, join before window closes</td>
+                </tr>
+                <tr>
+                    <td>Real-time sensor acquisition → queue</td>
+                    <td>Reader thread pushes samples to a bounded queue</td>
+                    <td>Joinable thread (or jthread)</td>
+                    <td>Joinable thread</td>
+                    <td>Data loss unacceptable; deterministic shutdown</td>
+                    <td>Stop signal, flush buffer, join</td>
+                </tr>
+                <tr>
+                    <td>Producer→consumer pipeline (download→parse→write)</td>
+                    <td>Stage per thread, connected by queues</td>
+                    <td>Joinable threads or pool</td>
+                    <td>Joinable threads with queue</td>
+                    <td>Back-pressure and orderly teardown</td>
+                    <td>Send sentinels, join in stage order</td>
+                </tr>
+                <tr>
+                    <td>Parallel I/O (e.g., web scraping many hosts)</td>
+                    <td>Cap concurrency using pool/executor</td>
+                    <td>Thread pool (joinable)</td>
+                    <td>ThreadPoolExecutor (joinable)</td>
+                    <td>I/O-bound; pooling avoids oversubscription</td>
+                    <td>Shutdown executor, wait=True</td>
+                </tr>
+                <tr>
+                    <td>CPU-bound parallel compute (e.g., image filters)</td>
+                    <td>True parallelism for heavy CPU tasks</td>
+                    <td>Thread pool (joinable)</td>
+                    <td>Use processes (multiprocessing)</td>
+                    <td>C++ threads run in parallel; Python GIL limits CPU threads</td>
+                    <td>Join pool / close process pool</td>
+                </tr>
+                <tr>
+                    <td>Connection timeout watchdog</td>
+                    <td>Sleeps, then cancels/alerts if overdue</td>
+                    <td>jthread (auto-join)</td>
+                    <td>Daemon thread or Timer</td>
+                    <td>Short-lived helper; safe if it dies at exit</td>
+                    <td>Cancel timer / stop token</td>
+                </tr>
+                <tr>
+                    <td>Cache warmer / prefetcher</td>
+                    <td>Preloads likely-needed data in background</td>
+                    <td>Detached thread</td>
+                    <td>Daemon thread</td>
+                    <td>Best-effort; shouldn’t block shutdown</td>
+                    <td>Allow early exit; no guarantees</td>
+                </tr>
+                <tr>
+                    <td>Background email/SMS sender in a web app</td>
+                    <td>Queue of messages consumed by workers</td>
+                    <td>Thread pool (joinable)</td>
+                    <td>ThreadPoolExecutor (joinable)</td>
+                    <td>Must ensure delivery or retry logic</td>
+                    <td>Drain queue, join; otherwise use external task queue</td>
+                </tr>
+                <tr>
+                    <td>Game asset streaming loader</td>
+                    <td>Loads textures/models while game runs</td>
+                    <td>Joinable thread</td>
+                    <td>Joinable thread</td>
+                    <td>Coordinate with main loop; avoid torn state</td>
+                    <td>Signal cancel, join before scene swap</td>
+                </tr>
+                <tr>
+                    <td>Game telemetry/analytics uploader</td>
+                    <td>Buffers and uploads non-critical events</td>
+                    <td>Detached thread</td>
+                    <td>Daemon thread</td>
+                    <td>Don’t stall frame rate or exit</td>
+                    <td>Best-effort flush only</td>
+                </tr>
+                <tr>
+                    <td>File system watcher (hot-reload)</td>
+                    <td>Watches dirs and enqueues change events</td>
+                    <td>Joinable thread</td>
+                    <td>Joinable thread</td>
+                    <td>Needs clean shutdown to release handles</td>
+                    <td>Stop watcher, join</td>
+                </tr>
+                <tr>
+                    <td>DB connection keepalive / pool maintenance</td>
+                    <td>Occasional pings, cleanup of idle conns</td>
+                    <td>jthread (auto-join)</td>
+                    <td>Daemon thread</td>
+                    <td>Low-importance periodic task</td>
+                    <td>Cancel on stop; ok to skip final ping</td>
+                </tr>
+                <tr>
+                    <td>CLI tool spawns background maintenance (e.g., log rotation)</td>
+                    <td>Helper that outlives brief main work</td>
+                    <td>Detached thread</td>
+                    <td>Daemon thread</td>
+                    <td>Main shouldn’t wait; tolerates early exit</td>
+                    <td>No join; rely on OS cleanup</td>
+                </tr>
+                <tr>
+                    <td>Small chat server: one thread per client (naïve)</td>
+                    <td>Spawn per connection, handle then exit</td>
+                    <td>Detached thread (small scale only)</td>
+                    <td>Joinable thread (or executor)</td>
+                    <td>Detached avoids bookkeeping; Python prefers controlled join</td>
+                    <td>Prefer pool for scale; join on shutdown</td>
+                </tr>
+                <tr>
+                    <td>Market data listener → queue</td>
+                    <td>Network read loop pushes updates</td>
+                    <td>Joinable thread (or jthread)</td>
+                    <td>Joinable thread</td>
+                    <td>Data integrity and ordering matter</td>
+                    <td>Signal stop, flush, join</td>
+                </tr>
+            </table>
+            </p>
             <h3 id="examples">Examples</h3>
             <h4 id="examples-in-c-">Examples in C++</h4>
             <p>In C++, every application starts with a single default main thread, represented by the <code>main()</code> function. This main thread can create additional threads, which are useful for performing multiple tasks simultaneously. Since C++11, the Standard Library provides the <code>std::thread</code> class to create and manage threads. The creation of a new thread involves defining a function that will execute in parallel and passing it to the <code>std::thread</code> constructor, along with any arguments required by that function.</p>
@@ -1857,7 +2013,7 @@ parentPort.postMessage(primes);</code></pre>
                 </tr>
             </table>
             </p>
-        </section>
+        </article-section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
             <ol><a href="#multithreading">Multithreading</a>
@@ -1876,6 +2032,7 @@ parentPort.postMessage(primes);</code></pre>
                             <li><a href="#common-misconceptions">Common Misconceptions</a></li>
                             <li><a href="#problems-for-which-multithreading-is-the-answer">Problems for which multithreading is the answer</a></li>
                             <li><a href="#problems-for-which-multithreading-is-not-the-answer">Problems for which multithreading is not the answer</a></li>
+                            <li><a href="#typical-applications">Typical Applications</a></li>
                         </ol>
                     </li>
                     <li><a href="#examples">Examples</a>

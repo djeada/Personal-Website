@@ -50,8 +50,7 @@
             </li>
         </ul>
     </nav>
-    <div id="article-wrapper">
-        <section id="article-body">
+    <div id="article-wrapper"><article-section id="article-body">
             <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
                     <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
                         <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
@@ -67,7 +66,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 12, 2020</i></p>
+            <p style="text-align: right;"><i>Last modified: September 13, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="asynchrony">Asynchrony</h2>
             <p>Asynchronous programming is a technique used to achieve concurrency, where tasks can be executed independently without waiting for other tasks to finish. It allows for nonblocking behavior, in contrast to synchronous execution that waits for one task to complete before starting the next task.</p>
@@ -164,64 +163,144 @@
                 <li>One of the key features of tasks is their ability to be <strong>canceled</strong>, which provides control over the execution flow, especially in situations where the task is no longer needed. Additionally, tasks can be combined or gathered, allowing developers to wait for multiple tasks to complete before proceeding with further actions.</li>
                 <li>The use of tasks in asynchronous programming enables developers to <strong>chain dependent operations</strong>, where the completion of one task can trigger the start of another. This chaining helps in creating complex workflows and ensuring that operations occur in the desired sequence.</li>
             </ul>
-            <h3 id="asynchrony-vs-multithreading">Asynchrony vs Multithreading</h3>
-            <p>Asynchrony and multithreading are distinct concepts but can be used together to achieve parallelism. The key difference is that asynchronous functions switch cooperatively, while threads switch preemptively.</p>
-            <ol>
-                <li>Synchronous execution with a single thread:</li>
-            </ol>
+            <h3 id="asynchrony-vs-multithreading">Asynchrony vs. Multithreading</h3>
+            <ul>
+                <li>In <em>asynchrony</em>, cooperative scheduling allows tasks to yield at <code>await</code> or callbacks, which works well for I/O-bound concurrency, while omitting this model forces developers to block on slow operations; for example, async HTTP requests let hundreds of downloads proceed concurrently without dedicated threads.</li>
+                <li>With <em>threads</em>, the operating system applies preemptive scheduling through time-slicing, which supports CPU-bound parallelism, whereas relying solely on async would underutilize CPU cores; image processing workloads illustrate this by achieving faster performance with multithreading.</li>
+                <li>Systems can <em>combine</em> async with threads or processes to handle mixed workloads efficiently, while skipping this layering can cause bottlenecks; for instance, a web server may run async for client connections while delegating encryption or compression to worker threads.</li>
+                <li>The concept of <em>concurrency</em> refers to making progress on multiple tasks within the same period, even if interleaved rather than simultaneous, while ignoring concurrency forces strictly sequential execution; a spreadsheet app demonstrates concurrency by saving files while still accepting user input.</li>
+                <li>The concept of <em>parallelism</em> involves executing tasks at the same instant across multiple cores or threads, whereas omitting parallelism keeps heavy tasks serial; a video encoding pipeline benefits from true parallelism by distributing frames across cores.</li>
+            </ul>
+            <p>Async gives you concurrency on one thread by <em>not blocking</em>; threads give you preemptive concurrency and, with multiple cores, true parallelism.</p>
+            <p>Legend: letters = task running on CPU; <code>-</code> = not running (blocked, waiting, or preempted)</p>
+            <p><strong>I. Synchronous, single thread</strong></p>
             <p>
             <div>
-                <pre><code class="language-shell">single thread: AAAABBBBBBBBBBBBBBBBBBBBBBCCCCCCCCCC</code></pre>
+                <pre><code class="language-shell">single thread: AAAA BBBBBBBBBBBBBBBBBBBBBB CCCCCCCCCC</code></pre>
             </div>
             </p>
-            <ol>
-                <li>Synchronous execution with multiple threads:</li>
-            </ol>
+            <p>Tasks run to completion one after another; others wait.</p>
+            <p><strong>II. Synchronous, multiple threads (OS preemption)</strong></p>
             <p>
             <div>
-                <pre><code class="language-shell">thread 1: AAAAAAAAAAAA---------------------------------
-
-thread 2: ------------BBBBBB--------------------------
-
-thread 3: ------------------CCCCCCCCCCCCCCCCCCCCCCCCCCC</code></pre>
+                <pre><code class="language-shell">thread 1: AAAAAAAAAAAA------------------------------
+thread 2: ------------BBBBBB------------------------
+thread 3: ------------------CCCCCCCCCCCCCCCCCCCCCCCC</code></pre>
             </div>
             </p>
-            <ol>
-                <li>Asynchronous execution with a single thread:</li>
-            </ol>
+            <p>Each thread can be scheduled independently; with multiple cores, B and C may truly run in parallel.</p>
+            <p><strong>III. Asynchronous, single thread (cooperative)</strong></p>
             <p>
             <div>
-                <pre><code class="language-shell">single thread: AAAABBBBAAAACCCAAABBBCCCCCBBBBBBBBBCCCCC</code></pre>
+                <pre><code class="language-shell">single thread: AAAA----BBBB----AA--CCC--AA--BBBB----CCCC</code></pre>
             </div>
             </p>
-            <ol>
-                <li>Asynchronous execution with multiple threads:</li>
-            </ol>
+            <p>Tasks <strong>yield</strong> at awaits; the event loop runs whatever is ready. No parallel CPU work—just efficient interleaving during I/O waits.</p>
+            <p><strong>IV. Asynchronous + multiple threads (hybrid)</strong></p>
             <p>
             <div>
-                <pre><code class="language-shell">thread 1: AAAAAAAAA-----
-thread 2: ---BBBBBBBBBBB
-thread 3: ----CCCC------</code></pre>
+                <pre><code class="language-shell">thread 1 (event loop): AAAAAA--A--A--C--A--B--C--A------
+thread 2 (worker):     ---BBBBBBBB-----------------------
+thread 3 (worker):     -----------CCCCCCCC--------------</code></pre>
             </div>
             </p>
+            <p>An async event loop offloads blocking/CPU-heavy bits to a thread (or process) pool.</p>
+            <p><strong>Quick comparison</strong></p>
+            <p>
+            <table>
+                <tr>
+                    <td>Aspect</td>
+                    <td>Asynchrony</td>
+                    <td>Threads</td>
+                </tr>
+                <tr>
+                    <td>Scheduling</td>
+                    <td><strong>Cooperative</strong> (<code>await</code>/callbacks)</td>
+                    <td><strong>Preemptive</strong> (OS time slices)</td>
+                </tr>
+                <tr>
+                    <td>Best for</td>
+                    <td>Many <strong>I/O-bound</strong> tasks (network, disk)</td>
+                    <td><strong>CPU-bound</strong> work; true parallelism</td>
+                </tr>
+                <tr>
+                    <td>Cost</td>
+                    <td>Lightweight (no per-task stack)</td>
+                    <td>Heavier (stack, context switches)</td>
+                </tr>
+                <tr>
+                    <td>Hazards</td>
+                    <td>Blocking the loop stalls everything</td>
+                    <td>Races, deadlocks, contention</td>
+                </tr>
+                <tr>
+                    <td>Composition</td>
+                    <td>Futures/Promises, event loop</td>
+                    <td>Locks, atomics, queues, thread-safe libs</td>
+                </tr>
+            </table>
+            </p>
+            <p><strong>When to use what</strong></p>
+            <ul>
+                <li>When a workload is <em>mostly I/O-bound</em>, using async ensures that the event loop remains responsive by avoiding blocking calls, while omitting async leads to wasted time waiting on network or file operations; for example, a web scraper benefits from async when handling many simultaneous HTTP requests.</li>
+                <li>If the workload is <em>mostly CPU-bound</em>, employing threads or processes enables true parallel execution, while sticking to async alone results in slow performance; image rendering pipelines often gain efficiency through multiprocessing rather than async.</li>
+                <li>For a <em>mixed workload</em>, combining an async architecture with a worker pool allows I/O tasks to run efficiently alongside offloaded CPU-heavy jobs, whereas not separating these concerns creates bottlenecks; an example is an API server that handles requests asynchronously but delegates data compression to worker threads.</li>
+            </ul>
+            <p><strong>Practical tips</strong></p>
+            <ul>
+                <li>Blocking APIs should be offloaded to a pool rather than called directly in an <em>async event loop</em>, since doing so keeps the event loop responsive, whereas failing to offload causes the entire system to stall; for instance, a blocking database driver can freeze an async web server if not isolated.</li>
+                <li>Using <em>structured concurrency</em> through task groups or scopes ensures that tasks complete or are cleaned up together, while omitting it risks resource leaks and orphaned operations; a file upload service benefits by grouping related subtasks under one scope for reliable cancellation.</li>
+                <li>Applying <em>timeouts</em>, cancellation, and backpressure mechanisms maintains responsiveness under load, whereas skipping them allows unbounded waits or uncontrolled demand; for example, an API gateway can enforce request timeouts and throttle traffic to prevent overload.</li>
+                <li>Thread-based programs run more reliably when they emphasize <em>immutable data</em> or message passing, which minimizes shared state, while ignoring this practice increases the risk of race conditions; a logging service illustrates this by passing immutable log messages through queues instead of sharing mutable buffers.</li>
+            </ul>
             <h3 id="challenges-and-considerations">Challenges and Considerations</h3>
             <ul>
-                <li>In <strong>asynchronous programming</strong>, functions operate on a cooperative model where tasks voluntarily yield control, rather than being preemptively interrupted, distinguishing it from multithreading.</li>
-                <li>This model eliminates the need for complex synchronization methods, thereby reducing overhead, as there is no requirement for <strong>locks</strong>.</li>
-                <li>Task switching is efficient in this context, as transitions are quick and avoid the heavy context switches typical in <strong>threads</strong>.</li>
-                <li>There are challenges when <strong>integrating synchronous functions</strong> within an asynchronous context, as they can cause blocking and undermine system efficiency.</li>
-                <li>To address this, developers can use <code>run_in_executor</code> to offload synchronous operations to separate threads, or they can <strong>refactor</strong> the code to be fully asynchronous.</li>
-                <li><strong>Error handling</strong> in asynchronous code can be complex, since unhandled exceptions in coroutines can disrupt the event loop, potentially impacting the entire application.</li>
-                <li>It is important to implement robust exception handling within coroutines and understand how <strong>errors</strong> can propagate through asynchronous systems.</li>
-                <li><strong>Debugging asynchronous code</strong> is challenging due to its non-linear flow, making traditional debugging techniques less effective.</li>
-                <li>Utilizing detailed <strong>logging</strong> and specialized tools, such as <code>asyncio.debug()</code>, can help provide insight into task transitions and pauses, aiding the debugging process.</li>
-                <li>While asynchronous programming is well-suited for handling <strong>I/O-bound operations</strong>, it may not be as effective for <strong>CPU-bound tasks</strong>, necessitating careful consideration for scalability.</li>
-                <li>A <strong>hybrid approach</strong>, combining multithreading and multiprocessing, can be employed to optimize performance for CPU-intensive workloads.</li>
-                <li>Managing <strong>backpressure</strong> is critical, as discrepancies between data production and consumption rates can overwhelm system components.</li>
-                <li>Strategies such as <strong>buffering</strong>, throttling, or load shedding can be used to regulate data flow and prevent system overload.</li>
-                <li><strong>Testing asynchronous code</strong> is inherently challenging due to the unpredictable nature of task execution, complicating the testing process.</li>
-                <li>Using testing tools specifically designed for <strong>asynchronous environments</strong>, such as <code>pytest-asyncio</code>, enables the simulation of various scenarios and ensures the reliability of the code.</li>
+                <li>In <em>asynchronous programming</em>, functions cooperate by yielding control rather than being preemptively interrupted, which contrasts with multithreading and allows efficient coordination of concurrent tasks.</li>
+                <li>When synchronization primitives like <em>locks</em> are unnecessary, systems avoid overhead and complexity, but without this model, developers must manage race conditions manually; for example, file writes in multithreaded applications often require explicit locks.</li>
+                <li>Task switching becomes more efficient because transitions are lightweight compared to heavy <em>thread</em> context switches, whereas omitting this model can cause performance degradation; a web server handling many requests demonstrates this efficiency gain.</li>
+                <li>Integrating <em>synchronous functions</em> without care can block the event loop and reduce throughput, while properly handling them ensures responsiveness; for instance, a synchronous database call in an async API can stall user requests if left unaddressed.</li>
+                <li>Developers who refactor code for <em>asynchronous execution</em> or use utilities like <code>run_in_executor</code> maintain system efficiency, whereas failing to do so can lead to bottlenecks; an example is offloading CPU-heavy image processing to a separate thread.</li>
+                <li>Inadequate <em>error handling</em> within coroutines allows exceptions to propagate and disrupt the event loop, while robust handling preserves application stability; for example, catching timeouts in API calls prevents full service outages.</li>
+                <li>Propagation of <em>errors</em> through asynchronous chains can spread failures silently if unchecked, but implementing structured exception management ensures predictable behavior; a payment service benefits by isolating transaction failures without crashing the system.</li>
+                <li>Debugging becomes more difficult when <em>asynchronous code</em> executes out of sequence, while structured debugging practices provide clarity; for instance, tracing delayed tasks in a chat application is easier with event loop inspection tools.</li>
+                <li>Detailed <em>logging</em> and utilities such as <code>asyncio.debug()</code> reveal task states and pauses, aiding problem resolution, whereas relying only on traditional debugging tools leaves gaps; real-world debugging of web crawlers often relies on such logging.</li>
+                <li>While <em>I/O-bound operations</em> are well supported, asynchronous models perform poorly for CPU-heavy workloads, making mismatched use inefficient; for example, a machine learning training loop gains little benefit from async patterns.</li>
+                <li>A <em>hybrid approach</em> that combines async I/O with multiprocessing or threading handles diverse workloads effectively, while ignoring this option limits scalability; a video streaming service often mixes async network handling with parallel encoding tasks.</li>
+                <li>Uncontrolled <em>backpressure</em> overwhelms consumers when producers outpace them, while active regulation prevents overload; streaming platforms, for instance, apply buffering or throttling to stabilize video playback.</li>
+                <li>Techniques such as <em>buffering</em> or load shedding smooth data flow, whereas neglecting them risks dropped requests and instability; online gaming servers commonly apply these controls to maintain responsiveness.</li>
+                <li>Testing becomes challenging when <em>asynchronous code</em> behaves unpredictably, while tailored testing methods ensure reliability; skipping such methods makes timing issues harder to detect, as in asynchronous chatbots.</li>
+                <li>Tools like <em>pytest-asyncio</em> simulate concurrent scenarios accurately, supporting robust testing, whereas generic frameworks miss timing-dependent bugs; for example, async test suites validate the order of financial transaction processing.</li>
             </ul>
+            <h3 id="typical-applications">Typical Applications</h3>
+            <p>
+            <div>
+                <pre><code class="language-markdown">| Use case | Pattern summary | C++ (preferred) | Python (preferred) | Why this choice | Shutdown behavior |
+|---|---|---|---|---|---|
+| High-concurrency HTTP **client** (scraper/crawler) | Fire thousands of non-blocking requests with bounded concurrency | C++20 coroutines + Boost.Asio/Beast; semaphore to cap in-flight | <code>asyncio</code> + <code>aiohttp</code> + <code>asyncio.Semaphore</code> | Excellent overlap of network waits; minimal threads | Cancel pending tasks, close <code>ClientSession</code>, await <code>gather(return_exceptions=True)</code> |
+| High-concurrency HTTP **server** (API) | Event-loop reactor accepts and services requests | Boost.Asio/Beast coroutines; strand for handler serialization | FastAPI/Starlette on <code>uvicorn</code>/<code>hypercorn</code> (async) | Scales with connections, low memory/ctx switches | Stop accepting, drain keep-alives, graceful shutdown hook, time-boxed cancel of tasks |
+| WebSockets chat/broadcast | Long-lived duplex connections, fan-out messages | Asio coroutines + Beast websockets | <code>websockets</code> / <code>aiohttp</code> WS | Async fits many idle sockets efficiently | Close WS with codes, cancel producers, flush queues |
+| Reverse proxy / gateway | Stream request/response bodies, back-pressure | Asio coroutines + Beast, async stream copy | <code>aiohttp</code> proxy / <code>anyio</code> streams | Zero-copy-ish streaming, flow control | Cancel copy tasks, half-close, drain, then close |
+| Streaming pipeline (socket→transform→sink) | Staged coroutines linked by queues | Asio + coroutines + bounded queues | <code>asyncio.Queue</code> + tasks per stage | Back-pressure &amp; simple composition | Send sentinels/cancel, drain queues, await tasks |
+| DB access (async driver) | Pooled async connections, transactions | Driver-specific async APIs (e.g., <code>ozo</code> for PG) | <code>asyncpg</code> / <code>databases</code> / SQLAlchemy async | Avoid thread pools for I/O; better throughput | Close pools, finish in-flight txns, cancel long queries |
+| Periodic jobs/heartbeats | <code>while</code> loop with async sleep and cancellation | <code>co_await async_timer</code> (Asio steady_timer) | <code>asyncio.TaskGroup</code> + <code>asyncio.sleep()</code> | Cheap timers; easy cooperative cancel | Respect cancel, final iteration optional, stop timers |
+| RPC client with retries/timeouts | Issue calls with per-call timeout, jittered retry | Asio + timers + coroutines | <code>asyncio.wait_for</code> + retry (tenacity/hand-rolled) | Compose timeouts &amp; retries declaratively | Cancel on shutdown, abort retries, close transports |
+| Bulk cloud uploads/downloads | Many concurrent objects with windowing | Asio coroutines + HTTP/S3 libs | <code>aiohttp</code>/SDK async clients | Hide latency; cap bandwidth with semaphores | Finish in-flight or checkpoint parts; close sessions |
+| Batched DNS resolution | Pipeline many lookups concurrently | Asio async resolver + coroutines | <code>asyncio.getaddrinfo</code> in threadpool or <code>aiodns</code> | Parallelize high-latency lookups | Cancel outstanding; cache results; close resolver |
+| MQ consumers/producers | Async consume/ack/publish with flow control | Asio + AMQP/Kafka client coroutines | <code>aio-pika</code>, <code>aiokafka</code> | Natural fit for broker I/O | Stop consume, flush acks/publishes, close channels |
+| GUI app non-blocking network I/O | Keep UI thread responsive | Qt + coroutines/Asio; integrate event loops | Qt + <code>qasync</code> + <code>asyncio</code> | Avoids UI stalls; fewer threads | Cancel tasks before closing UI; disconnect signals |
+| IoT gateway (many devices) | Thousands of idle TCP/MQTT sessions | Asio coroutines + strands | <code>asyncio-mqtt</code> / <code>asyncio</code> sockets | Async handles massive concurrency cheaply | Unsubscribe, close sockets, persist offsets/state |
+| Rate-limited API worker | Token bucket + bounded concurrency | Asio timers + custom bucket | <code>anyio</code>/<code>asyncio</code> + leaky/token bucket | Smooths bursts; avoids 429s | Flush queue, stop token refills, cancel waiters |
+| Async file↔socket streaming | Non-blocking file read/write to sockets | <code>io_uring</code> / Asio + files (platform-dep.) | <code>aiofiles</code> + <code>asyncio</code> streams | Preserve event-loop responsiveness | Flush buffers, fsync if needed, close handles |
+| Bulk email/SMS send | Many slow servers; pipeline SMTP/API calls | Asio + SMTP/HTTP libs | <code>aiosmtplib</code> / async provider SDKs | Great for I/O-bound fan-out | Drain queues, handle deferred failures, close clients |
+| Health checks/monitoring fan-out | Probe many endpoints on schedule | Asio coroutines + timers | <code>asyncio</code> + <code>aiohttp</code> + <code>gather</code> | Concurrency with small footprint | Cancel probes on exit; aggregate partial results |
+| Lightweight multiplayer/session server | Many small messages per client | Asio UDP/TCP coroutines | <code>asyncio</code> UDP/TCP protocols | Low latency, single-threaded logic | Kick clients, flush outbound, close transports |
+| Metrics fan-in (statsd/OTLP) | Receive, batch, forward asynchronously | Asio + UDP/TCP, batch timers | <code>asyncio</code> datagrams + batch send | High throughput with batching | Flush batch, stop intake, close sockets |
+| Async subprocess orchestration | Start many short jobs, stream stdio | Asio + Boost.Process + async pipes | <code>asyncio.create_subprocess_exec</code> | Avoid blocking; supervise easily | Terminate on timeout, drain pipes, await <code>wait()</code> |
+| Webhook/event handler workers | Handle many webhooks concurrently | Asio HTTP server + task queue | FastAPI + background <code>TaskGroup</code> | Bursty, I/O-bound workloads | Stop intake, finish tasks (time-boxed), persist offsets |
+| “Fire-and-forget” background task | Task not waited but tracked | Coroutine + supervisor registry | <code>asyncio.create_task</code> + tracking | Keep app responsive, but retain control | Store task refs; cancel explicitly on shutdown |
+| Bridging blocking call into async | Isolate blocking library call | Thread pool just for the call | <code>asyncio.to_thread()</code> | Keep loop unblocked without full rewrite | Await completion; cap worker threads; cancel if long |</code></pre>
+            </div>
+            </p>
             <h3 id="examples">Examples</h3>
             <h4 id="examples-in-c-">Examples in C++</h4>
             <p>Asynchronous programming in C++ involves performing tasks without blocking the main thread, allowing other operations to continue in parallel. This can be particularly useful for I/O-bound or computationally intensive tasks. The C++ Standard Library provides facilities for asynchronous programming, including the <code>std::async</code> function, <code>std::future</code>, and <code>std::promise</code>.</p>
@@ -1018,7 +1097,7 @@ async function doSomethingBetter() {
                 </tr>
             </table>
             </p>
-        </section>
+        </article-section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
             <ol><a href="#asynchrony">Asynchrony</a>
@@ -1030,8 +1109,9 @@ async function doSomethingBetter() {
                             <li><a href="#futures-and-tasks">Futures and Tasks</a></li>
                         </ol>
                     </li>
-                    <li><a href="#asynchrony-vs-multithreading">Asynchrony vs Multithreading</a></li>
+                    <li><a href="#asynchrony-vs-multithreading">Asynchrony vs. Multithreading</a></li>
                     <li><a href="#challenges-and-considerations">Challenges and Considerations</a></li>
+                    <li><a href="#typical-applications">Typical Applications</a></li>
                     <li><a href="#examples">Examples</a>
                         <ol>
                             <li><a href="#examples-in-c-">Examples in C++</a></li>
