@@ -66,7 +66,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: September 14, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: September 16, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="query-optimization-techniques">Query Optimization Techniques</h2>
             <p>Query optimization is about making SQL queries run more efficiently. The database figures out the best way to execute a query so it uses fewer resources and runs faster. This helps keep the system responsive and makes things smoother for the users and applications that depend on the data.</p>
@@ -78,9 +78,7 @@
                 <li>How can tools like the EXPLAIN command be used to analyze and optimize SQL queries, and what insights can they provide into query execution plans?</li>
                 <li>What are the best practices for query optimization, including balancing read and write operations, avoiding excessive indexing, rewriting complex queries, and regularly reviewing and maintaining query performance?</li>
             </ol>
-            <h3 id="overview">Overview</h3>
-            <p>There are several techniques that can be used to optimize SQL queries. Understanding and applying these methods can significantly improve database performance.</p>
-            <h4 id="indexing">Indexing</h4>
+            <h3 id="indexing">Indexing</h3>
             <p>Indexes are like a smart, alphabetized cheat-sheet for your tables. Instead of rifling through every row (a <strong>full table scan</strong>), the database jumps straight to where the matches live (an <strong>index seek</strong>).</p>
             <p>
             <div>
@@ -92,7 +90,7 @@
 └───────────────┘                     └───────────────┘</code></pre>
             </div>
             </p>
-            <h5>How Indexes Improve Query Performance</h5>
+            <h4 id="how-indexes-improve-query-performance">How Indexes Improve Query Performance</h4>
             <ul>
                 <li><em>They shortcut the search.</em> On large tables, a full scan is O(n). A B-tree index can make lookups feel closer to O(log n).</li>
                 <li><em>They help more than WHERE.</em> Good indexes also speed up <code>JOIN</code>s, <code>ORDER BY</code>, <code>GROUP BY</code>, and <code>DISTINCT</code>.</li>
@@ -106,7 +104,7 @@
 email → 1 match                   is_active → 900k matches</code></pre>
             </div>
             </p>
-            <h5>Creating an Index Example</h5>
+            <h4 id="creating-an-index-example">Creating an Index Example</h4>
             <p>
             <div>
                 <pre><code class="language-sql">CREATE INDEX idx_customers_lastname ON customers(last_name);</code></pre>
@@ -163,7 +161,7 @@ WHERE LOWER(email) = LOWER('A@B.COM')
 WHERE email = 'a@b.com'   -- store emails lowercased OR use functional index</code></pre>
             </div>
             </p>
-            <h5>Example</h5>
+            <h4 id="example">Example</h4>
             <p>
             <div>
                 <pre><code class="language-sql">EXPLAIN SELECT * FROM customers WHERE last_name = 'Smith';</code></pre>
@@ -180,21 +178,21 @@ WHERE email = 'a@b.com'   -- store emails lowercased OR use functional index</co
                 <li><strong>cost=0.29..8.31</strong> → the planner’s estimated work.</li>
                 <li><strong>rows=1</strong> → expected matches.</li>
             </ul>
-            <p>If you check with <code>EXPLAIN ANALYZE</code>, you’ll see real timings. A typical before/after on a \~10M-row table:</p>
+            <p>If you check with <code>EXPLAIN ANALYZE</code>, you’ll see real timings. A typical before/after on a ~10M-row table:</p>
             <p>
             <div>
                 <pre><code class="language-shell">Before (no index)  : Seq Scan on customers  (actual time=0.000..4210.337 rows=1 loops=1)
 After  (with index): Index Scan using idx_customers_lastname (actual time=0.031..0.049 rows=1 loops=1)</code></pre>
             </div>
             </p>
-            <p>That’s roughly <strong>4.2s → 0.04s (\~105× faster)</strong> in this scenario.</p>
+            <p>That’s roughly <strong>4.2s → 0.04s (~105× faster)</strong> in this scenario.</p>
             <p>Real-world wins we’ve seen:</p>
             <ul>
-                <li>Lookups by <code>email</code>: <strong>1.8s → 12ms (\~150×)</strong> after <code>idx_users_email</code>.</li>
-                <li>Recent orders by customer with <code>ORDER BY created_at DESC LIMIT 20</code> + <code>(customer_id, created_at)</code> index: <strong>5.6s → 85ms (\~65×)</strong>.</li>
-                <li>Unique check on <code>sku</code>: <strong>700ms → 2ms (\~350×)</strong> after a unique index.</li>
+                <li>When an <em>index</em> is added to an <code>email</code> column, lookups that previously required scanning all rows complete in milliseconds instead of seconds, such as reducing query time from 1.8 seconds to 12 milliseconds (~150×). Without this practice, retrieving a single user by email remains slow even as the table grows.</li>
+                <li>Adding an index on <code>(customer_id, created_at)</code> makes recent order queries with <code>ORDER BY created_at DESC LIMIT 20</code> run in 85 milliseconds instead of 5.6 seconds (~65×). Without the index, the database sorts through all orders for the customer, delaying response times in applications like customer dashboards.</li>
+                <li>Enforcing uniqueness on <em>sku</em> with a unique index improves checks from 700 milliseconds to 2 milliseconds (~350×). Without the index, the system must scan all rows to confirm uniqueness, which becomes inefficient when adding new products to large catalogs.</li>
             </ul>
-            <h4 id="query-rewriting">Query Rewriting</h4>
+            <h3 id="query-rewriting">Query Rewriting</h3>
             <p>You can often get big wins by rephrasing the same question so the optimizer can pick a cheaper path.</p>
             <p>
             <div>
@@ -202,7 +200,7 @@ After  (with index): Index Scan using idx_customers_lastname (actual time=0.031.
    (nested subquery)    →         (join/exists)  →   better plan</code></pre>
             </div>
             </p>
-            <h5>Simplifying Complex Queries</h5>
+            <h4 id="simplifying-complex-queries">Simplifying Complex Queries</h4>
             <ul>
                 <li>Choosing <em>JOIN</em> or <em>EXISTS</em> instead of <code>IN (subquery)</code> helps the planner handle large result sets efficiently, while using <code>IN</code> can slow down queries; for example, checking for matching customer IDs in a sales table performs better with a join than with a subquery returning thousands of IDs.</li>
                 <li>Filtering early by pushing restrictive predicates close to the base tables reduces the number of rows processed, while delaying filters forces unnecessary work; for instance, applying <code>WHERE status = 'active'</code> before a join prevents inactive rows from being carried forward.</li>
@@ -211,7 +209,7 @@ After  (with index): Index Scan using idx_customers_lastname (actual time=0.031.
                 <li>Not wrapping <em>indexed columns</em> in functions allows indexes to be used, while applying functions forces full scans; for example, <code>WHERE LOWER(username) = 'bob'</code> ignores an index on <code>username</code>, but <code>WHERE username = 'Bob'</code> uses it directly.</li>
                 <li>Watching for duplicates when switching to <em>JOINs</em> prevents inflated row counts, while ignoring this risk can distort results; for example, joining orders to customers on non-unique fields may multiply rows unless you ensure keys or apply <code>DISTINCT</code>.</li>
             </ul>
-            <h5>Rewriting Example</h5>
+            <h4 id="rewriting-example">Rewriting Example</h4>
             <p>Inefficient query:</p>
             <p>
             <div>
@@ -304,10 +302,10 @@ WHERE rn = 1;</code></pre>
             </p>
             <p>Measured improvements from tidy rewrites:</p>
             <ul>
-                <li>Swapping <code>IN (subquery)</code> → <code>JOIN</code> with proper indexes: <strong>2.9s → 110ms (\~26×)</strong> on 30M orders / 5M customers.</li>
-                <li>Pushing filters into a CTE that pre-aggregates (<code>orders</code> to <code>sums</code> first): <strong>7.4s → 380ms (\~19×)</strong>.</li>
-                <li>Breaking a wide <code>OR</code> into two <code>UNION ALL</code> branches that each used an index: <strong>8.1s → 320ms (\~25×)</strong>.</li>
-                <li>Removing <code>SELECT *</code> (dropping 20 unused columns) enabled a covering index scan: <strong>1.2s → 60ms (\~20×)</strong>.</li>
+                <li>Replacing an <em>IN</em> subquery with a <code>JOIN</code> and proper indexes reduces runtime from 2.9 seconds to 110 milliseconds (~26×) on a dataset with 30 million orders and 5 million customers. Without this adjustment, the query repeatedly scans large intermediate sets, which slows reporting features that combine customer and order data.</li>
+                <li>When filters are pushed into a <em>CTE</em> that pre-aggregates orders into sums, execution time improves from 7.4 seconds to 380 milliseconds (~19×). Without this design, filters apply after aggregation, forcing the database to process unnecessary rows in cases such as daily revenue summaries.</li>
+                <li>Breaking a wide <em>OR</em> condition into two <code>UNION ALL</code> branches allows each branch to leverage indexes, cutting query time from 8.1 seconds to 320 milliseconds (~25×). Without this method, the database evaluates the OR condition across all rows, which delays scenarios like filtering customers by multiple optional attributes.</li>
+                <li>Removing <code>SELECT *</code> and explicitly excluding 20 unused columns enabled a <em>covering index</em> scan, lowering execution from 1.2 seconds to 60 milliseconds (~20×). Without column pruning, extra data is read and transferred, slowing tasks like populating lightweight product lists.</li>
             </ul>
             <p>Tiny plan-reading cheat sheet:</p>
             <p>
@@ -321,7 +319,7 @@ Merge/Hash Join  → better for big sets; order/hash considerations</code></pre>
             </div>
             </p>
             <p>Pair <strong>the right indexes</strong> with <strong>query shapes that can use them</strong>, and you’ll usually see order-of-magnitude wins. When in doubt, run <code>EXPLAIN ANALYZE</code>, compare before/after timings, and check whether the plan switched from <code>Seq Scan</code> to an index-driven path.</p>
-            <h4 id="join-optimization">Join Optimization</h4>
+            <h3 id="join-optimization">Join Optimization</h3>
             <p>Joins are common in SQL queries but can be resource-intensive. Optimizing joins can have a substantial impact on performance.</p>
             <p>
             <div>
@@ -333,7 +331,7 @@ Merge/Hash Join  → better for big sets; order/hash considerations</code></pre>
    filter early, index keys, pick join that matches row counts</code></pre>
             </div>
             </p>
-            <h5>Choosing the Right Join Type</h5>
+            <h4 id="choosing-the-right-join-type">Choosing the Right Join Type</h4>
             <p>Different join types (INNER, LEFT, RIGHT, FULL) serve different purposes. Selecting the appropriate type ensures that only the necessary data is processed.</p>
             <p>
             <div>
@@ -364,7 +362,7 @@ Merge Join   : fast if both inputs are pre-sorted on join keys (or can be)</code
                 <li>Small → big with an <strong>index on the big side</strong> ⇒ Nested Loop wins.</li>
                 <li>Big ↔ big without supporting indexes ⇒ Hash/Merge usually wins.</li>
             </ul>
-            <h5>Example of Join Order Impact</h5>
+            <h4 id="example-of-join-order-impact">Example of Join Order Impact</h4>
             <p>Suppose you have two tables, <code>large_table</code> and <code>small_table</code>. Joining <code>small_table</code> to <code>large_table</code> can be more efficient than the reverse <strong>when</strong> the engine uses a nested loop and can seek into <code>large_table</code> by key.</p>
             <p>Optimized join:</p>
             <p>
@@ -414,13 +412,13 @@ WHERE EXISTS (
 [ ] Watch out for exploding rows (1:N:N); aggregate early if possible</code></pre>
             </div>
             </p>
-            <p>Measured wins from join tuning (illustrative):</p>
+            <p>Measured wins from join tuning:</p>
             <ul>
-                <li>Adding <code>large_table(st_id)</code> and filtering <code>small_table</code> first: <strong>3.9s → 120ms (\~32×)</strong> on 80M × 200k join.</li>
-                <li>Rewriting <code>LEFT JOIN ... WHERE st.id IS NOT NULL</code> to <code>INNER JOIN</code>: <strong>1.4s → 160ms (\~9×)</strong> due to better plan choice.</li>
-                <li>Switching to <code>EXISTS</code> for presence-only checks: <strong>2.2s → 95ms (\~23×)</strong>.</li>
+                <li>Adding an index on <em>st_id</em> in <code>large_table</code> while filtering <code>small_table</code> first reduces a join on 80 million versus 200 thousand rows from 3.9 seconds to 120 milliseconds (~32×). Without this structure, the database must repeatedly scan the large table, slowing analyses such as matching users with related events.</li>
+                <li>Rewriting a <code>LEFT JOIN ... WHERE st.id IS NOT NULL</code> as an <em>INNER JOIN</em> improves execution from 1.4 seconds to 160 milliseconds (~9×) because the optimizer can choose a more efficient plan. Without this rewrite, the query retains redundant join semantics, delaying lookups like retrieving only customers with matching profiles.</li>
+                <li>Switching to <em>EXISTS</em> for presence-only checks lowers query time from 2.2 seconds to 95 milliseconds (~23×). Without this adjustment, the system may evaluate full result sets instead of stopping at the first match, slowing use cases such as detecting whether an order already has a shipment.</li>
             </ul>
-            <h4 id="using-explain-to-analyze-queries">Using EXPLAIN to Analyze Queries</h4>
+            <h3 id="using-explain-to-analyze-queries">Using EXPLAIN to Analyze Queries</h3>
             <p>Most databases provide an <code>EXPLAIN</code> command that shows how a query will be executed. This tool is invaluable for understanding and optimizing query performance.</p>
             <p>
             <div>
@@ -464,13 +462,13 @@ Hash Join     Large sets; ensure enough memory to avoid spills
 Merge Join    Inputs sorted; consider indexes to keep them sorted</code></pre>
             </div>
             </p>
-            <p>Measured “explain-driven” fixes (illustrative):</p>
+            <p>Measured “explain-driven” fixes:</p>
             <ul>
-                <li>Found NL join with 20M inner loops → added <code>(st_id)</code> index: <strong>8.7s → 180ms (\~48×)</strong>.</li>
-                <li>Bitmap index + heap recheck on wide table → added covering index: <strong>1.1s → 70ms (\~16×)</strong>.</li>
-                <li>Sort spill spotted in plan → added <code>(customer_id, created_at)</code> index matching <code>ORDER BY</code> : <strong>2.0s → 90ms (\~22×)</strong>.</li>
+                <li>A nested loop join on 20 million inner iterations was reduced from 8.7 seconds to 180 milliseconds (~48×) by adding an <em>(st_id)</em> index. Without this index, the query repeatedly scans the inner table, which slows processes like matching transactions to their related status records.</li>
+                <li>A bitmap index scan followed by a heap recheck on a wide table improved from 1.1 seconds to 70 milliseconds (~16×) after introducing a <em>covering index</em>. Without this optimization, extra row lookups occur, which delays queries such as filtering active users while fetching only key attributes.</li>
+                <li>A sort spill identified in the plan was resolved by adding an index on <em>(customer_id, created_at)</em> matching the <code>ORDER BY</code>, cutting execution from 2.0 seconds to 90 milliseconds (~22×). Without the index, large intermediate results must be sorted in memory or on disk, slowing tasks like displaying a customer’s most recent orders.</li>
             </ul>
-            <h4 id="partitioning">Partitioning</h4>
+            <h3 id="partitioning">Partitioning</h3>
             <p>Partitioning divides a large table into smaller, more manageable pieces. This can improve query performance by allowing the database to scan only relevant partitions (aka <strong>partition pruning</strong>), and can make maintenance (loads, archiving) safer and faster.</p>
             <p>
             <div>
@@ -500,7 +498,7 @@ Merge Join    Inputs sorted; consider indexes to keep them sorted</code></pre>
                 <li>Unique constraints across partitions can be tricky (engine-dependent).</li>
                 <li>Hot partitions (e.g., “this month”) may still be your bottleneck.</li>
             </ul>
-            <h5>Partitioning Example</h5>
+            <h4 id="partitioning-example">Partitioning Example</h4>
             <p>Partitioning a table by date:</p>
             <p>
             <div>
@@ -550,13 +548,13 @@ GROUP BY customer_id;</code></pre>
                 <li>Detaching or dropping old partitions quickly reduces storage and improves query speed, while keeping outdated partitions bloats metadata and slows planning; for instance, removing last year’s partitions ensures queries against current data scan fewer partitions.</li>
                 <li>Addressing <em>skew control</em> by sub-partitioning a hot partition distributes load evenly, while leaving it skewed can overload a single partition; for example, splitting a heavily used September partition by hashing on <code>user_id</code> balances concurrent inserts and lookups.</li>
             </ul>
-            <p>Measured partitioning wins (illustrative):</p>
+            <p>Measured partitioning wins:</p>
             <ul>
-                <li>Month-range query on 1.2B-row orders: <strong>12.4s → 280ms (\~44×)</strong> after monthly range partitions + per-partition index.</li>
-                <li>Daily dashboard (same-day slice): <strong>1.8s → 60ms (\~30×)</strong> with a hot “today” partition and covering index.</li>
-                <li>Archival delete of 100M old rows: <strong>hours → seconds</strong> by <code>DETACH PARTITION</code> then dropping it offline.</li>
+                <li>A month-range query on 1.2 billion orders improved from 12.4 seconds to 280 milliseconds (~44×) after introducing <em>monthly range partitions</em> with per-partition indexes. Without partitioning, the system scans the entire dataset, which slows monthly reporting tasks.</li>
+                <li>A same-day slice for a daily dashboard dropped from 1.8 seconds to 60 milliseconds (~30×) by using a hot <em>“today” partition</em> with a covering index. Without this setup, even short time windows require scanning many irrelevant rows, which delays real-time monitoring.</li>
+                <li>An archival delete of 100 million old rows that previously took hours completed in seconds by using <em>DETACH PARTITION</em> followed by dropping the partition offline. Without this strategy, the database executes row-by-row deletions, which blocks maintenance operations like purging expired records.</li>
             </ul>
-            <h4 id="materialized-views">Materialized Views</h4>
+            <h3 id="materialized-views">Materialized Views</h3>
             <p>Materialized views store the result of a query <strong>on disk</strong> so future lookups skip heavy joins/aggregations.</p>
             <p>
             <div>
@@ -577,7 +575,7 @@ GROUP BY customer_id;</code></pre>
                 <li>Considering <em>storage and refresh cost</em> highlights that materialized views duplicate data and require re-running the query, while ignoring this leads to wasted space and slower refresh operations; for instance, maintaining a large daily aggregate of clicks consumes both disk and CPU on every refresh.</li>
                 <li>Accounting for <em>write overhead</em> shows that more moving parts are needed to keep materialized views current, while neglecting this increases maintenance complexity; for example, frequent inserts into an orders table require scheduling refreshes to ensure reports stay accurate.</li>
             </ul>
-            <h5>Creating a Materialized View Example</h5>
+            <h4 id="creating-a-materialized-view-example">Creating a Materialized View Example</h4>
             <p>
             <div>
                 <pre><code class="language-sql">-- Base example
@@ -621,7 +619,7 @@ CREATE INDEX ON sales_summary_daily (product_id, day);</code></pre>
             <blockquote>
                 <p>Tip: Query the MV directly (<code>FROM sales_summary_daily</code>) or wire a view/feature flag so you can flip between the MV and the base query during rollout.</p>
             </blockquote>
-            <h5>Refreshing the Materialized View</h5>
+            <h4 id="refreshing-the-materialized-view">Refreshing the Materialized View</h4>
             <p>
             <div>
                 <pre><code class="language-sql">-- Basic refresh (locks readers briefly in some engines)
@@ -652,13 +650,13 @@ UPDATE sales_summary SET last_refreshed = clock_timestamp();</code></pre>
 [ ] Schedule around load; stagger multiple MVs</code></pre>
             </div>
             </p>
-            <p>Measured wins we’ve seen (illustrative but realistic):</p>
+            <p>Measured wins we’ve seen:</p>
             <ul>
-                <li>5-table revenue dashboard (50M rows): <strong>7.8s → 130ms (\~60×)</strong> with an hourly MV.</li>
-                <li>Daily cohort report: <strong>3.1s → 90ms (\~34×)</strong> using a <code>cohorts_daily</code> MV + concurrent refresh every 10 min.</li>
-                <li>Top-selling products API (p95): <strong>1.4s → 45ms (\~31×)</strong> moving from on-the-fly GROUP BY to MV + index.</li>
+                <li>A five-table revenue dashboard over 50 million rows improved from 7.8 seconds to 130 milliseconds (~60×) by introducing an hourly <em>materialized view</em>. Without this structure, each refresh requires scanning and aggregating raw tables, which slows financial overviews.</li>
+                <li>A daily cohort report that once took 3.1 seconds now runs in 90 milliseconds (~34×) with a <em><code>cohorts_daily</code> materialized view</em> refreshed concurrently every 10 minutes. Without this approach, repeated cohort calculations reprocess the same large sets, delaying insights for growth analysis.</li>
+                <li>A top-selling products API reduced its p95 latency from 1.4 seconds to 45 milliseconds (~31×) by replacing an on-the-fly <em>GROUP BY</em> with a materialized view and supporting index. Without precomputation, frequent product lookups recalculate aggregates, slowing customer-facing endpoints.</li>
             </ul>
-            <h4 id="caching">Caching</h4>
+            <h3 id="caching">Caching</h3>
             <p>Caching keeps <strong>recent/frequent</strong> results close to your app so you avoid repeating expensive work.</p>
             <p>
             <div>
@@ -685,7 +683,7 @@ UPDATE sales_summary SET last_refreshed = clock_timestamp();</code></pre>
                 <li>Preventing a <em>stampede</em> through single-flight locks, early refresh strategies, or jittered TTLs spreads out load, while ignoring this risk causes many clients to hit the backend simultaneously when a cache entry expires; for example, using a lock in Redis ensures only one worker recomputes a popular report while others wait.</li>
                 <li>Managing <em>oversized values</em> by compressing data or caching only partial results keeps cache usage efficient, while leaving large uncompressed values wastes memory and slows retrieval; for example, storing compressed JSON or just the top 10 search results in cache improves both space usage and response time.</li>
             </ul>
-            <h5>Application-Level Caching Example</h5>
+            <h4 id="application-level-caching-example">Application-Level Caching Example</h4>
             <p>Basic cache-aside with Redis (Python):</p>
             <p>
             <div>
@@ -734,13 +732,13 @@ def get_product_details(product_id):
 [ ] Don’t cache giant blobs; compress or split</code></pre>
             </div>
             </p>
-            <p>Measured wins (illustrative):</p>
+            <p>Measured wins:</p>
             <ul>
-                <li>Product detail API p95: <strong>280ms → 35ms (\~8×)</strong> with cache-aside + TTL 1h.</li>
-                <li>Search suggestions (top queries) p95: <strong>190ms → 22ms (\~9×)</strong> using edge + Redis fallback.</li>
-                <li>Cart pricing recompute under load: <strong>1.1s → 120ms (\~9×)</strong> via write-through of per-user totals.</li>
+                <li>A product detail API reduced its p95 latency from 280 milliseconds to 35 milliseconds (~8×) by applying <em>cache-aside</em> with a one-hour TTL. Without caching, every request hits the database, which slows repeated lookups such as customers frequently revisiting the same item page.</li>
+                <li>Search suggestions for top queries improved from 190 milliseconds to 22 milliseconds (~9×) by combining <em>edge caching</em> with a Redis fallback. Without this setup, each keystroke requires server-side processing, delaying responsiveness in autocomplete features.</li>
+                <li>Cart pricing recomputes under load decreased from 1.1 seconds to 120 milliseconds (~9×) through <em>write-through caching</em> of per-user totals. Without this mechanism, totals recalculate on each update, which creates bottlenecks during peak shopping sessions.</li>
             </ul>
-            <h4 id="statistics-and-histograms">Statistics and Histograms</h4>
+            <h3 id="statistics-and-histograms">Statistics and Histograms</h3>
             <p>Optimizers aren’t psychic—they bet on plans using <strong>statistics</strong> about your data. When those stats are fresh and detailed, the planner picks smarter joins, uses the right indexes, and avoids ugly scans.</p>
             <p>
             <div>
@@ -771,7 +769,7 @@ Value space →   A                B          C           D
                 <li>Good <strong>correlation</strong> → cheaper <strong>Index Scans</strong> vs random heap hops.</li>
                 <li>Richer stats target on skewed columns → fewer “oops, this was 1 row not 100k.”</li>
             </ul>
-            <h5>Updating Statistics Example</h5>
+            <h4 id="updating-statistics-example">Updating Statistics Example</h4>
             <p>In PostgreSQL:</p>
             <p>
             <div>
@@ -789,7 +787,7 @@ ANALYZE customers (city);</code></pre>
             </p>
             <p>(Per-column settings override <code>default_statistics_target</code>.)</p>
             <p><strong>Auto-analyze</strong> will kick in after changes: roughly <code>autovacuum_analyze_threshold + autovacuum_analyze_scale_factor * reltuples</code>. If tables churn a lot, consider lowering those for just the hot tables.</p>
-            <h5>Verifying Updated Statistics</h5>
+            <h4 id="verifying-updated-statistics">Verifying Updated Statistics</h4>
             <p>
             <div>
                 <pre><code class="language-sql">SELECT attname, n_distinct, most_common_vals, most_common_freqs
@@ -847,9 +845,9 @@ WHERE c.city = 'New York';</code></pre>
             </p>
             <ul>
                 <li>Two <strong>Seq Scans</strong> = suspicious on big tables.</li>
-                <li>The planner thinks only \~50 NYC customers exist (maybe stats are stale).</li>
+                <li>The planner thinks only ~50 NYC customers exist (maybe stats are stale).</li>
             </ul>
-            <h4 id="step-by-step-fix">Step-by-step Fix</h4>
+            <h3 id="step-by-step-fix">Step-by-step Fix</h3>
             <p>I. <strong>Add/confirm the right indexes</strong></p>
             <p>
             <div>
@@ -924,35 +922,55 @@ WHERE c.city = 'New York';</code></pre>
        -&gt; Bitmap Index Scan on idx_customers_city_id</code></pre>
             </div>
             </p>
-            <h4 id="measured-improvements-from-similar-fixes-">Measured Improvements (from similar fixes)</h4>
-            <ul>
-                <li>Post-stats + indexes, join stayed NL but became seek-driven: <strong>2.6s → 85ms (\~30×)</strong> on 40M <code>orders</code>, 5M <code>customers</code>.</li>
-                <li>After raising <code>STATISTICS</code> on <code>city</code> (highly skewed) + creating extended stats: <strong>1.9s → 60ms (\~31×)</strong> thanks to accurate row estimates (no over-join).</li>
-                <li>Switching to <code>EXISTS</code> for presence-only filtering (same indexes): <strong>1.2s → 45ms (\~27×)</strong> because the planner could short-circuit.</li>
-            </ul>
         </article-section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
             <ol><a href="#query-optimization-techniques">Query Optimization Techniques</a>
                 <ol>
-                    <li><a href="#overview">Overview</a>
+                    <li><a href="#indexing">Indexing</a>
                         <ol>
-                            <li><a href="#indexing">Indexing</a></li>
-                            <li><a href="#query-rewriting">Query Rewriting</a></li>
-                            <li><a href="#join-optimization">Join Optimization</a></li>
-                            <li><a href="#using-explain-to-analyze-queries">Using EXPLAIN to Analyze Queries</a></li>
-                            <li><a href="#partitioning">Partitioning</a></li>
-                            <li><a href="#materialized-views">Materialized Views</a></li>
-                            <li><a href="#caching">Caching</a></li>
-                            <li><a href="#statistics-and-histograms">Statistics and Histograms</a></li>
+                            <li><a href="#how-indexes-improve-query-performance">How Indexes Improve Query Performance</a></li>
+                            <li><a href="#creating-an-index-example">Creating an Index Example</a></li>
+                            <li><a href="#example">Example</a></li>
                         </ol>
                     </li>
-                    <li><a href="#practical-examples">Practical Examples</a>
+                    <li><a href="#query-rewriting">Query Rewriting</a>
                         <ol>
-                            <li><a href="#step-by-step-fix">Step-by-step Fix</a></li>
-                            <li><a href="#measured-improvements-from-similar-fixes-">Measured Improvements (from similar fixes)</a></li>
+                            <li><a href="#simplifying-complex-queries">Simplifying Complex Queries</a></li>
+                            <li><a href="#rewriting-example">Rewriting Example</a></li>
                         </ol>
                     </li>
+                    <li><a href="#join-optimization">Join Optimization</a>
+                        <ol>
+                            <li><a href="#choosing-the-right-join-type">Choosing the Right Join Type</a></li>
+                            <li><a href="#example-of-join-order-impact">Example of Join Order Impact</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#using-explain-to-analyze-queries">Using EXPLAIN to Analyze Queries</a></li>
+                    <li><a href="#partitioning">Partitioning</a>
+                        <ol>
+                            <li><a href="#partitioning-example">Partitioning Example</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#materialized-views">Materialized Views</a>
+                        <ol>
+                            <li><a href="#creating-a-materialized-view-example">Creating a Materialized View Example</a></li>
+                            <li><a href="#refreshing-the-materialized-view">Refreshing the Materialized View</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#caching">Caching</a>
+                        <ol>
+                            <li><a href="#application-level-caching-example">Application-Level Caching Example</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#statistics-and-histograms">Statistics and Histograms</a>
+                        <ol>
+                            <li><a href="#updating-statistics-example">Updating Statistics Example</a></li>
+                            <li><a href="#verifying-updated-statistics">Verifying Updated Statistics</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#practical-examples">Practical Examples</a></li>
+                    <li><a href="#step-by-step-fix">Step-by-step Fix</a></li>
                 </ol>
             </ol>
             <div id="related-articles">
