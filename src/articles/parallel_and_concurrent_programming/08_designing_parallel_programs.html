@@ -66,7 +66,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: October 24, 2020</i></p>
+            <p style="text-align: right;"><i>Last modified: September 22, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="designing-parallel-programs">Designing Parallel Programs</h2>
             <p>Designing parallel programs involves breaking down computational tasks into smaller, concurrent units to be executed simultaneously. This approach leverages the power of multiple processors to enhance performance and efficiency. Key steps in this process include partitioning, communication, agglomeration, and mapping.</p>
@@ -192,10 +192,10 @@
             <p>In a distributed computing system, tasks running on separate machines need to communicate over a network.</p>
             <p>
             <div>
-                <pre><code class="language-shell">+-------------+       +-------------+
+                <pre><code class="language-shell">+-------------+        +-------------+
 | Processor 1 | &lt;----&gt; | Processor 2 |
-| Task A      |       | Task B      |
-+-------------+       +-------------+
+| Task A      |        | Task B      |
++-------------+        +-------------+
       |                     |
       +---------------------+
              Network</code></pre>
@@ -371,64 +371,202 @@
                 <li>Represent tasks and their communication as a graph, where nodes represent tasks and edges represent communication.</li>
                 <li>Use graph partitioning algorithms to divide the graph into subgraphs with minimal edge cuts, ensuring tasks with high communication needs are grouped together.</li>
             </ul>
-            <h4 id="practical-considerations">Practical Considerations</h4>
-            <p>I. Task Placement</p>
+            <h3 id="example-workflow">Example Workflow</h3>
+            <p>2-D Heat Diffusion (4096×4096, 5,000 steps, 5-point stencil, FP64)</p>
+            <p><strong>What we’re doing</strong></p>
+            <p>Simulate heat diffusion on a 4096×4096 grid for 5,000 steps using a 5-point stencil in double precision. Two row-major arrays (<code>A[nx][ny]</code>, <code>B[nx][ny]</code>) “ping-pong” each step. We checkpoint to HDF5 per tile with datasets named <code>temp_step_&lt;t&gt;</code>.</p>
+            <p><strong>Why these tools</strong></p>
             <ul>
-                <li>Specify where each task will execute, considering factors like processor capabilities, memory hierarchy, and network topology.</li>
-                <li>Placement decisions impact both computational performance and communication efficiency.</li>
+                <li>MPI combined with OpenMP provides a simple and portable form of hybrid parallelism, where MPI handles halo exchanges across ranks and OpenMP manages threads within a rank.</li>
+                <li>Parallel HDF5 enables scalable checkpoints and efficient final field output.</li>
+                <li>InfiniBand supports low-latency communication for halo exchanges.</li>
             </ul>
-            <p>II. Load Balancing</p>
+            <p><strong>What “done” looks like</strong></p>
             <ul>
-                <li>Continuously monitor and adjust the load distribution to prevent any processor from becoming a bottleneck.</li>
-                <li>Dynamic load balancing techniques can help in maintaining an even distribution of work.</li>
+                <li>Balanced tasks with explicit halo exchanges.</li>
+                <li>Fewer MPI ranks via agglomeration; threads handle intra-rank work.</li>
+                <li>Topology-aware mapping and pinning (low cross-node/NUMA traffic).</li>
+                <li>Output: converged temperature field + periodic checkpoints.</li>
             </ul>
-            <p>III. Communication Patterns</p>
+            <h4 id="i-partitioning-make-work-even-and-predictable-">I. Partitioning (make work even and predictable)</h4>
+            <p><strong>Goal:</strong> split the domain into equal, independent tasks.</p>
+            <p><strong>How:</strong> uniform 8×8 domain decomposition → 64 blocks.</p>
             <ul>
-                <li>Analyze the communication patterns of tasks to identify high-communication pairs or groups.</li>
-                <li>Optimize mapping to localize these communication patterns as much as possible.</li>
+                <li>A block size of 512×512 cells results in 262,144 updates per step per block, providing predictable work and good cache behavior.</li>
+                <li>Task IDs are assigned as T(0,0) through T(7,7) in row-major order, which makes mapping straightforward and debugging easier; for example, “T(3,5)” can be used to pinpoint issues.</li>
+                <li>The load balance is uniform to within about ±1 percent, so no special weighting is required on homogeneous CPUs.</li>
             </ul>
-            <h4 id="does-not-apply-to">Does Not Apply To</h4>
+            <p>
+            <div>
+                <pre><code class="language-shell">+---------------------------------------------------------------+
+|                        4096 x 4096 Grid                       |
++---------------------------------------------------------------+
+|   Split into 8 x 8 = 64 blocks                                |
+|   Each block = 512 x 512 cells                                |
++---------------------------------------------------------------+
+
+ Example partition view (8x8 blocks):
+
+ +----+----+----+----+----+----+----+----+
+ | T0 | T1 | T2 | T3 | T4 | T5 | T6 | T7 |
+ +----+----+----+----+----+----+----+----+
+ | T8 | T9 |T10 |T11 |T12 |T13 |T14 |T15 |
+ +----+----+----+----+----+----+----+----+
+ |T16 |T17 |T18 |T19 |T20 |T21 |T22 |T23 |
+ +----+----+----+----+----+----+----+----+
+ | ... repeats until T63 ...             |
+ +---------------------------------------+
+
+Each block has predictable work, ID, and size (512x512).</code></pre>
+            </div>
+            </p>
+            <h4 id="ii-communication-keep-it-correct-and-overlapped-">II. Communication (keep it correct and overlapped)</h4>
+            <p><strong>Goal:</strong> define and overlap all required data exchanges.</p>
+            <p><strong>How:</strong> nonblocking point-to-point halos; rare collectives.</p>
             <ul>
-                <li>In the context of <strong>single-core processors</strong>, mapping is irrelevant since all tasks are executed on the same processor.</li>
-                <li>Systems equipped with <strong>automated task scheduling</strong> manage task assignment internally, rendering manual mapping unnecessary.</li>
+                <li>Each step requires a one-cell halo exchange with the north, south, east, and west neighbors, while the corners are optional.</li>
+                <li>For a 512×512 block, the per-edge message size is 512 × 1 × 8 bytes, which equals 4 KB, leading to about 16 KB per block per step when all four edges are included.</li>
+                <li>The overlap pattern consists of four stages: first compute the interior, then issue nonblocking receives and sends to the north, south, east, and west neighbors using one contiguous buffer per edge, then perform the test or wait operations, and finally compute the borders.</li>
+                <li>A global synchronization is performed by running an Allreduce on the residual every 100 steps using a single double, which keeps synchronization costs low.</li>
             </ul>
-            <h3 id="example-workflow-in-designing-parallel-programs">Example Workflow in Designing Parallel Programs</h3>
-            <p>I. Partitioning</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Example: One block (512x512)
+
+      North halo
+        vvvvv
+   +---------------------+
+   | NNNNNNNNNNNNNNNNNNN |
+   |                     |
+   |   Interior work     |&lt;---&gt; East halo
+   |                     |
+   | SSSSSSSSSSSSSSSSSSS |
+   +---------------------+
+        ^^^^^
+      South halo
+
+Legend:
+- N = North halo (1 row)
+- S = South halo (1 row)
+- W/E = West/East halo (1 column each)
+
+Each step:
+- Send/recv 4 edges (north, south, east, west).
+- Overlap: compute interior first, halos later.
+- Message size per edge = 512 × 1 × 8 B = 4 KB.</code></pre>
+            </div>
+            </p>
+            <h4 id="iii-agglomeration-cut-rank-count-keep-memory-safe-">III. Agglomeration (cut rank count, keep memory safe)</h4>
+            <p><strong>Goal:</strong> reduce messages and ranks without exceeding per-rank memory.</p>
+            <p><strong>How:</strong> merge 2×2 blocks into a tile; thread inside each rank.</p>
             <ul>
-                <li>Analyze the problem to identify independent tasks.</li>
-                <li>Choose between domain decomposition and functional decomposition based on the nature of the problem.</li>
-                <li>Ensure the tasks are roughly equal in computational load.</li>
+                <li>The cluster consists of four hosts, each with two sockets and 16 cores per socket, giving 32 cores per host, along with 128 GB of RAM and a 100 Gbps InfiniBand interconnect.</li>
+                <li>In the earlier configuration, there were 64 MPI ranks, each responsible for a 512×512 block, which resulted in many small halo messages.</li>
+                <li>In the new configuration, there are 16 MPI ranks, each owning a 1024×1024 tile arranged as a 2×2 block, with OpenMP threads used inside each rank; this approach produces fewer but larger messages.</li>
+                <li>For a 1024×1024 tile, the per-edge message size is 1024 × 1 × 8 bytes, which equals 8 KB, leading to about 32 KB per rank per step when all four edges are included.</li>
+                <li>The memory usage per rank is approximately 8 MB for array A, 8 MB for array B, and 1–2 MB for halos and scratch space, totaling about 17–20 MB, which is far below the 512 MB budget.</li>
             </ul>
-            <p>II. Communication</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Before: 64 MPI ranks (each 512x512)
+ After:  16 MPI ranks (each 1024x1024 = 2x2 tile)
+
+ Illustration (agglomeration from 2x2 to 1):
+
+ +----+----+      +--------+
+ | A  | B  |  =&gt;  |        |
+ +----+----+      |   R    |   (One rank handles all 4 blocks)
+ | C  | D  |      |        |
+ +----+----+      +--------+
+
+Effect:
+- Fewer ranks (64 -&gt; 16)
+- Larger messages (8 KB per edge instead of 4 KB)
+- Threads (OpenMP) handle work inside each bigger block
+- Memory per rank ~20 MB (safe under 512 MB limit)</code></pre>
+            </div>
+            </p>
+            <h4 id="iv-mapping-place-work-where-data-moves-least-">IV. Mapping (place work where data moves least)</h4>
+            <p><strong>Goal:</strong> minimize cross-node traffic and cross-NUMA access.</p>
+            <p><strong>How:</strong> Cartesian rank layout + core pinning.</p>
             <ul>
-                <li>Determine the data dependencies between tasks.</li>
-                <li>Plan the communication strategy (point-to-point or collective).</li>
-                <li>Optimize the communication pattern to minimize overhead.</li>
+                <li>The configuration uses 16 MPI ranks with 8 OpenMP threads each, giving a total of 128 threads, which matches the 4 nodes with 32 cores each.</li>
+                <li>The MPI ranks are placed evenly across the nodes: ranks 0 through 3 on node-a, ranks 4 through 7 on node-b, ranks 8 through 11 on node-c, and ranks 12 through 15 on node-d.</li>
+                <li>The ranks are arranged in a 4×4 Cartesian layout in row-major order, so that neighbors align with tiles; for example, the east neighbor of rank 5 is rank 6.</li>
+                <li>Each socket hosts two ranks, and threads are pinned within the socket using <code>OMP_PLACES=cores</code> and <code>OMP_PROC_BIND=close</code> to avoid NUMA penalties.</li>
+                <li>A topology hint is to co-locate tile rows on the same node so that east–west halo exchanges remain intra-node, while only north–south exchanges cross nodes.</li>
             </ul>
-            <p>III. Agglomeration</p>
+            <p>
+            <div>
+                <pre><code class="language-shell">Cluster: 4 nodes (32 cores each)
+ Layout: 16 MPI ranks × 8 threads = 128 threads
+
+ Example placement:
+
+   Node A (ranks 0-3)     Node B (ranks 4-7)
+   +-----+-----+          +-----+-----+
+   | R0  | R1  |          | R4  | R5  |
+   +-----+-----+          +-----+-----+
+   | R2  | R3  |          | R6  | R7  |
+   +-----+-----+          +-----+-----+
+
+   Node C (ranks 8-11)    Node D (ranks 12-15)
+   +-----+-----+          +-----+-----+
+   | R8  | R9  |          |R12  |R13  |
+   +-----+-----+          +-----+-----+
+   |R10  |R11  |          |R14  |R15  |
+   +-----+-----+          +-----+-----+
+
+Inside each node:
+- 2 ranks per socket
+- 8 threads per rank pinned to cores
+- Cartesian layout keeps neighbor IDs aligned with space
+- East-West halos mostly intra-node, only North-South cross nodes</code></pre>
+            </div>
+            </p>
+            <h4 id="runbook">Runbook</h4>
+            <p><strong>Code:</strong> <code>heat2d.c</code> (ping-pong buffers, pack/unpack halos, 5-point update)</p>
+            <p><strong>Build &amp; quick check</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">mpicc -O3 -march=native -fopenmp heat2d.c -o heat2d
+./heat2d --nx 512 --ny 512 --steps 10 --tile 512 --verify analytic</code></pre>
+            </div>
+            </p>
+            <p><strong>Distribute across servers (rank layout)</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">mpirun -n 16 --map-by ppr:4:node --bind-to core --report-bindings \
+  ./heat2d --nx 4096 --ny 4096 --steps 5000 --tile 1024</code></pre>
+            </div>
+            </p>
+            <p><strong>Full run with threads + checkpoints</strong></p>
+            <p>
+            <div>
+                <pre><code class="language-bash">OMP_NUM_THREADS=8 OMP_PLACES=cores OMP_PROC_BIND=close \
+mpirun -n 16 --map-by ppr:4:node \
+  ./heat2d --nx 4096 --ny 4096 --steps 5000 --tile 1024 --checkpoint 200</code></pre>
+            </div>
+            </p>
+            <p>Outputs &amp; logging:</p>
             <ul>
-                <li>Combine smaller tasks to form larger ones, reducing the total number of tasks.</li>
-                <li>Balance the trade-off between computational granularity and communication overhead.</li>
-                <li>Ensure the combined tasks fit within the memory limits of a processor.</li>
-            </ul>
-            <p>IV. Mapping</p>
-            <ul>
-                <li>Assign agglomerated tasks to processors.</li>
-                <li>Use static mapping if the workload is predictable; otherwise, opt for dynamic mapping.</li>
-                <li>Consider the network topology to minimize communication delays.</li>
+                <li>Checkpoints are written as files named <code>chkpt_t&lt;step&gt;_tile&lt;r&gt;.h5</code>, with one file generated per tile.</li>
+                <li>The final field is stored in a single file named <code>final_temp.h5</code>.</li>
+                <li>Inside the files, the datasets are named <code>temp_step_&lt;t&gt;</code>.</li>
+                <li>Logs record the residual at each step using an Allreduce every 100 steps, along with timings for computation, halo exchanges, and I/O.</li>
             </ul>
             <h3 id="principles">Principles</h3>
             <ul>
-                <li>Effective <strong>load balancing</strong> aims to distribute work evenly across processors to avoid idle times.</li>
-                <li><strong>Minimizing communication</strong> is essential to reduce the amount and frequency of data exchange between tasks.</li>
-                <li><strong>Scalability</strong> is crucial, ensuring the system can handle increasing problem sizes and processor counts efficiently.</li>
-                <li>Maintaining <strong>locality</strong> by keeping frequently communicating tasks close to each other helps reduce communication delays.</li>
+                <li>When <em>load balancing</em> is effective, processors complete their assigned work at similar times and avoid idle periods, whereas poor distribution leaves some processors waiting; for example, evenly divided tiles in a 2-D grid let all ranks progress together.</li>
+                <li>By <em>minimizing communication</em>, tasks exchange less frequent or smaller data messages, which lowers overhead, whereas excessive communication can dominate runtime; for example, batching halo data into a single buffer reduces the number of network transfers.</li>
+                <li>Achieving <em>scalability</em> ensures that adding more processors or increasing the problem size continues to yield useful performance gains, whereas poor scaling leads to diminishing returns; for example, a stencil solver that maintains efficiency on 128 cores can often extend to 512 cores with predictable throughput.</li>
+                <li>Preserving <em>locality</em> keeps tasks that frequently exchange halos placed near each other in memory or on the same node, which shortens communication paths, whereas ignoring locality increases latency; for example, mapping tile rows to the same host keeps east–west messages intra-node.</li>
             </ul>
             <h3 id="tools-and-techniques">Tools and Techniques</h3>
             <ul>
-                <li>The <strong>Message Passing Interface</strong> (MPI) is used for communication in distributed memory systems.</li>
-                <li><strong>OpenMP</strong> is employed for parallel programming in shared memory systems.</li>
-                <li><strong>Profiling</strong> tools, such as Intel VTune and GNU gprof, are utilized to analyze performance and identify bottlenecks.</li>
+                <li>Using the <em>Message Passing Interface</em> (MPI) enables communication across distributed memory systems, whereas omitting it prevents processes on separate nodes from exchanging data; for example, halo values in a multi-node stencil computation require MPI sends and receives.</li>
+                <li>Applying <em>OpenMP</em> allows shared memory parallelism within a node, whereas ignoring it forces the program to rely solely on MPI ranks even for intra-node parallelism; for example, multiple threads per rank can process tiles more efficiently than many small MPI ranks on the same socket.</li>
+                <li>Employing <em>profiling</em> tools such as Intel VTune or GNU gprof helps identify runtime hotspots and communication bottlenecks, whereas not profiling leaves performance issues hidden; for example, profiling may reveal that boundary updates consume more time than interior computation.</li>
             </ul>
         </article-section>
         <div id="table-of-contents">
@@ -464,11 +602,17 @@
                         <ol>
                             <li><a href="#goals">Goals</a></li>
                             <li><a href="#strategies">Strategies</a></li>
-                            <li><a href="#practical-considerations">Practical Considerations</a></li>
-                            <li><a href="#does-not-apply-to">Does Not Apply To</a></li>
                         </ol>
                     </li>
-                    <li><a href="#example-workflow-in-designing-parallel-programs">Example Workflow in Designing Parallel Programs</a></li>
+                    <li><a href="#example-workflow">Example Workflow</a>
+                        <ol>
+                            <li><a href="#i-partitioning-make-work-even-and-predictable-">I. Partitioning (make work even and predictable)</a></li>
+                            <li><a href="#ii-communication-keep-it-correct-and-overlapped-">II. Communication (keep it correct and overlapped)</a></li>
+                            <li><a href="#iii-agglomeration-cut-rank-count-keep-memory-safe-">III. Agglomeration (cut rank count, keep memory safe)</a></li>
+                            <li><a href="#iv-mapping-place-work-where-data-moves-least-">IV. Mapping (place work where data moves least)</a></li>
+                            <li><a href="#runbook">Runbook</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#principles">Principles</a></li>
                     <li><a href="#tools-and-techniques">Tools and Techniques</a></li>
                 </ol>
@@ -484,6 +628,7 @@
                     <li><a href="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/06_hardware.html">Hardware</a></li>
                     <li><a href="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/07_evaluating_performance.html">Evaluating Performance</a></li>
                     <li><a href="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/08_designing_parallel_programs.html">Designing Parallel Programs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/parallel_and_concurrent_programming/09_gpu_programming.html">Gpu Programming</a></li>
                 </ol>
             </div>
         </div>

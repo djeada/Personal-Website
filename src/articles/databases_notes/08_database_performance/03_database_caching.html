@@ -66,7 +66,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: May 18, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: September 22, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="database-caching">Database Caching</h2>
             <p>Database caching is a powerful performance optimization technique that involves temporarily storing frequently accessed data in a cache for quick retrieval. By keeping commonly requested information readily available, caching reduces the time it takes to access data and lessens the load on the database server. This can significantly enhance the responsiveness and scalability of applications, leading to a better user experience.</p>
@@ -140,8 +140,8 @@
                                   │ Check Redis    │
                                   │  (cache_key)   │
                                   └───┬───────────┘
-                HIT? Yes ───────────│─────────┐ No
-                                  │         ▼
+                      HIT? ───────────│─────────┐ No
+                                 Yes  │         ▼
           ┌───────────┐         ┌───────┐  ┌────────────────────┐
           │ Return    │◀────────│Redis  │  │ Query Database     │
           │ Cached    │         │Hit!   │  │ (SELECT * FROM ...)│
@@ -215,15 +215,15 @@ def get_products():
        │ userCache.get │
        │ (key = 123)   │
        └───────┬───────┘
- HIT? Yes ─────┤      No ──────────────────────┐
-              │                                │
-              ▼                                ▼
+    HIT? ──────┤──────No ──────────────────────┐
+          Yes  │                               │
+               ▼                               ▼
        ┌─────────────┐                   ┌──────────────────┐
        │ Return      │                   │ Fetch from       │
        │ Cached User │                   │ Database         │
        └─────────────┘                   └────────┬─────────┘
-                                                 │
-                                                 ▼
+                                                  │
+                                                  ▼
                                          ┌──────────────────────┐
                                          │ userCache.put(123,   │
                                          │   &lt;user object=""&gt;)     │
@@ -345,20 +345,23 @@ EXECUTE get_users_by_age(30);</code></pre>
             <h3 id="cache-invalidation-strategies">Cache Invalidation Strategies</h3>
             <p>Keeping your cache coherent with the source of truth (the database) is one of the hardest problems in computer science. Below are three classic strategies, each with an ASCII diagram that shows <strong>who</strong> triggers the change and <strong>when</strong> the cached value is refreshed.</p>
             <h4 id="time-to-live-ttl-">Time-to-Live (TTL)</h4>
-            <ol>
-                <li><strong>Write</strong> – when data is first fetched from the DB, it is inserted into the cache with a fixed expiration time.</li>
-                <li><strong>Serve-from-cache</strong> – until that timer “pops,” every read is a fast cache hit.</li>
-                <li><strong>Expire &amp; Refresh</strong> – after the TTL elapses, the next read is a miss, so the application reloads the data from the DB and starts a fresh timer.</li>
-            </ol>
+            <ul>
+                <li>When <em>caching</em> is used to store data after it is first fetched, applications reduce repeated database queries, while omitting it results in slower response times; for example, a news site can quickly serve popular articles without repeatedly hitting the database.</li>
+                <li>By serving requests directly from cached entries until their expiration, users experience consistently fast reads, whereas skipping this practice causes each request to trigger a database query; for instance, an e-commerce site can display product details instantly during peak hours.</li>
+                <li>After the <em>time-to-live (TTL)</em> expires, the next request triggers a cache miss that forces a reload from the database, ensuring updated data is available, while not using this method risks showing outdated information indefinitely; a practical example is refreshing stock prices after a set interval.</li>
+            </ul>
             <p>
             <div>
-                <pre><code class="language-shell">Time ─────────────────────────────────────────────────────────►
+                <pre><code class="language-shell">Time ─────────────────────────────────────────────────────────────────────────►
 
- Client  ─►  Cache (HIT)   Cache (HIT)   Cache ✖ (MISS)   Cache (HIT)
-                 │             │               │               │
-                 │   TTL ticking down…         │               │
-                 └───────────────&lt;  TTL  &gt;─────┘               │
-                                         fetch ► DB ──► update │</code></pre>
+t0                         t1                         t2                        t3
+│                          │                          │                         │
+Client ► Cache [HIT]    Client ► Cache [HIT]       Client ► Cache [MISS]     Client ► Cache [HIT]
+           │                         │                          │                         │
+           │&lt;────────────── TTL valid window ──────────────────&gt;│                         │
+                                                (expires here)  │                         │
+                                                             fetch ► DB
+                                                             update cache</code></pre>
             </div>
             </p>
             <p><strong>Pros</strong></p>
@@ -456,11 +459,11 @@ EXECUTE get_users_by_age(30);</code></pre>
                 </tr>
             </table>
             </p>
-            <blockquote>
-                <p><strong>Hybrid in practice</strong> – Many production systems blend these techniques:
-                    <em>short TTL</em> as a safety net <strong>+</strong> <em>event-based</em> purging for critical objects. This “belt-and-suspenders” model keeps data fresh while guarding against missed events.
-                </p>
-            </blockquote>
+            <ul>
+                <li>In many systems, a short <em>TTL</em> acts as a safeguard to ensure stale data is eventually cleared, while omitting it can leave the cache relying solely on external signals that may fail; for example, product prices may still refresh within minutes even if an update notification is missed.</li>
+                <li>When <em>event-based</em> purging is added for critical objects, updates are reflected almost immediately, whereas skipping this leads to reliance on scheduled expirations alone; a typical use case is invalidating a user’s session cache as soon as they log out.</li>
+                <li>Combining both approaches creates a blended strategy that balances freshness with resilience, while using only one risks either unnecessary reloads or delayed updates; an example is a content platform that uses events to purge updated articles but also applies a brief fallback TTL.</li>
+            </ul>
             <h3 id="best-practices">Best Practices</h3>
             <p>Below is a “hands-on” playbook that teams actually use when they roll out a cache in front of a relational or NoSQL store. Feel free to cherry-pick the bits that fit your stack—everything is numbered so you can treat it like a checklist.</p>
             <h4 id="pinpoint-the-hot-data-don-t-guess-">Pinpoint the “hot” data (don’t guess)</h4>
@@ -614,9 +617,9 @@ def get_user(user_id):
             </ul>
             <h4 id="why-it-differs-by-app">Why it differs by app</h4>
             <ul>
-                <li><strong>E-commerce</strong>: product listings (immutable) vs. cart totals (write-through). TTL for product ≈ catalog update frequency (often 30 min – 1 h).</li>
-                <li><strong>SaaS CRUD</strong> apps: user &amp; org objects updated sporadically—TTL can be hours. Focus more on <em>invalidation correctness</em> than raw hit rate.</li>
-                <li><strong>Social feed</strong>: massive read amplification. Split feed metadata (list of IDs) and item bodies, use fan-out on write or “pull with cache”.</li>
+                <li>In an <em>e-commerce</em> platform, product listings are often treated as immutable and can be cached with a TTL close to the catalog update frequency, while omitting this practice causes unnecessary database load; for example, setting a 30–60 minute TTL lets popular items stay responsive without risking stale availability data.</li>
+                <li>For <em>SaaS CRUD</em> applications, user and organization objects change infrequently, so long TTL values are acceptable, whereas avoiding them forces constant database queries; in this case, ensuring invalidation correctness matters more than maximizing cache hit rates, such as when an admin updates organization details only a few times a day.</li>
+                <li>In a <em>social feed</em> with high read amplification, separating feed metadata from item bodies improves efficiency, while skipping this separation makes each read heavier and slower; for instance, a service may cache only the list of post IDs and then fetch or fan-out item content on demand.</li>
             </ul>
             <p>Each app’s <em>write cadence</em> and <em>staleness tolerance</em> ultimately dictate TTL and invalidation strategy—use the measurement steps above to quantify both before you start tweaking configs.</p>
             <h3 id="potential-challenges-and-solutions">Potential Challenges and Solutions</h3>
@@ -635,10 +638,10 @@ def get_user(user_id):
             <p><em>Scenario</em>: A product’s price changes from €29.99 to €24.99 at <strong>13:05:12</strong> but users keep seeing the old price for up to 30 s because that’s the TTL.</p>
             <p><strong>Mitigations</strong></p>
             <ul>
-                <li><strong>Short‑lived TTLs</strong> on volatile entities (e.g. prices 30 s, user sessions 15 min, catalog 1 h).</li>
-                <li><strong>Write‑through / write‑behind</strong> patterns so the cache is updated in the same transaction that touches the DB.</li>
-                <li><strong>Event‑driven invalidation</strong>: emit a <code>product.updated</code> event from the write service; consumers delete or refresh the key in Redis immediately.</li>
-                <li><strong>Background refresh</strong> ("refresh‑ahead") so popular keys are re‑fetched a few seconds <em>before</em> they expire.</li>
+                <li>Applying short-lived <em>TTLs</em> to volatile entities ensures that fast-changing data like prices or session states remain fresh, while omitting them risks users seeing outdated values; for example, a 30-second TTL on product prices prevents showing yesterday’s discount during checkout.</li>
+                <li>Using <em>write-through</em> or <em>write-behind</em> caching patterns keeps cache and database consistent during updates, whereas skipping this practice can lead to stale cache entries that contradict the source of truth; an example is updating a shopping cart total in Redis as part of the same database transaction.</li>
+                <li>Implementing <em>event-driven invalidation</em> allows immediate removal or refresh of keys after updates, while not doing so leaves caches dependent on TTL expiration alone; for instance, a <code>product.updated</code> event can trigger Redis consumers to drop outdated product details right away.</li>
+                <li>Enabling <em>background refresh</em> for popular keys pre-fetches data just before expiration, avoiding user-visible cache misses, while ignoring this approach can cause noticeable latency spikes; a common case is refreshing trending feed items a few seconds before their TTL lapses.</li>
             </ul>
             <h4 id="cache-miss-penalties-thundering-herd-">Cache Miss Penalties (Thundering Herd)</h4>
             <p>
@@ -657,10 +660,10 @@ def get_user(user_id):
             <p><em>Scenario</em>: After a deploy, the cache is cold. 5 k rps hits the DB, which briefly spikes to 90 % CPU causing p99 latency to jump from 60 ms ⇒ 1 s.</p>
             <p><strong>Mitigations</strong></p>
             <ul>
-                <li><strong>Warm‑up scripts</strong> at deploy time (<code>redis-cli MSET $(cat hot_keys.json)</code>).</li>
-                <li><strong>Probabilistic early refresh</strong> (e.g. ["lazy expiring"] where the first thread refreshes while others keep serving the old value).</li>
-                <li><strong>Request coalescing</strong> / <em>single‑flight</em>: the first miss locks the key; other requests wait for the result instead of hammering the DB.</li>
-                <li><strong>Read replicas</strong> or CQRS read stores to share the load when misses inevitably happen.</li>
+                <li>Running <em>warm-up scripts</em> at deploy time preloads hot keys into the cache, avoiding a cold-start surge of database queries, while omitting this step can cause spikes in latency just after rollout; for example, loading a JSON list of top product IDs ensures they are immediately available in Redis.</li>
+                <li>Using <em>probabilistic early refresh</em> lets the first thread refresh data while others continue serving the cached value, whereas not applying it can cause many threads to block simultaneously at expiration; a case in point is “lazy expiring,” where only one user request triggers a refresh of a popular item.</li>
+                <li>Applying <em>request coalescing</em> ensures that only the first cache miss triggers a database fetch, with others waiting for the refreshed result, while leaving it out risks a thundering herd effect; for example, a single-flight lock on a trending news article prevents hundreds of concurrent queries.</li>
+                <li>Adding <em>read replicas</em> or specialized CQRS read stores helps distribute load during inevitable cache misses, while relying on a single primary database can create bottlenecks; an example is serving cache misses for analytics queries from read replicas instead of the main transactional store.</li>
             </ul>
             <h4 id="increased-complexity-operational-overhead-">Increased Complexity (Operational Overhead)</h4>
             <p>
@@ -676,22 +679,21 @@ def get_user(user_id):
             <p><em>Pain Points</em>: extra moving parts (Redis cluster + Sentinel), failure modes (cache down ≠ DB down), and cognitive load for new devs who must understand eviction policies.</p>
             <p><strong>Mitigations</strong></p>
             <ul>
-                <li><strong>Leverage frameworks</strong> (<code>Spring @Cacheable</code>, <code>NestJS cache‑manager</code>, Django’s <code>cache</code> API) so most logic is declarative.</li>
-                <li>Keep TTLs, eviction policies, and key naming conventions in a single module.</li>
-                <li>Emit <em>hit</em>, <em>miss</em>, <em>eviction</em>, <em>latency</em> metrics; dashboard them next to DB metrics.</li>
-                <li>Periodically turn off the cache in staging to prove the app still works (albeit slower).</li>
+                <li>Leveraging <em>frameworks</em> that provide declarative caching APIs simplifies integration and reduces custom code, while bypassing them forces developers to manage low-level cache interactions; for example, using Spring’s <code>@Cacheable</code> annotation makes adding caching to a service method both easier and more consistent.</li>
+                <li>Centralizing <em>TTLs</em>, eviction rules, and key naming conventions in a single module keeps cache behavior predictable, whereas scattering these settings across services leads to inconsistent policies; for instance, a shared configuration file ensures all services apply the same naming pattern for user sessions.</li>
+                <li>Emitting <em>hit</em>, <em>miss</em>, <em>eviction</em>, and <em>latency</em> metrics gives teams visibility into cache effectiveness, while ignoring these signals makes it difficult to detect regressions; for example, a dashboard that shows cache hit rates beside database query counts helps diagnose performance issues quickly.</li>
+                <li>Periodically disabling the cache in staging validates that the application remains functional without it, while skipping this step risks hidden dependencies that surface only in production; an example is ensuring a SaaS dashboard still renders correctly—just more slowly—when cache bypass is enforced.</li>
             </ul>
             <blockquote>
                 <p><strong>Tip</strong>: Treat the cache as <em>a copy</em> of the source of truth, never the truth itself. Design every code path to <em>degrade gracefully</em> when the cache is empty or unreachable.</p>
             </blockquote>
             <h3 id="real-world-use-cases">Real-World Use Cases</h3>
             <p>Database caching is used extensively in various applications to improve performance and scalability.</p>
-            <h4 id="high-traffic-web-applications">High-Traffic Web Applications</h4>
-            <p>Websites that experience high traffic volumes, such as news sites or e-commerce platforms, benefit from caching by reducing database load and serving content more quickly.</p>
-            <h4 id="content-delivery-networks-cdns-">Content Delivery Networks (CDNs)</h4>
-            <p>CDNs cache static content at servers distributed around the globe, reducing latency by serving content from a location closer to the user.</p>
-            <h4 id="session-management">Session Management</h4>
-            <p>Applications often use caching to store session data, improving the speed of user authentication and personalization features.</p>
+            <ul>
+                <li>High-traffic websites such as news platforms or online stores improve scalability and response time through <em>caching</em>, while omitting it results in database overload and slower page delivery; for example, a breaking news article can be served instantly to millions without repeated database queries.</li>
+                <li>Distributed <em>CDNs</em> store static assets like images, scripts, or stylesheets on edge servers near users, which lowers latency, while skipping them forces every request to travel to the origin server; for instance, an e-commerce site loads product images faster when they come from a nearby CDN node.</li>
+                <li>Storing <em>session data</em> in a cache accelerates authentication and personalization, while leaving this data only in the database increases login times and reduces responsiveness; for example, a social media platform can quickly recall user preferences from cached session keys.</li>
+            </ul>
         </article-section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
@@ -743,13 +745,7 @@ def get_user(user_id):
                             <li><a href="#increased-complexity-operational-overhead-">Increased Complexity (Operational Overhead)</a></li>
                         </ol>
                     </li>
-                    <li><a href="#real-world-use-cases">Real-World Use Cases</a>
-                        <ol>
-                            <li><a href="#high-traffic-web-applications">High-Traffic Web Applications</a></li>
-                            <li><a href="#content-delivery-networks-cdns-">Content Delivery Networks (CDNs)</a></li>
-                            <li><a href="#session-management">Session Management</a></li>
-                        </ol>
-                    </li>
+                    <li><a href="#real-world-use-cases">Real-World Use Cases</a></li>
                 </ol>
             </ol>
             <div id="related-articles">

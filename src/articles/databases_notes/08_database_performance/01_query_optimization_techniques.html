@@ -66,7 +66,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: September 16, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: September 22, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="query-optimization-techniques">Query Optimization Techniques</h2>
             <p>Query optimization is about making SQL queries run more efficiently. The database figures out the best way to execute a query so it uses fewer resources and runs faster. This helps keep the system responsive and makes things smoother for the users and applications that depend on the data.</p>
@@ -326,8 +326,8 @@ Merge/Hash Join  → better for big sets; order/hash considerations</code></pre>
                 <pre><code class="language-shell">High level mental model
 ┌─────────┐   join key   ┌─────────┐
 │  LEFT   │◀────────────▶│  RIGHT  │
-│  rows   │               │  rows   │
-└─────────┘               └─────────┘
+│  rows   │              │  rows   │
+└─────────┘              └─────────┘
    filter early, index keys, pick join that matches row counts</code></pre>
             </div>
             </p>
@@ -849,6 +849,7 @@ WHERE c.city = 'New York';</code></pre>
             </ul>
             <h3 id="step-by-step-fix">Step-by-step Fix</h3>
             <p>I. <strong>Add/confirm the right indexes</strong></p>
+            <p>Think of this as laying down fast lanes. We add one index to jump straight to “customers in this city” and grab their IDs, and another to find all their orders without wandering the whole table. Do it so the database stops scanning everything; expect quick, targeted lookups instead of sloggy full scans.</p>
             <p>
             <div>
                 <pre><code class="language-sql">-- Filter &amp; join key on customers
@@ -861,6 +862,7 @@ CREATE INDEX IF NOT EXISTS idx_orders_customer_id
             </div>
             </p>
             <p>II. <strong>Update stats (and make them richer on skewed columns)</strong></p>
+            <p>This is giving the planner fresh glasses. We bump the stats target for <code>city</code> (because some cities are way more common) and re-run <code>ANALYZE</code>. Do it so the optimizer guesses row counts realistically; expect better join choices and fewer “why did it do that?” plans.</p>
             <p>
             <div>
                 <pre><code class="language-sql">ALTER TABLE customers ALTER COLUMN city SET STATISTICS 1000;
@@ -869,6 +871,7 @@ ANALYZE orders;           -- refresh orders stats too</code></pre>
             </div>
             </p>
             <p>III. <strong>(Optional) Extended statistics</strong> for multi-column estimates (PG 10+)</p>
+            <p>Now we clue the planner in on how columns relate. By telling it about distinctness across <code>(city, customer_id)</code>, it stops making naive assumptions. Do it if your data has relationships across columns; expect smarter estimates and, in turn, smarter plans.</p>
             <p>
             <div>
                 <pre><code class="language-sql">-- Helps the planner understand distinctness across columns
@@ -877,7 +880,7 @@ ANALYZE customers;</code></pre>
             </div>
             </p>
             <p>IV. <strong>Shape the query so the plan can win</strong></p>
-            <p>Keep it as a join (perfectly fine), or express “presence” with <code>EXISTS</code>:</p>
+            <p>Same result, clearer intent. A plain join is fine, but <code>EXISTS</code> often nudges the planner into a lean “just check if there’s a matching customer” mindset. Do it to avoid generating extra rows or over-complicating the join; expect simpler, index-friendly execution.</p>
             <p>
             <div>
                 <pre><code class="language-sql">-- Equivalent, often better estimates:
@@ -892,6 +895,7 @@ WHERE EXISTS (
             </div>
             </p>
             <p>V. <strong>Re-check the plan</strong></p>
+            <p>Quick sanity check. We run <code>EXPLAIN</code> to make sure our indexes and stats actually changed the strategy. Do it to confirm we’re not guessing; expect to see index scans and either a tidy nested loop (when NYC is small) or a hash/bitmap plan (when NYC is big).</p>
             <p>
             <div>
                 <pre><code class="language-sql">EXPLAIN
