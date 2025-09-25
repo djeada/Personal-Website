@@ -66,7 +66,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: September 22, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: September 25, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="designing-parallel-programs">Designing Parallel Programs</h2>
             <p>Designing parallel programs involves breaking down computational tasks into smaller, concurrent units to be executed simultaneously. This approach leverages the power of multiple processors to enhance performance and efficiency. Key steps in this process include partitioning, communication, agglomeration, and mapping.</p>
@@ -99,76 +99,130 @@
             </ul>
             <h4 id="types-of-decomposition">Types of Decomposition</h4>
             <p>I. Domain Decomposition</p>
-            <p>Domain decomposition involves splitting the data into partitions, with each partition processed by a separate task. This method is highly effective in scenarios where the data can be naturally divided into distinct segments.</p>
-            <p>Example:</p>
-            <p>In a weather simulation, the geographical area can be divided into smaller regions, with each region processed independently.</p>
+            <p>Domain decomposition splits your <strong>data space</strong> into chunks that different workers handle in parallel. The trick is to choose chunks so each worker mostly uses its own data, only syncing at boundaries.</p>
+            <p>Example (concrete &amp; step-by-step):</p>
+            <ul>
+                <li>Suppose you’re blurring a <strong>4000×4000 image</strong>. Cut it into 4 tiles of <strong>2000×2000</strong>: top-left, top-right, bottom-left, bottom-right.</li>
+                <li>Each worker blurs its own tile. Because blur needs neighbor pixels, each tile also reads a tiny border from adjacent tiles (often called <strong>halo/ghost cells</strong>).</li>
+                <li>After processing, you stitch the 4 blurred tiles back together.
+                    Why this works: most computations are <strong>local</strong> (each pixel depends on nearby pixels), so each tile can run independently and fast, with small, predictable communication at the edges.</li>
+            </ul>
+            <p>(Another mental model: In a weather sim, split the map into regions; each core updates temperature/wind in its region, only exchanging <strong>border values</strong> with neighbors after each timestep.)</p>
             <p>II. Functional Decomposition</p>
-            <p>Functional decomposition divides the computation into separate functional tasks, each performing a distinct part of the overall computation. This method focuses on breaking down the operations rather than the data.</p>
-            <p>Example:</p>
-            <p>In a web application, different tasks such as user authentication, data retrieval, and UI rendering can be handled by separate services.</p>
-            <p>IIII. Cyclic Decomposition</p>
-            <p>Cyclic decomposition is primarily used in the context of permutations and group theory. It breaks down a permutation into a collection of disjoint cycles, where each cycle represents a sequence of elements that are permuted among themselves.</p>
-            <p>Example:</p>
-            <p>Consider the permutation of the set ${1, 2, 3, 4}$ given by:</p>
+            <p>Functional decomposition splits by <strong>kind of work</strong>, not by data. You build a pipeline of stages; each stage does one job well.</p>
+            <p>Example (web request pipeline):</p>
+            <ul>
+                <li><strong>Auth stage:</strong> check the token/cookie; if invalid, stop.</li>
+                <li><strong>Data stage:</strong> query the database for the user’s posts.</li>
+                <li><strong>Transform stage:</strong> sort and format the posts.</li>
+                <li><strong>Render stage:</strong> turn the result into HTML or JSON.
+                    Each stage can scale independently (lots of data? scale the Data stage), and it’s easier to test (mock inputs/outputs per stage).</li>
+            </ul>
+            <p>(Another quick one: for large matrix multiplication on a GPU pipeline: <strong>Load → Multiply → Accumulate → Store</strong>. Same idea—different steps, specialized workers.)</p>
+            <p>III. Cyclic Decomposition</p>
+            <p>Cyclic decomposition (group theory) takes a <strong>permutation</strong>—a rule that reorders items—and breaks it into <strong>disjoint cycles</strong>. A cycle tells you how items rotate among themselves; disjoint means cycles don’t share elements, so they’re independent “mini-loops.”</p>
+            <p>Where does the permutation come from?
+                Anywhere you reorder labels/indices. Examples:</p>
+            <ul>
+                <li><strong>Rotating seats</strong> at a table: everyone moves to the next chair.</li>
+                <li><strong>Shuffling an array</strong> by a fixed pattern (e.g., “send item i to position p(i)”).</li>
+                <li><strong>Renaming variables</strong> in a compiler pass.</li>
+            </ul>
+            <p>Concrete example:</p>
+            <p>You have items labeled ${1,2,3,4}$. A “rotate left among the first three, keep 4” rule sends</p>
+            <ul>
+                <li>$1 \mapsto 2$, $2 \mapsto 3$, $3 \mapsto 1$, and $4 \mapsto 4$.</li>
+            </ul>
+            <p>In <strong>two-line notation</strong> that’s</p>
             <p>$$
-                \sigma = \begin{pmatrix}
+                \sigma =
+                \begin{pmatrix}
                 1 &amp; 2 &amp; 3 &amp; 4 \\
                 2 &amp; 3 &amp; 1 &amp; 4
-                \end{pmatrix}
+                \end{pmatrix}.
                 $$</p>
-            <p>This permutation can be decomposed into disjoint cycles as follows:</p>
+            <p>How to decompose into cycles (step-by-step):</p>
+            <ol>
+                <li>Start with the smallest label not yet used: <strong>1</strong>. Follow where it goes: $1 \to 2$, then $2 \to 3$, then $3 \to 1$. You’ve returned to 1, so close the cycle: <strong>$(1\,2\,3)$</strong>.</li>
+                <li>Next unused label: <strong>4</strong>. Follow it: $4 \to 4$. That’s a 1-cycle (a fixed point): <strong>$(4)$</strong>.</li>
+            </ol>
+            <p>So the cyclic decomposition is:</p>
             <p>$$
-                \sigma = (1 \to 2 \to 3 \to 1)(4)
+                \sigma = (1\,2\,3)(4).
                 $$</p>
-            <p>Here, the cycle $(1 → 2 → 3 → 1)$ indicates that 1 is sent to 2, 2 is sent to 3, and 3 is sent back to 1. The cycle $(4)$ indicates that 4 remains fixed.</p>
+            <p>What this tells you:</p>
+            <ul>
+                <li>Apply $\sigma$ once: $1!\to!2,\,2!\to!3,\,3!\to!1$; 4 stays put.</li>
+                <li>Apply $\sigma$ three times: the 3-cycle returns everyone in that cycle to start (order 3); 4 still stays put.</li>
+            </ul>
+            <p>Mini table to visualize the mapping:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>input</td>
+                    <td>1</td>
+                    <td>2</td>
+                    <td>3</td>
+                    <td>4</td>
+                </tr>
+                <tr>
+                    <td>output</td>
+                    <td>2</td>
+                    <td>3</td>
+                    <td>1</td>
+                    <td>4</td>
+                </tr>
+            </table>
+            </p>
+            <p>You can trace arrows $1\to2\to3\to1$ and $4\to4$ to “see” the cycles.</p>
             <p>IV. Block Decomposition</p>
-            <p>Block decomposition is a technique used in matrix theory and linear algebra. It involves partitioning a matrix into smaller submatrices (blocks). This can simplify computations and is useful for analyzing the structure of the matrix.</p>
-            <p>Example:</p>
-            <p>Consider a matrix $A$ of size $4 \times 4$:</p>
+            <p>Block decomposition slices a matrix into <strong>submatrices (blocks)</strong> so you operate on them as units. This clarifies structure (e.g., block-diagonal) and speeds things up (cache-friendly, reuse kernels).</p>
+            <p>Example (numbers + why it helps):</p>
+            <p>Let</p>
             <p>$$
-                A = \begin{pmatrix}
-                a_{11} &amp; a_{12} &amp; a_{13} &amp; a_{14} \\
-                a_{21} &amp; a_{22} &amp; a_{23} &amp; a_{24} \\
-                a_{31} &amp; a_{32} &amp; a_{33} &amp; a_{34} \\
-                a_{41} &amp; a_{42} &amp; a_{43} &amp; a_{44}
-                \end{pmatrix}
-                $$</p>
-            <p>This matrix can be decomposed into blocks:</p>
-            <p>$$
-                A = \begin{pmatrix}
-                A_{11} &amp; A_{12} \\
+                A=\begin{pmatrix}
+                1 &amp; 2 &amp; 9 &amp; 8\\
+                0 &amp; 3 &amp; 7 &amp; 6\\
+                4 &amp; 5 &amp; 0 &amp; 0\\
+                4 &amp; 5 &amp; 0 &amp; 0
+                \end{pmatrix} =
+                \begin{pmatrix}
+                A_{11} &amp; A_{12}\\
                 A_{21} &amp; A_{22}
                 \end{pmatrix}
                 $$</p>
-            <p>where each block is a submatrix:</p>
             <p>$$
-                A_{11} = \begin{pmatrix}
-                a_{11} &amp; a_{12} \\
-                a_{21} &amp; a_{22}
-                \end{pmatrix}, \quad A_{12} = \begin{pmatrix}
-                a_{13} &amp; a_{14} \\
-                a_{23} &amp; a_{24}
-                \end{pmatrix}, \quad A_{21} = \begin{pmatrix}
-                a_{31} &amp; a_{32} \\
-                a_{41} &amp; a_{42}
-                \end{pmatrix}, \quad A_{22} = \begin{pmatrix}
-                a_{33} &amp; a_{34} \\
-                a_{43} &amp; a_{44}
+                A_{11}=\begin{pmatrix}
+                1 &amp; 2\\
+                0 &amp; 3\end
+                {pmatrix}, \quad
+                A_{12}=\begin{pmatrix}
+                9 &amp; 8\\
+                7 &amp; 6
+                \end{pmatrix}, \quad
+                A_{21}=\begin{pmatrix}
+                4 &amp; 5\\
+                4 &amp; 5
+                \end{pmatrix}, \quad
+                A_{22}=\begin{pmatrix}
+                0 &amp; 0\\
+                0 &amp; 0
                 \end{pmatrix}
                 $$</p>
-            <p>Block decomposition helps in performing matrix operations more efficiently by working with smaller submatrices.</p>
+            <ul>
+                <li><strong>Block multiplication:</strong> $C = A B$ can be done via
+                    $C_{11}=A_{11}B_{11}+A_{12}B_{21}$, $C_{12}=A_{11}B_{12}+A_{12}B_{22}$, etc. You reuse fast kernels on smaller chunks.</li>
+                <li><strong>Solving block systems:</strong> If $A_{11}$ is easy to invert (e.g., triangular) and $A_{22}$ is simple (here zeros), you can use <strong>Schur complements</strong> to solve $Ax=b$ in stages.</li>
+                <li><strong>Structure spotting:</strong> If $A_{12}$ and $A_{21}$ were zero, $A$ would be block-diagonal, meaning two independent smaller problems—great for parallelism.</li>
+            </ul>
+            <p>Bottom line: with blocks, you trade one huge problem for a few tidy medium-sized ones, which are simpler to reason about and often faster to compute.</p>
             <h3 id="communication">Communication</h3>
             <p>Communication in parallel computing involves the exchange of data between tasks. This process is essential when tasks depend on each other's results to proceed. Efficient communication is crucial for maintaining performance and minimizing delays.</p>
             <h4 id="goals">Goals</h4>
             <p>I. Minimize the Volume and Frequency of Communication</p>
-            <ul>
-                <li>Reducing the amount of data exchanged and the number of communications can significantly decrease overhead and improve overall performance.</li>
-            </ul>
+            <p>Reducing the amount of data exchanged and the number of communications can significantly decrease overhead and improve overall performance.</p>
             <p>II. Optimize the Use of Network Resources:</p>
-            <ul>
-                <li>Efficient use of network bandwidth and minimizing latency ensures faster data transfer and better utilization of computational resources.</li>
-            </ul>
-            <p>I apologize for the omission. Here is the full text with ASCII graphics and examples for each type of communication, including the example for point-to-point communication.</p>
+            <p>Efficient use of network bandwidth and minimizing latency ensures faster data transfer and better utilization of computational resources.</p>
             <h3 id="types-of-communication">Types of Communication</h3>
             <p>I. Local Communication</p>
             <p>Local communication refers to data exchange between tasks that reside on the same physical processor. This type of communication is generally faster due to lower latency and higher bandwidth within a single processor.</p>
