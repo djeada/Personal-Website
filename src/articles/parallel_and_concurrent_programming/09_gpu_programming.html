@@ -66,7 +66,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: September 23, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: September 27, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="gpu-programming">GPU Programming</h2>
             <p>GPUs (Graphics Processing Units) excel at performing the same operation on many data elements in parallel. Originally, GPUs were used just for rendering images, but their highly parallel nature also makes them ideal for general-purpose tasks with large data sets, such as scientific simulations, machine learning, and other compute-intensive workloads.</p>
@@ -584,7 +584,7 @@ cudaFree(d_data);</code></pre>
                 <tr>
                     <td><strong>Kernel</strong></td>
                     <td>A function executed on the GPU in parallel by many threads. Marked with <code>__global__</code>.</td>
-                    <td><code>&lt;br&gt;__global__ void myKernel(float* data) {&lt;br&gt; // GPU code&lt;br&gt;}&lt;br&gt;&lt;br&gt;// Launch&lt;br&gt;myKernel&lt;&lt;&lt;numBlocks, threadsPerBlock&gt;&gt;&gt;(d_data);&lt;br&gt;</code></td>
+                    <td><code>__global__ void myKernel(float* data) {</code><br /><code>// GPU code</code><br /><code>}</code><br /><br /><code>// Launch</code><br /><code>myKernel&lt;&lt;&lt;numBlocks, threadsPerBlock&gt;&gt;&gt;(d_data);</code></td>
                     <td>- Each thread runs <code>myKernel()</code> independently.<br />- Grids and blocks specify the total thread count.<br />- Often used for data-parallel tasks (e.g., vector addition)</td>
                 </tr>
                 <tr>
@@ -602,19 +602,19 @@ cudaFree(d_data);</code></pre>
                 <tr>
                     <td><strong>Thread</strong></td>
                     <td>The basic unit of execution on the GPU. Each thread has its own registers and can identify itself by <code>threadIdx</code> within a block and <code>blockIdx</code> within the grid.</td>
-                    <td><code>&lt;br&gt;int tx = threadIdx.x;&lt;br&gt;int bx = blockIdx.x;&lt;br&gt;int idx = bx * blockDim.x + tx;&lt;br&gt;</code></td>
+                    <td><code>int tx = threadIdx.x;</code><br /><code>int bx = blockIdx.x;</code><br /><code>int idx = bx * blockDim.x + tx;</code></td>
                     <td>- <code>threadIdx</code>, <code>blockIdx</code>, and <code>blockDim</code> are built-in variables.<br />- Each thread typically handles one or more elements of the data.</td>
                 </tr>
                 <tr>
                     <td><strong>Barrier</strong> / <code>__syncthreads()</code></td>
                     <td>Synchronizes all threads in the same block. No thread passes the barrier until all threads have reached it.</td>
-                    <td><code>&lt;br&gt;__shared__ float temp[256];&lt;br&gt;temp[threadIdx.x] = data[threadIdx.x];&lt;br&gt;__syncthreads();&lt;br&gt;// All threads have updated temp here&lt;br&gt;</code></td>
+                    <td><code>__shared__ float temp[256];</code><br /><code>temp[threadIdx.x] = data[threadIdx.x];</code><br /><code>__syncthreads();</code><br /><code>// All threads have updated temp here</code></td>
                     <td>- Only valid within a kernel.<br />- Ensures partial updates in shared memory are visible to all threads before proceeding.<br />- Does <strong>not</strong> synchronize across multiple blocks.</td>
                 </tr>
                 <tr>
                     <td><strong>Shared Memory</strong></td>
                     <td>Fast on-chip memory visible to all threads in the same block. Declared with <code>__shared__</code>.</td>
-                    <td><code>&lt;br&gt;__global__ void myKernel(float* in){&lt;br&gt; __shared__ float tile[256];&lt;br&gt; // ...&lt;br&gt;}&lt;br&gt;</code></td>
+                    <td><code>__global__ void myKernel(float* in){</code><br /><code>__shared__ float tile[256];</code><br /><code>// ...</code><br /><code>}</code></td>
                     <td>- Useful for caching data reused by threads in a block.<br />- Access is much faster than global memory but limited in size.<br />- Must be accessed carefully to avoid bank conflicts.</td>
                 </tr>
                 <tr>
@@ -626,19 +626,19 @@ cudaFree(d_data);</code></pre>
                 <tr>
                     <td><strong>Host Code</strong></td>
                     <td>CPU-side code that sets up kernel launches, manages device memory, and coordinates data transfers.</td>
-                    <td><code>&lt;br&gt;// Allocate GPU memory&lt;br&gt;cudaMalloc((void**)&amp;d_data, size);&lt;br&gt;// Launch kernel&lt;br&gt;myKernel&lt;&lt;&lt;blocks, threads&gt;&gt;&gt;(d_data);&lt;br&gt;// Copy results back&lt;br&gt;cudaMemcpy(h_data, d_data, size, cudaMemcpyDeviceToHost);&lt;br&gt;</code></td>
+                    <td><code>// Allocate GPU memory</code><br /><code>cudaMalloc((void**)&amp;d_data, size);</code><br /><code>// Launch kernel</code><br /><code>myKernel&lt;&lt;&lt;blocks, threads&gt;&gt;&gt;(d_data);</code><br /><code>// Copy results back</code><br /><code>cudaMemcpy(h_data, d_data, size, cudaMemcpyDeviceToHost);</code></td>
                     <td>- The host is responsible for orchestrating GPU operations (allocation, copy, launch)<br />- Synchronization functions (<code>cudaDeviceSynchronize()</code>) can ensure the GPU has finished before using results on the CPU.</td>
                 </tr>
                 <tr>
                     <td><strong>Device Function</strong></td>
                     <td>A function that runs on the GPU but is <strong>only</strong> called from another GPU function (kernel or device function). Declared with <code>__device__</code>.</td>
-                    <td><code>&lt;br&gt;__device__ float deviceFunc(float x) {&lt;br&gt; return x * x;&lt;br&gt;}&lt;br&gt;&lt;br&gt;__global__ void kernelFunc(float* data){&lt;br&gt; data[threadIdx.x] = deviceFunc(data[threadIdx.x]);&lt;br&gt;}&lt;br&gt;</code></td>
+                    <td><code>__device__ float deviceFunc(float x) {</code><br /><code>return x * x;</code><br /><code>}</code><br /><br /><code>__global__ void kernelFunc(float* data){</code><br /><code>data[threadIdx.x] = deviceFunc(data[threadIdx.x]);</code><br /><code>}</code></td>
                     <td>- Not callable from the host.<br />- Often used to break large kernels into smaller subroutines.</td>
                 </tr>
                 <tr>
                     <td><strong>Host Function</strong></td>
                     <td>Normal CPU function compiled for the host. Marked with <code>__host__</code> (optional unless combined with <code>__device__</code> in a function qualifier).</td>
-                    <td><code>&lt;br&gt;__host__ void hostFunc(){&lt;br&gt; // Runs on CPU&lt;br&gt;}&lt;br&gt;</code></td>
+                    <td><code>__host__ void hostFunc(){</code><br /><code>// Runs on CPU</code><br /><code>}</code></td>
                     <td>- Host code typically handles memory management, kernel launches, etc.<br />- <code>__host__ __device__</code> can make a function callable from both CPU and GPU, although limitations apply.</td>
                 </tr>
             </table>
