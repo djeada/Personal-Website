@@ -84,23 +84,44 @@ def replace_footer(html: str, footer_html: str) -> str:
     return replace_element(html, footer_html, "footer", "body")
 
 
-def update_meta_content(html: str, tag_content: str, tag: str) -> str:
-    """Update the content of a meta tag in the HTML."""
-    pattern = re.compile(rf"<{tag}[^>]*>(.+?)</{tag}>")
-    match = pattern.search(html)
-    if match:
-        content = match.group(1)
-        html = html.replace(content, tag_content)
-    return html
-
-
 def change_title_in_head(html: str) -> str:
-    """Update the title tag based on the first header tag content."""
-    header_content = re.search(r"<(h1|header|h2)[^>]*>(.+?)<\/\1>", html)
-    if header_content:
-        title_content = BeautifulSoup(header_content.group(2), "html.parser").get_text()
-        html = update_meta_content(html, title_content, "title")
-    return html
+    """Update the <title> tag to match the primary page heading (prefer <h1>)."""
+    soup = BeautifulSoup(html, "html.parser")
+
+    # Prefer the first <h1>. If absent, look for an <h1> inside <header>, then fallback to <h2>.
+    title_text = None
+    h1 = soup.find("h1")
+    if h1 and h1.get_text(strip=True):
+        title_text = h1.get_text(strip=True)
+    else:
+        header = soup.find("header")
+        if header:
+            h1_in_header = header.find("h1")
+            if h1_in_header and h1_in_header.get_text(strip=True):
+                title_text = h1_in_header.get_text(strip=True)
+        if not title_text:
+            h2 = soup.find("h2")
+            if h2 and h2.get_text(strip=True):
+                title_text = h2.get_text(strip=True)
+
+    if not title_text:
+        return str(soup)
+
+    title_tag = soup.find("title")
+    if title_tag:
+        title_tag.string = title_text
+    else:
+        # Ensure <head> exists
+        if not soup.head:
+            if soup.html:
+                soup.html.insert(0, soup.new_tag("head"))
+            else:
+                soup.insert(0, soup.new_tag("head"))
+        new_title = soup.new_tag("title")
+        new_title.string = title_text
+        soup.head.append(new_title)
+
+    return str(soup)
 
 
 def find_first_ascii_sentence(paragraphs: list, file_path: Path) -> str:
