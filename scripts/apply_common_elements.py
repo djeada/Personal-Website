@@ -113,7 +113,10 @@ def change_title_in_head(html: str) -> str:
     else:
         # Ensure <head> exists
         if not soup.head:
-            soup.insert(0, soup.new_tag("head"))
+            if soup.html:
+                soup.html.insert(0, soup.new_tag("head"))
+            else:
+                soup.insert(0, soup.new_tag("head"))
         new_title = soup.new_tag("title")
         new_title.string = title_text
         soup.head.append(new_title)
