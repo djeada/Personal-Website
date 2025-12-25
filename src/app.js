@@ -1226,6 +1226,8 @@ function initTableOfContentsToggle() {
 
     // Check if toggle button already exists
     let toggleButton = document.getElementById('table-of-contents-toggle');
+    let toggleHandler = null;
+    let resizeHandler = null;
     
     const setupMobileToggle = () => {
         const isMobile = window.innerWidth <= 768;
@@ -1249,7 +1251,7 @@ function initTableOfContentsToggle() {
             toc.classList.add('collapsed');
 
             // Toggle functionality
-            const toggle = () => {
+            toggleHandler = () => {
                 const isCollapsed = toc.classList.contains('collapsed');
                 toc.classList.toggle('collapsed');
                 toggleButton.setAttribute('aria-expanded', isCollapsed ? 'true' : 'false');
@@ -1257,10 +1259,14 @@ function initTableOfContentsToggle() {
 
             // Make header clickable
             tocHeader.style.cursor = 'pointer';
-            tocHeader.addEventListener('click', toggle);
+            tocHeader.addEventListener('click', toggleHandler);
         } else if (!isMobile && toggleButton) {
             // Remove mobile-specific elements when resizing to desktop
             toc.classList.remove('collapsed');
+            if (toggleHandler) {
+                tocHeader.removeEventListener('click', toggleHandler);
+                toggleHandler = null;
+            }
             toggleButton.remove();
             toggleButton = null;
             tocHeader.style.cursor = '';
@@ -1270,8 +1276,11 @@ function initTableOfContentsToggle() {
     // Setup on load
     setupMobileToggle();
 
-    // Handle window resize
-    window.addEventListener('resize', setupMobileToggle);
+    // Handle window resize - use a single persistent handler
+    resizeHandler = () => {
+        setupMobileToggle();
+    };
+    window.addEventListener('resize', resizeHandler);
 }
 
 // Highlight active section in table of contents
