@@ -1013,17 +1013,17 @@ function initializeThreeJS() {
 // Scroll Reveal Animations
 // -------------------------
 function initScrollReveal() {
-    // Skip if user prefers reduced motion
+    const revealElements = document.querySelectorAll('.reveal, .reveal-stagger');
+    
+    if (!revealElements.length) return;
+
+    // Skip animations if user prefers reduced motion
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        document.querySelectorAll('.reveal, .reveal-stagger').forEach(el => {
+        revealElements.forEach(el => {
             el.classList.add('revealed');
         });
         return;
     }
-
-    const revealElements = document.querySelectorAll('.reveal, .reveal-stagger');
-    
-    if (!revealElements.length) return;
 
     const observerOptions = {
         root: null,
