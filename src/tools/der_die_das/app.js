@@ -1,5 +1,25 @@
 // ===== Der Die Das Game - Immersive Redesign =====
 
+// Polyfill for roundRect (needed before any drawing code)
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, width, height, radius) {
+        if (typeof radius === 'number') {
+            radius = {tl: radius, tr: radius, br: radius, bl: radius};
+        }
+        this.moveTo(x + radius.tl, y);
+        this.lineTo(x + width - radius.tr, y);
+        this.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
+        this.lineTo(x + width, y + height - radius.br);
+        this.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height);
+        this.lineTo(x + radius.bl, y + height);
+        this.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
+        this.lineTo(x, y + radius.tl);
+        this.quadraticCurveTo(x, y, x + radius.tl, y);
+        this.closePath();
+        return this;
+    };
+}
+
 // DOM Elements
 const gameCanvas = document.getElementById('gameCanvas');
 const ctx = gameCanvas.getContext('2d');
@@ -15,6 +35,9 @@ const startScreen = document.getElementById('startScreen');
 const startBtn = document.getElementById('startBtn');
 const soundToggle = document.getElementById('soundToggle');
 const difficultyBtns = document.querySelectorAll('.difficulty-btn');
+
+// Configuration constants
+const MAX_TABLE_ROWS = 10;
 
 // Game State
 let gameWidth, gameHeight;
@@ -359,7 +382,7 @@ function addWordToTable(table, wordText, userArticle, correctArticle) {
     }
     
     // Limit table rows to prevent excessive DOM nodes
-    while (tbody.children.length > 10) {
+    while (tbody.children.length > MAX_TABLE_ROWS) {
         tbody.removeChild(tbody.lastChild);
     }
 }
@@ -795,26 +818,6 @@ difficultyBtns.forEach(btn => {
 
 window.addEventListener('keydown', handleKeyDown);
 window.addEventListener('resize', resizeCanvas);
-
-// Polyfill for roundRect
-if (!CanvasRenderingContext2D.prototype.roundRect) {
-    CanvasRenderingContext2D.prototype.roundRect = function(x, y, width, height, radius) {
-        if (typeof radius === 'number') {
-            radius = {tl: radius, tr: radius, br: radius, bl: radius};
-        }
-        this.moveTo(x + radius.tl, y);
-        this.lineTo(x + width - radius.tr, y);
-        this.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
-        this.lineTo(x + width, y + height - radius.br);
-        this.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height);
-        this.lineTo(x + radius.bl, y + height);
-        this.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
-        this.lineTo(x, y + radius.tl);
-        this.quadraticCurveTo(x, y, x + radius.tl, y);
-        this.closePath();
-        return this;
-    };
-}
 
 // Initialize
 window.onload = function() {
