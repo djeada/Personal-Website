@@ -2,6 +2,7 @@
 Strips comments from .py, .css, and .js files in the project.
 """
 
+import os
 import re
 import logging
 from pathlib import Path
@@ -200,21 +201,26 @@ def find_files(directory: Path, extension: str) -> List[Path]:
 def process_file(file_path: Path) -> None:
     """
     Strips comments from a single file based on its extension.
+    Raises exceptions to be handled by the caller.
     """
-    content = file_path.read_text(encoding='utf-8')
-    
-    if file_path.suffix == '.py':
-        processed_content = strip_python_comments(content)
-    elif file_path.suffix == '.css':
-        processed_content = strip_css_comments(content)
-    elif file_path.suffix == '.js':
-        processed_content = strip_js_comments(content)
-    else:
-        logging.warning(f"Unsupported file type: {file_path}")
-        return
-    
-    file_path.write_text(processed_content, encoding='utf-8')
-    logging.info(f"Processed: {file_path}")
+    try:
+        content = file_path.read_text(encoding='utf-8')
+        
+        if file_path.suffix == '.py':
+            processed_content = strip_python_comments(content)
+        elif file_path.suffix == '.css':
+            processed_content = strip_css_comments(content)
+        elif file_path.suffix == '.js':
+            processed_content = strip_js_comments(content)
+        else:
+            logging.warning(f"Unsupported file type: {file_path}")
+            return
+        
+        file_path.write_text(processed_content, encoding='utf-8')
+        logging.info(f"Processed: {file_path}")
+    except Exception as e:
+        logging.error(f"Error processing {file_path}: {e}")
+        raise
 
 
 def main():
@@ -239,7 +245,8 @@ def main():
 
     # Process files in parallel using ThreadPoolExecutor
     total_files = 0
-    max_workers = min(32, len(all_files) or 1)  # Use up to 32 threads
+    cpu_count = os.cpu_count() or 1
+    max_workers = min(32, len(all_files) or 1, cpu_count * 2)  # Respect system capabilities
     
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit all file processing tasks
