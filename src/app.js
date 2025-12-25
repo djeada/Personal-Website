@@ -1123,6 +1123,11 @@ function main() {
         downloadButton.addEventListener('click', handleDownloadClick);
     }
 
+    // Initialize article UX enhancements
+    initTableOfContentsHighlight();
+    initReadingProgress();
+    initBackToTop();
+
     // Enhanced mobile nav UX: overlay, focus trap, and close interactions
     const navToggle = document.getElementById('navbar-toggle');
     const navMenu = navToggle ? navToggle.nextElementSibling : null; // <ul>
@@ -1199,6 +1204,170 @@ function main() {
         });
     }
 }
+
+// -------------------------
+// Article UX Enhancements
+// -------------------------
+
+// Highlight active section in table of contents
+function initTableOfContentsHighlight() {
+    const toc = document.getElementById('table-of-contents');
+    if (!toc) return;
+
+    const tocLinks = toc.querySelectorAll('a[href^="#"]');
+    if (!tocLinks.length) return;
+
+    const headings = Array.from(tocLinks).map(link => {
+        const id = link.getAttribute('href').substring(1);
+        return document.getElementById(id);
+    }).filter(Boolean);
+
+    if (!headings.length) return;
+
+    const observerOptions = {
+        rootMargin: '-20% 0px -35% 0px',
+        threshold: [0, 0.25, 0.5, 0.75, 1]
+    };
+
+    let activeLink = null;
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const id = entry.target.id;
+                const newActiveLink = toc.querySelector(`a[href="#${id}"]`);
+                
+                if (newActiveLink && newActiveLink !== activeLink) {
+                    // Remove active class from all links
+                    tocLinks.forEach(link => link.classList.remove('active'));
+                    // Add active class to current link
+                    newActiveLink.classList.add('active');
+                    activeLink = newActiveLink;
+
+                    // Scroll TOC to show active link
+                    if (toc.scrollHeight > toc.clientHeight) {
+                        const linkTop = newActiveLink.offsetTop;
+                        const linkHeight = newActiveLink.offsetHeight;
+                        const tocHeight = toc.clientHeight;
+                        const tocScroll = toc.scrollTop;
+
+                        if (linkTop < tocScroll || linkTop + linkHeight > tocScroll + tocHeight) {
+                            newActiveLink.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                        }
+                    }
+                }
+            }
+        });
+    }, observerOptions);
+
+    headings.forEach(heading => observer.observe(heading));
+}
+
+// Add reading progress indicator
+function initReadingProgress() {
+    const articleBody = document.getElementById('article-body');
+    if (!articleBody) return;
+
+    // Create progress bar
+    const progressBar = document.createElement('div');
+    progressBar.id = 'reading-progress';
+    progressBar.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--nav-accent, #ea8400), #ff9500);
+        z-index: 9999;
+        transition: width 150ms ease-out;
+        box-shadow: 0 0 10px rgba(234, 132, 0, 0.5);
+    `;
+    document.body.appendChild(progressBar);
+
+    // Update progress on scroll
+    const updateProgress = () => {
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight - windowHeight;
+        const scrolled = window.scrollY;
+        const progress = (scrolled / documentHeight) * 100;
+        progressBar.style.width = Math.min(progress, 100) + '%';
+    };
+
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+}
+
+// Add back to top button
+function initBackToTop() {
+    const articleBody = document.getElementById('article-body');
+    if (!articleBody) return;
+
+    const backToTopBtn = document.createElement('button');
+    backToTopBtn.id = 'back-to-top';
+    backToTopBtn.setAttribute('aria-label', 'Back to top');
+    backToTopBtn.title = 'Back to top';
+    backToTopBtn.innerHTML = `
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 19V5M5 12l7-7 7 7"/>
+        </svg>
+    `;
+    backToTopBtn.style.cssText = `
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        width: 3rem;
+        height: 3rem;
+        border-radius: 50%;
+        background: var(--nav-accent, #ea8400);
+        color: white;
+        border: none;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transition: all 250ms ease;
+        z-index: 1000;
+    `;
+
+    document.body.appendChild(backToTopBtn);
+
+    // Show/hide button based on scroll position
+    const toggleButton = () => {
+        if (window.scrollY > 400) {
+            backToTopBtn.style.display = 'flex';
+        } else {
+            backToTopBtn.style.display = 'none';
+        }
+    };
+
+    window.addEventListener('scroll', toggleButton, { passive: true });
+
+    // Smooth scroll to top
+    backToTopBtn.addEventListener('click', () => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    });
+
+    // Hover effects
+    backToTopBtn.addEventListener('mouseenter', () => {
+        backToTopBtn.style.transform = 'translateY(-4px)';
+        backToTopBtn.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.2)';
+    });
+
+    backToTopBtn.addEventListener('mouseleave', () => {
+        backToTopBtn.style.transform = 'translateY(0)';
+        backToTopBtn.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+    });
+
+    toggleButton();
+}
+
+// -------------------------
+// Main Initialization
+// -------------------------
 
 // Run `main` after DOM is ready
 document.addEventListener("DOMContentLoaded", main);
