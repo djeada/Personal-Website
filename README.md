@@ -283,7 +283,7 @@ See the [open issues](https://github.com/djeada/Personal-Website/issues) for a f
 
 ## 📧 Contact
 
-Adam Djellouli - [@adamdjellouli](https://github.com/djeada)
+Adam Djellouli - [@djeada](https://github.com/djeada)
 
 Project Link: [https://github.com/djeada/Personal-Website](https://github.com/djeada/Personal-Website)
 
