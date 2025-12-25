@@ -5,15 +5,143 @@ document.addEventListener('DOMContentLoaded', function() {
     const minLengthInput = document.getElementById('minLength');
     const minOccurrencesInput = document.getElementById('minOccurrences');
     const prefixTrackingInput = document.getElementById('matchPrefixes');
+    const clearButton = document.getElementById('clearButton');
+    const copyButton = document.getElementById('copyButton');
+    const downloadButton = document.getElementById('downloadButton');
+    const selectAllButton = document.getElementById('selectAllButton');
+    const deselectAllButton = document.getElementById('deselectAllButton');
+    const statsDisplay = document.getElementById('statsDisplay');
 
     let checkboxStates = {};
+    let debounceTimer = null;
+    let currentSort = { column: 'count', direction: 'desc' };
 
-    textInput.addEventListener('input', updateContent);
-    minLengthInput.addEventListener('input', updateContent);
-    minOccurrencesInput.addEventListener('input', updateContent);
+    let lastWordCounts = null;
+    let lastDuplicates = null;
+    let lastNormalizedText = null;
+
+    textInput.addEventListener('input', debounceUpdate);
+    minLengthInput.addEventListener('input', debounceUpdate);
+    minOccurrencesInput.addEventListener('input', debounceUpdate);
     prefixTrackingInput.addEventListener('change', updateContent);
+    
+    clearButton.addEventListener('click', clearAll);
+    copyButton.addEventListener('click', copyResults);
+    downloadButton.addEventListener('click', downloadResults);
+    selectAllButton.addEventListener('click', selectAllWords);
+    deselectAllButton.addEventListener('click', deselectAllWords);
 
     window.onload = updateContent;
+
+    function debounceUpdate() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(updateContent, 300);
+    }
+
+    function clearAll() {
+        textInput.value = '';
+        textDisplay.innerHTML = '';
+        duplicateTable.innerHTML = '';
+        statsDisplay.innerHTML = '';
+        checkboxStates = {};
+    }
+
+    function copyResults() {
+        const text = textInput.value;
+        const normalizedText = normalizeText(text);
+        const wordCounts = getWordCounts(normalizedText);
+        const duplicates = getDuplicates(wordCounts);
+        
+        let result = 'Duplicate Words Analysis\n';
+        result += '========================\n\n';
+        
+        const sortedDuplicates = [...duplicates].sort((a, b) => wordCounts[b] - wordCounts[a]);
+        sortedDuplicates.forEach(word => {
+            result += `${word}: ${wordCounts[word]}\n`;
+        });
+        
+        navigator.clipboard.writeText(result).then(() => {
+            showNotification('Results copied to clipboard!');
+        }).catch(() => {
+            showNotification('Failed to copy results', 'error');
+        });
+    }
+
+    function downloadResults() {
+        const text = textInput.value;
+        const normalizedText = normalizeText(text);
+        const wordCounts = getWordCounts(normalizedText);
+        const duplicates = getDuplicates(wordCounts);
+        
+        const data = {
+            timestamp: new Date().toISOString(),
+            settings: {
+                minLength: parseInt(minLengthInput.value, 10),
+                minOccurrences: parseInt(minOccurrencesInput.value, 10),
+                prefixTracking: prefixTrackingInput.checked
+            },
+            duplicates: duplicates.map(word => ({
+                word: word,
+                count: wordCounts[word]
+            })).sort((a, b) => b.count - a.count)
+        };
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const link = document.createElement('a');
+        const blobUrl = URL.createObjectURL(blob);
+        link.href = blobUrl;
+        link.download = 'duplicate-words-analysis.json';
+        link.click();
+        URL.revokeObjectURL(blobUrl);
+        showNotification('Results downloaded!');
+    }
+
+    function selectAllWords() {
+        const text = textInput.value;
+        const normalizedText = normalizeText(text);
+        const wordCounts = getWordCounts(normalizedText);
+        const duplicates = getDuplicates(wordCounts);
+        
+        duplicates.forEach(word => {
+            checkboxStates[word] = true;
+        });
+        updateContent();
+    }
+
+    function deselectAllWords() {
+        const text = textInput.value;
+        const normalizedText = normalizeText(text);
+        const wordCounts = getWordCounts(normalizedText);
+        const duplicates = getDuplicates(wordCounts);
+        
+        duplicates.forEach(word => {
+            checkboxStates[word] = false;
+        });
+        updateContent();
+    }
+
+    function showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: ${type === 'error' ? '#f44336' : '#4CAF50'};
+            color: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 10000;
+            animation: slideIn 0.3s ease-out;
+        `;
+        document.body.appendChild(notification);
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
 
     function updateContent() {
         const text = textInput.value;
@@ -21,8 +149,50 @@ document.addEventListener('DOMContentLoaded', function() {
         const wordCounts = getWordCounts(normalizedText);
         const duplicates = getDuplicates(wordCounts);
 
+        // Cache for efficient checkbox updates
+        lastWordCounts = wordCounts;
+        lastDuplicates = duplicates;
+        lastNormalizedText = normalizedText;
+
+        updateStats(text, normalizedText, wordCounts, duplicates);
         updateDuplicateTable(wordCounts, duplicates);
         highlightText(normalizedText, duplicates);
+    }
+
+    function updateStats(originalText, normalizedText, wordCounts, duplicates) {
+        const words = normalizedText.match(/\w+/g) || [];
+        const totalWords = words.length;
+        const uniqueWords = Object.keys(wordCounts).length;
+        const duplicateWords = duplicates.length;
+        
+        // Calculate total occurrences of duplicate words
+        let totalDuplicateOccurrences = 0;
+        duplicates.forEach(word => {
+            totalDuplicateOccurrences += wordCounts[word];
+        });
+        
+        const duplicatePercentage = totalWords > 0 ? ((totalDuplicateOccurrences / totalWords) * 100).toFixed(1) : 0;
+        
+        statsDisplay.innerHTML = `
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Words:</span>
+                    <span class="stat-value">${totalWords}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Unique Words:</span>
+                    <span class="stat-value">${uniqueWords}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Duplicate Words:</span>
+                    <span class="stat-value">${duplicateWords}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Duplicate %:</span>
+                    <span class="stat-value">${duplicatePercentage}%</span>
+                </div>
+            </div>
+        `;
     }
 
     function normalizeText(text) {
@@ -84,16 +254,16 @@ document.addEventListener('DOMContentLoaded', function() {
             let highlightedText = originalText.replace(/\b\w+\b/g, match => {
                 const normalizedMatch = normalizeText(match);
                 if (duplicates.includes(normalizedMatch) && (checkboxStates[normalizedMatch] !== false)) {
-                    return `<span class="highlight">${match}</span>`;
+                    return `<span class="highlight">${escapeHtml(match)}</span>`;
                 }
-                return match;
+                return escapeHtml(match);
             });
             textDisplay.innerHTML = highlightedText;
         } else {
 
             let highlightedText = normalizedText.split(/\b/).map(word => {
                 if (!/\w+/.test(word)) {
-                    return word; // Return non-word parts as is
+                    return escapeHtml(word); // Return non-word parts escaped
                 }
 
                 let applicableDuplicates = duplicates.filter(dup =>
@@ -105,10 +275,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Check if we have any applicable duplicates
                 if (applicableDuplicates.length > 0) {
                     let longestDuplicate = applicableDuplicates[0]; // The first one is the longest due to sorting
-                    return `<span class="highlight">${longestDuplicate}</span>${word.substring(longestDuplicate.length)}`;
+                    return `<span class="highlight">${escapeHtml(longestDuplicate)}</span>${escapeHtml(word.substring(longestDuplicate.length))}`;
                 }
 
-                return word; // No duplicated prefix found, return the word as is
+                return escapeHtml(word); // No duplicated prefix found, return the word escaped
             });
 
             textDisplay.innerHTML = highlightedText.join('');
@@ -116,19 +286,79 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateDuplicateTable(wordCounts, duplicates) {
-        let sortedDuplicates = duplicates.sort((a, b) => wordCounts[b] - wordCounts[a]);
-        let html = '<table><tr><th>Word</th><th>Count</th><th>Toggle</th></tr>';
-        sortedDuplicates.forEach(duplicate => {
+        let sortedDuplicates = [...duplicates];
+        
+        if (currentSort.column === 'word') {
+            sortedDuplicates.sort((a, b) => {
+                return currentSort.direction === 'asc' 
+                    ? a.localeCompare(b) 
+                    : b.localeCompare(a);
+            });
+        } else {
+            sortedDuplicates.sort((a, b) => {
+                return currentSort.direction === 'asc'
+                    ? wordCounts[a] - wordCounts[b]
+                    : wordCounts[b] - wordCounts[a];
+            });
+        }
+        
+        let html = '<table><thead><tr>';
+        html += `<th class="sortable" data-column="word">Word ${getSortIcon('word')}</th>`;
+        html += `<th class="sortable" data-column="count">Count ${getSortIcon('count')}</th>`;
+        html += '<th>Toggle</th>';
+        html += '</tr></thead><tbody>';
+        
+        sortedDuplicates.forEach((duplicate, index) => {
             const isChecked = checkboxStates[duplicate] !== false;
-            html += `<tr><td>${duplicate}</td><td>${wordCounts[duplicate]}</td><td><input type="checkbox" id="checkbox-${duplicate}" ${isChecked ? 'checked' : ''} onchange="updateCheckboxState('${duplicate}')"></td></tr>`;
+            const escapedWord = escapeHtml(duplicate);
+            html += `<tr>
+                <td>${escapedWord}</td>
+                <td>${wordCounts[duplicate]}</td>
+                <td><input type="checkbox" class="word-checkbox" data-index="${index}" ${isChecked ? 'checked' : ''}></td>
+            </tr>`;
         });
-        html += '</table>';
+        
+        html += '</tbody></table>';
         duplicateTable.innerHTML = html;
+        
+        // Add event listeners for sorting
+        duplicateTable.querySelectorAll('.sortable').forEach(header => {
+            header.addEventListener('click', function() {
+                const column = this.dataset.column;
+                if (currentSort.column === column) {
+                    currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentSort.column = column;
+                    currentSort.direction = 'desc';
+                }
+                updateContent();
+            });
+        });
+        
+        // Add event listeners for checkboxes
+        duplicateTable.querySelectorAll('.word-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const index = parseInt(this.dataset.index, 10);
+                const word = sortedDuplicates[index];
+                checkboxStates[word] = this.checked;
+                // Use cached values instead of recalculating
+                if (lastNormalizedText && lastDuplicates) {
+                    highlightText(lastNormalizedText, lastDuplicates);
+                }
+            });
+        });
     }
 
-    window.updateCheckboxState = function(word) {
-        const checkbox = document.getElementById(`checkbox-${word}`);
-        checkboxStates[word] = checkbox.checked;
-        highlightText(normalizeText(textInput.value), getDuplicates(getWordCounts(normalizeText(textInput.value))));
-    };
+    function getSortIcon(column) {
+        if (currentSort.column !== column) {
+            return '⇅';
+        }
+        return currentSort.direction === 'asc' ? '↑' : '↓';
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
 });
