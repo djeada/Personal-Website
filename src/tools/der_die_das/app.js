@@ -532,8 +532,9 @@ function checkLevelUp() {
 function checkCollisions() {
     if (!currentWord) return;
     
-    const containerHeight = 60;
-    const hitY = gameHeight - containerHeight;
+    const containerHeight = 55;
+    const bottomMargin = 10;
+    const hitY = gameHeight - containerHeight - bottomMargin;
     
     if (currentWord.y < hitY) return;
 
@@ -653,9 +654,10 @@ function drawWord() {
 
 function drawContainers() {
     const containerWidth = gameWidth / 3;
-    const containerHeight = 60;
+    const containerHeight = 55;
     const labels = ['der', 'die', 'das'];
-    const containerY = gameHeight - containerHeight;
+    const bottomMargin = 10; // Add margin from bottom edge
+    const containerY = gameHeight - containerHeight - bottomMargin;
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -691,10 +693,10 @@ function drawContainers() {
         ctx.scale(animScale, animScale);
         ctx.translate(-centerX, -centerY);
         
-        // Container shadow
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
-        ctx.shadowBlur = 15;
-        ctx.shadowOffsetY = 5;
+        // Container shadow (reduced to prevent clipping)
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetY = 3;
 
         // Draw rounded container
         ctx.fillStyle = fillColor;
