@@ -1009,6 +1009,77 @@ function initializeThreeJS() {
     }
 }
 
+// -------------------------
+// Scroll Reveal Animations
+// -------------------------
+function initScrollReveal() {
+    // Skip if user prefers reduced motion
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        document.querySelectorAll('.reveal, .reveal-stagger').forEach(el => {
+            el.classList.add('revealed');
+        });
+        return;
+    }
+
+    const revealElements = document.querySelectorAll('.reveal, .reveal-stagger');
+    
+    if (!revealElements.length) return;
+
+    const observerOptions = {
+        root: null,
+        rootMargin: '0px 0px -50px 0px',
+        threshold: 0.1
+    };
+
+    const revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('revealed');
+                // Optionally unobserve after revealing for performance
+                revealObserver.unobserve(entry.target);
+            }
+        });
+    }, observerOptions);
+
+    revealElements.forEach(el => {
+        revealObserver.observe(el);
+    });
+}
+
+// Add reveal classes to home page content sections
+function setupHomePageReveals() {
+    const homeContent = document.getElementById('home-page-content');
+    if (!homeContent) return;
+
+    // Add reveal class to main sections
+    const headers = homeContent.querySelectorAll(':scope > header');
+    const sections = homeContent.querySelectorAll(':scope > section, :scope > .blog-section, :scope > .video-container, :scope > .threejs-wrapper');
+    const paragraphs = homeContent.querySelectorAll(':scope > p');
+    const lists = homeContent.querySelectorAll(':scope > ul');
+
+    headers.forEach(el => el.classList.add('reveal'));
+    sections.forEach(el => el.classList.add('reveal'));
+    paragraphs.forEach(el => el.classList.add('reveal'));
+    lists.forEach(el => el.classList.add('reveal'));
+
+    // Add stagger to blog sections for cascading effect
+    const blogSections = homeContent.querySelectorAll('.blog-section');
+    blogSections.forEach(section => {
+        section.classList.add('reveal');
+        const ul = section.querySelector('ul');
+        if (ul) {
+            ul.classList.add('reveal-stagger');
+        }
+    });
+
+    // Add reveal to video container and threejs wrapper
+    const videoContainer = homeContent.querySelector('.video-container');
+    if (videoContainer) videoContainer.classList.add('reveal');
+
+    const threejsWrapper = homeContent.querySelector('.threejs-wrapper');
+    if (threejsWrapper) threejsWrapper.classList.add('reveal');
+}
+
 
 // --------------
 // Main Function
@@ -1026,6 +1097,10 @@ function main() {
         document.body.classList.add("dark-mode");
     }
     checkLogo();
+
+    // Setup scroll reveal animations for home page
+    setupHomePageReveals();
+    initScrollReveal();
 
     // Initialize Three.js if container is present
     if (document.getElementById('threejs-container')) {
