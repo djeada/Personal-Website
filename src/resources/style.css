@@ -304,7 +304,6 @@ details[open] {
 .dark-mode .help-box ul {
     color: #c0c0c0;
 }
-
 /* Existing CSS for your navigation */
 :root {
     --nav-height: 56px;
@@ -312,6 +311,8 @@ details[open] {
     --nav-fg: #000000;
     --nav-accent: #ea8400;
     --nav-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    --hamburger-line-spacing: 7px;
+    --ease-out-quart: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 nav {
@@ -371,7 +372,7 @@ nav li a:active {
         padding: 0 0.75rem;
     }
 
-    /* Hamburger toggle styled as a button */
+    /* Hamburger toggle styled as a button with animated icon */
     #navbar-toggle {
         display: inline-block;
         appearance: none;
@@ -383,28 +384,62 @@ nav li a:active {
         cursor: pointer;
         position: relative;
         margin-left: auto;
+        padding: 10px;
+        border-radius: 6px;
+        transition: background-color 200ms ease;
+    }
+
+    #navbar-toggle:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    #navbar-toggle:focus {
+        outline: 2px solid var(--nav-accent);
+        outline-offset: 2px;
+    }
+
+    /* Hamburger icon lines */
+    #navbar-toggle::before,
+    #navbar-toggle::after {
+        content: '';
+        position: absolute;
+        left: 10px;
+        width: 24px;
+        height: 2px;
+        background-color: var(--nav-fg);
+        transition: transform 300ms var(--ease-out-quart),
+                    opacity 200ms ease,
+                    background-color 200ms ease;
+        border-radius: 2px;
+    }
+
+    #navbar-toggle::before {
+        top: 14px;
+        box-shadow: 0 var(--hamburger-line-spacing) 0 var(--nav-fg);
     }
 
     #navbar-toggle::after {
-        content: '☰';
-        position: absolute;
-        inset: 0;
-        display: grid;
-        place-items: center;
-        font-size: 24px;
-        line-height: 1;
+        top: 28px;
     }
 
-    #navbar-toggle:hover,
-    #navbar-toggle:focus,
-    #navbar-toggle:active {
-        color: var(--nav-accent);
-        outline: none;
+    /* Hover effect for hamburger lines */
+    #navbar-toggle:hover::before,
+    #navbar-toggle:hover::after {
+        background-color: var(--nav-accent);
+    }
+
+    #navbar-toggle:hover::before {
+        box-shadow: 0 var(--hamburger-line-spacing) 0 var(--nav-accent);
+    }
+
+    /* Transform to X when checked */
+    #navbar-toggle:checked::before {
+        transform: translateY(var(--hamburger-line-spacing)) rotate(45deg);
+        box-shadow: none;
     }
 
     #navbar-toggle:checked::after {
-        content: '✕';
-        font-size: 22px;
+        transform: translateY(calc(-1 * var(--hamburger-line-spacing))) rotate(-45deg);
     }
 
     /* Off-canvas menu */
@@ -428,25 +463,55 @@ nav li a:active {
         opacity: 1;
     }
 
-    /* Larger tap targets */
+    /* Larger tap targets with animation */
     nav li {
         margin: 0;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateX(20px);
+        transition: opacity 300ms ease, transform 300ms ease, visibility 300ms ease;
     }
 
     nav li a {
         display: block;
         padding: 0.9rem 0.9rem;
         border-radius: 8px;
+        transition: background-color 200ms ease, transform 150ms ease;
+        position: relative;
+    }
+
+    nav li a:hover {
+        background-color: rgba(0, 0, 0, 0.05);
     }
 
     nav li a:active {
-        transform: translateY(0.5px);
+        transform: scale(0.98);
+    }
+
+    nav li a:focus {
+        outline: 2px solid var(--nav-accent);
+        outline-offset: 2px;
     }
 
     /* Slide in when toggled */
     #navbar-toggle:checked~ul {
         transform: translateX(0);
     }
+
+    /* Animate menu items in with stagger effect */
+    #navbar-toggle:checked~ul li {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(0);
+    }
+
+    #navbar-toggle:checked~ul li:nth-child(1) { transition-delay: 50ms; }
+    #navbar-toggle:checked~ul li:nth-child(2) { transition-delay: 100ms; }
+    #navbar-toggle:checked~ul li:nth-child(3) { transition-delay: 150ms; }
+    #navbar-toggle:checked~ul li:nth-child(4) { transition-delay: 200ms; }
+    #navbar-toggle:checked~ul li:nth-child(5) { transition-delay: 250ms; }
+    #navbar-toggle:checked~ul li:nth-child(6) { transition-delay: 300ms; }
+    #navbar-toggle:checked~ul li:nth-child(7) { transition-delay: 350ms; }
 
     /* Keep logo visible on mobile */
     .logo {
@@ -509,10 +574,34 @@ nav li a:active {
     background: transparent;
 }
 
-.dark-mode #navbar-toggle:hover,
-.dark-mode #navbar-toggle:focus,
-.dark-mode #navbar-toggle:active {
-    color: var(--nav-accent);
+.dark-mode #navbar-toggle::before,
+.dark-mode #navbar-toggle::after {
+    background-color: white;
+}
+
+.dark-mode #navbar-toggle::before {
+    box-shadow: 0 var(--hamburger-line-spacing) 0 white;
+}
+
+.dark-mode #navbar-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark-mode #navbar-toggle:hover::before,
+.dark-mode #navbar-toggle:hover::after {
+    background-color: var(--nav-accent);
+}
+
+.dark-mode #navbar-toggle:hover::before {
+    box-shadow: 0 var(--hamburger-line-spacing) 0 var(--nav-accent);
+}
+
+.dark-mode #navbar-toggle:checked::before {
+    box-shadow: none;
+}
+
+.dark-mode #navbar-toggle:focus {
+    outline-color: var(--nav-accent);
 }
 
 .dark-mode #navbar-toggle:checked~ul {
@@ -521,6 +610,10 @@ nav li a:active {
 
 .dark-mode #navbar-toggle:checked~ul li a {
     color: white;
+}
+
+.dark-mode #navbar-toggle:checked~ul li a:hover {
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 /* Custom styles for the GSE search box */
@@ -649,9 +742,10 @@ nav li a:active {
     background: rgba(0, 0, 0, 0.35);
     opacity: 0;
     visibility: hidden;
-    transition: opacity 200ms ease;
+    transition: opacity 280ms ease, visibility 280ms ease;
     z-index: 900;
     /* just below nav */
+    backdrop-filter: blur(2px);
 }
 
 body.nav-open .nav-overlay {
@@ -660,7 +754,7 @@ body.nav-open .nav-overlay {
 }
 
 .dark-mode .nav-overlay {
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.6);
 }
 
 /* Respect reduced motion */
@@ -669,11 +763,19 @@ body.nav-open .nav-overlay {
         transition: none !important;
     }
 
+    nav li {
+        transition: none !important;
+    }
+
+    #navbar-toggle::before,
+    #navbar-toggle::after {
+        transition: none !important;
+    }
+
     .nav-overlay {
         transition: none !important;
     }
 }
-
 /* ===== Banner base (with scoped overlay tokens) ===== */
 .banner {
     /* Light-mode overlay tokens (subtle) */
@@ -885,7 +987,6 @@ body.nav-open .nav-overlay {
         animation: none !important;
     }
 }
-
 .timeline {
     position: relative;
     background-image: linear-gradient(rgb(128, 128, 128), rgb(128, 128, 128));
@@ -1093,7 +1194,6 @@ body.nav-open .nav-overlay {
         transform: none !important;
     }
 }
-
 #article-wrapper {
     display: flex;
     justify-content: flex-start;
@@ -1349,7 +1449,6 @@ article-section {
     border-color: rgba(255, 255, 255, 0.08);
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
 }
-
 /* ===== Modern Flat Footer (no CSS variables) ============================ */
 
 footer {
@@ -1573,7 +1672,6 @@ footer a:focus {
         transition: none !important;
     }
 }
-
 .fancy-ul ul {
     counter-reset: item;
     line-height: 2.2;
@@ -1601,7 +1699,6 @@ footer a:focus {
     border-color: #0D1117;
     box-shadow: 0px 0px 0px 1px rgba(51, 51, 51, 0.1);
 }
-
 .cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -1855,7 +1952,6 @@ footer a:focus {
     background: linear-gradient(180deg, #ea8400, #b65a00);
     box-shadow: 0 8px 22px rgba(234, 132, 0, 0.3);
 }
-
 .about-me-section img {
     width: 10em;
     height: 10em;
@@ -1899,7 +1995,6 @@ footer a:focus {
 .dark-mode .works-section h2 {
     color: #eee;
 }
-
 .article-list {
     display: flex;
     flex-wrap: wrap;
@@ -2114,7 +2209,6 @@ footer a:focus {
         font-size: 1.22rem;
     }
 }
-
 code {
     font-family: "Courier New", monospace;
     font-size: 1.1em;
@@ -2181,7 +2275,6 @@ code {
 pre {
     padding: 0.5em 1em;
 }
-
 /* Modern flat toggle for dark mode */
 :root {
     --toggle-track: #e6e6e6;
@@ -2277,7 +2370,6 @@ pre {
         transition: none !important;
     }
 }
-
 #home-page-content {
     margin-inline: auto;
     padding-inline: clamp(16px, 3vw, 40px);
@@ -2412,7 +2504,6 @@ pre {
     display: inline-block;
     /* respects the parent's text-align */
 }
-
 .article-action-buttons {
     display: flex;
     justify-content: flex-end;
@@ -2499,7 +2590,6 @@ pre {
     border-top: 6px solid #66B2FF;
     /* lighter blue for contrast */
 }
-
 /* Resume page scoped enhancements */
 
 /* Action buttons used in resume hero */
