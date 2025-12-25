@@ -39,6 +39,7 @@ const difficultyBtns = document.querySelectorAll('.difficulty-btn');
 // Configuration constants
 const MAX_TABLE_ROWS = 10;
 const MAX_SPEED_CAP = 2.5; // Maximum falling speed multiplier
+const SOUND_VOLUME = 0.3; // Volume for loaded sound effects (0.0 to 1.0)
 
 // Game State
 let gameWidth, gameHeight;
@@ -232,8 +233,59 @@ function drawParticles() {
     particles.forEach(p => p.draw(ctx));
 }
 
-// Sound effects (using Web Audio API for simple tones)
+// Sound effects (using Web Audio API for simple tones and loaded audio files)
 const audioContext = typeof AudioContext !== 'undefined' ? new AudioContext() : null;
+
+// Audio buffers for sound effects
+let audioBuffers = {
+    correct: null,
+    incorrect: null,
+    levelup: null,
+    gameover: null
+};
+
+// Load sound effects from free sound URLs
+async function loadSoundEffect(url, key) {
+    if (!audioContext) return;
+    
+    try {
+        const response = await fetch(url);
+        
+        // Check if response is ok (status 200-299)
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        audioBuffers[key] = audioBuffer;
+        console.log(`Successfully loaded ${key} sound`);
+    } catch (error) {
+        console.log(`Failed to load ${key} sound, using fallback:`, error.message);
+    }
+}
+
+// Initialize sound effects - using free sounds from Mixkit
+function initializeSounds() {
+    // Using free sounds from Mixkit.co (all sounds are free to use)
+    // These are actual sound files that will be loaded if available
+    // If loading fails, the game will fallback to synthesized sounds
+    
+    // Mixkit provides free sound effects under their license
+    // https://mixkit.co/license/#sfxFree
+    
+    // NOTE: For production, consider hosting these sounds locally to:
+    // 1. Avoid external dependencies and potential CORS issues
+    // 2. Implement Subresource Integrity (SRI) checks
+    // 3. Ensure faster loading times
+    // 4. Better control over Content Security Policy (CSP)
+    
+    // Current implementation uses external URLs with graceful fallback
+    loadSoundEffect('https://assets.mixkit.co/active_storage/sfx/2018/2018-preview.mp3', 'correct');
+    loadSoundEffect('https://assets.mixkit.co/active_storage/sfx/2955/2955-preview.mp3', 'incorrect');
+    loadSoundEffect('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3', 'levelup');
+    loadSoundEffect('https://assets.mixkit.co/active_storage/sfx/1788/1788-preview.mp3', 'gameover');
+}
 
 function playSound(frequency, duration, type = 'sine') {
     if (!soundEnabled || !audioContext) return;
@@ -258,27 +310,58 @@ function playSound(frequency, duration, type = 'sine') {
     }
 }
 
+// Play loaded sound or fallback to synthesized sound
+function playLoadedSound(key, fallbackFn) {
+    if (!soundEnabled || !audioContext) return;
+    
+    if (audioBuffers[key]) {
+        try {
+            const source = audioContext.createBufferSource();
+            const gainNode = audioContext.createGain();
+            source.buffer = audioBuffers[key];
+            source.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            gainNode.gain.value = SOUND_VOLUME;
+            source.start(0);
+            return;
+        } catch (e) {
+            console.log('Error playing loaded sound, using fallback');
+        }
+    }
+    
+    // Fallback to synthesized sound
+    if (fallbackFn) fallbackFn();
+}
+
 function playCorrectSound() {
-    playSound(523.25, 0.1); // C5
-    setTimeout(() => playSound(659.25, 0.1), 100); // E5
-    setTimeout(() => playSound(783.99, 0.15), 200); // G5
+    playLoadedSound('correct', () => {
+        playSound(523.25, 0.1); // C5
+        setTimeout(() => playSound(659.25, 0.1), 100); // E5
+        setTimeout(() => playSound(783.99, 0.15), 200); // G5
+    });
 }
 
 function playIncorrectSound() {
-    playSound(200, 0.3, 'square');
+    playLoadedSound('incorrect', () => {
+        playSound(200, 0.3, 'square');
+    });
 }
 
 function playLevelUpSound() {
-    playSound(523.25, 0.1);
-    setTimeout(() => playSound(659.25, 0.1), 80);
-    setTimeout(() => playSound(783.99, 0.1), 160);
-    setTimeout(() => playSound(1046.50, 0.2), 240);
+    playLoadedSound('levelup', () => {
+        playSound(523.25, 0.1);
+        setTimeout(() => playSound(659.25, 0.1), 80);
+        setTimeout(() => playSound(783.99, 0.1), 160);
+        setTimeout(() => playSound(1046.50, 0.2), 240);
+    });
 }
 
 function playGameOverSound() {
-    playSound(392, 0.2, 'square');
-    setTimeout(() => playSound(349.23, 0.2, 'square'), 200);
-    setTimeout(() => playSound(329.63, 0.3, 'square'), 400);
+    playLoadedSound('gameover', () => {
+        playSound(392, 0.2, 'square');
+        setTimeout(() => playSound(349.23, 0.2, 'square'), 200);
+        setTimeout(() => playSound(329.63, 0.3, 'square'), 400);
+    });
 }
 
 // Canvas setup
@@ -857,6 +940,9 @@ window.onload = function() {
     // Draw initial state
     drawBackground();
     drawContainers();
+    
+    // Initialize sound effects
+    initializeSounds();
     
     // Load words in background (no spinner, no waiting)
     loadWords();
