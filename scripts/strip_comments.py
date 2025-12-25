@@ -6,6 +6,7 @@ import re
 import logging
 from pathlib import Path
 from typing import List
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -200,35 +201,32 @@ def process_file(file_path: Path) -> None:
     """
     Strips comments from a single file based on its extension.
     """
-    try:
-        content = file_path.read_text(encoding='utf-8')
-
-        if file_path.suffix == '.py':
-            processed_content = strip_python_comments(content)
-        elif file_path.suffix == '.css':
-            processed_content = strip_css_comments(content)
-        elif file_path.suffix == '.js':
-            processed_content = strip_js_comments(content)
-        else:
-            logging.warning(f"Unsupported file type: {file_path}")
-            return
-
-        file_path.write_text(processed_content, encoding='utf-8')
-        logging.info(f"Processed: {file_path}")
-    except Exception as e:
-        logging.error(f"Error processing {file_path}: {e}")
+    content = file_path.read_text(encoding='utf-8')
+    
+    if file_path.suffix == '.py':
+        processed_content = strip_python_comments(content)
+    elif file_path.suffix == '.css':
+        processed_content = strip_css_comments(content)
+    elif file_path.suffix == '.js':
+        processed_content = strip_js_comments(content)
+    else:
+        logging.warning(f"Unsupported file type: {file_path}")
+        return
+    
+    file_path.write_text(processed_content, encoding='utf-8')
+    logging.info(f"Processed: {file_path}")
 
 
 def main():
     """
-    Main function to strip comments from all .py, .css, and .js files.
+    Main function to strip comments from all .py, .css, and .js files using parallel processing.
     """
     logging.info("Starting comment stripping process...")
 
     extensions = ['.py', '.css', '.js']
     directories = [SRC_DIR, SCRIPTS_DIR]
 
-    total_files = 0
+    all_files = []
     for directory in directories:
         if not directory.exists():
             logging.warning(f"Directory does not exist: {directory}")
@@ -237,10 +235,24 @@ def main():
         for extension in extensions:
             files = find_files(directory, extension)
             logging.info(f"Found {len(files)} {extension} files in {directory}")
+            all_files.extend(files)
 
-            for file_path in files:
-                process_file(file_path)
+    # Process files in parallel using ThreadPoolExecutor
+    total_files = 0
+    max_workers = min(32, len(all_files) or 1)  # Use up to 32 threads
+    
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all file processing tasks
+        future_to_file = {executor.submit(process_file, file_path): file_path for file_path in all_files}
+        
+        # Process completed tasks as they finish
+        for future in as_completed(future_to_file):
+            file_path = future_to_file[future]
+            try:
+                future.result()  # This will raise any exceptions that occurred
                 total_files += 1
+            except Exception as e:
+                logging.error(f"Error processing {file_path}: {e}")
 
     logging.info(f"Comment stripping completed. Processed {total_files} files.")
 
