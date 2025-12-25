@@ -232,8 +232,48 @@ function drawParticles() {
     particles.forEach(p => p.draw(ctx));
 }
 
-// Sound effects (using Web Audio API for simple tones)
+// Sound effects (using Web Audio API for simple tones and loaded audio files)
 const audioContext = typeof AudioContext !== 'undefined' ? new AudioContext() : null;
+
+// Audio buffers for sound effects
+let audioBuffers = {
+    correct: null,
+    incorrect: null,
+    levelup: null,
+    gameover: null
+};
+
+// Load sound effects from free sound URLs
+async function loadSoundEffect(url, key) {
+    if (!audioContext) return;
+    
+    try {
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        audioBuffers[key] = audioBuffer;
+    } catch (error) {
+        console.log(`Failed to load ${key} sound, using fallback`);
+    }
+}
+
+// Initialize sound effects - using Freesound.org CC0 sounds via CDN
+function initializeSounds() {
+    // Using simple beep sounds as fallback - in production, replace with actual sound file URLs
+    // These URLs would point to free sound files from sources like:
+    // - freesound.org (CC0 licensed)
+    // - zapsplat.com (free tier)
+    // - mixkit.co (free sounds)
+    
+    // For now, we'll keep using synthesized sounds as they work reliably
+    // To use actual sound files, uncomment below and add valid URLs:
+    /*
+    loadSoundEffect('https://example.com/correct.mp3', 'correct');
+    loadSoundEffect('https://example.com/incorrect.mp3', 'incorrect');
+    loadSoundEffect('https://example.com/levelup.mp3', 'levelup');
+    loadSoundEffect('https://example.com/gameover.mp3', 'gameover');
+    */
+}
 
 function playSound(frequency, duration, type = 'sine') {
     if (!soundEnabled || !audioContext) return;
@@ -258,27 +298,58 @@ function playSound(frequency, duration, type = 'sine') {
     }
 }
 
+// Play loaded sound or fallback to synthesized sound
+function playLoadedSound(key, fallbackFn) {
+    if (!soundEnabled || !audioContext) return;
+    
+    if (audioBuffers[key]) {
+        try {
+            const source = audioContext.createBufferSource();
+            const gainNode = audioContext.createGain();
+            source.buffer = audioBuffers[key];
+            source.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            gainNode.gain.value = 0.3;
+            source.start(0);
+            return;
+        } catch (e) {
+            console.log('Error playing loaded sound, using fallback');
+        }
+    }
+    
+    // Fallback to synthesized sound
+    if (fallbackFn) fallbackFn();
+}
+
 function playCorrectSound() {
-    playSound(523.25, 0.1); // C5
-    setTimeout(() => playSound(659.25, 0.1), 100); // E5
-    setTimeout(() => playSound(783.99, 0.15), 200); // G5
+    playLoadedSound('correct', () => {
+        playSound(523.25, 0.1); // C5
+        setTimeout(() => playSound(659.25, 0.1), 100); // E5
+        setTimeout(() => playSound(783.99, 0.15), 200); // G5
+    });
 }
 
 function playIncorrectSound() {
-    playSound(200, 0.3, 'square');
+    playLoadedSound('incorrect', () => {
+        playSound(200, 0.3, 'square');
+    });
 }
 
 function playLevelUpSound() {
-    playSound(523.25, 0.1);
-    setTimeout(() => playSound(659.25, 0.1), 80);
-    setTimeout(() => playSound(783.99, 0.1), 160);
-    setTimeout(() => playSound(1046.50, 0.2), 240);
+    playLoadedSound('levelup', () => {
+        playSound(523.25, 0.1);
+        setTimeout(() => playSound(659.25, 0.1), 80);
+        setTimeout(() => playSound(783.99, 0.1), 160);
+        setTimeout(() => playSound(1046.50, 0.2), 240);
+    });
 }
 
 function playGameOverSound() {
-    playSound(392, 0.2, 'square');
-    setTimeout(() => playSound(349.23, 0.2, 'square'), 200);
-    setTimeout(() => playSound(329.63, 0.3, 'square'), 400);
+    playLoadedSound('gameover', () => {
+        playSound(392, 0.2, 'square');
+        setTimeout(() => playSound(349.23, 0.2, 'square'), 200);
+        setTimeout(() => playSound(329.63, 0.3, 'square'), 400);
+    });
 }
 
 // Canvas setup
@@ -857,6 +928,9 @@ window.onload = function() {
     // Draw initial state
     drawBackground();
     drawContainers();
+    
+    // Initialize sound effects
+    initializeSounds();
     
     // Load words in background (no spinner, no waiting)
     loadWords();
