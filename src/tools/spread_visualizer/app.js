@@ -20,58 +20,162 @@ function draw() {
     const curve1Area = calculateArea(mean1, std1);
     const curve2Area = calculateArea(mean2, std2);
 
-    drawAxis(ctx, canvas.width, canvas.height, xRange);
+    // Calculate max Y value for scaling
+    const maxY = Math.max(gaussian(mean1, mean1, std1), gaussian(mean2, mean2, std2));
+
+    drawGrid(ctx, canvas.width, canvas.height, xRange, maxY);
+    drawAxis(ctx, canvas.width, canvas.height, xRange, maxY);
     drawBellCurve(ctx, mean1, std1, 'blue', 'cyan', canvas.width, canvas.height, xRange);
     drawBellCurve(ctx, mean2, std2, 'red', 'magenta', canvas.width, canvas.height, xRange);
+    drawMeanMarkers(ctx, mean1, mean2, canvas.width, canvas.height, xRange);
     drawLegendOnCanvas(ctx, canvas.width, canvas.height, mean1, std1, curve1Area, mean2, std2, curve2Area);
 }
 
-function drawAxis(ctx, canvasWidth, canvasHeight, xRange) {
+function drawGrid(ctx, canvasWidth, canvasHeight, xRange, maxY) {
     const axisCenterY = canvasHeight * 0.95;
     const scale = canvasWidth / (xRange.max - xRange.min);
+    const gridColor = getColorForMode('rgba(200, 200, 200, 0.3)', 'rgba(100, 100, 100, 0.3)');
+    const tickInterval = Math.max(1, Math.floor((xRange.max - xRange.min) / 10));
+
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 0.5;
+
+    // Vertical grid lines
+    for (let i = Math.floor(xRange.min); i <= Math.ceil(xRange.max); i += tickInterval) {
+        const x = (i - xRange.min) * scale;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, axisCenterY);
+        ctx.stroke();
+    }
+
+    // Horizontal grid lines
+    const yScale = (canvasHeight * 0.90) / maxY;
+    const yTickInterval = maxY / 5;
+    for (let i = 0; i <= 5; i++) {
+        const y = axisCenterY - (i * yTickInterval * yScale * 5000);
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvasWidth, y);
+        ctx.stroke();
+    }
+    
+    ctx.lineWidth = 1;
+}
+
+function drawAxis(ctx, canvasWidth, canvasHeight, xRange, maxY) {
+    const axisCenterY = canvasHeight * 0.95;
+    const leftMargin = 50;
+    const scale = (canvasWidth - leftMargin) / (xRange.max - xRange.min);
     const axisColor = getColorForMode('black', 'white');
     const textColor = getColorForMode('black', 'white');
-    const tickInterval = Math.floor((xRange.max - xRange.min) / 10);
+    const tickInterval = Math.max(1, Math.floor((xRange.max - xRange.min) / 10));
 
+    // X-axis
     ctx.beginPath();
     ctx.strokeStyle = axisColor;
-    ctx.moveTo(0, axisCenterY);
+    ctx.lineWidth = 2;
+    ctx.moveTo(leftMargin, axisCenterY);
     ctx.lineTo(canvasWidth, axisCenterY);
     ctx.stroke();
 
+    // Y-axis
+    ctx.beginPath();
+    ctx.moveTo(leftMargin, 0);
+    ctx.lineTo(leftMargin, axisCenterY);
+    ctx.stroke();
+
     ctx.fillStyle = textColor;
+    ctx.font = '12px Arial';
+    
+    // X-axis labels
     for (let i = Math.floor(xRange.min); i <= Math.ceil(xRange.max); i += tickInterval) {
-        const x = (i - xRange.min) * scale;
-        ctx.fillText(i.toString(), x, axisCenterY + 20);
+        const x = leftMargin + (i - xRange.min) * scale;
+        ctx.fillText(i.toString(), x - 10, axisCenterY + 20);
         ctx.beginPath();
         ctx.moveTo(x, axisCenterY - 5);
         ctx.lineTo(x, axisCenterY + 5);
         ctx.stroke();
     }
+    
+    // Y-axis labels
+    const yScale = (canvasHeight * 0.90) / maxY;
+    const yTickInterval = maxY / 5;
+    for (let i = 0; i <= 5; i++) {
+        const yValue = (i * yTickInterval).toFixed(2);
+        const y = axisCenterY - (i * yTickInterval * yScale * 5000);
+        ctx.fillText(yValue, 5, y + 5);
+        ctx.beginPath();
+        ctx.moveTo(leftMargin - 5, y);
+        ctx.lineTo(leftMargin + 5, y);
+        ctx.stroke();
+    }
+    
+    // Axis labels
+    ctx.font = '14px Arial';
+    ctx.fillText('x', canvasWidth - 20, axisCenterY + 20);
+    ctx.save();
+    ctx.translate(15, canvasHeight / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('Probability Density', 0, 0);
+    ctx.restore();
+    
+    ctx.lineWidth = 1;
 }
 
 function drawBellCurve(ctx, mean, std, colorLight, colorDark, canvasWidth, canvasHeight, xRange) {
+    const leftMargin = 50;
     const axisCenterY = canvasHeight / 2;
-    const xScale = canvasWidth / (xRange.max - xRange.min);
+    const xScale = (canvasWidth - leftMargin) / (xRange.max - xRange.min);
     const yScale = 5000;
     const yOffset = canvasHeight * 0.95;
     const curveColor = getColorForMode(colorLight, colorDark);
 
     ctx.beginPath();
     ctx.strokeStyle = curveColor;
+    ctx.lineWidth = 2;
     for (let x = -3 * std + mean; x <= 3 * std + mean; x += 0.01) {
-        let plotX = (x - xRange.min) * xScale;
+        let plotX = leftMargin + (x - xRange.min) * xScale;
         let plotY = yOffset - gaussian(x, mean, std) * yScale;
         ctx.lineTo(plotX, plotY);
     }
     ctx.stroke();
+    ctx.lineWidth = 1;
+}
+
+function drawMeanMarkers(ctx, mean1, mean2, canvasWidth, canvasHeight, xRange) {
+    const leftMargin = 50;
+    const axisCenterY = canvasHeight * 0.95;
+    const xScale = (canvasWidth - leftMargin) / (xRange.max - xRange.min);
+    
+    ctx.save();
+    ctx.setLineDash([5, 5]);
+    ctx.lineWidth = 1.5;
+    
+    // Mean 1 marker
+    const x1 = leftMargin + (mean1 - xRange.min) * xScale;
+    ctx.strokeStyle = getColorForMode('blue', 'cyan');
+    ctx.beginPath();
+    ctx.moveTo(x1, 0);
+    ctx.lineTo(x1, axisCenterY);
+    ctx.stroke();
+    
+    // Mean 2 marker
+    const x2 = leftMargin + (mean2 - xRange.min) * xScale;
+    ctx.strokeStyle = getColorForMode('red', 'magenta');
+    ctx.beginPath();
+    ctx.moveTo(x2, 0);
+    ctx.lineTo(x2, axisCenterY);
+    ctx.stroke();
+    
+    ctx.restore();
 }
 
 function drawLegendOnCanvas(ctx, canvasWidth, canvasHeight, mean1, std1, area1, mean2, std2, area2) {
-    const legendX = canvasWidth - 200;
+    const legendX = canvasWidth - 250;
     const legendY = 30;
-    const boxWidth = 180;
-    const boxHeight = 60;
+    const boxWidth = 230;
+    const boxHeight = 80;
     const textColor = getColorForMode('black', 'white');
 
     ctx.fillStyle = getColorForMode('#f0f0f0', '#333');
@@ -80,11 +184,21 @@ function drawLegendOnCanvas(ctx, canvasWidth, canvasHeight, mean1, std1, area1, 
     ctx.strokeStyle = textColor;
     ctx.strokeRect(legendX, legendY, boxWidth, boxHeight);
 
-    ctx.fillStyle = textColor;
     ctx.font = '12px Arial';
-    ctx.fillText(`Curve 1: μ=${mean1}, σ=${std1}, Area=${area1.toFixed(2)}`, legendX + 10, legendY + 20);
+    
+    // Curve 1 with color indicator
     ctx.fillStyle = getColorForMode('blue', 'cyan');
-    ctx.fillText(`Curve 2: μ=${mean2}, σ=${std2}, Area=${area2.toFixed(2)}`, legendX + 10, legendY + 40);
+    ctx.fillRect(legendX + 10, legendY + 15, 15, 15);
+    ctx.fillStyle = textColor;
+    ctx.fillText(`Curve 1: μ=${mean1}, σ=${std1}`, legendX + 30, legendY + 27);
+    ctx.fillText(`Area=${area1.toFixed(2)}`, legendX + 30, legendY + 40);
+    
+    // Curve 2 with color indicator
+    ctx.fillStyle = getColorForMode('red', 'magenta');
+    ctx.fillRect(legendX + 10, legendY + 50, 15, 15);
+    ctx.fillStyle = textColor;
+    ctx.fillText(`Curve 2: μ=${mean2}, σ=${std2}`, legendX + 30, legendY + 62);
+    ctx.fillText(`Area=${area2.toFixed(2)}`, legendX + 30, legendY + 75);
 }
 
 function calculateArea(mean, std) {
@@ -135,6 +249,16 @@ document.addEventListener('DOMContentLoaded', function() {
     if (drawButton) {
         drawButton.addEventListener('click', draw);
     }
+
+    // Add real-time update listeners to all inputs
+    var inputs = document.querySelectorAll('input[type="number"]');
+    inputs.forEach(function(input) {
+        input.addEventListener('input', function() {
+            // Debounce the draw call for smoother performance
+            clearTimeout(input.drawTimeout);
+            input.drawTimeout = setTimeout(draw, 100);
+        });
+    });
 
     var toggleButton = document.querySelector('.toggle-dark-mode');
     if (toggleButton) {
