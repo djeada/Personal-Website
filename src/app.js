@@ -1125,6 +1125,7 @@ function main() {
 
     // Initialize article UX enhancements
     initTableOfContentsHighlight();
+    initTableOfContentsToggle();
     initReadingProgress();
     initBackToTop();
 
@@ -1208,6 +1209,70 @@ function main() {
 // -------------------------
 // Article UX Enhancements
 // -------------------------
+
+// Add toggle functionality for table of contents on mobile
+function initTableOfContentsToggle() {
+    const toc = document.getElementById('table-of-contents');
+    if (!toc) return;
+
+    // Find or create the h2 header
+    let tocHeader = toc.querySelector(':scope > h2');
+    if (!tocHeader) {
+        // If no h2 exists, create one
+        tocHeader = document.createElement('h2');
+        tocHeader.textContent = 'Table of Contents';
+        toc.insertBefore(tocHeader, toc.firstChild);
+    }
+
+    // Check if toggle button already exists
+    let toggleButton = document.getElementById('table-of-contents-toggle');
+    
+    const setupMobileToggle = () => {
+        const isMobile = window.innerWidth <= 768;
+        
+        if (isMobile && !toggleButton) {
+            // Create toggle button for mobile
+            toggleButton = document.createElement('button');
+            toggleButton.id = 'table-of-contents-toggle';
+            toggleButton.setAttribute('aria-label', 'Toggle table of contents');
+            toggleButton.setAttribute('aria-expanded', 'false');
+            toggleButton.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            `;
+
+            // Add toggle button to header
+            tocHeader.appendChild(toggleButton);
+
+            // Start collapsed on mobile
+            toc.classList.add('collapsed');
+
+            // Toggle functionality
+            const toggle = () => {
+                const isCollapsed = toc.classList.contains('collapsed');
+                toc.classList.toggle('collapsed');
+                toggleButton.setAttribute('aria-expanded', isCollapsed ? 'true' : 'false');
+            };
+
+            // Make header clickable
+            tocHeader.style.cursor = 'pointer';
+            tocHeader.addEventListener('click', toggle);
+        } else if (!isMobile && toggleButton) {
+            // Remove mobile-specific elements when resizing to desktop
+            toc.classList.remove('collapsed');
+            toggleButton.remove();
+            toggleButton = null;
+            tocHeader.style.cursor = '';
+        }
+    };
+
+    // Setup on load
+    setupMobileToggle();
+
+    // Handle window resize
+    window.addEventListener('resize', setupMobileToggle);
+}
 
 // Highlight active section in table of contents
 function initTableOfContentsHighlight() {
