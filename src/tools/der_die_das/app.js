@@ -38,6 +38,7 @@ const difficultyBtns = document.querySelectorAll('.difficulty-btn');
 
 // Configuration constants
 const MAX_TABLE_ROWS = 10;
+const MAX_SPEED_CAP = 2.5; // Maximum falling speed multiplier
 
 // Game State
 let gameWidth, gameHeight;
@@ -62,6 +63,8 @@ let baseSpeed = difficulties.easy.baseSpeed;
 let speedIncrement = difficulties.easy.speedIncrement;
 
 let fallingSpeed = 0.5;
+let fastDropSpeed = 5; // Speed multiplier for fast drop
+let isFastDropping = false;
 let lastWordTime = 0;
 let lastFrameTime = 0;
 const fixedTimeStep = 16;
@@ -71,6 +74,10 @@ let highlightDuration = 400;
 let highlightStartTime = 0;
 const articles = ['der', 'die', 'das'];
 const moveAmount = 35;
+
+// Mobile double-tap detection
+let lastTapTime = 0;
+const doubleTapDelay = 300; // milliseconds
 
 // Particles system
 let particles = [];
@@ -152,23 +159,22 @@ const fetchWordList = (url, article) => fetch(proxyUrl + encodeURIComponent(url)
 });
 
 function loadWords() {
-    const loadingSpinner = document.getElementById('loadingSpinner');
-    loadingSpinner.style.display = 'flex';
-
-    return new Promise(resolve => setTimeout(resolve, 500))
-        .then(() => Promise.all([
-            fetchWordList('https://adamdjellouli.com/tools/der_die_das/der.txt', 'der'),
-            fetchWordList('https://adamdjellouli.com/tools/der_die_das/die.txt', 'die'),
-            fetchWordList('https://adamdjellouli.com/tools/der_die_das/das.txt', 'das')
-        ]))
-        .then(([derWords, dieWords, dasWords]) => {
-            if (derWords) wordLists['der'] = derWords.split('\n').filter(w => w.trim());
-            if (dieWords) wordLists['die'] = dieWords.split('\n').filter(w => w.trim());
-            if (dasWords) wordLists['das'] = dasWords.split('\n').filter(w => w.trim());
-        })
-        .finally(() => {
-            loadingSpinner.style.display = 'none';
-        });
+    // Load words in background without showing spinner
+    // The game will use the pre-cached wordLists until loading completes
+    Promise.all([
+        fetchWordList('https://adamdjellouli.com/tools/der_die_das/der.txt', 'der'),
+        fetchWordList('https://adamdjellouli.com/tools/der_die_das/die.txt', 'die'),
+        fetchWordList('https://adamdjellouli.com/tools/der_die_das/das.txt', 'das')
+    ])
+    .then(([derWords, dieWords, dasWords]) => {
+        if (derWords) wordLists['der'] = derWords.split('\n').filter(w => w.trim());
+        if (dieWords) wordLists['die'] = dieWords.split('\n').filter(w => w.trim());
+        if (dasWords) wordLists['das'] = dasWords.split('\n').filter(w => w.trim());
+        console.log('Extended word lists loaded successfully');
+    })
+    .catch(err => {
+        console.log('Using pre-cached word lists:', err.message);
+    });
 }
 
 // Particle class
@@ -332,13 +338,16 @@ function moveWords(deltaTime) {
         currentWord.scale = Math.min(1, currentWord.scale + 0.03);
     }
     
-    currentWord.y += fallingSpeed * deltaTime;
+    // Apply fast drop speed if active
+    const currentSpeed = isFastDropping ? fallingSpeed * fastDropSpeed : fallingSpeed;
+    currentWord.y += currentSpeed * deltaTime;
     
     if (currentWord.y > gameHeight + 50) {
         // Word missed - count as incorrect
         totalAttempts++;
         lives--;
         streak = 0;
+        isFastDropping = false; // Reset fast drop
         updateStats();
         
         if (lives <= 0) {
@@ -409,8 +418,10 @@ function checkLevelUp() {
         level++;
         wordsInCurrentLevel = 0;
         
-        // Increase speed
-        fallingSpeed += speedIncrement * gameHeight;
+        // Increase speed with cap
+        const newSpeed = fallingSpeed + speedIncrement * gameHeight;
+        const maxSpeed = baseSpeed * gameHeight * MAX_SPEED_CAP;
+        fallingSpeed = Math.min(newSpeed, maxSpeed);
         
         playLevelUpSound();
         updateStats();
@@ -484,6 +495,7 @@ function checkCollisions() {
         containerAnimations[highlightContainerIndex] = 1;
     }
     
+    isFastDropping = false; // Reset fast drop after collision
     currentWord = null;
 }
 
@@ -698,6 +710,8 @@ function resetGame() {
     lastFrameTime = 0;
     highlightContainerIndex = -1;
     containerAnimations = [0, 0, 0];
+    isFastDropping = false;
+    lastTapTime = 0;
     
     // Reset speed based on difficulty
     baseSpeed = difficulties[currentDifficulty].baseSpeed;
@@ -758,6 +772,12 @@ function handleKeyDown(event) {
         case 'ArrowRight':
             moveRight();
             break;
+        case ' ': // Space key for fast drop
+            event.preventDefault();
+            if (currentWord && !isGameOver) {
+                isFastDropping = true;
+            }
+            break;
         case 'ArrowUp':
         case 'ArrowDown':
             event.preventDefault();
@@ -791,7 +811,18 @@ gameCanvas.addEventListener('touchstart', (e) => {
     if (isGameOver) {
         resetGame();
         requestAnimationFrame(gameLoop);
+        return;
     }
+    
+    // Double-tap detection for fast drop
+    const currentTime = Date.now();
+    if (currentTime - lastTapTime < doubleTapDelay) {
+        // Double tap detected
+        if (currentWord) {
+            isFastDropping = true;
+        }
+    }
+    lastTapTime = currentTime;
 });
 
 startBtn.addEventListener('click', startGame);
@@ -821,17 +852,15 @@ window.addEventListener('resize', resizeCanvas);
 
 // Initialize
 window.onload = function() {
-    const loadingSpinner = document.getElementById('loadingSpinner');
-    loadingSpinner.style.display = 'flex';
-
     resizeCanvas();
     
     // Draw initial state
     drawBackground();
     drawContainers();
     
-    loadWords().then(() => {
-        loadingSpinner.style.display = 'none';
-        showStartScreen();
-    });
+    // Load words in background (no spinner, no waiting)
+    loadWords();
+    
+    // Show start screen immediately
+    showStartScreen();
 };
