@@ -245,16 +245,16 @@ document.addEventListener('DOMContentLoaded', function() {
             let highlightedText = originalText.replace(/\b\w+\b/g, match => {
                 const normalizedMatch = normalizeText(match);
                 if (duplicates.includes(normalizedMatch) && (checkboxStates[normalizedMatch] !== false)) {
-                    return `<span class="highlight">${match}</span>`;
+                    return `<span class="highlight">${escapeHtml(match)}</span>`;
                 }
-                return match;
+                return escapeHtml(match);
             });
             textDisplay.innerHTML = highlightedText;
         } else {
 
             let highlightedText = normalizedText.split(/\b/).map(word => {
                 if (!/\w+/.test(word)) {
-                    return word; // Return non-word parts as is
+                    return escapeHtml(word); // Return non-word parts escaped
                 }
 
                 let applicableDuplicates = duplicates.filter(dup =>
@@ -266,10 +266,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Check if we have any applicable duplicates
                 if (applicableDuplicates.length > 0) {
                     let longestDuplicate = applicableDuplicates[0]; // The first one is the longest due to sorting
-                    return `<span class="highlight">${longestDuplicate}</span>${word.substring(longestDuplicate.length)}`;
+                    return `<span class="highlight">${escapeHtml(longestDuplicate)}</span>${escapeHtml(word.substring(longestDuplicate.length))}`;
                 }
 
-                return word; // No duplicated prefix found, return the word as is
+                return escapeHtml(word); // No duplicated prefix found, return the word escaped
             });
 
             textDisplay.innerHTML = highlightedText.join('');
@@ -299,13 +299,13 @@ document.addEventListener('DOMContentLoaded', function() {
         html += '<th>Toggle</th>';
         html += '</tr></thead><tbody>';
         
-        sortedDuplicates.forEach(duplicate => {
+        sortedDuplicates.forEach((duplicate, index) => {
             const isChecked = checkboxStates[duplicate] !== false;
             const escapedWord = escapeHtml(duplicate);
             html += `<tr>
                 <td>${escapedWord}</td>
                 <td>${wordCounts[duplicate]}</td>
-                <td><input type="checkbox" class="word-checkbox" data-word="${escapedWord}" ${isChecked ? 'checked' : ''}></td>
+                <td><input type="checkbox" class="word-checkbox" data-index="${index}" ${isChecked ? 'checked' : ''}></td>
             </tr>`;
         });
         
@@ -329,7 +329,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add event listeners for checkboxes
         duplicateTable.querySelectorAll('.word-checkbox').forEach(checkbox => {
             checkbox.addEventListener('change', function() {
-                const word = unescapeHtml(this.dataset.word);
+                const index = parseInt(this.dataset.index, 10);
+                const word = sortedDuplicates[index];
                 checkboxStates[word] = this.checked;
                 const text = textInput.value;
                 const normalizedText = normalizeText(text);
@@ -351,11 +352,5 @@ document.addEventListener('DOMContentLoaded', function() {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
-    }
-
-    function unescapeHtml(html) {
-        const div = document.createElement('div');
-        div.innerHTML = html;
-        return div.textContent;
     }
 });
