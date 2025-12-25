@@ -438,14 +438,15 @@ function drawNORGate(ctx) {
 
     // Negation Circle (for NOR)
     ctx.beginPath();
-    ctx.arc(centerX + gateWidth / 4 + lineLength / 2, (startY + endY) / 2, negationCircleRadius, 0, 2 * Math.PI);
+    const norCircleCenterX = centerX + gateWidth / 2 + negationCircleRadius;
+    ctx.arc(norCircleCenterX, (startY + endY) / 2, negationCircleRadius, 0, 2 * Math.PI);
     ctx.stroke();
     ctx.fill();
 
     // Output Line (adjusted for the negation circle)
     ctx.beginPath();
-    ctx.moveTo(centerX + gateWidth / 4 + lineLength / 2 + negationCircleRadius, (startY + endY) / 2);
-    ctx.lineTo(centerX + gateWidth / 4 + lineLength + negationCircleRadius, (startY + endY) / 2);
+    ctx.moveTo(norCircleCenterX + negationCircleRadius, (startY + endY) / 2);
+    ctx.lineTo(norCircleCenterX + negationCircleRadius + lineLength - 40, (startY + endY) / 2);
     ctx.stroke();
 }
 
@@ -549,14 +550,16 @@ function drawXNORGate(ctx) {
 
     // Negation Circle (for XNOR)
     ctx.beginPath();
-    ctx.arc(centerX + gateWidth / 4 + lineLength / 2, (startY + endY) / 2, negationCircleRadius, 0, 2 * Math.PI);
+    const xnorCircleCenterX = centerX + gateWidth / 2 + negationCircleRadius;
+    ctx.arc(xnorCircleCenterX, (startY + endY) / 2, negationCircleRadius, 0, 2 * Math.PI);
     ctx.stroke();
     ctx.fill();
 
     // Output Line (adjusted for the negation circle)
     ctx.beginPath();
-    ctx.moveTo(centerX + gateWidth / 4 + lineLength / 2 + negationCircleRadius, (startY + endY) / 2);
-    ctx.lineTo(centerX + gateWidth / 4 + lineLength + negationCircleRadius, (startY + endY) / 2);
+    ctx.moveTo(xnorCircleCenterX + negationCircleRadius, (startY + endY) / 2);
+    ctx.lineTo(xnorCircleCenterX + negationCircleRadius + lineLength - 40, (startY + endY) / 2);
+    ctx.stroke();
     ctx.stroke();
 }
 
