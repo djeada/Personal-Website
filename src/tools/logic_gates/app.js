@@ -1,3 +1,12 @@
+function getColorForMode(colorLight, colorDark) {
+    // Check for dark mode preference
+    const darkModeValue = document.cookie.split('; ').find(row => row.startsWith('darkMode='));
+    if (darkModeValue) {
+        return darkModeValue.split('=')[1].toLowerCase() === 'true' ? colorDark : colorLight;
+    }
+    return colorLight;
+}
+
 function updateInputs() {
     var gateType = document.getElementById("gateSelect").value;
     var inputArea = document.getElementById("inputArea");
@@ -13,9 +22,21 @@ function updateInputs() {
             toggleInput(this);
             updateOutput();
         };
-        inputArea.appendChild(inputDiv);
+        
+        // Add label for inputs
+        var label = document.createElement("div");
+        label.className = "input-label";
+        label.textContent = "Input " + (i + 1);
+        
+        var container = document.createElement("div");
+        container.className = "input-container";
+        container.appendChild(inputDiv);
+        container.appendChild(label);
+        
+        inputArea.appendChild(container);
     }
     updateOutput(); // Update output initially
+    updateTruthTable(); // Update truth table
 }
 
 function getNumberOfInputsForGate(gateType) {
@@ -70,6 +91,76 @@ function updateOutput() {
         outputElement.classList.add('inactive');
         outputElement.classList.remove('active');
     }
+    
+    updateTruthTable(); // Update truth table when output changes
+}
+
+function updateTruthTable() {
+    var gateType = document.getElementById("gateSelect").value;
+    var truthTableDiv = document.getElementById("truthTable");
+    
+    if (!truthTableDiv) return;
+    
+    var truthTable = getTruthTable(gateType);
+    var html = '<h3>Truth Table: ' + gateType + ' Gate</h3>';
+    html += '<table>';
+    
+    // Header
+    html += '<thead><tr>';
+    if (gateType === "NOT") {
+        html += '<th>Input</th><th>Output</th>';
+    } else {
+        html += '<th>Input A</th><th>Input B</th><th>Output</th>';
+    }
+    html += '</tr></thead>';
+    
+    // Body
+    html += '<tbody>';
+    for (var i = 0; i < truthTable.length; i++) {
+        html += '<tr>';
+        for (var j = 0; j < truthTable[i].length; j++) {
+            var value = truthTable[i][j];
+            var className = value ? 'truth-value-true' : 'truth-value-false';
+            html += '<td class="' + className + '">' + (value ? '1' : '0') + '</td>';
+        }
+        html += '</tr>';
+    }
+    html += '</tbody></table>';
+    
+    truthTableDiv.innerHTML = html;
+}
+
+function getTruthTable(gateType) {
+    switch (gateType) {
+        case "NOT":
+            return [[false, true], [true, false]];
+        case "AND":
+            return [[false, false, false], [false, true, false], [true, false, false], [true, true, true]];
+        case "OR":
+            return [[false, false, false], [false, true, true], [true, false, true], [true, true, true]];
+        case "NAND":
+            return [[false, false, true], [false, true, true], [true, false, true], [true, true, false]];
+        case "NOR":
+            return [[false, false, true], [false, true, false], [true, false, false], [true, true, false]];
+        case "XOR":
+            return [[false, false, false], [false, true, true], [true, false, true], [true, true, false]];
+        case "XNOR":
+            return [[false, false, true], [false, true, false], [true, false, false], [true, true, true]];
+        default:
+            return [];
+    }
+}
+
+function resetInputs() {
+    var inputArea = document.getElementById("inputArea");
+    var inputs = inputArea.querySelectorAll('.lightBulb');
+    
+    inputs.forEach(function(input) {
+        input.classList.remove('active');
+        input.classList.add('inactive');
+    });
+    
+    updateOutput();
 }
 
 function drawGate(gateType) {
@@ -347,14 +438,15 @@ function drawNORGate(ctx) {
 
     // Negation Circle (for NOR)
     ctx.beginPath();
-    ctx.arc(centerX + gateWidth / 4 + lineLength / 2, (startY + endY) / 2, negationCircleRadius, 0, 2 * Math.PI);
+    const norCircleCenterX = centerX + gateWidth / 2 + negationCircleRadius;
+    ctx.arc(norCircleCenterX, (startY + endY) / 2, negationCircleRadius, 0, 2 * Math.PI);
     ctx.stroke();
     ctx.fill();
 
     // Output Line (adjusted for the negation circle)
     ctx.beginPath();
-    ctx.moveTo(centerX + gateWidth / 4 + lineLength / 2 + negationCircleRadius, (startY + endY) / 2);
-    ctx.lineTo(centerX + gateWidth / 4 + lineLength + negationCircleRadius, (startY + endY) / 2);
+    ctx.moveTo(norCircleCenterX + negationCircleRadius, (startY + endY) / 2);
+    ctx.lineTo(norCircleCenterX + negationCircleRadius + lineLength - 40, (startY + endY) / 2);
     ctx.stroke();
 }
 
@@ -458,14 +550,16 @@ function drawXNORGate(ctx) {
 
     // Negation Circle (for XNOR)
     ctx.beginPath();
-    ctx.arc(centerX + gateWidth / 4 + lineLength / 2, (startY + endY) / 2, negationCircleRadius, 0, 2 * Math.PI);
+    const xnorCircleCenterX = centerX + gateWidth / 2 + negationCircleRadius;
+    ctx.arc(xnorCircleCenterX, (startY + endY) / 2, negationCircleRadius, 0, 2 * Math.PI);
     ctx.stroke();
     ctx.fill();
 
     // Output Line (adjusted for the negation circle)
     ctx.beginPath();
-    ctx.moveTo(centerX + gateWidth / 4 + lineLength / 2 + negationCircleRadius, (startY + endY) / 2);
-    ctx.lineTo(centerX + gateWidth / 4 + lineLength + negationCircleRadius, (startY + endY) / 2);
+    ctx.moveTo(xnorCircleCenterX + negationCircleRadius, (startY + endY) / 2);
+    ctx.lineTo(xnorCircleCenterX + negationCircleRadius + lineLength - 40, (startY + endY) / 2);
+    ctx.stroke();
     ctx.stroke();
 }
 
