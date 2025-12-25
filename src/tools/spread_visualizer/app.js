@@ -2,18 +2,55 @@ function gaussian(x, mean, std) {
     return (1 / (std * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mean) / std, 2));
 }
 
+function resizeCanvas() {
+    var canvas = document.getElementById('canvas');
+    var container = canvas.parentElement;
+    
+    // Get the container width and set responsive dimensions
+    var containerWidth = container.clientWidth;
+    var canvasWidth = Math.min(containerWidth - 20, 800); // Max 800px, with padding
+    var canvasHeight = Math.min(Math.floor(canvasWidth * 0.75), 600); // 3:4 aspect ratio, max 600px
+    
+    // Set canvas size accounting for device pixel ratio for crisp rendering
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = canvasWidth * dpr;
+    canvas.height = canvasHeight * dpr;
+    canvas.style.width = canvasWidth + 'px';
+    canvas.style.height = canvasHeight + 'px';
+    
+    // Scale the context to match device pixel ratio
+    var ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    
+    return { width: canvasWidth, height: canvasHeight };
+}
+
 function draw() {
     var canvas = document.getElementById('canvas');
+    var dimensions = resizeCanvas();
     var ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+    
     var mean1 = parseFloat(document.getElementById('mean1').value);
     var std1 = parseFloat(document.getElementById('std1').value);
     var mean2 = parseFloat(document.getElementById('mean2').value);
     var std2 = parseFloat(document.getElementById('std2').value);
 
+    // Validate inputs
     if (isNaN(mean1) || isNaN(std1) || isNaN(mean2) || isNaN(std2)) {
-        return; // Avoid drawing if any of the inputs are invalid.
+        ctx.fillStyle = getColorForMode('#333', '#eee');
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Please enter valid numbers for all fields', dimensions.width / 2, dimensions.height / 2);
+        return;
+    }
+    
+    // Ensure standard deviations are positive
+    if (std1 <= 0 || std2 <= 0) {
+        ctx.fillStyle = getColorForMode('#d32f2f', '#ff5252');
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Standard deviation must be greater than 0', dimensions.width / 2, dimensions.height / 2);
+        return;
     }
 
     const xRange = calculateXRange([mean1, mean2], [std1, std2]);
@@ -23,12 +60,13 @@ function draw() {
     // Calculate max Y value for scaling
     const maxY = Math.max(gaussian(mean1, mean1, std1), gaussian(mean2, mean2, std2));
 
-    drawGrid(ctx, canvas.width, canvas.height, xRange, maxY);
-    drawAxis(ctx, canvas.width, canvas.height, xRange, maxY);
-    drawBellCurve(ctx, mean1, std1, 'blue', 'cyan', canvas.width, canvas.height, xRange);
-    drawBellCurve(ctx, mean2, std2, 'red', 'magenta', canvas.width, canvas.height, xRange);
-    drawMeanMarkers(ctx, mean1, mean2, canvas.width, canvas.height, xRange);
-    drawLegendOnCanvas(ctx, canvas.width, canvas.height, mean1, std1, curve1Area, mean2, std2, curve2Area);
+    ctx.textAlign = 'left'; // Reset text alignment
+    drawGrid(ctx, dimensions.width, dimensions.height, xRange, maxY);
+    drawAxis(ctx, dimensions.width, dimensions.height, xRange, maxY);
+    drawBellCurve(ctx, mean1, std1, 'blue', 'cyan', dimensions.width, dimensions.height, xRange);
+    drawBellCurve(ctx, mean2, std2, 'red', 'magenta', dimensions.width, dimensions.height, xRange);
+    drawMeanMarkers(ctx, mean1, mean2, dimensions.width, dimensions.height, xRange);
+    drawLegendOnCanvas(ctx, dimensions.width, dimensions.height, mean1, std1, curve1Area, mean2, std2, curve2Area);
 }
 
 function drawGrid(ctx, canvasWidth, canvasHeight, xRange, maxY) {
@@ -268,4 +306,9 @@ document.addEventListener('DOMContentLoaded', function() {
     draw();
 });
 
-window.onresize = draw;
+// Debounced resize handler for better performance
+var resizeTimeout;
+window.onresize = function() {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(draw, 150);
+};
