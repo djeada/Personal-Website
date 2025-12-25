@@ -367,18 +367,24 @@ function playGameOverSound() {
 // Canvas setup
 function resizeCanvas() {
     const parent = gameCanvas.parentNode;
-    const width = parent.clientWidth;
-    const height = parent.clientHeight;
+    const rect = parent.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    
+    // Set canvas resolution to match display size with device pixel ratio for crisp rendering
+    const dpr = window.devicePixelRatio || 1;
+    gameCanvas.width = width * dpr;
+    gameCanvas.height = height * dpr;
+    
+    // Scale context to match device pixel ratio
+    ctx.scale(dpr, dpr);
 
-    gameCanvas.width = width;
-    gameCanvas.height = height;
-
-    gameWidth = gameCanvas.width;
-    gameHeight = gameCanvas.height;
+    gameWidth = width;
+    gameHeight = height;
 
     fallingSpeed = baseSpeed * gameHeight;
     
-    let fontSize = gameCanvas.width <= 500 ? 20 : 28;
+    let fontSize = gameWidth <= 500 ? 20 : 28;
     ctx.font = `bold ${fontSize}px 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif`;
     
     colors = getColors();
@@ -843,6 +849,7 @@ function moveRight() {
 function handleKeyDown(event) {
     if (!isGameStarted) {
         if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
             startGame();
         }
         return;
@@ -850,9 +857,11 @@ function handleKeyDown(event) {
     
     switch (event.key) {
         case 'ArrowLeft':
+            event.preventDefault();
             moveLeft();
             break;
         case 'ArrowRight':
+            event.preventDefault();
             moveRight();
             break;
         case ' ': // Space key for fast drop
