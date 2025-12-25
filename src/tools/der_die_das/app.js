@@ -39,6 +39,7 @@ const difficultyBtns = document.querySelectorAll('.difficulty-btn');
 // Configuration constants
 const MAX_TABLE_ROWS = 10;
 const MAX_SPEED_CAP = 2.5; // Maximum falling speed multiplier
+const SOUND_VOLUME = 0.3; // Volume for loaded sound effects (0.0 to 1.0)
 
 // Game State
 let gameWidth, gameHeight;
@@ -249,30 +250,41 @@ async function loadSoundEffect(url, key) {
     
     try {
         const response = await fetch(url);
+        
+        // Check if response is ok (status 200-299)
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const arrayBuffer = await response.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
         audioBuffers[key] = audioBuffer;
+        console.log(`Successfully loaded ${key} sound`);
     } catch (error) {
-        console.log(`Failed to load ${key} sound, using fallback`);
+        console.log(`Failed to load ${key} sound, using fallback:`, error.message);
     }
 }
 
-// Initialize sound effects - using Freesound.org CC0 sounds via CDN
+// Initialize sound effects - using free sounds from Mixkit
 function initializeSounds() {
-    // Using simple beep sounds as fallback - in production, replace with actual sound file URLs
-    // These URLs would point to free sound files from sources like:
-    // - freesound.org (CC0 licensed)
-    // - zapsplat.com (free tier)
-    // - mixkit.co (free sounds)
+    // Using free sounds from Mixkit.co (all sounds are free to use)
+    // These are actual sound files that will be loaded if available
+    // If loading fails, the game will fallback to synthesized sounds
     
-    // For now, we'll keep using synthesized sounds as they work reliably
-    // To use actual sound files, uncomment below and add valid URLs:
-    /*
-    loadSoundEffect('https://example.com/correct.mp3', 'correct');
-    loadSoundEffect('https://example.com/incorrect.mp3', 'incorrect');
-    loadSoundEffect('https://example.com/levelup.mp3', 'levelup');
-    loadSoundEffect('https://example.com/gameover.mp3', 'gameover');
-    */
+    // Mixkit provides free sound effects under their license
+    // https://mixkit.co/license/#sfxFree
+    
+    // NOTE: For production, consider hosting these sounds locally to:
+    // 1. Avoid external dependencies and potential CORS issues
+    // 2. Implement Subresource Integrity (SRI) checks
+    // 3. Ensure faster loading times
+    // 4. Better control over Content Security Policy (CSP)
+    
+    // Current implementation uses external URLs with graceful fallback
+    loadSoundEffect('https://assets.mixkit.co/active_storage/sfx/2018/2018-preview.mp3', 'correct');
+    loadSoundEffect('https://assets.mixkit.co/active_storage/sfx/2955/2955-preview.mp3', 'incorrect');
+    loadSoundEffect('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3', 'levelup');
+    loadSoundEffect('https://assets.mixkit.co/active_storage/sfx/1788/1788-preview.mp3', 'gameover');
 }
 
 function playSound(frequency, duration, type = 'sine') {
@@ -309,7 +321,7 @@ function playLoadedSound(key, fallbackFn) {
             source.buffer = audioBuffers[key];
             source.connect(gainNode);
             gainNode.connect(audioContext.destination);
-            gainNode.gain.value = 0.3;
+            gainNode.gain.value = SOUND_VOLUME;
             source.start(0);
             return;
         } catch (e) {
