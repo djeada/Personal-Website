@@ -1,8 +1,15 @@
 # Personal Website
 
-Welcome to the GitHub repository for [adamdjellouli.com](https://adamdjellouli.com)! Your feedback, comments, and suggestions for improvements are highly appreciated. Your support is invaluable to me.
+<div align="center">
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/5a8f7823-3cef-4732-807d-6cb1838b9d4c/deploy-status)](https://app.netlify.com/projects/goofy-brahmagupta-0a14f0/deploys)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/djeada/Personal-Website/graphs/commit-activity)
+[![Website](https://img.shields.io/website-up-down-green-red/https/adamdjellouli.com.svg)](https://adamdjellouli.com)
+
+</div>
+
+Welcome to the GitHub repository for [adamdjellouli.com](https://adamdjellouli.com)! This is the source code for my personal website where I share my thoughts, projects, and various topics of interest. Your feedback, comments, and suggestions for improvements are highly appreciated.
 
 ## 📖 Overview
 
@@ -18,13 +25,25 @@ Check out the live website: [adamdjellouli.com](https://adamdjellouli.com)
 
 ## 📑 Table of Contents
 
-- [Philosophy](#💡-philosophy)
-- [Building Blocks](#🛠️-building-blocks)
-- [Technologies](#🔧-technologies)
-- [Getting Started](#🚀-getting-started)
-- [Scripts](#📜-scripts)
-- [Contributing](#🤝-contributing)
-- [License](#📄-license)
+- [Overview](#-overview)
+- [Live Demo](#-live-demo)
+- [Screenshot](#️-screenshot)
+- [Philosophy](#-philosophy)
+- [Building Blocks](#️-building-blocks)
+- [Technologies](#-technologies)
+- [Getting Started](#-getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+- [Scripts](#-scripts)
+  - [Script Descriptions](#script-descriptions)
+  - [Usage](#usage)
+- [Project Structure](#-project-structure)
+- [Contributing](#-contributing)
+- [Troubleshooting](#-troubleshooting)
+- [Roadmap](#-roadmap)
+- [Acknowledgments](#-acknowledgments)
+- [Contact](#-contact)
+- [License](#-license)
 
 ## 💡 Philosophy
 
@@ -61,25 +80,67 @@ This project employs the following technologies:
 
 ## 🚀 Getting Started
 
+Follow these instructions to set up the project on your local machine for development and testing purposes.
+
 ### Prerequisites
 
-- **Node.js** and **npm** installed.
-- **Python 3** installed.
+Ensure you have the following installed on your system:
+
+- **Node.js** (version 14.x or higher)
+- **npm** (usually comes with Node.js)
+- **Python 3** (version 3.7 or higher)
+- **pip** (Python package manager)
+
+You can verify your installations by running:
+
+```bash
+node --version
+npm --version
+python3 --version
+pip3 --version
+```
 
 ### Installation
+
+Follow these steps to get your development environment set up:
 
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/yourusername/yourrepository.git
-cd yourrepository
+git clone https://github.com/djeada/Personal-Website.git
+cd Personal-Website
 ```
 
-2. **Run Build Scripts**
+2. **Install Python dependencies**
 
 ```bash
-python run_all.py
+cd scripts
+pip3 install -r requirements.txt
+cd ..
 ```
+
+3. **Run Build Scripts**
+
+Execute the main build script to generate the website:
+
+```bash
+cd scripts
+python3 run_all.py
+cd ..
+```
+
+The generated website files will be available in the output directory, ready for deployment or local testing.
+
+4. **View the website locally** (optional)
+
+You can use any local web server to view the generated site. For example, using Python's built-in HTTP server:
+
+```bash
+cd src
+python3 -m http.server 8000
+```
+
+Then open your browser and navigate to `http://localhost:8000`
 
 ## 📜 Scripts
 
@@ -87,37 +148,41 @@ This directory contains a set of Python scripts designed to build and maintain t
 
 ### Script Descriptions
 
-- **`apply_common_elements.py`**: Integrates common elements (like headers and footers) across all HTML files in the website, ensuring consistency in design and navigation.
-
-- **`bundle_css.py`**: Consolidates multiple CSS files from the `resources/assets` directory into a single `style.css` file. This improves page load times by reducing the number of HTTP requests.
-
-- **`clean_output_dirs.py`**: Cleans and prepares output directories, ensuring a fresh environment for each build process.
-
-- **`create_site_map.py`**: Generates a sitemap of the website, which is crucial for SEO and helps search engines index the site more effectively.
-
-- **`format.sh`**: A shell script to format and lint code, maintaining code quality and consistency throughout the project.
-
-- **`generate_article_list.py`**: Compiles a list of all articles or blog posts rendered on a specific section of the website (blog).
-
-- **`generate_from_markdown.py`**: Converts Markdown files, primarily used for the blog section, into HTML format for web presentation.
-
-- **`generate_related_articles_section.py`**: Creates a section on each article page that suggests related articles, enhancing user engagement.
-
-- **`generate_table_of_contents.py`**: Produces a table of contents for articles, making longer content more navigable.
-
-- **`get_markdown_urls.py`**: Extracts and lists URLs from Markdown files, which are sources from which the articles will be generated.
-
-- **`run_all.py`**: A comprehensive script that executes all the above scripts in the required sequence. It acts as a one-click solution to rebuild or update the entire website.
+| Script | Description |
+|--------|-------------|
+| **`apply_common_elements.py`** | Integrates common elements (like headers and footers) across all HTML files in the website, ensuring consistency in design and navigation. |
+| **`bundle_css.py`** | Consolidates multiple CSS files from the `resources/assets` directory into a single `style.css` file. This improves page load times by reducing the number of HTTP requests. |
+| **`clean_output_dirs.py`** | Cleans and prepares output directories, ensuring a fresh environment for each build process. |
+| **`create_site_map.py`** | Generates a sitemap of the website, which is crucial for SEO and helps search engines index the site more effectively. |
+| **`format.sh`** | A shell script to format and lint code, maintaining code quality and consistency throughout the project. |
+| **`generate_article_list.py`** | Compiles a list of all articles or blog posts rendered on a specific section of the website (blog). |
+| **`generate_from_markdown.py`** | Converts Markdown files, primarily used for the blog section, into HTML format for web presentation. |
+| **`generate_related_articles_section.py`** | Creates a section on each article page that suggests related articles, enhancing user engagement. |
+| **`generate_table_of_contents.py`** | Produces a table of contents for articles, making longer content more navigable. |
+| **`get_markdown_urls.py`** | Extracts and lists URLs from Markdown files, which are sources from which the articles will be generated. |
+| **`run_all.py`** | A comprehensive script that executes all the above scripts in the required sequence. It acts as a one-click solution to rebuild or update the entire website. |
 
 ### Usage
 
 To run the entire website building process, execute:
 
 ```bash
-python run_all.py
+cd scripts
+python3 run_all.py
 ```
 
-Alternatively, individual scripts can be run separately for specific tasks as needed.
+Alternatively, individual scripts can be run separately for specific tasks as needed. For example:
+
+```bash
+# Generate sitemap only
+python3 create_site_map.py
+
+# Bundle CSS files only
+python3 bundle_css.py
+
+# Generate articles from Markdown
+python3 generate_from_markdown.py
+```
 
 ## 🤝 Contributing
 
@@ -144,6 +209,85 @@ git push origin feature/AmazingFeature
 ```
 
 5. **Open a Pull Request**
+
+Please ensure your code follows the existing style and all tests pass before submitting a pull request.
+
+## 📁 Project Structure
+
+```
+Personal-Website/
+├── images/              # Image assets
+├── scripts/             # Build and maintenance scripts
+│   ├── apply_common_elements.py
+│   ├── bundle_css.py
+│   ├── generate_from_markdown.py
+│   ├── run_all.py
+│   └── ...
+├── src/                 # Source files for the website
+│   ├── articles/        # Article HTML files
+│   ├── building_blocks/ # Common HTML elements (header, footer)
+│   ├── core/            # Core pages (about, blog, projects)
+│   └── tools/           # Interactive tools
+├── .gitignore
+├── LICENSE
+└── README.md
+```
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+**Issue**: Python scripts fail with module import errors
+
+**Solution**: Ensure all dependencies are installed:
+```bash
+cd scripts
+pip3 install -r requirements.txt
+```
+
+**Issue**: Generated website doesn't display correctly
+
+**Solution**: Make sure you've run the complete build process:
+```bash
+cd scripts
+python3 run_all.py
+```
+
+**Issue**: Netlify deployment fails
+
+**Solution**: Check the Netlify badge status above and review the deployment logs in your Netlify dashboard.
+
+### Getting Help
+
+If you encounter any issues not listed here, please [open an issue](https://github.com/djeada/Personal-Website/issues) on GitHub.
+
+## 🗺️ Roadmap
+
+- [x] Basic website structure with HTML/CSS/TypeScript
+- [x] Automated build scripts in Python
+- [x] Blog section with Markdown support
+- [x] Responsive design
+- [x] SEO optimization with sitemap
+- [ ] Dark mode support
+- [ ] Improved accessibility features
+- [ ] Performance optimization
+- [ ] Multi-language support
+
+See the [open issues](https://github.com/djeada/Personal-Website/issues) for a full list of proposed features and known issues.
+
+## 🙏 Acknowledgments
+
+- Thanks to all contributors who have helped improve this project
+- Inspired by the philosophy of building from scratch without frameworks
+- Built with love for the web development community
+
+## 📧 Contact
+
+Adam Djellouli - [@djeada](https://github.com/djeada)
+
+Project Link: [https://github.com/djeada/Personal-Website](https://github.com/djeada/Personal-Website)
+
+Website: [adamdjellouli.com](https://adamdjellouli.com)
 
 ## 📄 License
 
