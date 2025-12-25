@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let result = 'Duplicate Words Analysis\n';
         result += '========================\n\n';
         
-        const sortedDuplicates = duplicates.sort((a, b) => wordCounts[b] - wordCounts[a]);
+        const sortedDuplicates = [...duplicates].sort((a, b) => wordCounts[b] - wordCounts[a]);
         sortedDuplicates.forEach(word => {
             result += `${word}: ${wordCounts[word]}\n`;
         });
@@ -84,9 +84,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
+        const blobUrl = URL.createObjectURL(blob);
+        link.href = blobUrl;
         link.download = 'duplicate-words-analysis.json';
         link.click();
+        URL.revokeObjectURL(blobUrl);
         showNotification('Results downloaded!');
     }
 
@@ -153,7 +155,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const totalWords = words.length;
         const uniqueWords = Object.keys(wordCounts).length;
         const duplicateWords = duplicates.length;
-        const duplicatePercentage = totalWords > 0 ? ((duplicateWords / uniqueWords) * 100).toFixed(1) : 0;
+        
+        // Calculate total occurrences of duplicate words
+        let totalDuplicateOccurrences = 0;
+        duplicates.forEach(word => {
+            totalDuplicateOccurrences += wordCounts[word];
+        });
+        
+        const duplicatePercentage = totalWords > 0 ? ((totalDuplicateOccurrences / totalWords) * 100).toFixed(1) : 0;
         
         statsDisplay.innerHTML = `
             <div class="stats-grid">
