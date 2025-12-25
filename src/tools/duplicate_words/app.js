@@ -16,6 +16,10 @@ document.addEventListener('DOMContentLoaded', function() {
     let debounceTimer = null;
     let currentSort = { column: 'count', direction: 'desc' };
 
+    let lastWordCounts = null;
+    let lastDuplicates = null;
+    let lastNormalizedText = null;
+
     textInput.addEventListener('input', debounceUpdate);
     minLengthInput.addEventListener('input', debounceUpdate);
     minOccurrencesInput.addEventListener('input', debounceUpdate);
@@ -144,6 +148,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const normalizedText = normalizeText(text);
         const wordCounts = getWordCounts(normalizedText);
         const duplicates = getDuplicates(wordCounts);
+
+        // Cache for efficient checkbox updates
+        lastWordCounts = wordCounts;
+        lastDuplicates = duplicates;
+        lastNormalizedText = normalizedText;
 
         updateStats(text, normalizedText, wordCounts, duplicates);
         updateDuplicateTable(wordCounts, duplicates);
@@ -332,11 +341,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const index = parseInt(this.dataset.index, 10);
                 const word = sortedDuplicates[index];
                 checkboxStates[word] = this.checked;
-                const text = textInput.value;
-                const normalizedText = normalizeText(text);
-                const wordCounts = getWordCounts(normalizedText);
-                const duplicates = getDuplicates(wordCounts);
-                highlightText(normalizedText, duplicates);
+                // Use cached values instead of recalculating
+                if (lastNormalizedText && lastDuplicates) {
+                    highlightText(lastNormalizedText, lastDuplicates);
+                }
             });
         });
     }
