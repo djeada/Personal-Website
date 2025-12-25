@@ -1271,17 +1271,6 @@ function initReadingProgress() {
     // Create progress bar
     const progressBar = document.createElement('div');
     progressBar.id = 'reading-progress';
-    progressBar.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 0;
-        height: 3px;
-        background: linear-gradient(90deg, var(--nav-accent, #ea8400), #ff9500);
-        z-index: 9999;
-        transition: width 150ms ease-out;
-        box-shadow: 0 0 10px rgba(234, 132, 0, 0.5);
-    `;
     document.body.appendChild(progressBar);
 
     // Update progress on scroll
@@ -1311,24 +1300,6 @@ function initBackToTop() {
             <path d="M12 19V5M5 12l7-7 7 7"/>
         </svg>
     `;
-    backToTopBtn.style.cssText = `
-        position: fixed;
-        bottom: 2rem;
-        right: 2rem;
-        width: 3rem;
-        height: 3rem;
-        border-radius: 50%;
-        background: var(--nav-accent, #ea8400);
-        color: white;
-        border: none;
-        cursor: pointer;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        transition: all 250ms ease;
-        z-index: 1000;
-    `;
 
     document.body.appendChild(backToTopBtn);
 
@@ -1349,17 +1320,6 @@ function initBackToTop() {
             top: 0,
             behavior: 'smooth'
         });
-    });
-
-    // Hover effects
-    backToTopBtn.addEventListener('mouseenter', () => {
-        backToTopBtn.style.transform = 'translateY(-4px)';
-        backToTopBtn.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.2)';
-    });
-
-    backToTopBtn.addEventListener('mouseleave', () => {
-        backToTopBtn.style.transform = 'translateY(0)';
-        backToTopBtn.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
     });
 
     toggleButton();
