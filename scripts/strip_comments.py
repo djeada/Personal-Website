@@ -43,7 +43,7 @@ def strip_python_comments(content: str) -> str:
 
             if in_multiline_string:
                 cleaned_line += char
-                if i + 2 < len(stripped_line) and stripped_line[i:i+3] == in_multiline_string:
+                if i + 2 <= len(stripped_line) and stripped_line[i:i+3] == in_multiline_string:
                     cleaned_line += stripped_line[i+1:i+3]
                     in_multiline_string = None
                     i += 3
@@ -51,7 +51,7 @@ def strip_python_comments(content: str) -> str:
                 i += 1
                 continue
 
-            if i + 2 < len(stripped_line) and stripped_line[i:i+3] in ('"""', "'''"):
+            if i + 2 <= len(stripped_line) and stripped_line[i:i+3] in ('"""', "'''"):
                 in_multiline_string = stripped_line[i:i+3]
                 cleaned_line += in_multiline_string
                 i += 3
@@ -87,10 +87,42 @@ def strip_python_comments(content: str) -> str:
 
 def strip_css_comments(content: str) -> str:
     """
-    Strips comments from CSS code.
+    Strips comments from CSS code while preserving strings.
     """
-    pattern = r'/\*.*?\*/'
-    return re.sub(pattern, '', content, flags=re.DOTALL)
+    result = []
+    i = 0
+    length = len(content)
+    
+    while i < length:
+        if i + 1 < length and content[i:i+2] == '/*':
+            i += 2
+            while i + 1 <= length and content[i:i+2] != '*/':
+                i += 1
+            if i + 1 <= length:
+                i += 2
+            continue
+        
+        if content[i] in ('"', "'"):
+            delimiter = content[i]
+            result.append(content[i])
+            i += 1
+            while i < length:
+                if content[i] == '\\' and i + 1 < length:
+                    result.append(content[i])
+                    result.append(content[i + 1])
+                    i += 2
+                    continue
+                result.append(content[i])
+                if content[i] == delimiter:
+                    i += 1
+                    break
+                i += 1
+            continue
+        
+        result.append(content[i])
+        i += 1
+    
+    return ''.join(result)
 
 
 def strip_js_comments(content: str) -> str:
@@ -112,9 +144,9 @@ def strip_js_comments(content: str) -> str:
 
         if i + 1 < length and content[i:i+2] == '/*':
             i += 2
-            while i + 1 < length and content[i:i+2] != '*/':
+            while i + 1 <= length and content[i:i+2] != '*/':
                 i += 1
-            if i + 1 < length:
+            if i + 1 <= length:
                 i += 2
             continue
 
@@ -161,7 +193,7 @@ def find_files(directory: Path, extension: str) -> List[Path]:
     """
     Finds all files with the given extension in the directory recursively.
     """
-    return list(directory.glob(f"**/*{extension}"))
+    return list(directory.rglob(f"*{extension}"))
 
 
 def process_file(file_path: Path) -> None:
