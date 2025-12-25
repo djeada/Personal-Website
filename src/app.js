@@ -1368,7 +1368,6 @@ function initBackToTop() {
     const backToTopBtn = document.createElement('button');
     backToTopBtn.id = 'back-to-top';
     backToTopBtn.setAttribute('aria-label', 'Back to top');
-    backToTopBtn.title = 'Back to top';
     backToTopBtn.innerHTML = `
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" y1="19" x2="12" y2="5"></line>
