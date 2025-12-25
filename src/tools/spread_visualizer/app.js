@@ -2,6 +2,11 @@ function gaussian(x, mean, std) {
     return (1 / (std * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mean) / std, 2));
 }
 
+// Constants for consistent drawing
+const LEFT_MARGIN = 50;
+const Y_SCALE_FACTOR = 5000;
+const AXIS_Y_POSITION = 0.95;
+
 function resizeCanvas() {
     var canvas = document.getElementById('canvas');
     var container = canvas.parentElement;
@@ -70,8 +75,8 @@ function draw() {
 }
 
 function drawGrid(ctx, canvasWidth, canvasHeight, xRange, maxY) {
-    const axisCenterY = canvasHeight * 0.95;
-    const scale = canvasWidth / (xRange.max - xRange.min);
+    const axisCenterY = canvasHeight * AXIS_Y_POSITION;
+    const xScale = (canvasWidth - LEFT_MARGIN) / (xRange.max - xRange.min);
     const gridColor = getColorForMode('rgba(200, 200, 200, 0.3)', 'rgba(100, 100, 100, 0.3)');
     const tickInterval = Math.max(1, Math.floor((xRange.max - xRange.min) / 10));
 
@@ -80,7 +85,7 @@ function drawGrid(ctx, canvasWidth, canvasHeight, xRange, maxY) {
 
     // Vertical grid lines
     for (let i = Math.floor(xRange.min); i <= Math.ceil(xRange.max); i += tickInterval) {
-        const x = (i - xRange.min) * scale;
+        const x = LEFT_MARGIN + (i - xRange.min) * xScale;
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, axisCenterY);
@@ -91,9 +96,9 @@ function drawGrid(ctx, canvasWidth, canvasHeight, xRange, maxY) {
     const yScale = (canvasHeight * 0.90) / maxY;
     const yTickInterval = maxY / 5;
     for (let i = 0; i <= 5; i++) {
-        const y = axisCenterY - (i * yTickInterval * yScale * 5000);
+        const y = axisCenterY - (i * yTickInterval * yScale * Y_SCALE_FACTOR);
         ctx.beginPath();
-        ctx.moveTo(0, y);
+        ctx.moveTo(LEFT_MARGIN, y);
         ctx.lineTo(canvasWidth, y);
         ctx.stroke();
     }
@@ -102,9 +107,8 @@ function drawGrid(ctx, canvasWidth, canvasHeight, xRange, maxY) {
 }
 
 function drawAxis(ctx, canvasWidth, canvasHeight, xRange, maxY) {
-    const axisCenterY = canvasHeight * 0.95;
-    const leftMargin = 50;
-    const scale = (canvasWidth - leftMargin) / (xRange.max - xRange.min);
+    const axisCenterY = canvasHeight * AXIS_Y_POSITION;
+    const xScale = (canvasWidth - LEFT_MARGIN) / (xRange.max - xRange.min);
     const axisColor = getColorForMode('black', 'white');
     const textColor = getColorForMode('black', 'white');
     const tickInterval = Math.max(1, Math.floor((xRange.max - xRange.min) / 10));
@@ -113,14 +117,14 @@ function drawAxis(ctx, canvasWidth, canvasHeight, xRange, maxY) {
     ctx.beginPath();
     ctx.strokeStyle = axisColor;
     ctx.lineWidth = 2;
-    ctx.moveTo(leftMargin, axisCenterY);
+    ctx.moveTo(LEFT_MARGIN, axisCenterY);
     ctx.lineTo(canvasWidth, axisCenterY);
     ctx.stroke();
 
     // Y-axis
     ctx.beginPath();
-    ctx.moveTo(leftMargin, 0);
-    ctx.lineTo(leftMargin, axisCenterY);
+    ctx.moveTo(LEFT_MARGIN, 0);
+    ctx.lineTo(LEFT_MARGIN, axisCenterY);
     ctx.stroke();
 
     ctx.fillStyle = textColor;
@@ -128,7 +132,7 @@ function drawAxis(ctx, canvasWidth, canvasHeight, xRange, maxY) {
     
     // X-axis labels
     for (let i = Math.floor(xRange.min); i <= Math.ceil(xRange.max); i += tickInterval) {
-        const x = leftMargin + (i - xRange.min) * scale;
+        const x = LEFT_MARGIN + (i - xRange.min) * xScale;
         ctx.fillText(i.toString(), x - 10, axisCenterY + 20);
         ctx.beginPath();
         ctx.moveTo(x, axisCenterY - 5);
@@ -141,11 +145,11 @@ function drawAxis(ctx, canvasWidth, canvasHeight, xRange, maxY) {
     const yTickInterval = maxY / 5;
     for (let i = 0; i <= 5; i++) {
         const yValue = (i * yTickInterval).toFixed(2);
-        const y = axisCenterY - (i * yTickInterval * yScale * 5000);
+        const y = axisCenterY - (i * yTickInterval * yScale * Y_SCALE_FACTOR);
         ctx.fillText(yValue, 5, y + 5);
         ctx.beginPath();
-        ctx.moveTo(leftMargin - 5, y);
-        ctx.lineTo(leftMargin + 5, y);
+        ctx.moveTo(LEFT_MARGIN - 5, y);
+        ctx.lineTo(LEFT_MARGIN + 5, y);
         ctx.stroke();
     }
     
@@ -162,19 +166,16 @@ function drawAxis(ctx, canvasWidth, canvasHeight, xRange, maxY) {
 }
 
 function drawBellCurve(ctx, mean, std, colorLight, colorDark, canvasWidth, canvasHeight, xRange) {
-    const leftMargin = 50;
-    const axisCenterY = canvasHeight / 2;
-    const xScale = (canvasWidth - leftMargin) / (xRange.max - xRange.min);
-    const yScale = 5000;
-    const yOffset = canvasHeight * 0.95;
+    const xScale = (canvasWidth - LEFT_MARGIN) / (xRange.max - xRange.min);
+    const yOffset = canvasHeight * AXIS_Y_POSITION;
     const curveColor = getColorForMode(colorLight, colorDark);
 
     ctx.beginPath();
     ctx.strokeStyle = curveColor;
     ctx.lineWidth = 2;
     for (let x = -3 * std + mean; x <= 3 * std + mean; x += 0.01) {
-        let plotX = leftMargin + (x - xRange.min) * xScale;
-        let plotY = yOffset - gaussian(x, mean, std) * yScale;
+        let plotX = LEFT_MARGIN + (x - xRange.min) * xScale;
+        let plotY = yOffset - gaussian(x, mean, std) * Y_SCALE_FACTOR;
         ctx.lineTo(plotX, plotY);
     }
     ctx.stroke();
@@ -182,16 +183,15 @@ function drawBellCurve(ctx, mean, std, colorLight, colorDark, canvasWidth, canva
 }
 
 function drawMeanMarkers(ctx, mean1, mean2, canvasWidth, canvasHeight, xRange) {
-    const leftMargin = 50;
-    const axisCenterY = canvasHeight * 0.95;
-    const xScale = (canvasWidth - leftMargin) / (xRange.max - xRange.min);
+    const axisCenterY = canvasHeight * AXIS_Y_POSITION;
+    const xScale = (canvasWidth - LEFT_MARGIN) / (xRange.max - xRange.min);
     
     ctx.save();
     ctx.setLineDash([5, 5]);
     ctx.lineWidth = 1.5;
     
     // Mean 1 marker
-    const x1 = leftMargin + (mean1 - xRange.min) * xScale;
+    const x1 = LEFT_MARGIN + (mean1 - xRange.min) * xScale;
     ctx.strokeStyle = getColorForMode('blue', 'cyan');
     ctx.beginPath();
     ctx.moveTo(x1, 0);
@@ -199,7 +199,7 @@ function drawMeanMarkers(ctx, mean1, mean2, canvasWidth, canvasHeight, xRange) {
     ctx.stroke();
     
     // Mean 2 marker
-    const x2 = leftMargin + (mean2 - xRange.min) * xScale;
+    const x2 = LEFT_MARGIN + (mean2 - xRange.min) * xScale;
     ctx.strokeStyle = getColorForMode('red', 'magenta');
     ctx.beginPath();
     ctx.moveTo(x2, 0);
