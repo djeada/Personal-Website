@@ -57,7 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    fetch('https://api.allorigins.win/get?url=' + encodeURIComponent('https://adamdjellouli.com/tools/cyrillic_quest/words.json'))
+    fetch('words.json')
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -65,24 +65,18 @@ document.addEventListener("DOMContentLoaded", () => {
             return response.json();
         })
         .then(data => {
-            try {
-                words = JSON.parse(data.contents);
-                console.log('Successfully fetched and parsed JSON:', words);
-                populateCategories(Object.keys(words));
-                loadCategory(categorySelect.value);
-                loadingMessage.style.display = 'none';
-                gameArea.style.display = 'block';
-                showToast("Word database loaded successfully!", "success");
-            } catch (error) {
-                console.error('Error parsing JSON:', error, data.contents);
-                loadingMessage.innerHTML = '<span style="color: var(--danger-color);">❌ Error loading data. Please try again later.</span>';
-                showToast("Error loading word database", "error");
-            }
+            words = data;
+            console.log('Successfully loaded word database:', words);
+            populateCategories(Object.keys(words));
+            loadCategory(categorySelect.value);
+            loadingMessage.style.display = 'none';
+            gameArea.style.display = 'block';
+            showToast("Word database loaded successfully!", "success");
         })
         .catch(error => {
-            console.error('Error fetching the words:', error);
-            loadingMessage.innerHTML = '<span style="color: var(--danger-color);">❌ Error fetching data. Please try again later.</span>';
-            showToast("Connection error. Please check your internet.", "error");
+            console.error('Error loading word database:', error);
+            loadingMessage.innerHTML = '<span style="color: var(--danger-color);">❌ Failed to load data. Please refresh the page.</span>';
+            showToast("Error loading word database. Please refresh the page.", "error");
         });
 
     categorySelect.addEventListener("change", () => {
