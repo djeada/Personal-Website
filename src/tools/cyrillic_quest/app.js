@@ -66,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .then(data => {
             words = data;
-            console.log('Successfully fetched and parsed JSON:', words);
+            console.log('Successfully loaded JSON:', words);
             populateCategories(Object.keys(words));
             loadCategory(categorySelect.value);
             loadingMessage.style.display = 'none';
