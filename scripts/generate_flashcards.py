@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Flashcard Generator Script
 
@@ -29,11 +28,7 @@ from urllib.parse import unquote, urlparse
 import markdown
 import requests
 
-# ============================================================================
-# CONFIGURATION
-# ============================================================================
 
-# URLs to fetch flashcards from, organized by category
 URLS_INFO: List[Dict[str, str]] = [
     {
         "url": "https://raw.githubusercontent.com/djeada/Frontend-Notes/main/notes/12_quizes.md",
@@ -61,16 +56,16 @@ URLS_INFO: List[Dict[str, str]] = [
     },
 ]
 
-# Output configuration
+
 OUTPUT_DIR: Path = Path("../src/tools/flash_cards")
 CATEGORIES_FILE: Path = OUTPUT_DIR / "categories.json"
 
-# Network configuration
+
 RETRY_LIMIT: int = 3
 TIMEOUT: int = 15
 MAX_WORKERS: int = 8
 
-# Logging configuration
+
 LOG_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
@@ -81,23 +76,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ============================================================================
-# REGEX PATTERNS
-# ============================================================================
 
-# Pattern to extract flashcards from <details><summary>...</summary>...</details>
 FLASHCARD_PATTERN = re.compile(
     r"<details>\s*<summary>(.*?)</summary>\s*(?:<br\s*/?>)?\s*(.*?)\s*</details>",
     re.DOTALL | re.IGNORECASE,
 )
 
-# Pattern to extract markdown headers (## to ######)
+
 HEADER_PATTERN = re.compile(r"^(#{2,6})\s*(.+)$", re.MULTILINE)
-
-
-# ============================================================================
-# FILE OPERATIONS
-# ============================================================================
 
 
 def atomic_write_json(data: Any, path: Path) -> None:
@@ -132,11 +118,6 @@ def atomic_write_json(data: Any, path: Path) -> None:
         raise
 
 
-# ============================================================================
-# NETWORK OPERATIONS
-# ============================================================================
-
-
 def retry_get(url: str, retries: int = RETRY_LIMIT) -> Optional[str]:
     """
     Download content from a URL with exponential backoff retry logic.
@@ -161,7 +142,9 @@ def retry_get(url: str, retries: int = RETRY_LIMIT) -> Optional[str]:
         except requests.HTTPError as e:
             logger.warning("HTTP error fetching %s: %s (attempt %d)", url, e, attempt)
         except requests.RequestException as e:
-            logger.warning("Request error fetching %s: %s (attempt %d)", url, e, attempt)
+            logger.warning(
+                "Request error fetching %s: %s (attempt %d)", url, e, attempt
+            )
 
         if attempt < retries:
             wait_time = 2 ** (attempt - 1)
@@ -170,11 +153,6 @@ def retry_get(url: str, retries: int = RETRY_LIMIT) -> Optional[str]:
 
     logger.error("Failed to fetch %s after %d attempts", url, retries)
     return None
-
-
-# ============================================================================
-# MARKDOWN PROCESSING
-# ============================================================================
 
 
 def markdown_to_html(md_text: str) -> str:
@@ -220,11 +198,6 @@ def extract_subcategories_and_sections(content: str) -> List[Tuple[str, str]]:
     return sections if sections else [("Default", content)]
 
 
-# ============================================================================
-# FLASHCARD PROCESSING
-# ============================================================================
-
-
 def parse_flashcards(section: str) -> List[Dict[str, str]]:
     """
     Extract flashcards from a markdown section.
@@ -244,16 +217,16 @@ def parse_flashcards(section: str) -> List[Dict[str, str]]:
         front_raw = match.group(1).strip()
         back_raw = match.group(2).strip()
 
-        # Convert markdown to HTML
         front_html = markdown_to_html(front_raw)
         back_html = markdown_to_html(back_raw)
 
-        # Skip empty cards
         if front_html and back_html:
-            cards.append({
-                "front": front_html,
-                "back": back_html,
-            })
+            cards.append(
+                {
+                    "front": front_html,
+                    "back": back_html,
+                }
+            )
 
     return dedupe_cards(cards)
 
@@ -333,11 +306,6 @@ def merge_flashcards(
     return existing
 
 
-# ============================================================================
-# CATEGORY PROCESSING
-# ============================================================================
-
-
 def save_category_to_json(
     cards_by_subcategory: Dict[str, List[Dict[str, str]]],
     category: str,
@@ -356,14 +324,13 @@ def save_category_to_json(
     Returns:
         The total number of flashcards saved
     """
-    # Merge with existing data if file exists
+
     if output_path.exists():
         logger.info("Merging with existing data from %s", output_path)
         try:
             existing_data = json.loads(output_path.read_text(encoding="utf-8"))
             existing_subcategories = {
-                s["name"]: s["cards"]
-                for s in existing_data.get("subcategories", [])
+                s["name"]: s["cards"] for s in existing_data.get("subcategories", [])
             }
             cards_by_subcategory = merge_flashcards(
                 existing_subcategories, cards_by_subcategory
@@ -371,7 +338,6 @@ def save_category_to_json(
         except (json.JSONDecodeError, KeyError) as e:
             logger.warning("Could not parse existing file, overwriting: %s", e)
 
-    # Build output data structure
     data = {
         "category": category,
         "subcategories": [
@@ -406,15 +372,12 @@ def process_category(category: str, urls: List[str]) -> int:
         if not content:
             continue
 
-        # Extract fallback name from URL path
         path = unquote(urlparse(url).path)
         fallback_name = Path(path).stem.replace("_", " ").title()
 
-        # Group cards by subcategory
         grouped = group_cards_by_subcategory(content, fallback_name)
         all_cards = merge_flashcards(all_cards, grouped)
 
-    # Generate output filename
     output_filename = category.replace(" ", "_").lower() + ".json"
     output_path = OUTPUT_DIR / output_filename
 
@@ -440,19 +403,12 @@ def update_categories_index(categories: Set[str]) -> None:
     logger.info("Updated categories index with %d categories", len(category_list))
 
 
-# ============================================================================
-# MAIN ENTRY POINT
-# ============================================================================
-
-
 def main() -> None:
     """Main entry point for the flashcard generator."""
     logger.info("Starting flashcard generation...")
 
-    # Ensure output directory exists
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Organize URLs by category
     category_urls: Dict[str, List[str]] = {}
     categories: Set[str] = set()
 
@@ -464,7 +420,6 @@ def main() -> None:
 
     logger.info("Found %d categories to process", len(categories))
 
-    # Process categories concurrently
     total_cards = 0
     num_workers = min(MAX_WORKERS, len(category_urls))
 
@@ -482,7 +437,6 @@ def main() -> None:
             except Exception as e:
                 logger.error("Error processing category '%s': %s", category, e)
 
-    # Update categories index
     update_categories_index(categories)
 
     logger.info(

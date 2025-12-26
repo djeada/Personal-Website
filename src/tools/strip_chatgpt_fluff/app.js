@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", function() {
-    // DOM Elements
+
     const editorText = document.getElementById("editor-text");
     const processButton = document.getElementById("process");
     const clearButton = document.getElementById("clear");
@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const historyContent = document.getElementById("history-content");
     const toastContainer = document.getElementById("toast-container");
 
-    // Option checkboxes
+
     const removeAllStars = document.getElementById("remove-all-stars");
     const confirmStep = document.getElementById("confirm-step");
     const removeBetween = document.getElementById("remove-between");
@@ -32,46 +32,46 @@ document.addEventListener("DOMContentLoaded", function() {
     const searchText = document.getElementById("search-text");
     const replaceTextInput = document.getElementById("replace-text");
 
-    // Preset buttons
+
     const presetButtons = document.querySelectorAll(".preset-option");
 
-    // Stats elements
+
     const charCount = document.getElementById("char-count");
     const wordCount = document.getElementById("word-count");
     const lineCount = document.getElementById("line-count");
     const readTime = document.getElementById("read-time");
 
-    // History management
+
     let history = [];
     let historyIndex = -1;
     let isUndoRedo = false;
     const MAX_HISTORY = 50;
 
-    // Toast notification system
+
     function showToast(message, type = "info") {
         const toast = document.createElement("div");
         toast.className = `toast ${type}`;
-        
+
         const icons = {
             success: "✅",
             error: "❌",
             info: "ℹ️",
             warning: "⚠️"
         };
-        
+
         toast.innerHTML = `
             <span class="toast-icon">${icons[type] || icons.info}</span>
             <span class="toast-message">${message}</span>
         `;
-        
+
         toastContainer.appendChild(toast);
-        
+
         setTimeout(() => {
             toast.remove();
         }, 3000);
     }
 
-    // Update stats
+
     function updateStats() {
         const text = editorText.value;
         const chars = text.length;
@@ -86,30 +86,30 @@ document.addEventListener("DOMContentLoaded", function() {
         readTime.textContent = `${minutes} min`;
     }
 
-    // Save state to history
+
     function saveState() {
         if (isUndoRedo) return;
         if (historyIndex < history.length - 1) {
             history = history.slice(0, historyIndex + 1);
         }
-        
+
         const state = {
             text: editorText.value,
             timestamp: new Date()
         };
-        
+
         history.push(state);
         if (history.length > MAX_HISTORY) {
             history.shift();
-            historyIndex--; // Adjust index when oldest entry is removed
+            historyIndex--;
         }
         historyIndex++;
-        
+
         updateHistoryPanel();
         updateStats();
     }
 
-    // Update history panel
+
     function updateHistoryPanel() {
         if (history.length <= 1) {
             historyContent.innerHTML = '<div class="history-empty"><p>No history yet. Make some changes!</p></div>';
@@ -121,7 +121,7 @@ document.addEventListener("DOMContentLoaded", function() {
             const time = state.timestamp.toLocaleTimeString();
             const preview = state.text.substring(0, 50).replace(/\n/g, " ") || "(empty)";
             const isActive = realIdx === historyIndex ? "active" : "";
-            
+
             return `
                 <div class="history-item ${isActive}" data-index="${realIdx}">
                     <span class="history-time">${time}</span>
@@ -132,7 +132,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         historyContent.innerHTML = items;
 
-        // Add click handlers
+
         historyContent.querySelectorAll(".history-item").forEach(item => {
             item.addEventListener("click", () => {
                 const idx = parseInt(item.dataset.index);
@@ -141,7 +141,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // Restore history state
+
     function restoreHistoryState(idx) {
         if (idx >= 0 && idx < history.length) {
             isUndoRedo = true;
@@ -178,15 +178,15 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    // Initialize history
+
     saveState();
 
-    // Input event listeners
+
     editorText.addEventListener("input", () => {
         saveState();
     });
 
-    // Checkbox interactions
+
     removeAllStars.addEventListener("change", function() {
         if (removeAllStars.checked) {
             confirmStep.checked = false;
@@ -199,7 +199,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
-    // Preset configurations
+
     const presets = {
         minimal: {
             removeAllStars: true,
@@ -254,7 +254,7 @@ document.addEventListener("DOMContentLoaded", function() {
         simplifyTextCheckbox.checked = preset.simplifyText;
         trimListsCheckbox.checked = preset.trimListsBeforeColon;
 
-        // Update active state
+
         presetButtons.forEach(btn => {
             btn.classList.toggle("active", btn.dataset.preset === presetName);
         });
@@ -262,19 +262,19 @@ document.addEventListener("DOMContentLoaded", function() {
         showToast(`${presetName.charAt(0).toUpperCase() + presetName.slice(1)} preset applied`, "success");
     }
 
-    // Preset button handlers
+
     presetButtons.forEach(btn => {
         btn.addEventListener("click", () => {
             applyPreset(btn.dataset.preset);
         });
     });
 
-    // Reset defaults
+
     resetDefaults.addEventListener("click", () => {
         applyPreset("standard");
     });
 
-    // Card toggle functionality
+
     document.querySelectorAll(".card-toggle").forEach(toggle => {
         toggle.addEventListener("click", () => {
             const expanded = toggle.getAttribute("aria-expanded") === "true";
@@ -282,13 +282,13 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
-    // History panel toggle
+
     toggleHistory.addEventListener("click", () => {
         historyContent.classList.toggle("collapsed");
         toggleHistory.textContent = historyContent.classList.contains("collapsed") ? "▶" : "▼";
     });
 
-    // File upload handling
+
     uploadBtn.addEventListener("click", () => {
         fileInput.click();
     });
@@ -313,7 +313,7 @@ document.addEventListener("DOMContentLoaded", function() {
         reader.readAsText(file);
     }
 
-    // Paste button
+
     pasteBtn.addEventListener("click", async () => {
         try {
             const text = await navigator.clipboard.readText();
@@ -325,7 +325,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
-    // Drag and drop handling
+
     ["dragenter", "dragover", "dragleave", "drop"].forEach(eventName => {
         editorText.addEventListener(eventName, preventDefaults, false);
         document.body.addEventListener(eventName, preventDefaults, false);
@@ -356,19 +356,19 @@ document.addEventListener("DOMContentLoaded", function() {
         dropZone.classList.remove("active");
     });
 
-    // Keyboard shortcuts
+
     document.addEventListener("keydown", (e) => {
-        // Ctrl+Enter to process
+
         if (e.ctrlKey && e.key === "Enter") {
             e.preventDefault();
             processButton.click();
         }
-        // Ctrl+Z to undo (when not focused on textarea)
+
         if (e.ctrlKey && e.key === "z" && document.activeElement !== editorText) {
             e.preventDefault();
             undo();
         }
-        // Ctrl+Y to redo
+
         if (e.ctrlKey && e.key === "y") {
             e.preventDefault();
             redo();
@@ -395,7 +395,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 newLines.push(line);
             } else {
                 if (inList && line.trim() === "") {
-                    // Skip empty lines between list items
+
                     return;
                 } else {
                     inList = false;
@@ -458,67 +458,60 @@ document.addEventListener("DOMContentLoaded", function() {
         editorText.value = newLines.join("\n");
     }
 
-    /*
-    implements the three main formatting rules while never altering lines inside code blocks, math blocks, or table lines (“forbidden zones”). The passes proceed in this order:
 
-        Pass 0: Remove lines containing only - - - ...
-        Pass 1: Insert blank lines around recognized elements (headings, lists, code/math blocks, tables) but do no changes inside them.
-        Pass 2: Collapse multiple consecutive blank lines outside forbidden zones (keep only one).
-        Pass 3: Remove any blank lines that appear between consecutive list items (last step).
-        */
     function correctLines() {
-        // 0) Check if corrections are enabled
+
         if (!lineCorrectionCheckbox.checked) return;
         saveState();
 
-        // 1) Split the editor text into lines
+
         let lines = editorText.value.split("\n");
 
-        // ------------------------------------------------------------------------
-        // Helper functions
-        // ------------------------------------------------------------------------
+
+
+
 
         function isListItem(line) {
-            // Matches, e.g., '- something' or '* something' (with optional indentation)
+
             return /^\s*[-*]\s+/.test(line);
         }
 
         function isRomanHeading(line) {
-            // Matches uppercase Roman numerals followed by a dot and space
-            // e.g. "I. Title", "XVII. Topic"
+
+
             return /^[IVXLCDM]+\.\s/.test(line.trim());
         }
 
         function isTableLine(line) {
-            // Treat as a table line if it starts and ends with '|'
-            // e.g. "| Col1 | Col2 |"
+
+
             let t = line.trim();
             return t.startsWith("|") && t.endsWith("|");
         }
 
-        // ------------------------------------------------------------------------
-        // Pass 0: Remove lines that ONLY contain minus signs (like "----")
-        // ------------------------------------------------------------------------
+
+
+
         let pass0 = [];
         for (let line of lines) {
             let t = line.trim();
-            // Skip lines that ONLY have '-' characters
+
             if (/^-+$/.test(t)) {
                 continue;
             }
             pass0.push(line);
         }
 
-        // ------------------------------------------------------------------------
-        // Pass 1: Insert blank lines above/below certain elements
-        //         (but do NOT modify lines inside code/math/table blocks)
-        // ------------------------------------------------------------------------
+
+
+
+
         let pass1 = [];
-        let inBlock = false; // for code/math
-        let blockMarker = null; // will store "```" or "$$"
+        let inBlock = false;
+        let blockMarker = null;
 
         function pushBlankLineIfNeeded(arr) {
-            // Insert a blank line if the last line isn't already blank
+
             if (arr.length && arr[arr.length - 1].trim() !== "") {
                 arr.push("");
             }
@@ -528,11 +521,11 @@ document.addEventListener("DOMContentLoaded", function() {
             let line = pass0[i];
             let t = line.trim();
 
-            // Check if this line is the start/end of code or math block
-            // (forbidden zone)
+
+
             if (!inBlock) {
                 if (t === "```" || t === "$$") {
-                    // Insert blank line before block
+
                     pushBlankLineIfNeeded(pass1);
                     pass1.push(line);
                     inBlock = true;
@@ -540,26 +533,26 @@ document.addEventListener("DOMContentLoaded", function() {
                     continue;
                 }
             } else {
-                // We are inside a code/math block
+
                 pass1.push(line);
-                // Check if it's the closing marker
+
                 if (t === blockMarker) {
                     inBlock = false;
                     blockMarker = null;
-                    // Insert blank line after block
+
                     pushBlankLineIfNeeded(pass1);
                 }
                 continue;
             }
 
-            // If we get here, we're NOT in a code/math block
-            // but we also need to treat table lines as forbidden.
+
+
             if (isTableLine(line)) {
-                // Insert blank line before the table block
+
                 pushBlankLineIfNeeded(pass1);
                 pass1.push(line);
 
-                // Collect any subsequent table lines as one block
+
                 while (i + 1 < pass0.length) {
                     let nextT = pass0[i + 1].trim();
                     if (nextT.startsWith("|") && nextT.endsWith("|")) {
@@ -570,27 +563,27 @@ document.addEventListener("DOMContentLoaded", function() {
                     }
                 }
 
-                // Insert blank line after table block
+
                 pushBlankLineIfNeeded(pass1);
             } else if (/^#+\s/.test(t) || isRomanHeading(line)) {
-                // Heading => insert blank line above and below
+
                 pushBlankLineIfNeeded(pass1);
                 pass1.push(line);
                 pass1.push("");
             } else if (isListItem(line)) {
-                // List item => insert blank line above
+
                 pushBlankLineIfNeeded(pass1);
                 pass1.push(line);
             } else {
-                // Normal line => just push
+
                 pass1.push(line);
             }
         }
 
-        // ------------------------------------------------------------------------
-        // Pass 2: Collapse multiple consecutive blank lines
-        //         (but skip inside code/math/table blocks)
-        // ------------------------------------------------------------------------
+
+
+
+
         let pass2 = [];
         inBlock = false;
         blockMarker = null;
@@ -602,28 +595,28 @@ document.addEventListener("DOMContentLoaded", function() {
             let tableCheck = isTableLine(line);
 
             if (!inBlock && !tableCheck) {
-                // Check code/math block start
+
                 if (t === "```" || t === "$$") {
                     pass2.push(line);
                     inBlock = true;
                     blockMarker = t;
                     lastWasBlank = false;
                 } else if (t === "") {
-                    // If it's a blank line, only push it if we haven't just pushed one
+
                     if (!lastWasBlank) {
                         pass2.push("");
                         lastWasBlank = true;
                     }
                 } else {
-                    // Normal line => push it
+
                     pass2.push(line);
                     lastWasBlank = false;
                 }
             } else {
-                // Either inside code/math block OR it's a table line => pass through
+
                 pass2.push(line);
 
-                // If inside code/math, check for the end marker
+
                 if (!tableCheck && t === blockMarker) {
                     inBlock = false;
                     blockMarker = null;
@@ -632,10 +625,10 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         }
 
-        // ------------------------------------------------------------------------
-        // Pass 3: Remove any blank lines that appear between consecutive list items
-        //         (outside forbidden zones)
-        // ------------------------------------------------------------------------
+
+
+
+
         let pass3 = [];
         inBlock = false;
         blockMarker = null;
@@ -646,21 +639,19 @@ document.addEventListener("DOMContentLoaded", function() {
             let tableCheck = isTableLine(line);
 
             if (!inBlock && !tableCheck) {
-                // Check if it's start/end of code/math
+
                 if (t === "```" || t === "$$") {
                     pass3.push(line);
                     inBlock = true;
                     blockMarker = t;
-                }
-                // If it's a blank line, see if the previous line and the next line are list items
-                else if (t === "" && i + 1 < pass2.length) {
+                } else if (t === "" && i + 1 < pass2.length) {
                     let nextLine = pass2[i + 1];
                     if (
                         pass3.length > 0 &&
                         isListItem(pass3[pass3.length - 1]) &&
                         isListItem(nextLine)
                     ) {
-                        // Skip pushing this blank line
+
                         continue;
                     }
                     pass3.push(line);
@@ -668,7 +659,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     pass3.push(line);
                 }
             } else {
-                // Inside code/math block or table => pass through unmodified
+
                 pass3.push(line);
                 if (!tableCheck && t === blockMarker) {
                     inBlock = false;
@@ -677,19 +668,19 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         }
 
-        // Optionally ensure a trailing blank line at the end
+
         if (pass3.length && pass3[pass3.length - 1].trim() !== "") {
             pass3.push("");
         }
 
-        // 5) Rejoin everything
+
         editorText.value = pass3.join("\n");
     }
 
 
 
     function removeTabIndent() {
-        // Check if tab correction is enabled
+
         if (!tabCorrectionCheckbox.checked) return;
 
         saveState();
@@ -698,13 +689,13 @@ document.addEventListener("DOMContentLoaded", function() {
         let newLines = [];
 
         lines.forEach(line => {
-            // Regex to match tabs or up to 4 leading spaces
+
             const match = line.match(/^(\t| {1,4})/);
 
             if (match) {
-                newLines.push(line.substring(match[0].length)); // Remove the matched tab or spaces
+                newLines.push(line.substring(match[0].length));
             } else {
-                newLines.push(line); // If no tab or leading spaces, keep the line as it is
+                newLines.push(line);
             }
         });
 
@@ -712,8 +703,8 @@ document.addEventListener("DOMContentLoaded", function() {
         editorText.value = newLines.join("\n");
     }
 
-    // TODO:
-    // - add remove ,\
+
+
     function correctLatex() {
         if (!latexCorrectionCheckbox.checked) return;
         saveState();
@@ -722,24 +713,24 @@ document.addEventListener("DOMContentLoaded", function() {
         let result = '';
         let i = 0;
 
-        // -------------------------------------------------------------
-        // 1) Helper: checks if a given `index` is "escaped" by backslash
-        // -------------------------------------------------------------
+
+
+
         function isEscaped(str, index) {
             let backslashCount = 0;
             let pos = index - 1;
-            // Count consecutive backslashes going backward
+
             while (pos >= 0 && str[pos] === '\\') {
                 backslashCount++;
                 pos--;
             }
-            // If we have an odd number of backslashes, it's escaped
+
             return (backslashCount % 2) === 1;
         }
 
-        // -------------------------------------------------------------
-        // 2) Helper: apply small corrections to math content itself
-        // -------------------------------------------------------------
+
+
+
         function applyCorrections(content) {
 
             content = content.trim();
@@ -755,10 +746,10 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
 
-        // -------------------------------------------------------------
-        // 3) Helper: scans text from `startIndex` until unescaped `endTag`
-        //    e.g., for \[...\], endTag = '\]'; for $...$, endTag = '$'
-        // -------------------------------------------------------------
+
+
+
+
         function getMathContent(str, startIndex, endTag) {
             let pos = startIndex;
             while (pos < str.length) {
@@ -773,52 +764,49 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
                 pos++;
             }
-            return null; // no matching endTag found
+            return null;
         }
 
-        // -------------------------------------------------------------
-        // 4) Main parse loop
-        // -------------------------------------------------------------
+
+
+
         while (i < text.length) {
-            // --- (A) Convert \[...\] to $$...$$ or \(...\) to $...$ ---
+
             if (
                 text[i] === '\\' &&
                 (text[i + 1] === '[' || text[i + 1] === '(') &&
                 !isEscaped(text, i)
             ) {
-                const twoChar = text.substr(i, 2); // "\[" or "\("
+                const twoChar = text.substr(i, 2);
                 let endTag, replacement;
 
                 if (twoChar === '\\[') {
-                    endTag = '\\]'; // we look for "\]"
+                    endTag = '\\]';
                     replacement = '$$';
                 } else {
-                    endTag = '\\)'; // we look for "\)"
+                    endTag = '\\)';
                     replacement = '$';
                 }
 
-                // Skip the 2-character delimiter
+
                 const startSearch = i + 2;
                 const found = getMathContent(text, startSearch, endTag);
 
                 if (found) {
-                    // content inside the brackets
+
                     const rawMath = found.content;
                     const corrected = applyCorrections(rawMath);
-                    // Add the replacement delimiters: $$...$$ or $...$
+
                     result += replacement + corrected + replacement;
                     i = found.endIndex;
                     continue;
                 } else {
-                    // No matching "\]" or "\)", just copy this character
+
                     result += text[i];
                     i++;
                 }
-            }
+            } else if (text[i] === '$' && !isEscaped(text, i)) {
 
-            // --- (B) Check for "$" or "$$" math blocks ---
-            else if (text[i] === '$' && !isEscaped(text, i)) {
-                // Determine if it's a single-dollar or double-dollar block
                 let delimiter = '$';
                 if (text[i + 1] === '$') {
                     delimiter = '$$';
@@ -833,26 +821,23 @@ document.addEventListener("DOMContentLoaded", function() {
                     i = found.endIndex;
                     continue;
                 } else {
-                    // No closing match
+
                     result += text[i];
                     i++;
                 }
-            }
-
-            // --- (C) Otherwise, copy normal text ---
-            else {
+            } else {
                 result += text[i];
                 i++;
             }
         }
 
-        // Finally, set the transformed result back into your editor
+
         editorText.value = result;
     }
 
 
     function trimListItemsBeforeColon() {
-        // Check if trimming is enabled
+
         if (!trimListsCheckbox.checked) return;
 
         saveState();
@@ -863,20 +848,20 @@ document.addEventListener("DOMContentLoaded", function() {
         lines.forEach(line => {
             let trimmedLine = line.trim();
 
-            // Check if the line starts with a numeral, hyphen, or star and contains a colon
-            let listStartRegex = /^(\d+\.|\*|-)/; // Regex for numbers followed by a dot, star, or hyphen
+
+            let listStartRegex = /^(\d+\.|\*|-)/;
 
             if (listStartRegex.test(trimmedLine) && trimmedLine.includes(":")) {
-                // Find the position of the first colon
+
                 let colonIndex = trimmedLine.indexOf(":");
 
-                // Get only the part after the colon, while keeping the list symbol at the beginning
-                let listSymbolMatch = trimmedLine.match(listStartRegex)[0]; // Extract the list symbol (e.g., '- ', '1. ', '* ')
+
+                let listSymbolMatch = trimmedLine.match(listStartRegex)[0];
                 let newText = listSymbolMatch + " " + trimmedLine.slice(colonIndex + 1).trim();
 
                 newLines.push(newText);
             } else {
-                // If no colon or does not match list pattern, leave it unchanged
+
                 newLines.push(line);
             }
         });
@@ -884,7 +869,7 @@ document.addEventListener("DOMContentLoaded", function() {
         editorText.value = newLines.join("\n");
     }
 
-    // Utility function to convert normal text to bold UTF-8 characters for popup
+
     function toBoldUTF8(text) {
         const boldOffset = {
             a: '𝗮',
@@ -966,14 +951,14 @@ document.addEventListener("DOMContentLoaded", function() {
 
         if (removeAllStars.checked) {
             if (removeBetween.checked) {
-                // Remove everything after the second `**` up to and including the next whitespace
+
                 text = text.replace(/\*\*[^*]*\*\*[^ ]*\s*/g, '');
             }
-            // Remove all ** markers
+
             text = text.replace(/\*\*/g, '');
         } else if (confirmStep.checked) {
             let matches = [];
-            let regex = /\*\*(.*?)\*\*/gs; // Match content between **
+            let regex = /\*\*(.*?)\*\*/gs;
             let match;
 
             while ((match = regex.exec(text)) !== null) {
@@ -988,46 +973,46 @@ document.addEventListener("DOMContentLoaded", function() {
             for (let i = 0; i < matches.length; i++) {
                 let m = matches[i];
 
-                // Find the entire line containing the match
+
                 let lineStart = text.lastIndexOf('\n', m.index) + 1;
                 let lineEnd = text.indexOf('\n', m.index);
                 if (lineEnd === -1) lineEnd = text.length;
                 let fullLine = text.slice(lineStart, lineEnd);
 
-                // Convert the bold part to UTF-8 bold characters for display
+
                 let displayLine = fullLine.replace(m.match, toBoldUTF8(m.content));
 
-                // Show confirmation dialog with the full line using bold UTF-8 characters
+
                 let userConfirmed = confirm(`Do you want to remove this text?\n"${displayLine}"`);
                 if (userConfirmed) {
-                    // Apply the confirmed removal immediately
+
                     text = text.slice(0, m.index - offset) + text.slice(m.index - offset + m.match.length);
                     offset += m.match.length;
                 } else {
-                    // Stop further popups, but apply the changes confirmed so far
+
                     break;
                 }
             }
         } else if (removeBetween.checked) {
-            // Remove everything after the second ** up to and including the next whitespace
+
             text = text.replace(/\*\*[^*]*\*\*[^ ]*\s*/g, '');
         }
 
-        // Update the editor text with the processed version, including confirmed removals
+
         editorText.value = text;
     }
 
     function simplifyText() {
-        // Check if Text Simplification is enabled
+
         if (!simplifyTextCheckbox.checked) return;
 
-        saveState(); // Save current editor state
+        saveState();
 
         let text = editorText.value;
         let result = '';
         let i = 0;
 
-        // Helper function to check if the character at position index is escaped
+
         function isEscaped(text, index) {
             let backslashCount = 0;
             index--;
@@ -1038,9 +1023,9 @@ document.addEventListener("DOMContentLoaded", function() {
             return backslashCount % 2 === 1;
         }
 
-        // Internal function to apply word replacements in text blocks
+
         function applySimplifications(content) {
-            // Define the mapping of complex words to simpler alternatives
+
             const replacements = {
                 "work": "function",
                 "works": "functions",
@@ -1425,21 +1410,21 @@ document.addEventListener("DOMContentLoaded", function() {
             };
 
 
-            // Create a regex pattern to match all keys in the replacements map
-            // The 'i' flag makes it case-insensitive
+
+
             const pattern = new RegExp(`\\b(${Object.keys(replacements).join('|')})\\b`, 'gi');
 
-            // Replace matched words using the replacements map
+
             content = content.replace(pattern, function(match) {
-                // Preserve the original case (capitalize if necessary)
+
                 const lowerMatch = match.toLowerCase();
                 let replacement = replacements[lowerMatch];
 
-                if (!replacement) return match; // If no replacement found, return the original word
+                if (!replacement) return match;
 
-                // Handle case preservation
+
                 if (match[0] === match[0].toUpperCase()) {
-                    // Capitalize the first letter of the replacement
+
                     replacement = replacement.charAt(0).toUpperCase() + replacement.slice(1);
                 }
 
@@ -1450,14 +1435,14 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         while (i < text.length) {
-            // Check for unescaped \[ or \(
+
             if (text[i] === '\\' && (text[i + 1] === '[' || text[i + 1] === '(') && !isEscaped(text, i)) {
-                const startDelimiter = text.substr(i, 2); // '\[' or '\('
+                const startDelimiter = text.substr(i, 2);
                 const endDelimiter = startDelimiter === '\\[' ? '\\]' : '\\)';
                 const replacementDelimiter = startDelimiter === '\\[' ? '$$' : '$';
-                let j = i + 2; // Position after the opening delimiter
+                let j = i + 2;
 
-                // Skip optional whitespace/newlines after opening delimiter
+
                 if (startDelimiter === '\\[') {
                     while (j < text.length && /\s/.test(text[j])) {
                         j++;
@@ -1468,15 +1453,15 @@ document.addEventListener("DOMContentLoaded", function() {
                     }
                 }
 
-                let contentStart = j; // Start position of the content
+                let contentStart = j;
 
-                // Search for the closing delimiter
+
                 let contentEnd = null;
-                let k; // Declare k here
+                let k;
                 while (j < text.length) {
-                    k = j; // Assign to k inside the loop
+                    k = j;
 
-                    // Before checking for endDelimiter, skip optional whitespace/newlines before it
+
                     if (endDelimiter === '\\]') {
                         while (k < text.length && /\s/.test(text[k])) {
                             k++;
@@ -1487,9 +1472,9 @@ document.addEventListener("DOMContentLoaded", function() {
                         }
                     }
 
-                    // Check for unescaped closing delimiter at position k
+
                     if (text.substr(k, endDelimiter.length) === endDelimiter && !isEscaped(text, k)) {
-                        contentEnd = j; // End position of the content (before skipped whitespace)
+                        contentEnd = j;
                         break;
                     } else {
                         j++;
@@ -1497,20 +1482,20 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
 
                 if (contentEnd !== null) {
-                    // Found matching closing delimiter
+
                     let content = text.substring(contentStart, contentEnd);
 
-                    // Do NOT apply simplifications within math blocks
+
                     result += replacementDelimiter + content + replacementDelimiter;
-                    // Move i to after the closing delimiter and any skipped whitespace
+
                     i = k + endDelimiter.length;
                 } else {
-                    // No matching closing delimiter, copy the opening delimiter and move on
+
                     result += text[i];
                     i++;
                 }
             } else if (text[i] === '$') {
-                // Handle existing $...$ or $$...$$ blocks
+
                 let delimiter = '$';
                 if (text[i + 1] === '$') {
                     delimiter = '$$';
@@ -1521,38 +1506,38 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 let contentStart = j;
 
-                // Find the matching closing delimiter
+
                 let contentEnd = text.indexOf(endDelimiter, j);
                 while (contentEnd !== -1 && isEscaped(text, contentEnd)) {
-                    // If the found delimiter is escaped, search for the next one
+
                     contentEnd = text.indexOf(endDelimiter, contentEnd + endDelimiter.length);
                 }
 
                 if (contentEnd !== -1) {
-                    // Found matching closing delimiter
+
                     let content = text.substring(contentStart, contentEnd);
 
-                    // Do NOT apply simplifications within math blocks
+
                     result += startDelimiter + content + endDelimiter;
                     i = contentEnd + endDelimiter.length;
                 } else {
-                    // No matching closing delimiter, copy the current character and move on
+
                     result += text[i];
                     i++;
                 }
             } else {
-                // Handle regular text outside math blocks
-                // Find the next delimiter to minimize processing
+
+
                 let nextDelimiterIndex = text.indexOf('\\[', i);
                 let nextDelimiterIndex2 = text.indexOf('\\(', i);
                 let nextDelimiterIndex3 = text.indexOf('$', i);
                 let nextIndices = [nextDelimiterIndex, nextDelimiterIndex2, nextDelimiterIndex3].filter(index => index !== -1);
                 let nextIndex = nextIndices.length > 0 ? Math.min(...nextIndices) : text.length;
 
-                // Extract the text block to simplify
+
                 let textBlock = text.substring(i, nextIndex);
 
-                // Apply simplifications to the text block
+
                 textBlock = applySimplifications(textBlock);
 
                 result += textBlock;
@@ -1560,7 +1545,7 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         }
 
-        // Set the simplified text back to the editor
+
         editorText.value = result;
     }
 
@@ -1578,7 +1563,7 @@ document.addEventListener("DOMContentLoaded", function() {
         const regex = new RegExp(searchValue, "g");
         const originalLength = editorText.value.length;
         editorText.value = editorText.value.replace(regex, replaceValue);
-        
+
         if (editorText.value.length !== originalLength) {
             showToast("Text replaced successfully", "success");
         } else {
@@ -1589,7 +1574,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     processButton.addEventListener("click", () => {
         const originalText = editorText.value;
-        
+
         processText();
         replaceNumericalListsWithRoman();
         trimListItemsBeforeColon();
@@ -1598,9 +1583,9 @@ document.addEventListener("DOMContentLoaded", function() {
         correctLatex();
         correctLines();
         simplifyText();
-        
+
         updateStats();
-        
+
         if (editorText.value !== originalText) {
             showToast("Text processed successfully! ✨", "success");
         } else {
@@ -1625,7 +1610,7 @@ document.addEventListener("DOMContentLoaded", function() {
             showToast("Nothing to copy", "warning");
             return;
         }
-        
+
         navigator.clipboard
             .writeText(editorText.value)
             .then(() => {
@@ -1641,7 +1626,7 @@ document.addEventListener("DOMContentLoaded", function() {
             showToast("Nothing to download", "warning");
             return;
         }
-        
+
         const blob = new Blob([editorText.value], {
             type: "text/plain",
         });

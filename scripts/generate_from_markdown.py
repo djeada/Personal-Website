@@ -31,18 +31,15 @@ class UrlData:
     @property
     def output_path(self) -> Path:
         def process(string: str) -> str:
-            # Define exceptions here
+
             exceptions = {
                 "neo4j": "neo4j",
-                # Add more exceptions as needed
             }
 
-            # Apply exceptions
             for key, replacement in exceptions.items():
                 if key in string.lower():
                     string = string.lower().replace(key, replacement)
 
-            # Apply general rules
             string = re.sub(r"(?<=[a-z0-9A-Z])[A-Z]", r"_\g<0>", string)
             string = re.sub(r"\s+", "_", string)
             string = re.sub(r"[^a-zA-Z0-9./]", "_", string.strip())
@@ -130,7 +127,7 @@ class HtmlEnhancer:
 
     @classmethod
     def replace_all_tables(cls, html: str) -> str:
-        # find all tables, every table starts with <p>| (there could be a space before the |) and ends with </p>
+
         table_start_pattern = re.compile(r"<p>\s*\|")
         table_end_pattern = re.compile(r"</p>")
         output_html = ""
@@ -148,7 +145,6 @@ class HtmlEnhancer:
             end = table_end_match.end()
             table = html[table_start_match.end() : table_end_match.start()]
 
-            # Append the part of the HTML before the table and the converted table
             output_html += (
                 html[last_end:start]
                 + "<p>"
@@ -157,14 +153,13 @@ class HtmlEnhancer:
             )
             last_end = table_end_match.end()
 
-        # Append the remainder of the HTML after the last table
         output_html += html[last_end:]
 
         return output_html
 
     @classmethod
     def correct_image_sources(cls, html: str) -> str:
-        # find all images
+
         soup = BeautifulSoup(html, "html.parser")
         images = soup.find_all("img")
         for image in images:
@@ -181,34 +176,33 @@ class HtmlEnhancer:
 
     @staticmethod
     def handle_code_blocks(html: str) -> str:
-        # Find all code tags that span multiple lines there must be at least two time \n in the content
+
         regex = r"<code>((?:(?!<code>|</code>).)+\n(?:(?!<code>|</code>).)+)</code>"
         matches = re.finditer(regex, html, re.DOTALL)
         for match in matches:
-            # Extract the content between the code tags
+
             content = match.group().replace("<code>", "").replace("</code>", "")
-            # Replace the code tags with backticks
+
             html = html.replace(match.group(), f"```{content}```")
         return html
 
     @classmethod
     def correct_math_blocks(cls, html: str) -> str:
-        # Compile a pattern to find math blocks, including across newlines
+
         math_pattern = re.compile(r"\$\$(.*?)\$\$", re.DOTALL)
 
         def replacer(match):
-            # Extract the content inside $$...$$
+
             math_content = match.group(1)
-            # Escape backslash-newlines
+
             math_content = math_content.replace("\\\n", "\\\\\n")
-            # Replace anchor tags with [href-value]
+
             math_content = re.sub(r'<a\s+href="([^"]+)">.*?</a>', r"[\1]", math_content)
-            # Replace HTML entity &amp; with &
+
             math_content = math_content.replace("&amp;", "&")
-            # Re-wrap in $$
+
             return f"$${math_content}$$"
 
-        # Substitute all math blocks using the replacer
         return math_pattern.sub(replacer, html)
 
     @classmethod
@@ -235,7 +229,6 @@ class HtmlEnhancer:
 
             code_sample = re.sub(r"`{3,}([\w+]+)?", "", code_sample).strip()
 
-            # Escape '<' and '>' characters using regex
             code_sample = re.sub(r"<", "&lt;", code_sample)
             code_sample = re.sub(r">", "&gt;", code_sample)
             code_sample = re.sub(r"&lt;p&gt;", "", code_sample)
@@ -316,7 +309,7 @@ class HtmlEnhancer:
         soup = BeautifulSoup(html, "html.parser")
         body_tag = soup.find("html")
         if body_tag:
-            # Append the scripts just before the closing </body> tag
+
             body_tag.append(BeautifulSoup(combined_scripts, "html.parser"))
 
         return str(soup)
@@ -357,10 +350,9 @@ class HtmlEnhancer:
     def markdown_to_html_table(cls, markdown_table: str) -> str:
         rows = markdown_table.split("\n")
 
-        # Initialize processed rows list
         processed_rows = []
         for row in rows:
-            # Remove leading and trailing pipes
+
             row = row.strip("|")
 
             cells = []
@@ -372,19 +364,18 @@ class HtmlEnhancer:
             while i < len(row):
                 char = row[i]
 
-                # Check for backtick blocks
                 if char == "`":
                     inside_backticks = not inside_backticks
                     current_cell += char
-                # Check for <code> blocks
+
                 elif row[i : i + 6] == "<code>":
                     inside_code_tags = True
                     current_cell += "<code>"
-                    i += 5  # Skip the rest of '<code>'
+                    i += 5
                 elif row[i : i + 7] == "</code>":
                     inside_code_tags = False
                     current_cell += "</code>"
-                    i += 6  # Skip the rest of '</code>'
+                    i += 6
                 elif char == "|" and not inside_backticks and not inside_code_tags:
                     cells.append(current_cell.strip())
                     current_cell = ""
@@ -393,20 +384,17 @@ class HtmlEnhancer:
 
                 i += 1
 
-            # Add the last cell
             if current_cell:
                 cells.append(current_cell.strip())
 
             processed_rows.append(cells)
 
-        # Remove separator row, if present
         processed_rows = [
             row
             for row in processed_rows
             if not all(re.match(r"\s*-+\s*", cell) or not cell.strip() for cell in row)
         ]
 
-        # Convert rows to HTML table
         html_table = "<table>"
         for row in processed_rows:
             html_table += "<tr>"
@@ -426,23 +414,19 @@ def read_urls() -> List[UrlData]:
 
 
 def process_url(url_data):
-    # This function will be executed by each worker.
-    # Download the Markdown file from the URL
+
     website_text = requests.get(url_data.url).text
 
     code_blocks = MarkdownProcessor.extract_code_blocks(website_text)
 
-    # Process markdown
     md_processor = MarkdownProcessor()
     html = md_processor.run(website_text)
 
     html = MarkdownProcessor.insert_code_blocks(html, code_blocks)
 
-    # Enhance HTML
     enhancer = HtmlEnhancer()
     html = enhancer.run(html, url_data)
 
-    # Save the processed HTML
     url_data.output_path.parent.mkdir(parents=True, exist_ok=True)
     url_data.output_path.write_text(html)
 
@@ -450,7 +434,6 @@ def process_url(url_data):
 def main():
     urls = read_urls()
 
-    # Using multiprocessing
     with Pool() as pool:
         pool.map(process_url, urls)
 

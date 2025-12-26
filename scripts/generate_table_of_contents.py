@@ -31,10 +31,8 @@ def create_toc_entries(soup: BeautifulSoup) -> Tag:
     body = soup.find("article-section", {"id": "article-body"})
     headers = body.find_all(["h1", "h2", "h3", "h4"])
 
-    # Initial root ordered list
     root_ol = soup.new_tag("ol")
 
-    # A stack to manage the nested ordered lists based on the header levels
     ol_stack = [root_ol]
     level_mapping = {}
 
@@ -54,7 +52,6 @@ def create_toc_entries(soup: BeautifulSoup) -> Tag:
         a.string = header.text
         li.append(a)
 
-        # If current level is deeper than the last, create and nest a new ordered list
         while mapped_level > len(ol_stack):
             new_ol = soup.new_tag("ol")
             if ol_stack[-1].contents:
@@ -63,7 +60,6 @@ def create_toc_entries(soup: BeautifulSoup) -> Tag:
                 ol_stack[-1].append(new_ol)
             ol_stack.append(new_ol)
 
-        # If current level is shallower or equal to the last, pop from the stack to ascend the hierarchy
         while mapped_level < len(ol_stack):
             ol_stack.pop()
 
@@ -78,7 +74,7 @@ def process_nested_list(tag):
     If the outer list has only one item, the outer list tags are removed.
     """
     if tag.name in ["ol", "ul"] and len(tag.find_all("li", recursive=False)) == 1:
-        tag.li.unwrap()  # Removes the surrounding <ol> or <ul> tags, leaving the <li> contents
+        tag.li.unwrap()
 
     return tag
 
@@ -123,13 +119,12 @@ def generate_table_of_contents(html: str) -> str:
         return html
     headers = article_body.find_all(["h1", "h2", "h3"])
 
-    # If no headers or only a single header, return the original HTML
     if len(headers) < 2:
         return html
 
     toc_wrapper = create_toc_wrapper(soup, html)
 
-    move_specific_section(soup)  # Reorder sections if needed
+    move_specific_section(soup)
 
     wrap_article_and_toc(soup, toc_wrapper)
 

@@ -16,14 +16,13 @@ def get_last_modified_date(path: Path) -> Optional[str]:
         with path.open("r", encoding="utf-8") as file:
             content = file.read()
 
-        # Look for the line containing the last modified date
         match = re.search(
             r'<p style="text-align: right;"><i>Last modified: (.*?)</i></p>', content
         )
         if match:
-            # Extract the date
+
             date_str = match.group(1)
-            # Parse the date string and reformat it
+
             parsed_date = datetime.strptime(date_str, "%B %d, %Y")
             return parsed_date.strftime("%Y-%m-%d")
     except FileNotFoundError:
@@ -35,7 +34,6 @@ def get_last_modified_date(path: Path) -> Optional[str]:
     except Exception as e:
         print(f"Unexpected error: {e}")
 
-    # If no date found, return the current modification time of the file in "%Y-%m-%d" format
     timestamp = path.stat().st_mtime
     return datetime.utcfromtimestamp(timestamp).strftime("%Y-%m-%d")
 
@@ -50,21 +48,19 @@ def create_url_element(file_path: Path, domain: str) -> Optional[ET.Element]:
     if EXCLUDE_PATTERN.search(relative_path):
         return None
 
-    # Handle index.html specifically by removing "index" from the URL
     if relative_path.endswith("/index"):
-        relative_path = relative_path[:-5]  # Remove the "/index" part
+        relative_path = relative_path[:-5]
 
     url = ET.Element("url")
     loc = ET.SubElement(url, "loc")
     loc.text = f"{domain}{relative_path}"
 
-    # Optional: Add lastmod, changefreq, priority
     lastmod = ET.SubElement(url, "lastmod")
     lastmod.text = get_last_modified_date(file_path)
     changefreq = ET.SubElement(url, "changefreq")
-    changefreq.text = "monthly"  # Change as needed
+    changefreq.text = "monthly"
     priority = ET.SubElement(url, "priority")
-    priority.text = "0.5"  # Change as needed
+    priority.text = "0.5"
 
     return url
 
@@ -78,7 +74,6 @@ def generate_sitemap(startpath: Path, domain: str) -> None:
         if url_element is not None:
             urlset.append(url_element)
 
-    # Properly format the XML output with new lines and tabs
     tree = ET.ElementTree(urlset)
     ET.indent(tree, space="\t", level=0)
     try:

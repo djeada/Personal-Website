@@ -15,15 +15,12 @@ def inject_article_buttons(html: str) -> str:
     """
     soup = BeautifulSoup(html, "html.parser")
 
-    # 1. Find the article body
     article_body = soup.find("article-section", {"id": "article-body"})
     if not article_body:
         return html
 
-    # 2. Create container for the buttons
     button_container = soup.new_tag("div", attrs={"class": "article-action-buttons"})
 
-    # 3. SVG icons
     svg_edit = """
     <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
         <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2" />
@@ -42,7 +39,6 @@ def inject_article_buttons(html: str) -> str:
     </svg>
     """
 
-    # 4. Create buttons with SVG icons and titles
     suggest_button = soup.new_tag(
         "button", attrs={"class": "btn-suggest-edit", "title": "Suggest Edit"}
     )
@@ -58,7 +54,6 @@ def inject_article_buttons(html: str) -> str:
     )
     download_button.append(BeautifulSoup(svg_download, "html.parser"))
 
-    # 5. Append to container and insert
     button_container.extend([suggest_button, issue_button, download_button])
     article_body.insert(0, button_container)
 
@@ -72,7 +67,6 @@ def inject_spinner_overlay(html: str) -> str:
     """
     soup = BeautifulSoup(html, "html.parser")
 
-    # Check if spinner already exists
     if soup.find(id="pdf-spinner-overlay"):
         return str(soup)
 
@@ -83,7 +77,7 @@ def inject_spinner_overlay(html: str) -> str:
     if soup.body:
         soup.body.append(spinner_div)
     else:
-        # If no <body>, inject at the end of <html>
+
         soup.append(spinner_div)
 
     return str(soup)
@@ -95,10 +89,8 @@ def process_html_file(file_path: Path):
     """
     html = file_path.read_text(encoding="utf-8")
 
-    # Inject buttons
     html = inject_article_buttons(html)
 
-    # Inject spinner overlay
     html = inject_spinner_overlay(html)
 
     file_path.write_text(html, encoding="utf-8")

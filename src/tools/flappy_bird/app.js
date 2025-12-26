@@ -1,4 +1,3 @@
-// Canvas and UI setup
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const difficultySel = document.getElementById('difficulty');
@@ -14,7 +13,7 @@ let isPaused = false;
 let lastTapTime = 0;
 let game;
 
-// Persistence and audio
+
 let highScore = Number(localStorage.getItem('flappy_highscore') || 0);
 let muted = localStorage.getItem('flappy_muted') === '1';
 const savedTheme = localStorage.getItem('flappy_theme') || 'auto';
@@ -34,12 +33,12 @@ if (themeModeSel) themeModeSel.value = savedTheme;
 if (birdSkinSel) birdSkinSel.value = savedBird;
 if (pipeSkinSel) pipeSkinSel.value = savedPipe;
 
-// Responsive canvas sizing (square, fits container width up to 900px)
+
 function resizeCanvas() {
     const max = Math.min(900, canvas.parentElement.clientWidth);
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const size = Math.floor(max * dpr);
-    canvas.width = size; // internal buffer
+    canvas.width = size;
     canvas.height = size;
 }
 window.addEventListener('resize', () => {
@@ -51,7 +50,7 @@ window.addEventListener('resize', () => {
 });
 resizeCanvas();
 
-// Game Class
+
 class Game {
     constructor() {
         this.bird = new Bird();
@@ -67,11 +66,11 @@ class Game {
         this.backgroundX = 0;
         this.backgroundColor = '#70c5ce';
         this.lastPipeX = null;
-        // parallax
+
         this.clouds = genClouds();
         this.stars = genStars();
         this.bg2X = 0;
-        // particles
+
         this.particles = [];
     }
 
@@ -247,7 +246,7 @@ class Game {
         ctx.fillText('Tap to Restart', canvas.width / 2, canvas.height / 2 + 60);
     }
 
-    // Particles
+
     spawnScoreBurst(x, y) {
         const colors = ['#fff', '#ffe066', '#ff9f1c', '#2ec4b6'];
         for (let i = 0; i < 18; i++) {
@@ -352,7 +351,7 @@ class Pipe {
     }
 }
 
-// Input Handling
+
 window.addEventListener('keydown', (e) => {
     if (e.code === 'Space' || e.code === 'ArrowUp') {
         if (!game || game.gameOver) {
@@ -376,7 +375,7 @@ window.addEventListener('keydown', (e) => {
     }
 });
 
-// Touch Input
+
 canvas.addEventListener('touchstart', (e) => {
     const currentTime = new Date().getTime();
     const tapLength = currentTime - lastTapTime;
@@ -405,7 +404,7 @@ canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
 });
 
-// Pause Overlay
+
 function renderPauseOverlay() {
     if (game?.gameOver) return;
     ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
@@ -416,7 +415,7 @@ function renderPauseOverlay() {
     ctx.fillText('Paused', canvas.width / 2, canvas.height / 2);
 }
 
-// Disable Scrolling
+
 function preventDefaultTouch(e) {
     e.preventDefault();
 }
@@ -437,7 +436,7 @@ function enableScrolling() {
     document.body.classList.remove('no-scroll');
 }
 
-// Start Screen
+
 function renderStartScreen() {
     ctx.fillStyle = '#70c5ce';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -459,11 +458,11 @@ canvas.addEventListener('click', () => {
     }
 });
 
-// Initialize
+
 renderStartScreen();
 disableScrolling();
 
-// Controls wiring
+
 restartBtn?.addEventListener('click', () => {
     if (!game) game = new Game();
     game.reset();
@@ -498,7 +497,7 @@ pipeSkinSel?.addEventListener('change', () => {
     localStorage.setItem('flappy_pipe_skin', pipeSkinSel.value);
 });
 
-// Helpers
+
 function applyDifficulty(g) {
     const d = difficultySel?.value || 'normal';
     if (d === 'easy') {
@@ -540,7 +539,7 @@ function playSfx(name) {
     if (fn) fn();
 }
 
-// Tiny synth using WebAudio Oscillator for simple beeps
+
 let audioCtx;
 
 function makeBeep(freq, durationSec) {

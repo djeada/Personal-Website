@@ -6,7 +6,7 @@ from typing import Tuple, Dict, Callable
 
 from bs4 import BeautifulSoup
 
-# Configuration settings
+
 CONFIG = {
     "ARTICLES": {
         "HEADER": "../src/building_blocks/head_article.html",
@@ -51,7 +51,7 @@ def replace_element(html: str, element_html: str, tag: str, fallback_tag: str) -
     if start_match is None or end_match is None:
         fallback_start_match = re.compile(rf"<{fallback_tag}[^>]*>").search(html)
         if tag == "footer":
-            # Add the footer content just before the closing </body> tag
+
             body_end_match = re.search(r"</body>", html, re.IGNORECASE)
             new_html = (
                 html[: body_end_match.start()]
@@ -88,7 +88,6 @@ def change_title_in_head(html: str) -> str:
     """Update the <title> tag to match the primary page heading (prefer <h1>)."""
     soup = BeautifulSoup(html, "html.parser")
 
-    # Prefer the first <h1>. If absent, look for an <h1> inside <header>, then fallback to <h2>.
     title_text = None
     h1 = soup.find("h1")
     if h1 and h1.get_text(strip=True):
@@ -111,7 +110,7 @@ def change_title_in_head(html: str) -> str:
     if title_tag:
         title_tag.string = title_text
     else:
-        # Ensure <head> exists
+
         if not soup.head:
             if soup.html:
                 soup.html.insert(0, soup.new_tag("head"))
@@ -138,7 +137,7 @@ def find_first_ascii_sentence(paragraphs: list, file_path: Path) -> str:
     for paragraph in filtered_paragraphs:
         sentences = re.split(r"(?<=[.!?]) +", paragraph.get_text())
         for sentence in sentences:
-            # Strip HTML tags using BeautifulSoup
+
             stripped_sentence = BeautifulSoup(sentence, "html.parser").get_text()
             return stripped_sentence
     return None
@@ -155,7 +154,6 @@ def change_meta_description_in_head(html_content: str, file_path: Path) -> str:
         logging.error(f"No suitable description found! {file_path}")
         return str(soup)
 
-    # Check for existing meta description tag
     meta_desc_tag = soup.find("meta", attrs={"name": "description"})
 
     if meta_desc_tag:
@@ -168,7 +166,7 @@ def change_meta_description_in_head(html_content: str, file_path: Path) -> str:
         else:
             logging.info(f"Not changing description in {file_path}")
     else:
-        # Create a new meta description tag if it doesn't exist
+
         new_meta_tag = soup.new_tag("meta")
         new_meta_tag.attrs["name"] = "description"
         new_meta_tag.attrs["content"] = first_ascii_sentence
@@ -204,7 +202,6 @@ def main() -> None:
     }
     tool_configurations = {"NAVBAR": replace_navbar, "FOOTER": replace_footer}
 
-    # Process articles
     article_dir = Path(CONFIG["ARTICLES"]["INPUT_DIR"])
     with ThreadPoolExecutor() as executor:
         for file in article_dir.rglob("**/*.html"):
@@ -213,7 +210,6 @@ def main() -> None:
                 process_file, file, "ARTICLES", article_configurations, depth
             )
 
-    # Process tools
     tool_dir = Path(CONFIG["TOOLS"]["INPUT_DIR"])
     with ThreadPoolExecutor() as executor:
         for file in tool_dir.rglob("**/*.html"):
@@ -222,8 +218,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-    # change_meta_description_in_head(
-    #   Path(
-    #       "/home/adam/Personal-Website/src/articles/od_c_do_cpp/08_typ_wyliczeniowy.html"
-    #    ).read_text()
-    # )

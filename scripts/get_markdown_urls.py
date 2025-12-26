@@ -9,7 +9,7 @@ import logging
 import requests
 from pathlib import Path
 
-# Initialize logging
+
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
@@ -137,7 +137,7 @@ def get_repository_name_from_url(url):
         path = urlparse(unquote(url)).path
         parts = path.split("/")
         if len(parts) >= 3 and parts[1] != "repos":
-            # Typically the pattern is /username/repository/
+
             repo_name = parts[2]
             logging.info(f"Extracted repository name: {repo_name} from URL: {url}")
             return repo_name
@@ -177,19 +177,16 @@ def main(run_failed=False):
         logging.info("Running all URLs.")
         urls_to_process = zip([PL_INPUT_URLS, EN_INPUT_URLS], [PL_LANG, EN_LANG])
 
-    # Using ThreadPoolExecutor for multithreading
     with ThreadPoolExecutor() as executor:
-        # Map the function to the url-language pairs
+
         results = executor.map(
             lambda pair: process_links_for_language(*pair, failed_repos),
             urls_to_process,
         )
 
-        # Extend output list with results
         for result in results:
             output_list.extend(result)
 
-    # Write to the output file
     with Path(OUTPUT_FILE).open("w") as file:
         json.dump(output_list, file, indent=4)
     logging.info(f"Successfully wrote output to {OUTPUT_FILE}")

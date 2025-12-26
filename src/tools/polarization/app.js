@@ -1,13 +1,13 @@
 "use strict";
 
-// Preset buttons
+
 const btnLinear = document.getElementById("btnLinear");
 const btnCircularRight = document.getElementById("btnCircularRight");
 const btnCircularLeft = document.getElementById("btnCircularLeft");
 const btnElliptical = document.getElementById("btnElliptical");
 
 btnLinear.addEventListener("click", () => {
-    // Example: linear at 45°
+
     psiSlider.value = "45";
     deltaSlider.value = "0";
     psi = 45 * Math.PI / 180;
@@ -18,7 +18,7 @@ btnLinear.addEventListener("click", () => {
 });
 
 btnCircularRight.addEventListener("click", () => {
-    // Right-handed circular: psi=45°, delta=+90°
+
     psiSlider.value = "45";
     deltaSlider.value = "90";
     psi = 45 * Math.PI / 180;
@@ -29,7 +29,7 @@ btnCircularRight.addEventListener("click", () => {
 });
 
 btnCircularLeft.addEventListener("click", () => {
-    // Left-handed circular: psi=45°, delta=-90°
+
     psiSlider.value = "45";
     deltaSlider.value = "-90";
     psi = 45 * Math.PI / 180;
@@ -40,7 +40,7 @@ btnCircularLeft.addEventListener("click", () => {
 });
 
 btnElliptical.addEventListener("click", () => {
-    // Example elliptical: psi=30°, delta=60°
+
     psiSlider.value = "30";
     deltaSlider.value = "60";
     psi = 30 * Math.PI / 180;

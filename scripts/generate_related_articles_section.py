@@ -62,7 +62,7 @@ def build_articles_tree(articles_in_dir, root):
 def populate_ol_with_tree(soup, ol_tag, articles_tree, path_parts=[]):
     def beautify(string: str) -> str:
         string = string.replace("_", " ").title()
-        string = re.sub(r"^\d+", "", string)  # remove leading digits
+        string = re.sub(r"^\d+", "", string)
         string = re.sub(r"[^a-zA-Z0-9./\s+]", "_", string.strip())
 
         def lowercase_match(match):
@@ -146,7 +146,7 @@ def main():
                 list(subdir.rglob("*.html")), key=lambda x: x.parent.name + x.name
             )
             with ThreadPoolExecutor() as executor:
-                # Use map or submit each file processing as a separate task
+
                 executor.map(
                     process_file,
                     articles_in_dir,

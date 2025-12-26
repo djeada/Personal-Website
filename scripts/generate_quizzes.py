@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Quiz Generator Script
 
@@ -27,26 +26,18 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# =============================================================================
-# Configuration
-# =============================================================================
 
-# Map each quiz URL to exactly one category
 URL_TO_CATEGORY: Dict[str, str] = {
-    # Parallel Programming
     "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/quizzes/intro.md": "parallel_programming",
-    # Frontend
     "https://raw.githubusercontent.com/djeada/Frontend-Notes/main/quizzes/html.md": "frontend",
     "https://raw.githubusercontent.com/djeada/Frontend-Notes/main/quizzes/css.md": "frontend",
     "https://raw.githubusercontent.com/djeada/Frontend-Notes/main/quizzes/js.md": "frontend",
-    # Linux quizzes
     "https://raw.githubusercontent.com/djeada/Linux-Notes/main/quizzes/partitions_and_logical_volumes.md": "linux",
     "https://raw.githubusercontent.com/djeada/Linux-Notes/main/quizzes/files.md": "linux",
     "https://raw.githubusercontent.com/djeada/Linux-Notes/main/quizzes/file_systems.md": "linux",
     "https://raw.githubusercontent.com/djeada/Linux-Notes/main/quizzes/networking.md": "linux",
     "https://raw.githubusercontent.com/djeada/Linux-Notes/main/quizzes/tools.md": "linux",
     "https://raw.githubusercontent.com/djeada/Linux-Notes/main/quizzes/users.md": "linux",
-    # Statistics
     "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/quizzes/correlation_and_regression.md": "statistics",
     "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/quizzes/descriptive_statistics.md": "statistics",
     "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/quizzes/intro_probability.md": "statistics",
@@ -55,23 +46,18 @@ URL_TO_CATEGORY: Dict[str, str] = {
     "https://raw.githubusercontent.com/djeada/Statistics-Notes/main/quizzes/time_series.md": "statistics",
 }
 
-# Output configuration
+
 OUTPUT_DIR: Path = Path(__file__).parent.parent / "src" / "tools" / "quiz_app"
 CATEGORIES_FILE: Path = OUTPUT_DIR / "categories.json"
 
-# HTTP configuration
+
 MAX_WORKERS = 8
 REQUEST_TIMEOUT = 30
 MAX_RETRIES = 3
 
-# Logging configuration
+
 LOG_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
-
-
-# =============================================================================
-# Data Classes
-# =============================================================================
 
 
 @dataclass
@@ -102,11 +88,6 @@ class ProcessingResult:
     error_message: Optional[str] = None
 
 
-# =============================================================================
-# Logging Setup
-# =============================================================================
-
-
 def setup_logging(verbose: bool = False) -> logging.Logger:
     """Configure logging for the application."""
     level = logging.DEBUG if verbose else logging.INFO
@@ -118,11 +99,6 @@ def setup_logging(verbose: bool = False) -> logging.Logger:
 
 
 logger = setup_logging()
-
-
-# =============================================================================
-# HTTP Client
-# =============================================================================
 
 
 def create_session() -> requests.Session:
@@ -162,11 +138,6 @@ def download_markdown(url: str, session: requests.Session) -> str:
     return response.text
 
 
-# =============================================================================
-# Markdown Parsing
-# =============================================================================
-
-
 def parse_markdown_question(block: str) -> Optional[Question]:
     """
     Parse a single question block from markdown.
@@ -183,7 +154,7 @@ def parse_markdown_question(block: str) -> Optional[Question]:
     Returns:
         A Question object if parsing succeeds, None otherwise
     """
-    # Extract the question text
+
     question_match = re.search(
         r"Q\.\s*(.+?)(?=\n[\*\-]\s*\[)",
         block,
@@ -196,12 +167,10 @@ def parse_markdown_question(block: str) -> Optional[Question]:
 
     question_text = question_match.group(1).strip()
 
-    # Validate question text
     if len(question_text) < 5:
         logger.debug(f"Skipping block: question text too short: '{question_text}'")
         return None
 
-    # Extract all options (supporting both * and - bullets)
     options: List[str] = []
     correct_index: int = -1
 
@@ -217,11 +186,9 @@ def parse_markdown_question(block: str) -> Optional[Question]:
         if option_text:
             options.append(option_text)
 
-            # Check if this is the correct option
             if marker.lower() == "x" and correct_index == -1:
                 correct_index = idx
 
-    # Validate parsed content
     if len(options) < 2:
         logger.debug(f"Skipping question: too few options ({len(options)})")
         return None
@@ -247,8 +214,10 @@ def parse_questions_from_markdown(markdown_content: str) -> List[Question]:
     Returns:
         A list of parsed Question objects
     """
-    # Split by question headers (#### markers)
-    blocks = [block.strip() for block in markdown_content.split("\n#### ") if block.strip()]
+
+    blocks = [
+        block.strip() for block in markdown_content.split("\n#### ") if block.strip()
+    ]
 
     questions: List[Question] = []
     for block in blocks:
@@ -258,11 +227,6 @@ def parse_questions_from_markdown(markdown_content: str) -> List[Question]:
 
     logger.info(f"Parsed {len(questions)} questions from {len(blocks)} blocks")
     return questions
-
-
-# =============================================================================
-# File Operations
-# =============================================================================
 
 
 def write_json(data: Any, path: Path) -> None:
@@ -278,7 +242,6 @@ def write_json(data: Any, path: Path) -> None:
     """
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Write to a temporary file first
     with tempfile.NamedTemporaryFile(
         mode="w",
         delete=False,
@@ -289,14 +252,8 @@ def write_json(data: Any, path: Path) -> None:
         json.dump(data, tmp_file, indent=4, sort_keys=True, ensure_ascii=False)
         temp_path = Path(tmp_file.name)
 
-    # Atomically replace the target file
     temp_path.replace(path)
     logger.info(f"Wrote JSON to {path}")
-
-
-# =============================================================================
-# URL Processing
-# =============================================================================
 
 
 def process_url(url: str, session: requests.Session) -> ProcessingResult:
@@ -358,12 +315,11 @@ def process_all_urls(urls: List[str]) -> List[ProcessingResult]:
 
     with create_session() as session:
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-            # Submit all tasks
+
             future_to_url = {
                 executor.submit(process_url, url, session): url for url in urls
             }
 
-            # Collect results as they complete
             for future in as_completed(future_to_url):
                 url = future_to_url[future]
                 try:
@@ -378,13 +334,7 @@ def process_all_urls(urls: List[str]) -> List[ProcessingResult]:
                         error_message=str(e),
                     )
 
-    # Return results in original URL order
     return [results[url] for url in urls]
-
-
-# =============================================================================
-# Main Entry Point
-# =============================================================================
 
 
 def main() -> int:
@@ -397,17 +347,15 @@ def main() -> int:
     logger.info("Starting quiz generation...")
     logger.info(f"Output directory: {OUTPUT_DIR}")
 
-    # Ensure output directory exists
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Get ordered list of URLs
     urls = list(URL_TO_CATEGORY.keys())
-    logger.info(f"Processing {len(urls)} URLs across {len(set(URL_TO_CATEGORY.values()))} categories")
+    logger.info(
+        f"Processing {len(urls)} URLs across {len(set(URL_TO_CATEGORY.values()))} categories"
+    )
 
-    # Process all URLs
     results = process_all_urls(urls)
 
-    # Aggregate questions by category
     aggregated: Dict[str, List[Dict[str, Any]]] = {}
     errors: List[str] = []
 
@@ -419,30 +367,27 @@ def main() -> int:
         else:
             errors.append(f"{result.url}: {result.error_message}")
 
-    # Sort questions within each category for consistent output
     for category in aggregated:
         aggregated[category] = sorted(
             aggregated[category],
             key=lambda q: q["text"],
         )
 
-    # Write per-category JSON files
     for category in sorted(aggregated):
         questions = aggregated[category]
         output_path = OUTPUT_DIR / f"{category}.json"
         write_json({"questions": questions}, output_path)
         logger.info(f"Category '{category}': {len(questions)} questions")
 
-    # Generate categories index file
     categories_list = [
-        {"name": category.replace("_", " ").title()}
-        for category in sorted(aggregated)
+        {"name": category.replace("_", " ").title()} for category in sorted(aggregated)
     ]
     write_json(categories_list, CATEGORIES_FILE)
 
-    # Report summary
     total_questions = sum(len(q) for q in aggregated.values())
-    logger.info(f"Generation complete: {total_questions} questions in {len(aggregated)} categories")
+    logger.info(
+        f"Generation complete: {total_questions} questions in {len(aggregated)} categories"
+    )
 
     if errors:
         logger.warning(f"{len(errors)} URLs failed to process:")

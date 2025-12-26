@@ -135,8 +135,8 @@ function getColorForMode(colorLight, colorDark) {
 }
 
 function drawAxes(ctx, width, height) {
-    const axisColor = getColorForMode('#ccc', '#444'); // Light gray for light mode, dark gray for dark mode
-    const labelColor = getColorForMode('#000', '#fff'); // Black for light mode, white for dark mode
+    const axisColor = getColorForMode('#ccc', '#444');
+    const labelColor = getColorForMode('#000', '#fff');
 
     ctx.strokeStyle = axisColor;
     ctx.lineWidth = 1;
@@ -178,9 +178,9 @@ function generateSignal(t, dt) {
             y = (2 * amplitude / Math.PI) * (((omega * t + phi) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI);
             break;
         case 'pulse':
-            const period = 1 / frequency; // Time for one cycle
-            const timeInPeriod = ((t + phi / omega) % period + period) % period; // Ensure positive modulo
-            y = (timeInPeriod < dt) ? amplitude : 0; // Impulse width matches `dt`
+            const period = 1 / frequency;
+            const timeInPeriod = ((t + phi / omega) % period + period) % period;
+            y = (timeInPeriod < dt) ? amplitude : 0;
             break;
         default:
             y = 0;
@@ -199,7 +199,7 @@ function animate() {
     const height = inputCanvas.height;
     const midY = height / 2;
     const numPoints = width;
-    const timeScale = 0.005; // Adjust for your canvas resolution and velocity
+    const timeScale = 0.005;
 
     drawAxes(inputCtx, width, height);
     drawAxes(filteredCtx, width, height);
@@ -207,14 +207,14 @@ function animate() {
     inputCtx.beginPath();
     filteredCtx.beginPath();
 
-    const dt = timeScale; // Define the time step size
+    const dt = timeScale;
 
-    const inputWaveColor = getColorForMode('#000', '#00ff00'); // Black for light mode, green for dark mode
-    const filteredWaveColor = getColorForMode('#00f', '#ff4500'); // Blue for light mode, orange-red for dark mode
+    const inputWaveColor = getColorForMode('#000', '#00ff00');
+    const filteredWaveColor = getColorForMode('#00f', '#ff4500');
 
     for (let x = 0; x < numPoints; x++) {
-        const t = time - (numPoints - x) * dt; // Reverse time mapping
-        const y = generateSignal(t, dt); // Pass `dt` to `generateSignal`
+        const t = time - (numPoints - x) * dt;
+        const y = generateSignal(t, dt);
         const filteredY = filter.apply(y, dt);
 
         const plotYInput = midY - y * ((height / 2 - 20) / amplitudeMax());
@@ -237,7 +237,7 @@ function animate() {
     filteredCtx.lineWidth = 2;
     filteredCtx.stroke();
 
-    time -= (velocity / 60); // Reverse increment direction
+    time -= (velocity / 60);
     requestAnimationFrame(animate);
 }
 

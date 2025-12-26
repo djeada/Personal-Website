@@ -1,15 +1,14 @@
 import subprocess
 import logging
 
-# Configure logging
+
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-# Dictionary mapping scripts to their respective command line arguments
+
 SCRIPTS_TO_ARGS = {
     "python3 clean_output_dirs.py": [],
-    # "python get_markdown_urls.py": [],
     "python3 generate_from_markdown.py": [],
     "python3 apply_common_elements.py": [],
     "python3 bundle_css.py": [],

@@ -11,12 +11,12 @@ from bs4 import BeautifulSoup
 import string
 import math
 
-# Configure logging
+
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 START_DATE = None
-# START_DATE = datetime.datetime(2018, 1, 1)
+
 INPUT_DIR = "../src/articles"
 INPUT_FILE = "../src/articles/blog_1.html"
 ARTICLE_PER_PAGE = 35
@@ -59,19 +59,17 @@ def get_article_list(dir_path: Path) -> list:
 
 
 def get_article_title(file_path: Path) -> str:
-    # Extract the title from the file name
+
     title = file_path.stem.replace("_", " ").title()
-    title = re.sub(r"^\d+", "", title)  # Remove leading digits
+    title = re.sub(r"^\d+", "", title)
     title = re.sub(r"[^a-zA-Z0-9./\s+]", "_", title.strip())
 
-    # Function to make specific words lowercase
     def lowercase_match(match):
         word = match.group(0)
         return word.lower() if word.lower() in LOWERCASE_WORDS else word
 
     title = re.sub(r"\b[A-Za-z]+\b", lowercase_match, title)
 
-    # Read and parse the file to extract the language
     try:
         with file_path.open() as file:
             soup = BeautifulSoup(file, "html.parser")
@@ -88,7 +86,6 @@ def get_article_title(file_path: Path) -> str:
         logging.exception("Error opening or parsing file: %s", file_path)
         language = ""
 
-    # Append the language to the title if it exists
     return f"{title} {language}" if language else title
 
 
@@ -111,35 +108,29 @@ def get_article_description(file_path: Path) -> str:
 
 
 def get_article_category(file_path: Path) -> str:
-    # Get the absolute path of the file
+
     absolute_path = file_path.absolute()
 
-    # Get the absolute path of the input directory
     input_dir_absolute = Path(INPUT_DIR).absolute()
 
-    # Get the relative path from the input directory to the file
     relative_path = absolute_path.relative_to(input_dir_absolute)
 
     while relative_path.parent.parent != Path():
         relative_path = relative_path.parent
 
-    # Extract the parent directory's name
     category_name = relative_path.parent.stem
 
-    # Convert to title case and replace underscores with spaces
     formatted_category_name = category_name.title().replace("_", " ")
 
     return formatted_category_name
 
 
 def get_category_url(file_path: Path) -> str:
-    # Get the absolute path of the file
+
     absolute_path = file_path.absolute()
 
-    # Get the absolute path of the input directory
     input_dir_absolute = Path(INPUT_DIR).absolute()
 
-    # Get the relative path from the input directory to the file
     relative_path = absolute_path.relative_to(input_dir_absolute)
 
     while relative_path.parent.parent != Path():
@@ -152,17 +143,16 @@ def get_current_date(
     file_path: Path, start_date: Optional[datetime.datetime] = None
 ) -> datetime.datetime:
     remote_date = None
-    # ——— Random-date branch ———
+
     if start_date is not None:
         now = datetime.datetime.now()
         if start_date > now:
             raise ValueError("start_date cannot be in the future")
-        # Compute a random offset in seconds
+
         delta_secs = (now - start_date).total_seconds()
         rand_offset = random.uniform(0, delta_secs)
         rand_date = start_date + datetime.timedelta(seconds=rand_offset)
 
-        # Read local HTML and replace the Last modified date
         html = file_path.read_text(encoding="utf-8")
         new_html = re.sub(
             r"Last modified: \w+ \d+, \d+",
@@ -173,9 +163,8 @@ def get_current_date(
         logging.info(f"Set random date for {file_path}: {rand_date}")
         return rand_date
 
-    # ——— Original fetch-and-compare logic ———
     try:
-        # Build URL
+
         relative = file_path.relative_to("../src").with_suffix("")
         url = f"https://adamdjellouli.com/{relative}"
 
@@ -187,7 +176,6 @@ def get_current_date(
             logging.error(f"{url}: 'article-body' not found.")
             return datetime.datetime.now()
 
-        # Read local HTML
         html = file_path.read_text(encoding="utf-8")
         local_soup = BeautifulSoup(html, "html.parser")
         local_sec = local_soup.find(id="article-body")
@@ -195,7 +183,6 @@ def get_current_date(
             logging.error(f"{file_path}: 'article-body' not found locally.")
             return datetime.datetime.now()
 
-        # Helper to extract the last-modified date
         def extract_date(soup_obj):
             p = soup_obj.find("p", style="text-align: right;")
             if not p:
@@ -206,29 +193,25 @@ def get_current_date(
         remote_date = extract_date(remote_soup)
         local_date = extract_date(local_soup)
 
-        # Strip the date paragraph before comparing content
         def strip_date(html_str):
-            # Parse the HTML fragment
+
             soup = BeautifulSoup(html_str, "html.parser")
 
-            # Remove all <div class="article-action-buttons"> blocks
             for div in soup.select("div.article-action-buttons"):
                 div.decompose()
 
-            # Remove any <p> whose text starts with the unwanted metadata prefixes
             for p in soup.find_all("p"):
                 text = p.get_text(strip=True)
                 if re.match(r"^(Last modified:|This article is written in:)", text):
                     p.decompose()
 
-            # Return the remaining HTML as a string (concatenate top-level nodes)
             return "".join(str(elem) for elem in soup.contents).strip()
 
         if strip_date(remote_sec.decode_contents()) == strip_date(
             local_sec.decode_contents()
         ):
             if remote_date:
-                # Update the local file's date
+
                 updated_html = re.sub(
                     r"Last modified: \w+ \d+, \d+",
                     f"Last modified: {remote_date.strftime('%B %d, %Y')}",
@@ -238,7 +221,6 @@ def get_current_date(
                 logging.info(f"Updated date for {file_path}")
                 return remote_date
 
-        # Fallback to the local date if it exists
         if local_date:
             return local_date
 
@@ -259,11 +241,10 @@ def generate_pages_for_articles(
     """
     Generates pages for the provided list of articles.
     """
-    # Extract information (including date) for each article
+
     with multiprocessing.Pool() as pool:
         articles_info = pool.map(_extract_article_info, articles)
 
-    # Sort articles by date
     sorted_articles_info = sorted(articles_info, key=lambda x: x[1], reverse=True)
 
     for i in range(math.ceil(len(sorted_articles_info) / ARTICLE_PER_PAGE)):
@@ -346,7 +327,6 @@ def get_next_input_file(base_input_file: Path, index: int) -> Path:
 
     base_name = base_input_file.stem
 
-    # Check if the base name already ends with a number
     if base_name[-2:] in ["_0", "_1"]:
         base_name = base_name[:-2]
 
@@ -392,10 +372,8 @@ def generate_pages_for_subdir(subdir: Path, output_file: Path):
 
     articles = sorted(articles, key=lambda x: x[1], reverse=True)
 
-    # Just one page for each subdir, so no need for pagination
     html_content = convert_articles_to_html(articles)
 
-    # If the output file doesn't exist, create it by copying the INPUT_FILE
     if not output_file.exists():
         output_file.write_text(Path(INPUT_FILE).read_text())
 
@@ -417,11 +395,9 @@ def generate_pages_for_subdir(subdir: Path, output_file: Path):
 def main():
     base_input_file = Path(INPUT_FILE)
 
-    # Generate pages for the root INPUT_DIR
     articles = get_article_list(Path(INPUT_DIR))
     generate_pages_for_articles(articles, base_input_file, "blog")
 
-    # Generate pages for each subdirectory
     subdirs = get_subdirs(Path(INPUT_DIR))
     for subdir in subdirs:
         generate_pages_for_subdir(
@@ -431,8 +407,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # print('result',
-    #   get_current_date(
-    #       file_path=Path("../src/articles/git_notes/07_stashing_files.html")
-    #   )
-    # )

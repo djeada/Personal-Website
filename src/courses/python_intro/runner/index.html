@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Frontend-only Python Judge (Pyodide + Classic Worker)</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --panel: #111827;
+            --ink: #e5e7eb;
+            --muted: #9ca3af;
+            --accent: #22d3ee;
+            --pass: #10b981;
+            --fail: #ef4444;
+        }
+
+        html,
+        body {
+            height: 100%;
+            background: var(--bg);
+            color: var(--ink);
+            font: 14px/1.4 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        }
+
+        .wrap {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 20px;
+            margin: 0 0 8px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 420px;
+            gap: 16px;
+            align-items: stretch;
+        }
+
+        textarea {
+            width: 100%;
+            height: 420px;
+            background: #0b1022;
+            color: var(--ink);
+            border: 1px solid #1f2937;
+            border-radius: 12px;
+            padding: 12px;
+            font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid #1f2937;
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 10px 0 0;
+        }
+
+        button {
+            border: none;
+            border-radius: 10px;
+            padding: 10px 12px;
+            cursor: pointer;
+            background: #1f2937;
+            color: var(--ink);
+        }
+
+        button.primary {
+            background: var(--accent);
+            color: #00141a;
+            font-weight: 600;
+        }
+
+        button:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .tests {
+            display: grid;
+            gap: 8px;
+        }
+
+        .test {
+            background: #0b1022;
+            border: 1px solid #1f2937;
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .pass {
+            background: rgba(16, 185, 129, .15);
+            color: var(--pass);
+            border: 1px solid rgba(16, 185, 129, .3);
+        }
+
+        .fail {
+            background: rgba(239, 68, 68, .15);
+            color: var(--fail);
+            border: 1px solid rgba(239, 68, 68, .3);
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin: 6px 0 0;
+        }
+
+        .log {
+            height: 420px;
+            overflow: auto;
+            background: #0b1022;
+            border: 1px solid #1f2937;
+            border-radius: 12px;
+            padding: 10px;
+            font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+
+        a {
+            color: var(--accent);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <h1>Frontend-only Python Judge</h1>
+        <p class="muted">Runs user Python in the browser via WebAssembly (Pyodide) inside a Web Worker, then checks outputs against tests. No server required.</p>
+
+        <div class="row">
+            <div>
+                <label class="muted">Your Python (either define <code>solve(s: str) -&gt; str</code> or use <code>input()</code>/<code>print()</code>):</label>
+                <textarea id="code"></textarea>
+                <div class="controls">
+                    <button id="run-public" class="primary">Run public tests</button>
+                    <button id="run-hidden">Run hidden tests</button>
+                    <button id="format">Reset to stub</button>
+                    <span id="status" class="muted" style="margin-left:auto">Pyodide loading…</span>
+                </div>
+            </div>
+            <div>
+                <div class="panel">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap: 8px;">
+                        <strong>Public tests</strong>
+                        <button id="add-test">+ Add test</button>
+                    </div>
+                    <div id="tests" class="tests" style="margin-top:8px"></div>
+                    <p class="muted" style="margin-top:8px">Hidden tests only run locally in the worker and aren't shown here.</p>
+                </div>
+                <div style="height:12px"></div>
+                <div class="panel">
+                    <strong>Results</strong>
+                    <div id="log" class="log"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ================= Worker source (CLASSIC; no backticks inside) ================= */
+        const WORKER_SRC =
+            "self.importScripts('https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js');\n\
+\n\
+const TESTS_HIDDEN = JSON.parse(atob('__HIDDEN_B64__'));\n\
+let pyodide;\n\
+const ready = (async () => {\n\
+  pyodide = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/' });\n\
+})();\n\
+\n\
+function buildProgram() {\n\
+  return [\n\
+    'import sys, io, json, traceback, re',\n\
+    'from dataclasses import dataclass',\n\
+    '',\n\
+    '@dataclass',\n\
+    'class Case:',\n\
+    '    input: str',\n\
+    '    expected: str',\n\
+    '',\n\
+    'PY = PY_PAYLOAD',\n\
+    \"USER_CODE = PY['code']\",\n\
+    'TESTS = [Case(**t) for t in PY[\\'tests\\']]',\n\
+    '',\n\
+    'def _norm(s: str) -> str:',\n\
+    '    if s is None:',\n\
+    \"        return ''\",\n\
+    \"    return str(s).replace('\\\\r\\\\n', '\\\\n').rstrip()\",\n\
+    '',\n\
+    'import types',\n\
+    \"is_func = bool(re.search(r'^\\\\s*def\\\\s+solve\\\\s*\\\\(', USER_CODE, re.M))\",\n\
+    'ns = {}',\n\
+    'if is_func:',\n\
+    '    # Safe to exec once to define solve (won\\'t call input here)',\n\
+    '    exec(USER_CODE, ns)',\n\
+    '',\n\
+    'results = []',\n\
+    'for i, t in enumerate(TESTS):',\n\
+    '    ok = False',\n\
+    \"    out = ''\",\n\
+    \"    err = ''\",\n\
+    '    try:',\n\
+    '        if is_func and \"solve\" in ns and isinstance(ns[\"solve\"], types.FunctionType):',\n\
+    '            out = ns[\"solve\"](t.input)',\n\
+    \"            out = '' if out is None else str(out)\",\n\
+    '        else:',\n\
+    '            # Script-style: patch stdio before exec so input()/print() work',\n\
+    '            stdin, stdout = io.StringIO(t.input), io.StringIO()',\n\
+    '            _in, _out = sys.stdin, sys.stdout',\n\
+    '            sys.stdin, sys.stdout = stdin, stdout',\n\
+    '            try:',\n\
+    '                exec(USER_CODE, {})',\n\
+    '            finally:',\n\
+    '                sys.stdin, sys.stdout = _in, _out',\n\
+    '            out = stdout.getvalue()',\n\
+    '        ok = _norm(out) == _norm(t.expected)',\n\
+    '    except Exception as e:',\n\
+    '        err = traceback.format_exc()',\n\
+    \"    results.append({'i': i, 'ok': ok, 'out': out, 'exp': t.expected, 'err': err})\",\n\
+    '',\n\
+    '# Return JSON as the last expression (no print) so JS can JSON.parse(...)',\n\
+    \"json.dumps({'results': results})\",\n\
+  ].join('\\n');\n\
+}\n\
+\n\
+async function run(code, tests) {\n\
+  await ready;\n\
+  // Convert JS object to a real Python object BEFORE running code\n\
+  const payloadPy = pyodide.toPy({ code, tests });\n\
+  try {\n\
+    pyodide.globals.set('PY_PAYLOAD', payloadPy);\n\
+    const program = buildProgram();\n\
+    const raw = await pyodide.runPythonAsync(program); // returns string (last expr)\n\
+    return JSON.parse(raw);\n\
+  } finally {\n\
+    try { payloadPy.destroy(); } catch (e) {}\n\
+    try { pyodide.globals.delete && pyodide.globals.delete('PY_PAYLOAD'); } catch (e) {}\n\
+  }\n\
+}\n\
+\n\
+self.addEventListener('message', async (ev) => {\n\
+  const { type, code, tests } = ev.data || {};\n\
+  if (type === 'run') {\n\
+    try {\n\
+      const res = await run(code, tests === 'hidden' ? TESTS_HIDDEN : tests);\n\
+      self.postMessage({ type: 'done', ok: true, res });\n\
+    } catch (e) {\n\
+      self.postMessage({ type: 'done', ok: false, error: String((e && e.message) || e) });\n\
+    }\n\
+  } else if (type === 'ping') {\n\
+    await ready; // only signal ready after Pyodide loaded\n\
+    self.postMessage({ type: 'pong' });\n\
+  }\n\
+});\n";
+
+        /* ================= Test data ================= */
+        const PUBLIC_TESTS = [{
+                input: '3\n1 2 3\n',
+                expected: '6'
+            },
+            {
+                input: '2\n100 100\n',
+                expected: '200'
+            },
+            {
+                input: '1\n42\n',
+                expected: '42'
+            },
+            {
+                input: '3\n-1 -2 -3\n',
+                expected: '-6'
+            },
+        ];
+
+        const HIDDEN_TESTS = [{
+                input: '1\n-5\n',
+                expected: '-5'
+            },
+            {
+                input: '5\n0 0 0 0 0\n',
+                expected: '0'
+            },
+            {
+                input: '4\n10 20 30 40\n',
+                expected: '100'
+            },
+        ];
+
+        const HIDDEN_B64 = btoa(JSON.stringify(HIDDEN_TESTS));
+
+        /* ================= UI wiring ================= */
+        const codeEl = document.getElementById('code');
+        const logEl = document.getElementById('log');
+        const testsEl = document.getElementById('tests');
+        const statusEl = document.getElementById('status');
+
+        function setStatus(text) {
+            statusEl.textContent = text;
+        }
+
+        function escapeHtml(s) {
+            return (s || '').replace(/[&<>]/g, c => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;'
+            } [c]));
+        }
+
+        function appendLog(html) {
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            logEl.appendChild(div);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function clearLog() {
+            logEl.innerHTML = '';
+        }
+
+        function renderTests() {
+            testsEl.innerHTML = '';
+            PUBLIC_TESTS.forEach((t, idx) => {
+                const el = document.createElement('div');
+                el.className = 'test';
+                el.innerHTML = `<div style="display:flex; gap:6px; align-items:center; justify-content:space-between;">
+            <strong>Case #${idx+1}</strong>
+            <button data-idx="${idx}" class="del">Delete</button>
+          </div>
+          <div class="muted">Input</div>
+          <pre contenteditable spellcheck="false" class="in">${t.input.replace(/</g,'&lt;')}</pre>
+          <div class="muted">Expected output</div>
+          <pre contenteditable spellcheck="false" class="exp">${t.expected.replace(/</g,'&lt;')}</pre>`;
+                testsEl.appendChild(el);
+                el.querySelector('.del').onclick = () => {
+                    PUBLIC_TESTS.splice(idx, 1);
+                    renderTests();
+                };
+                const inEl = el.querySelector('.in');
+                const expEl = el.querySelector('.exp');
+                const save = () => {
+                    PUBLIC_TESTS[idx] = {
+                        input: inEl.textContent,
+                        expected: expEl.textContent
+                    };
+                };
+                inEl.oninput = expEl.oninput = save;
+            });
+        }
+        renderTests();
+
+        /* ================= Default stub code ================= */
+        const STUB = `# Problem: read N then N integers, output their sum.
+# You can implement either a solve(s) function OR script style using input()/print().
+
+# Option A: function style
+# def solve(s: str) -> str:
+#     data = list(map(int, s.split()))
+#     n, nums = data[0], data[1:]
+#     return str(sum(nums[:n]))
+
+# Option B: script style (stdin/stdout)
+# n = int(input().strip())
+# nums = list(map(int, input().split()))
+# print(sum(nums[:n]))
+`;
+        codeEl.value = STUB;
+
+        document.getElementById('format').onclick = () => {
+            codeEl.value = STUB;
+        };
+        document.getElementById('add-test').onclick = () => {
+            PUBLIC_TESTS.push({
+                input: '',
+                expected: ''
+            });
+            renderTests();
+        };
+
+        /* ================= Worker factory (CLASSIC) ================= */
+        function createWorker() {
+            const src = WORKER_SRC.replace('__HIDDEN_B64__', HIDDEN_B64);
+            const blob = new Blob([src], {
+                type: 'text/javascript'
+            });
+            const url = URL.createObjectURL(blob);
+            const w = new Worker(url); // classic worker (no { type: 'module' })
+            w.addEventListener('error', (e) => {
+                appendLog(`<span class="badge fail">WORKER ERROR</span> ${escapeHtml(e.message || String(e))}`);
+                setStatus('Error');
+            });
+            return w;
+        }
+
+        let worker = createWorker();
+
+        /* ================= Heartbeat ================= */
+        setStatus('Pyodide loading…');
+        const ping = setInterval(() => {
+            try {
+                worker.postMessage({
+                    type: 'ping'
+                });
+            } catch {}
+        }, 1200);
+
+        worker.addEventListener('message', (ev) => {
+            if (ev.data && ev.data.type === 'pong') {
+                clearInterval(ping);
+                setStatus('Ready');
+            }
+        });
+
+        /* ================= Runner ================= */
+        function run(kind) {
+            clearLog();
+            setStatus('Running ' + kind + ' tests…');
+            const code = codeEl.value;
+
+            if (worker) {
+                try {
+                    worker.terminate();
+                } catch {}
+            }
+            worker = createWorker();
+
+            let killed = false;
+            const MAX_MS = Math.min(15000, 2500 * (kind === 'hidden' ? 5 : PUBLIC_TESTS.length || 1));
+            const timer = setTimeout(() => {
+                killed = true;
+                try {
+                    worker.terminate();
+                } catch {}
+                setStatus('Timed out');
+                appendLog(`<span class="badge fail">TIME LIMIT</span> Your program exceeded ${MAX_MS}ms.`);
+            }, MAX_MS);
+
+            worker.addEventListener('message', (ev) => {
+                const {
+                    type,
+                    ok,
+                    res,
+                    error
+                } = ev.data || {};
+                if (type === 'done' && !killed) {
+                    clearTimeout(timer);
+                    if (!ok) {
+                        setStatus('Error');
+                        appendLog(`<span class="badge fail">ERROR</span> ${escapeHtml(error)}`);
+                        return;
+                    }
+                    const results = res.results || [];
+                    const passed = results.filter(r => r.ok).length;
+                    setStatus(`Done • ${passed}/${results.length} passed`);
+                    results.forEach((r, i) => {
+                        const badge = r.ok ? '<span class="badge pass">PASS</span>' : '<span class="badge fail">FAIL</span>';
+                        let html = `${badge} Case #${i+1}`;
+                        if (!r.ok) {
+                            html += `\n<pre>Expected:\n${escapeHtml(r.exp)}\n\nGot:\n${escapeHtml(r.out || '')}\n</pre>`;
+                            if (r.err) html += `\n<pre>Traceback:\n${escapeHtml(r.err)}\n</pre>`;
+                        }
+                        appendLog(html);
+                    });
+                }
+            });
+
+            worker.postMessage({
+                type: 'run',
+                code,
+                tests: kind === 'hidden' ? 'hidden' : PUBLIC_TESTS
+            });
+        }
+
+        document.getElementById('run-public').onclick = () => run('public');
+        document.getElementById('run-hidden').onclick = () => run('hidden');
+    </script>
+</body>
+
+</html>

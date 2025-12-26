@@ -14,7 +14,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let checkboxStates = {};
     let debounceTimer = null;
-    let currentSort = { column: 'count', direction: 'desc' };
+    let currentSort = {
+        column: 'count',
+        direction: 'desc'
+    };
 
     let lastWordCounts = null;
     let lastDuplicates = null;
@@ -24,7 +27,7 @@ document.addEventListener('DOMContentLoaded', function() {
     minLengthInput.addEventListener('input', debounceUpdate);
     minOccurrencesInput.addEventListener('input', debounceUpdate);
     prefixTrackingInput.addEventListener('change', updateContent);
-    
+
     clearButton.addEventListener('click', clearAll);
     copyButton.addEventListener('click', copyResults);
     downloadButton.addEventListener('click', downloadResults);
@@ -51,15 +54,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const normalizedText = normalizeText(text);
         const wordCounts = getWordCounts(normalizedText);
         const duplicates = getDuplicates(wordCounts);
-        
+
         let result = 'Duplicate Words Analysis\n';
         result += '========================\n\n';
-        
+
         const sortedDuplicates = [...duplicates].sort((a, b) => wordCounts[b] - wordCounts[a]);
         sortedDuplicates.forEach(word => {
             result += `${word}: ${wordCounts[word]}\n`;
         });
-        
+
         navigator.clipboard.writeText(result).then(() => {
             showNotification('Results copied to clipboard!');
         }).catch(() => {
@@ -72,7 +75,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const normalizedText = normalizeText(text);
         const wordCounts = getWordCounts(normalizedText);
         const duplicates = getDuplicates(wordCounts);
-        
+
         const data = {
             timestamp: new Date().toISOString(),
             settings: {
@@ -85,8 +88,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 count: wordCounts[word]
             })).sort((a, b) => b.count - a.count)
         };
-        
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+
+        const blob = new Blob([JSON.stringify(data, null, 2)], {
+            type: 'application/json'
+        });
         const link = document.createElement('a');
         const blobUrl = URL.createObjectURL(blob);
         link.href = blobUrl;
@@ -101,7 +106,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const normalizedText = normalizeText(text);
         const wordCounts = getWordCounts(normalizedText);
         const duplicates = getDuplicates(wordCounts);
-        
+
         duplicates.forEach(word => {
             checkboxStates[word] = true;
         });
@@ -113,7 +118,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const normalizedText = normalizeText(text);
         const wordCounts = getWordCounts(normalizedText);
         const duplicates = getDuplicates(wordCounts);
-        
+
         duplicates.forEach(word => {
             checkboxStates[word] = false;
         });
@@ -149,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const wordCounts = getWordCounts(normalizedText);
         const duplicates = getDuplicates(wordCounts);
 
-        // Cache for efficient checkbox updates
+
         lastWordCounts = wordCounts;
         lastDuplicates = duplicates;
         lastNormalizedText = normalizedText;
@@ -164,15 +169,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const totalWords = words.length;
         const uniqueWords = Object.keys(wordCounts).length;
         const duplicateWords = duplicates.length;
-        
-        // Calculate total occurrences of duplicate words
+
+
         let totalDuplicateOccurrences = 0;
         duplicates.forEach(word => {
             totalDuplicateOccurrences += wordCounts[word];
         });
-        
+
         const duplicatePercentage = totalWords > 0 ? ((totalDuplicateOccurrences / totalWords) * 100).toFixed(1) : 0;
-        
+
         statsDisplay.innerHTML = `
             <div class="stats-grid">
                 <div class="stat-item">
@@ -196,7 +201,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function normalizeText(text) {
-        // Normalize to NFD (decomposing diacritics)
+
         let normalized = text.normalize("NFD");
 
         const customReplacements = {
@@ -206,17 +211,17 @@ document.addEventListener('DOMContentLoaded', function() {
             'ß': 'ss',
             'ñ': 'n',
             'ç': 'c',
-            // ... add more replacements as needed
+
         };
 
         normalized = Array.from(normalized).map(char =>
             customReplacements[char] || char
         ).join('');
 
-        // Remove diacritics not covered by NFD normalization using a more concise regex
+
         normalized = normalized.replace(/\p{M}/gu, '');
 
-        // Convert to lowercase
+
         return normalized.toLowerCase();
     }
 
@@ -229,7 +234,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (word.length >= minWordLength) {
                 counts[word] = (counts[word] || 0) + 1;
 
-                // Count prefixes if prefix tracking is enabled
+
                 if (trackPrefixes) {
                     for (let i = minWordLength; i < word.length; i++) {
                         const prefix = word.substring(0, i);
@@ -243,13 +248,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     function getDuplicates(wordCounts) {
-        const minOccurrences = parseInt(minOccurrencesInput.value, 10) || 2; // Use the minOccurrences value
+        const minOccurrences = parseInt(minOccurrencesInput.value, 10) || 2;
         return Object.keys(wordCounts).filter(word => wordCounts[word] >= minOccurrences);
     }
 
     function highlightText(normalizedText, duplicates) {
         if (!prefixTrackingInput.checked) {
-            // Highlight only full words
+
             const originalText = normalizedText;
             let highlightedText = originalText.replace(/\b\w+\b/g, match => {
                 const normalizedMatch = normalizeText(match);
@@ -263,22 +268,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
             let highlightedText = normalizedText.split(/\b/).map(word => {
                 if (!/\w+/.test(word)) {
-                    return escapeHtml(word); // Return non-word parts escaped
+                    return escapeHtml(word);
                 }
 
                 let applicableDuplicates = duplicates.filter(dup =>
                     word.startsWith(dup) && checkboxStates[dup] !== false
                 );
-                // Sort the applicable duplicates by length in descending order
+
                 applicableDuplicates.sort((a, b) => b.length - a.length);
 
-                // Check if we have any applicable duplicates
+
                 if (applicableDuplicates.length > 0) {
-                    let longestDuplicate = applicableDuplicates[0]; // The first one is the longest due to sorting
+                    let longestDuplicate = applicableDuplicates[0];
                     return `<span class="highlight">${escapeHtml(longestDuplicate)}</span>${escapeHtml(word.substring(longestDuplicate.length))}`;
                 }
 
-                return escapeHtml(word); // No duplicated prefix found, return the word escaped
+                return escapeHtml(word);
             });
 
             textDisplay.innerHTML = highlightedText.join('');
@@ -287,27 +292,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateDuplicateTable(wordCounts, duplicates) {
         let sortedDuplicates = [...duplicates];
-        
+
         if (currentSort.column === 'word') {
             sortedDuplicates.sort((a, b) => {
-                return currentSort.direction === 'asc' 
-                    ? a.localeCompare(b) 
-                    : b.localeCompare(a);
+                return currentSort.direction === 'asc' ?
+                    a.localeCompare(b) :
+                    b.localeCompare(a);
             });
         } else {
             sortedDuplicates.sort((a, b) => {
-                return currentSort.direction === 'asc'
-                    ? wordCounts[a] - wordCounts[b]
-                    : wordCounts[b] - wordCounts[a];
+                return currentSort.direction === 'asc' ?
+                    wordCounts[a] - wordCounts[b] :
+                    wordCounts[b] - wordCounts[a];
             });
         }
-        
+
         let html = '<table><thead><tr>';
         html += `<th class="sortable" data-column="word">Word ${getSortIcon('word')}</th>`;
         html += `<th class="sortable" data-column="count">Count ${getSortIcon('count')}</th>`;
         html += '<th>Toggle</th>';
         html += '</tr></thead><tbody>';
-        
+
         sortedDuplicates.forEach((duplicate, index) => {
             const isChecked = checkboxStates[duplicate] !== false;
             const escapedWord = escapeHtml(duplicate);
@@ -317,11 +322,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td><input type="checkbox" class="word-checkbox" data-index="${index}" ${isChecked ? 'checked' : ''}></td>
             </tr>`;
         });
-        
+
         html += '</tbody></table>';
         duplicateTable.innerHTML = html;
-        
-        // Add event listeners for sorting
+
+
         duplicateTable.querySelectorAll('.sortable').forEach(header => {
             header.addEventListener('click', function() {
                 const column = this.dataset.column;
@@ -334,14 +339,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateContent();
             });
         });
-        
-        // Add event listeners for checkboxes
+
+
         duplicateTable.querySelectorAll('.word-checkbox').forEach(checkbox => {
             checkbox.addEventListener('change', function() {
                 const index = parseInt(this.dataset.index, 10);
                 const word = sortedDuplicates[index];
                 checkboxStates[word] = this.checked;
-                // Use cached values instead of recalculating
+
                 if (lastNormalizedText && lastDuplicates) {
                     highlightText(lastNormalizedText, lastDuplicates);
                 }

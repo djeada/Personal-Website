@@ -1,7 +1,6 @@
-// Enhanced LaTeX Renderer App with advanced features
 class LatexRenderer {
     constructor() {
-        // Core elements
+
         this.input = document.getElementById('latex-input');
         this.output = document.getElementById('latex-output');
         this.charCount = document.getElementById('char-count');
@@ -10,7 +9,7 @@ class LatexRenderer {
         this.srStatus = document.getElementById('sr-status');
         this.diagnosticsEl = document.getElementById('diagnostics');
 
-        // Toolbar controls
+
         this.clearBtn = document.getElementById('clear-btn');
         this.exampleBtn = document.getElementById('example-btn');
         this.copyBtn = document.getElementById('copy-btn');
@@ -20,23 +19,23 @@ class LatexRenderer {
         this.wrapDisplayBtn = document.getElementById('wrap-display-btn');
         this.downloadBtn = document.getElementById('download-btn');
         this.shareBtn = document.getElementById('share-btn');
-        // Drawing controls
+
         this.penBtn = document.getElementById('pen-btn');
         this.highlightBtn = document.getElementById('highlight-btn');
         this.eraserBtn = document.getElementById('eraser-btn');
         this.drawColorInput = document.getElementById('draw-color');
-        // Quick reference elements
+
         this.quickRefFilter = document.getElementById('quick-ref-filter');
         this.quickRefList = document.getElementById('quick-ref-list');
         this.quickRefCount = document.getElementById('quick-ref-count');
 
-        // Layout elements
+
         this.splitContainer = document.getElementById('split-container');
         this.editorPanel = document.getElementById('editor-panel');
         this.previewPanel = document.getElementById('preview-panel');
         this.divider = document.getElementById('divider');
 
-        // State
+
         this.isRendering = false;
         this.renderTimeout = null;
         this.saveTimeout = null;
@@ -57,7 +56,7 @@ class LatexRenderer {
     }
 
     setupEventListeners() {
-        // Input updates
+
         this.input.addEventListener('input', () => {
             this.updateCharCount();
             this.updateLineNumbers();
@@ -74,10 +73,10 @@ class LatexRenderer {
             this.syncScroll();
         });
 
-        // Keyboard shortcuts
+
         this.input.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
 
-        // Toolbar actions
+
         this.clearBtn.addEventListener('click', () => this.clearContent());
         this.exampleBtn.addEventListener('click', () => this.loadExample());
         this.copyBtn.addEventListener('click', () => this.copyToClipboard());
@@ -94,12 +93,12 @@ class LatexRenderer {
             }
         });
 
-        // Drawing events
+
         if (this.penBtn) this.penBtn.addEventListener('click', () => this.toggleDrawingMode('pen'));
         if (this.highlightBtn) this.highlightBtn.addEventListener('click', () => this.toggleDrawingMode('highlight'));
         if (this.eraserBtn) this.eraserBtn.addEventListener('click', () => this.toggleDrawingMode('eraser'));
 
-        // Resizing
+
         this.initResizing();
         this.initQuickReference();
         this.initDrawingLayer();
@@ -125,15 +124,15 @@ class LatexRenderer {
             this.showPlaceholder();
             return;
         }
-        // Clear previous diagnostics before new validation/render cycle
+
         this.clearDiagnostics();
         this.setStatus('Rendering...', 'rendering');
         this.isRendering = true;
-        // Validate before rendering
+
         const issues = this.validateLatex(this.input.value);
         this.renderDiagnostics(issues);
         this.output.innerHTML = this.processLatexContent(inputText);
-        // Reattach drawing layer after content refresh
+
         if (this.drawingWrapper) {
             this.output.appendChild(this.drawingWrapper);
             this.resizeDrawingCanvas();
@@ -159,13 +158,13 @@ class LatexRenderer {
     }
 
     processLatexContent(content) {
-        // 1. Squash multi-line $$...$$ blocks into single-line display math
+
         const squashed = content.replace(/\$\$([\s\S]*?)\$\$/g, (m, inner) => {
-            // Preserve internal double backslashes for line breaks inside matrix environments; just remove raw newlines
+
             const cleaned = inner.replace(/\r?\n+/g, ' ').trim();
             return `$$${cleaned}$$`;
         });
-        // 2. Map each line to simple HTML wrappers (unchanged logic from earlier version)
+
         return squashed.split('\n').map(line => {
             if (!line.trim()) return '<br>';
             if (line.includes('$$')) return `<div class="display-math">${line}</div>`;
@@ -177,7 +176,7 @@ class LatexRenderer {
     validateLatex(text) {
         const issues = [];
         const lines = text.split('\n');
-        const stack = []; // for environments
+        const stack = [];
         const envRegex = /\\(begin|end)\{([^}]+)\}/g;
         const braceMap = {
             '(': ')',
@@ -187,11 +186,11 @@ class LatexRenderer {
         const openers = new Set(Object.keys(braceMap));
 
         lines.forEach((rawLine, idx) => {
-            const line = rawLine; // keep formatting
-            // Skip commented lines entirely
+            const line = rawLine;
+
             if (line.trim().startsWith('%')) return;
 
-            // Basic brace / bracket / parenthesis balance (ignoring math mode dollars for now)
+
             const stackChars = [];
             for (let i = 0; i < line.length; i++) {
                 const ch = line[i];
@@ -215,7 +214,7 @@ class LatexRenderer {
                 }));
             }
 
-            // Environment tracking
+
             envRegex.lastIndex = 0;
             let m;
             while ((m = envRegex.exec(line))) {
@@ -225,7 +224,7 @@ class LatexRenderer {
                     env,
                     line: idx + 1
                 });
-                else { // end
+                else {
                     const last = stack.pop();
                     if (!last || last.env !== env) {
                         issues.push({
@@ -237,7 +236,7 @@ class LatexRenderer {
                 }
             }
 
-            // Dollar sign pairing (simple) skip escaped \$ and $$ blocks
+
             const sanitized = line.replace(/\\\$/g, '');
             const doubleRemoved = sanitized.replace(/\$\$[^$]*\$\$/g, '');
             const singles = (doubleRemoved.match(/\$/g) || []).length;
@@ -250,14 +249,14 @@ class LatexRenderer {
             }
         });
 
-        // Any remaining unclosed environments
+
         stack.reverse().forEach(fr => issues.push({
             severity: 'warning',
             line: fr.line,
             message: `Environment '${fr.env}' opened here not closed`
         }));
 
-        // Global unmatched display math $$ count
+
         const allDouble = (text.replace(/\\\$/g, '').match(/\$\$/g) || []).length;
         if (allDouble % 2 !== 0) {
             issues.push({
@@ -272,7 +271,7 @@ class LatexRenderer {
 
     renderDiagnostics(issues) {
         if (!this.diagnosticsEl) return;
-        // De-duplicate issues (line + message)
+
         const seen = new Set();
         const unique = [];
         for (const i of issues) {
@@ -332,9 +331,9 @@ class LatexRenderer {
             this.updateCharCount();
             this.updateLineNumbers();
             this.showPlaceholder();
-            // Remove share/compressed content param from URL so refresh stays empty
+
             this.removeURLContentParam();
-            // Allow subsequent edits to start updating URL again
+
             this.initializedFromURL = false;
             this.saveState();
             this.clearDrawing(true);
@@ -350,7 +349,7 @@ class LatexRenderer {
                 history.replaceState(null, '', url.toString());
             }
         } catch (_) {
-            /* noop */
+
         }
     }
 
@@ -563,7 +562,7 @@ class LatexRenderer {
 
     initQuickReference() {
         if (!this.quickRefList) return;
-        // Make each snippet clickable / focusable
+
         this.quickRefList.querySelectorAll('.latex-snippet').forEach(el => {
             el.setAttribute('tabindex', '0');
             el.addEventListener('click', () => {
@@ -584,15 +583,15 @@ class LatexRenderer {
 
     insertSnippet(snippet) {
         if (!snippet) return;
-        // Decode minimal HTML entities (&amp;)
+
         snippet = snippet.replace(/&amp;/g, '&');
-        // Replace accidental double backslashes (from HTML attribute escaping) with single
-        // Preserve \\ (line breaks) inside environments by temporarily marking them
+
+
         const LINE_BREAK_TOKEN = '__BR__TOKEN__';
-        snippet = snippet.replace(/\\\\/g, LINE_BREAK_TOKEN); // mark real \\ first
-        snippet = snippet.replace(/\\{2,}/g, '\\'); // collapse remaining doubles
-        snippet = snippet.replace(new RegExp(LINE_BREAK_TOKEN, 'g'), '\\\\'); // restore
-        // Decide if should wrap with $ ... $
+        snippet = snippet.replace(/\\\\/g, LINE_BREAK_TOKEN);
+        snippet = snippet.replace(/\\{2,}/g, '\\');
+        snippet = snippet.replace(new RegExp(LINE_BREAK_TOKEN, 'g'), '\\\\');
+
         const needsWrap = !/\\begin\{/.test(snippet) && !/\$/.test(snippet) && !/^\s*$/.test(snippet) && snippet.length < 40 && !/\\(sum|int|prod|lim|begin)/.test(snippet) && !snippet.includes('\\\\');
         const finalSnippet = needsWrap ? `$${snippet}$` : snippet;
         this.insertAtCursor(finalSnippet);
@@ -614,7 +613,7 @@ class LatexRenderer {
                     sn.style.display = 'inline-block';
                     anyVisible = true;
                     visibleSnippets++;
-                    // simple highlight
+
                     if (q) {
                         const raw = sn.textContent;
                         const idx = raw.toLowerCase().indexOf(q);
@@ -622,13 +621,13 @@ class LatexRenderer {
                             const before = raw.slice(0, idx);
                             const match = raw.slice(idx, idx + q.length);
                             const after = raw.slice(idx + q.length);
-                            // Only wrap outside of code tag label part to avoid breaking formatting
+
                             sn.innerHTML = sn.innerHTML.replace(/<code>[\s\S]*?<\/code>(.*)/, (m, rest) => {
                                 return m.replace(rest, before + '<mark>' + match + '</mark>' + after);
                             });
                         }
                     } else {
-                        // remove marks
+
                         sn.innerHTML = sn.innerHTML.replace(/<mark>(.*?)<\/mark>/g, '$1');
                     }
                 } else {
@@ -648,17 +647,17 @@ class LatexRenderer {
         this.quickRefCount.textContent = `${count} snippet${count===1?'':'s'}${this.quickRefFilter && this.quickRefFilter.value? ' match' : ''}`;
     }
     initDrawingLayer() {
-        this.drawingMode = null; // 'pen' | 'highlight' | null
+        this.drawingMode = null;
         this.isDrawing = false;
         this.activeCtx = null;
         this.drawingWrapper = document.createElement('div');
         this.drawingWrapper.className = 'drawing-canvas-wrapper';
-        // Separate canvases to avoid highlight compounding with pen lines
+
         this.highlightCanvas = document.createElement('canvas');
         this.highlightCanvas.className = 'drawing-canvas highlight-layer';
         this.penCanvas = document.createElement('canvas');
         this.penCanvas.className = 'drawing-canvas pen-layer';
-        // Offscreen mask for highlight to keep constant opacity regardless of overlaps
+
         this.highlightMaskCanvas = document.createElement('canvas');
         this.highlightMaskCtx = this.highlightMaskCanvas.getContext('2d');
         this.highlightCtx = this.highlightCanvas.getContext('2d');
@@ -670,10 +669,10 @@ class LatexRenderer {
         }
         this.resizeDrawingCanvas = () => {
             if (!(this.highlightCanvas && this.penCanvas && this.output)) return;
-            // Use clientWidth for visible width (exclude potential scrollbars), scrollHeight for full vertical drawing space
+
             const w = this.output.clientWidth;
-            const h = this.output.scrollHeight; // allow drawing over full rendered content
-            // Preserve existing mask by copying before resize
+            const h = this.output.scrollHeight;
+
             const oldMask = document.createElement('canvas');
             oldMask.width = this.highlightMaskCanvas.width;
             oldMask.height = this.highlightMaskCanvas.height;
@@ -686,7 +685,7 @@ class LatexRenderer {
                 c.style.width = w + 'px';
                 c.style.height = h + 'px';
             });
-            // Restore mask content scaled if different size (simple drawImage auto-scales)
+
             if (oldMask.width && oldMask.height) {
                 this.highlightMaskCtx.drawImage(oldMask, 0, 0, w, h);
                 this.renderHighlightTint();
@@ -697,7 +696,7 @@ class LatexRenderer {
         }
         window.addEventListener('resize', () => this.resizeDrawingCanvas());
         this.output.addEventListener('scroll', () => {
-            /* reserved */
+
         });
         this.resizeDrawingCanvas();
         const start = (e) => {
@@ -838,7 +837,7 @@ class LatexRenderer {
                 this._penPoints = null;
             }
         };
-        // Attach to both canvases (pointer may start on either)
+
         ;
         [this.highlightCanvas, this.penCanvas].forEach(c => {
             c.addEventListener('mousedown', start);
@@ -870,14 +869,14 @@ class LatexRenderer {
         }
         const scrollLeft = this.output.scrollLeft;
         const scrollTop = this.output.scrollTop;
-        // Use raw client offset plus scroll; padding remains part of drawable region
+
         return {
             x: clientX - rect.left + scrollLeft,
             y: clientY - rect.top + scrollTop
         };
     }
     toggleDrawingMode(mode) {
-        if (this.drawingMode === mode) mode = null; // toggle off
+        if (this.drawingMode === mode) mode = null;
         this.drawingMode = mode;
         const active = !!mode;
         this.output.classList.toggle('drawing-active', active);
@@ -900,21 +899,21 @@ class LatexRenderer {
         const w = this.highlightCanvas.width,
             h = this.highlightCanvas.height;
         const color = this.drawColorInput?.value || '#ffff00';
-        // Clear visible highlight layer
+
         this.highlightCtx.clearRect(0, 0, w, h);
-        // Draw mask
+
         this.highlightCtx.drawImage(this.highlightMaskCanvas, 0, 0);
-        // Apply tint with fixed alpha via source-in
+
         this.highlightCtx.globalCompositeOperation = 'source-in';
         this.highlightCtx.globalAlpha = 0.25;
         this.highlightCtx.fillStyle = color;
         this.highlightCtx.fillRect(0, 0, w, h);
-        // Reset comp mode
+
         this.highlightCtx.globalCompositeOperation = 'source-over';
         this.highlightCtx.globalAlpha = 1;
     }
 
-    /* ================= Fullscreen ================= */
+
     toggleFullscreen() {
         const el = this.previewPanel || this.output;
         if (!document.fullscreenElement) {

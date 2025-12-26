@@ -1,8 +1,7 @@
-// DOM event listeners
 document.getElementById("reset").addEventListener("click", reset);
 document.getElementById("submit").addEventListener("click", processMatrices);
 
-// Functions
+
 function reset() {
     displayMatrix("matrix-a", []);
     displayMatrix("matrix-b", []);

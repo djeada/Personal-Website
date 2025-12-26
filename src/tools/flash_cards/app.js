@@ -1,38 +1,33 @@
-/**
- * Interactive Learning Flashcards Application
- * A modern, accessible flashcard learning tool
- */
-
 (function() {
     'use strict';
 
-    // ===============================================
-    // CONFIGURATION
-    // ===============================================
+
+
+
     const CONFIG = {
-        // Use relative paths for local data loading
+
         categoriesUrl: 'categories.json',
         categoryDataUrl: (category) => `${category}.json`,
         animationDuration: 300,
-        autoFlipDelay: 0, // Set > 0 to enable auto-flip
+        autoFlipDelay: 0,
     };
 
-    // ===============================================
-    // STATE MANAGEMENT
-    // ===============================================
+
+
+
     const state = {
         currentCategory: null,
         currentSubcategories: new Set(),
         cards: [],
         currentCardIndex: 0,
-        cardStatus: [], // true = not known, false = known
+        cardStatus: [],
         isFlipped: false,
         isLoading: false,
     };
 
-    // ===============================================
-    // DOM ELEMENTS
-    // ===============================================
+
+
+
     const elements = {
         categorySelect: null,
         subcategoriesDiv: null,
@@ -54,13 +49,11 @@
         errorDiv: null,
     };
 
-    // ===============================================
-    // UTILITY FUNCTIONS
-    // ===============================================
 
-    /**
-     * Display error message to user
-     */
+
+
+
+
     function displayError(msg) {
         if (!elements.errorDiv) {
             elements.errorDiv = document.createElement('div');
@@ -84,25 +77,21 @@
         }
         elements.errorDiv.textContent = msg;
         elements.errorDiv.style.display = 'block';
-        
-        // Auto-hide after 5 seconds
+
+
         setTimeout(() => {
             elements.errorDiv.style.display = 'none';
         }, 5000);
     }
 
-    /**
-     * Clear error message
-     */
+
     function clearError() {
         if (elements.errorDiv) {
             elements.errorDiv.style.display = 'none';
         }
     }
 
-    /**
-     * Show/hide loading spinner
-     */
+
     function setLoading(isLoading) {
         state.isLoading = isLoading;
         if (elements.loadingSpinner) {
@@ -110,9 +99,7 @@
         }
     }
 
-    /**
-     * Fisher-Yates shuffle algorithm
-     */
+
     function shuffleArray(array) {
         const shuffled = [...array];
         for (let i = shuffled.length - 1; i > 0; i--) {
@@ -122,16 +109,12 @@
         return shuffled;
     }
 
-    /**
-     * Format category name for display
-     */
+
     function formatCategoryName(name) {
         return name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     }
 
-    /**
-     * Resize text to fit container
-     */
+
     function resizeText(elementId) {
         const container = document.getElementById(elementId);
         if (!container) return;
@@ -139,13 +122,13 @@
         const textElements = container.querySelectorAll('p');
         if (textElements.length === 0) return;
 
-        // Reset font size first
+
         textElements.forEach(el => el.style.fontSize = '');
-        
+
         let fontSize = parseFloat(window.getComputedStyle(textElements[0]).fontSize);
         const minFontSize = 12;
-        
-        // Calculate if content overflows
+
+
         const checkOverflow = () => {
             const totalHeight = Array.from(textElements).reduce((sum, el) => sum + el.scrollHeight, 0);
             return totalHeight > container.clientHeight * 0.85;
@@ -157,17 +140,15 @@
         }
     }
 
-    // ===============================================
-    // DATA FETCHING
-    // ===============================================
 
-    /**
-     * Fetch JSON data from URL
-     */
+
+
+
+
     async function fetchJson(url) {
         clearError();
         setLoading(true);
-        
+
         try {
             const response = await fetch(url);
             if (!response.ok) {
@@ -184,15 +165,13 @@
         }
     }
 
-    /**
-     * Load categories from JSON file
-     */
+
     async function loadCategories() {
         const categories = await fetchJson(CONFIG.categoriesUrl);
-        
+
         if (categories && Array.isArray(categories) && categories.length > 0) {
             elements.categorySelect.innerHTML = '';
-            
+
             categories.forEach((cat, i) => {
                 const opt = document.createElement('option');
                 opt.value = cat;
@@ -200,19 +179,17 @@
                 elements.categorySelect.appendChild(opt);
                 if (i === 0) opt.selected = true;
             });
-            
+
             await loadCategoryData(elements.categorySelect.value);
         } else {
             displayError('No categories available. Please check your data files.');
         }
     }
 
-    /**
-     * Load category data (subcategories and cards)
-     */
+
     async function loadCategoryData(category) {
         const data = await fetchJson(CONFIG.categoryDataUrl(category));
-        
+
         if (data && data.subcategories) {
             state.currentCategory = data;
             populateSubcategories();
@@ -223,39 +200,35 @@
         }
     }
 
-    // ===============================================
-    // UI POPULATION
-    // ===============================================
 
-    /**
-     * Populate subcategory checkboxes
-     */
+
+
+
+
     function populateSubcategories() {
         elements.subcategoriesDiv.innerHTML = '';
         state.currentSubcategories.clear();
-        
+
         state.currentCategory.subcategories.forEach(sc => {
             const label = document.createElement('label');
             const checkbox = document.createElement('input');
-            
+
             checkbox.type = 'checkbox';
             checkbox.value = sc.name;
             checkbox.checked = true;
             checkbox.id = `subcategory-${sc.name.replace(/\s+/g, '-').toLowerCase()}`;
             checkbox.addEventListener('change', handleSubcategoryChange);
-            
+
             label.htmlFor = checkbox.id;
             label.appendChild(checkbox);
             label.appendChild(document.createTextNode(sc.name));
-            
+
             elements.subcategoriesDiv.appendChild(label);
             state.currentSubcategories.add(sc.name);
         });
     }
 
-    /**
-     * Select all subcategories
-     */
+
     function selectAllSubcategories() {
         state.currentSubcategories = new Set(
             state.currentCategory.subcategories.map(sc => sc.name)
@@ -265,12 +238,10 @@
         });
     }
 
-    /**
-     * Filter cards based on selected subcategories
-     */
+
     function filterCards() {
         state.cards = [];
-        
+
         state.currentCategory.subcategories.forEach(sc => {
             if (state.currentSubcategories.has(sc.name)) {
                 state.cards.push(...sc.cards.map(card => ({
@@ -279,42 +250,40 @@
                 })));
             }
         });
-        
+
         state.cardStatus = Array(state.cards.length).fill(true);
         state.currentCardIndex = 0;
         state.isFlipped = false;
-        
+
         showCard();
         populateQuestionsTable();
         updateProgress();
     }
 
-    /**
-     * Populate questions table
-     */
+
     function populateQuestionsTable() {
         elements.questionsTableBody.innerHTML = '';
-        
+
         state.cards.forEach((card, idx) => {
             const row = document.createElement('tr');
             row.id = `question-row-${idx}`;
-            
-            // Index cell
+
+
             const idxCell = document.createElement('td');
             idxCell.textContent = idx + 1;
-            
-            // Question cell
+
+
             const questionCell = document.createElement('td');
             questionCell.innerHTML = card.front;
-            
-            // Subcategory cell
+
+
             const subcategoryCell = document.createElement('td');
             const badge = document.createElement('span');
             badge.className = 'subcategory-badge';
             badge.textContent = card.subcategory;
             subcategoryCell.appendChild(badge);
-            
-            // Status cell
+
+
             const statusCell = document.createElement('td');
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
@@ -325,34 +294,32 @@
                 state.cardStatus[idx] = checkbox.checked;
                 row.classList.toggle('completed', !checkbox.checked);
                 updateProgress();
-                
-                // If current card is now marked as known, move to next
+
+
                 if (idx === state.currentCardIndex && !checkbox.checked) {
                     showCard();
                 }
             });
             statusCell.appendChild(checkbox);
-            
+
             row.appendChild(idxCell);
             row.appendChild(questionCell);
             row.appendChild(subcategoryCell);
             row.appendChild(statusCell);
-            
+
             if (!state.cardStatus[idx]) {
                 row.classList.add('completed');
             }
-            
+
             elements.questionsTableBody.appendChild(row);
         });
     }
 
-    // ===============================================
-    // CARD DISPLAY
-    // ===============================================
 
-    /**
-     * Show current flashcard
-     */
+
+
+
+
     function showCard() {
         if (state.cards.length === 0) {
             elements.flashcardFront.innerHTML = `
@@ -368,10 +335,10 @@
             return;
         }
 
-        // Find next available card
+
         let start = state.currentCardIndex;
         let found = false;
-        
+
         do {
             if (state.cardStatus[state.currentCardIndex]) {
                 found = true;
@@ -381,7 +348,7 @@
         } while (state.currentCardIndex !== start);
 
         if (!found) {
-            // All cards completed
+
             elements.flashcardFront.innerHTML = `
                 <div class="empty-state">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -404,15 +371,15 @@
             `;
         }
 
-        // Reset flip state
+
         elements.flashcard.classList.remove('flipped');
         state.isFlipped = false;
 
-        // Resize text and render math
+
         requestAnimationFrame(() => {
             resizeText('flashcardFront');
             resizeText('flashcardBack');
-            
+
             if (window.MathJax && window.MathJax.typesetPromise) {
                 MathJax.typesetPromise().catch(err => {
                     console.error('MathJax error:', err);
@@ -420,13 +387,11 @@
             }
         });
 
-        // Highlight current row in table
+
         highlightCurrentRow();
     }
 
-    /**
-     * Highlight current card row in table
-     */
+
     function highlightCurrentRow() {
         const rows = elements.questionsTableBody.querySelectorAll('tr');
         rows.forEach((row, idx) => {
@@ -434,21 +399,19 @@
         });
     }
 
-    /**
-     * Update progress indicators
-     */
+
     function updateProgress() {
         const total = state.cards.length;
         const completed = state.cardStatus.filter(s => !s).length;
         const remaining = total - completed;
         const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-        // Update stat cards
+
         if (elements.totalCards) elements.totalCards.textContent = total;
         if (elements.remainingCards) elements.remainingCards.textContent = remaining;
         if (elements.completedCards) elements.completedCards.textContent = completed;
 
-        // Update progress bar
+
         if (elements.progressBar) {
             elements.progressBar.style.width = `${percentage}%`;
         }
@@ -457,13 +420,11 @@
         }
     }
 
-    // ===============================================
-    // EVENT HANDLERS
-    // ===============================================
 
-    /**
-     * Handle subcategory checkbox change
-     */
+
+
+
+
     function handleSubcategoryChange(e) {
         if (e.target.checked) {
             state.currentSubcategories.add(e.target.value);
@@ -473,74 +434,62 @@
         filterCards();
     }
 
-    /**
-     * Handle category change
-     */
+
     function handleCategoryChange(e) {
         loadCategoryData(e.target.value);
     }
 
-    /**
-     * Handle flip button click
-     */
+
     function handleFlip() {
         elements.flashcard.classList.toggle('flipped');
         state.isFlipped = !state.isFlipped;
-        
+
         requestAnimationFrame(() => {
             resizeText('flashcardFront');
             resizeText('flashcardBack');
         });
     }
 
-    /**
-     * Handle "I Know It" button click
-     */
+
     function handleKnowIt() {
         if (state.cards.length === 0) return;
-        
+
         state.cardStatus[state.currentCardIndex] = false;
-        
-        // Update table checkbox
+
+
         const row = document.getElementById(`question-row-${state.currentCardIndex}`);
         if (row) {
             const checkbox = row.querySelector('.status-checkbox');
             if (checkbox) checkbox.checked = false;
             row.classList.add('completed');
         }
-        
+
         updateProgress();
-        
-        // Move to next card
+
+
         moveToNextCard();
     }
 
-    /**
-     * Handle Next button click
-     */
+
     function handleNext() {
         if (state.cards.length === 0) return;
         moveToNextCard();
     }
 
-    /**
-     * Move to next available card
-     */
+
     function moveToNextCard() {
         const start = state.currentCardIndex;
-        
+
         do {
             state.currentCardIndex = (state.currentCardIndex + 1) % state.cards.length;
         } while (!state.cardStatus[state.currentCardIndex] && state.currentCardIndex !== start);
-        
+
         showCard();
     }
 
-    /**
-     * Handle shuffle button click
-     */
+
     function handleShuffle() {
-        // Shuffle cards within each selected subcategory
+
         state.currentCategory.subcategories.forEach(sc => {
             if (state.currentSubcategories.has(sc.name)) {
                 sc.cards = shuffleArray(sc.cards);
@@ -549,9 +498,7 @@
         filterCards();
     }
 
-    /**
-     * Handle reset button click
-     */
+
     function handleReset() {
         state.cardStatus = Array(state.cards.length).fill(true);
         state.currentCardIndex = 0;
@@ -560,13 +507,11 @@
         updateProgress();
     }
 
-    /**
-     * Handle keyboard shortcuts
-     */
+
     function handleKeydown(e) {
-        // Ignore if user is typing in an input
+
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
-        
+
         switch (e.key) {
             case ' ':
             case 'f':
@@ -599,20 +544,16 @@
         }
     }
 
-    /**
-     * Handle flashcard click
-     */
+
     function handleFlashcardClick() {
         handleFlip();
     }
 
-    // ===============================================
-    // INITIALIZATION
-    // ===============================================
 
-    /**
-     * Cache DOM elements
-     */
+
+
+
+
     function cacheElements() {
         elements.categorySelect = document.getElementById('categorySelect');
         elements.subcategoriesDiv = document.getElementById('subcategories');
@@ -633,27 +574,25 @@
         elements.completedCards = document.getElementById('completedCards');
     }
 
-    /**
-     * Attach event listeners
-     */
+
     function attachEventListeners() {
-        // Category change
+
         elements.categorySelect?.addEventListener('change', handleCategoryChange);
-        
-        // Button clicks
+
+
         elements.flipButton?.addEventListener('click', handleFlip);
         elements.knowButton?.addEventListener('click', handleKnowIt);
         elements.nextButton?.addEventListener('click', handleNext);
         elements.shuffleAllButton?.addEventListener('click', handleShuffle);
         elements.resetButton?.addEventListener('click', handleReset);
-        
-        // Flashcard click
+
+
         elements.flashcard?.addEventListener('click', handleFlashcardClick);
-        
-        // Keyboard shortcuts
+
+
         document.addEventListener('keydown', handleKeydown);
-        
-        // Flashcard keyboard accessibility
+
+
         elements.flashcard?.addEventListener('keydown', (e) => {
             if (e.key === ' ' || e.key === 'Enter') {
                 e.preventDefault();
@@ -662,16 +601,14 @@
         });
     }
 
-    /**
-     * Initialize the application
-     */
+
     function init() {
         cacheElements();
         attachEventListeners();
         loadCategories();
     }
 
-    // Start the application when DOM is ready
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {

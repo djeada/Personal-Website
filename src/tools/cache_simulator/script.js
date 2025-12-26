@@ -1,12 +1,12 @@
 'use strict';
 const $ = selector => document.querySelector(selector);
 
-/* --------- CACHE & RAM SIMULATOR ---------- */
+
 class Line {
     constructor(sz) {
         this.valid = false;
         this.tag = null;
-        this.data = new Array(sz).fill(null); // each entry will be { addr, value, offset }
+        this.data = new Array(sz).fill(null);
         this.lru = 0;
     }
 }
@@ -143,7 +143,7 @@ class Sim {
             }
         }
 
-        // return the word object so UI can inspect addr/value/offset
+
         return this.cache[idx].data[this.offset(addr)];
     }
 
@@ -155,7 +155,7 @@ class Sim {
     }
 }
 
-/* ---- cost & helpers ---- */
+
 const cost = {
     H: 10,
     M: 100,
@@ -176,13 +176,13 @@ function log(msg) {
     o.scrollTop = o.scrollHeight;
 }
 
-/* --------- UI UPDATE HELPERS ---------- */
+
 function buildCacheHeader(blk) {
     const thead = $('#cache thead tr');
-    // remove any old <th> after Tag
+
     while (thead.children.length > 3) thead.removeChild(thead.lastChild);
 
-    // insert offset columns
+
     for (let off = 0; off < blk; off++) {
         const th = document.createElement('th');
         th.textContent = `Off ${off}`;
@@ -198,32 +198,31 @@ const ui = {
 
         sim.cache.forEach((line, idx) => {
             const tr = document.createElement('tr');
-            // highlight the most‐recently accessed line
+
             if (sim.last.idx === idx) tr.classList.add(sim.last.result);
 
-            // build an array of cell‐values:
-            // [ idx, Valid?, Tag, off0, off1, …, LRU ]
+
+
             const rowData = [
                 idx,
                 line.valid ? 'V' : '',
                 line.valid ? line.tag : ''
             ];
 
-            // one cell per offset
+
             for (let off = 0; off < sim.cfg.blk; off++) {
                 const word = line.data[off];
                 rowData.push(
                     word ?
-                    `${word.value} @ ${word.addr}` // e.g. “123 @ 0”
-                    :
+                    `${word.value} @ ${word.addr}` :
                     '–'
                 );
             }
 
-            // finally the LRU counter
+
             rowData.push(line.valid ? line.lru : '');
 
-            // and turn that into actual <td>s
+
             tr.innerHTML = rowData
                 .map(cell => `<td>${cell}</td>`)
                 .join('');
@@ -260,7 +259,7 @@ const ui = {
     }
 };
 
-/* --------- CHART.JS SETUP ---------- */
+
 let chart;
 
 function newChart() {
@@ -316,7 +315,7 @@ function pushChart(step, sim) {
     chart.update();
 }
 
-/* --------- CONTROLLER & BINDINGS ---------- */
+
 let sim, seq = [],
     idx = 0,
     timer = null;
@@ -414,7 +413,7 @@ function pause() {
     $('#step').disabled = false;
 }
 
-// Bind controls
+
 ['#ramSize', '#blkSize', '#lines', '#assoc', '#pfDist'].forEach(s =>
     $(s).addEventListener('change', hardReset)
 );

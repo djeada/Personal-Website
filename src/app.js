@@ -1,9 +1,8 @@
-// Make renderer globally accessible
 let renderer;
 
-// ------------------
-// Utility Functions
-// ------------------
+
+
+
 function setCookie(name, value, days, sameSite = 'Lax') {
     let expires = "";
     if (days) {
@@ -35,9 +34,9 @@ function getColorForMode(colorLight, colorDark) {
     return darkModeValue && darkModeValue.toLowerCase() === "true" ? colorDark : colorLight;
 }
 
-// -------------------------
-// Ripple Effect for Menus
-// -------------------------
+
+
+
 function onMenuClick(e) {
     var dom = e.currentTarget;
     var elemRect = dom.getBoundingClientRect();
@@ -53,14 +52,14 @@ function onMenuClick(e) {
     dom.appendChild(rippleDiv);
     setTimeout(function() {
         dom.removeChild(rippleDiv);
-        return /* () */ 0;
+        return 0;
     }, 900);
-    return /* () */ 0;
+    return 0;
 }
 
-// ---------------------------
-// Dark Mode and Logo Handling
-// ---------------------------
+
+
+
 function checkLogo() {
     let logoImage = document.getElementById("logo-image");
     if (document.body.classList.contains("dark-mode")) {
@@ -72,10 +71,10 @@ function checkLogo() {
     }
 }
 
-// ---------------------
-// GitHub Integrations
-// ---------------------
-// Mapping of section keys to GitHub repository base URLs.
+
+
+
+
 const GITHUB_BASE_REPOS = {
     "algorithms_and_data_structures": "https://github.com/djeada/Algorithms-And-Data-Structures",
     "frontend_notes": "https://github.com/djeada/Frontend-Notes",
@@ -92,7 +91,7 @@ const GITHUB_BASE_REPOS = {
     "vtk_examples": "https://github.com/djeada/Vtk-Examples"
 };
 
-// Mapping of section keys to additional path prepends within the repo.
+
 const PATH_PREPENDS = {
     "algorithms_and_data_structures": "notes",
     "frontend_notes": "notes",
@@ -110,7 +109,7 @@ const PATH_PREPENDS = {
 
 };
 
-// Mapping of section keys to the main branch names.
+
 const MAIN_BRANCH = {
     "algorithms_and_data_structures": "master",
     "frontend_notes": "master",
@@ -126,64 +125,48 @@ const MAIN_BRANCH = {
     "stanford_machine_learning": "main",
 };
 
-/**
- * Returns an object containing:
- *  - sectionKey: the key for looking up repo-specific configurations.
- *  - baseRepoUrl: the GitHub repository base URL using the section key.
- *  - filePathInRepo: the relative file path in that repository, with an additional prepended folder if configured,
- *    and with any .html file extension replaced with .md.
- *
- * The function works by:
- *   1. Removing any leading slash from the current URL's pathname.
- *   2. Splitting the path into segments.
- *   3. Searching from the end for the "articles" segment.
- *   4. Taking the segment immediately after "articles" as the section key.
- *   5. Joining the remaining segments as the file path.
- *   6. Prepending a folder from PATH_PREPENDS (if defined) and replacing the .html extension.
- *
- * If "articles" or a proper section key mapping is not found, an error message is displayed.
- */
+
 function getArticleGithubPath() {
     let path = location.pathname;
     if (path.startsWith("/")) {
-        path = path.substring(1); // remove the leading slash
+        path = path.substring(1);
     }
 
     const parts = path.split("/");
-    // Find the last occurrence of "articles" in the URL path.
+
     const articlesIndex = parts.lastIndexOf("articles");
     if (articlesIndex === -1 || articlesIndex >= parts.length - 1) {
         alert("Sorry, the article base '/articles' was not found in the URL or the section key is missing.");
         return null;
     }
 
-    // The segment immediately after "articles" is the section key.
+
     const sectionKey = parts[articlesIndex + 1];
-    // All segments after the section key represent the file path in the repository.
+
     let filePathParts = parts.slice(articlesIndex + 2);
     let filePathInRepo = filePathParts.join("/");
 
-    // Retrieve the base GitHub repo URL using the section key.
+
     if (!GITHUB_BASE_REPOS.hasOwnProperty(sectionKey)) {
         alert("Sorry, no GitHub repository is configured for the section: " + sectionKey);
         return null;
     }
     const baseRepoUrl = GITHUB_BASE_REPOS[sectionKey];
 
-    // Look up the additional path prepend for this section (if available).
+
     if (PATH_PREPENDS.hasOwnProperty(sectionKey)) {
         const prependFolder = PATH_PREPENDS[sectionKey];
-        // Prepend the additional folder to the file path.
-        // If filePathInRepo is empty, then the prependFolder becomes the entire file path.
+
+
         filePathInRepo = prependFolder + (filePathInRepo ? "/" + filePathInRepo : "");
     }
 
-    // Normalize the file extension:
-    // Replace a .html extension with .md or, if no extension exists, append .md.
+
+
     if (filePathInRepo.match(/\.html$/)) {
         filePathInRepo = filePathInRepo.replace(/\.html$/, ".md");
     } else if (!/\.[^\/]+$/.test(filePathInRepo)) {
-        // If there is no extension in the last segment, append .md.
+
         filePathInRepo += ".md";
     }
 
@@ -194,32 +177,28 @@ function getArticleGithubPath() {
     };
 }
 
-/**
- * Opens the GitHub editor interface for the current page's corresponding file.
- */
+
 function handleSuggestEditClick() {
     const result = getArticleGithubPath();
     if (!result) {
-        return; // An error has been shown.
+        return;
     }
     const {
         sectionKey,
         baseRepoUrl,
         filePathInRepo
     } = result;
-    // Lookup the correct branch for the section using the MAIN_BRANCH mapping.
+
     const branch = MAIN_BRANCH.hasOwnProperty(sectionKey) ? MAIN_BRANCH[sectionKey] : "master";
     const editUrl = `${baseRepoUrl}/edit/${branch}/${filePathInRepo}`;
     window.open(editUrl, "_blank");
 }
 
-/**
- * Opens the new issue page for the respective GitHub repository.
- */
+
 function handleCreateIssueClick() {
     const result = getArticleGithubPath();
     if (!result) {
-        return; // An error has been shown.
+        return;
     }
     const {
         baseRepoUrl
@@ -236,34 +215,34 @@ function handleDownloadClick() {
     const spinner = document.getElementById('pdf-spinner-overlay');
     if (spinner) spinner.style.display = 'flex';
 
-    // Clone and modify the article content
+
     const cloned = article.cloneNode(true);
 
-    // ----- NEW: strip out the top "action buttons + metadata" block -----
-    // Remove any .article-action-buttons divs
+
+
     cloned.querySelectorAll('.article-action-buttons').forEach(el => el.remove());
 
-    // Remove any <p> whose text starts with "Last modified:" or "This article is written in:"
+
     cloned.querySelectorAll('p').forEach(p => {
         const txt = p.textContent.trim();
         if (/^Last modified:/i.test(txt) || /^This article is written in:/i.test(txt)) {
             p.remove();
         }
     });
-    // --------------------------------------------------------------------
 
-    // Remove all images
+
+
     cloned.querySelectorAll('img').forEach(img => img.remove());
 
-    // Replace header content with your custom header markup
+
     cloned.querySelectorAll('header').forEach(header => {
         header.innerHTML = '<h1>Your Custom Header</h1>';
     });
 
-    // Reserve extra space at the bottom to prevent cutting text
+
     cloned.style.paddingBottom = '20px';
 
-    // Create a hidden container to hold the modified content
+
     const container = document.createElement('div');
     container.style.position = 'fixed';
     container.style.top = '-9999px';
@@ -271,7 +250,7 @@ function handleDownloadClick() {
     container.appendChild(cloned);
     document.body.appendChild(container);
 
-    // Configure html2pdf options with additional page-break setting and higher scale
+
     const options = {
         margin: 0.5,
         filename: 'article.pdf',
@@ -293,7 +272,7 @@ function handleDownloadClick() {
         }
     };
 
-    // Generate and download the PDF, then clean up
+
     html2pdf().set(options).from(cloned).save()
         .then(() => {
             document.body.removeChild(container);
@@ -310,40 +289,40 @@ function initializeThreeJS() {
     const container = document.getElementById('threejs-container');
     let darkMode = getCookie("darkMode") === "true";
 
-    // Mobile detection
+
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
         window.innerWidth <= 768;
 
-    // Adjust quality settings for mobile
+
     const qualitySettings = {
         particles: isMobile ? 300 : 1200,
         stars: isMobile ? 2000 : 6000,
         shadowMap: isMobile ? 512 : 2048,
         pixelRatio: isMobile ? 1 : Math.min(window.devicePixelRatio, 2),
-        antialias: !isMobile, // Disable antialiasing on mobile for performance
-        fog: isMobile ? 0.004 : 0.002, // Denser fog on mobile to hide lower detail
-        ringDetail: isMobile ? [16, 64] : [32, 128] // Lower geometry detail on mobile
+        antialias: !isMobile,
+        fog: isMobile ? 0.004 : 0.002,
+        ringDetail: isMobile ? [16, 64] : [32, 128]
     };
 
-    // Enhanced color palettes for better contrast
+
     let bgColor = darkMode ? 0x0a0a12 : 0xf8f9fa;
     let fogColor = darkMode ? bgColor : 0xc8d0e0;
     let ringColor = darkMode ? 0x4a90e2 : 0x2c5aa0;
     let starColor = darkMode ? 0xffffff : 0x2a2a2a;
 
-    // Scene setup with mobile-optimized fog
+
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(fogColor, qualitySettings.fog);
 
     const camera = new THREE.PerspectiveCamera(
-        isMobile ? 85 : 75, // Wider FOV on mobile for better view
+        isMobile ? 85 : 75,
         container.clientWidth / container.clientHeight,
         0.1,
         2000
     );
-    camera.position.set(0, 8, isMobile ? 20 : 25); // Closer camera on mobile
+    camera.position.set(0, 8, isMobile ? 20 : 25);
 
-    // Mobile-optimized renderer settings
+
     const renderer = new THREE.WebGLRenderer({
         antialias: qualitySettings.antialias,
         alpha: true,
@@ -352,7 +331,7 @@ function initializeThreeJS() {
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setPixelRatio(qualitySettings.pixelRatio);
 
-    // Conditional shadow settings
+
     if (!isMobile) {
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -365,7 +344,7 @@ function initializeThreeJS() {
     }
     container.appendChild(renderer.domElement);
 
-    // Mobile-optimized lighting system
+
     const ambient = new THREE.AmbientLight(darkMode ? 0x404040 : 0xc0c0c0, isMobile ? 0.8 : 0.6);
     scene.add(ambient);
 
@@ -385,21 +364,21 @@ function initializeThreeJS() {
     }
     scene.add(sunLight);
 
-    // Dynamic point light for energy visualization
+
     const energyLight = new THREE.PointLight(0x44aaff, 0, 100, 1.5);
     energyLight.position.set(0, 10, 0);
     scene.add(energyLight);
 
-    // Mobile-optimized ring geometry
+
     const ringGeo = new THREE.TorusGeometry(4, 0.3, qualitySettings.ringDetail[0], qualitySettings.ringDetail[1]);
 
-    // Simplified procedural surface details for mobile
+
     const colors = [];
     const colorCount = isMobile ? ringGeo.attributes.position.count / 4 : ringGeo.attributes.position.count;
 
     for (let i = 0; i < ringGeo.attributes.position.count; i++) {
         if (isMobile && i > colorCount) {
-            // Use base color for remaining vertices on mobile
+
             colors.push(
                 ((ringColor >> 16) & 0xff) / 255,
                 ((ringColor >> 8) & 0xff) / 255,
@@ -425,7 +404,7 @@ function initializeThreeJS() {
     }
     ringGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
-    // Mobile-optimized material properties
+
     const ringMat = new THREE.MeshPhysicalMaterial({
         vertexColors: true,
         metalness: isMobile ? 0.6 : 0.8,
@@ -442,10 +421,10 @@ function initializeThreeJS() {
     ring.position.set(0, 10, 0);
     scene.add(ring);
 
-    // Physics variables with mobile adjustments
+
     const GRAVITY = -9.81 * 0.5;
     const GROUND_LEVEL = 2;
-    const MAX_LAUNCH_VELOCITY = isMobile ? 15 : 20; // Reduced for mobile
+    const MAX_LAUNCH_VELOCITY = isMobile ? 15 : 20;
     const MAX_HORIZONTAL_DISTANCE = isMobile ? 30 : 40;
     const VELOCITY_DAMPING_GROUND = 0.85;
     const MIN_BOUNCE_VELOCITY = 0.5;
@@ -468,7 +447,7 @@ function initializeThreeJS() {
     let baseRotationSpeed = 0.005;
     let ringOnGround = false;
 
-    // Mobile-optimized particle system
+
     const particleCount = qualitySettings.particles;
     const particlePositions = new Float32Array(particleCount * 3);
     const particleVelocities = new Float32Array(particleCount * 3);
@@ -505,7 +484,7 @@ function initializeThreeJS() {
     const particles = new THREE.Points(particleGeo, particleMat);
     scene.add(particles);
 
-    // Mobile-optimized starfield
+
     const starCount = qualitySettings.stars;
     const starPositions = new Float32Array(starCount * 3);
     const starSizes = new Float32Array(starCount);
@@ -534,7 +513,7 @@ function initializeThreeJS() {
     const starField = new THREE.Points(starsGeo, starsMat);
     scene.add(starField);
 
-    // Ground plane for shadows (only on desktop)
+
     if (!isMobile) {
         const groundGeo = new THREE.PlaneGeometry(100, 100);
         const groundMat = new THREE.MeshLambertMaterial({
@@ -549,7 +528,7 @@ function initializeThreeJS() {
         scene.add(ground);
     }
 
-    // Enhanced interactivity with touch support
+
     let isMouseDown = false;
     let isTouching = false;
     let mouseForce = {
@@ -569,7 +548,7 @@ function initializeThreeJS() {
     const clock = new THREE.Clock();
     let time = 0;
 
-    // Touch event handlers for mobile
+
     renderer.domElement.addEventListener('touchstart', (e) => {
         e.preventDefault();
         isTouching = true;
@@ -581,7 +560,7 @@ function initializeThreeJS() {
 
         const currentTime = Date.now();
         if (currentTime - lastTouchTime < 300) {
-            // Double tap detected
+
             handleDoubleTap();
         }
         lastTouchTime = currentTime;
@@ -594,7 +573,7 @@ function initializeThreeJS() {
         isTouching = false;
         setTimeout(() => cameraAutoRotate = true, 2000);
 
-        // Single tap launch
+
         if (e.changedTouches.length === 1) {
             setTimeout(() => {
                 if (Date.now() - lastTouchTime > 300) {
@@ -615,14 +594,14 @@ function initializeThreeJS() {
         const currentX = touch.clientX - rect.left;
         const currentY = touch.clientY - rect.top;
 
-        // Apply force based on touch movement
+
         mouseForce.x = ((currentX - touchStartPos.x) / rect.width) * 0.03;
         mouseForce.y = ((currentY - touchStartPos.y) / rect.height) * -0.03;
     }, {
         passive: false
     });
 
-    // Mouse event handlers (for desktop)
+
     renderer.domElement.addEventListener('mousedown', (e) => {
         isMouseDown = true;
         cameraAutoRotate = false;
@@ -674,7 +653,7 @@ function initializeThreeJS() {
         ringOnGround = false;
     }
 
-    // Keyboard controls (desktop only)
+
     if (!isMobile) {
         window.addEventListener('keydown', (e) => {
             keysPressed[e.code] = true;
@@ -717,7 +696,7 @@ function initializeThreeJS() {
         ringOnGround = false;
     }
 
-    // Responsive resize handler
+
     function handleResize() {
         const width = container.clientWidth;
         const height = container.clientHeight;
@@ -726,19 +705,19 @@ function initializeThreeJS() {
         camera.updateProjectionMatrix();
         renderer.setSize(width, height);
 
-        // Update mobile detection on resize
+
         const wasMobile = isMobile;
         const nowMobile = window.innerWidth <= 768;
 
         if (wasMobile !== nowMobile) {
-            // Reload if mobile status changed
+
             location.reload();
         }
     }
 
     window.addEventListener('resize', handleResize);
 
-    // Performance monitoring for mobile
+
     let frameCount = 0;
     let lastFPSCheck = performance.now();
     let lowFPSCount = 0;
@@ -748,7 +727,7 @@ function initializeThreeJS() {
         const deltaTime = clock.getDelta();
         time += deltaTime;
 
-        // FPS monitoring on mobile
+
         if (isMobile) {
             frameCount++;
             const now = performance.now();
@@ -760,7 +739,7 @@ function initializeThreeJS() {
                 if (fps < 25) {
                     lowFPSCount++;
                     if (lowFPSCount >= 3) {
-                        // Reduce quality further if consistently low FPS
+
                         particleMat.opacity *= 0.8;
                         starsMat.opacity *= 0.8;
                         lowFPSCount = 0;
@@ -769,7 +748,7 @@ function initializeThreeJS() {
             }
         }
 
-        // Handle continuous key presses for camera control (desktop only)
+
         if (!isMobile) {
             if (keysPressed['ArrowLeft'] || keysPressed['KeyA']) {
                 cameraAngle -= deltaTime * 2;
@@ -781,7 +760,7 @@ function initializeThreeJS() {
             }
         }
 
-        // Theme switching
+
         const newDarkMode = getCookie("darkMode") === "true";
         if (newDarkMode !== darkMode) {
             darkMode = newDarkMode;
@@ -799,7 +778,7 @@ function initializeThreeJS() {
             }
         }
 
-        // Physics simulation
+
         if ((isMouseDown || isTouching) && !ringOnGround) {
             ringVelocity.x += mouseForce.x;
             ringVelocity.z += mouseForce.y;
@@ -809,7 +788,7 @@ function initializeThreeJS() {
             ringVelocity.y += GRAVITY * deltaTime;
         }
 
-        // Boundary enforcement
+
         const distanceFromCenter = Math.sqrt(ringPosition.x * ringPosition.x + ringPosition.z * ringPosition.z);
         if (distanceFromCenter > MAX_HORIZONTAL_DISTANCE) {
             const returnForce = 0.02;
@@ -817,12 +796,12 @@ function initializeThreeJS() {
             ringVelocity.z -= (ringPosition.z / distanceFromCenter) * returnForce;
         }
 
-        // Velocity limits
+
         ringVelocity.x = Math.max(-MAX_LAUNCH_VELOCITY, Math.min(MAX_LAUNCH_VELOCITY, ringVelocity.x));
         ringVelocity.y = Math.max(-MAX_LAUNCH_VELOCITY * 1.5, Math.min(MAX_LAUNCH_VELOCITY * 1.5, ringVelocity.y));
         ringVelocity.z = Math.max(-MAX_LAUNCH_VELOCITY, Math.min(MAX_LAUNCH_VELOCITY, ringVelocity.z));
 
-        // Update position
+
         if (!ringOnGround) {
             ringPosition.x += ringVelocity.x * deltaTime * 10;
             ringPosition.y += ringVelocity.y * deltaTime * 10;
@@ -835,7 +814,7 @@ function initializeThreeJS() {
             ringVelocity.z *= VELOCITY_DAMPING_GROUND;
         }
 
-        // Ground collision
+
         if (ringPosition.y <= GROUND_LEVEL + 0.3) {
             ringPosition.y = GROUND_LEVEL + 0.3;
 
@@ -850,7 +829,7 @@ function initializeThreeJS() {
             }
         }
 
-        // Update angular velocity and rotation
+
         angularVelocity.x *= 0.995;
         angularVelocity.y *= 0.995;
         angularVelocity.z *= 0.995;
@@ -861,7 +840,7 @@ function initializeThreeJS() {
 
         ring.position.set(ringPosition.x, ringPosition.y, ringPosition.z);
 
-        // Energy-based effects
+
         energyLevel = Math.max(0, energyLevel - deltaTime * 15);
         const energyFactor = energyLevel / 100;
 
@@ -871,8 +850,8 @@ function initializeThreeJS() {
         energyLight.intensity = energyFactor * 3;
         energyLight.position.set(ringPosition.x, ringPosition.y + 2, ringPosition.z);
 
-        // Particle system update (with mobile optimizations)
-        const particleUpdateStep = isMobile ? 2 : 1; // Update every other particle on mobile
+
+        const particleUpdateStep = isMobile ? 2 : 1;
         for (let i = 0; i < particleCount; i += particleUpdateStep) {
             const i3 = i * 3;
 
@@ -901,14 +880,14 @@ function initializeThreeJS() {
         particles.geometry.attributes.position.needsUpdate = true;
         particleMat.opacity = 0.3 + energyFactor * 0.5;
 
-        // Star twinkling (reduced frequency on mobile)
+
         if (!isMobile || frameCount % 2 === 0) {
             starsMat.opacity = 0.6 + 0.3 * Math.sin(time * 0.5) + energyFactor * 0.2;
         }
 
-        // Camera system
+
         if (cameraAutoRotate) {
-            cameraAngle = time * (isMobile ? 0.03 : 0.05); // Slower on mobile
+            cameraAngle = time * (isMobile ? 0.03 : 0.05);
         }
 
         const radius = (isMobile ? 20 : 25) + Math.sin(time * 0.3) * (isMobile ? 3 : 5);
@@ -923,7 +902,7 @@ function initializeThreeJS() {
 
     animate();
 
-    // Mobile-optimized instructions overlay
+
     const instructions = document.createElement('div');
     const instructionStyle = isMobile ? `
         position: absolute;
@@ -983,7 +962,7 @@ function initializeThreeJS() {
 
     container.appendChild(instructions);
 
-    // Add mobile-specific reset button
+
     if (isMobile) {
         const resetButton = document.createElement('button');
         resetButton.style.cssText = `
@@ -1009,15 +988,15 @@ function initializeThreeJS() {
     }
 }
 
-// -------------------------
-// Scroll Reveal Animations
-// -------------------------
+
+
+
 function initScrollReveal() {
     const revealElements = document.querySelectorAll('.reveal, .reveal-stagger');
-    
+
     if (!revealElements.length) return;
 
-    // Skip animations if user prefers reduced motion
+
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         revealElements.forEach(el => {
             el.classList.add('revealed');
@@ -1035,7 +1014,7 @@ function initScrollReveal() {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 entry.target.classList.add('revealed');
-                // Optionally unobserve after revealing for performance
+
                 revealObserver.unobserve(entry.target);
             }
         });
@@ -1046,12 +1025,12 @@ function initScrollReveal() {
     });
 }
 
-// Add reveal classes to home page content sections
+
 function setupHomePageReveals() {
     const homeContent = document.getElementById('home-page-content');
     if (!homeContent) return;
 
-    // Add reveal class to main sections
+
     const headers = homeContent.querySelectorAll(':scope > header');
     const sections = homeContent.querySelectorAll(':scope > section, :scope > .blog-section, :scope > .video-container, :scope > .threejs-wrapper');
     const paragraphs = homeContent.querySelectorAll(':scope > p');
@@ -1062,7 +1041,7 @@ function setupHomePageReveals() {
     paragraphs.forEach(el => el.classList.add('reveal'));
     lists.forEach(el => el.classList.add('reveal'));
 
-    // Add stagger to blog sections for cascading effect
+
     const blogSections = homeContent.querySelectorAll('.blog-section');
     blogSections.forEach(section => {
         section.classList.add('reveal');
@@ -1072,7 +1051,7 @@ function setupHomePageReveals() {
         }
     });
 
-    // Add reveal to video container and threejs wrapper
+
     const videoContainer = homeContent.querySelector('.video-container');
     if (videoContainer) videoContainer.classList.add('reveal');
 
@@ -1081,11 +1060,11 @@ function setupHomePageReveals() {
 }
 
 
-// --------------
-// Main Function
-// --------------
+
+
+
 function main() {
-    // Dark Mode Setup
+
     const darkModeButton = document.getElementById("dark-mode-button");
     darkModeButton.addEventListener("click", () => {
         document.body.classList.toggle("dark-mode");
@@ -1098,16 +1077,16 @@ function main() {
     }
     checkLogo();
 
-    // Setup scroll reveal animations for home page
+
     setupHomePageReveals();
     initScrollReveal();
 
-    // Initialize Three.js if container is present
+
     if (document.getElementById('threejs-container')) {
         initializeThreeJS();
     }
 
-    // Attach event listeners to our action buttons (if they exist)
+
     const suggestEditButton = document.querySelector('.btn-suggest-edit');
     if (suggestEditButton) {
         suggestEditButton.addEventListener('click', handleSuggestEditClick);
@@ -1123,23 +1102,23 @@ function main() {
         downloadButton.addEventListener('click', handleDownloadClick);
     }
 
-    // Initialize article UX enhancements
+
     initTableOfContentsHighlight();
     initTableOfContentsToggle();
     initReadingProgress();
     initBackToTop();
 
-    // Enhanced mobile nav UX: overlay, focus trap, and close interactions
+
     const navToggle = document.getElementById('navbar-toggle');
-    const navMenu = navToggle ? navToggle.nextElementSibling : null; // <ul>
+    const navMenu = navToggle ? navToggle.nextElementSibling : null;
     if (navToggle && navMenu && navMenu.tagName === 'UL') {
-        // Ensure ARIA linkage
+
         if (!navMenu.id) {
             navMenu.id = 'main-menu';
         }
         navToggle.setAttribute('aria-controls', navMenu.id);
 
-        // Create overlay once
+
         let overlay = document.querySelector('.nav-overlay');
         if (!overlay) {
             overlay = document.createElement('div');
@@ -1154,7 +1133,7 @@ function main() {
             navMenu.setAttribute('aria-hidden', open ? 'false' : 'true');
             navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
             if (open) {
-                // Move focus to first focusable in menu for accessibility
+
                 const firstFocusable = navMenu.querySelector('a, button, input, [tabindex]:not([tabindex="-1"])');
                 if (firstFocusable) firstFocusable.focus({
                     preventScroll: true
@@ -1170,7 +1149,7 @@ function main() {
             updateOpenState();
         });
 
-        // Close with ESC
+
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && navToggle.checked) {
                 navToggle.checked = false;
@@ -1179,7 +1158,7 @@ function main() {
             }
         });
 
-        // Basic focus trap when open
+
         document.addEventListener('keydown', (e) => {
             if (!navToggle.checked || e.key !== 'Tab') return;
             const focusables = navMenu.querySelectorAll('a, button, input, [tabindex]:not([tabindex="-1"])');
@@ -1195,7 +1174,7 @@ function main() {
             }
         });
 
-        // Close on navigation link click (improves UX on mobile)
+
         navMenu.addEventListener('click', (e) => {
             const target = e.target;
             if (target && target.closest('a')) {
@@ -1206,34 +1185,34 @@ function main() {
     }
 }
 
-// -------------------------
-// Article UX Enhancements
-// -------------------------
 
-// Add toggle functionality for table of contents on mobile
+
+
+
+
 function initTableOfContentsToggle() {
     const toc = document.getElementById('table-of-contents');
     if (!toc) return;
 
-    // Find or create the h2 header
+
     let tocHeader = toc.querySelector(':scope > h2');
     if (!tocHeader) {
-        // If no h2 exists, create one
+
         tocHeader = document.createElement('h2');
         tocHeader.textContent = 'Table of Contents';
         toc.insertBefore(tocHeader, toc.firstChild);
     }
 
-    // Check if toggle button already exists
+
     let toggleButton = document.getElementById('table-of-contents-toggle');
     let toggleHandler = null;
     let resizeHandler = null;
-    
+
     const setupMobileToggle = () => {
         const isMobile = window.innerWidth <= 768;
-        
+
         if (isMobile && !toggleButton) {
-            // Create toggle button for mobile
+
             toggleButton = document.createElement('button');
             toggleButton.id = 'table-of-contents-toggle';
             toggleButton.setAttribute('aria-label', 'Toggle table of contents');
@@ -1244,24 +1223,24 @@ function initTableOfContentsToggle() {
                 </svg>
             `;
 
-            // Add toggle button to header
+
             tocHeader.appendChild(toggleButton);
 
-            // Start collapsed on mobile
+
             toc.classList.add('collapsed');
 
-            // Toggle functionality
+
             toggleHandler = () => {
                 const isCollapsed = toc.classList.contains('collapsed');
                 toc.classList.toggle('collapsed');
                 toggleButton.setAttribute('aria-expanded', isCollapsed ? 'true' : 'false');
             };
 
-            // Make header clickable
+
             tocHeader.style.cursor = 'pointer';
             tocHeader.addEventListener('click', toggleHandler);
         } else if (!isMobile && toggleButton) {
-            // Remove mobile-specific elements when resizing to desktop
+
             toc.classList.remove('collapsed');
             if (toggleHandler) {
                 tocHeader.removeEventListener('click', toggleHandler);
@@ -1273,17 +1252,17 @@ function initTableOfContentsToggle() {
         }
     };
 
-    // Setup on load
+
     setupMobileToggle();
 
-    // Handle window resize - use a single persistent handler
+
     resizeHandler = () => {
         setupMobileToggle();
     };
     window.addEventListener('resize', resizeHandler);
 }
 
-// Highlight active section in table of contents
+
 function initTableOfContentsHighlight() {
     const toc = document.getElementById('table-of-contents');
     if (!toc) return;
@@ -1310,15 +1289,15 @@ function initTableOfContentsHighlight() {
             if (entry.isIntersecting) {
                 const id = entry.target.id;
                 const newActiveLink = toc.querySelector(`a[href="#${id}"]`);
-                
+
                 if (newActiveLink && newActiveLink !== activeLink) {
-                    // Remove active class from all links
+
                     tocLinks.forEach(link => link.classList.remove('active'));
-                    // Add active class to current link
+
                     newActiveLink.classList.add('active');
                     activeLink = newActiveLink;
 
-                    // Scroll TOC to show active link
+
                     if (toc.scrollHeight > toc.clientHeight) {
                         const linkTop = newActiveLink.offsetTop;
                         const linkHeight = newActiveLink.offsetHeight;
@@ -1326,7 +1305,10 @@ function initTableOfContentsHighlight() {
                         const tocScroll = toc.scrollTop;
 
                         if (linkTop < tocScroll || linkTop + linkHeight > tocScroll + tocHeight) {
-                            newActiveLink.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                            newActiveLink.scrollIntoView({
+                                block: 'nearest',
+                                behavior: 'smooth'
+                            });
                         }
                     }
                 }
@@ -1337,17 +1319,17 @@ function initTableOfContentsHighlight() {
     headings.forEach(heading => observer.observe(heading));
 }
 
-// Add reading progress indicator
+
 function initReadingProgress() {
     const articleBody = document.getElementById('article-body');
     if (!articleBody) return;
 
-    // Create progress bar
+
     const progressBar = document.createElement('div');
     progressBar.id = 'reading-progress';
     document.body.appendChild(progressBar);
 
-    // Update progress on scroll
+
     const updateProgress = () => {
         const windowHeight = window.innerHeight;
         const documentHeight = document.documentElement.scrollHeight - windowHeight;
@@ -1356,11 +1338,13 @@ function initReadingProgress() {
         progressBar.style.width = Math.min(progress, 100) + '%';
     };
 
-    window.addEventListener('scroll', updateProgress, { passive: true });
+    window.addEventListener('scroll', updateProgress, {
+        passive: true
+    });
     updateProgress();
 }
 
-// Add back to top button
+
 function initBackToTop() {
     const articleBody = document.getElementById('article-body');
     if (!articleBody) return;
@@ -1373,7 +1357,7 @@ function initBackToTop() {
 
     document.body.appendChild(backToTopBtn);
 
-    // Show/hide button based on scroll position
+
     const toggleButton = () => {
         if (window.scrollY > 400) {
             backToTopBtn.style.display = 'flex';
@@ -1382,9 +1366,11 @@ function initBackToTop() {
         }
     };
 
-    window.addEventListener('scroll', toggleButton, { passive: true });
+    window.addEventListener('scroll', toggleButton, {
+        passive: true
+    });
 
-    // Smooth scroll to top
+
     backToTopBtn.addEventListener('click', () => {
         window.scrollTo({
             top: 0,
@@ -1395,9 +1381,9 @@ function initBackToTop() {
     toggleButton();
 }
 
-// -------------------------
-// Main Initialization
-// -------------------------
 
-// Run `main` after DOM is ready
+
+
+
+
 document.addEventListener("DOMContentLoaded", main);

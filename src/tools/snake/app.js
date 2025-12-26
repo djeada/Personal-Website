@@ -1,4 +1,3 @@
-// ——— COOKIE HELPERS ———
 function setCookie(name, value, days) {
     const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000)
         .toUTCString();
@@ -12,7 +11,7 @@ function getCookie(name) {
     return match ? decodeURIComponent(match[1]) : null;
 }
 
-// Canvas Setup
+
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const gridSize = 20;
@@ -20,12 +19,12 @@ const cellSize = canvas.width / gridSize;
 let isPaused = false;
 let lastTapTime = 0;
 
-// Game Variables
+
 let game;
 let highScore = parseInt(getCookie('SNAKE_HIGH_SCORE')) || 0;
 
 
-// Game Class
+
 class Game {
     constructor() {
         this.grid = Array(gridSize).fill(null).map(() => Array(gridSize).fill(CellState.EMPTY));
@@ -115,7 +114,7 @@ class Game {
     }
 
     render() {
-        // === Constants ===
+
         const FONT = '16px "Helvetica Neue", sans-serif';
         const TEXT_COLOR = 'rgba(255,255,255,0.9)';
         const PANEL_BG = 'rgba(255,255,255,0.15)';
@@ -126,19 +125,19 @@ class Game {
         const PADDING_X = 12;
         const PADDING_Y = 8;
 
-        // === Helper to draw a rounded “glass” panel with text ===
+
         function drawPanel(textLines, x, y) {
             ctx.font = FONT;
-            // measure widest line
+
             const widths = textLines.map(t => ctx.measureText(t).width);
             const w = Math.max(...widths) + PADDING_X * 2;
             const h = textLines.length * (parseInt(FONT) + 4) + PADDING_Y * 2;
 
-            // panel shadow
+
             ctx.shadowColor = SHADOW_COLOR;
             ctx.shadowBlur = SHADOW_BLUR;
 
-            // draw rounded rect
+
             ctx.fillStyle = PANEL_BG;
             ctx.strokeStyle = PANEL_BORDER;
             ctx.lineWidth = 1;
@@ -156,10 +155,10 @@ class Game {
             ctx.fill();
             ctx.stroke();
 
-            // reset shadow
+
             ctx.shadowBlur = 0;
 
-            // draw text lines
+
             ctx.fillStyle = TEXT_COLOR;
             ctx.textBaseline = 'top';
             ctx.textAlign = 'left';
@@ -171,10 +170,10 @@ class Game {
                 );
             });
 
-            return w; // for positioning
+            return w;
         }
 
-        // === Clear & draw board ===
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         for (let y = 0; y < gridSize; y++) {
             for (let x = 0; x < gridSize; x++) {
@@ -183,7 +182,7 @@ class Game {
             }
         }
 
-        // === Content ===
+
         ctx.fillStyle = '#8B4513';
         this.obstacles.forEach(o =>
             ctx.fillRect(o.x * cellSize, o.y * cellSize, cellSize, cellSize)
@@ -191,14 +190,14 @@ class Game {
         this.food.render();
         this.snake.render();
 
-        // === HUD Panels ===
-        // Left panel: Score & High Score
+
+
         drawPanel(
             [`Score: ${this.score}`, `High: ${highScore}`],
             10, 10
         );
 
-        // Right panel: Level
+
         const lvlText = [`Level: ${this.level}`];
         const panelW = drawPanel(
             lvlText,
@@ -208,7 +207,7 @@ class Game {
     }
 
     renderGameOver() {
-        // === Constants ===
+
         const FONT_TITLE = '36px "Helvetica Neue", sans-serif';
         const FONT_BODY = '20px "Helvetica Neue", sans-serif';
         const TEXT_COLOR = 'rgba(255,255,255,0.9)';
@@ -222,7 +221,7 @@ class Game {
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
 
-        // Prepare lines
+
         const lines = [{
                 text: 'Game Over',
                 font: FONT_TITLE,
@@ -240,7 +239,7 @@ class Game {
             },
         ];
 
-        // measure panel size
+
         ctx.textAlign = 'center';
         let panelWidth = 0;
         let panelHeight = PADDING * 2;
@@ -259,11 +258,11 @@ class Game {
         const panelX = centerX - panelWidth / 2;
         const panelY = centerY - panelHeight / 2;
 
-        // Draw panel shadow
+
         ctx.shadowColor = SHADOW_COLOR;
         ctx.shadowBlur = SHADOW_BLUR;
 
-        // Draw rounded panel
+
         ctx.fillStyle = PANEL_BG;
         ctx.strokeStyle = PANEL_BORDER;
         ctx.lineWidth = 1;
@@ -281,10 +280,10 @@ class Game {
         ctx.fill();
         ctx.stroke();
 
-        // Reset shadow
+
         ctx.shadowBlur = 0;
 
-        // Draw text lines
+
         let cursorY = panelY + PADDING;
         lines.forEach(({
             text,
@@ -377,7 +376,7 @@ class Snake {
     }
 
     render() {
-        // apply a soft shadow to lift the snake off the background
+
         ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
         ctx.shadowBlur = 4;
 
@@ -386,14 +385,14 @@ class Snake {
             const y = segment.y * cellSize;
 
             if (index === 0) {
-                // Head: dark green fill + white outline
+
                 ctx.fillStyle = 'darkgreen';
                 ctx.strokeStyle = 'white';
                 ctx.lineWidth = 2;
                 ctx.fillRect(x, y, cellSize, cellSize);
                 ctx.strokeRect(x, y, cellSize, cellSize);
 
-                // Eyes: white square + black outline
+
                 const eyeSize = cellSize / 6;
                 const eyeOffsetX = this.direction.x === 0 ?
                     cellSize / 4 :
@@ -413,7 +412,7 @@ class Snake {
                 ctx.strokeRect(x + eyeOffsetX, y + eyeOffsetY, eyeSize, eyeSize);
 
             } else {
-                // Body: green fill + white outline
+
                 ctx.fillStyle = 'green';
                 ctx.strokeStyle = 'white';
                 ctx.lineWidth = 1;
@@ -422,7 +421,7 @@ class Snake {
             }
         });
 
-        // reset shadow before drawing other things
+
         ctx.shadowBlur = 0;
     }
 
@@ -454,14 +453,14 @@ class Food {
         const y = this.y * cellSize + cellSize / 2;
         const radius = cellSize * 0.4;
 
-        // drop-shadow
+
         ctx.save();
         ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
         ctx.shadowBlur = 4;
         ctx.shadowOffsetX = 1;
         ctx.shadowOffsetY = 1;
 
-        // base circle with radial gradient
+
         const grad = ctx.createRadialGradient(
             x - radius * 0.3, y - radius * 0.3, radius * 0.2,
             x, y, radius
@@ -474,10 +473,10 @@ class Food {
         ctx.arc(x, y, radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // restore so the highlight isn’t shadowed
+
         ctx.restore();
 
-        // small white “shine” ellipse
+
         ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
         ctx.beginPath();
         ctx.ellipse(
@@ -491,7 +490,7 @@ class Food {
         );
         ctx.fill();
 
-        // thin dark outline
+
         ctx.strokeStyle = 'rgba(0,0,0,0.2)';
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -501,7 +500,7 @@ class Food {
 
 }
 
-// Enums
+
 const CellState = {
     EMPTY: 'empty',
     SNAKE: 'snake',
@@ -509,7 +508,7 @@ const CellState = {
     OBSTACLE: 'obstacle'
 };
 
-// Input Handling
+
 window.addEventListener('keydown', e => {
     const directionKeys = {
         ArrowUp: {
@@ -551,7 +550,7 @@ window.addEventListener('keydown', e => {
         e.preventDefault();
 
     } else if (e.key === ' ') {
-        // SPACE: if game over → restart; otherwise toggle pause
+
         if (game && game.gameOver) {
             game.reset();
             game.start();
@@ -566,14 +565,14 @@ window.addEventListener('keydown', e => {
         e.preventDefault();
 
     } else if (e.key === 'Escape' && game && game.gameOver) {
-        // ESC also restarts after game over if you still want that
+
         game.reset();
         game.start();
     }
 });
 
 
-// Touch Input
+
 let touchStartPos = null;
 canvas.addEventListener('touchstart', e => {
     touchStartPos = {
@@ -632,7 +631,7 @@ canvas.addEventListener('touchend', e => {
     lastTapTime = currentTime;
 });
 
-// Pause Overlay
+
 function renderPauseOverlay() {
     if (game.gameOver) return;
 
@@ -646,7 +645,7 @@ function renderPauseOverlay() {
     ctx.fillText('Tap to Resume', canvas.width / 2, canvas.height / 2 + 40);
 }
 
-// Disable Scrolling
+
 function preventDefaultTouch(e) {
     e.preventDefault();
 }
@@ -667,9 +666,9 @@ function enableScrolling() {
     document.body.classList.remove('no-scroll');
 }
 
-// Start Screen
+
 function renderStartScreen() {
-    // === Constants ===
+
     const BG_COLOR = '#AAD751';
     const FONT_TITLE = '48px "Helvetica Neue", sans-serif';
     const FONT_BODY = '24px "Helvetica Neue", sans-serif';
@@ -681,11 +680,11 @@ function renderStartScreen() {
     const RADIUS = 12;
     const PADDING = 24;
 
-    // Fill background
+
     ctx.fillStyle = BG_COLOR;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Prepare text lines
+
     const lines = [{
             text: 'Snake Game',
             font: FONT_TITLE,
@@ -703,11 +702,11 @@ function renderStartScreen() {
         },
     ];
 
-    // Center coords
+
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
 
-    // Measure panel dimensions
+
     ctx.textAlign = 'center';
     let panelWidth = 0;
     let panelHeight = PADDING * 2;
@@ -725,11 +724,11 @@ function renderStartScreen() {
     const panelX = centerX - panelWidth / 2;
     const panelY = centerY - panelHeight / 2;
 
-    // Draw panel shadow
+
     ctx.shadowColor = SHADOW_COLOR;
     ctx.shadowBlur = SHADOW_BLUR;
 
-    // Draw rounded “glass” panel
+
     ctx.fillStyle = PANEL_BG;
     ctx.strokeStyle = PANEL_BORDER;
     ctx.lineWidth = 1;
@@ -747,10 +746,10 @@ function renderStartScreen() {
     ctx.fill();
     ctx.stroke();
 
-    // Reset shadow
+
     ctx.shadowBlur = 0;
 
-    // Draw text
+
     let cursorY = panelY + PADDING;
     lines.forEach(({
         text,
@@ -780,6 +779,6 @@ canvas.addEventListener('touchstart', e => {
     }
 });
 
-// Initialize
+
 renderStartScreen();
 disableScrolling();

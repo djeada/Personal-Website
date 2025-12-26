@@ -1,5 +1,5 @@
 function getColorForMode(colorLight, colorDark) {
-    // Check for dark mode preference
+
     const darkModeValue = document.cookie.split('; ').find(row => row.startsWith('darkMode='));
     if (darkModeValue) {
         return darkModeValue.split('=')[1].toLowerCase() === 'true' ? colorDark : colorLight;
@@ -10,7 +10,7 @@ function getColorForMode(colorLight, colorDark) {
 function updateInputs() {
     var gateType = document.getElementById("gateSelect").value;
     var inputArea = document.getElementById("inputArea");
-    inputArea.innerHTML = ''; // Clear current inputs
+    inputArea.innerHTML = '';
 
     var numberOfInputs = getNumberOfInputsForGate(gateType);
 
@@ -22,28 +22,28 @@ function updateInputs() {
             toggleInput(this);
             updateOutput();
         };
-        
-        // Add label for inputs
+
+
         var label = document.createElement("div");
         label.className = "input-label";
         label.textContent = "Input " + (i + 1);
-        
+
         var container = document.createElement("div");
         container.className = "input-container";
         container.appendChild(inputDiv);
         container.appendChild(label);
-        
+
         inputArea.appendChild(container);
     }
-    updateOutput(); // Update output initially
-    updateTruthTable(); // Update truth table
+    updateOutput();
+    updateTruthTable();
 }
 
 function getNumberOfInputsForGate(gateType) {
     switch (gateType) {
         case "NOT":
             return 1;
-        default: // For AND, OR, NAND, NOR, XOR, XNOR
+        default:
             return 2;
     }
 }
@@ -91,21 +91,21 @@ function updateOutput() {
         outputElement.classList.add('inactive');
         outputElement.classList.remove('active');
     }
-    
-    updateTruthTable(); // Update truth table when output changes
+
+    updateTruthTable();
 }
 
 function updateTruthTable() {
     var gateType = document.getElementById("gateSelect").value;
     var truthTableDiv = document.getElementById("truthTable");
-    
+
     if (!truthTableDiv) return;
-    
+
     var truthTable = getTruthTable(gateType);
     var html = '<h3>Truth Table: ' + gateType + ' Gate</h3>';
     html += '<table>';
-    
-    // Header
+
+
     html += '<thead><tr>';
     if (gateType === "NOT") {
         html += '<th>Input</th><th>Output</th>';
@@ -113,8 +113,8 @@ function updateTruthTable() {
         html += '<th>Input A</th><th>Input B</th><th>Output</th>';
     }
     html += '</tr></thead>';
-    
-    // Body
+
+
     html += '<tbody>';
     for (var i = 0; i < truthTable.length; i++) {
         html += '<tr>';
@@ -126,26 +126,59 @@ function updateTruthTable() {
         html += '</tr>';
     }
     html += '</tbody></table>';
-    
+
     truthTableDiv.innerHTML = html;
 }
 
 function getTruthTable(gateType) {
     switch (gateType) {
         case "NOT":
-            return [[false, true], [true, false]];
+            return [
+                [false, true],
+                [true, false]
+            ];
         case "AND":
-            return [[false, false, false], [false, true, false], [true, false, false], [true, true, true]];
+            return [
+                [false, false, false],
+                [false, true, false],
+                [true, false, false],
+                [true, true, true]
+            ];
         case "OR":
-            return [[false, false, false], [false, true, true], [true, false, true], [true, true, true]];
+            return [
+                [false, false, false],
+                [false, true, true],
+                [true, false, true],
+                [true, true, true]
+            ];
         case "NAND":
-            return [[false, false, true], [false, true, true], [true, false, true], [true, true, false]];
+            return [
+                [false, false, true],
+                [false, true, true],
+                [true, false, true],
+                [true, true, false]
+            ];
         case "NOR":
-            return [[false, false, true], [false, true, false], [true, false, false], [true, true, false]];
+            return [
+                [false, false, true],
+                [false, true, false],
+                [true, false, false],
+                [true, true, false]
+            ];
         case "XOR":
-            return [[false, false, false], [false, true, true], [true, false, true], [true, true, false]];
+            return [
+                [false, false, false],
+                [false, true, true],
+                [true, false, true],
+                [true, true, false]
+            ];
         case "XNOR":
-            return [[false, false, true], [false, true, false], [true, false, false], [true, true, true]];
+            return [
+                [false, false, true],
+                [false, true, false],
+                [true, false, false],
+                [true, true, true]
+            ];
         default:
             return [];
     }
@@ -154,23 +187,23 @@ function getTruthTable(gateType) {
 function resetInputs() {
     var inputArea = document.getElementById("inputArea");
     var inputs = inputArea.querySelectorAll('.lightBulb');
-    
+
     inputs.forEach(function(input) {
         input.classList.remove('active');
         input.classList.add('inactive');
     });
-    
+
     updateOutput();
 }
 
 function drawGate(gateType) {
     var canvas = document.getElementById('gateCanvas');
     if (!canvas.getContext) {
-        return; // Canvas not supported
+        return;
     }
 
     var ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     switch (gateType) {
         case "AND":
@@ -185,13 +218,13 @@ function drawGate(gateType) {
         case "NAND":
             drawNANDGate(ctx);
             break;
-        case "NOR": // Add NOR gate
+        case "NOR":
             drawNORGate(ctx);
             break;
-        case "XOR": // Add XOR gate
+        case "XOR":
             drawXORGate(ctx);
             break;
-        case "XNOR": // Add XOR gate
+        case "XNOR":
             drawXNORGate(ctx);
             break;
         default:
@@ -201,26 +234,26 @@ function drawGate(gateType) {
 }
 
 function drawANDGate(ctx) {
-    // Responsive scales
-    const scale = ctx.canvas.height / 200; // Use the height to determine the scale factor
+
+    const scale = ctx.canvas.height / 200;
     const gateWidth = 180 * scale;
     const gateHeight = 180 * scale;
     const lineLength = 100 * scale;
-    const lineWidth = 2 * scale; // Make the line width scale as well
+    const lineWidth = 2 * scale;
 
-    // Centering the gate
+
     const centerX = ctx.canvas.width / 2;
     const startY = (ctx.canvas.height - gateHeight) / 2;
     const endY = startY + gateHeight;
 
     ctx.lineWidth = lineWidth;
-    ctx.strokeStyle = getColorForMode('black', 'white'); // Gate color
-    ctx.fillStyle = '#FFF'; // Fill color
+    ctx.strokeStyle = getColorForMode('black', 'white');
+    ctx.fillStyle = '#FFF';
 
-    // Clear the canvas
+
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-    // Input Lines
+
     ctx.beginPath();
     ctx.moveTo(centerX - gateWidth / 2 - lineLength, startY + 0.9 * gateHeight);
     ctx.lineTo(centerX - gateWidth / 2, startY + 0.9 * gateHeight);
@@ -228,17 +261,17 @@ function drawANDGate(ctx) {
     ctx.lineTo(centerX - gateWidth / 2, endY - 0.9 * gateHeight);
     ctx.stroke();
 
-    // AND Gate shape
+
     ctx.beginPath();
     ctx.moveTo(centerX - gateWidth / 2, startY);
-    ctx.lineTo(centerX, startY); // Straight line to start the curve
+    ctx.lineTo(centerX, startY);
     ctx.quadraticCurveTo(centerX + gateWidth / 2, ctx.canvas.height / 2, centerX, endY);
     ctx.lineTo(centerX - gateWidth / 2, endY);
     ctx.closePath();
     ctx.stroke();
-    ctx.fill(); // Fill the gate shape
+    ctx.fill();
 
-    // Output Line
+
     ctx.beginPath();
     ctx.moveTo(centerX + gateWidth / 4, (startY + endY) / 2);
     ctx.lineTo(centerX + gateWidth / 4 + lineLength + 10, (startY + endY) / 2);
@@ -247,26 +280,26 @@ function drawANDGate(ctx) {
 
 
 function drawORGate(ctx) {
-    // Responsive scales
+
     const scale = ctx.canvas.height / 200;
     const gateWidth = 180 * scale;
     const gateHeight = 180 * scale;
     const lineLength = 100 * scale;
     const lineWidth = 2 * scale;
 
-    // Centering the gate
+
     const centerX = ctx.canvas.width / 2;
     const startY = (ctx.canvas.height - gateHeight) / 2;
     const endY = startY + gateHeight;
 
     ctx.lineWidth = lineWidth;
-    ctx.strokeStyle = getColorForMode('black', 'white'); // Gate color
-    ctx.fillStyle = '#FFF'; // Fill color
+    ctx.strokeStyle = getColorForMode('black', 'white');
+    ctx.fillStyle = '#FFF';
 
-    // Clear the canvas
+
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-    // Input Lines
+
     ctx.beginPath();
     ctx.moveTo(centerX - gateWidth / 2 - lineLength, startY + 0.9 * gateHeight);
     ctx.lineTo(centerX - gateWidth / 2, startY + 0.9 * gateHeight);
@@ -274,19 +307,19 @@ function drawORGate(ctx) {
     ctx.lineTo(centerX - gateWidth / 2, endY - 0.9 * gateHeight);
     ctx.stroke();
 
-    // OR Gate shape
+
     ctx.beginPath();
     ctx.moveTo(centerX - gateWidth / 2, startY);
-    ctx.quadraticCurveTo(centerX - gateWidth / 4, ctx.canvas.height / 2, centerX - gateWidth / 2, endY); // First curve for input side
-    ctx.quadraticCurveTo(centerX, endY, centerX + gateWidth / 2, (startY + endY) / 2); // Second curve for output side
-    ctx.quadraticCurveTo(centerX, startY, centerX - gateWidth / 2, startY); // Third curve to complete the shape
+    ctx.quadraticCurveTo(centerX - gateWidth / 4, ctx.canvas.height / 2, centerX - gateWidth / 2, endY);
+    ctx.quadraticCurveTo(centerX, endY, centerX + gateWidth / 2, (startY + endY) / 2);
+    ctx.quadraticCurveTo(centerX, startY, centerX - gateWidth / 2, startY);
     ctx.closePath();
     ctx.stroke();
-    ctx.fill(); // Fill the gate shape
+    ctx.fill();
 
-    // Output Line
+
     ctx.beginPath();
-    // Adjusted starting point for output line to align with the gate's right edge
+
     ctx.moveTo(centerX + gateWidth / 2, (startY + endY) / 2);
     ctx.lineTo(centerX + gateWidth / 2 + lineLength - 20, (startY + endY) / 2);
     ctx.stroke();
@@ -294,33 +327,33 @@ function drawORGate(ctx) {
 
 
 function drawNOTGate(ctx) {
-    // Responsive scales
+
     const scale = ctx.canvas.height / 200;
-    const gateWidth = 120 * scale; // Width of the triangle
-    const gateHeight = 80 * scale; // Height of the triangle
+    const gateWidth = 120 * scale;
+    const gateHeight = 80 * scale;
     const lineLength = 100 * scale;
     const lineWidth = 2 * scale;
-    const negationCircleRadius = 10 * scale; // Radius for the negation circle
+    const negationCircleRadius = 10 * scale;
 
-    // Centering the gate
+
     const centerX = ctx.canvas.width / 2;
     const startY = (ctx.canvas.height - gateHeight) / 2;
     const endY = startY + gateHeight;
 
     ctx.lineWidth = lineWidth;
-    ctx.strokeStyle = getColorForMode('black', 'white'); // Gate color
-    ctx.fillStyle = '#FFF'; // Fill color
+    ctx.strokeStyle = getColorForMode('black', 'white');
+    ctx.fillStyle = '#FFF';
 
-    // Clear the canvas
+
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-    // Input Line
+
     ctx.beginPath();
     ctx.moveTo(centerX - gateWidth / 2 - lineLength, (startY + endY) / 2);
     ctx.lineTo(centerX - gateWidth / 2, (startY + endY) / 2);
     ctx.stroke();
 
-    // NOT Gate shape (triangle)
+
     ctx.beginPath();
     ctx.moveTo(centerX - gateWidth / 2, startY);
     ctx.lineTo(centerX - gateWidth / 2, endY);
@@ -329,13 +362,13 @@ function drawNOTGate(ctx) {
     ctx.stroke();
     ctx.fill();
 
-    // Negation Circle (for NOT)
+
     ctx.beginPath();
     ctx.arc(centerX + gateWidth / 2 - negationCircleRadius, (startY + endY) / 2, negationCircleRadius, 0, 2 * Math.PI);
     ctx.stroke();
     ctx.fill();
 
-    // Output Line (adjusted for the negation circle)
+
     ctx.beginPath();
     ctx.moveTo(centerX + gateWidth / 2, (startY + endY) / 2);
     ctx.lineTo(centerX + gateWidth / 2 + lineLength, (startY + endY) / 2);
@@ -344,27 +377,27 @@ function drawNOTGate(ctx) {
 
 
 function drawNANDGate(ctx) {
-    // Responsive scales
+
     const scale = ctx.canvas.height / 200;
     const gateWidth = 180 * scale;
     const gateHeight = 180 * scale;
     const lineLength = 100 * scale;
     const lineWidth = 2 * scale;
-    const negationCircleRadius = 10 * scale; // Radius for the negation circle
+    const negationCircleRadius = 10 * scale;
 
-    // Centering the gate
+
     const centerX = ctx.canvas.width / 2;
     const startY = (ctx.canvas.height - gateHeight) / 2;
     const endY = startY + gateHeight;
 
     ctx.lineWidth = lineWidth;
-    ctx.strokeStyle = getColorForMode('black', 'white'); // Gate color
-    ctx.fillStyle = '#FFF'; // Fill color
+    ctx.strokeStyle = getColorForMode('black', 'white');
+    ctx.fillStyle = '#FFF';
 
-    // Clear the canvas
+
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-    // Input Lines
+
     ctx.beginPath();
     ctx.moveTo(centerX - gateWidth / 2 - lineLength, startY + 0.9 * gateHeight);
     ctx.lineTo(centerX - gateWidth / 2, startY + 0.9 * gateHeight);
@@ -372,24 +405,24 @@ function drawNANDGate(ctx) {
     ctx.lineTo(centerX - gateWidth / 2, endY - 0.9 * gateHeight);
     ctx.stroke();
 
-    // NAND Gate shape (similar to AND Gate)
+
     ctx.beginPath();
     ctx.moveTo(centerX - gateWidth / 2, startY);
-    ctx.lineTo(centerX, startY); // Straight line to start the curve
+    ctx.lineTo(centerX, startY);
     ctx.quadraticCurveTo(centerX + gateWidth / 2, ctx.canvas.height / 2, centerX, endY);
     ctx.lineTo(centerX - gateWidth / 2, endY);
     ctx.closePath();
     ctx.stroke();
     ctx.fill();
 
-    // Negation Circle (for NAND)
+
     ctx.beginPath();
     const circleCenterX = centerX + gateWidth / 4 + negationCircleRadius;
     ctx.arc(circleCenterX, (startY + endY) / 2, negationCircleRadius, 0, 2 * Math.PI);
     ctx.stroke();
     ctx.fill();
 
-    // Output Line (adjusted for the negation circle)
+
     ctx.beginPath();
     ctx.moveTo(circleCenterX + negationCircleRadius, (startY + endY) / 2);
     ctx.lineTo(circleCenterX + negationCircleRadius + lineLength, (startY + endY) / 2);
@@ -398,27 +431,27 @@ function drawNANDGate(ctx) {
 
 
 function drawNORGate(ctx) {
-    // Responsive scales
+
     const scale = ctx.canvas.height / 200;
     const gateWidth = 180 * scale;
     const gateHeight = 180 * scale;
     const lineLength = 100 * scale;
     const lineWidth = 2 * scale;
-    const negationCircleRadius = 10 * scale; // Radius for the negation circle
+    const negationCircleRadius = 10 * scale;
 
-    // Centering the gate
+
     const centerX = ctx.canvas.width / 2;
     const startY = (ctx.canvas.height - gateHeight) / 2;
     const endY = startY + gateHeight;
 
     ctx.lineWidth = lineWidth;
     ctx.strokeStyle = getColorForMode('black', 'white');
-    ctx.fillStyle = '#FFF'; // Fill color
+    ctx.fillStyle = '#FFF';
 
-    // Clear the canvas
+
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-    // Input Lines
+
     ctx.beginPath();
     ctx.moveTo(centerX - gateWidth / 2 - lineLength, startY + 0.9 * gateHeight);
     ctx.lineTo(centerX - gateWidth / 2, startY + 0.9 * gateHeight);
@@ -426,24 +459,24 @@ function drawNORGate(ctx) {
     ctx.lineTo(centerX - gateWidth / 2, endY - 0.9 * gateHeight);
     ctx.stroke();
 
-    // NOR Gate shape (based on OR gate)
+
     ctx.beginPath();
     ctx.moveTo(centerX - gateWidth / 2, startY);
-    ctx.quadraticCurveTo(centerX - gateWidth / 4, ctx.canvas.height / 2, centerX - gateWidth / 2, endY); // First curve for input side
-    ctx.quadraticCurveTo(centerX, endY, centerX + gateWidth / 2, (startY + endY) / 2); // Second curve for output side
-    ctx.quadraticCurveTo(centerX, startY, centerX - gateWidth / 2, startY); // Third curve to complete the shape
+    ctx.quadraticCurveTo(centerX - gateWidth / 4, ctx.canvas.height / 2, centerX - gateWidth / 2, endY);
+    ctx.quadraticCurveTo(centerX, endY, centerX + gateWidth / 2, (startY + endY) / 2);
+    ctx.quadraticCurveTo(centerX, startY, centerX - gateWidth / 2, startY);
     ctx.closePath();
     ctx.stroke();
     ctx.fill();
 
-    // Negation Circle (for NOR)
+
     ctx.beginPath();
     const norCircleCenterX = centerX + gateWidth / 2 + negationCircleRadius;
     ctx.arc(norCircleCenterX, (startY + endY) / 2, negationCircleRadius, 0, 2 * Math.PI);
     ctx.stroke();
     ctx.fill();
 
-    // Output Line (adjusted for the negation circle)
+
     ctx.beginPath();
     ctx.moveTo(norCircleCenterX + negationCircleRadius, (startY + endY) / 2);
     ctx.lineTo(norCircleCenterX + negationCircleRadius + lineLength - 40, (startY + endY) / 2);
@@ -451,26 +484,26 @@ function drawNORGate(ctx) {
 }
 
 function drawXORGate(ctx) {
-    // Responsive scales
+
     const scale = ctx.canvas.height / 200;
     const gateWidth = 180 * scale;
     const gateHeight = 180 * scale;
     const lineLength = 100 * scale;
     const lineWidth = 2 * scale;
 
-    // Centering the gate
+
     const centerX = ctx.canvas.width / 2;
     const startY = (ctx.canvas.height - gateHeight) / 2;
     const endY = startY + gateHeight;
 
     ctx.lineWidth = lineWidth;
-    ctx.strokeStyle = getColorForMode('black', 'white'); // Gate color
-    ctx.fillStyle = '#FFF'; // Fill color
+    ctx.strokeStyle = getColorForMode('black', 'white');
+    ctx.fillStyle = '#FFF';
 
-    // Clear the canvas
+
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-    // Input Lines
+
     ctx.beginPath();
     ctx.moveTo(centerX - gateWidth / 2 - lineLength, startY + 0.9 * gateHeight);
     ctx.lineTo(centerX - gateWidth / 2, startY + 0.9 * gateHeight);
@@ -478,25 +511,25 @@ function drawXORGate(ctx) {
     ctx.lineTo(centerX - gateWidth / 2, endY - 0.9 * gateHeight);
     ctx.stroke();
 
-    // Extra curve for XOR Gate
+
     ctx.beginPath();
-    ctx.moveTo(centerX - gateWidth / 2 - (20 * scale), startY); // 20 * scale for a small offset
+    ctx.moveTo(centerX - gateWidth / 2 - (20 * scale), startY);
     ctx.quadraticCurveTo(centerX - gateWidth / 4 - (20 * scale), ctx.canvas.height / 2, centerX - gateWidth / 2 - (20 * scale), endY);
     ctx.stroke();
 
-    // XOR Gate shape (based on OR gate)
+
     ctx.beginPath();
     ctx.moveTo(centerX - gateWidth / 2, startY);
-    ctx.quadraticCurveTo(centerX - gateWidth / 4, ctx.canvas.height / 2, centerX - gateWidth / 2, endY); // First curve for input side
-    ctx.quadraticCurveTo(centerX, endY, centerX + gateWidth / 2, (startY + endY) / 2); // Second curve for output side
-    ctx.quadraticCurveTo(centerX, startY, centerX - gateWidth / 2, startY); // Third curve to complete the shape
+    ctx.quadraticCurveTo(centerX - gateWidth / 4, ctx.canvas.height / 2, centerX - gateWidth / 2, endY);
+    ctx.quadraticCurveTo(centerX, endY, centerX + gateWidth / 2, (startY + endY) / 2);
+    ctx.quadraticCurveTo(centerX, startY, centerX - gateWidth / 2, startY);
     ctx.closePath();
     ctx.stroke();
     ctx.fill();
 
-    // Output Line
+
     ctx.beginPath();
-    // Adjusted starting point for output line to align with the gate's right edge
+
     ctx.moveTo(centerX + gateWidth / 2, (startY + endY) / 2);
     ctx.lineTo(centerX + gateWidth / 2 + lineLength - 20, (startY + endY) / 2);
     ctx.stroke();
@@ -504,27 +537,27 @@ function drawXORGate(ctx) {
 
 
 function drawXNORGate(ctx) {
-    // Responsive scales
+
     const scale = ctx.canvas.height / 200;
     const gateWidth = 180 * scale;
     const gateHeight = 180 * scale;
     const lineLength = 100 * scale;
     const lineWidth = 2 * scale;
-    const negationCircleRadius = 10 * scale; // Radius for the negation circle
+    const negationCircleRadius = 10 * scale;
 
-    // Centering the gate
+
     const centerX = ctx.canvas.width / 2;
     const startY = (ctx.canvas.height - gateHeight) / 2;
     const endY = startY + gateHeight;
 
     ctx.lineWidth = lineWidth;
-    ctx.strokeStyle = getColorForMode('black', 'white'); // Gate color
-    ctx.fillStyle = '#FFF'; // Fill color
+    ctx.strokeStyle = getColorForMode('black', 'white');
+    ctx.fillStyle = '#FFF';
 
-    // Clear the canvas
+
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-    // Input Lines
+
     ctx.beginPath();
     ctx.moveTo(centerX - gateWidth / 2 - lineLength, startY + 0.9 * gateHeight);
     ctx.lineTo(centerX - gateWidth / 2, startY + 0.9 * gateHeight);
@@ -532,30 +565,30 @@ function drawXNORGate(ctx) {
     ctx.lineTo(centerX - gateWidth / 2, endY - 0.9 * gateHeight);
     ctx.stroke();
 
-    // Extra curve for XNOR Gate
+
     ctx.beginPath();
-    ctx.moveTo(centerX - gateWidth / 2 - (20 * scale), startY); // 20 * scale for a small offset
+    ctx.moveTo(centerX - gateWidth / 2 - (20 * scale), startY);
     ctx.quadraticCurveTo(centerX - gateWidth / 4 - (20 * scale), ctx.canvas.height / 2, centerX - gateWidth / 2 - (20 * scale), endY);
     ctx.stroke();
 
-    // XNOR Gate shape (based on XOR gate)
+
     ctx.beginPath();
     ctx.moveTo(centerX - gateWidth / 2, startY);
-    ctx.quadraticCurveTo(centerX - gateWidth / 4, ctx.canvas.height / 2, centerX - gateWidth / 2, endY); // First curve for input side
-    ctx.quadraticCurveTo(centerX, endY, centerX + gateWidth / 2, (startY + endY) / 2); // Second curve for output side
-    ctx.quadraticCurveTo(centerX, startY, centerX - gateWidth / 2, startY); // Third curve to complete the shape
+    ctx.quadraticCurveTo(centerX - gateWidth / 4, ctx.canvas.height / 2, centerX - gateWidth / 2, endY);
+    ctx.quadraticCurveTo(centerX, endY, centerX + gateWidth / 2, (startY + endY) / 2);
+    ctx.quadraticCurveTo(centerX, startY, centerX - gateWidth / 2, startY);
     ctx.closePath();
     ctx.stroke();
     ctx.fill();
 
-    // Negation Circle (for XNOR)
+
     ctx.beginPath();
     const xnorCircleCenterX = centerX + gateWidth / 2 + negationCircleRadius;
     ctx.arc(xnorCircleCenterX, (startY + endY) / 2, negationCircleRadius, 0, 2 * Math.PI);
     ctx.stroke();
     ctx.fill();
 
-    // Output Line (adjusted for the negation circle)
+
     ctx.beginPath();
     ctx.moveTo(xnorCircleCenterX + negationCircleRadius, (startY + endY) / 2);
     ctx.lineTo(xnorCircleCenterX + negationCircleRadius + lineLength - 40, (startY + endY) / 2);
@@ -570,23 +603,23 @@ function updateGateDrawing() {
 }
 
 function handleGateChange() {
-    updateInputs(); // Update the number of inputs
-    updateGateDrawing(); // Redraw the gate
+    updateInputs();
+    updateGateDrawing();
 }
 
 document.addEventListener('DOMContentLoaded', function() {
     var gateSelect = document.getElementById("gateSelect");
     gateSelect.addEventListener('change', function() {
-        updateInputs(); // Update the number of inputs
-        updateGateDrawing(); // Redraw the gate
+        updateInputs();
+        updateGateDrawing();
     });
 
     handleGateChange();
 });
-// Call handleGateChange when the page is fully loaded
+
 window.addEventListener('load', handleGateChange);
 
-// Call handleGateChange when the window is resized
+
 window.addEventListener('resize', handleGateChange);
 
 
