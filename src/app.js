@@ -1118,7 +1118,6 @@ function main() {
         }
         navToggle.setAttribute('aria-controls', navMenu.id);
 
-
         let overlay = document.querySelector('.nav-overlay');
         if (!overlay) {
             overlay = document.createElement('div');
@@ -1132,6 +1131,28 @@ function main() {
             document.body.style.overflow = open ? 'hidden' : '';
             navMenu.setAttribute('aria-hidden', open ? 'false' : 'true');
             navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            
+            // Add close button on first open
+            let closeButton = navMenu.querySelector('.menu-close-button');
+            if (open && !closeButton) {
+                closeButton = document.createElement('button');
+                closeButton.className = 'menu-close-button';
+                closeButton.setAttribute('aria-label', 'Close navigation menu');
+                closeButton.innerHTML = `
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                `;
+                navMenu.insertBefore(closeButton, navMenu.firstChild);
+                
+                closeButton.addEventListener('click', () => {
+                    navToggle.checked = false;
+                    updateOpenState();
+                    navToggle.focus();
+                });
+            }
+            
             if (open) {
 
                 const firstFocusable = navMenu.querySelector('a, button, input, [tabindex]:not([tabindex="-1"])');
