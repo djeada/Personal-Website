@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", function() {
+    // DOM Elements
     const editorText = document.getElementById("editor-text");
     const processButton = document.getElementById("process");
     const clearButton = document.getElementById("clear");
@@ -7,7 +8,16 @@ document.addEventListener("DOMContentLoaded", function() {
     const replaceButton = document.getElementById("replace");
     const undoButton = document.getElementById("undo");
     const redoButton = document.getElementById("redo");
+    const pasteBtn = document.getElementById("paste-btn");
+    const uploadBtn = document.getElementById("upload-btn");
+    const fileInput = document.getElementById("file-input");
+    const dropZone = document.getElementById("drop-zone");
+    const resetDefaults = document.getElementById("reset-defaults");
+    const toggleHistory = document.getElementById("toggle-history");
+    const historyContent = document.getElementById("history-content");
+    const toastContainer = document.getElementById("toast-container");
 
+    // Option checkboxes
     const removeAllStars = document.getElementById("remove-all-stars");
     const confirmStep = document.getElementById("confirm-step");
     const removeBetween = document.getElementById("remove-between");
@@ -17,29 +27,142 @@ document.addEventListener("DOMContentLoaded", function() {
     const tabCorrectionCheckbox = document.getElementById("tab-correction");
     const latexCorrectionCheckbox = document.getElementById("latex-correction");
     const simplifyTextCheckbox = document.getElementById("simplify-text");
+    const trimListsCheckbox = document.getElementById("trim-lists-before-colon");
 
     const searchText = document.getElementById("search-text");
-    const replaceText = document.getElementById("replace-text");
+    const replaceTextInput = document.getElementById("replace-text");
 
+    // Preset buttons
+    const presetButtons = document.querySelectorAll(".preset-option");
+
+    // Stats elements
+    const charCount = document.getElementById("char-count");
+    const wordCount = document.getElementById("word-count");
+    const lineCount = document.getElementById("line-count");
+    const readTime = document.getElementById("read-time");
+
+    // History management
     let history = [];
     let historyIndex = -1;
     let isUndoRedo = false;
+    const MAX_HISTORY = 50;
 
+    // Toast notification system
+    function showToast(message, type = "info") {
+        const toast = document.createElement("div");
+        toast.className = `toast ${type}`;
+        
+        const icons = {
+            success: "✅",
+            error: "❌",
+            info: "ℹ️",
+            warning: "⚠️"
+        };
+        
+        toast.innerHTML = `
+            <span class="toast-icon">${icons[type] || icons.info}</span>
+            <span class="toast-message">${message}</span>
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+
+    // Update stats
+    function updateStats() {
+        const text = editorText.value;
+        const chars = text.length;
+        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+        const lines = text ? text.split("\n").length : 0;
+        const avgWordsPerMin = 200;
+        const minutes = Math.ceil(words / avgWordsPerMin);
+
+        charCount.textContent = chars.toLocaleString();
+        wordCount.textContent = words.toLocaleString();
+        lineCount.textContent = lines.toLocaleString();
+        readTime.textContent = `${minutes} min`;
+    }
+
+    // Save state to history
     function saveState() {
         if (isUndoRedo) return;
         if (historyIndex < history.length - 1) {
             history = history.slice(0, historyIndex + 1);
         }
-        history.push(editorText.value);
-        historyIndex++;
+        
+        const state = {
+            text: editorText.value,
+            timestamp: new Date()
+        };
+        
+        history.push(state);
+        if (history.length > MAX_HISTORY) {
+            history.shift();
+        } else {
+            historyIndex++;
+        }
+        
+        updateHistoryPanel();
+        updateStats();
+    }
+
+    // Update history panel
+    function updateHistoryPanel() {
+        if (history.length <= 1) {
+            historyContent.innerHTML = '<div class="history-empty"><p>No history yet. Make some changes!</p></div>';
+            return;
+        }
+
+        const items = history.slice().reverse().map((state, idx) => {
+            const realIdx = history.length - 1 - idx;
+            const time = state.timestamp.toLocaleTimeString();
+            const preview = state.text.substring(0, 50).replace(/\n/g, " ") || "(empty)";
+            const isActive = realIdx === historyIndex ? "active" : "";
+            
+            return `
+                <div class="history-item ${isActive}" data-index="${realIdx}">
+                    <span class="history-time">${time}</span>
+                    <span class="history-preview">${preview}...</span>
+                </div>
+            `;
+        }).join("");
+
+        historyContent.innerHTML = items;
+
+        // Add click handlers
+        historyContent.querySelectorAll(".history-item").forEach(item => {
+            item.addEventListener("click", () => {
+                const idx = parseInt(item.dataset.index);
+                restoreHistoryState(idx);
+            });
+        });
+    }
+
+    // Restore history state
+    function restoreHistoryState(idx) {
+        if (idx >= 0 && idx < history.length) {
+            isUndoRedo = true;
+            historyIndex = idx;
+            editorText.value = history[idx].text;
+            updateHistoryPanel();
+            updateStats();
+            isUndoRedo = false;
+            showToast("State restored", "success");
+        }
     }
 
     function undo() {
         if (historyIndex > 0) {
             isUndoRedo = true;
             historyIndex--;
-            editorText.value = history[historyIndex];
+            editorText.value = history[historyIndex].text;
+            updateHistoryPanel();
+            updateStats();
             isUndoRedo = false;
+            showToast("Undo", "info");
         }
     }
 
@@ -47,17 +170,23 @@ document.addEventListener("DOMContentLoaded", function() {
         if (historyIndex < history.length - 1) {
             isUndoRedo = true;
             historyIndex++;
-            editorText.value = history[historyIndex];
+            editorText.value = history[historyIndex].text;
+            updateHistoryPanel();
+            updateStats();
             isUndoRedo = false;
+            showToast("Redo", "info");
         }
     }
 
+    // Initialize history
     saveState();
 
+    // Input event listeners
     editorText.addEventListener("input", () => {
         saveState();
     });
 
+    // Checkbox interactions
     removeAllStars.addEventListener("change", function() {
         if (removeAllStars.checked) {
             confirmStep.checked = false;
@@ -67,6 +196,182 @@ document.addEventListener("DOMContentLoaded", function() {
     confirmStep.addEventListener("change", function() {
         if (confirmStep.checked) {
             removeAllStars.checked = false;
+        }
+    });
+
+    // Preset configurations
+    const presets = {
+        minimal: {
+            removeAllStars: true,
+            confirmStep: false,
+            removeBetween: false,
+            lineCorrection: false,
+            listCorrection: false,
+            romanListConversion: false,
+            tabCorrection: false,
+            latexCorrection: false,
+            simplifyText: false,
+            trimListsBeforeColon: false
+        },
+        standard: {
+            removeAllStars: true,
+            confirmStep: false,
+            removeBetween: false,
+            lineCorrection: true,
+            listCorrection: true,
+            romanListConversion: true,
+            tabCorrection: false,
+            latexCorrection: true,
+            simplifyText: true,
+            trimListsBeforeColon: true
+        },
+        aggressive: {
+            removeAllStars: true,
+            confirmStep: false,
+            removeBetween: false,
+            lineCorrection: true,
+            listCorrection: true,
+            romanListConversion: true,
+            tabCorrection: true,
+            latexCorrection: true,
+            simplifyText: true,
+            trimListsBeforeColon: true
+        }
+    };
+
+    function applyPreset(presetName) {
+        const preset = presets[presetName];
+        if (!preset) return;
+
+        removeAllStars.checked = preset.removeAllStars;
+        confirmStep.checked = preset.confirmStep;
+        removeBetween.checked = preset.removeBetween;
+        lineCorrectionCheckbox.checked = preset.lineCorrection;
+        listCorrectionCheckbox.checked = preset.listCorrection;
+        romanListCheckbox.checked = preset.romanListConversion;
+        tabCorrectionCheckbox.checked = preset.tabCorrection;
+        latexCorrectionCheckbox.checked = preset.latexCorrection;
+        simplifyTextCheckbox.checked = preset.simplifyText;
+        trimListsCheckbox.checked = preset.trimListsBeforeColon;
+
+        // Update active state
+        presetButtons.forEach(btn => {
+            btn.classList.toggle("active", btn.dataset.preset === presetName);
+        });
+
+        showToast(`${presetName.charAt(0).toUpperCase() + presetName.slice(1)} preset applied`, "success");
+    }
+
+    // Preset button handlers
+    presetButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+            applyPreset(btn.dataset.preset);
+        });
+    });
+
+    // Reset defaults
+    resetDefaults.addEventListener("click", () => {
+        applyPreset("standard");
+    });
+
+    // Card toggle functionality
+    document.querySelectorAll(".card-toggle").forEach(toggle => {
+        toggle.addEventListener("click", () => {
+            const expanded = toggle.getAttribute("aria-expanded") === "true";
+            toggle.setAttribute("aria-expanded", !expanded);
+        });
+    });
+
+    // History panel toggle
+    toggleHistory.addEventListener("click", () => {
+        historyContent.classList.toggle("collapsed");
+        toggleHistory.textContent = historyContent.classList.contains("collapsed") ? "▶" : "▼";
+    });
+
+    // File upload handling
+    uploadBtn.addEventListener("click", () => {
+        fileInput.click();
+    });
+
+    fileInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            readFile(file);
+        }
+    });
+
+    function readFile(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            editorText.value = e.target.result;
+            saveState();
+            showToast(`File "${file.name}" loaded`, "success");
+        };
+        reader.onerror = () => {
+            showToast("Error reading file", "error");
+        };
+        reader.readAsText(file);
+    }
+
+    // Paste button
+    pasteBtn.addEventListener("click", async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            editorText.value = text;
+            saveState();
+            showToast("Text pasted from clipboard", "success");
+        } catch (err) {
+            showToast("Unable to paste from clipboard", "error");
+        }
+    });
+
+    // Drag and drop handling
+    ["dragenter", "dragover", "dragleave", "drop"].forEach(eventName => {
+        editorText.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ["dragenter", "dragover"].forEach(eventName => {
+        editorText.addEventListener(eventName, () => {
+            dropZone.classList.add("active");
+        }, false);
+    });
+
+    ["dragleave", "drop"].forEach(eventName => {
+        document.body.addEventListener(eventName, () => {
+            dropZone.classList.remove("active");
+        }, false);
+    });
+
+    editorText.addEventListener("drop", (e) => {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            readFile(files[0]);
+        }
+        dropZone.classList.remove("active");
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener("keydown", (e) => {
+        // Ctrl+Enter to process
+        if (e.ctrlKey && e.key === "Enter") {
+            e.preventDefault();
+            processButton.click();
+        }
+        // Ctrl+Z to undo (when not focused on textarea)
+        if (e.ctrlKey && e.key === "z" && document.activeElement !== editorText) {
+            e.preventDefault();
+            undo();
+        }
+        // Ctrl+Y to redo
+        if (e.ctrlKey && e.key === "y") {
+            e.preventDefault();
+            redo();
         }
     });
 
@@ -547,9 +852,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
     function trimListItemsBeforeColon() {
-        // Get the checkbox element
-        const trimListsCheckbox = document.getElementById('trim-lists-before-colon');
-
         // Check if trimming is enabled
         if (!trimListsCheckbox.checked) return;
 
@@ -1264,20 +1566,30 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function replaceTextFunction() {
         const searchValue = searchText.value;
-        const replaceValue = replaceText.value;
+        const replaceValue = replaceTextInput.value;
 
         if (searchValue === "") {
-            alert("Please enter text to search for.");
+            showToast("Please enter text to search for", "warning");
             return;
         }
 
         saveState();
 
         const regex = new RegExp(searchValue, "g");
+        const originalLength = editorText.value.length;
         editorText.value = editorText.value.replace(regex, replaceValue);
+        
+        if (editorText.value.length !== originalLength) {
+            showToast("Text replaced successfully", "success");
+        } else {
+            showToast("No matches found", "info");
+        }
+        updateStats();
     }
 
     processButton.addEventListener("click", () => {
+        const originalText = editorText.value;
+        
         processText();
         replaceNumericalListsWithRoman();
         trimListItemsBeforeColon();
@@ -1286,29 +1598,50 @@ document.addEventListener("DOMContentLoaded", function() {
         correctLatex();
         correctLines();
         simplifyText();
-
+        
+        updateStats();
+        
+        if (editorText.value !== originalText) {
+            showToast("Text processed successfully! ✨", "success");
+        } else {
+            showToast("No changes were made", "info");
+        }
     });
     replaceButton.addEventListener("click", replaceTextFunction);
     undoButton.addEventListener("click", undo);
     redoButton.addEventListener("click", redo);
 
     clearButton.addEventListener("click", () => {
-        saveState();
-        editorText.value = "";
+        if (editorText.value.trim()) {
+            saveState();
+            editorText.value = "";
+            updateStats();
+            showToast("Text cleared", "info");
+        }
     });
 
     copyButton.addEventListener("click", () => {
+        if (!editorText.value.trim()) {
+            showToast("Nothing to copy", "warning");
+            return;
+        }
+        
         navigator.clipboard
             .writeText(editorText.value)
             .then(() => {
-                alert("Output copied to clipboard");
+                showToast("Copied to clipboard! 📋", "success");
             })
             .catch(() => {
-                alert("Failed to copy output");
+                showToast("Failed to copy", "error");
             });
     });
 
     downloadButton.addEventListener("click", () => {
+        if (!editorText.value.trim()) {
+            showToast("Nothing to download", "warning");
+            return;
+        }
+        
         const blob = new Blob([editorText.value], {
             type: "text/plain",
         });
@@ -1316,5 +1649,6 @@ document.addEventListener("DOMContentLoaded", function() {
         link.href = URL.createObjectURL(blob);
         link.download = "processed_text.txt";
         link.click();
+        showToast("File downloaded! 💾", "success");
     });
 });
