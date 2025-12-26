@@ -15,6 +15,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
     <meta content="ie-edge" http-equiv="X-UA-Compatible" />
 </head>
@@ -53,25 +54,116 @@
     <section>
         <header>
             <h1>Ultimate Quiz Challenge</h1>
-            <p>Explore and master various topics through interactive quizzes. Perfect for learners of all levels. Select a category and subcategories to start testing your knowledge and enhance your learning experience.</p>
+            <p>Explore and master various topics through interactive quizzes. Perfect for learners of all levels. Select a category to start testing your knowledge and enhance your learning experience.</p>
         </header>
-        <div class="container">
-            <div class="controls">
-                <select id="categorySelect">
-                    <!-- Categories will be populated here -->
-                </select>
-                <input id="maxQuestionsInput" min="1" placeholder="Max questions" type="number" />
-                <button id="reloadQuestionsButton">Reload Questions</button>
+        
+        <div class="quiz-app-container">
+            <!-- Control Panel -->
+            <div class="control-panel" role="region" aria-label="Quiz settings">
+                <div class="control-group">
+                    <label for="categorySelect" class="control-label">
+                        <span class="control-icon" aria-hidden="true">📚</span>
+                        Category
+                    </label>
+                    <select id="categorySelect" aria-describedby="category-help">
+                        <!-- Categories will be populated here -->
+                    </select>
+                    <span id="category-help" class="sr-only">Select a quiz category to test your knowledge</span>
+                </div>
+                
+                <div class="control-group">
+                    <label for="maxQuestionsInput" class="control-label">
+                        <span class="control-icon" aria-hidden="true">🎯</span>
+                        Questions
+                    </label>
+                    <input id="maxQuestionsInput" min="1" max="100" placeholder="12" type="number" aria-describedby="questions-help" />
+                    <span id="questions-help" class="sr-only">Enter the maximum number of questions you want to answer</span>
+                </div>
+                
+                <button id="reloadQuestionsButton" class="btn btn-secondary" aria-label="Reload questions with new random selection">
+                    <span class="btn-icon" aria-hidden="true">🔄</span>
+                    Shuffle Questions
+                </button>
             </div>
-            <div id="quizContainer">
+
+            <!-- Progress Bar -->
+            <div class="progress-section" role="region" aria-label="Quiz progress">
+                <div class="progress-header">
+                    <span class="progress-text" id="progressText">Question 0 of 0</span>
+                    <span class="progress-percentage" id="progressPercentage">0%</span>
+                </div>
+                <div class="progress-bar-container" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Quiz completion progress">
+                    <div class="progress-bar-fill" id="progressBar"></div>
+                </div>
+            </div>
+
+            <!-- Quiz Container -->
+            <div id="quizContainer" class="quiz-container" role="main" aria-live="polite">
                 <!-- Quiz questions will be populated here -->
             </div>
-            <div class="buttons">
-                <button id="submitButton">Submit Answers</button>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons" role="group" aria-label="Quiz actions">
+                <button id="submitButton" class="btn btn-primary btn-large">
+                    <span class="btn-icon" aria-hidden="true">✅</span>
+                    Submit Answers
+                </button>
             </div>
         </div>
-        <!-- Loading Spinner -->
-        <div class="spinner" id="loadingSpinner" style="display: none;">Loading...</div>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay" style="display: none;" role="status" aria-live="polite">
+            <div class="loading-spinner"></div>
+            <span class="loading-text">Loading questions...</span>
+        </div>
+
+        <!-- Results Modal -->
+        <div class="results-modal" id="resultsModal" role="dialog" aria-modal="true" aria-labelledby="resultsTitle" style="display: none;">
+            <div class="modal-backdrop" id="modalBackdrop"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="resultsTitle">Quiz Results</h2>
+                    <button class="modal-close" id="modalClose" aria-label="Close results">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="results-circle" id="resultsCircle">
+                        <svg viewBox="0 0 100 100">
+                            <circle class="results-bg" cx="50" cy="50" r="45"></circle>
+                            <circle class="results-progress" id="resultsProgress" cx="50" cy="50" r="45"></circle>
+                        </svg>
+                        <div class="results-score" id="resultsScore">0%</div>
+                    </div>
+                    <div class="results-stats">
+                        <div class="stat-item stat-correct">
+                            <span class="stat-icon" aria-hidden="true">✓</span>
+                            <span class="stat-value" id="correctCount">0</span>
+                            <span class="stat-label">Correct</span>
+                        </div>
+                        <div class="stat-item stat-incorrect">
+                            <span class="stat-icon" aria-hidden="true">✗</span>
+                            <span class="stat-value" id="incorrectCount">0</span>
+                            <span class="stat-label">Incorrect</span>
+                        </div>
+                        <div class="stat-item stat-unanswered">
+                            <span class="stat-icon" aria-hidden="true">○</span>
+                            <span class="stat-value" id="unansweredCount">0</span>
+                            <span class="stat-label">Skipped</span>
+                        </div>
+                    </div>
+                    <p class="results-message" id="resultsMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button id="reviewAnswersButton" class="btn btn-secondary">
+                        <span class="btn-icon" aria-hidden="true">👁️</span>
+                        Review Answers
+                    </button>
+                    <button id="tryAgainButton" class="btn btn-primary">
+                        <span class="btn-icon" aria-hidden="true">🔄</span>
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        </div>
     </section>
     <footer>
         <div class="footer-columns">
