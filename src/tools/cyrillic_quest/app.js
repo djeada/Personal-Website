@@ -125,6 +125,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 const cyrillicCell = document.createElement('td');
                 cyrillicCell.innerHTML = `<span class="cyrillic-word">${word.cyrillic}</span>`;
 
+                // Create result cell first so it can be referenced in event handlers
+                const resultCell = document.createElement('td');
+                resultCell.className = 'result-message';
+
                 const transliterationCell = document.createElement('td');
                 const transliterationInput = document.createElement('input');
                 transliterationInput.className = 'transliteration-input';
@@ -161,9 +165,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 validateButton.title = 'Check your answer';
                 validateButton.addEventListener('click', () => validateTransliteration(transliterationInput, word.transliteration, resultCell, index));
                 validateCell.appendChild(validateButton);
-
-                const resultCell = document.createElement('td');
-                resultCell.className = 'result-message';
 
                 row.appendChild(cyrillicCell);
                 row.appendChild(transliterationCell);
