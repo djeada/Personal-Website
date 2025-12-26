@@ -1369,11 +1369,7 @@ function initBackToTop() {
     backToTopBtn.id = 'back-to-top';
     backToTopBtn.setAttribute('aria-label', 'Back to top');
     backToTopBtn.title = 'Back to top';
-    backToTopBtn.innerHTML = `
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="18 15 12 9 6 15"></polyline>
-        </svg>
-    `;
+    backToTopBtn.textContent = '↑';
 
     document.body.appendChild(backToTopBtn);
 
