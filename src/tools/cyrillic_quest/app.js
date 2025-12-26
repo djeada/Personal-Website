@@ -66,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .then(data => {
             words = data;
-            console.log('Successfully loaded JSON:', words);
+            console.log('Successfully loaded word database:', words);
             populateCategories(Object.keys(words));
             loadCategory(categorySelect.value);
             loadingMessage.style.display = 'none';
@@ -74,9 +74,9 @@ document.addEventListener("DOMContentLoaded", () => {
             showToast("Word database loaded successfully!", "success");
         })
         .catch(error => {
-            console.error('Error fetching the words:', error);
-            loadingMessage.innerHTML = '<span style="color: var(--danger-color);">❌ Error fetching data. Please try again later.</span>';
-            showToast("Connection error. Please check your internet.", "error");
+            console.error('Error loading word database:', error);
+            loadingMessage.innerHTML = '<span style="color: var(--danger-color);">❌ Failed to load data. Please refresh the page.</span>';
+            showToast("Error loading word database. Please refresh the page.", "error");
         });
 
     categorySelect.addEventListener("change", () => {
