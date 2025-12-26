@@ -78,7 +78,7 @@ document.addEventListener("DOMContentLoaded", function() {
         const words = text.trim() ? text.trim().split(/\s+/).length : 0;
         const lines = text ? text.split("\n").length : 0;
         const avgWordsPerMin = 200;
-        const minutes = Math.ceil(words / avgWordsPerMin);
+        const minutes = words > 0 ? Math.ceil(words / avgWordsPerMin) : 0;
 
         charCount.textContent = chars.toLocaleString();
         wordCount.textContent = words.toLocaleString();
@@ -101,9 +101,9 @@ document.addEventListener("DOMContentLoaded", function() {
         history.push(state);
         if (history.length > MAX_HISTORY) {
             history.shift();
-        } else {
-            historyIndex++;
+            historyIndex--; // Adjust index when oldest entry is removed
         }
+        historyIndex++;
         
         updateHistoryPanel();
         updateStats();
