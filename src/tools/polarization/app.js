@@ -34,6 +34,20 @@ let timerRunning = false,
     delta = +deltaSlider.value * Math.PI / 180;
 const samplesPerCycle = 90;
 
+// Helper function to get CSS color variables
+function getCSSColor(variableName) {
+    return getComputedStyle(document.documentElement)
+        .getPropertyValue(variableName).trim() || getDefaultColor(variableName);
+}
+
+function getDefaultColor(variableName) {
+    const defaults = {
+        '--text-muted': '#94a3b8',
+        '--primary-color': '#ea8400'
+    };
+    return defaults[variableName] || '#94a3b8';
+}
+
 // Update stats bar
 function updateStats() {
     statPsi.textContent = psiSlider.value + "°";
@@ -135,8 +149,7 @@ function drawArrow(ax, ay, bx, by, c) {
 }
 
 function drawAxes2D() {
-    ctx.strokeStyle = getComputedStyle(document.documentElement)
-        .getPropertyValue('--text-muted').trim() || "#94a3b8";
+    ctx.strokeStyle = getCSSColor('--text-muted');
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(20, cy);
@@ -168,9 +181,7 @@ function drawEllipse2D() {
             py = cy - y * 150;
         i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
     }
-    const primaryColor = getComputedStyle(document.documentElement)
-        .getPropertyValue('--primary-color').trim() || "#ea8400";
-    ctx.strokeStyle = primaryColor;
+    ctx.strokeStyle = getCSSColor('--primary-color');
     ctx.lineWidth = 3;
     ctx.stroke();
 }
@@ -216,8 +227,7 @@ function drawAxes3D() {
             y: cy
         },
         r = 2;
-    const axisColor = getComputedStyle(document.documentElement)
-        .getPropertyValue('--text-muted').trim() || "#94a3b8";
+    const axisColor = getCSSColor('--text-muted');
     drawLine3D({
         x: -r,
         y: 0,
@@ -285,9 +295,7 @@ function drawWave3D() {
             py = o.y - pp.y;
         i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
     }
-    const primaryColor = getComputedStyle(document.documentElement)
-        .getPropertyValue('--primary-color').trim() || "#ea8400";
-    ctx.strokeStyle = primaryColor;
+    ctx.strokeStyle = getCSSColor('--primary-color');
     ctx.lineWidth = 3;
     ctx.stroke();
     let ex = cp * Math.cos(w * t),
