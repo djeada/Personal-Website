@@ -1,54 +1,10 @@
 "use strict";
 
-
+// UI Elements
 const btnLinear = document.getElementById("btnLinear");
 const btnCircularRight = document.getElementById("btnCircularRight");
 const btnCircularLeft = document.getElementById("btnCircularLeft");
 const btnElliptical = document.getElementById("btnElliptical");
-
-btnLinear.addEventListener("click", () => {
-
-    psiSlider.value = "45";
-    deltaSlider.value = "0";
-    psi = 45 * Math.PI / 180;
-    delta = 0;
-    psiValue.textContent = "45°";
-    deltaValue.textContent = "0°";
-    drawAll();
-});
-
-btnCircularRight.addEventListener("click", () => {
-
-    psiSlider.value = "45";
-    deltaSlider.value = "90";
-    psi = 45 * Math.PI / 180;
-    delta = 90 * Math.PI / 180;
-    psiValue.textContent = "45°";
-    deltaValue.textContent = "90°";
-    drawAll();
-});
-
-btnCircularLeft.addEventListener("click", () => {
-
-    psiSlider.value = "45";
-    deltaSlider.value = "-90";
-    psi = 45 * Math.PI / 180;
-    delta = -90 * Math.PI / 180;
-    psiValue.textContent = "45°";
-    deltaValue.textContent = "-90°";
-    drawAll();
-});
-
-btnElliptical.addEventListener("click", () => {
-
-    psiSlider.value = "30";
-    deltaSlider.value = "60";
-    psi = 30 * Math.PI / 180;
-    delta = 60 * Math.PI / 180;
-    psiValue.textContent = "30°";
-    deltaValue.textContent = "60°";
-    drawAll();
-});
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
@@ -56,6 +12,7 @@ const cw = canvas.width,
     ch = canvas.height,
     cx = cw / 2,
     cy = ch / 2;
+
 const psiSlider = document.getElementById("idpsi");
 const psiValue = document.getElementById("idpsiValue");
 const deltaSlider = document.getElementById("iddelta");
@@ -63,21 +20,109 @@ const deltaValue = document.getElementById("iddeltaValue");
 const viewMode3DCheck = document.getElementById("viewMode3D");
 const startStopBtn = document.getElementById("startStopBtn");
 const resetBtn = document.getElementById("resetBtn");
+
+// Stats elements
+const statPsi = document.getElementById("stat-psi");
+const statDelta = document.getElementById("stat-delta");
+const statType = document.getElementById("stat-type");
+const statMode = document.getElementById("stat-mode");
+
+// State variables
 let timerRunning = false,
     frameCounter = 0,
     psi = +psiSlider.value * Math.PI / 180,
     delta = +deltaSlider.value * Math.PI / 180;
 const samplesPerCycle = 90;
 
+// Update stats bar
+function updateStats() {
+    statPsi.textContent = psiSlider.value + "°";
+    statDelta.textContent = deltaSlider.value + "°";
+    statMode.textContent = viewMode3DCheck.checked ? "3D" : "2D";
+    
+    // Determine polarization type
+    const psiDeg = +psiSlider.value;
+    const deltaDeg = +deltaSlider.value;
+    let type = "Elliptical";
+    
+    if (Math.abs(deltaDeg) < 5 || Math.abs(Math.abs(deltaDeg) - 180) < 5) {
+        type = "Linear";
+    } else if (Math.abs(psiDeg - 45) < 5 && (Math.abs(Math.abs(deltaDeg) - 90) < 5)) {
+        type = "Circular";
+    }
+    
+    statType.textContent = type;
+}
+
+// Update preset button states
+function updatePresetButtons(activeBtn) {
+    [btnLinear, btnCircularRight, btnCircularLeft, btnElliptical].forEach(btn => {
+        btn.classList.remove("active");
+    });
+    if (activeBtn) {
+        activeBtn.classList.add("active");
+    }
+}
+
+// Preset button handlers
+btnLinear.addEventListener("click", () => {
+    psiSlider.value = "45";
+    deltaSlider.value = "0";
+    psi = 45 * Math.PI / 180;
+    delta = 0;
+    psiValue.textContent = "45°";
+    deltaValue.textContent = "0°";
+    updateStats();
+    updatePresetButtons(btnLinear);
+    drawAll();
+});
+
+btnCircularRight.addEventListener("click", () => {
+    psiSlider.value = "45";
+    deltaSlider.value = "90";
+    psi = 45 * Math.PI / 180;
+    delta = 90 * Math.PI / 180;
+    psiValue.textContent = "45°";
+    deltaValue.textContent = "90°";
+    updateStats();
+    updatePresetButtons(btnCircularRight);
+    drawAll();
+});
+
+btnCircularLeft.addEventListener("click", () => {
+    psiSlider.value = "45";
+    deltaSlider.value = "-90";
+    psi = 45 * Math.PI / 180;
+    delta = -90 * Math.PI / 180;
+    psiValue.textContent = "45°";
+    deltaValue.textContent = "-90°";
+    updateStats();
+    updatePresetButtons(btnCircularLeft);
+    drawAll();
+});
+
+btnElliptical.addEventListener("click", () => {
+    psiSlider.value = "30";
+    deltaSlider.value = "60";
+    psi = 30 * Math.PI / 180;
+    delta = 60 * Math.PI / 180;
+    psiValue.textContent = "30°";
+    deltaValue.textContent = "60°";
+    updateStats();
+    updatePresetButtons(btnElliptical);
+    drawAll();
+});
+
+// Drawing functions
 function drawArrow(ax, ay, bx, by, c) {
     ctx.strokeStyle = c;
     ctx.fillStyle = c;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(ax, ay);
     ctx.lineTo(bx, by);
     ctx.stroke();
-    let h = 10,
+    let h = 12,
         dx = bx - ax,
         dy = by - ay,
         A = Math.atan2(dy, dx);
@@ -90,16 +135,24 @@ function drawArrow(ax, ay, bx, by, c) {
 }
 
 function drawAxes2D() {
-    ctx.strokeStyle = "#555";
+    ctx.strokeStyle = getComputedStyle(document.documentElement)
+        .getPropertyValue('--text-muted').trim() || "#94a3b8";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(0, cy);
-    ctx.lineTo(cw, cy);
+    ctx.moveTo(20, cy);
+    ctx.lineTo(cw - 20, cy);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(cx, 0);
-    ctx.lineTo(cx, ch);
+    ctx.moveTo(cx, 20);
+    ctx.lineTo(cx, ch - 20);
     ctx.stroke();
+    
+    // Add axis labels
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.font = "14px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("x", cw - 30, cy + 20);
+    ctx.fillText("y", cx + 20, 30);
 }
 
 function drawEllipse2D() {
@@ -111,12 +164,14 @@ function drawEllipse2D() {
         let t = 2 * Math.PI * i / n,
             x = cp * Math.cos(t),
             y = sp * Math.cos(t + delta);
-        let px = cx + x * 100,
-            py = cy - y * 100;
+        let px = cx + x * 150,
+            py = cy - y * 150;
         i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
     }
-    ctx.strokeStyle = "blue";
-    ctx.lineWidth = 2;
+    const primaryColor = getComputedStyle(document.documentElement)
+        .getPropertyValue('--primary-color').trim() || "#ea8400";
+    ctx.strokeStyle = primaryColor;
+    ctx.lineWidth = 3;
     ctx.stroke();
 }
 
@@ -126,12 +181,12 @@ function drawInstantaneous2D() {
         w = 2 * Math.PI * (frameCounter / samplesPerCycle);
     let x = cp * Math.cos(w),
         y = sp * Math.cos(w + delta);
-    drawArrow(cx, cy, cx + x * 100, cy - y * 100, "red");
+    drawArrow(cx, cy, cx + x * 150, cy - y * 150, "#ef4444");
 }
 
 function project3D(p) {
     let r = 60 * Math.PI / 180,
-        s = 80,
+        s = 100,
         xx = p.x + p.z * Math.cos(r),
         yy = p.y + p.z * Math.sin(r);
     return {
@@ -140,7 +195,7 @@ function project3D(p) {
     };
 }
 
-function drawLine3D(a, b, o, c = "#555") {
+function drawLine3D(a, b, o, c = "#94a3b8") {
     let p1 = project3D(a),
         p2 = project3D(b);
     let x1 = o.x + p1.x,
@@ -161,6 +216,8 @@ function drawAxes3D() {
             y: cy
         },
         r = 2;
+    const axisColor = getComputedStyle(document.documentElement)
+        .getPropertyValue('--text-muted').trim() || "#94a3b8";
     drawLine3D({
         x: -r,
         y: 0,
@@ -169,7 +226,7 @@ function drawAxes3D() {
         x: r,
         y: 0,
         z: 0
-    }, o);
+    }, o, axisColor);
     drawLine3D({
         x: 0,
         y: -r,
@@ -178,7 +235,7 @@ function drawAxes3D() {
         x: 0,
         y: r,
         z: 0
-    }, o);
+    }, o, axisColor);
     drawLine3D({
         x: 0,
         y: 0,
@@ -187,7 +244,18 @@ function drawAxes3D() {
         x: 0,
         y: 0,
         z: r
-    }, o);
+    }, o, axisColor);
+    
+    // Add labels
+    ctx.fillStyle = axisColor;
+    ctx.font = "14px Arial";
+    ctx.textAlign = "center";
+    const xLabel = project3D({x: r + 0.3, y: 0, z: 0});
+    const yLabel = project3D({x: 0, y: r + 0.3, z: 0});
+    const zLabel = project3D({x: 0, y: 0, z: r + 0.3});
+    ctx.fillText("x", o.x + xLabel.x, o.y - xLabel.y);
+    ctx.fillText("y", o.x + yLabel.x, o.y - yLabel.y);
+    ctx.fillText("z", o.x + zLabel.x, o.y - zLabel.y);
 }
 
 function drawWave3D() {
@@ -217,8 +285,10 @@ function drawWave3D() {
             py = o.y - pp.y;
         i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
     }
-    ctx.strokeStyle = "blue";
-    ctx.lineWidth = 2;
+    const primaryColor = getComputedStyle(document.documentElement)
+        .getPropertyValue('--primary-color').trim() || "#ea8400";
+    ctx.strokeStyle = primaryColor;
+    ctx.lineWidth = 3;
     ctx.stroke();
     let ex = cp * Math.cos(w * t),
         ey = sp * Math.cos(w * t + delta),
@@ -227,7 +297,7 @@ function drawWave3D() {
             y: ey,
             z: 0
         });
-    drawArrow(o.x, o.y, o.x + p.x, o.y - p.y, "red");
+    drawArrow(o.x, o.y, o.x + p.x, o.y - p.y, "#ef4444");
 }
 
 function drawAll() {
@@ -249,31 +319,39 @@ function animate() {
     requestAnimationFrame(animate);
 }
 
+// Event listeners
 psiSlider.addEventListener("input", () => {
     psi = +psiSlider.value * Math.PI / 180;
     psiValue.innerHTML = psiSlider.value + "°";
+    updateStats();
+    updatePresetButtons(null);
     if (!timerRunning) drawAll();
 });
 
 deltaSlider.addEventListener("input", () => {
     delta = +deltaSlider.value * Math.PI / 180;
     deltaValue.innerHTML = deltaSlider.value + "°";
+    updateStats();
+    updatePresetButtons(null);
     if (!timerRunning) drawAll();
 });
 
 viewMode3DCheck.addEventListener("change", () => {
+    updateStats();
     if (!timerRunning) drawAll();
 });
 
 startStopBtn.addEventListener("click", () => {
     timerRunning = !timerRunning;
-    startStopBtn.textContent = timerRunning ? "Stop" : "Start";
+    startStopBtn.innerHTML = timerRunning 
+        ? '<span>⏸️</span> Stop Animation' 
+        : '<span>▶️</span> Start Animation';
     if (timerRunning) animate();
 });
 
 resetBtn.addEventListener("click", () => {
     timerRunning = false;
-    startStopBtn.textContent = "Start";
+    startStopBtn.innerHTML = '<span>▶️</span> Start Animation';
     frameCounter = 0;
     psiSlider.value = "45";
     deltaSlider.value = "0";
@@ -281,7 +359,11 @@ resetBtn.addEventListener("click", () => {
     delta = 0;
     psiValue.innerHTML = "45°";
     deltaValue.innerHTML = "0°";
+    updateStats();
+    updatePresetButtons(btnLinear);
     drawAll();
 });
 
+// Initialize
+updateStats();
 drawAll();
