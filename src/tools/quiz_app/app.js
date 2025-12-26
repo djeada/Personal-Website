@@ -76,11 +76,13 @@
     // =========================================================================
     
     /**
-     * Fetches JSON from a URL using the proxy service.
+     * Fetches JSON from a URL, with fallback to local files.
+     * First tries through a CORS proxy, then falls back to direct local fetch.
      * @param {string} url - The URL to fetch
      * @returns {Promise<Object|null>} - The parsed JSON or null on error
      */
     async function fetchJson(url) {
+        // Try proxy first
         try {
             const response = await fetch(CONFIG.PROXY_URL + encodeURIComponent(url));
             if (!response.ok) {
@@ -88,8 +90,20 @@
             }
             const { contents } = await response.json();
             return JSON.parse(contents);
-        } catch (error) {
-            console.error('Fetch error:', error);
+        } catch (proxyError) {
+            console.warn('Proxy fetch failed, trying local fallback:', proxyError.message);
+        }
+        
+        // Fallback to local file (extract filename from URL)
+        try {
+            const filename = url.split('/').pop();
+            const response = await fetch(filename);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return await response.json();
+        } catch (localError) {
+            console.error('Both proxy and local fetch failed:', localError);
             return null;
         }
     }
