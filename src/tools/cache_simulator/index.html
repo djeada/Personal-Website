@@ -1,29 +1,22 @@
-<!-- index.html -->
 <!DOCTYPE html>
 
 <html lang="en">
 
 <head>
-    <!-- Ads script (preserved from template) -->
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <title>Cache Simulator</title>
     <meta charset="utf-8" />
-    <meta content="Interactive Cache Simulator demonstrating hits, misses, and prefetch behavior" name="description" />
-    <meta content="cache, simulator, visualization, memory, prefetch, cache lines" name="keywords" />
-    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
-    <link href="https://fonts.googleapis.com" rel="preconnect" />
-    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <meta content="Interactive Cache Simulator demonstrating hits, misses, and prefetch behavior with visual memory access patterns" name="description" />
+    <meta content="cache, simulator, visualization, memory, prefetch, cache lines, computer architecture" name="keywords" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
-    <!-- Main styles -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
     <link href="../../resources/style.css" rel="stylesheet" type="text/css" />
     <link href="style.css" rel="stylesheet" type="text/css" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="ie-edge" http-equiv="X-UA-Compatible" />
-    <script defer="" src="../../app.js"></script>
-    <script defer="" src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.min.js"></script>
-    <script defer="" src="script.js"></script>
 </head>
 
 <body>
@@ -57,199 +50,227 @@
             </li>
         </ul>
     </nav>
-    <!-- Main Content -->
-    <section>
-        <header>
-            <h1>Cache Simulator</h1>
-            <p>Adjust the configuration below and run memory access patterns to visualize cache behavior.</p>
+    <!-- Toast Notification Container -->
+    <div aria-live="polite" class="toast-container" id="toast-container"></div>
+    <main class="tool-main">
+        <!-- Hero Header -->
+        <header class="tool-header">
+            <div class="header-content">
+                <div class="header-icon">
+                    <span class="icon-memory">💾</span>
+                </div>
+                <h1>Cache Simulator</h1>
+                <p class="subtitle">Visualize cache behavior with interactive memory access patterns</p>
+                <div class="keyboard-hint">
+                    <kbd>Play</kbd> to auto-run • <kbd>Step</kbd> for single access • <kbd>Generate</kbd> to reset
+                </div>
+            </div>
         </header>
-        <div class="row">
-            <aside class="panel panel--config">
-                <h2>Configuration</h2>
-                <div class="config-grid">
-                    <label>
-                        <span>RAM Size</span>
-                        <div class="input-group">
-                            <input id="ramSize" max="1024" min="32" step="32" type="number" value="128" />
-                            <span class="unit">words</span>
-                        </div>
-                    </label>
-                    <label>
-                        <span>Block Size</span>
-                        <div class="input-group">
-                            <input id="blkSize" max="16" min="1" type="number" value="4" />
-                            <span class="unit">words</span>
-                        </div>
-                    </label>
-                    <label>
-                        <span>Cache Lines</span>
-                        <input id="lines" max="64" min="4" type="number" value="16" />
-                    </label>
-                    <label>
-                        <span>Associativity</span>
-                        <select id="assoc">
-                            <option value="1">Direct</option>
-                            <option value="2">2-way</option>
-                            <option value="4">4-way</option>
-                            <option value="8">Full</option>
-                        </select>
-                    </label>
-                    <label>
-                        <span>Prefetch Distance</span>
-                        <input id="pfDist" max="4" min="0" type="number" value="1" />
-                    </label>
-                </div>
-            </aside>
-            <section class="panel panel--controls">
-                <h2>Run Controls</h2>
-                <div class="controls">
-                    <label>
-                        <span>Pattern</span>
-                        <select id="pattern">
-                            <option value="sequential">Sequential</option>
-                            <option value="reverse">Reverse</option>
-                            <option value="strided">Strided</option>
-                            <option value="random">Random</option>
-                        </select>
-                    </label>
-                    <label class="hidden" id="strideWrapper">
-                        <span>Stride</span>
-                        <input id="stride" max="16" min="1" type="number" value="2" />
-                    </label>
-                    <div class="button-group">
-                        <button id="regen" type="button">Generate</button>
-                        <button id="play" type="button">Play</button>
-                        <button disabled="" id="pause" type="button">Pause</button>
-                        <button id="step" type="button">Step</button>
-                    </div>
-                </div>
-            </section>
-        </div>
-        <div class="row">
-            <section class="panel panel--stats">
-                <h2>Statistics</h2>
-                <div class="stats-grid">
-                    <div><strong id="hits">0</strong><span>Hits</span></div>
-                    <div><strong id="misses">0</strong><span>Misses</span></div>
-                    <div><strong id="prefetches">0</strong><span>Prefetches</span></div>
-                    <div><strong id="rate">0%</strong><span>Hit Rate</span></div>
-                    <div><strong id="time">0 ns</strong><span>Time</span></div>
-                </div>
-            </section>
-        </div>
-        <!-- Flexbox row: Cache Lines + (Chart stacked above RAM Overview) -->
-        <div class="row row--two-col">
-            <!-- Left column: Cache Lines -->
-            <section class="panel panel--cache">
-                <h2>Cache Lines</h2>
-                <div class="table-wrapper">
-                    <table id="cache">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Valid</th>
-                                <th>Tag</th>
-                                <!-- dynamically insert these -->
-                                <th>Off 0</th>
-                                <th>Off 1</th>
-                                <th>Off 2</th>
-                                <th>Off 3</th>
-                                <!-- …etc, up to blk–1 -->
-                                <th>LRU</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </section>
-            <!-- Right column: stacked panels -->
-            <div class="chart-ram-container">
-                <section class="panel panel--chart">
-                    <h2>Hit vs. Miss</h2>
-                    <div class="chart-container">
-                        <canvas id="chart"></canvas>
-                    </div>
-                </section>
-                <section class="panel panel--ram">
-                    <h2>RAM Overview</h2>
-                    <div class="ram-view" id="ramView"></div>
-                    <div class="ram-legend">
-                        <div class="ram-legend-item hit"><span></span>Hit</div>
-                        <div class="ram-legend-item miss"><span></span>Miss</div>
-                        <div class="ram-legend-item prefetch"><span></span>Prefetch</div>
-                    </div>
-                </section>
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-item hit">
+                <span class="stat-icon">✓</span>
+                <span class="stat-value" id="hits">0</span>
+                <span class="stat-label">Hits</span>
+            </div>
+            <div class="stat-item miss">
+                <span class="stat-icon">✗</span>
+                <span class="stat-value" id="misses">0</span>
+                <span class="stat-label">Misses</span>
+            </div>
+            <div class="stat-item prefetch">
+                <span class="stat-icon">⟳</span>
+                <span class="stat-value" id="prefetches">0</span>
+                <span class="stat-label">Prefetches</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">📊</span>
+                <span class="stat-value" id="rate">0%</span>
+                <span class="stat-label">Hit Rate</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">⏱️</span>
+                <span class="stat-value" id="time">0 ns</span>
+                <span class="stat-label">Time</span>
             </div>
         </div>
-        <!-- Log below everything else -->
-        <div class="row">
-            <section class="panel panel--log">
-                <h2>Log</h2>
-                <div class="log-output" id="logOutput"></div>
-            </section>
-        </div>
+        <section class="tool-content">
+            <!-- Sidebar Options -->
+            <aside class="options-sidebar">
+                <div class="sidebar-header">
+                    <h2><span class="icon">⚙️</span> Configuration</h2>
+                    <button class="reset-btn" id="reset-config" title="Reset to defaults">
+                        <span>↺</span>
+                    </button>
+                </div>
+                <!-- Memory Configuration -->
+                <div class="option-card">
+                    <h3><span class="card-icon">🧠</span> Memory Settings</h3>
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label for="ramSize">RAM Size</label>
+                            <div class="input-with-unit">
+                                <input id="ramSize" max="1024" min="32" step="32" type="number" value="128" />
+                                <span class="unit">words</span>
+                            </div>
+                        </div>
+                        <div class="config-item">
+                            <label for="blkSize">Block Size</label>
+                            <div class="input-with-unit">
+                                <input id="blkSize" max="16" min="1" type="number" value="4" />
+                                <span class="unit">words</span>
+                            </div>
+                        </div>
+                        <div class="config-item">
+                            <label for="lines">Cache Lines</label>
+                            <input id="lines" max="64" min="4" type="number" value="16" />
+                        </div>
+                        <div class="config-item">
+                            <label for="assoc">Associativity</label>
+                            <select id="assoc">
+                                <option value="1">Direct Mapped</option>
+                                <option value="2">2-way Set</option>
+                                <option value="4">4-way Set</option>
+                                <option value="8">Fully Associative</option>
+                            </select>
+                        </div>
+                        <div class="config-item">
+                            <label for="pfDist">Prefetch Distance</label>
+                            <input id="pfDist" max="4" min="0" type="number" value="1" />
+                        </div>
+                    </div>
+                </div>
+                <!-- Access Pattern -->
+                <div class="option-card pattern-card">
+                    <h3><span class="card-icon">🔀</span> Access Pattern</h3>
+                    <div class="pattern-buttons">
+                        <button class="pattern-option active" data-pattern="sequential" title="Sequential access: 0, 1, 2, ...">
+                            Sequential
+                        </button>
+                        <button class="pattern-option" data-pattern="reverse" title="Reverse access: N-1, N-2, ...">
+                            Reverse
+                        </button>
+                        <button class="pattern-option" data-pattern="strided" title="Strided access: 0, S, 2S, ...">
+                            Strided
+                        </button>
+                        <button class="pattern-option" data-pattern="random" title="Random shuffle access">
+                            Random
+                        </button>
+                    </div>
+                    <div class="stride-control" id="strideControl">
+                        <label for="stride">Stride Value</label>
+                        <input id="stride" max="16" min="1" type="number" value="2" />
+                    </div>
+                </div>
+            </aside>
+            <!-- Main Editor Area -->
+            <div class="editor-area">
+                <!-- Control Panel -->
+                <div class="control-panel">
+                    <div class="control-header">
+                        <span class="control-title">🎮 Simulation Controls</span>
+                    </div>
+                    <div class="action-bar">
+                        <button class="action-btn primary" id="regen">
+                            <span class="btn-icon">🔄</span> Generate
+                        </button>
+                        <button class="action-btn success" id="play">
+                            <span class="btn-icon">▶</span> Play
+                        </button>
+                        <button class="action-btn" disabled="" id="pause">
+                            <span class="btn-icon">⏸</span> Pause
+                        </button>
+                        <button class="action-btn" id="step">
+                            <span class="btn-icon">⏭</span> Step
+                        </button>
+                    </div>
+                </div>
+                <!-- Cache Table -->
+                <div class="cache-panel">
+                    <div class="panel-header">
+                        <span class="panel-title">📋 Cache Lines</span>
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="cache">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Valid</th>
+                                    <th>Tag</th>
+                                    <th>Off 0</th>
+                                    <th>Off 1</th>
+                                    <th>Off 2</th>
+                                    <th>Off 3</th>
+                                    <th>LRU</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- Visualization Grid -->
+                <div class="visualization-grid">
+                    <!-- Chart Panel -->
+                    <div class="chart-panel">
+                        <div class="panel-header">
+                            <span class="panel-title">📈 Hit vs Miss</span>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="chart"></canvas>
+                        </div>
+                    </div>
+                    <!-- RAM Panel -->
+                    <div class="ram-panel">
+                        <div class="panel-header">
+                            <span class="panel-title">💽 RAM Overview</span>
+                        </div>
+                        <div class="ram-view" id="ramView"></div>
+                        <div class="ram-legend">
+                            <div class="ram-legend-item hit"><span></span>Hit</div>
+                            <div class="ram-legend-item miss"><span></span>Miss</div>
+                            <div class="ram-legend-item prefetch"><span></span>Prefetch</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Log Panel -->
+                <div class="log-panel">
+                    <div class="panel-header">
+                        <span class="panel-title">📜 Access Log</span>
+                    </div>
+                    <div class="log-output" id="logOutput"></div>
+                </div>
+            </div>
+        </section>
+        <!-- Help Box -->
         <div class="help-box">
-            <h2>Cache Simulator</h2>
-            <h3>Synthetic Access Patterns</h3>
-            <p>
-                This tool doesn’t execute real code (e.g. <code>for i in range(10): print(i)</code>);
-                instead it generates one of four abstract memory‐access sequences:
-            </p>
+            <strong>💡 How to Use This Simulator</strong>
             <ul>
-                <li><strong>Sequential</strong> (0, 1, 2, …): models a simple forward loop like <code>for(i=0;i&lt;N;i++) load A[i]</code>.</li>
-                <li><strong>Reverse</strong> (N−1, N−2, …): models iterating backward through an array.</li>
-                <li><strong>Strided</strong> (0, S, 2S, …): models stepping through every S<sup>th</sup> element (<code>for(i=0;i&lt;N;i+=S)</code>).</li>
-                <li><strong>Random</strong> (a shuffle of [0…N−1]): models pointer-chasing or other cache-unfriendly accesses.</li>
+                <li>Configure memory settings in the sidebar (RAM size, block size, cache lines, associativity).</li>
+                <li>Select an access pattern to simulate different memory access behaviors.</li>
+                <li>Click <kbd>Generate</kbd> to create a new access sequence, or <kbd>Play</kbd> to auto-run.</li>
+                <li>Use <kbd>Step</kbd> to advance one memory access at a time.</li>
+                <li>Watch the cache table, RAM view, and chart update in real-time.</li>
             </ul>
-            <h3>Memory vs. Cache</h3>
+            <h3>Access Patterns Explained</h3>
+            <ul>
+                <li><strong>Sequential</strong>: Accesses addresses 0, 1, 2, ... like a simple loop.</li>
+                <li><strong>Reverse</strong>: Accesses N-1, N-2, ... iterating backward.</li>
+                <li><strong>Strided</strong>: Accesses 0, S, 2S, ... stepping by stride value.</li>
+                <li><strong>Random</strong>: Shuffled addresses, simulating pointer-chasing.</li>
+            </ul>
+            <h3>Understanding Cache Behavior</h3>
             <dl>
-                <dt>Main Memory</dt>
-                <dd>A large, relatively slow array of words, each addressed by a unique number.</dd>
-                <dt>Cache</dt>
-                <dd>A smaller, faster store divided into fixed-size blocks (lines), each holding several consecutive words.</dd>
-                <dt>Set-Associativity</dt>
-                <dd>Splits the cache into “sets”; each block can only live in one set but within that set can occupy one of several lines.</dd>
+                <dt>Cache Hit</dt>
+                <dd>Data found in cache - fast access (10 ns).</dd>
+                <dt>Cache Miss</dt>
+                <dd>Data not in cache - must fetch from RAM (100 ns).</dd>
+                <dt>Prefetch</dt>
+                <dd>Speculatively load next blocks to reduce future misses.</dd>
+                <dt>LRU (Least Recently Used)</dt>
+                <dd>Eviction policy - removes oldest unused cache line when full.</dd>
             </dl>
-            <h3>How an Access Works</h3>
-            <ol>
-                <li>Break the requested address into three fields:
-                    <ul>
-                        <li><strong>Tag</strong>: Identifies which block is in the cache line.</li>
-                        <li><strong>Set index</strong>: Chooses which small group (set) of lines to search.</li>
-                        <li><strong>Offset</strong>: Picks which word within the block to use.</li>
-                    </ul>
-                </li>
-                <li>If a matching tag is found in that set → <strong>cache hit</strong>, return the data.</li>
-                <li>If not → <strong>cache miss</strong>, load the block from RAM, evicting the least-recently-used line if needed.</li>
-                <li>Optionally, <strong>prefetch</strong> future blocks on a miss to reduce upcoming misses.</li>
-            </ol>
-            <h3>Replacement Policy (LRU)</h3>
-            <p>
-                When you need to make room, evict the line that hasn’t been accessed for the longest time.
-                This maximizes the chance that “hot” data stays resident.
-            </p>
-            <h3>Performance Metrics</h3>
-            <ul>
-                <li><strong>Hit Rate</strong>: fraction of accesses served from cache.</li>
-                <li><strong>Miss Rate</strong>: fraction requiring a RAM fetch.</li>
-                <li><strong>Prefetch Count</strong>: extra blocks loaded speculatively.</li>
-                <li><strong>Total Time</strong>: cumulative latency (hits + misses + prefetches).</li>
-            </ul>
-            <h3>Visualizations</h3>
-            <p>
-                You get three synchronized views:
-            <ul>
-                <li><strong>Cache Table</strong> (lines, tags, offsets, LRU ages)</li>
-                <li><strong>RAM View</strong> (addresses, values, highlighting for current &amp; prefetched)</li>
-                <li><strong>Chart</strong> (cumulative hits vs. misses over time)</li>
-            </ul>
-            </p>
-            <p>
-                Play with block size, associativity, and prefetch distance to see in real time how they affect performance!
-            </p>
         </div>
-    </section>
-    <!-- Footer (adapted from template) -->
+    </main>
     <footer>
         <div class="footer-columns">
             <div class="footer-column">
@@ -257,7 +278,7 @@
             </div>
             <div class="footer-column">
                 <h2><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Our Privacy Policy</a></h2>
-                <p>Thank you for visiting my personal website. All content here is free to use, but please remember to be respectful and avoid any misuse of the site. If you’d like to get in touch, feel free to reach out via my <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn profile</a> or connect with me on <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a> if you have technical questions or ideas to share. Wishing you all the best and a fantastic life ahead!</p>
+                <p>Thank you for visiting my personal website. All content here is free to use, but please remember to be respectful and avoid any misuse of the site. If you'd like to get in touch, feel free to reach out via my <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn profile</a> or connect with me on <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a> if you have technical questions or ideas to share. Wishing you all the best and a fantastic life ahead!</p>
             </div>
             <div class="footer-column">
                 <h2>Follow me</h2>
@@ -291,8 +312,8 @@
         </script>
         <script src="../../app.js"></script>
     </footer>
-    <!-- Main application script -->
-    <script src="app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.min.js"></script>
+    <script src="script.js"></script>
 </body>
 
 </html>
