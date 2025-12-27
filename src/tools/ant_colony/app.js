@@ -443,8 +443,9 @@ function update() {
 }
 
 function draw() {
-    // Clear canvas
-    ctx.fillStyle = '#1a1a1a';
+    // Clear canvas with theme-appropriate background
+    const isDarkMode = document.body.classList.contains('dark-mode');
+    ctx.fillStyle = isDarkMode ? '#0f172a' : '#1a1a1a';
     ctx.fillRect(0, 0, CONFIG.canvas.width, CONFIG.canvas.height);
     
     // Draw everything in order
