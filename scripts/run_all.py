@@ -6,6 +6,10 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+RANDOM_DATE = True
+RANDOM_DATE_START = "2016-01-01"
+RANDOM_DATE_END = "now"
+RANDOM_DATE_SEED = ""
 
 SCRIPTS_TO_ARGS = {
     "python3 clean_output_dirs.py": [],
@@ -110,7 +114,21 @@ def run_all():
     Runs all predefined scripts with their associated command line arguments.
     """
     logging.info("Initiating the execution of all scripts...")
-    for script, args_list in SCRIPTS_TO_ARGS.items():
+    scripts_to_args = dict(SCRIPTS_TO_ARGS)
+    if RANDOM_DATE:
+        date_args = [
+            "--random-date-range",
+            "--random-date-start",
+            RANDOM_DATE_START,
+            "--random-date-end",
+            RANDOM_DATE_END,
+        ]
+        if RANDOM_DATE_SEED:
+            date_args.extend(["--random-date-seed", RANDOM_DATE_SEED])
+        scripts_to_args["python3 generate_from_markdown.py"] = date_args
+        scripts_to_args["python3 generate_article_list.py"] = date_args
+
+    for script, args_list in scripts_to_args.items():
         run_script(script, args_list)
     run_script("python3 apply_common_elements.py", [])
     run_script("./format.sh", [])

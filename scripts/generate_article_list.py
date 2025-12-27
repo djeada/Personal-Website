@@ -1,8 +1,10 @@
+import argparse
 import datetime
 import logging
 import multiprocessing
 import random
 import re
+import sys
 from pathlib import Path
 from typing import List, Tuple, Optional
 
@@ -11,11 +13,18 @@ from bs4 import BeautifulSoup
 import string
 import math
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.append(str(SCRIPT_DIR))
+import date_utils
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 START_DATE = None
+RANDOM_DATE_RANGE = False
+RANDOM_DATE_START = datetime.datetime(2016, 1, 1)
+RANDOM_DATE_END: Optional[datetime.datetime] = None
+RANDOM_DATE_SEED = ""
 
 INPUT_DIR = "../src/articles"
 INPUT_FILE = "../src/articles/blog_1.html"
@@ -144,6 +153,13 @@ def get_current_date(
 ) -> datetime.datetime:
     remote_date = None
 
+    if RANDOM_DATE_RANGE:
+        random_date = date_utils.get_random_date_for_path(
+            file_path, RANDOM_DATE_START, RANDOM_DATE_END, RANDOM_DATE_SEED
+        )
+        set_last_modified_date(file_path, date_utils.format_date(random_date))
+        return random_date
+
     if start_date is not None:
         now = datetime.datetime.now()
         if start_date > now:
@@ -154,12 +170,7 @@ def get_current_date(
         rand_date = start_date + datetime.timedelta(seconds=rand_offset)
 
         html = file_path.read_text(encoding="utf-8")
-        new_html = re.sub(
-            r"Last modified: \w+ \d+, \d+",
-            f"Last modified: {rand_date.strftime('%B %d, %Y')}",
-            html,
-        )
-        file_path.write_text(new_html, encoding="utf-8")
+        set_last_modified_date(file_path, date_utils.format_date(rand_date))
         logging.info(f"Set random date for {file_path}: {rand_date}")
         return rand_date
 
@@ -211,13 +222,7 @@ def get_current_date(
             local_sec.decode_contents()
         ):
             if remote_date:
-
-                updated_html = re.sub(
-                    r"Last modified: \w+ \d+, \d+",
-                    f"Last modified: {remote_date.strftime('%B %d, %Y')}",
-                    html,
-                )
-                file_path.write_text(updated_html, encoding="utf-8")
+                set_last_modified_date(file_path, date_utils.format_date(remote_date))
                 logging.info(f"Updated date for {file_path}")
                 return remote_date
 
@@ -233,6 +238,28 @@ def get_current_date(
     except Exception as e:
         logging.error(f"Error processing {file_path}: {e}")
         return datetime.datetime.now() if not remote_date else remote_date
+
+
+def set_last_modified_date(file_path: Path, date_str: str) -> None:
+    html = file_path.read_text(encoding="utf-8")
+    if re.search(r"Last modified: \w+ \d+, \d+", html):
+        new_html = re.sub(
+            r"Last modified: \w+ \d+, \d+",
+            f"Last modified: {date_str}",
+            html,
+        )
+    else:
+        insertion_point = re.search(r"<article-section id=\"article-body\">", html)
+        if not insertion_point:
+            return
+        insert_at = insertion_point.end()
+        date_paragraph = (
+            f"\n<p style='text-align: right;'><i>Last modified: {date_str}</i></p>\n"
+        )
+        new_html = html[:insert_at] + date_paragraph + html[insert_at:]
+
+    if new_html != html:
+        file_path.write_text(new_html, encoding="utf-8")
 
 
 def generate_pages_for_articles(
@@ -392,7 +419,41 @@ def generate_pages_for_subdir(subdir: Path, output_file: Path):
     update_html_content(output_file, html_content, "")
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Generate article list pages.")
+    parser.add_argument(
+        "--random-date-range",
+        action="store_true",
+        help="Set a deterministic random Last modified date per article.",
+    )
+    parser.add_argument(
+        "--random-date-start",
+        default="2016-01-01",
+        help="Oldest date in YYYY-MM-DD format.",
+    )
+    parser.add_argument(
+        "--random-date-end",
+        default="now",
+        help="Newest date in YYYY-MM-DD format or 'now'.",
+    )
+    parser.add_argument(
+        "--random-date-seed",
+        default="",
+        help="Optional seed for stable random dates.",
+    )
+    return parser.parse_args()
+
+
 def main():
+    global RANDOM_DATE_RANGE, RANDOM_DATE_START, RANDOM_DATE_END, RANDOM_DATE_SEED
+    args = parse_args()
+    if args.random_date_range:
+        RANDOM_DATE_RANGE = True
+        now = datetime.datetime.now()
+        RANDOM_DATE_START = date_utils.parse_date_arg(args.random_date_start, now=now)
+        RANDOM_DATE_END = date_utils.parse_date_arg(args.random_date_end, now=now)
+        RANDOM_DATE_SEED = args.random_date_seed
+
     base_input_file = Path(INPUT_FILE)
 
     articles = get_article_list(Path(INPUT_DIR))

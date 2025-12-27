@@ -2,9 +2,11 @@
 Transforms Markdown to HTML.
 """
 
+import argparse
 import json
+import sys
 from datetime import datetime
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 import requests
 import markdown
@@ -15,10 +17,19 @@ from multiprocessing import Pool
 
 from bs4 import BeautifulSoup
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.append(str(SCRIPT_DIR))
+import date_utils
+
 PATH_TO_CONFIG = "input.json"
 OUTPUT_DIR = Path("../src/articles")
 
 LANGUAGE_MAP: Dict[str, str] = {"🇵🇱": "pl", "🇺🇸": "en", "pl": "🇵🇱", "en": "🇺🇸"}
+
+RANDOM_DATE_RANGE = False
+RANDOM_DATE_START = datetime(2016, 1, 1)
+RANDOM_DATE_END: Optional[datetime] = None
+RANDOM_DATE_SEED = ""
 
 
 @dataclass
@@ -103,11 +114,11 @@ class MarkdownProcessor:
 
 
 class HtmlEnhancer:
-    def run(self, html: str, url_data) -> str:
+    def run(self, html: str, url_data, date_override: Optional[str] = None) -> str:
         """Main method to enhance the provided HTML content."""
         html = self.apply_filters(html, url_data.language.lower())
         html = self.add_language_info(html, LANGUAGE_MAP[url_data.language.lower()])
-        html = self.add_date_info(html)
+        html = self.add_date_info(html, date_override)
         return html
 
     @classmethod
@@ -324,12 +335,12 @@ class HtmlEnhancer:
         return html
 
     @classmethod
-    def add_date_info(cls, html: str) -> str:
+    def add_date_info(cls, html: str, date_override: Optional[str] = None) -> str:
         """Adds a date information paragraph."""
         insertion_point = re.search(r"<article-section id=\"article-body\">", html)
         if insertion_point:
             insert_at = insertion_point.end()
-            current_date = datetime.now().strftime("%B %d, %Y")
+            current_date = date_override or datetime.now().strftime("%B %d, %Y")
             date_paragraph = f"\n<p style='text-align: right;'><i>Last modified: {current_date}</i></p>\n"
             html = html[:insert_at] + date_paragraph + html[insert_at:]
         return html
@@ -413,13 +424,57 @@ def process_url(url_data):
     html = MarkdownProcessor.insert_code_blocks(html, code_blocks)
 
     enhancer = HtmlEnhancer()
-    html = enhancer.run(html, url_data)
+    date_override = None
+    if RANDOM_DATE_RANGE:
+        start_date = RANDOM_DATE_START or datetime(2016, 1, 1)
+        end_date = RANDOM_DATE_END or datetime.now()
+        if end_date < start_date:
+            raise ValueError("RANDOM_DATE_END cannot be earlier than RANDOM_DATE_START")
+        random_date = date_utils.get_random_date_for_path(
+            url_data.output_path, start_date, end_date, RANDOM_DATE_SEED
+        )
+        date_override = date_utils.format_date(random_date)
+    html = enhancer.run(html, url_data, date_override=date_override)
 
     url_data.output_path.parent.mkdir(parents=True, exist_ok=True)
     url_data.output_path.write_text(html)
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Generate HTML from Markdown.")
+    parser.add_argument(
+        "--random-date-range",
+        action="store_true",
+        help="Set a deterministic random Last modified date per article.",
+    )
+    parser.add_argument(
+        "--random-date-start",
+        default="2016-01-01",
+        help="Oldest date in YYYY-MM-DD format.",
+    )
+    parser.add_argument(
+        "--random-date-end",
+        default="now",
+        help="Newest date in YYYY-MM-DD format or 'now'.",
+    )
+    parser.add_argument(
+        "--random-date-seed",
+        default="",
+        help="Optional seed for stable random dates.",
+    )
+    return parser.parse_args()
+
+
 def main():
+    global RANDOM_DATE_RANGE, RANDOM_DATE_START, RANDOM_DATE_END, RANDOM_DATE_SEED
+    args = parse_args()
+    if args.random_date_range:
+        RANDOM_DATE_RANGE = True
+        now = datetime.now()
+        RANDOM_DATE_START = date_utils.parse_date_arg(args.random_date_start, now=now)
+        RANDOM_DATE_END = date_utils.parse_date_arg(args.random_date_end, now=now)
+        RANDOM_DATE_SEED = args.random_date_seed
+
     urls = read_urls()
 
     with Pool() as pool:
