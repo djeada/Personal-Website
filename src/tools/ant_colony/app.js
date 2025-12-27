@@ -419,17 +419,14 @@ function drawObstacles() {
 }
 
 function drawStats() {
-    ctx.fillStyle = '#fff';
-    ctx.font = '14px Arial';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    
+    // Update stats bar instead of drawing on canvas
     const antsWithFood = ants.filter(ant => ant.hasFood).length;
     const totalFood = CONFIG.food.reduce((sum, food) => sum + food.amount, 0);
     
-    ctx.fillText(`Ants: ${ants.length}`, 10, 10);
-    ctx.fillText(`Carrying Food: ${antsWithFood}`, 10, 30);
-    ctx.fillText(`Food Remaining: ${totalFood}`, 10, 50);
+    document.getElementById('stat-ants').textContent = ants.length;
+    document.getElementById('stat-carrying').textContent = antsWithFood;
+    document.getElementById('stat-food').textContent = totalFood;
+    document.getElementById('stat-pheromones').textContent = settings.showPheromones ? 'Visible' : 'Hidden';
 }
 
 // ========================
