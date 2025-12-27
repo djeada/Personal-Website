@@ -6,7 +6,7 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-RANDOM_DATE = True
+RANDOM_DATE = False
 RANDOM_DATE_START = "2016-01-01"
 RANDOM_DATE_END = "now"
 RANDOM_DATE_SEED = ""
@@ -14,6 +14,7 @@ RANDOM_DATE_SEED = ""
 SCRIPTS_TO_ARGS = {
     "python3 clean_output_dirs.py": [],
     "python3 generate_from_markdown.py": [],
+    "python3 generate_course_tasks.py": [],
     "python3 apply_common_elements.py": [],
     "python3 bundle_css.py": [],
     "python3 generate_table_of_contents.py": [],
@@ -25,6 +26,7 @@ SCRIPTS_TO_ARGS = {
     "python3 generate_article_list.py": [],
     "python3 generate_article_buttons.py": [],
     "python3 create_site_map.py": [],
+    "./replace_navbar.sh": [],
 }
 
 

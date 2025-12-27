@@ -184,7 +184,10 @@ def process_file(
 
     for config_key, replace_func in configurations.items():
         element_html = Path(CONFIG[category][config_key]).read_text()
-        element_html = element_html.replace("../../", f"{depth_prefix}")
+        if "__DEPTH__" in element_html:
+            element_html = element_html.replace("__DEPTH__", f"{depth_prefix}")
+        else:
+            element_html = element_html.replace("../../", f"{depth_prefix}")
         html = replace_func(html, element_html)
 
     html = change_title_in_head(html)
@@ -213,7 +216,8 @@ def main() -> None:
     tool_dir = Path(CONFIG["TOOLS"]["INPUT_DIR"])
     with ThreadPoolExecutor() as executor:
         for file in tool_dir.rglob("**/*.html"):
-            executor.submit(process_file, file, "TOOLS", tool_configurations)
+            depth = len(file.relative_to(tool_dir).parts) - 1
+            executor.submit(process_file, file, "TOOLS", tool_configurations, depth)
 
 
 if __name__ == "__main__":
