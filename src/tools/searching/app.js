@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", function() {
-    // Default configuration constants
+
     const DEFAULT_ARRAY_SIZE = 50;
     const DEFAULT_SPEED = 5;
     const DEFAULT_ALGORITHM = "linear";
@@ -16,13 +16,13 @@ document.addEventListener("DOMContentLoaded", function() {
     const resetDefaultsButton = document.getElementById("reset-defaults");
     const toastContainer = document.getElementById("toast-container");
 
-    // Stats elements
+
     const comparisonsCountEl = document.getElementById("comparisons-count");
     const targetValueEl = document.getElementById("target-value");
     const elapsedTimeEl = document.getElementById("elapsed-time");
     const algorithmNameEl = document.getElementById("algorithm-name");
 
-    // Algorithm names map
+
     const algorithmNames = {
         "linear": "Linear",
         "binary": "Binary",
@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", function() {
         "interpolation": "Interpolation"
     };
 
-    // Toast notification function
+
     function showToast(message, type = "info") {
         const toast = document.createElement("div");
         toast.className = `toast ${type}`;
@@ -54,7 +54,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }, 3000);
     }
 
-    // Toggle card functionality
+
     document.querySelectorAll(".card-toggle").forEach(toggle => {
         toggle.addEventListener("click", () => {
             const expanded = toggle.getAttribute("aria-expanded") === "true";
@@ -114,7 +114,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 resetDefaultsButton.addEventListener("click", () => this.resetDefaults());
             }
 
-            // Keyboard shortcuts
+
             document.addEventListener("keydown", (e) => {
                 if (e.code === "Space") {
                     e.preventDefault();
@@ -132,7 +132,7 @@ document.addEventListener("DOMContentLoaded", function() {
             speedInput.value = DEFAULT_SPEED;
             algorithmSelect.value = DEFAULT_ALGORITHM;
             searchTargetInput.value = "";
-            
+
             this.arrayLength = DEFAULT_ARRAY_SIZE;
             this.speed = DEFAULT_SPEED;
             this.resetArray();
@@ -147,7 +147,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         updateStats() {
             comparisonsCountEl.textContent = this.comparisons;
-            
+
             if (this.startTime) {
                 const elapsed = Date.now() - this.startTime;
                 elapsedTimeEl.textContent = elapsed + "ms";
@@ -201,11 +201,11 @@ document.addEventListener("DOMContentLoaded", function() {
             this.startTime = Date.now();
             pauseButton.innerHTML = '<span class="btn-icon">⏸️</span> Pause';
             this.currentAlgorithm = this.getSelectedAlgorithm();
-            
+
             const target = parseInt(searchTargetInput.value) || this.array[Math.floor(Math.random() * this.array.length)];
             searchTargetInput.value = target;
             targetValueEl.textContent = target;
-            
+
             showToast(`Starting ${algorithmNames[this.currentAlgorithm]} search for ${target}...`, "info");
 
             switch (this.currentAlgorithm) {
@@ -224,15 +224,15 @@ document.addEventListener("DOMContentLoaded", function() {
                 default:
                     break;
             }
-            
+
             this.updateStats();
-            
+
             if (this.found) {
                 showToast(`Found! ${this.comparisons} comparisons`, "success");
             } else if (this.searchingInProgress) {
                 showToast(`Not found after ${this.comparisons} comparisons`, "warning");
             }
-            
+
             this.searchingInProgress = false;
             this.searchCompleted = true;
         }
@@ -240,10 +240,10 @@ document.addEventListener("DOMContentLoaded", function() {
         togglePause() {
             if (this.searchingInProgress) {
                 this.paused = !this.paused;
-                pauseButton.innerHTML = this.paused 
-                    ? '<span class="btn-icon">▶️</span> Resume' 
-                    : '<span class="btn-icon">⏸️</span> Pause';
-                
+                pauseButton.innerHTML = this.paused ?
+                    '<span class="btn-icon">▶️</span> Resume' :
+                    '<span class="btn-icon">⏸️</span> Pause';
+
                 if (this.paused) {
                     showToast("Search paused", "info");
                 } else {
@@ -263,12 +263,12 @@ document.addEventListener("DOMContentLoaded", function() {
             this.startTime = null;
             this.generateSortedRandomArray();
             this.drawArray();
-            
-            // Reset stats
+
+
             comparisonsCountEl.textContent = "0";
             targetValueEl.textContent = "-";
             elapsedTimeEl.textContent = "0ms";
-            
+
             showToast("Array reset", "info");
         }
 
@@ -295,12 +295,12 @@ document.addEventListener("DOMContentLoaded", function() {
             this.updateAlgorithmName();
             this.generateSortedRandomArray();
             this.drawArray();
-            
-            // Reset stats
+
+
             comparisonsCountEl.textContent = "0";
             targetValueEl.textContent = "-";
             elapsedTimeEl.textContent = "0ms";
-            
+
             showToast(`Algorithm changed to ${algorithmNames[this.getSelectedAlgorithm()]}`, "info");
         }
 
@@ -324,7 +324,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     await new Promise((resolve) => setTimeout(resolve, 50));
                 }
             } else {
-                // Speed ranges from 1-10, where 10 is fastest
+
                 const maxDelay = 200;
                 const minDelay = 5;
                 const delayTime = Math.round(maxDelay - ((this.speed - 1) / 9) * (maxDelay - minDelay));

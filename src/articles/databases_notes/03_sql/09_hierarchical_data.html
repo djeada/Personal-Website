@@ -66,7 +66,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: May 24, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: December 27, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="storing-hierarchical-data-in-relational-databases-with-sql">Storing Hierarchical Data in Relational Databases with SQL</h2>
             <p>In many applications, data is naturally organized in a hierarchical structure, such as organizational charts, file systems, categories and subcategories, and family trees. Representing and querying this hierarchical data efficiently in a relational database can be challenging due to the flat nature of relational tables. In this guide, we'll explore several models and techniques for storing and querying hierarchical data in SQL, including:</p>
@@ -88,7 +88,6 @@
             <p>The <strong>Adjacency List Model</strong> is a straightforward way to represent hierarchies in SQL by having each record point to its immediate parent in the same table. This self-referencing design makes it very intuitive to understand and maintain simple tree structures, though querying deep hierarchies can require recursive logic or iterative joins.</p>
             <h4 id="table-schema">Table Schema</h4>
             <p>Before working with the model, you need to define a table that stores both the node and a reference to its parent. The example below creates a <code>categories</code> table where each category can optionally link to another category as its parent.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">CREATE TABLE categories (
     category_id   INT PRIMARY KEY,
@@ -101,7 +100,6 @@
 -- Helpful index for fast child look-ups
 CREATE INDEX idx_categories_parent ON categories(parent_id);</code></pre>
             </div>
-            </p>
             <p>Example data:</p>
             <p>
             <table>
@@ -175,15 +173,12 @@ CREATE INDEX idx_categories_parent ON categories(parent_id);</code></pre>
             <h4 id="common-queries">Common Queries</h4>
             <p>This section outlines typical operations you’ll perform when navigating the hierarchy, from finding direct children to retrieving full descendant trees or building breadcrumb trails.</p>
             <p><strong>Immediate children</strong></p>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT *
 FROM   categories
 WHERE  parent_id = :parent;</code></pre>
             </div>
-            </p>
             <p><strong>All descendants</strong> (PostgreSQL / MySQL 8.0+ / SQL Server)</p>
-            <p>
             <div>
                 <pre><code class="language-sql">WITH RECURSIVE subtree AS (
     SELECT category_id, parent_id, category_name, 1 AS depth
@@ -200,9 +195,7 @@ SELECT *
 FROM   subtree
 ORDER  BY depth, category_name;</code></pre>
             </div>
-            </p>
             <p><strong>Path from root to a node</strong></p>
-            <p>
             <div>
                 <pre><code class="language-sql">WITH RECURSIVE path AS (
     SELECT category_id, parent_id, category_name
@@ -216,7 +209,6 @@ ORDER  BY depth, category_name;</code></pre>
 SELECT string_agg(category_name, ' → ' ORDER BY category_id DESC) AS breadcrumb
 FROM   path;</code></pre>
             </div>
-            </p>
             <h4 id="implementation-tips">Implementation Tips</h4>
             <p>When implementing the adjacency list, consider additional constraints and indexing to maintain data integrity and performance. You can enforce sibling uniqueness, control cascading behaviors on deletes, and guard against cyclical references.</p>
             <ul>
@@ -235,7 +227,6 @@ FROM   path;</code></pre>
             <p>The <strong>Path Enumeration Model</strong>, often called the <em>materialised path</em> technique, represents hierarchies by storing each node’s complete ancestry as a single delimited string. This means any descendant or ancestor lookup requires no joins or recursion, trading read simplicity for more complex writes.</p>
             <h4 id="table-schema">Table Schema</h4>
             <p>To implement this model, your table must include a <code>path</code> column that uniquely holds the concatenated IDs from the root to each node, using a consistent delimiter. An index on this column enables fast prefix scans for hierarchical queries.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">CREATE TABLE categories_path (
     category_id   INT PRIMARY KEY,
@@ -247,7 +238,6 @@ FROM   path;</code></pre>
 CREATE INDEX idx_categories_path_prefix
         ON categories_path USING btree (path text_pattern_ops);</code></pre>
             </div>
-            </p>
             <p><em>Trailing delimiter (<code>.</code> here) ensures prefix matches never confuse <code>1.12.</code> with <code>1.1.</code>.</em></p>
             <p>Example rows:</p>
             <p>
@@ -319,31 +309,25 @@ CREATE INDEX idx_categories_path_prefix
             <h4 id="everyday-queries">Everyday Queries</h4>
             <p>With materialised paths, common tree operations reduce to simple text operations. Here are examples for finding descendants, children, or building breadcrumbs.</p>
             <p><strong>All descendants of “Computers”</strong></p>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT *
 FROM   categories_path
 WHERE  path LIKE '1.2.%';</code></pre>
             </div>
-            </p>
             <p><strong>Immediate children</strong></p>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT *
 FROM   categories_path
 WHERE  path LIKE '1.2.%'
   AND  path NOT LIKE '1.2.%._%'; -- optional depth filter if delimiter is '.'</code></pre>
             </div>
-            </p>
             <p><strong>Breadcrumb / ancestors of node \:leaf</strong> (PostgreSQL)</p>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT *
 FROM   categories_path
 WHERE  ':leaf_path' LIKE path || '%'
 ORDER  BY length(path);</code></pre>
             </div>
-            </p>
             <h4 id="maintenance-recipes">Maintenance Recipes</h4>
             <p>Writes in this model require cascaded updates to keep paths consistent. Wrap each multi-step change in a transaction to avoid partial updates.</p>
             <p>
@@ -411,7 +395,6 @@ ORDER  BY length(path);</code></pre>
             <p>The <strong>Nested Set Model</strong>, also known as <em>Modified Preorder Tree Traversal (MPTT)</em>, encodes hierarchical structures by assigning two numerical bounds (<code>lft</code> and <code>rgt</code>) to each node. These bounds encompass all descendants, allowing entire subtrees to be retrieved with a simple range query.</p>
             <h4 id="table-schema">Table Schema</h4>
             <p>Before using MPTT, your table must include left and right bound columns, and optionally a <code>depth</code> to save computing levels. Unique indexes on the bounds prevent overlapping subtrees.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">CREATE TABLE categories_nested (
     category_id   INT PRIMARY KEY,
@@ -426,7 +409,6 @@ ORDER  BY length(path);</code></pre>
 CREATE UNIQUE INDEX idx_categories_lft  ON categories_nested(lft);
 CREATE UNIQUE INDEX idx_categories_rgt  ON categories_nested(rgt);</code></pre>
             </div>
-            </p>
             <p><em>Rule</em>: a parent’s <code>lft</code> is less than any value in its subtree and its <code>rgt</code> is greater.</p>
             <p>Example rows:</p>
             <p>
@@ -515,7 +497,6 @@ CREATE UNIQUE INDEX idx_categories_rgt  ON categories_nested(rgt);</code></pre>
             <h4 id="everyday-queries">Everyday Queries</h4>
             <p>MPTT makes tree retrieval simple. Here are common patterns for subtrees, children, and breadcrumbs.</p>
             <p><strong>Entire subtree of node \:id</strong></p>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT *
 FROM   categories_nested AS c
@@ -523,9 +504,7 @@ JOIN   categories_nested AS root ON root.category_id = :id
 WHERE  c.lft BETWEEN root.lft AND root.rgt
 ORDER  BY c.lft;</code></pre>
             </div>
-            </p>
             <p><strong>Immediate children</strong></p>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT *
 FROM   categories_nested AS c
@@ -534,9 +513,7 @@ WHERE  c.depth = p.depth + 1
   AND  c.lft BETWEEN p.lft AND p.rgt
 ORDER  BY c.lft;</code></pre>
             </div>
-            </p>
             <p><strong>Breadcrumb / ancestors of node \:id</strong></p>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT *
 FROM   categories_nested AS anc
@@ -544,7 +521,6 @@ JOIN   categories_nested AS leaf ON leaf.category_id = :id
 WHERE  anc.lft &lt; leaf.lft AND anc.rgt &gt; leaf.rgt
 ORDER  BY anc.lft;</code></pre>
             </div>
-            </p>
             <h4 id="maintenance-recipes">Maintenance Recipes</h4>
             <p>Writes in the Nested Set Model involve multi-step bound shifts. Always wrap these operations in one transaction to maintain consistency.</p>
             <p>
@@ -611,7 +587,6 @@ ORDER  BY anc.lft;</code></pre>
             <p>The <strong>Closure Table Model</strong> captures every ancestor–descendant relationship, including self-relations, in a dedicated table. By precomputing the transitive closure of the hierarchy, queries become simple joins, offering consistent performance for both upward and downward navigations.</p>
             <h4 id="table-schema">Table Schema</h4>
             <p>Implementing a closure table requires two tables: one for the nodes themselves and another for all their ancestor–descendant pairs. Each row in the closure table holds an <code>ancestor_id</code>, a <code>descendant_id</code>, and the <code>depth</code> between them.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">CREATE TABLE categories (
     category_id   INT PRIMARY KEY,
@@ -632,7 +607,6 @@ CREATE TABLE category_closure (
 -- Fast look-ups
 CREATE INDEX idx_closure_desc ON category_closure(descendant_id);</code></pre>
             </div>
-            </p>
             <p><em>Rule</em>: Every node has a <strong>self-row</strong> <code>(id, id, 0)</code>; direct children use <code>depth = 1</code>, grandchildren <code>depth = 2</code>, and so on.</p>
             <h4 id="strengths-trade-offs">Strengths / Trade‑offs</h4>
             <p>The closure table excels at query performance, providing constant-time joins for ancestor and descendant lookups. However, it incurs extra storage proportional to the number of relationships and adds complexity to write operations.</p>
@@ -663,7 +637,6 @@ CREATE INDEX idx_closure_desc ON category_closure(descendant_id);</code></pre>
             <h4 id="everyday-queries">Everyday Queries</h4>
             <p>With all relationships precomputed, typical hierarchy operations reduce to straightforward joins and filters.</p>
             <p><strong>All descendants of a node</strong></p>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT c.*
 FROM   categories         AS c
@@ -672,9 +645,7 @@ WHERE  cc.ancestor_id   = :id
   AND  cc.depth         &gt; 0  -- exclude the node itself
 ORDER  BY cc.depth, c.category_name;</code></pre>
             </div>
-            </p>
             <p><strong>All ancestors (breadcrumbs)</strong></p>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT c.*
 FROM   categories         AS c
@@ -683,9 +654,7 @@ WHERE  cc.descendant_id = :id
   AND  cc.depth         &gt; 0
 ORDER  BY cc.depth DESC;  -- root first</code></pre>
             </div>
-            </p>
             <p><strong>Immediate children</strong></p>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT c.*
 FROM   categories         AS c
@@ -693,7 +662,6 @@ JOIN   category_closure   AS cc ON cc.descendant_id = c.category_id
 WHERE  cc.ancestor_id = :id
   AND  cc.depth       = 1;</code></pre>
             </div>
-            </p>
             <h4 id="maintenance-recipes">Maintenance Recipes</h4>
             <p>Updating the closure table involves inserting or deleting multiple relationship rows. Wrap these operations in transactions to preserve tree consistency.</p>
             <p>
@@ -760,7 +728,6 @@ WHERE  cc.ancestor_id = :id
             <p>Recursive CTEs provide a portable, one-table solution for unlimited depth hierarchies. They work across major SQL vendors (PostgreSQL, SQL Server, Oracle, MySQL, MariaDB, SQLite, DuckDB) and can retrieve descendants, ancestors, paths, and even leaf nodes—all with a consistent query structure.</p>
             <h4 id="table-layout-adjacency-list-">Table Layout (Adjacency-List)</h4>
             <p>To use recursive CTEs, your table only needs an ID and a self-reference to its parent. This simple schema underpins the traversal logic without extra helper tables.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">CREATE TABLE categories (
   category_id   INT PRIMARY KEY,
@@ -768,23 +735,18 @@ WHERE  cc.ancestor_id = :id
   category_name TEXT NOT NULL
 );</code></pre>
             </div>
-            </p>
             <h5>Visual Map of Demo Data</h5>
             <p>Below is the tree we'll query in examples. It shows categories and subcategories connected by parent–child links.</p>
-            <p>
             <div>
-                <pre><code class="language-shell">Electronics
-├─ Computers
+                <pre><code class="language-electronics">├─ Computers
 │  ├─ Laptops
 │  │  ├─ Gaming Laptops
 │  │  └─ Business Laptops
 │  └─ Desktops
 └─ Televisions</code></pre>
             </div>
-            </p>
             <h4 id="the-recursive-cte-template">The Recursive-CTE Template</h4>
             <p>Recursive CTEs follow a three-part pattern: an <em>anchor</em> to seed the starting rows, a <em>recursive step</em> that joins to the CTE itself to add layers, and a <em>final query</em> to filter or order the results.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">WITH RECURSIVE cte_name AS (
     -- ① Anchor: select initial rows (e.g., roots)
@@ -800,11 +762,9 @@ WHERE  cc.ancestor_id = :id
 SELECT *            -- ③ Final query: retrieve or filter the accumulated set
 FROM   cte_name;</code></pre>
             </div>
-            </p>
             <p>The engine executes the anchor once, then repeats the recursive step until no new rows emerge.</p>
             <h4 id="example-a-breadcrumb-path-for-every-category">Example A – Breadcrumb Path for Every Category</h4>
             <p>This query builds a <code>full_path</code> column by concatenating names from root to each node. Each recursion appends the child’s name and increments the depth.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">WITH RECURSIVE category_path AS (
     -- ① Anchor: top-level categories
@@ -833,11 +793,9 @@ SELECT *
 FROM   category_path
 ORDER  BY full_path;</code></pre>
             </div>
-            </p>
             <p><em>Key Ideas:</em> use <code>UNION ALL</code> to preserve duplicates, <code>depth</code> for ordering or indenting, and string concatenation (<code>||</code> or <code>CONCAT()</code>).</p>
             <h4 id="example-b-subtree-of-a-chosen-node">Example B – Subtree of a Chosen Node</h4>
             <p>To extract a subtree, seed the CTE with the chosen node, then recur downward to include all descendants.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">WITH RECURSIVE sub_tree AS (
     -- ① Anchor: the selected category
@@ -853,11 +811,9 @@ ORDER  BY full_path;</code></pre>
 SELECT *
 FROM   sub_tree;</code></pre>
             </div>
-            </p>
             <p>Swap the join direction (<code>ON c.category_id = s.parent_id</code>) to climb upward and list ancestors instead.</p>
             <h4 id="example-c-leaf-nodes-only">Example C – Leaf Nodes Only</h4>
             <p>This pattern discovers nodes that never appear as a parent. The CTE collects all nodes, then a final <code>LEFT JOIN</code> filters out those with children.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">WITH RECURSIVE walker AS (
     SELECT category_id, parent_id FROM categories
@@ -871,7 +827,6 @@ FROM   walker w
 LEFT   JOIN categories x ON x.parent_id = w.category_id
 WHERE  x.category_id IS NULL;</code></pre>
             </div>
-            </p>
             <h4 id="performance-safety-checklist">Performance &amp; Safety Checklist</h4>
             <p>Recursive CTEs are powerful but can misbehave on large or cyclic graphs. Follow these guidelines for robust, efficient queries.</p>
             <p>
@@ -900,14 +855,12 @@ WHERE  x.category_id IS NULL;</code></pre>
             </p>
             <h4 id="quick-reference">Quick Reference</h4>
             <p>A handy cheat sheet for common tasks:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">-- Descendants: JOIN cte ON cte.category_id = base.parent_id
 -- Ancestors:   JOIN cte ON cte.parent_id   = base.category_id
 -- Path string: full_path || ' &gt; ' || child.name
 -- Depth:       parent.depth + 1</code></pre>
             </div>
-            </p>
             <h4 id="when-recursive-ctes-are-not-enough">When Recursive CTEs Are <strong>Not</strong> Enough</h4>
             <p>While versatile, recursive CTEs can struggle with very deep or wide trees, frequent full-branch reads, or legacy systems lacking support. In such cases, explore <strong>Closure Tables</strong>, <strong>Nested Sets</strong>, <strong>Materialised Paths</strong>, or specialized graph databases (e.g., Neo4j).</p>
         </article-section>

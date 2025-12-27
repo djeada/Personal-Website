@@ -66,14 +66,13 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: May 16, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: December 27, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="squashing">Squashing</h2>
             <p>In Git, you might accumulate multiple small commits over the course of developing a new feature, fixing small bugs, or refactoring code. While these incremental commits are crucial during active development, they can clutter the project history in the long term. This clutter becomes especially evident when you merge your work into a primary branch like <code>main</code> or <code>master</code>.</p>
             <p><strong>Squashing</strong> is the process of compressing multiple commits into a single, consolidated commit. By doing so, you ensure that the branch’s history remains clean, succinct, and more understandable to collaborators who later need to review or track changes.</p>
             <h3 id="visualising-a-commit-squash">Visualising a commit squash</h3>
             <p>Before squashing <code>feature</code> into a single commit:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">main branch
 │
@@ -81,16 +80,13 @@ A──B──C          ◄─ tip of main
     \
      D──E──F──G  ◄─ feature (4 commits)</code></pre>
             </div>
-            </p>
             <p>The four commits <strong>D → G</strong> capture one logical feature but were made in stages.</p>
             <p>One-liner to squash everything on <code>feature</code> into a single commit:</p>
-            <p>
             <div>
                 <pre><code class="language-bash"># run from the feature branch
 git reset --soft $(git merge-base main HEAD) \
   &amp;&amp; git commit --amend -m "feat: brief, imperative summary of the feature"</code></pre>
             </div>
-            </p>
             <ul>
                 <li><code>git merge-base main HEAD</code> finds the common ancestor (<strong>C</strong>) of <code>main</code> and <code>feature</code>.</li>
                 <li><code>reset --soft</code> moves <code>HEAD</code> back to <strong>C</strong> while keeping all changes staged.</li>
@@ -98,7 +94,6 @@ git reset --soft $(git merge-base main HEAD) \
                 <li>If the branch is already on a remote: <code>git push --force-with-lease</code>.</li>
             </ul>
             <p>After squashing:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">main branch
 │
@@ -106,7 +101,6 @@ A──B──C
     \
      H              ◄─ feature (single squashed commit)</code></pre>
             </div>
-            </p>
             <ul>
                 <li><strong>H</strong> now contains the combined changes from <strong>D, E, F, G</strong>.</li>
                 <li>Write the commit message as a concise changelog entry for the entire feature (and reference issue IDs, e.g. <code>(#123)</code>).</li>
@@ -142,76 +136,60 @@ A──B──C
             <p>The <strong>interactive rebase</strong> workflow is the most common and flexible method for squashing commits. It allows you to selectively rewrite commit history, adjust commit messages, reorder commits, and squash any subset of commits.</p>
             <p>I. <strong>Identify the Number of Commits</strong>: Determine how many commits you want to squash. For example, if you have 4 commits in your current feature branch that you want to combine into 1 commit, note that number (N = 4).</p>
             <p>II. <strong>Run Interactive Rebase</strong>:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">git rebase -i HEAD~N</code></pre>
             </div>
-            </p>
             <p>Replace <strong>N</strong> with the number of commits you want to rewrite. If you wanted to squash the last 4 commits, you’d use <code>git rebase -i HEAD~4</code>.</p>
             <p>III. <strong>Modify the Rebase To-Do List</strong>: </p>
             <p>Your default text editor will open, showing something like:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">pick a1b2c3d4 First commit message
 pick e5f6g7h8 Second commit message
 pick i9j0k1l2 Third commit message
 pick m3n4o5p6 Fourth commit message</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Change <code>pick</code> to <code>squash</code> (or <code>s</code> for short) for the commits you want to squash <strong>into</strong> the commit above it.</li>
                 <li>If you want to end up with just <strong>one</strong> commit, you typically mark the first commit as <code>pick</code> and the rest as <code>squash</code>.</li>
             </ul>
             <p><strong>Example</strong>:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">pick a1b2c3d4 First commit message
 squash e5f6g7h8 Second commit message
 squash i9j0k1l2 Third commit message
 squash m3n4o5p6 Fourth commit message</code></pre>
             </div>
-            </p>
             <p>IV. <strong>Save and Close the Editor</strong>:</p>
             <p>After you close the editor, Git will apply your rebase instructions. It will then open another editor window to let you customize the final combined commit message. </p>
             <p><strong>Tip</strong>: Use this opportunity to write a clear and descriptive commit message that summarizes all the changes you’ve squashed together.</p>
             <p>V. <strong>Complete the Rebase</strong>:</p>
             <p>Once you save the final combined commit message, Git finishes the rebase. You can run:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">git log</code></pre>
             </div>
-            </p>
             <p>to verify that you now have a single commit in place of the previous multiple commits.</p>
             <h4 id="alternative-reset-merge-squash">Alternative: Reset + Merge Squash</h4>
             <p>If you prefer not to use an interactive rebase, or you want a more manual approach:</p>
             <p>I. <strong>Reset to a Previous Commit</strong>:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">git reset --hard HEAD~N</code></pre>
             </div>
-            </p>
             <p>This moves your branch pointer back by <strong>N</strong> commits, effectively discarding the last N commits from the branch tip (but they’re still in Git’s reflog for a while).</p>
             <p>II. <strong>Merge with the <code>--squash</code> Option</strong>:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">git merge --squash HEAD@{1}</code></pre>
             </div>
-            </p>
             <p><code>HEAD@{1}</code> references the commit your branch pointed to before the reset. The <code>--squash</code> option collects all the changes introduced in those commits without creating individual commits for each.</p>
             <p>III. <strong>Commit the Squashed Changes</strong>:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">git commit -m "Your new squashed commit message"</code></pre>
             </div>
-            </p>
             <p>Now you have a single commit that represents all the changes from the last N commits.</p>
             <h3 id="dealing-with-remote-repositories">Dealing with Remote Repositories</h3>
             <p>If the commits you have squashed were already <strong>pushed</strong> to a remote repository, you will need to <strong>force push</strong> your rewritten history:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">git push origin your-branch --force</code></pre>
             </div>
-            </p>
             <p>Force pushing effectively replaces the remote branch with your local branch’s new commit structure. This can cause major confusion for anyone who has already pulled those original commits. They may encounter merge conflicts or will need to rebase their work.</p>
             <p><strong>Therefore</strong>, always coordinate with your team or ensure that no one else depends on the commit history you are about to rewrite. It might be safer to create a new branch that contains your squashed commit, then open a pull request from that branch, so you don’t disrupt existing references on the remote repository.</p>
             <h3 id="best-practices-and-warnings">Best Practices and Warnings</h3>

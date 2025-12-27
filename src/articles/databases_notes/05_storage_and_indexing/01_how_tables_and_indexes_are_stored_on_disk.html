@@ -66,12 +66,11 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: May 18, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: December 27, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="storage-of-tables-and-indexes-on-disk">Storage of Tables and Indexes on Disk</h2>
             <p>Exploring how databases store tables and indexes on disk can provide valuable insights into optimizing performance and managing data efficiently. Let's delve into the fundamental concepts of disk storage in relational databases, focusing on the structures and mechanisms that underlie data organization.</p>
             <h3 id="operating-system-files-datafiles-">Operating-System Files (“Datafiles”)</h3>
-            <p>
             <div>
                 <pre><code class="language-shell">┌──────────────────────────────────────────────────────────────────────┐
 │ tablespace_sales                                                     │
@@ -80,7 +79,6 @@
 │└───────────────┘└───────────────┘└───────────────┘                   │
 └──────────────────────────────────────────────────────────────────────┘</code></pre>
             </div>
-            </p>
             <ul>
                 <li>A tablespace/filegroup is a logical pool of one or more datafiles.</li>
                 <li>Every byte of every table, index, and catalog record is somewhere inside those files.</li>
@@ -88,7 +86,6 @@
                 <li>File layout on the physical platter/SSD is up to the OS unless the DBA pre-allocates contiguous space.</li>
             </ul>
             <h3 id="extents-pages-allocation-units-">Extents &amp; Pages (Allocation Units)</h3>
-            <p>
             <div>
                 <pre><code class="language-shell">DATAFILE  (sales01.dbf)
 │
@@ -103,7 +100,6 @@
 │  └─ Page 7  (free)
 └─ Extent #18  …</code></pre>
             </div>
-            </p>
             <ul>
                 <li>A <strong>page</strong> (a.k.a. block) is the atomic I/O unit; common sizes: 4 KB, 8 KB, 16 KB.</li>
                 <li>Eight or sixteen consecutive pages form an <strong>extent</strong>; allocating extents keeps related pages adjacent.</li>
@@ -111,7 +107,6 @@
                 <li>Sequential scans jump extent-to-extent, minimizing head seeks on spinning media.</li>
             </ul>
             <h3 id="anatomy-of-a-data-page">Anatomy of a Data Page</h3>
-            <p>
             <div>
                 <pre><code class="language-shell">8 KB PAGE (heap)
 ┌──────────────────┐ 0x0000
@@ -125,7 +120,6 @@
 │                  │
 └──────────────────┘ 0x2000 (end)</code></pre>
             </div>
-            </p>
             <ul>
                 <li>The header tells the engine what page type it is and where free space begins/ends.</li>
                 <li>The slot array lets rows move inside the page without breaking external row IDs.</li>
@@ -133,14 +127,12 @@
                 <li>Free space in the middle is coalesced during a <strong>VACUUM / OPTIMIZE / REORG</strong> pass.</li>
             </ul>
             <h3 id="heap-table-lifecycle">Heap Table Lifecycle</h3>
-            <p>
             <div>
                 <pre><code class="language-shell">INSERT PATH
 Client → Buffer Pool → find page w/ ≥ row_size free → write row → mark page dirty
                                                              ↓
                                             checkpoint writes dirty page back to disk</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Rows are appended to the first page listed as “enough-free” in the free-space map.</li>
                 <li>Delete = mark slot unused; data bytes may linger until vacuum to avoid extra WAL.</li>
@@ -148,7 +140,6 @@ Client → Buffer Pool → find page w/ ≥ row_size free → write row → mark
                 <li>Heap scans read every page from first to last; index scans use row IDs to jump directly.</li>
             </ul>
             <h3 id="clustered-index-organized-tables">Clustered (Index-Organized) Tables</h3>
-            <p>
             <div>
                 <pre><code class="language-shell">CLUSTERED B-TREE
            (root p500)
@@ -157,7 +148,6 @@ Client → Buffer Pool → find page w/ ≥ row_size free → write row → mark
    /   \                 /   \
 p512  p518           p562   p570 ← leaf nodes = full rows</code></pre>
             </div>
-            </p>
             <ul>
                 <li>The primary-key index <em>is</em> the table; leaf pages hold whole rows in key order.</li>
                 <li>Range predicates (<code>BETWEEN</code>, <code>&gt;=</code>) read consecutive leaf pages with almost no random I/O.</li>
@@ -165,7 +155,6 @@ p512  p518           p562   p570 ← leaf nodes = full rows</code></pre>
                 <li>Enlarging a row may push it to another leaf, updating parent pointers.</li>
             </ul>
             <h3 id="secondary-non-clustered-index-walk">Secondary (Non-Clustered) Index Walk</h3>
-            <p>
             <div>
                 <pre><code class="language-shell">SELECT … WHERE sku = 'A42';
 ┌─────────────┐
@@ -182,14 +171,12 @@ p512  p518           p562   p570 ← leaf nodes = full rows</code></pre>
 │  heap page  │  contains actual row
 └─────────────┘</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Leaf stores only key + <strong>RID</strong> (page#, slot#) so it stays compact.</li>
                 <li>Query path: traverse the B-tree → fetch heap page → return row.</li>
                 <li>If the leaf already includes every column in the <code>SELECT</code> list, the engine performs an <strong>index-only scan</strong> and never touches the heap page.</li>
             </ul>
             <h3 id="other-index-types">Other Index Types</h3>
-            <p>
             <div>
                 <pre><code class="language-shell">┌──────────── HASH ────────────┐   equality only
 │ key → hash → bucket page     │
@@ -202,7 +189,6 @@ p512  p518           p562   p570 ← leaf nodes = full rows</code></pre>
 │ term → posting list of RIDs  │
 └──────────────────────────────┘</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Hash = O(1) equality, no range support, directory may need re-splitting.</li>
                 <li>Bitmap = 1 bit per row; logical AND/OR of bitmaps solves multi-column predicates quickly.</li>
@@ -210,7 +196,6 @@ p512  p518           p562   p570 ← leaf nodes = full rows</code></pre>
                 <li>Covering/index-include = copy extra columns into leaf → query satisfied directly from index.</li>
             </ul>
             <h3 id="free-space-extent-maps">Free-Space &amp; Extent Maps</h3>
-            <p>
             <div>
                 <pre><code class="language-shell">FREE SPACE MAP (FSM)
 page_id │ free_bytes
@@ -220,7 +205,6 @@ page_id │ free_bytes
    102  │ 1600
 …</code></pre>
             </div>
-            </p>
             <ul>
                 <li>FSM answers “which page has ≥ N free bytes?” in O(1) time.</li>
                 <li>When no page qualifies, the engine grabs a free page from the <strong>Extent Map</strong>.</li>
@@ -228,7 +212,6 @@ page_id │ free_bytes
                 <li>Large deletes make extents 100 % empty; a background task hands them back to the file so other objects can grow there.</li>
             </ul>
             <h3 id="write-ahead-log-wal-relationship">Write-Ahead Log (WAL) Relationship</h3>
-            <p>
             <div>
                 <pre><code class="language-shell">┌──────────────┐   (1) change row
 │ client query │ ───────────────────────────────────┐
@@ -239,7 +222,6 @@ page_id │ free_bytes
                                                     │
                              (4) later: flush dirty page to datafile</code></pre>
             </div>
-            </p>
             <ul>
                 <li>All page changes first land in the sequential WAL so commits are fast and crash-safe.</li>
                 <li>Background checkpoints write dirty pages in large batches, turning many random page writes into fewer sequential WAL writes.</li>
@@ -267,14 +249,12 @@ page_id │ free_bytes
                 <li>Retrieves the size of a specific table, its indexes, and the total combined size in a human-readable format.</li>
                 <li>Use when you need to understand the storage footprint of a table and its indexes to manage disk space or optimize performance.</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT
  pg_size_pretty(pg_relation_size('your_table')) AS table_size,
  pg_size_pretty(pg_indexes_size('your_table')) AS indexes_size,
  pg_size_pretty(pg_total_relation_size('your_table')) AS total_size;</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
             <p>
             <table>
@@ -300,19 +280,15 @@ page_id │ free_bytes
                 <li>Provides detailed execution plans for a query, including the number of disk pages read from memory and disk.</li>
                 <li>Use when diagnosing query performance issues to understand how much data is being read from different sources.</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-sql">EXPLAIN (ANALYZE, BUFFERS) your_query;</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Seq Scan on your_table  (cost=0.00..431.00 rows=21000 width=...)
  Buffers: shared hit=123 read=45
  ...</code></pre>
             </div>
-            </p>
             <ul>
                 <li><strong>shared hit:</strong> Pages read from shared memory (cache).</li>
                 <li><strong>read:</strong> Pages read from disk.</li>
@@ -323,30 +299,23 @@ page_id │ free_bytes
                 <li>Cleans up dead rows and reclaims space for future inserts, optimizing storage usage.</li>
                 <li>Regular maintenance to prevent table bloat and maintain optimal performance, especially after大量的INSERTs, UPDATEs, or DELETEs.</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-sql">VACUUM your_table;</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
-                <pre><code class="language-shell">VACUUM</code></pre>
+                <pre><code class="language-vacuum"></code></pre>
             </div>
-            </p>
             <p>Successful execution indicates that dead space has been reclaimed. Use <code>VACUUM VERBOSE your_table;</code> for detailed output.</p>
             <p>IV. <strong>Check Space Usage with pgstattuple</strong></p>
             <ul>
                 <li>Provides detailed statistics about table space usage, including dead tuples and fragmentation.</li>
                 <li>Use when assessing how much space is wasted due to dead rows and fragmentation, guiding maintenance actions like <code>VACUUM</code>.</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT * FROM pgstattuple('your_table');</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">table_len           |  1000000
   tuple_count         |  20000
@@ -355,7 +324,6 @@ page_id │ free_bytes
   dead_tuple_len      |  200000
   free_space          |  0</code></pre>
             </div>
-            </p>
             <ul>
                 <li><strong>dead_tuple_count &amp; dead_tuple_len:</strong> Amount of space occupied by obsolete rows.</li>
                 <li>High values suggest the need for vacuuming to reclaim space.</li>
@@ -365,37 +333,29 @@ page_id │ free_bytes
                 <li>Initializes a PostgreSQL database cluster with page-level checksums to detect data corruption.</li>
                 <li>Use during database initialization to enhance data integrity by detecting corrupted pages.</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-bash">initdb --data-checksums -D /path/to/data</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Data page checksums are enabled.</code></pre>
             </div>
-            </p>
             <p>Ensures that any corrupted data pages are identified, enhancing reliability and data integrity.</p>
             <p>VI. <strong>Monitor I/O Statistics with pg_stat_io</strong></p>
             <ul>
                 <li>Provides insights into the number of pages read and written for each query.</li>
                 <li>Use when analyzing I/O performance to identify queries that cause excessive disk access.</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT * FROM pg_stat_io;</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">query_id | read_pages | write_pages
 ---------|------------|------------
 1        |     500    |     20
 2        |    1500    |     50</code></pre>
             </div>
-            </p>
             <ul>
                 <li><strong>read_pages:</strong> Number of pages read from disk or memory.</li>
                 <li><strong>write_pages:</strong> Number of pages written to disk.</li>
@@ -406,11 +366,9 @@ page_id │ free_bytes
                 <li>Sets the amount of memory allocated for PostgreSQL to cache data pages, reducing physical I/O.</li>
                 <li>Use when performance tuning to allow more data to reside in memory, thus minimizing disk access.</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-conf">shared_buffers = 2GB</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Increasing <code>shared_buffers</code> can improve performance by reducing disk reads.</li>
                 <li>Balance is required to ensure sufficient memory for other system operations.</li>
@@ -420,34 +378,26 @@ page_id │ free_bytes
                 <li>Updates the statistics about the distribution of data in the table, aiding the query planner in choosing efficient execution paths.</li>
                 <li>Use after significant data changes (INSERTs, UPDATEs, DELETEs) to ensure the query planner has accurate information.</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-sql">ANALYZE your_table;</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
-                <pre><code class="language-shell">ANALYZE</code></pre>
+                <pre><code class="language-analyze"></code></pre>
             </div>
-            </p>
             <p>Successful execution means statistics are updated. Use <code>EXPLAIN</code> to see how updated statistics affect query plans.</p>
             <p>IX. <strong>Reorder Table Data with CLUSTER</strong></p>
             <ul>
                 <li>Reorders the physical storage of a table based on an index, improving data locality for queries that use that index.</li>
                 <li>Use when queries frequently access data in the order of a specific index, enhancing I/O performance.</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-sql">CLUSTER your_table USING your_index;</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
-                <pre><code class="language-shell">CLUSTER</code></pre>
+                <pre><code class="language-cluster"></code></pre>
             </div>
-            </p>
             <p>The table is physically reordered, which can lead to faster sequential scans and better cache utilization for indexed queries.</p>
             <h4 id="mysql-commands"><strong>MySQL Commands</strong></h4>
             <p>I. <strong>Show Table Status</strong></p>
@@ -455,11 +405,9 @@ page_id │ free_bytes
                 <li>Provides detailed information about a table, including the number of rows, data length, and index length.</li>
                 <li>To assess table size, row count, and index usage for storage optimization and performance tuning.</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-sql">SHOW TABLE STATUS LIKE 'your_table';</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
             <p>
             <table>
@@ -497,21 +445,17 @@ page_id │ free_bytes
             </ul>
             <p>II. <strong>Monitor InnoDB Buffer Pool Metrics</strong></p>
             <p>Used to determine how effectively the buffer pool is caching data and to identify if more memory allocation is needed.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">SHOW GLOBAL STATUS LIKE 'Innodb_buffer_pool_read_requests';
 SHOW GLOBAL STATUS LIKE 'Innodb_buffer_pool_reads';</code></pre>
             </div>
-            </p>
             <ul>
                 <li><strong>Innodb_buffer_pool_read_requests:</strong> Number of logical read requests.</li>
                 <li><strong>Innodb_buffer_pool_reads:</strong> Number of reads that had to fetch data from disk.</li>
             </ul>
             <p>Expected Output:</p>
-            <p>
             <div>
-                <pre><code class="language-shell">+---------------------------------+---------+
-| Variable_name                   | Value   |
+                <pre><code class="language-+---------------------------------+---------+">| Variable_name                   | Value   |
 +---------------------------------+---------+
 | Innodb_buffer_pool_read_requests | 100000 |
 +---------------------------------+---------+
@@ -522,7 +466,6 @@ SHOW GLOBAL STATUS LIKE 'Innodb_buffer_pool_reads';</code></pre>
 | Innodb_buffer_pool_reads | 500   |
 +--------------------------+-------+</code></pre>
             </div>
-            </p>
             <ul>
                 <li><strong>Ratio:</strong> <code>Innodb_buffer_pool_reads / Innodb_buffer_pool_read_requests</code></li>
                 <li>A low ratio indicates most reads are served from memory. A high ratio suggests insufficient buffer pool size, leading to more disk I/O.</li>
@@ -532,11 +475,9 @@ SHOW GLOBAL STATUS LIKE 'Innodb_buffer_pool_reads';</code></pre>
                 <li>Sets the size of the InnoDB buffer pool, which caches data and indexes in memory to reduce disk I/O</li>
                 <li>Use during performance tuning to allocate more memory for caching, thereby improving read performance.</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-conf">innodb_buffer_pool_size = 4G</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Increasing <code>innodb_buffer_pool_size</code> can reduce disk reads.</li>
                 <li>Ensure the server has sufficient memory to accommodate the buffer pool alongside other processes.</li>

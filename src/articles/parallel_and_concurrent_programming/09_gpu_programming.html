@@ -66,7 +66,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: September 27, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: December 27, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="gpu-programming">GPU Programming</h2>
             <p>GPUs (Graphics Processing Units) excel at performing the same operation on many data elements in parallel. Originally, GPUs were used just for rendering images, but their highly parallel nature also makes them ideal for general-purpose tasks with large data sets, such as scientific simulations, machine learning, and other compute-intensive workloads.</p>
@@ -79,7 +79,6 @@
             </ul>
             <h3 id="time-space-duality">Time-Space Duality</h3>
             <p>GPU architectures (and more broadly, parallel processors) often exploit a concept called <strong>time-space duality</strong>, which compares two main ways of doing parallel operations: array processors and vector processors. Understanding these helps illustrate general principles behind GPU designs.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">====================================================
 ARRAY PROCESSOR (Spatial Parallelism)
@@ -105,7 +104,6 @@ Time --&gt;    T0     T1     T2     T3     T4     T5     T6     T7
 ----------------------------------------------------------------
 (Each data element "flows" through the pipeline over time)</code></pre>
             </div>
-            </p>
             <p><strong>How it fits into GPU programming?</strong></p>
             <p>I. <strong>Array Processors (Spatial Parallelism)</strong></p>
             <ul>
@@ -190,7 +188,6 @@ Time --&gt;    T0     T1     T2     T3     T4     T5     T6     T7
             <p>In practice, vector loads/stores are a key part of high-performance computing. When data is well-organized in memory and has a suitable stride, the hardware can fetch multiple elements at once, reducing the number of individual instructions and improving overall throughput.</p>
             <h3 id="memory-banking">Memory Banking</h3>
             <p>Each bank has its own <strong>Memory Address Register (MAR)</strong> and <strong>Memory Data Register (MDR)</strong>, and they all connect to the <strong>CPU</strong> via a shared <strong>address bus</strong> and <strong>data bus</strong>. The following diagram shows the high-level structure of a system with multiple memory banks:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">#
                  +----------------+
@@ -212,7 +209,6 @@ Time --&gt;    T0     T1     T2     T3     T4     T5     T6     T7
 | (MAR,MDR) |  | (MAR,MDR) |  | (MAR,MDR) |         | (MAR,MDR) |
 +-----------+  +-----------+  +-----------+   ...   +-----------+</code></pre>
             </div>
-            </p>
             <ul>
                 <li>When the <em>CPU</em> issues addresses and performs reads or writes through the memory controller, memory operations are coordinated centrally, whereas without this role there is no component directing when or where to access memory; for example, a GPU core issues load/store instructions that translate into memory transactions.</li>
                 <li>With an <em>address bus</em> carrying addresses from the CPU to all memory banks, each bank receives the same signals but only the bank selected by the relevant bits responds, whereas omitting this mechanism would require separate dedicated address lines for each bank; for example, address bits can determine whether a request goes to Bank 3 or Bank 7.</li>
@@ -249,7 +245,6 @@ Time --&gt;    T0     T1     T2     T3     T4     T5     T6     T7
                 <li>One <em>advantage of SIMT</em> is that threads can run independently on scalar pipelines, approximating MIMD-style flexibility, whereas SIMD requires strict instruction uniformity; for example, threads in a GPU can diverge onto different branches, even though performance drops if many diverge.</li>
                 <li>Another <em>advantage of SIMT</em> is its ability to regroup threads dynamically into warps for SIMD-like efficiency when paths align, whereas SIMD has no mechanism to adapt to divergence; for example, threads executing identical arithmetic instructions can be grouped automatically, but diverging threads continue in scalar mode.</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-shell">===============================================
 SIMD (Single Instruction, Multiple Data)
@@ -268,14 +263,12 @@ SIMD (Single Instruction, Multiple Data)
 (One instruction is applied to multiple data elements simultaneously 
  in parallel lanes. All lanes share the same Program Counter.)</code></pre>
             </div>
-            </p>
             <ul>
                 <li>One instruction stream (shared Program Counter) </li>
                 <li>Multiple data lanes operate in lockstep (e.g., VADD across 4 elements) </li>
                 <li>Typically uses specialized vector registers. </li>
                 <li>Great for uniform data-parallel tasks where each element does the same operation.</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-shell">===============================================
 SIMT (Single Instruction, Multiple Threads)
@@ -296,7 +289,6 @@ SIMT (Single Instruction, Multiple Threads)
  but threads that execute the same instruction can run in lockstep 
  as a warp, effectively behaving like SIMD when they follow one path.)</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Multiple threads, each with its own Program Counter (PC) </li>
                 <li>A hardware scheduler groups threads with the same PC into a warp for SIMD-like execution. </li>
@@ -321,7 +313,6 @@ SIMT (Single Instruction, Multiple Threads)
                 <li>An <em>interconnection network</em> links multiple shader cores so they can share data and coordinate execution, whereas without this network each core would operate in isolation; for example, workloads requiring global reductions depend on efficient inter-core communication.</li>
                 <li>Multiple <em>memory controllers</em> tied to high-bandwidth GDDR memory provide rapid data access for large datasets, whereas a single controller would become a bottleneck; for example, texture fetches and matrix operations benefit from GDDR’s high bandwidth delivered across several controllers in parallel.</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-shell">#
                               +--------------------------------+
@@ -358,7 +349,6 @@ SIMT (Single Instruction, Multiple Threads)
          |                 |    GDDRx     |  (e.g., GDDR3, GDDR5)  |
          +-----------------+--------------+------------------------+</code></pre>
             </div>
-            </p>
             <ol>
                 <li><strong>Front-End</strong> </li>
                 <li><strong>PC (Program Counter), Mask</strong>: Tracks instruction addresses and active lanes (threads) </li>
@@ -412,7 +402,6 @@ SIMT (Single Instruction, Multiple Threads)
                 <li>The CPU can then use or display the computed results.</li>
             </ul>
             <p>Here’s a simplified diagram showing the <strong>basic</strong> data flow:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">+-------------------------+       Step 1        +------------------------+
 |         CPU (Host)      | --(Host-&gt;Device)--&gt; |       GPU (Device)     |
@@ -425,7 +414,6 @@ SIMT (Single Instruction, Multiple Threads)
                                                  Kernel
                                                  Launch</code></pre>
             </div>
-            </p>
             <ul>
                 <li>In <em>Step 1 (Host → Device)</em>, the CPU allocates GPU memory with functions like <code>cudaMalloc</code> and transfers input data using <code>cudaMemcpy</code>, whereas skipping this step leaves the GPU without access to necessary inputs; for example, image pixels must be copied to device memory before a filter kernel can run.</li>
                 <li>In <em>Step 2 (Kernel Launch)</em>, the CPU instructs the GPU to execute a kernel with a launch configuration such as <code>myKernel&lt;&lt;&lt;blocks, threads&gt;&gt;&gt;(args)</code>, whereas without this step the GPU performs no computation; for example, a matrix multiplication kernel assigns rows and columns to thousands of threads in parallel.</li>
@@ -445,10 +433,8 @@ SIMT (Single Instruction, Multiple Threads)
                 <li>This <em>separation of abstraction</em> lets GPU hardware optimize warp scheduling internally, while programmers focus on simple thread-based kernels, whereas exposing hardware details would burden developers; for example, CUDA developers write kernels as if for independent threads, even though execution occurs in warps.</li>
             </ul>
             <p>Below is a diagram that visualizes how <strong>blocks</strong> and <strong>warps</strong> fit into the overall GPU execution model. Each <strong>grid</strong> consists of one or more <strong>blocks</strong>, and each block contains many <strong>threads</strong>. Under the hood, the GPU hardware groups these threads into <strong>warps</strong> (on NVIDIA GPUs, typically 32 threads per warp) </p>
-            <p>
             <div>
-                <pre><code class="language-shell">+-------------------------------------------------------------+
-|                    GPU Grid                                 |
+                <pre><code class="language-+-------------------------------------------------------------+">|                    GPU Grid                                 |
 | (launched by Kernel&lt;&lt;&lt; numBlocks, threadsPerBlock &gt;&gt;&gt;(...)) | 
 |                                                             |
 |  +------------------+    +------------------+               |
@@ -466,7 +452,6 @@ SIMT (Single Instruction, Multiple Threads)
 |  +------------------+    +------------------+               |
 +-------------------------------------------------------------+</code></pre>
             </div>
-            </p>
             <p><strong>How Blocks and Warps Relate</strong></p>
             <ol>
                 <li><strong>Grid</strong>: The entire problem domain, composed of multiple blocks. A GPU kernel launch specifies:</li>
@@ -515,47 +500,36 @@ SIMT (Single Instruction, Multiple Threads)
             </ul>
             <h3 id="program-structure-in-cuda">Program Structure in CUDA</h3>
             <p>A CUDA kernel is a function marked with <code>__global__</code> that runs on the GPU across many threads; each thread computes its own index and works on a slice of the data.</p>
-            <p>
             <div>
                 <pre><code class="language-clike">__global__ void scale(float* d, float s, int n) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   if (i &lt; n) d[i] *= s;
 }</code></pre>
             </div>
-            </p>
             <p>Before the GPU can touch your data, you allocate memory on the device; the pointer you hold on the CPU is just a handle to memory that physically lives on the GPU.</p>
-            <p>
             <div>
                 <pre><code class="language-clike">float* d_data = nullptr;
 size_t bytes = n * sizeof(float);
 cudaError_t err = cudaMalloc(&amp;d_data, bytes);
 if (err != cudaSuccess) { /* handle error */ }</code></pre>
             </div>
-            </p>
             <p>Inputs must be moved from host RAM to device memory; <code>cudaMemcpy</code> does a raw byte copy and you must state the direction explicitly.</p>
-            <p>
             <div>
                 <pre><code class="language-clike">cudaMemcpy(d_data, h_data, bytes, cudaMemcpyHostToDevice);</code></pre>
             </div>
-            </p>
             <p>Kernels are launched with the <code>&lt;&lt;&lt;grid, block&gt;&gt;&gt;</code> syntax that sets parallelism; pick a block size (often 128–1024) and compute how many blocks cover your data, then optionally synchronize to surface errors before continuing.</p>
-            <p>
             <div>
                 <pre><code class="language-clike">int block = 256;
 int grid  = (n + block - 1) / block;
-scale&lt;&lt;&lt;grid, block=""&gt;&gt;&gt;(d_data, 2.0f, n);
+scale&lt;&lt;&lt;grid, block&gt;&gt;&gt;(d_data, 2.0f, n);
 cudaDeviceSynchronize();  // wait &amp; surface any runtime errors</code></pre>
             </div>
-            </p>
             <p>Results live on the device until you copy them back; once you’re done, free the device memory to avoid leaks.</p>
-            <p>
             <div>
                 <pre><code class="language-clike">cudaMemcpy(h_data, d_data, bytes, cudaMemcpyDeviceToHost);
 cudaFree(d_data);</code></pre>
             </div>
-            </p>
             <p>Inside a kernel, registers hold most scalars (fast but limited), while <code>__shared__</code> memory lets threads in the same block cooperate; use <code>__syncthreads()</code> to make sure all threads reach a safe point before using shared results.</p>
-            <p>
             <div>
                 <pre><code class="language-clike">__global__ void blockSum(const float* in, float* out) {
   __shared__ float buf[256];
@@ -571,7 +545,6 @@ cudaFree(d_data);</code></pre>
   if (t == 0) out[blockIdx.x] = buf[0];
 }</code></pre>
             </div>
-            </p>
             <p>Below is a table of common CUDA concepts. Each row outlines the <strong>concept</strong>, gives a <strong>brief description</strong>, shows a <strong>typical usage or syntax</strong>, and provides <strong>extra notes</strong> or examples for clarity.</p>
             <p>
             <table>

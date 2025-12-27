@@ -66,11 +66,10 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: July 19, 2020</i></p>
+            <p style="text-align: right;"><i>Last modified: December 27, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="nfs">NFS</h2>
             <p>NFS, or Network File System, is a protocol that allows different computers to share files over a network as if they were on the local machine. This means you can access files on another computer just like you would access files on your own, making collaboration and resource sharing much easier. NFS is compatible with various operating systems, including Linux, macOS, and Windows.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Client                       Network                      Server
 +--------+                                            +--------+
@@ -94,7 +93,6 @@
 | Storage|                                            | Storage|
 +--------+                                            +--------+</code></pre>
             </div>
-            </p>
             <p>In this diagram, the client interacts with the NFS server over the network. The NFS client software translates local file operations into NFS protocol requests, which are sent to the server. The server processes these requests and accesses its local file system accordingly, providing the requested data back to the client.</p>
             <h3 id="reasons-for-using-nfs">Reasons for Using NFS</h3>
             <ul>
@@ -114,16 +112,13 @@
             <p>If you're looking to share directories from a CentOS 7 machine so that other computers on the network can access them, you'll need to set up that machine as an NFS server. Here's how you can do it step by step.</p>
             <h4 id="installing-necessary-packages">Installing Necessary Packages</h4>
             <p>First, you'll need to install the NFS utilities, which include essential services and tools for NFS functionality. Open your terminal and run:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">yum install nfs-utils nfs-utils-lib</code></pre>
             </div>
-            </p>
             <p>This command downloads and installs the <code>nfs-utils</code> and <code>nfs-utils-lib</code> packages. After running it, you should see output indicating that the packages have been successfully installed, along with any dependencies.</p>
             <h4 id="enabling-and-starting-required-services">Enabling and Starting Required Services</h4>
             <p>NFS relies on several background services to operate correctly. These services include <code>rpcbind</code>, <code>nfs-server</code>, <code>nfs-lock</code>, and <code>nfs-idmap</code>. Each service plays a role in handling network communication, file locking, and user ID mapping.</p>
             <p>To enable these services to start at boot time and to start them immediately, execute the following commands:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">systemctl enable rpcbind
 systemctl start rpcbind
@@ -137,36 +132,27 @@ systemctl start nfs-lock
 systemctl enable nfs-idmap
 systemctl start nfs-idmap</code></pre>
             </div>
-            </p>
             <p>For example, after starting the <code>nfs-server</code> service, you can check its status by running:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">systemctl status nfs-server</code></pre>
             </div>
-            </p>
             <p>You should see output similar to:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">● nfs-server.service - NFS server and services
    Loaded: loaded (/usr/lib/systemd/system/nfs-server.service; enabled; vendor preset: disabled)
    Active: active (exited) since Wed 2024-10-10 12:34:56 EDT; 10s ago</code></pre>
             </div>
-            </p>
             <p>This output confirms that the NFS server service is active and running.</p>
             <h4 id="configuring-nfs-exports">Configuring NFS Exports</h4>
             <p>Now it's time to specify which directories you want to share with clients and define the access permissions. This is done by editing the <code>/etc/exports</code> file.</p>
             <p>Open the exports file with your favorite text editor:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">vi /etc/exports</code></pre>
             </div>
-            </p>
             <p>Add the following line to share the <code>/opt/shared</code> directory with clients on the <code>192.168.1.0/24</code> network:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">/opt/shared 192.168.1.0/24(rw,sync,no_root_squash,no_all_squash)</code></pre>
             </div>
-            </p>
             <p>Here's what each part means:</p>
             <ul>
                 <li><code>/opt/shared</code> is the directory on the server that you want to share.</li>
@@ -201,84 +187,64 @@ systemctl start nfs-idmap</code></pre>
             <p>By setting these options, you're controlling how clients interact with the shared directory, including who can read or write files and how user permissions are handled.</p>
             <h4 id="applying-configuration-changes">Applying Configuration Changes</h4>
             <p>After editing the exports file, you need to inform the NFS server of the changes. This is done using the <code>exportfs</code> command:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">exportfs -r</code></pre>
             </div>
-            </p>
             <p>This command re-reads the <code>/etc/exports</code> file and updates the NFS server's table of exported file systems without requiring a restart.</p>
             <h4 id="verifying-shared-directories">Verifying Shared Directories</h4>
             <p>To confirm that your directory is being shared correctly, you can use:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">exportfs -v</code></pre>
             </div>
-            </p>
             <p>The output will display the shared directories along with their options, something like:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">/opt/shared  192.168.1.0/24(rw,wdelay,root_squash,no_subtree_check,secure)</code></pre>
             </div>
-            </p>
             <p>This confirms that <code>/opt/shared</code> is exported and accessible to clients in the specified IP range with the defined options.</p>
             <h4 id="adjusting-firewall-settings">Adjusting Firewall Settings</h4>
             <p>For clients to access the NFS share, the server's firewall must allow NFS-related traffic. You can adjust the firewall settings using the <code>firewall-cmd</code> utility:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">firewall-cmd --permanent --add-service=nfs
 firewall-cmd --permanent --add-service=mountd
 firewall-cmd --permanent --add-service=rpc-bind
 firewall-cmd --reload</code></pre>
             </div>
-            </p>
             <p>These commands open the necessary ports for NFS services and reload the firewall configuration to apply the changes immediately.</p>
             <h4 id="restarting-nfs-services">Restarting NFS Services</h4>
             <p>To ensure that all changes are properly applied, it's a good idea to restart the NFS server:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">systemctl restart nfs-server</code></pre>
             </div>
-            </p>
             <p>This restarts the NFS server service, ensuring that it recognizes the new configuration and that any pending changes are implemented.</p>
             <h3 id="setting-up-an-nfs-client-on-centos-7">Setting Up an NFS Client on CentOS 7</h3>
             <p>Once the NFS server is set up, the next step is to configure a client machine so it can access the shared directory. Here are the steps to set up an NFS client on CentOS 7.</p>
             <h4 id="installing-nfs-utilities-on-the-client">Installing NFS Utilities on the Client</h4>
             <p>Just like on the server, the client needs the NFS utilities installed to communicate with the NFS server:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">yum install nfs-utils nfs-utils-lib</code></pre>
             </div>
-            </p>
             <p>This installs the necessary packages for NFS client functionality.</p>
             <h4 id="enabling-and-starting-the-rpcbind-service">Enabling and Starting the rpcbind Service</h4>
             <p>The <code>rpcbind</code> service is essential for NFS communication on the client side as well. Enable and start it by running:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">systemctl enable rpcbind
 systemctl start rpcbind</code></pre>
             </div>
-            </p>
             <p>You can verify that it's running with:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">systemctl status rpcbind</code></pre>
             </div>
-            </p>
             <h4 id="creating-a-mount-point">Creating a Mount Point</h4>
             <p>Decide where you want the NFS share to be mounted on your client system. For example, you might create a directory under <code>/mnt</code>:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">mkdir /mnt/nfs_shared</code></pre>
             </div>
-            </p>
             <p>This directory will serve as the access point for the shared files from the server.</p>
             <h4 id="mounting-the-nfs-share">Mounting the NFS Share</h4>
             <p>Now you can mount the NFS share using the <code>mount</code> command:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">mount -t nfs 192.168.1.100:/opt/shared /mnt/nfs_shared</code></pre>
             </div>
-            </p>
             <p>Breaking down this command:</p>
             <ul>
                 <li><code>-t nfs</code> specifies the file system type as NFS.</li>
@@ -288,38 +254,28 @@ systemctl start rpcbind</code></pre>
             <p>After running this command, the contents of <code>/opt/shared</code> on the server will be accessible under <code>/mnt/nfs_shared</code> on the client.</p>
             <h4 id="verifying-the-mount">Verifying the Mount</h4>
             <p>To ensure that the NFS share is mounted correctly, you can use:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">mount | grep nfs</code></pre>
             </div>
-            </p>
             <p>This should display something like:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">192.168.1.100:/opt/shared on /mnt/nfs_shared type nfs (rw,addr=192.168.1.100)</code></pre>
             </div>
-            </p>
             <p>Alternatively, you can list the contents of the mounted directory:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">ls /mnt/nfs_shared</code></pre>
             </div>
-            </p>
             <p>This should show the files and directories that are present on the server's shared directory.</p>
             <h4 id="automating-the-mount-at-boot">Automating the Mount at Boot</h4>
             <p>If you want the NFS share to be mounted automatically every time the client machine boots up, you can add an entry to the <code>/etc/fstab</code> file.</p>
             <p>Open the <code>/etc/fstab</code> file:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">vi /etc/fstab</code></pre>
             </div>
-            </p>
             <p>Add the following line at the end:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">192.168.1.100:/opt/shared /mnt/nfs_shared nfs defaults 0 0</code></pre>
             </div>
-            </p>
             <p>This tells the system to mount the NFS share at <code>/mnt/nfs_shared</code> using default options during the boot process.</p>
             <h3 id="permissions-and-uid-gid-mapping-in-nfs">Permissions and UID/GID Mapping in NFS</h3>
             <p>When using NFS to share files across different systems, managing permissions becomes a critical aspect to ensure that users have appropriate access to shared resources. One of the main challenges arises from the way NFS handles user and group identities, specifically through User IDs (UIDs) and Group IDs (GIDs). Understanding how these identifiers work and the potential caveats can help prevent permission issues and security risks.</p>
@@ -345,44 +301,34 @@ systemctl start rpcbind</code></pre>
             <p>Using <code>idmapd</code> can simplify UID and GID management by mapping usernames between client and server. Here's how to set it up:</p>
             <p>I. <strong>Install and Configure <code>idmapd</code></strong></p>
             <p>Ensure that <code>nfs-utils</code> is installed, which includes <code>idmapd</code>. Edit the <code>/etc/idmapd.conf</code> file on both the client and server to set the same domain:</p>
-            <p>
             <div>
                 <pre><code class="language-conf">[General]
 Domain = example.com</code></pre>
             </div>
-            </p>
             <p>II. <strong>Start the <code>idmapd</code> Service</strong></p>
             <p>Enable and start the <code>idmapd</code> service on both systems:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">systemctl enable nfs-idmapd
 systemctl start nfs-idmapd</code></pre>
             </div>
-            </p>
             <p>III. <strong>Mount the NFS Share Using NFSv4</strong></p>
             <p>On the client, mount the NFS share specifying NFS version 4:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">mount -t nfs4 server.example.com:/shared /mnt/shared</code></pre>
             </div>
-            </p>
             <h4 id="root-squashing-and-its-impact-on-permissions">Root Squashing and Its Impact on Permissions</h4>
             <p>Root squashing is an NFS security feature that maps requests from the root user (UID 0) on the client to an anonymous or unprivileged user on the server, typically <code>nfsnobody</code>. This prevents a root user on a client machine from having root privileges on the NFS server, enhancing security.</p>
             <p>While root squashing protects the server, it can also cause permission issues when administrative tasks require root access to shared files. If necessary, you can disable root squashing by modifying the export options in <code>/etc/exports</code>:</p>
-            <p>
             <div>
                 <pre><code class="language-conf">/shared 192.168.1.0/24(rw,sync,no_root_squash)</code></pre>
             </div>
-            </p>
             <p>However, disabling root squashing should be done cautiously, as it can expose the server to security risks.</p>
             <h4 id="using-no_all_squash-and-all_squash-options">Using <code>no_all_squash</code> and <code>all_squash</code> Options</h4>
             <p>The <code>no_all_squash</code> option (default behavior) preserves the original UID and GID of users accessing the NFS share. Conversely, the <code>all_squash</code> option maps all user requests to the anonymous user, which can be useful in environments where you want to restrict all client access to a single user identity on the server.</p>
             <p>For example, to map all client access to the <code>nfsnobody</code> user, you can use:</p>
-            <p>
             <div>
                 <pre><code class="language-conf">/shared 192.168.1.0/24(rw,sync,all_squash)</code></pre>
             </div>
-            </p>
             <h4 id="understanding-permission-denied-errors">Understanding Permission Denied Errors</h4>
             <p>If users encounter "Permission Denied" errors when accessing NFS shares, it's often due to UID and GID mismatches or incorrect export configurations. To troubleshoot:</p>
             <ul>
@@ -408,18 +354,14 @@ systemctl start nfs-idmapd</code></pre>
             </ul>
             <h4 id="managing-shared-folders">Managing Shared Folders</h4>
             <p>If you need to view the current shared directories and their options on the server, you can use:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">exportfs -v</code></pre>
             </div>
-            </p>
             <p>This will display detailed information about each exported directory.</p>
             <p>If you decide to stop sharing a directory, you can unexport it with:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">exportfs -u /opt/shared</code></pre>
             </div>
-            </p>
             <p>This command stops the NFS server from sharing <code>/opt/shared</code>.</p>
             <h4 id="troubleshooting-common-issues">Troubleshooting Common Issues</h4>
             <p>If clients are having trouble accessing the NFS share, here are some steps you can take:</p>
@@ -436,11 +378,9 @@ systemctl start nfs-idmapd</code></pre>
                 <li>On the client, you can specify mount options like <code>rsize</code> and <code>wsize</code> to control the read and write buffer sizes.</li>
             </ul>
             <p>For example, mounting with specific read and write sizes:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">mount -t nfs -o rsize=8192,wsize=8192 192.168.1.100:/opt/shared /mnt/nfs_shared</code></pre>
             </div>
-            </p>
             <p>This sets the read and write buffer sizes to 8KB, which can improve performance depending on your network conditions.</p>
             <h4 id="cross-platform-compatibility">Cross-Platform Compatibility</h4>
             <p>NFS can be used in mixed operating system environments. For example, macOS and Windows systems can also act as NFS clients.</p>

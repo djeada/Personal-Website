@@ -66,12 +66,11 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: September 13, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: December 27, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="git-internals">Git internals</h2>
             <p>Git stores your project as a graph of immutable objects. At the leaves are blobs: raw file contents with no filenames attached. Trees sit above blobs and act like directories; a tree is just a list that maps a filename and a mode to either another tree (subfolder) or a blob (file). Commits point to exactly one top-level tree—the snapshot of the entire project at that moment—plus zero or more parents (for merges), and some who/when/why metadata. Refs like <code>main</code> or <code>v1.2.0</code> are just human-friendly names that point at a commit’s ID. HEAD is a tiny text file telling Git which ref you have checked out. The magic is that object IDs are content-hashes, so if two files have identical bytes, they share the same blob; if a folder hasn’t changed, its tree can be reused; if nothing changed, the commit points at the same tree as before. That’s how Git is both space-efficient and lightning fast: reuse everywhere, append-only history, and lookups by hash.</p>
             <p>Inside <code>.git/</code>, everything supports that model. You’ll see <code>objects/</code> holding the database (loose files at first, later packed into <code>.pack</code> files), <code>refs/</code> holding branch and tag pointers, <code>HEAD</code> pointing to the current branch, an <code>index</code> file acting as a staging area, and logs that remember where refs used to point (your safety net). Git never edits a blob or tree in place; it writes a brand-new object, then flips a pointer. That’s why operations feel atomic and why you can always walk backward. Think of it like Lego: blobs are bricks, trees are plates arranging bricks by name, commits are photos of the model with notes about who built it—Git keeps every photo and never scribbles on an old one.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Objects (content-addressed)
         ┌────────────┐
@@ -101,9 +100,7 @@ storage:
     tags/v1.2.0
   logs/refs/heads/main  (reflog)</code></pre>
             </div>
-            </p>
             <h3 id="walk-the-objects-by-hand-tiny-repo-lab-">Walk the objects by hand (tiny repo lab)</h3>
-            <p>
             <div>
                 <pre><code class="language-bash"># start clean
 mkdir toy &amp;&amp; cd toy
@@ -111,9 +108,7 @@ git init
 # output:
 # Initialized empty Git repository in .../toy/.git/</code></pre>
             </div>
-            </p>
             <p>Create a file and inspect what gets stored.</p>
-            <p>
             <div>
                 <pre><code class="language-bash">echo "hello world" &gt; hello.txt
 git status
@@ -121,9 +116,7 @@ git status
 # Untracked files:
 #   hello.txt</code></pre>
             </div>
-            </p>
             <p>Stage it; staging writes a blob object and records its hash in the index.</p>
-            <p>
             <div>
                 <pre><code class="language-bash">git add hello.txt
 
@@ -133,9 +126,7 @@ git ls-files -s
 # 100644 &lt;blob-hash&gt; 0	hello.txt
 # (your hash will differ)</code></pre>
             </div>
-            </p>
             <p>Peek at the blob (raw file content, no filename inside):</p>
-            <p>
             <div>
                 <pre><code class="language-bash">git cat-file -t &lt;blob-hash&gt;
 # output:
@@ -145,9 +136,7 @@ git cat-file -p &lt;blob-hash&gt;
 # output:
 # hello world</code></pre>
             </div>
-            </p>
             <p>Write the first tree from the index and look inside it.</p>
-            <p>
             <div>
                 <pre><code class="language-bash">git write-tree
 # output:
@@ -157,9 +146,7 @@ git cat-file -p &lt;tree-hash&gt;
 # output (mode type   hash                                   name):
 # 100644 blob  &lt;blob-hash&gt;    hello.txt</code></pre>
             </div>
-            </p>
             <p>Make a commit that points at that tree.</p>
-            <p>
             <div>
                 <pre><code class="language-bash">git commit-tree &lt;tree-hash&gt; -m "initial snapshot"
 # output:
@@ -169,9 +156,7 @@ git cat-file -p &lt;tree-hash&gt;
 git update-ref refs/heads/main &lt;commit-hash&gt;
 echo "ref: refs/heads/main" &gt; .git/HEAD</code></pre>
             </div>
-            </p>
             <p>Read the commit object:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">git cat-file -p &lt;commit-hash&gt;
 # output (example):
@@ -181,9 +166,7 @@ echo "ref: refs/heads/main" &gt; .git/HEAD</code></pre>
 #
 # initial snapshot</code></pre>
             </div>
-            </p>
             <p>Now use the regular porcelain to keep going.</p>
-            <p>
             <div>
                 <pre><code class="language-bash"># Add another file and commit it the normal way
 echo "bye" &gt; bye.txt
@@ -194,9 +177,7 @@ git commit -m "add bye"
 #  1 file changed, 1 insertion(+)
 #  create mode 100644 bye.txt</code></pre>
             </div>
-            </p>
             <p>See the new snapshot’s tree and all files’ blob hashes.</p>
-            <p>
             <div>
                 <pre><code class="language-bash">git ls-tree -r HEAD
 # output:
@@ -208,18 +189,14 @@ git cat-file -p HEAD^{tree}
 # 100644 blob &lt;hash1&gt;    bye.txt
 # 100644 blob &lt;hash2&gt;    hello.txt</code></pre>
             </div>
-            </p>
             <p>Show how commits stitch together.</p>
-            <p>
             <div>
                 <pre><code class="language-bash">git log --oneline --graph --decorate
 # output:
 # * 9f3a1c2 (HEAD -&gt; main) add bye
 # * a1b2c3d initial snapshot</code></pre>
             </div>
-            </p>
             <p>Peek at pointers on disk.</p>
-            <p>
             <div>
                 <pre><code class="language-bash">cat .git/HEAD
 # output:
@@ -229,9 +206,7 @@ cat .git/refs/heads/main
 # output:
 # 9f3a1c2...   (the commit ID for main)</code></pre>
             </div>
-            </p>
             <p>A picture of what you just built:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">refs/heads/main ──► (commit 9f3a1c2)
                       │
@@ -242,21 +217,17 @@ cat .git/refs/heads/main
                       └─ parent (commit a1b2c3d)
                            └─ tree T1 with only hello.txt</code></pre>
             </div>
-            </p>
             <h3 id="what-the-index-staging-area-really-holds">What the index (staging area) really holds</h3>
             <p>The index is a compact table: for each path, it stores mode, blob hash, and some metadata. That’s why “staged vs unstaged” is so fast—Git compares your working tree to the index, not to HEAD, and it can build a tree object directly from the index during commit.</p>
-            <p>
             <div>
                 <pre><code class="language-bash">git ls-files --stage
 # output (mode stage hash path):
 # 100644 0 &lt;hash1&gt; bye.txt
 # 100644 0 &lt;hash2&gt; hello.txt</code></pre>
             </div>
-            </p>
             <p>Stages other than <code>0</code> appear during merges to hold multiple versions of the same path (that’s how Git presents conflict hunks).</p>
             <h3 id="loose-objects-vs-packfiles-storage-evolution-">Loose objects vs packfiles (storage evolution)</h3>
             <p>New objects start life as compressed files under <code>.git/objects/aa/bb...</code> where <code>aa</code> is the first two hex digits of the ID. Over time Git packs many objects into a single <code>.pack</code> file for space and speed; an accompanying <code>.idx</code> lets it locate an object quickly.</p>
-            <p>
             <div>
                 <pre><code class="language-bash"># Count loose objects
 find .git/objects -type f | wc -l
@@ -275,9 +246,7 @@ ls .git/objects/pack
 # pack-1234abcd.pack
 # pack-1234abcd.idx</code></pre>
             </div>
-            </p>
             <p>ASCII of that progression:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">loose:
 .git/objects/
@@ -289,10 +258,8 @@ packed:
   pack-xxxx.pack   (many objects)
   pack-xxxx.idx    (index for lookups)</code></pre>
             </div>
-            </p>
             <h3 id="names-are-in-trees-not-blobs-why-dedup-works-">Names are in trees, not blobs (why dedup works)</h3>
             <p>Two files with identical bytes anywhere in history share the same blob ID. Filenames and execute bits live in trees, so renames don’t rewrite blobs; Git just updates the tree entry to point the same blob under a new name.</p>
-            <p>
             <div>
                 <pre><code class="language-bash">cp hello.txt copy.txt
 git add copy.txt
@@ -301,10 +268,8 @@ git ls-tree -r HEAD
 # 100644 blob &lt;hash2&gt; copy.txt
 # 100644 blob &lt;hash2&gt; hello.txt</code></pre>
             </div>
-            </p>
             <h3 id="tags-anchor-names-to-objects-annotated-vs-lightweight-">Tags anchor names to objects (annotated vs lightweight)</h3>
             <p>Tags are refs too; annotated tags are objects with their own metadata and a pointer to another object (usually a commit). Lightweight tags are just a name pointing straight to a commit.</p>
-            <p>
             <div>
                 <pre><code class="language-bash">git tag -a v1.0 -m "first release"
 git cat-file -p refs/tags/v1.0
@@ -316,9 +281,7 @@ git cat-file -p refs/tags/v1.0
 #
 # first release</code></pre>
             </div>
-            </p>
             <h3 id="quick-x-ray-recipes-you-ll-use">Quick “x-ray” recipes you’ll use</h3>
-            <p>
             <div>
                 <pre><code class="language-bash"># Show the type/size/pretty of any object by hash
 git cat-file -t &lt;id&gt;
@@ -332,9 +295,8 @@ git show --no-patch --pretty=raw HEAD
 git ls-tree -r --long HEAD
 
 # Compare two trees without touching the working dir
-git diff --name-status &lt;commita&gt;^{tree} &lt;commitb&gt;^{tree}</code></pre>
+git diff --name-status &lt;commitA&gt;^{tree} &lt;commitB&gt;^{tree}</code></pre>
             </div>
-            </p>
             <h3 id="mental-model-to-keep">Mental model to keep</h3>
             <p>Blobs are bytes. Trees give names to blobs (and trees). Commits name a tree and connect it to parents. Refs name commits so humans don’t have to memorize hashes. The <code>.git/</code> folder is the whole universe: a content-addressed object store, a few tiny pointers, and logs. Everything else is a view on those pieces.</p>
         </article-section>

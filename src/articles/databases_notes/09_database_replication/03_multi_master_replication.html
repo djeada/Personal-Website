@@ -66,13 +66,12 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: May 16, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: December 27, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="multi-master-replication">Multi-Master Replication</h2>
             <p>Multi-master replication is a database replication model where multiple database nodes, referred to as masters, can perform read and write operations concurrently. Each master node propagates its data changes to every other master node, ensuring consistency across the entire system. This approach enhances scalability, availability, and performance but introduces complexities like conflict resolution and increased configuration overhead.</p>
             <h3 id="understanding-the-architecture">Understanding the Architecture</h3>
             <p>To visualize how multi-master replication works, consider the following diagram:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">#
                +---------------------+
@@ -93,7 +92,6 @@
 |                      | &lt;----------  |                    | &lt;---------- |                    |
 +----------+-----------+              +---------+----------+             +---------+----------+</code></pre>
             </div>
-            </p>
             <p>In this setup, each master node is connected to every other master node through replication links. Data changes made on any node are replicated to all other nodes, and clients can connect to any master node for both read and write operations. This interconnected architecture allows for a highly available and scalable system.</p>
             <h4 id="characteristics">Characteristics</h4>
             <p>Multi-master replication has several defining features:</p>
@@ -137,7 +135,6 @@
             </ul>
             <h3 id="implementing-multi-master-replication-with-mysql-mariadb-galera-cluster">Implementing Multi-Master Replication with MySQL / MariaDB + Galera Cluster</h3>
             <p>Galera Cluster is a synchronous multi-master replication plugin for MySQL and MariaDB databases. It ensures that transactions are committed on all nodes simultaneously, providing strong data consistency across the cluster.</p>
-            <p>
             <div>
                 <pre><code class="language-text">#
                  ┌────────────────────────────┐
@@ -160,7 +157,6 @@
 │  (Master*)     │                         │                 │
 └────────────────┘                         └─────────────────┘</code></pre>
             </div>
-            </p>
             <blockquote>
                 <p><strong>Legend</strong> – All three nodes act as <em>masters</em> (“writer-writers”).
                     Traffic flows in a full-mesh using the Galera ports <strong>4567 (replication)</strong>, <strong>4568 (incremental SST/IST)</strong> and <strong>4444 (state snapshot transfer)</strong>.
@@ -176,23 +172,18 @@
             </ol>
             <h4 id="install-server-galera">Install Server &amp; Galera</h4>
             <p><strong>Ubuntu / Debian</strong></p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo apt update
 sudo apt install mariadb-server galera-4 rsync</code></pre>
             </div>
-            </p>
             <p><strong>RHEL / CentOS</strong></p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo dnf install mariadb-server galera-4 rsync</code></pre>
             </div>
-            </p>
             <p><em>(Replace <code>mariadb-…</code> with Percona packages if you need MySQL-8 compatibility.)</em></p>
             <h4 id="core-configuration">Core Configuration</h4>
             <p>The foundation of a stable Galera cluster is consistent configuration across all nodes. This section outlines the essential parameters you must set in the Galera configuration file to enable multi-master replication, ensure data consistency, and tune basic performance settings.</p>
             <p><code>/etc/mysql/conf.d/60-galera.cnf</code> or <code>/etc/my.cnf.d/galera.cnf</code></p>
-            <p>
             <div>
                 <pre><code class="language-ini">[mysqld]
 # ==== Basic ====
@@ -220,10 +211,8 @@ wsrep_sst_auth          = sstuser:s3cr3t!  # will create below
 innodb_buffer_pool_size = 2G               # ≥40 % RAM (adjust)
 wsrep_slave_threads     = 4                # = CPU cores (rule of thumb)</code></pre>
             </div>
-            </p>
             <h4 id="creating-the-sst-user">Creating the SST User</h4>
             <p>To securely transfer the initial dataset from the primary node to joining nodes, Galera uses a State Snapshot Transfer (SST) user. Create and grant the necessary privileges once on any cluster node.</p>
-            <p>
             <div>
                 <pre><code class="language-bash">mysql -u root &lt;&lt;'SQL'
 CREATE USER 'sstuser'@'%' IDENTIFIED BY 's3cr3t!';
@@ -231,49 +220,36 @@ GRANT RELOAD, LOCK TABLES, PROCESS, REPLICATION CLIENT ON *.* TO 'sstuser'@'%';
 FLUSH PRIVILEGES;
 SQL</code></pre>
             </div>
-            </p>
             <h4 id="securing-the-server">Securing the Server</h4>
             <p>Before bringing up the cluster, tighten the default MariaDB security posture. Run the secure installation script to set a strong root password, remove unused accounts, and disable remote root access.</p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo mysql_secure_installation   # set root pwd, remove test DB, disallow remote root</code></pre>
             </div>
-            </p>
             <h4 id="bootstrapping-the-cluster-node-1-">Bootstrapping the Cluster (Node-1)</h4>
             <p>The first node must be started in bootstrap mode to initialize the cluster state. This step only runs once and sets up the initial primary component.</p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo systemctl stop mariadb
 sudo galera_new_cluster           # or: mysqld --wsrep-new-cluster &amp;</code></pre>
             </div>
-            </p>
             <p>Verify that the cluster is running and contains only the bootstrap node:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">mysql -e "SHOW GLOBAL STATUS LIKE 'wsrep_cluster_size';"
 # Expect Value = 1</code></pre>
             </div>
-            </p>
             <h4 id="joining-remaining-nodes-node-2-node-3-">Joining Remaining Nodes (Node-2 &amp; Node-3)</h4>
             <p>Subsequent nodes join the existing cluster by starting their MariaDB service. They will perform an SST from the primary node to synchronize state before becoming active members.</p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo systemctl start mariadb</code></pre>
             </div>
-            </p>
             <p>Monitor the SST process in real time with:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">journalctl -u mariadb -f</code></pre>
             </div>
-            </p>
             <p>Once complete, verify every node sees the full cluster:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">mysql -e "SHOW GLOBAL STATUS LIKE 'wsrep_cluster_size';"
 # Expect Value = 3 on every node</code></pre>
             </div>
-            </p>
             <h4 id="conflict-resolution-certification">Conflict Resolution &amp; Certification</h4>
             <p>Galera uses optimistic concurrency control and write-set certification to resolve conflicts in a synchronous multi-master setup. At commit time, write-sets are broadcast and validated against each node's transaction history.</p>
             <ol>

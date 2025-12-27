@@ -66,7 +66,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 26, 2018</i></p>
+            <p style="text-align: right;"><i>Last modified: December 27, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="backup-and-recovery-strategies">Backup and Recovery Strategies</h2>
             <p>Backup and recovery strategies are essential components of any robust database management plan, ensuring that data remains durable, available, and that business operations can continue uninterrupted. One of the significant challenges in designing these strategies is performing backups without disrupting or slowing down production read and write operations. In this discussion, we'll delve into various backup types, explore methods to minimize production impact, examine recovery strategies, and highlight best practices and tools.</p>
@@ -107,19 +107,15 @@
             <p>Online, or hot backups, are performed while the database is running and accessible to users. This method leverages database features that allow for consistent backups without locking tables. The backup tool reads data files while tracking changes, often through mechanisms like write-ahead logs. It's essential to ensure that the backup tool supports online backups and to monitor resource utilization during the process to prevent performance degradation.</p>
             <p><strong>Example with PostgreSQL:</strong></p>
             <p>Using <code>pg_basebackup</code>, you can perform an online backup without stopping the database:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">pg_basebackup -h localhost -D /backup/data -U replicator -Fp -Xs -P</code></pre>
             </div>
-            </p>
             <p><em>Example Output:</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">Password:
 32768/32768 kB (100%), 1/1 tablespace
 Base backup completed.</code></pre>
             </div>
-            </p>
             <ul>
                 <li>The <strong>Password Prompt</strong> signifies that user authentication is necessary before proceeding with the backup operation, ensuring secure access to the database or system.</li>
                 <li>The <strong>Progress Indicator</strong> provides real-time updates on the backup process, displaying details such as the amount of data transferred (in kilobytes) and the specific tablespaces being backed up.</li>
@@ -127,10 +123,8 @@ Base backup completed.</code></pre>
             </ul>
             <h4 id="snapshot-based-backups">Snapshot-Based Backups</h4>
             <p>Snapshot-based backups utilize filesystem or storage-level snapshots to capture the state of the database at a specific point in time. Filesystem snapshots, like those provided by LVM, ZFS, or Btrfs, and storage snapshots from SAN or NAS systems can create instant snapshots with minimal impact on the running system.</p>
-            <p>
             <div>
-                <pre><code class="language-shell">+------------------------+
-|   Production Database  |
+                <pre><code class="language-+------------------------+">|   Production Database  |
 |       (Running)        |
 +-----------+------------+
             |
@@ -142,10 +136,8 @@ Base backup completed.</code></pre>
 |   (Point-in-Time Copy) |
 +------------------------+</code></pre>
             </div>
-            </p>
             <p>In this setup, the production database continues to operate without interruption while the snapshot is created. The snapshot can then be backed up or moved without affecting the production workload.</p>
             <p><strong>Example with LVM Snapshots:</strong></p>
-            <p>
             <div>
                 <pre><code class="language-bash"># Create LVM snapshot
 lvcreate --size 10G --snapshot --name db_snapshot /dev/vg0/db_volume
@@ -158,7 +150,6 @@ tar -czf db_backup.tar.gz /mnt/db_snapshot
 umount /mnt/db_snapshot
 lvremove /dev/vg0/db_snapshot</code></pre>
             </div>
-            </p>
             <ul>
                 <li>The <strong>lvcreate</strong> command is used to create a snapshot volume named <code>db_snapshot</code>, allocating 10G of space for the snapshot from the original logical volume <code>/dev/vg0/db_volume</code>.</li>
                 <li>The <strong>mount</strong> command is employed to attach the snapshot volume to the directory <code>/mnt/db_snapshot</code>, enabling access to its files for further operations.</li>
@@ -167,10 +158,8 @@ lvremove /dev/vg0/db_snapshot</code></pre>
             </ul>
             <h4 id="replication-based-backups">Replication-Based Backups</h4>
             <p>Using a replica or standby server to perform backups can offload the backup workload from the primary server. Replication keeps the standby server synchronized with the primary, and backups are performed on the standby, avoiding any impact on the primary server's performance.</p>
-            <p>
             <div>
-                <pre><code class="language-shell">+-------------------+
-          |   Primary Server  |
+                <pre><code class="language-+-------------------+">|   Primary Server  |
           |   (Production)    |
           +---------+---------+
                     |
@@ -189,7 +178,6 @@ lvremove /dev/vg0/db_snapshot</code></pre>
           |   Backup Storage  |
           +-------------------+</code></pre>
             </div>
-            </p>
             <p>In this configuration, the standby server receives updates from the primary server and serves as the source for backups. This approach ensures that the backup process does not consume resources on the primary server, thereby preserving performance.</p>
             <p><strong>Considerations:</strong></p>
             <ul>
@@ -208,31 +196,26 @@ lvremove /dev/vg0/db_snapshot</code></pre>
             <p><strong>Example with PostgreSQL:</strong></p>
             <p>I. <strong>Configure Continuous Archiving:</strong></p>
             <p>In the <code>postgresql.conf</code> file:</p>
-            <p>
             <div>
                 <pre><code class="language-conf">archive_mode = on
 archive_command = 'cp %p /archive_location/%f'</code></pre>
             </div>
-            </p>
             <p>This setup ensures that transaction logs are copied to a designated archive location.</p>
             <p>II. <strong>Perform Recovery:</strong></p>
             <ul>
                 <li>Restore the base backup to the desired location.</li>
                 <li>Create a <code>recovery.conf</code> file specifying the target recovery time:</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-conf">restore_command = 'cp /archive_location/%f %p'
 recovery_target_time = '2023-09-14 12:34:56'</code></pre>
             </div>
-            </p>
             <p>Start the PostgreSQL server, which will enter recovery mode and apply logs up to the specified time.</p>
             <h4 id="continuous-data-protection-cdp-">Continuous Data Protection (CDP)</h4>
             <p>Continuous Data Protection involves capturing and storing all changes in real-time or near-real-time, allowing for recovery to any point. This method provides the most granular recovery option but requires significant storage for logs and may impact performance due to the overhead of continuous logging.</p>
             <h4 id="standby-databases">Standby Databases</h4>
             <p>Maintaining one or more standby databases synchronized with the primary via replication offers immediate failover capabilities. In case of a primary server failure, a standby can be promoted to become the new primary, minimizing downtime.</p>
             <p><strong>Failover Process Illustration:</strong></p>
-            <p>
             <div>
                 <pre><code class="language-shell">[Normal Operation]
 +-------------------+       Replication       +-------------------+
@@ -246,7 +229,6 @@ recovery_target_time = '2023-09-14 12:34:56'</code></pre>
 |     (Failed)      | -----------------------&gt; |    (Now Active)   |
 +-------------------+                          +-------------------+</code></pre>
             </div>
-            </p>
             <p>Clients are redirected to the new primary server, ensuring continuity of service.</p>
             <h4 id="best-practices">Best Practices</h4>
             <p>Implementing best practices enhances the effectiveness of backup and recovery strategies:</p>

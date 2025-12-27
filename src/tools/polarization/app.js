@@ -1,6 +1,6 @@
 "use strict";
 
-// UI Elements
+
 const btnLinear = document.getElementById("btnLinear");
 const btnCircularRight = document.getElementById("btnCircularRight");
 const btnCircularLeft = document.getElementById("btnCircularLeft");
@@ -21,20 +21,20 @@ const viewMode3DCheck = document.getElementById("viewMode3D");
 const startStopBtn = document.getElementById("startStopBtn");
 const resetBtn = document.getElementById("resetBtn");
 
-// Stats elements
+
 const statPsi = document.getElementById("stat-psi");
 const statDelta = document.getElementById("stat-delta");
 const statType = document.getElementById("stat-type");
 const statMode = document.getElementById("stat-mode");
 
-// State variables
+
 let timerRunning = false,
     frameCounter = 0,
     psi = +psiSlider.value * Math.PI / 180,
     delta = +deltaSlider.value * Math.PI / 180;
 const samplesPerCycle = 90;
 
-// Helper function to get CSS color variables
+
 function getCSSColor(variableName) {
     return getComputedStyle(document.documentElement)
         .getPropertyValue(variableName).trim() || getDefaultColor(variableName);
@@ -48,27 +48,27 @@ function getDefaultColor(variableName) {
     return defaults[variableName] || '#94a3b8';
 }
 
-// Update stats bar
+
 function updateStats() {
     statPsi.textContent = psiSlider.value + "°";
     statDelta.textContent = deltaSlider.value + "°";
     statMode.textContent = viewMode3DCheck.checked ? "3D" : "2D";
-    
-    // Determine polarization type
+
+
     const psiDeg = +psiSlider.value;
     const deltaDeg = +deltaSlider.value;
     let type = "Elliptical";
-    
+
     if (Math.abs(deltaDeg) < 5 || Math.abs(Math.abs(deltaDeg) - 180) < 5) {
         type = "Linear";
     } else if (Math.abs(psiDeg - 45) < 5 && (Math.abs(Math.abs(deltaDeg) - 90) < 5)) {
         type = "Circular";
     }
-    
+
     statType.textContent = type;
 }
 
-// Update preset button states
+
 function updatePresetButtons(activeBtn) {
     [btnLinear, btnCircularRight, btnCircularLeft, btnElliptical].forEach(btn => {
         btn.classList.remove("active");
@@ -78,7 +78,7 @@ function updatePresetButtons(activeBtn) {
     }
 }
 
-// Preset button handlers
+
 btnLinear.addEventListener("click", () => {
     psiSlider.value = "45";
     deltaSlider.value = "0";
@@ -127,7 +127,7 @@ btnElliptical.addEventListener("click", () => {
     drawAll();
 });
 
-// Drawing functions
+
 function drawArrow(ax, ay, bx, by, c) {
     ctx.strokeStyle = c;
     ctx.fillStyle = c;
@@ -159,8 +159,8 @@ function drawAxes2D() {
     ctx.moveTo(cx, 20);
     ctx.lineTo(cx, ch - 20);
     ctx.stroke();
-    
-    // Add axis labels
+
+
     ctx.fillStyle = ctx.strokeStyle;
     ctx.font = "14px Arial";
     ctx.textAlign = "center";
@@ -255,14 +255,26 @@ function drawAxes3D() {
         y: 0,
         z: r
     }, o, axisColor);
-    
-    // Add labels
+
+
     ctx.fillStyle = axisColor;
     ctx.font = "14px Arial";
     ctx.textAlign = "center";
-    const xLabel = project3D({x: r + 0.3, y: 0, z: 0});
-    const yLabel = project3D({x: 0, y: r + 0.3, z: 0});
-    const zLabel = project3D({x: 0, y: 0, z: r + 0.3});
+    const xLabel = project3D({
+        x: r + 0.3,
+        y: 0,
+        z: 0
+    });
+    const yLabel = project3D({
+        x: 0,
+        y: r + 0.3,
+        z: 0
+    });
+    const zLabel = project3D({
+        x: 0,
+        y: 0,
+        z: r + 0.3
+    });
     ctx.fillText("x", o.x + xLabel.x, o.y - xLabel.y);
     ctx.fillText("y", o.x + yLabel.x, o.y - yLabel.y);
     ctx.fillText("z", o.x + zLabel.x, o.y - zLabel.y);
@@ -327,7 +339,7 @@ function animate() {
     requestAnimationFrame(animate);
 }
 
-// Event listeners
+
 psiSlider.addEventListener("input", () => {
     psi = +psiSlider.value * Math.PI / 180;
     psiValue.innerHTML = psiSlider.value + "°";
@@ -351,9 +363,9 @@ viewMode3DCheck.addEventListener("change", () => {
 
 startStopBtn.addEventListener("click", () => {
     timerRunning = !timerRunning;
-    startStopBtn.innerHTML = timerRunning 
-        ? '<span>⏸️</span> Stop Animation' 
-        : '<span>▶️</span> Start Animation';
+    startStopBtn.innerHTML = timerRunning ?
+        '<span>⏸️</span> Stop Animation' :
+        '<span>▶️</span> Start Animation';
     if (timerRunning) animate();
 });
 
@@ -372,6 +384,6 @@ resetBtn.addEventListener("click", () => {
     drawAll();
 });
 
-// Initialize
+
 updateStats();
 drawAll();

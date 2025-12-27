@@ -84,7 +84,10 @@ class MarkdownProcessor:
         placeholders = soup.find_all(string="CODE_BLOCK_PLACEHOLDER")
 
         for idx, placeholder in enumerate(placeholders):
-            placeholder.replace_with(BeautifulSoup(code_blocks[idx], "html.parser"))
+            if idx >= len(code_blocks):
+                break
+
+            placeholder.replace_with(code_blocks[idx])
 
         return str(soup)
 
@@ -207,42 +210,27 @@ class HtmlEnhancer:
 
     @classmethod
     def apply_prism_for_code_samples(cls, html: str) -> str:
-        code_start_pattern = re.compile(r"```")
-        code_start_match = code_start_pattern.search(html)
-        while code_start_match is not None:
-            code_end_match = code_start_pattern.search(html, code_start_match.end())
-            if code_end_match is None:
-                break
-            start = code_start_match.start()
-            end = code_end_match.end()
-            code_sample = html[start:end]
+        pattern = re.compile(
+            r"(?:<p>)?```(?:\s*(?P<lang>[\w+-]+))?\s*\n(?P<code>.*?)```(?:</p>)?",
+            re.DOTALL,
+        )
 
-            language = re.match(r"```([\w+]+)", code_sample)
-            if language is None:
-                language = "shell"
-            else:
-                language = language.group(1)
-                language = language.lower()
+        def replacer(match: re.Match) -> str:
+            language = match.group("lang") or "shell"
+            language = language.lower()
 
-            if language == "c++" or language == "cpp" or language == "c":
+            if language in {"c++", "cpp", "c"}:
                 language = "clike"
 
-            code_sample = re.sub(r"`{3,}([\w+]+)?", "", code_sample).strip()
-
+            code_sample = match.group("code").strip()
             code_sample = re.sub(r"<", "&lt;", code_sample)
             code_sample = re.sub(r">", "&gt;", code_sample)
             code_sample = re.sub(r"&lt;p&gt;", "", code_sample)
             code_sample = re.sub(r"&lt;\/p&gt;", "", code_sample)
 
-            html = (
-                html[:start]
-                + f'<div><pre><code class="language-{language}">{code_sample}</code></pre></div>'
-                + html[end:]
-            )
+            return f'<div><pre><code class="language-{language}">{code_sample}</code></pre></div>'
 
-            code_start_match = code_start_pattern.search(html, code_end_match.end())
-
-        return html
+        return pattern.sub(replacer, html)
 
     @classmethod
     def ensure_structure(cls, html: str, lang: str) -> str:

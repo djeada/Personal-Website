@@ -66,58 +66,80 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: December 26, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: December 27, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="greedy-algorithms">Greedy algorithms</h2>
-            <p>Greedy algorithms build a solution one step at a time. At each step, grab the option that looks best <em>right now</em> by some simple rule (highest value, earliest finish, shortest length, etc.). Keep it if it doesn’t break the rules of the problem.</p>
+            <p>Greedy algorithms build a solution one step at a time. At each step, grab the option that looks best <em>right now</em> by some simple rule (highest value, earliest finish, shortest length, etc.). Keep it if it doesn't break the rules of the problem.</p>
+            <p><strong>The general pattern:</strong></p>
             <ol>
-                <li>Sort by your rule (the “key”).</li>
+                <li>Sort by your rule (the "key").</li>
                 <li>Scan items in that order.</li>
                 <li>If adding this item keeps the partial answer valid, keep it.</li>
                 <li>Otherwise skip it.</li>
             </ol>
-            <p>Picking the best “now” doesn’t obviously give the best “overall.” The real work is showing that these local choices still lead to a globally best answer.</p>
-            <p><strong>Two proof tricks you’ll see a lot:</strong></p>
-            <ul>
-                <li><em>Exchange argument.</em> Take any optimal solution that disagrees with greedy at the first point. Show you can “swap in” the greedy choice there without making the solution worse or breaking feasibility. Do this repeatedly and you morph some optimal solution into the greedy one—so greedy must be optimal.</li>
-                <li><em>Loop invariant.</em> Write down a sentence that’s true after every step of the scan (e.g., “the current set is feasible and as good as any other set built from the items we’ve seen”). Prove it stays true as you process the next item; at the end, that sentence implies optimality.</li>
-            </ul>
+            <p>Picking the best "now" doesn't obviously give the best "overall." <strong>Greedy isn't magic; you must prove the choice is safe.</strong> The real work is showing that these local choices still lead to a globally best answer.</p>
+            <h3 id="the-greedy-proof-toolkit">The Greedy Proof Toolkit</h3>
+            <p>This section provides reusable proof templates you'll apply to every greedy algorithm. Master these patterns once, and you can tackle any greedy problem.</p>
+            <h4 id="the-universal-greedy-checklist">The Universal Greedy Checklist</h4>
+            <p>For every greedy algorithm, answer these five questions:</p>
+            <ol>
+                <li><strong>Greedy choice</strong>: What local choice do we make at each step?</li>
+                <li><strong>Feasibility</strong>: What constraint must always remain true? (the invariant)</li>
+                <li><strong>Why safe</strong>: Why does this choice never hurt optimality?</li>
+                <li><strong>Implementation</strong>: What data structure makes the choice fast?</li>
+                <li><strong>Complexity</strong>: What dominates runtime?</li>
+            </ol>
+            <h4 id="exchange-argument-template">Exchange Argument Template</h4>
+            <p>The exchange argument is the workhorse of greedy correctness proofs. Here's the four-line generic template:</p>
+            <ol>
+                <li>Take any optimal solution <strong>OPT</strong> that disagrees with greedy <strong>G</strong> at the first position.</li>
+                <li>Show you can "swap in" the greedy choice at that position without making the solution worse or breaking feasibility.</li>
+                <li>The modified solution is still optimal and now agrees with greedy for one more position.</li>
+                <li>Repeat this process: eventually <strong>OPT</strong> transforms into <strong>G</strong>, proving greedy is optimal.</li>
+            </ol>
             <p><em>Picture it like this:</em></p>
-            <p>
             <div>
-                <pre><code class="language-shell">position →   1    2    3    4    5
+                <pre><code class="language-shell">position →   0    1    2    3    4
 greedy:     [✓]  [✗]  [✓]  [✓]  [✗]
 some optimal:
              ✓    ✓    ✗    ?    ?
-First mismatch at 3 → swap in greedy’s pick without harm.
+First mismatch at position 2 → swap in greedy's pick without harm.
 Repeat until both rows match → greedy is optimal.</code></pre>
             </div>
-            </p>
-            <p><strong>Where greedy shines automatically: matroids (nice constraint systems).</strong>
-                There’s a tidy setting where greedy is <em>always</em> right (for nonnegative weights): when your “what’s allowed” rules form a <strong>matroid</strong>. You don’t need the symbols—just the vibe:</p>
+            <h4 id="loop-invariant-template">Loop Invariant Template</h4>
+            <p>An alternative proof strategy uses loop invariants. The template has four parts:</p>
             <ol>
-                <li><strong>You can start from empty.</strong></li>
-                <li><strong>Throwing things out never hurts.</strong> If a set is allowed, any subset is allowed.</li>
-                <li><strong>Smooth growth (augmentation).</strong> If one allowed set is smaller than another, you can always add <em>something</em> from the bigger one to the smaller and stay allowed.</li>
+                <li><strong>State the invariant</strong>: A sentence that's true after every iteration (e.g., "the current set is feasible and at least as good as any other feasible set built from the items processed so far").</li>
+                <li><strong>Initialization</strong>: Prove the invariant holds before the first iteration.</li>
+                <li><strong>Maintenance</strong>: Prove that if the invariant holds before an iteration, it remains true afterward.</li>
+                <li><strong>Termination</strong>: Show that when the loop ends, the invariant implies the solution is optimal.</li>
             </ol>
-            <p>That third rule prevents dead ends and is exactly what exchange arguments rely on. In matroids, the simple “sort by weight and take what fits” greedy is guaranteed optimal. Outside matroids, greedy can still work—but you must justify it for the specific problem using exchange/invariants.</p>
-            <h3 id="reachability-on-a-line">Reachability on a line</h3>
+            <h4 id="cut-and-cycle-rules-graph-specializations-">Cut and Cycle Rules (Graph Specializations)</h4>
+            <p>For graph problems, exchange arguments often take specialized forms:</p>
             <ul>
-                <li>You stand at square $0$ on squares $0,1,\ldots,n-1$.</li>
+                <li><strong>Cut rule (safe to add)</strong>: For any partition of vertices into two sets, the cheapest edge crossing that partition can safely be included in an optimal solution. This underlies MST algorithms and Dijkstra's shortest paths.</li>
+                <li><strong>Cycle rule (safe to skip)</strong>: In any cycle, the most expensive edge is never in a minimum spanning tree. You can always remove it and remain connected with lower cost.</li>
+            </ul>
+            <p>These rules are just exchange arguments dressed in graph-theoretic language. The cut rule says "swapping in the cheapest crossing edge cannot hurt," and the cycle rule says "removing the heaviest edge in a cycle cannot hurt."</p>
+            <hr />
+            <h3 id="examples-grouped-by-pattern">Examples Grouped by Pattern</h3>
+            <p>The following examples demonstrate different greedy patterns. Each section follows a standard structure: <strong>Problem → Greedy rule → Algorithm → Proof sketch → Complexity → Edge cases</strong>.</p>
+            <h3 id="reachability-on-a-line">Reachability on a line</h3>
+            <p><strong>Pattern</strong>: Frontier/Reachability Greedy</p>
+            <p><strong>Problem</strong></p>
+            <ul>
+                <li>You stand at square 0 on squares $0, 1, \ldots, n-1$.</li>
                 <li>Each square $i$ has a jump power $a[i]$. From $i$ you may land on any of $i+1, i+2, \dots, i+a[i]$.</li>
                 <li>Goal: decide if you can reach $n-1$; if not, report the furthest reachable square.</li>
             </ul>
             <p><strong>Example</strong></p>
-            <p>Input: $a=[3,1,0,0,4,1]$, so $n=6$ (squares $0..5$).</p>
-            <p>
+            <p>Input: $a = [3, 1, 0, 0, 4, 1]$, so $n = 6$ (squares $0$ through $5$).</p>
             <div>
                 <pre><code class="language-shell">indices:  0   1   2   3   4   5
 a[i]   :  3   1   0   0   4   1
 reach  :  ^ start at 0</code></pre>
             </div>
-            </p>
             <p>From any $i$, the allowed landings are a range:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">i=0 (a[0]=3): 1..3
 i=1 (a[1]=1): 2
@@ -125,16 +147,14 @@ i=2 (a[2]=0): —
 i=3 (a[3]=0): —
 i=4 (a[4]=4): 5..8 (board ends at 5)</code></pre>
             </div>
-            </p>
             <p><strong>Baseline idea</strong></p>
-            <p>“Paint everything reachable, one wave at a time.”</p>
+            <p>"Paint everything reachable, one wave at a time."</p>
             <ol>
                 <li>Start with ${0}$ reachable.</li>
-                <li>For each already-reachable $i$, add all $i+1..i+a[i]$.</li>
+                <li>For each already-reachable $i$, add all $i+1 \ldots i+a[i]$.</li>
                 <li>Stop when nothing new appears.</li>
             </ol>
             <p><em>Walkthrough:</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">start:   reachable = {0}
 from 0:  add {1,2,3}     → reachable = {0,1,2,3}
@@ -143,22 +163,21 @@ from 2:  add {}          → a[2]=0
 from 3:  add {}          → a[3]=0
 stop:    no new squares  → furthest = 3; last (5) unreachable</code></pre>
             </div>
-            </p>
             <p>Correct, but can reprocess many squares.</p>
-            <p><strong>One-pass trick</strong></p>
+            <p><strong>Greedy rule</strong></p>
             <p>Carry one number while scanning left→right: the furthest frontier $F$ seen so far.</p>
             <p>Rules:</p>
             <ul>
-                <li>If you are at $i$ with $i&gt;F$, you hit a gap → stuck forever.</li>
-                <li>Otherwise, extend $F \leftarrow \max(F, i+a[i])$ and continue.</li>
+                <li>If you are at $i$ with $i &gt; F$, you hit a gap → stuck forever.</li>
+                <li>Otherwise, extend $F \leftarrow \max(F, i + a[i])$ and continue.</li>
             </ul>
             <p>At the end:</p>
             <ul>
-                <li>Can reach last iff $F \ge n-1$.</li>
-                <li>Furthest reachable square is $F$ (capped by $n-1$).</li>
+                <li>Can reach last iff $F \ge n - 1$.</li>
+                <li>Furthest reachable square is $F$ (capped by $n - 1$).</li>
             </ul>
+            <p><strong>Algorithm</strong></p>
             <p><em>Pseudocode</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">F = 0
 for i in 0..n-1:
@@ -168,36 +187,56 @@ for i in 0..n-1:
 can_reach_last = (F &gt;= n-1)
 furthest = min(F, n-1)</code></pre>
             </div>
-            </p>
-            <p>Why this is safe (one line): $F$ always equals “best jump end discovered from any truly-reachable square $\le i$,” and never decreases; if $i&gt;F$, no earlier jump can help because its effect was already folded into $F$.</p>
-            <p><em>Walkthrough:</em></p>
+            <p><strong>Proof sketch</strong> </p>
+            <p>The loop invariant is: "$F$ always equals the best jump end discovered from any truly-reachable square $\le i$." This is maintained because:</p>
+            <ul>
+                <li>Initially $F = 0$ (we start at position 0).</li>
+                <li>If $i \le F$, then position $i$ is reachable, so we can update $F$ with $i + a[i]$.</li>
+                <li>If $i &gt; F$, no earlier jump can help because all such jumps were already folded into $F$.</li>
+            </ul>
+            <p>Since $F$ never decreases and captures all reachable positions up to $i$, when the loop ends we have the correct furthest reachable position.</p>
+            <p><strong>Greedy checklist application:</strong></p>
+            <ol>
+                <li><strong>Greedy choice</strong>: At each position $i$, extend the frontier as far as possible using $a[i]$.</li>
+                <li><strong>Feasibility</strong>: The invariant "$F$ = furthest reachable so far" is always true.</li>
+                <li><strong>Why safe</strong>: Any position beyond $F$ is unreachable, so stopping at $i &gt; F$ is correct. Extending $F$ greedily captures all possibilities from reachable positions.</li>
+                <li><strong>Implementation</strong>: Single pass with $O(1)$ state.</li>
+                <li><strong>Complexity</strong>: $O(n)$ time, $O(1)$ space.</li>
+            </ol>
+            <p><strong>Walkthrough:</strong></p>
             <p>We draw the frontier as a bracket reaching to $F$.</p>
-            <p>Step $i=0$ (inside frontier since $0\le F$); update $F=\max(0,0+3)=3$.</p>
-            <p>
+            <p>Step $i = 0$ (inside frontier since $0 \le F$); update $F = \max(0, 0 + 3) = 3$.</p>
             <div>
                 <pre><code class="language-shell">indices:  0   1   2   3   4   5
           [===============F]
           0   1   2   3
 F=3</code></pre>
             </div>
-            </p>
-            <p>Step $i=1$: still $i\le F$. Update $F=\max(3,1+1)=3$ (no change).
-                Step $i=2$: $F=\max(3,2+0)=3$ (no change).
-                Step $i=3$: $F=\max(3,3+0)=3$ (no change).</p>
-            <p>Now $i=4$ but $4&gt;F(=3)$ → gap → stuck.</p>
-            <p>
+            <p>Step $i = 1$: still $i \le F$. Update $F = \max(3, 1 + 1) = 3$ (no change).
+                Step $i = 2$: $F = \max(3, 2 + 0) = 3$ (no change).
+                Step $i = 3$: $F = \max(3, 3 + 0) = 3$ (no change).</p>
+            <p>Now $i = 4$ but $4 &gt; F(= 3)$ → gap → stuck.</p>
             <div>
                 <pre><code class="language-shell">indices:  0   1   2   3   4   5
           [===============F]   x  (i=4 is outside)
 F=3</code></pre>
             </div>
-            </p>
-            <p>Final: $F=3$. Since $F &lt;n-1=5$, last is unreachable; furthest reachable square is $3$.</p>
-            <p>Complexity: time $O(n)$, space $O(1)$.</p>
+            <p>Final: $F = 3$. Since $F &lt; n - 1 = 5$, last is unreachable; furthest reachable square is $3$.</p>
+            <p><strong>Complexity</strong></p>
+            <ul>
+                <li>Time: $O(n)$</li>
+                <li>Space: $O(1)$</li>
+            </ul>
+            <p><strong>Edge cases</strong></p>
+            <ul>
+                <li>If all $a[i] = 0$ except $a[0]$, you can only reach as far as $a[0]$.</li>
+                <li>If $n = 1$, you're already at the goal.</li>
+            </ul>
             <h3 id="minimum-spanning-trees">Minimum spanning trees</h3>
-            <p>You’ve got a connected weighted graph and you want the cheapest way to connect <strong>all</strong> its vertices without any cycles—that’s a minimum spanning tree (MST). Think “one network of cables that touches every building, with the total cost as small as possible.”</p>
+            <p><strong>Pattern</strong>: Cut-Based Greedy on Graphs</p>
+            <p><strong>Problem</strong></p>
+            <p>You've got a <strong>connected, undirected, weighted</strong> graph and you want the cheapest way to connect <strong>all</strong> its vertices without any cycles—that's a minimum spanning tree (MST). Think "one network of cables that touches every building, with the total cost as small as possible."</p>
             <p><strong>Example inputs and outputs</strong></p>
-            <p>
             <div>
                 <pre><code class="language-shell">V = {A,B,C,D,E}
 
@@ -207,31 +246,30 @@ B-C:4  B-D:2  B-E:7
 C-D:6  C-E:3
 D-E:8</code></pre>
             </div>
-            </p>
             <p>A correct MST for this graph is:</p>
             <p>$$
-                {A ⁣− ⁣B(1), B ⁣− ⁣D(2), C ⁣− ⁣E(3), B ⁣− ⁣C(4)}
+                {A !-! B(1), B !-! D(2), C !-! E(3), B !-! C(4)}
                 $$</p>
-            <p>Total weight $=1+2+3+4=10$.</p>
-            <p>You can’t do better: any cheaper set of 4 edges would either miss a vertex or create a cycle.</p>
-            <p><em>Baseline</em></p>
-            <p>Enumerate every spanning tree and pick the one with the smallest total weight. That’s conceptually simple—“try all combinations of $n-1$ edges that connect everything and have no cycles”—but it explodes combinatorially. Even medium graphs have an astronomical number of spanning trees, so this approach is only good as a thought experiment.</p>
-            <p><em>How it works</em></p>
+            <p>Total weight $= 1 + 2 + 3 + 4 = 10$.</p>
+            <p>You can't do better: any cheaper set of 4 edges would either miss a vertex or create a cycle.</p>
+            <p><strong>Baseline</strong></p>
+            <p>Enumerate every spanning tree and pick the one with the smallest total weight. That's conceptually simple—"try all combinations of $n - 1$ edges that connect everything and have no cycles"—but it explodes combinatorially. Even medium graphs have an astronomical number of spanning trees, so this approach is only good as a thought experiment.</p>
+            <p><strong>How it works</strong></p>
             <p>Both fast methods rely on two facts:</p>
             <ul>
-                <li><strong>Cut rule (safe to add)</strong> - for any cut $(S, V\setminus S)$, the cheapest edge that crosses the cut appears in some MST. Intuition: if your current partial connection is on one side, the cheapest bridge to the other side is never a bad idea.</li>
-                <li><strong>Cycle rule (safe to skip)</strong> - in any cycle, the most expensive edge is never in an MST. Intuition: if you already have a loop, drop the priciest link and you’ll still be connected but strictly cheaper.</li>
+                <li><strong>Cut rule (safe to add)</strong> - for any cut $(S, V \setminus S)$, the cheapest edge that crosses the cut appears in some MST. Intuition: if your current partial connection is on one side, the cheapest bridge to the other side is never a bad idea.</li>
+                <li><strong>Cycle rule (safe to skip)</strong> - in any cycle, the most expensive edge is never in an MST. Intuition: if you already have a loop, drop the priciest link and you'll still be connected but strictly cheaper.</li>
             </ul>
-            <h4 id="kruskal-s-method">Kruskal’s method</h4>
+            <h4 id="kruskal-s-method">Kruskal's method</h4>
             <p><strong>Example inputs and outputs</strong></p>
             <p>Use the same graph as above. A valid MST is</p>
             <p>$$
-                {A!-!B(1), B!-!D(2), C!-!E(3), B!-!C(4)}\quad\Rightarrow\quad \text{total} = 10
+                {A!-!B(1), B!-!D(2), C!-!E(3), B!-!C(4)} \quad\Rightarrow\quad \text{total} = 10
                 $$</p>
-            <p><strong>How it works</strong></p>
-            <p>Sort edges from lightest to heaviest; walk down that list and keep an edge if it connects two <strong>different</strong> components. Stop when you have $n-1$ edges.</p>
+            <p><strong>Greedy rule</strong></p>
+            <p>Sort edges from lightest to heaviest; walk down that list and keep an edge if it connects two <strong>different</strong> components. Stop when you have $n - 1$ edges.</p>
+            <p><strong>Algorithm</strong></p>
             <p>Sorted edges by weight:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">1: A-B
 2: B-D
@@ -243,9 +281,7 @@ D-E:8</code></pre>
 8: D-E
 9: A-E</code></pre>
             </div>
-            </p>
-            <p>We’ll keep a running view of the components; initially each vertex is alone.</p>
-            <p>
+            <p>We'll keep a running view of the components; initially each vertex is alone.</p>
             <div>
                 <pre><code class="language-shell">start:   {A} {B} {C} {D} {E}
 
@@ -256,13 +292,11 @@ take 4:  B-C(4)   → {ABCDE}   ← all connected (|V|-1 edges) → stop
 
 kept: A-B(1), B-D(2), C-E(3), B-C(4)  → total = 10</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Edges kept: $A!-!B(1), B!-!D(2), C!-!E(3), B!-!C(4)$.</li>
-                <li>Total $=10$. Every later edge would create a cycle and is skipped by the cycle rule.</li>
+                <li>Total $= 10$. Every later edge would create a cycle and is skipped by the cycle rule.</li>
             </ul>
-            <p>Kruskal pseudocode</p>
-            <p>
+            <p><strong>Kruskal pseudocode</strong></p>
             <div>
                 <pre><code class="language-python">MST = ∅
 make_set(v) for v in V
@@ -272,19 +306,33 @@ for (w,u,v) in edges sorted by w:
         union(u,v)
         if |MST| == |V|-1: break</code></pre>
             </div>
-            </p>
-            <p>Complexity</p>
+            <p><strong>Proof sketch</strong></p>
+            <p>The greedy choice is always the lightest edge that doesn't create a cycle. By the cycle rule, any edge that would create a cycle is safe to skip. By the cut rule, the lightest edge connecting two components is always safe to include. An exchange argument shows that any optimal MST can be transformed to match Kruskal's choices without increasing cost.</p>
+            <p><strong>Greedy checklist application:</strong></p>
+            <ol>
+                <li><strong>Greedy choice</strong>: Always pick the lightest available edge that doesn't create a cycle.</li>
+                <li><strong>Feasibility</strong>: No cycles; remains a forest throughout.</li>
+                <li><strong>Why safe</strong>: Cycle rule (skip heavy edges in cycles) + cut rule (include light crossing edges).</li>
+                <li><strong>Implementation</strong>: Disjoint-set (union-find) data structure for cycle detection.</li>
+                <li><strong>Complexity</strong>: $O(E \log E)$ dominated by sorting.</li>
+            </ol>
+            <p><strong>Complexity</strong></p>
             <ul>
-                <li>Time: $O(E \log E)$ to sort edges + near-constant $\alpha(V)$ for DSU unions; often written $O(E \log V)$ since $E\le V^2$.</li>
+                <li>Time: $O(E \log E)$ to sort edges + near-constant $\alpha(V)$ for DSU unions; often written $O(E \log V)$ since $E \le V^2$.</li>
                 <li>Space: $O(V)$ for disjoint-set structure.</li>
+            </ul>
+            <p><strong>Edge cases</strong></p>
+            <ul>
+                <li>If the graph is disconnected, Kruskal produces a minimum spanning forest (one tree per component).</li>
+                <li>Ties in edge weights can be broken arbitrarily; all produce an MST of the same total weight.</li>
             </ul>
             <h4 id="prim-s-method">Prim's method</h4>
             <p><strong>Example inputs and outputs</strong></p>
             <p>Same graph and target: produce any MST of total weight $10$.</p>
-            <p><strong>How it works</strong></p>
+            <p><strong>Greedy rule</strong></p>
             <p>Start from any vertex; repeatedly add the lightest edge that leaves the current tree to bring in a new vertex. Stop when all vertices are in.</p>
-            <p>Let’s start from $A$. The “tree” grows one cheapest boundary edge at a time.</p>
-            <p>
+            <p><strong>Algorithm</strong></p>
+            <p>Let's start from $A$. The "tree" grows one cheapest boundary edge at a time.</p>
             <div>
                 <pre><code class="language-shell">step 0:
 Tree = {A}
@@ -307,11 +355,9 @@ Tree = {A,B,C,D,E}  → done
 
 kept: A-B(1), B-D(2), B-C(4), C-E(3) → total = 10</code></pre>
             </div>
-            </p>
-            <p>Edges chosen: exactly the same four as Kruskal, total $=10$.</p>
-            <p>Why did step 4 grab a weight-3 edge after we already took a 4? Because earlier that 3 wasn’t <strong>available</strong>—it didn’t cross from the tree to the outside until $C$ joined the tree. Prim never regrets earlier picks because of the cut rule: at each moment it adds the cheapest bridge from “inside” to “outside,” and that’s always safe.</p>
-            <p>Prim pseudocode (binary heap)</p>
-            <p>
+            <p>Edges chosen: exactly the same four as Kruskal, total $= 10$.</p>
+            <p>Why did step 4 grab a weight-3 edge after we already took a 4? Because earlier that 3 wasn't <strong>available</strong>—it didn't cross from the tree to the outside until $C$ joined the tree. Prim never regrets earlier picks because of the cut rule: at each moment it adds the cheapest bridge from "inside" to "outside," and that's always safe.</p>
+            <p><strong>Prim pseudocode (binary heap)</strong></p>
             <div>
                 <pre><code class="language-python">pick any root r
 Tree = {r}
@@ -321,46 +367,76 @@ while |Tree| &lt; |V|:
     add v to Tree; record edge (u,v,w) in MST
     push all edges (v→x,wvx) with x ∉ Tree</code></pre>
             </div>
-            </p>
-            <p>Complexity</p>
+            <p><strong>Proof sketch</strong></p>
+            <p>At each step, Prim's algorithm chooses the lightest edge crossing the cut between the current tree and the rest of the graph. By the cut rule, this edge must be in some MST. An exchange argument shows that any optimal MST can be transformed to use Prim's choices.</p>
+            <p><strong>Greedy checklist application:</strong></p>
+            <ol>
+                <li><strong>Greedy choice</strong>: Always add the lightest edge leaving the current tree.</li>
+                <li><strong>Feasibility</strong>: Tree property maintained (no cycles, connected).</li>
+                <li><strong>Why safe</strong>: Cut rule—lightest crossing edge is always in some MST.</li>
+                <li><strong>Implementation</strong>: Min-heap (priority queue) for boundary edges; track visited vertices.</li>
+                <li><strong>Complexity</strong>: $O(E \log V)$ with binary heap.</li>
+            </ol>
+            <p><strong>Complexity</strong></p>
             <ul>
-                <li>Time: $O(E \log V)$ with a binary heap and adjacency lists; $O(E + V\log V)$ with a Fibonacci heap.</li>
+                <li>Time: $O(E \log V)$ with a binary heap and adjacency lists; $O(E + V \log V)$ with a Fibonacci heap.</li>
                 <li>Space: $O(V)$ for keys/parents and visited set.</li>
             </ul>
+            <p><strong>Edge cases</strong></p>
+            <ul>
+                <li>Choice of starting vertex doesn't matter; all produce an MST of the same weight.</li>
+                <li>The heap may contain stale entries (edges to already-visited vertices); skip them when popped.</li>
+            </ul>
             <h3 id="shortest-paths-with-non-negative-weights-dijkstra-">Shortest paths with non-negative weights (Dijkstra)</h3>
+            <p><strong>Pattern</strong>: Cut-Based Greedy on Graphs</p>
+            <p><strong>Problem</strong></p>
             <p>Goal: from start $s$, compute cheapest costs $d(\cdot)$ to every node (and routes if you keep parents).</p>
-            <p>Non-negative edges only; that’s what makes the greedy step safe.</p>
-            <p>Example</p>
-            <p>
+            <p><strong>Non-negative edges only</strong>; that's what makes the greedy step safe. The graph can be either <strong>directed or undirected</strong>.</p>
+            <p><strong>Example</strong></p>
             <div>
                 <pre><code class="language-shell">Nodes: A B C D E   (start s=A)
 
-Edges (undirected):
+Edges (undirected, non-negative weights):
 A-B:2  A-C:5
 B-C:1  B-D:2  B-E:7
 C-D:3  C-E:1
 D-E:2</code></pre>
             </div>
-            </p>
-            <p>Correct answers from A: $d(A)=0, d(B)=2, d(C)=3, d(D)=4, d(E)=4$.</p>
-            <p><em>Baseline</em> </p>
-            <p>Repeat relaxations $|V|-1$ rounds (Bellman–Ford-style).</p>
-            <p>Work $\approx |V|\cdot|E|$. Handles negatives; we don’t need that here.</p>
-            <p>Fast method (Dijkstra): “settle the smallest label”</p>
+            <p>Correct answers from A: $d(A) = 0, d(B) = 2, d(C) = 3, d(D) = 4, d(E) = 4$.</p>
+            <p><strong>Baseline</strong> </p>
+            <p>Repeat relaxations $|V| - 1$ rounds (Bellman–Ford-style).</p>
+            <p>Work $\approx |V| \cdot |E|$. Handles negatives; we don't need that here.</p>
+            <p><strong>Greedy rule: "settle the smallest label"</strong></p>
+            <p>At each step, among all unsettled nodes, pick the one with the smallest tentative distance and <strong>settle</strong> it (mark its distance as final). This is safe because with non-negative weights, any path through unsettled nodes to reach this node would be at least as long.</p>
+            <p><strong>Algorithm</strong></p>
             <ol>
-                <li>Initialize distance labels: set $d(s)=0$, and $d(x)=\infty$ for all other nodes.</li>
+                <li>Initialize distance labels: set $d(s) = 0$, and $d(x) = \infty$ for all other nodes.</li>
                 <li>Initialize parent pointers $\pi(\cdot)$.</li>
-                <li>Initialize the settled set $S=\emptyset$.</li>
-                <li>Initialize the unsettled set as $V\setminus S$.</li>
+                <li>Initialize the settled set $S = \emptyset$.</li>
+                <li>Initialize the unsettled set as $V \setminus S$.</li>
                 <li>Select the unsettled node $u$ with the smallest distance label $d(u)$.</li>
                 <li>Move node $u$ from the unsettled set into the settled set.</li>
-                <li>Update each neighbor $v$ of $u$ by assigning $d(v) \leftarrow \min\bigl(d(v), d(u) + w(u,v)\bigr)$.</li>
+                <li>Update each neighbor $v$ of $u$ by assigning $d(v) \leftarrow \min\bigl(d(v), d(u) + w(u, v)\bigr)$.</li>
                 <li>If the update in step 7 improves $d(v)$, then set $\pi(v) \leftarrow u$.</li>
                 <li>Repeat from step 5 until all nodes are settled or no reachable unsettled nodes remain.</li>
-                <li>Justification of correctness: with non-negative edge weights, any path reaching an unsettled node must have length at least $d(u)$ plus a non-negative exit edge, so the chosen $d(u)$ is final and cannot later be decreased.</li>
             </ol>
-            <p>Pseudocode (binary heap)</p>
-            <p>
+            <p><strong>Proof sketch (Justification of correctness)</strong></p>
+            <p>With non-negative edge weights, any path reaching an unsettled node must have length at least $d(u)$ plus a non-negative exit edge. Therefore, the chosen $d(u)$ is final and cannot later be decreased. This is the core greedy property: settling the node with the smallest label is always safe.</p>
+            <p>The loop invariant is: "All settled nodes have their correct shortest-path distances." This holds because:</p>
+            <ul>
+                <li><strong>Initialization</strong>: $d(s) = 0$ is correct.</li>
+                <li><strong>Maintenance</strong>: When we settle $u$, $d(u)$ is minimal among unsettled nodes. Any alternative path to $u$ would go through another unsettled node with distance $\ge d(u)$, plus non-negative edges, so it cannot be shorter.</li>
+                <li><strong>Termination</strong>: When all reachable nodes are settled, all have correct distances.</li>
+            </ul>
+            <p><strong>Greedy checklist application:</strong></p>
+            <ol>
+                <li><strong>Greedy choice</strong>: Always settle the unsettled node with smallest tentative distance.</li>
+                <li><strong>Feasibility</strong>: All settled nodes have correct final distances (invariant).</li>
+                <li><strong>Why safe</strong>: Non-negative weights ensure no future discovery can improve a settled node's distance.</li>
+                <li><strong>Implementation</strong>: Min-heap (priority queue) for unsettled nodes with their distances.</li>
+                <li><strong>Complexity</strong>: $O((V + E) \log V)$ with binary heap.</li>
+            </ol>
+            <p><strong>Pseudocode (binary heap)</strong></p>
             <div>
                 <pre><code class="language-shell">for v in V: d[v]=∞; π[v]=nil
 d[s]=0
@@ -376,20 +452,16 @@ while H not empty:
             π[v] = u
             push (d[v], v) into H</code></pre>
             </div>
-            </p>
-            <p>Time $O((|V|+|E|)\log|V|)$; space $O(|V|)$.</p>
-            <p><em>Walkthrough</em></p>
-            <p>Legend: “S” = settled, “π[x]” = parent of $x$. Ties break arbitrarily.</p>
+            <p>Time $O((|V| + |E|) \log |V|)$; space $O(|V|)$.</p>
+            <p><strong>Walkthrough</strong></p>
+            <p>Legend: "S" = settled, "$\pi[x]$" = parent of $x$. Ties break arbitrarily.</p>
             <p>Round 0 (init)</p>
-            <p>
             <div>
                 <pre><code class="language-shell">S = ∅
 d:  A:0  B:∞  C:∞  D:∞  E:∞
 π:  A:-  B:-  C:-  D:-  E:-</code></pre>
             </div>
-            </p>
             <p>Round 1 — pick min unsettled → A(0); relax neighbors</p>
-            <p>
             <div>
                 <pre><code class="language-shell">S = {A}
 relax A-B (2):  d[B]=2  π[B]=A
@@ -397,9 +469,7 @@ relax A-C (5):  d[C]=5  π[C]=A
 d:  A:0S  B:2  C:5  D:∞  E:∞
 π:  A:-   B:A  C:A  D:-  E:-</code></pre>
             </div>
-            </p>
             <p>Round 2 — pick B(2); relax</p>
-            <p>
             <div>
                 <pre><code class="language-shell">S = {A,B}
 B→C (1): 2+1=3 &lt;5 → d[C]=3  π[C]=B
@@ -408,9 +478,7 @@ B→E (7): 2+7=9     → d[E]=9  π[E]=B
 d:  A:0S  B:2S  C:3  D:4  E:9
 π:  A:-   B:A   C:B  D:B  E:B</code></pre>
             </div>
-            </p>
             <p>Round 3 — pick C(3); relax</p>
-            <p>
             <div>
                 <pre><code class="language-shell">S = {A,B,C}
 C→D (3): 3+3=6  (no improv; keep 4)
@@ -418,168 +486,68 @@ C→E (1): 3+1=4 &lt;9 → d[E]=4  π[E]=C
 d:  A:0S  B:2S  C:3S  D:4  E:4
 π:  A:-   B:A   C:B   D:B  E:C</code></pre>
             </div>
-            </p>
             <p>Round 4 — pick D(4); relax</p>
-            <p>
             <div>
                 <pre><code class="language-shell">S = {A,B,C,D}
 D→E (2): 4+2=6 (no improv; keep 4)
 d:  A:0S  B:2S  C:3S  D:4S  E:4</code></pre>
             </div>
-            </p>
             <p>Round 5 — pick E(4); done</p>
-            <p>
             <div>
                 <pre><code class="language-shell">S = {A,B,C,D,E}  (all settled)
 Final d: A:0  B:2  C:3  D:4  E:4
 Parents π: B←A, C←B, D←B, E←C</code></pre>
             </div>
-            </p>
             <p>Reconstruct routes by following parents backward:</p>
             <ul>
-                <li>$B$: $A\to B$</li>
-                <li>$C$: $A\to B\to C$</li>
-                <li>$D$: $A\to B\to D$</li>
-                <li>$E$: $A\to B\to C\to E$</li>
+                <li>$B$: $A \to B$</li>
+                <li>$C$: $A \to B \to C$</li>
+                <li>$D$: $A \to B \to D$</li>
+                <li>$E$: $A \to B \to C \to E$</li>
             </ul>
-            <p>Complexity</p>
+            <p><strong>Complexity</strong></p>
             <ul>
-                <li>Time: $O((V+E)\log V)$ with a binary heap (often written $O(E \log V)$ when $E\ge V$).</li>
+                <li>Time: $O((V + E) \log V)$ with a binary heap (often written $O(E \log V)$ when $E \ge V$).</li>
                 <li>Space: $O(V)$ for distances, parent pointers, and heap entries.</li>
             </ul>
-            <h3 id="maximum-contiguous-sum">Maximum contiguous sum</h3>
-            <p>You’re given a list of numbers laid out in a line. You may pick one <strong>contiguous</strong> block, and you want that block’s sum to be as large as possible.</p>
-            <p><strong>Example inputs and outputs</strong></p>
-            <p>
-            <div>
-                <pre><code class="language-shell">x = [ 2, -3, 4, -1, 2, -5, 3 ]
-best block = [ 4, -1, 2 ]  → sum = 5</code></pre>
-            </div>
-            </p>
-            <p>So the correct output is “maximum sum $=5$” and one optimal segment is positions $3$ through $5$ (1-based).</p>
-            <p><em>Baseline</em></p>
-            <p>Try every possible block and keep the best total. To sum any block $i..j$ quickly, precompute <strong>prefix sums</strong> $S_0=0$ and $S_j=\sum_{k=1}^j x_k$. Then</p>
-            <p>$$
-                \sum_{k=i}^j x_k = S_j - S_{i-1}
-                $$</p>
-            <p>Loop over all $j$ and all $i\le j$, compute $S_j-S_{i-1}$, and take the maximum. This is easy to reason about and always correct, but it does $O(n^2)$ block checks.</p>
-            <p><strong>How it works</strong></p>
-            <p>Walk left to right once and carry two simple numbers.</p>
+            <p><strong>Edge cases</strong></p>
             <ul>
-                <li>$S$: the running prefix sum up to the current position.</li>
-                <li>$M$: the <strong>smallest</strong> prefix seen so far (to the left of the current position).</li>
-            </ul>
-            <p>At each step $j$, the best block <strong>ending at</strong> $j$ is “current prefix minus the smallest older prefix”:</p>
-            <p>$$
-                \text{best ending at j} = S_j - \min_{0\le t \le j} S_t
-                $$</p>
-            <p>So during the scan:</p>
-            <ol>
-                <li>Update $S \leftarrow S + x_j$.</li>
-                <li>Update the answer with $S - M$.</li>
-                <li>Update $M \leftarrow \min(M, S)$.</li>
-            </ol>
-            <p>This is the whole algorithm. In words: keep the lowest floor you’ve ever seen and measure how high you are above it now. If you dip to a new floor, remember it; if you rise, maybe you’ve set a new record.</p>
-            <p>A widely used equivalent form keeps a “best sum ending here” value $E$: set $E \leftarrow \max(x_j,; E+x_j)$ and track a global maximum. It’s the same idea written incrementally: if the running sum ever hurts you, you “reset” and start fresh at the current element.</p>
-            <p><em>Walkthrough</em></p>
-            <p>Sequence $x = [2,-3,4,-1,2,-5,3]$.</p>
-            <p>Initialize $S=0$, $M=0$, and $\text{best}=-\infty$. Keep the index $t$ where the current $M$ occurred so we can reconstruct the block as $(t+1)..j$.</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">j   x_j   S_j = S+x_j   M (min prefix so far)   S_j - M   best   chosen block
---------------------------------------------------------------------------------
- 1    2         2                0                  2        2     (1..1)
-       update: M = min(0,2) = 0
-
- 2   -3        -1                0                 -1        2     (still 1..1)
-       update: M = min(0,-1) = -1   [new floor at t=2]
-
- 3    4         3               -1                  4        4     (3..3)
-       update: M = min(-1,3) = -1
-
- 4   -1         2               -1                  3        4     (still 3..3)
-       update: M = min(-1,2) = -1
-
- 5    2         4               -1                  5        5     (3..5)  ✓
-       update: M = min(-1,4) = -1
-
- 6   -5        -1               -1                  0        5     (still 3..5)
-       update: M = min(-1,-1) = -1
-
- 7    3         2               -1                  3        5     (still 3..5)
-       update: M = min(-1,2) = -1</code></pre>
-            </div>
-            </p>
-            <p>Final answer: maximum sum $=5$, achieved by indices $3..5$ (that’s $[4,-1,2]$).</p>
-            <p>You can picture $S_j$ as a hilly skyline and $M$ as the lowest ground you’ve touched. The best block is the tallest vertical gap between the skyline and any earlier ground level.</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">prefix S: 0 → 2 → -1 → 3 → 2 → 4 → -1 → 2
-ground M: 0   0   -1   -1  -1  -1   -1  -1
-gap S-M:  0   2    0    4   3   5    0   3
-                                ^ peak gap = 5 here</code></pre>
-            </div>
-            </p>
-            <p>Pseudocode (prefix-floor form):</p>
-            <p>
-            <div>
-                <pre><code class="language-shell">best = -∞          # or x[0] if you require non-empty
-S = 0
-M = 0              # 0 makes empty prefix available
-t = 0              # index where M happened (0 means before first element)
-best_i = best_j = None
-
-for j in 1..n:
-    S = S + x[j]
-    if S - M &gt; best:
-        best = S - M
-        best_i = t + 1
-        best_j = j
-    if S &lt; M:
-        M = S
-        t = j
-
-return best, (best_i, best_j)</code></pre>
-            </div>
-            </p>
-            <p><em>Edge cases</em></p>
-            <p>When all numbers are negative, the best block is the <strong>least negative single element</strong>. The scan handles this automatically because $M$ keeps dropping with every step, so the maximum of $S_j-M$ happens when you take just the largest entry.</p>
-            <p>Empty-block conventions matter. If you define the answer to be strictly nonempty, initialize $\text{best}$ with $x_1$ and $E=x_1$ in the incremental form; if you allow empty blocks with sum $0$, initialize $\text{best}=0$ and $M=0$. Either way, the one-pass logic doesn’t change.</p>
-            <p><em>Complexity</em></p>
-            <ul>
-                <li>Time: $O(n)$</li>
-                <li>Space: $O(1)$</li>
+                <li>If a node is unreachable from $s$, its distance remains $\infty$.</li>
+                <li>The heap may contain stale entries (outdated distance labels); we skip them by checking if the node is already settled.</li>
+                <li>Works on both directed and undirected graphs, as long as all edge weights are non-negative.</li>
             </ul>
             <h3 id="scheduling-themes">Scheduling themes</h3>
+            <p><strong>Pattern</strong>: Scheduling Greedy</p>
             <p>Two classics:</p>
             <ul>
                 <li>Pick as many non-overlapping intervals as possible (one room, max meetings).</li>
                 <li>Keep maximum lateness small when jobs have deadlines.</li>
             </ul>
-            <p>They’re both greedy—and both easy to run by hand.</p>
-            <p>Imagine you have time intervals on a single line, and you can keep an interval only if it doesn’t overlap anything you already kept. The aim is to keep as many as possible.</p>
+            <p>They're both greedy—and both easy to run by hand.</p>
+            <h4 id="interval-scheduling-maximum-cardinality-">Interval scheduling (maximum cardinality)</h4>
+            <p><strong>Problem</strong></p>
+            <p>Imagine you have time intervals on a single line, and you can keep an interval only if it doesn't overlap anything you already kept. The aim is to keep as many as possible.</p>
             <p><strong>Example inputs and outputs</strong></p>
             <p>Intervals (start, finish):</p>
-            <p>
             <div>
                 <pre><code class="language-shell">(1,3) (2,5) (4,7) (6,9) (8,10) (9,11)</code></pre>
             </div>
-            </p>
-            <p>A best answer keeps four intervals, for instance $(1,3),(4,7),(8,10),(10,11)$.</p>
+            <p>A best answer keeps <strong>three</strong> intervals, for instance $(1,3), (4,7), (8,10)$.</p>
+            <p>Note: With the given input set, the maximum number of non-overlapping intervals is 3, not 4. If we had an additional interval like $(10,11)$ in the input, we could keep four intervals: $(1,3), (4,7), (8,10), (10,11)$.</p>
             <p><strong>Baseline (slow)</strong></p>
-            <p>Try all subsets and keep the largest that has no overlaps. That’s conceptually simple and always correct, but it’s exponential in the number of intervals, which is a non-starter for anything but tiny inputs.</p>
-            <p><strong>Greedy rule:</strong> </p>
+            <p>Try all subsets and keep the largest that has no overlaps. That's conceptually simple and always correct, but it's exponential in the number of intervals, which is a non-starter for anything but tiny inputs.</p>
+            <p><strong>Greedy rule</strong></p>
             <p>Sort by finish time and take what fits.</p>
             <ul>
                 <li>Scan from earliest finisher to latest.</li>
-                <li>Keep $(s,e)$ iff $s \ge \text{last end}$; then set $\text{last end}\leftarrow e$.</li>
+                <li>Keep $(s, e)$ iff $s \ge \text{last end}$; then set $\text{last end} \leftarrow e$.</li>
             </ul>
+            <p><strong>Algorithm</strong></p>
             <p>Sorted by finish:</p>
             <p>$$
                 (1,3), (2,5), (4,7), (6,9), (8,10), (9,11)
                 $$</p>
             <p>Run the scan and track the end of the last kept interval.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">last_end = -∞
 (1,3):  1 ≥ -∞ → keep → last_end = 3
@@ -589,20 +557,25 @@ return best, (best_i, best_j)</code></pre>
 (8,10): 8 ≥ 7  → keep → last_end = 10
 (9,11): 9 &lt; 10 → skip</code></pre>
             </div>
-            </p>
-            <p>Kept intervals: $(1,3),(4,7),(8,10)$. If we allow a meeting that starts exactly at $10$, we can also keep $(10,11)$ if it exists. Four kept, which matches the claim.</p>
-            <p>A tiny picture helps the “finish early” idea feel natural:</p>
-            <p>
+            <p>Kept intervals: $(1,3), (4,7), (8,10)$. That's 3 intervals, which is optimal for this input.</p>
+            <p>A tiny picture helps the "finish early" idea feel natural:</p>
             <div>
                 <pre><code class="language-shell">time →
 kept:  [1────3) [4─────7)  [8────10)
 skip:      [2────5)  [6──────9)[9─────11)
 ending earlier leaves more open space to the right</code></pre>
             </div>
-            </p>
-            <p>Why this works: at the first place an optimal schedule would choose a later-finishing interval, swapping in the earlier finisher cannot reduce what still fits afterward, so you can push the optimal schedule to match greedy without losing size.</p>
-            <p>Handy pseudocode</p>
-            <p>
+            <p><strong>Proof sketch</strong></p>
+            <p>At the first place an optimal schedule would choose a later-finishing interval, swapping in the earlier finisher cannot reduce what still fits afterward (the earlier finisher ends sooner or at the same time, leaving at least as much room for future intervals). An exchange argument shows you can push any optimal schedule to match greedy without losing size.</p>
+            <p><strong>Greedy checklist application:</strong></p>
+            <ol>
+                <li><strong>Greedy choice</strong>: Always pick the interval with the earliest finish time among those that don't overlap kept intervals.</li>
+                <li><strong>Feasibility</strong>: No two kept intervals overlap.</li>
+                <li><strong>Why safe</strong>: Exchange argument—replacing a later-finishing interval with an earlier-finishing one never reduces future opportunities.</li>
+                <li><strong>Implementation</strong>: Sort intervals by finish time; single scan with $O(1)$ state.</li>
+                <li><strong>Complexity</strong>: $O(n \log n)$ sorting + $O(n)$ scan.</li>
+            </ol>
+            <p><strong>Handy pseudocode</strong></p>
             <div>
                 <pre><code class="language-python"># Interval scheduling (max cardinality)
 sort intervals by end time
@@ -613,37 +586,42 @@ for (s,e) in intervals:
         keep.append((s,e))
         last_end = e</code></pre>
             </div>
-            </p>
-            <p><em>Complexity</em></p>
+            <p><strong>Complexity</strong></p>
             <ul>
                 <li>Time: $O(n \log n)$ to sort by finishing time; $O(n)$ scan.</li>
                 <li>Space: $O(1)$ (beyond input storage).</li>
             </ul>
-            <h3 id="minimize-the-maximum-lateness">Minimize the maximum lateness</h3>
-            <p>Now think of $n$ jobs, all taking the same amount of time (say one unit). Each job $i$ has a deadline $d_i$. When you run them in some order, the completion time of the $k$-th job is $C_k=k$ (since each takes one unit), and its lateness is</p>
+            <p><strong>Edge cases</strong></p>
+            <ul>
+                <li>If all intervals overlap at a single point, only one can be kept.</li>
+                <li>Intervals with the same finish time can be processed in any order among themselves.</li>
+            </ul>
+            <h4 id="minimize-the-maximum-lateness">Minimize the maximum lateness</h4>
+            <p><strong>Problem</strong></p>
+            <p>Now think of $n$ jobs, all taking the same amount of time (say one unit). Each job $i$ has a deadline $d_i$. When you run them in some order, the completion time of the $k$-th job is $C_k = k$ (since each takes one unit), and its lateness is</p>
             <p>$$
                 L_i = C_i - d_i.
                 $$</p>
-            <p>Negative values mean you finished early; the quantity to control is the worst lateness $L_{\max}=\max_i L_i$. The goal is to order the jobs so $L_{\max}$ is as small as possible.</p>
+            <p>Negative values mean you finished early; the quantity to control is the worst lateness $L_{\max} = \max_i L_i$. The goal is to order the jobs so $L_{\max}$ is as small as possible.</p>
             <p><strong>Example inputs and outputs</strong></p>
             <p>Jobs and deadlines:</p>
             <ul>
-                <li>$J_1: d_1=3$</li>
-                <li>$J_2: d_2=1$</li>
-                <li>$J_3: d_3=4$</li>
-                <li>$J_4: d_4=2$</li>
+                <li>$J_1: d_1 = 3$</li>
+                <li>$J_2: d_2 = 1$</li>
+                <li>$J_3: d_3 = 4$</li>
+                <li>$J_4: d_4 = 2$</li>
             </ul>
-            <p>An optimal schedule is $J_2,J_4, J_1, J_3$. The maximum lateness there is $0$.</p>
+            <p>An optimal schedule is $J_2, J_4, J_1, J_3$. The maximum lateness there is $0$.</p>
             <p><strong>Baseline (slow)</strong></p>
-            <p>Try all $n!$ orders, compute every job’s completion time and lateness, and take the order with the smallest $L_{\max}$. This explodes even for modest $n$.</p>
+            <p>Try all $n!$ orders, compute every job's completion time and lateness, and take the order with the smallest $L_{\max}$. This explodes even for modest $n$.</p>
             <p><strong>Greedy rule</strong></p>
-            <p>Order jobs by nondecreasing deadlines (earliest due date first, often called EDD). Fixing any “inversion” where a later deadline comes before an earlier one can only help the maximum lateness, so sorting by deadlines is safe.</p>
+            <p>Order jobs by nondecreasing deadlines (earliest due date first, often called EDD). Fixing any "inversion" where a later deadline comes before an earlier one can only help the maximum lateness, so sorting by deadlines is safe.</p>
+            <p><strong>Algorithm</strong></p>
             <p>Deadlines in increasing order:</p>
             <p>$$
-                J_2(d=1), J_4(d=2), J_1(d=3), J_3(d=4)
+                J_2(d = 1), J_4(d = 2), J_1(d = 3), J_3(d = 4)
                 $$</p>
             <p>Run them one by one and compute completion times and lateness.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">slot 1: J2 finishes at C=1 → L2 = 1 - d2(=1) = 0
 slot 2: J4 finishes at C=2 → L4 = 2 - d4(=2) = 0
@@ -651,9 +629,7 @@ slot 3: J1 finishes at C=3 → L1 = 3 - d1(=3) = 0
 slot 4: J3 finishes at C=4 → L3 = 4 - d3(=4) = 0
 L_max = 0</code></pre>
             </div>
-            </p>
-            <p>If you scramble the order, the worst lateness jumps. For example, $J_1,J_2,J_3,J_4$ gives</p>
-            <p>
+            <p>If you scramble the order, the worst lateness jumps. For example, $J_1, J_2, J_3, J_4$ gives</p>
             <div>
                 <pre><code class="language-shell">slot 1: J1 → L1 = 1 - 3 = -2
 slot 2: J2 → L2 = 2 - 1 = 1
@@ -661,18 +637,23 @@ slot 3: J3 → L3 = 3 - 4 = -1
 slot 4: J4 → L4 = 4 - 2 = 2
 L_max = 2   (worse)</code></pre>
             </div>
-            </p>
             <p>A quick timeline sketch shows how EDD keeps you out of trouble:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">time → 1   2   3   4
 EDD:   [J2][J4][J1][J3]   deadlines: 1   2   3   4
 late?    0    0    0    0  → max lateness 0</code></pre>
             </div>
-            </p>
-            <p>Why this works: if two adjacent jobs are out of deadline order, swapping them never increases any completion time relative to its own deadline, and strictly improves at least one, so repeatedly fixing these inversions leads to the sorted-by-deadline order with no worse maximum lateness.</p>
-            <p>Pseudocode</p>
-            <p>
+            <p><strong>Proof sketch</strong></p>
+            <p>If two adjacent jobs are out of deadline order (later deadline comes first), swapping them never increases any completion time relative to its own deadline. In fact, it strictly improves the lateness of the earlier-deadline job. An exchange argument shows that repeatedly fixing these inversions leads to the sorted-by-deadline order with no worse maximum lateness. Therefore, EDD is optimal.</p>
+            <p><strong>Greedy checklist application:</strong></p>
+            <ol>
+                <li><strong>Greedy choice</strong>: Process jobs in order of increasing deadline.</li>
+                <li><strong>Feasibility</strong>: All jobs are completed; order determines completion times.</li>
+                <li><strong>Why safe</strong>: Exchange argument—swapping adjacent out-of-order jobs never increases $L_{\max}$.</li>
+                <li><strong>Implementation</strong>: Sort jobs by deadline; scan and compute lateness.</li>
+                <li><strong>Complexity</strong>: $O(n \log n)$ sorting + $O(n)$ evaluation.</li>
+            </ol>
+            <p><strong>Pseudocode</strong></p>
             <div>
                 <pre><code class="language-shell"># Minimize L_max (EDD)
 sort jobs by increasing deadline d_j
@@ -683,34 +664,41 @@ for job j in order:
     Lmax = max(Lmax, L)
 return order, Lmax</code></pre>
             </div>
-            </p>
-            <p><em>Complexity</em></p>
+            <p><strong>Complexity</strong></p>
             <ul>
                 <li>Time: $O(n \log n)$ to sort by deadlines; $O(n)$ evaluation.</li>
                 <li>Space: $O(1)$.</li>
             </ul>
+            <p><strong>Edge cases</strong></p>
+            <ul>
+                <li>If all jobs have the same deadline, any order gives the same $L_{\max}$.</li>
+                <li>If jobs have different processing times $p_j$, the problem becomes more complex (weighted EDD or other scheduling algorithms may be needed).</li>
+            </ul>
             <h3 id="huffman-coding">Huffman coding</h3>
-            <p>You have symbols that occur with known frequencies $f_i&gt;0$ and $\sum_i f_i=1$ (if you start with counts, first normalize by their total). The goal is to assign each symbol a binary codeword so that no codeword is a prefix of another (a <strong>prefix code</strong>, i.e., uniquely decodable without separators), and the average length</p>
+            <p><strong>Pattern</strong>: Merge-the-Two-Smallest Greedy</p>
+            <p><strong>Problem</strong></p>
+            <p>You have symbols that occur with known frequencies $f_i &gt; 0$ and $\sum_i f_i = 1$ (if you start with counts, first normalize by their total). The goal is to assign each symbol a binary codeword so that no codeword is a prefix of another (a <strong>prefix code</strong>, i.e., uniquely decodable without separators), and the average length</p>
             <p>$$
-                \mathbb{E}[L]=\sum_i f_i\,L_i
+                \mathbb{E}[L] = \sum_i f_i L_i
                 $$</p>
-            <p>is as small as possible. Prefix codes correspond exactly to <strong>full binary trees</strong> (every internal node has two children) whose leaves are the symbols and whose leaf depths equal the codeword lengths $L_i$. The <strong>Kraft inequality</strong> $\sum_i 2^{-L_i}\le 1$ characterizes feasibility; equality holds for full trees (so an optimal prefix code “fills” the inequality).</p>
+            <p>is as small as possible. Prefix codes correspond exactly to <strong>full binary trees</strong> (every internal node has two children) whose leaves are the symbols and whose leaf depths equal the codeword lengths $L_i$. The <strong>Kraft inequality</strong> $\sum_i 2^{-L_i} \le 1$ characterizes feasibility; equality holds for full trees (so an optimal prefix code "fills" the inequality).</p>
             <p><strong>Example inputs and outputs</strong></p>
             <p>Frequencies:</p>
             <p>$$
-                A:0.40,\quad B:0.20,\quad C:0.20,\quad D:0.10,\quad E:0.10.
+                A:0.40, \quad B:0.20, \quad C:0.20, \quad D:0.10, \quad E:0.10.
                 $$</p>
-            <p>A valid optimal answer will be a prefix code with expected length as small as possible. We will compute the exact minimum and one optimal set of lengths $L_A,\dots,L_E$, plus a concrete codebook. (There can be multiple optimal codebooks when there are ties in frequencies; their <strong>lengths</strong> agree, though the exact bitstrings may differ.)</p>
+            <p>A valid optimal answer will be a prefix code with expected length as small as possible. We will compute the exact minimum and one optimal set of lengths $L_A, \ldots, L_E$, plus a concrete codebook.</p>
             <p><strong>Baseline</strong></p>
-            <p>One conceptual baseline is to enumerate all full binary trees with five labeled leaves and pick the one minimizing $\sum f_i,L_i$. That is correct but explodes combinatorially as the number of symbols grows. A simpler but usually suboptimal baseline is to give every symbol the same length $\lceil \log_2 5\rceil=3$. That fixed-length code has $\mathbb{E}[L]=3$.</p>
-            <p><strong>Greedy Approach</strong></p>
-            <p>Huffman’s rule repeats one tiny step: always merge the two least frequent items. When you merge two “symbols” with weights $p$ and $q$, you create a parent of weight $p+q$. <strong>Why does this change the objective by exactly $p+q$?</strong> Every leaf in those two subtrees increases its depth (and thus its code length) by $1$, so the total increase in $\sum f_i L_i$ is $\sum_{\ell\in\text{subtrees}} f_\ell\cdot 1=(p+q)$ by definition of $p$ and $q$. Summing over all merges yields the final cost:</p>
+            <p>One conceptual baseline is to enumerate all full binary trees with five labeled leaves and pick the one minimizing $\sum_i f_i L_i$. That is correct but explodes combinatorially as the number of symbols grows. A simpler but usually suboptimal baseline is to give every symbol the same length $\lceil \log_2 5 \rceil = 3$. That fixed-length code has $\mathbb{E}[L] = 3$.</p>
+            <p><strong>Greedy rule</strong></p>
+            <p>Huffman's rule repeats one tiny step: always merge the two least frequent items. When you merge two "symbols" with weights $p$ and $q$, you create a parent of weight $p + q$. </p>
+            <p><strong>Why does this change the objective by exactly $p + q$?</strong> Every leaf in those two subtrees increases its depth (and thus its code length) by $1$, so the total increase in $\sum_i f_i L_i$ is $\sum_{\ell \in \text{subtrees}} f_\ell \cdot 1 = (p + q)$ by definition of $p$ and $q$. Summing over all merges yields the final cost:</p>
             <p>$$
-                \mathbb{E}[L]=\sum_{\text{merges}} (p+q)=\sum_{\text{internal nodes}} \text{weight}.
+                \mathbb{E}[L] = \sum_{\text{merges}} (p + q) = \sum_{\text{internal nodes}} \text{weight}.
                 $$</p>
-            <p><strong>Why is the greedy choice optimal?</strong> In an optimal tree the two deepest leaves must be siblings; if not, pairing them to be siblings never increases any other depth and strictly reduces cost whenever a heavier symbol is deeper than a lighter one (an <strong>exchange argument</strong>: swapping depths changes the cost by $f_{\text{heavy}}-f_{\text{light}}&gt;0$ in our favor). Collapsing those siblings into a single pseudo-symbol reduces the problem size without changing optimality, so induction finishes the proof. (Ties can be broken arbitrarily; all tie-breaks achieve the same minimum $\mathbb{E}[L]$.)</p>
+            <p><strong>Algorithm</strong></p>
+            <p><strong>Why is the greedy choice optimal?</strong> In an optimal tree the two deepest leaves must be siblings; if not, pairing them to be siblings never increases any other depth and strictly reduces cost whenever a heavier symbol is deeper than a lighter one (an <strong>exchange argument</strong>: swapping depths changes the cost by $f_{\text{heavy}} - f_{\text{light}} &gt; 0$ in our favor when we move the lighter symbol deeper). Collapsing those siblings into a single pseudo-symbol reduces the problem size without changing optimality, so induction finishes the proof. (Ties can be broken arbitrarily; all tie-breaks achieve the same minimum $\mathbb{E}[L]$.)</p>
             <p>Start with the multiset ${0.40, 0.20, 0.20, 0.10, 0.10}$. At each line, merge the two smallest weights and add their sum to the running cost.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">1) merge 0.10 + 0.10 → 0.20        cost += 0.20   (total 0.20)
    multiset becomes {0.20, 0.20, 0.20, 0.40}
@@ -724,25 +712,285 @@ return order, Lmax</code></pre>
 4) merge 0.40 + 0.60 → 1.00        cost += 1.00   (total 2.20)
    multiset becomes {1.00}  (done)</code></pre>
             </div>
-            </p>
-            <p>So the optimal expected length is $\boxed{\mathbb{E}[L]=2.20}$ bits per symbol. This already beats the naive fixed-length baseline $3$. It also matches the information-theoretic bound $H(f)\le \mathbb{E}[L] </p>
+            <p>So the optimal expected length is $\boxed{\mathbb{E}[L] = 2.20}$ bits per symbol. This already beats the naive fixed-length baseline $3$. It also matches the information-theoretic bound $H(f) \le \mathbb{E}[L] &lt; H(f) + 1$ (where $H(f)$ is the Shannon entropy), since the entropy here is $H \approx 2.1219$.</p>
+            <p>Now assign actual lengths. Record who merged with whom:</p>
+            <ul>
+                <li>Step 1 merges $D(0.10)$ and $E(0.10)$ → those two become siblings.</li>
+                <li>Step 2 merges $B(0.20)$ and $C(0.20)$ → those two become siblings.</li>
+                <li>Step 3 merges the pair $D!E(0.20)$ with $A(0.40)$ — wait, that's not quite right. Let me redo this carefully.</li>
+            </ul>
+            <p>Actually, in step 3, we merge one of the 0.20 nodes (say the pair $D!E$) with the standalone 0.20 node. Let's be more careful:</p>
+            <ul>
+                <li>Step 1: merge $D(0.10)$ and $E(0.10)$ → create node $DE(0.20)$.</li>
+                <li>Step 2: merge $B(0.20)$ and $C(0.20)$ → create node $BC(0.40)$.</li>
+                <li>Step 3: merge $DE(0.20)$ and $A(0.40)$ → create node $DEA(0.60)$.</li>
+                <li>Step 4: merge $DEA(0.60)$ and $BC(0.40)$ → create root $(1.00)$.</li>
+            </ul>
+            <p>Depths follow directly (each merge adds one level to its members):</p>
+            <p>$$
+                L_A = 2, \quad L_B = L_C = 2, \quad L_D = L_E = 3.
+                $$</p>
+            <p>Check the Kraft sum $3 \cdot 2^{-2} + 2 \cdot 2^{-3} = 3/4 + 1/4 = 1$ and the cost $0.4 \cdot 2 + 0.2 \cdot 2 + 0.2 \cdot 2 + 0.1 \cdot 3 + 0.1 \cdot 3 = 2.2$.</p>
+            <p>A tidy tree (weights shown for clarity):</p>
+            <div>
+                <pre><code class="language-shell">[1.00]
++--0--&gt; [0.60]
+|       +--0--&gt; A(0.40)
+|       <code>--1--&gt; [0.20]
+|                +--0--&gt; D(0.10)
+|                </code>--1--&gt; E(0.10)
+<code>--1--&gt; [0.40]
+        +--0--&gt; B(0.20)
+        </code>--1--&gt; C(0.20)</code></pre>
+            </div>
+            <p>One concrete codebook arises by reading left edges as 0 and right edges as 1 (the left/right choice is arbitrary; flipping all bits in a subtree yields an equivalent optimal code):</p>
+            <ul>
+                <li>$A \mapsto 00$</li>
+                <li>$B \mapsto 10$</li>
+                <li>$C \mapsto 11$</li>
+                <li>$D \mapsto 010$</li>
+                <li>$E \mapsto 011$</li>
+            </ul>
+            <p>You can verify the prefix property immediately and recompute $\mathbb{E}[L]$ from these lengths to get $2.20$ again. (From these lengths you can also construct the <strong>canonical Huffman code</strong>, which orders codewords lexicographically—useful for compactly storing the codebook.)</p>
+            <p><strong>Proof sketch</strong></p>
+            <p>The greedy choice is to always merge the two least frequent symbols/subtrees. An exchange argument shows that in any optimal tree, the two least frequent symbols must be siblings at the deepest level (otherwise we could improve the tree by swapping a deeper heavy symbol with a shallower light symbol). Inductively, collapsing these siblings and repeating maintains optimality.</p>
+            <p><strong>Greedy checklist application:</strong></p>
+            <ol>
+                <li><strong>Greedy choice</strong>: Always merge the two items with smallest frequency.</li>
+                <li><strong>Feasibility</strong>: Construct a valid full binary tree (prefix code).</li>
+                <li><strong>Why safe</strong>: Exchange argument—lighter symbols should be deeper; pairing the two lightest is always optimal.</li>
+                <li><strong>Implementation</strong>: Min-heap for frequencies; $k-1$ merge operations for $k$ symbols.</li>
+                <li><strong>Complexity</strong>: $O(k \log k)$ time.</li>
+            </ol>
+            <p><strong>Complexity</strong></p>
+            <ul>
+                <li>Time: $O(k \log k)$ using a min-heap over $k$ symbol frequencies (each of the $k - 1$ merges performs two extractions and one insertion).</li>
+                <li>Space: $O(k)$ for the heap and $O(k)$ for the resulting tree (plus $O(k)$ for an optional map from symbols to codewords).</li>
+            </ul>
+            <p><strong>Edge cases</strong></p>
+            <ul>
+                <li>There can be multiple optimal codebooks when there are ties in frequencies. The expected length $\mathbb{E}[L]$ is always the same, but specific codeword assignments (especially among equal-frequency symbols) may differ. So we say: "Expected length is the same; codeword/leaf assignments may differ (especially among equal-frequency symbols)."</li>
+                <li>For two symbols, optimal code lengths are both 1 (one bit each).</li>
+            </ul>
+            <h3 id="maximum-contiguous-sum">Maximum contiguous sum</h3>
+            <p><strong>Pattern</strong>: Discard-Negative-Prefix Greedy</p>
+            <p><strong>Problem</strong></p>
+            <p>You're given a list of numbers laid out in a line (indexed from 0). You may pick one <strong>contiguous</strong> block, and you want that block's sum to be as large as possible.</p>
+            <p><strong>This is greedy in the sense that any negative-running prefix is never worth keeping, so we discard it immediately.</strong> This is commonly taught as Kadane's algorithm or as a DP problem, but it has a clear greedy interpretation.</p>
+            <p><strong>Example inputs and outputs</strong></p>
+            <div>
+                <pre><code class="language-shell">x = [ 2, -3, 4, -1, 2, -5, 3 ]
+indices: 0   1  2   3  4   5  6
+best block = [ 4, -1, 2 ]  → sum = 5</code></pre>
+            </div>
+            <p>So the correct output is "maximum sum $= 5$" and one optimal segment is positions $2$ through $4$ (0-based indexing).</p>
+            <p><strong>Baseline</strong></p>
+            <p>Try every possible block and keep the best total. To sum any block $i \ldots j$ quickly, precompute <strong>prefix sums</strong> $S_0 = 0$ and $S_j = \sum_{k=0}^{j-1} x[k]$ (0-based). Then</p>
+            <p>$$
+                \sum_{k=i}^{j} x[k] = S_{j+1} - S_i
+                $$</p>
+            <p>Loop over all $j$ and all $i \le j$, compute the sum, and take the maximum. This is easy to reason about and always correct, but it does $O(n^2)$ block checks.</p>
+            <p><strong>Greedy rule</strong></p>
+            <p>Walk left to right once and carry two simple numbers.</p>
+            <ul>
+                <li>$S$: the running prefix sum up to the current position.</li>
+                <li>$M$: the <strong>smallest</strong> prefix seen so far (to the left of the current position).</li>
+            </ul>
+            <p>At each step $j$, the best block <strong>ending at</strong> $j$ is "current prefix minus the smallest older prefix":</p>
+            <p>$$
+                \text{best ending at j} = S_j - \min_{0 \le t &lt; j} S_t
+                $$</p>
+            <p>So during the scan:</p>
+            <ol>
+                <li>Update $S \leftarrow S + x[j]$.</li>
+                <li>Update the answer with $S - M$.</li>
+                <li>Update $M \leftarrow \min(M, S)$.</li>
+            </ol>
+            <p>This is the whole algorithm. In words: keep the lowest floor you've ever seen and measure how high you are above it now. If you dip to a new floor, remember it; if you rise, maybe you've set a new record.</p>
+            <p><strong>Why is this greedy?</strong> At each position, we make the local decision to either continue the current subarray or start fresh from the current position. Specifically, if the running sum ever becomes negative, we "drop" that prefix because it would only hurt future subarrays. This is the greedy choice: never carry a negative prefix forward.</p>
+            <p>A widely used equivalent form keeps a "best sum ending here" value $E$: set $E \leftarrow \max(x[j], E + x[j])$ and track a global maximum. It's the same idea written incrementally: if the running sum ever hurts you (becomes negative), you "reset" and start fresh at the current element.</p>
+            <p><strong>Algorithm</strong></p>
+            <p><em>Walkthrough</em></p>
+            <p>Sequence $x = [2, -3, 4, -1, 2, -5, 3]$ (0-based indices).</p>
+            <p>Initialize $S = 0$, $M = 0$, and $\text{best} = -\infty$. Keep the index $t$ where the current $M$ occurred so we can reconstruct the block.</p>
+            <div>
+                <pre><code class="language-shell">j   x[j]   S_j = S+x[j]   M (min prefix so far)   S_j - M   best   chosen block
+------------------------------------------------------------------------------------
+ 0    2         2                0                    2        2     (0..0)
+       update: M = min(0,2) = 0
+
+ 1   -3        -1                0                   -1        2     (still 0..0)
+       update: M = min(0,-1) = -1   [new floor at t=1]
+
+ 2    4         3               -1                    4        4     (2..2)
+       update: M = min(-1,3) = -1
+
+ 3   -1         2               -1                    3        4     (still 2..2)
+       update: M = min(-1,2) = -1
+
+ 4    2         4               -1                    5        5     (2..4)  ✓
+       update: M = min(-1,4) = -1
+
+ 5   -5        -1               -1                    0        5     (still 2..4)
+       update: M = min(-1,-1) = -1
+
+ 6    3         2               -1                    3        5     (still 2..4)
+       update: M = min(-1,2) = -1</code></pre>
+            </div>
+            <p>Final answer: maximum sum $= 5$, achieved by indices $2 \ldots 4$ (that's $[4, -1, 2]$).</p>
+            <p>You can picture $S_j$ as a hilly skyline and $M$ as the lowest ground you've touched. The best block is the tallest vertical gap between the skyline and any earlier ground level.</p>
+            <div>
+                <pre><code class="language-shell">prefix S: 0 → 2 → -1 → 3 → 2 → 4 → -1 → 2
+ground M: 0   0   -1   -1  -1  -1   -1  -1
+gap S-M:  0   2    0    4   3   5    0   3
+                                ^ peak gap = 5 here</code></pre>
+            </div>
+            <p><strong>Pseudocode (prefix-floor form):</strong></p>
+            <div>
+                <pre><code class="language-shell">best = -∞          # or x[0] if you require non-empty
+S = 0
+M = 0              # 0 makes empty prefix available
+t = 0              # index where M happened (0 means before first element)
+best_i = best_j = None
+
+for j in 0..n-1:
+    S = S + x[j]
+    if S - M &gt; best:
+        best = S - M
+        best_i = t + 1
+        best_j = j
+    if S &lt; M:
+        M = S
+        t = j
+
+return best, (best_i, best_j)</code></pre>
+            </div>
+            <p><strong>Pseudocode (incremental form, Kadane's algorithm):</strong></p>
+            <div>
+                <pre><code class="language-shell">best = -∞          # or x[0] if you require non-empty
+E = 0              # best sum ending here
+
+for j in 0..n-1:
+    E = max(x[j], E + x[j])
+    best = max(best, E)
+
+return best</code></pre>
+            </div>
+            <p><strong>Proof sketch</strong></p>
+            <p>The greedy choice is: if the running sum becomes negative, discard it and start fresh. This is safe because a negative prefix can never help a future subarray—it would only reduce the sum. </p>
+            <p>The loop invariant is: "At position $j$, we know the best subarray ending at or before $j$." This is maintained because at each step we consider extending the current subarray or starting a new one at $j$, and we always choose the option that maximizes the sum.</p>
+            <p><strong>Greedy checklist application:</strong></p>
+            <ol>
+                <li><strong>Greedy choice</strong>: Discard any negative-running prefix; never carry a negative sum forward.</li>
+                <li><strong>Feasibility</strong>: Always track the best contiguous subarray seen so far.</li>
+                <li><strong>Why safe</strong>: A negative prefix can never improve a future subarray sum.</li>
+                <li><strong>Implementation</strong>: Single pass with $O(1)$ state.</li>
+                <li><strong>Complexity</strong>: $O(n)$ time, $O(1)$ space.</li>
+            </ol>
+            <p><strong>Edge cases</strong></p>
+            <p>When all numbers are negative, the best block is the <strong>least negative single element</strong>. The scan handles this automatically because $M$ keeps dropping with every step, so the maximum of $S_j - M$ happens when you take just the largest (least negative) entry.</p>
+            <p>Empty-block conventions matter. If you define the answer to be strictly nonempty, initialize $\text{best}$ with $x[0]$ and $E = x[0]$ in the incremental form; if you allow empty blocks with sum $0$, initialize $\text{best} = 0$ and $M = 0$. Either way, the one-pass logic doesn't change.</p>
+            <p><strong>Complexity</strong></p>
+            <ul>
+                <li>Time: $O(n)$</li>
+                <li>Space: $O(1)$</li>
+            </ul>
+            <hr />
+            <h3 id="when-greedy-is-guaranteed-matroids">When Greedy Is Guaranteed: Matroids</h3>
+            <p><strong>Optional: Advanced Topic</strong></p>
+            <p>There's a tidy setting where greedy is <em>always</em> right (for nonnegative weights): when your "what's allowed" rules form a <strong>matroid</strong>. You don't need the symbols—just the vibe:</p>
+            <ol>
+                <li><strong>You can start from empty.</strong></li>
+                <li><strong>Throwing things out never hurts.</strong> If a set is allowed, any subset is allowed.</li>
+                <li><strong>Smooth growth (augmentation).</strong> If one allowed set is smaller than another, you can always add <em>something</em> from the bigger one to the smaller and stay allowed.</li>
+            </ol>
+            <p>That third rule prevents dead ends and is exactly what exchange arguments rely on. In matroids, the simple "sort by weight and take what fits" greedy is guaranteed optimal. Outside matroids, greedy can still work—but you must justify it for the specific problem using exchange/invariants.</p>
+            <p><strong>Why is this relevant to our examples?</strong></p>
+            <ul>
+                <li><strong>MST</strong> is a classic matroid example (the graphic matroid). The "allowed sets" are forests (acyclic edge sets), which satisfy all three matroid properties. This is why Kruskal's algorithm (sort edges by weight, add if no cycle) always works.</li>
+                <li><strong>Interval scheduling</strong> has a matroid-like structure where "allowed sets" are non-overlapping intervals. This is sometimes called an "interval scheduling matroid" or viewed as a special case of matroid intersection.</li>
+            </ul>
+            <p>The matroid framework explains why greedy works "automatically" in these settings—exchange arguments are baked into the structure. For problems like Dijkstra's algorithm or Huffman coding, the correctness proofs rely on problem-specific properties rather than general matroid theory, but the exchange argument pattern is similar.</p>
+            <p><strong>Bridge to exchange arguments:</strong></p>
+            <p>Matroids formalize the conditions under which exchange arguments succeed. The augmentation property (property 3 above) guarantees that if one solution is smaller, we can grow it by borrowing from a larger solution without breaking feasibility—this is exactly the swap operation used in exchange arguments.</p>
+            <p>If you're curious about matroids, they're worth studying for competitive programming and algorithm design, but they're not required to understand or apply greedy algorithms. Think of matroids as the "formal certificate" that greedy works, while exchange arguments are the "proof technique" you use in practice.</p>
+            <hr />
+            <h3 id="common-failure-modes">Common Failure Modes</h3>
+            <p>Greedy doesn't always work. Here are examples where the local-best choice fails:</p>
+            <h4 id="coin-change-with-non-canonical-coin-systems">Coin change with non-canonical coin systems</h4>
+            <p><strong>Problem</strong>: Make change for amount $n$ using the fewest coins from denominations ${d_1, d_2, \ldots, d_k}$.</p>
+            <p><strong>Greedy approach</strong>: Always pick the largest coin that fits.</p>
+            <p><strong>Example where greedy fails</strong>:</p>
+            <p>Denominations: ${1, 3, 4}$, target amount $= 6$.</p>
+            <ul>
+                <li>Greedy: picks $4$, then $1$, then $1$ → total 3 coins.</li>
+                <li>Optimal: picks $3$, then $3$ → total 2 coins.</li>
+            </ul>
+            <p>The greedy algorithm fails because larger coins don't always lead to fewer total coins in non-canonical systems. (For canonical systems like US coins ${1, 5, 10, 25}$, greedy does work.)</p>
+            <p><strong>Fix</strong>: Use dynamic programming instead.</p>
+            <h4 id="interval-scheduling-by-earliest-start-time">Interval scheduling by earliest start time</h4>
+            <p><strong>Problem</strong>: Same as interval scheduling (maximize non-overlapping intervals).</p>
+            <p><strong>Wrong greedy approach</strong>: Sort by start time and take what fits.</p>
+            <p><strong>Example where this fails</strong>:</p>
+            <p>Intervals: $(1, 10), (2, 3), (4, 5)$.</p>
+            <ul>
+                <li>Greedy by start time: picks $(1, 10)$ first, then can't fit $(2, 3)$ or $(4, 5)$ → total 1 interval.</li>
+                <li>Optimal (by finish time): picks $(2, 3)$ and $(4, 5)$ → total 2 intervals.</li>
+            </ul>
+            <p>Picking the earliest start doesn't leave room for other intervals that might fit. The correct greedy choice is earliest <strong>finish</strong> time.</p>
+            <p><strong>Fix</strong>: Sort by finish time instead of start time.</p>
+            <h4 id="fractional-vs-0-1-knapsack">Fractional vs 0/1 knapsack</h4>
+            <p><strong>Problem</strong>: Pack items with weights and values into a knapsack of capacity $W$.</p>
+            <p><strong>Greedy works for fractional knapsack</strong>: Sort by value/weight ratio and take as much as possible of each item (allowing fractions).</p>
+            <p><strong>Greedy fails for 0/1 knapsack</strong>: You must take whole items or nothing.</p>
+            <p><strong>Example where greedy fails (0/1)</strong>:</p>
+            <p>Items: $(w_1 = 10, v_1 = 60), (w_2 = 20, v_2 = 100), (w_3 = 30, v_3 = 120)$, capacity $W = 50$.</p>
+            <p>Ratios: $v_1/w_1 = 6, v_2/w_2 = 5, v_3/w_3 = 4$.</p>
+            <ul>
+                <li>Greedy by ratio: picks item 1 ($w = 10, v = 60$), then item 2 ($w = 20, v = 100$), then can't fit item 3 → total value $= 160$.</li>
+                <li>Optimal: picks item 2 and item 3 ($w = 50, v = 220$) → total value $= 220$.</li>
+            </ul>
+            <p><strong>Fix</strong>: Use dynamic programming for 0/1 knapsack.</p>
+            <hr />
+            <p><strong>Lesson</strong>: Always verify the greedy choice is safe for your specific problem using an exchange argument or loop invariant. If you can't prove it, greedy might not work, and you may need dynamic programming, backtracking, or another approach.</p>
         </article-section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
             <ol><a href="#greedy-algorithms">Greedy algorithms</a>
                 <ol>
+                    <li><a href="#the-greedy-proof-toolkit">The Greedy Proof Toolkit</a>
+                        <ol>
+                            <li><a href="#the-universal-greedy-checklist">The Universal Greedy Checklist</a></li>
+                            <li><a href="#exchange-argument-template">Exchange Argument Template</a></li>
+                            <li><a href="#loop-invariant-template">Loop Invariant Template</a></li>
+                            <li><a href="#cut-and-cycle-rules-graph-specializations-">Cut and Cycle Rules (Graph Specializations)</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#examples-grouped-by-pattern">Examples Grouped by Pattern</a></li>
                     <li><a href="#reachability-on-a-line">Reachability on a line</a></li>
                     <li><a href="#minimum-spanning-trees">Minimum spanning trees</a>
                         <ol>
-                            <li><a href="#kruskal-s-method">Kruskal’s method</a></li>
+                            <li><a href="#kruskal-s-method">Kruskal's method</a></li>
                             <li><a href="#prim-s-method">Prim's method</a></li>
                         </ol>
                     </li>
                     <li><a href="#shortest-paths-with-non-negative-weights-dijkstra-">Shortest paths with non-negative weights (Dijkstra)</a></li>
-                    <li><a href="#maximum-contiguous-sum">Maximum contiguous sum</a></li>
-                    <li><a href="#scheduling-themes">Scheduling themes</a></li>
-                    <li><a href="#minimize-the-maximum-lateness">Minimize the maximum lateness</a></li>
+                    <li><a href="#scheduling-themes">Scheduling themes</a>
+                        <ol>
+                            <li><a href="#interval-scheduling-maximum-cardinality-">Interval scheduling (maximum cardinality)</a></li>
+                            <li><a href="#minimize-the-maximum-lateness">Minimize the maximum lateness</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#huffman-coding">Huffman coding</a></li>
+                    <li><a href="#maximum-contiguous-sum">Maximum contiguous sum</a></li>
+                    <li><a href="#when-greedy-is-guaranteed-matroids">When Greedy Is Guaranteed: Matroids</a></li>
+                    <li><a href="#common-failure-modes">Common Failure Modes</a>
+                        <ol>
+                            <li><a href="#coin-change-with-non-canonical-coin-systems">Coin change with non-canonical coin systems</a></li>
+                            <li><a href="#interval-scheduling-by-earliest-start-time">Interval scheduling by earliest start time</a></li>
+                            <li><a href="#fractional-vs-0-1-knapsack">Fractional vs 0/1 knapsack</a></li>
+                        </ol>
+                    </li>
                 </ol>
             </ol>
             <div id="related-articles">

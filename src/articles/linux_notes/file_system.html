@@ -66,7 +66,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: June 01, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: December 27, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="files-and-filesystems">Files and Filesystems</h2>
             <p>In Unix, files and filesystems are important components of the operating system's structure. A file is a collection of data stored on disk, which can include anything from text documents and images to executable programs. Files are organized within directories in a hierarchical structure, allowing for efficient data management and retrieval.</p>
@@ -186,7 +186,6 @@
             <h3 id="blocks-superblocks-pages">Blocks, Superblocks &amp; Pages</h3>
             <p>Blocks, pages, and the superblock are concepts in storage and memory management. A <strong>block</strong> is the smallest unit of data on disk used by file systems, while a <strong>page</strong> is the smallest unit of memory used in RAM by the operating system. The <strong>superblock</strong> holds metadata about the file system, such as its size and structure. While blocks manage how files are stored, pages manage how memory is accessed, and the superblock helps the system organize everything.</p>
             <h4 id="block-the-atomic-on-disk-i-o-unit">Block — the Atomic On-Disk I/O Unit</h4>
-            <p>
             <div>
                 <pre><code class="language-shell">Entire Disk (logical view divided into 4 KiB blocks)
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -199,14 +198,12 @@ Offset 0     ┌─────────────────────�
              │          DISK BLOCK #42           │
              └───────────────────────────────────┘</code></pre>
             </div>
-            </p>
             <ul>
                 <li><strong>Fixed size</strong> chosen at <code>mkfs</code> (e.g. ext4 default = 4 KiB).</li>
                 <li>All filesystem metadata/data (bitmaps, inodes, journals) is laid out in whole blocks.</li>
                 <li>The block device layer (<code>bio</code>) can aggregate multiple blocks into one I/O.</li>
             </ul>
             <h4 id="superblock-group-descriptor-table-block-groups">Superblock → Group Descriptor Table → Block Groups</h4>
-            <p>
             <div>
                 <pre><code class="language-shell">Filesystem Layout (ext4, 4 KiB blocks)
 LBA 0           LBA 124      LBA 125                      LBA 126+  
@@ -222,14 +219,12 @@ LBA 0           LBA 124      LBA 125                      LBA 126+
               │  • free_blocks, free_inodes, flags…       │
               └───────────────────────────────────────────┘</code></pre>
             </div>
-            </p>
             <ul>
                 <li><strong>Superblock</strong> (at block 1024) holds global FS metadata plus a pointer (offset) to the start of the Group Descriptor Table (GDT).</li>
                 <li><strong>GDT</strong> is an array of one descriptor per block group; each descriptor records where that group begins, how many free blocks/inodes remain, etc.</li>
                 <li>When the kernel needs to read a block group’s metadata, it indexes into the GDT to find its on-disk location.</li>
             </ul>
             <h4 id="block-group-layout-128-mib-4-kib-blocks-">Block Group Layout (≈128 MiB @ 4 KiB blocks)</h4>
-            <p>
             <div>
                 <pre><code class="language-shell">Descriptor #2
     ↓
@@ -247,7 +242,6 @@ Block Group #2 Start
                          │
                     Block #42  ← lives here, inside this group’s Data Blocks</code></pre>
             </div>
-            </p>
             <ul>
                 <li><strong>Inode &amp; Block Bitmaps</strong>: track which inodes/blocks are free or in use.</li>
                 <li><strong>Inode Table</strong>: fixed number of inodes allocated per group.</li>
@@ -259,7 +253,6 @@ Block Group #2 Start
             </ul>
             <h4 id="inode-extent-trees">Inode &amp; Extent Trees</h4>
             <p>Every file is represented by an inode, which points to extents—contiguous block runs—that efficiently map file data on disk.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">INODE #132 (regular file)
 ┌──────────────────────────────────────────────────────────────┐
@@ -273,7 +266,6 @@ Block Group #2 Start
      │ start = 8200, len=256 │ ... │ start = 8456, len=256 │
      └───────────────────────┘     └───────────────────────┘</code></pre>
             </div>
-            </p>
             <ul>
                 <li>1 inode ↔ 1 file/dir.</li>
                 <li>Extents record <strong>contiguous</strong> physical block runs ⇒ bitmap compression, faster I/O submit, no indirect block b-tree lookup for large files.</li>
@@ -281,21 +273,18 @@ Block Group #2 Start
             </ul>
             <h4 id="directory-entries-dentry-blocks-">Directory Entries (dentry blocks)</h4>
             <p>Directories are special files containing entries that map names to inode numbers. ext4 accelerates lookups with a hash-tree index for large directories.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">DIR DATA BLOCK
 ┌── inode=2048 │ "config" │ rec_len  │ file_type ──┐
 │   ...        │ "lib"    │          │             │
 └── inode=2050 │ "logs"   │          │ END …       ┘</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Dir-files are just blocks of <code>(inode#, name, type)</code> pairs → ordinary read(2)/write(2) paths apply.</li>
                 <li><code>htree</code> index (ext4 dir_index) upgrades large dirs to O(log n) lookup.</li>
             </ul>
             <h4 id="journal-ordered-mode-">Journal (Ordered Mode)</h4>
             <p>The journal provides write-ahead logging for metadata (and optionally data) to ensure filesystem consistency across crashes.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">RESERVED JOURNAL AREA
 ┌────────────────────────────────────────────────────┐
@@ -304,7 +293,6 @@ Block Group #2 Start
 │  Commit block (checksum + tid)                     │
 └────────────────────────────────────────────────────┘</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Write-ahead log capturing <strong>metadata</strong> (and optionally data) before main-area overwrite.</li>
                 <li>Ext3/4 default <strong>ordered</strong> mode: data blocks reach media before the commit → no fs-checker sees stale metadata.</li>
@@ -312,17 +300,13 @@ Block Group #2 Start
             </ul>
             <h4 id="end-to-end-walk-through">End-to-End Walk-Through</h4>
             <p>Here’s a high-level sequence tracing a read from the superblock through the block group into actual file data.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">[ Superblock ] → [ Group #0 bitmaps ] → [ Inode #132 ] → [ Extent 8200..8455 ] → [ File Data ]</code></pre>
             </div>
-            </p>
             <h4 id="from-disk-blocks-ram-pages-unified-page-cache-">From Disk Blocks → RAM Pages (Unified Page Cache)</h4>
             <p>Once blocks are read from disk, they enter the unified page cache, serving both file I/O and memory mappings seamlessly.</p>
-            <p>
             <div>
-                <pre><code class="language-shell">+----------------------------------+
-|  FILE -&gt; mapping (address_space) |
+                <pre><code class="language-+----------------------------------+">|  FILE -&gt; mapping (address_space) |
 +----------------------------------+
 	        │
 read(2)/mmap    │        writeback
@@ -337,7 +321,6 @@ RAM phys addr 0x3f7e_0000
 	               │        DISK BLOCK #8202       │
 	               └───────────────────────────────┘</code></pre>
             </div>
-            </p>
             <ul>
                 <li><strong>Fault-on-first-touch</strong>: VFS sees a cache miss, allocates a free page, submits <code>bio</code> to read the 4 KiB block.</li>
                 <li>Subsequent I/O hits the in-RAM page; mmap’d code/data benefit identically — the cache is unified across read(), mmap(), readdir, etc.</li>
@@ -345,7 +328,6 @@ RAM phys addr 0x3f7e_0000
             </ul>
             <h4 id="dirty-pages-write-back-pipeline">Dirty Pages → Write-back Pipeline</h4>
             <p>Modifications to pages become "dirty" and are eventually written back to disk in optimized batches by the kernel’s write-back machinery.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">USER SPACE write(2) / memcpy to mmap
             │                     flusher thread / sync(2)
@@ -356,7 +338,6 @@ RAM phys addr 0x3f7e_0000
  │  ext4_writepages() merges │  ─────────────────────────►  Media
  └───────────────────────────┘</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Dirty clustering (<code>writepages()</code>): adjacent dirty pages coalesced into single bio up to the device <code>queue_max_hw_sectors</code>.</li>
                 <li><strong>pdflush / bdi flusher</strong> wakes when <code>vm.dirty_ratio</code> or <code>dirty_expire_centisecs</code> thresholds fire.</li>
@@ -364,7 +345,6 @@ RAM phys addr 0x3f7e_0000
             </ul>
             <h3 id="directory-hierarchy">Directory Hierarchy</h3>
             <p>Linux follows the <strong>Filesystem Hierarchy Standard (FHS)</strong>: everything, including devices and running processes, lives somewhere under a single root directory <code>/</code>. This predictability lets administrators and software know exactly where to look for binaries, configuration files, logs, and users’ data.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">/
 ├── bin/          → Core user commands (ls, cp)
@@ -400,7 +380,6 @@ RAM phys addr 0x3f7e_0000
     ├── mail/     → Local mail spools
     └── tmp/      → Persistent temp data between reboots</code></pre>
             </div>
-            </p>
             <p>Quick-Reference Table:</p>
             <p>
             <table>
@@ -696,20 +675,16 @@ RAM phys addr 0x3f7e_0000
             <p>Before performing any file system operations, it's important to have a clear understanding of the current state of your system. This helps in planning safe modifications and identifying any issues that might impact disk usage and performance. </p>
             <p>I. <strong>List Mounted File Systems</strong></p>
             <p>Use the <code>df -T</code> command to display all mounted file systems along with their types. This command provides an overview of disk space usage across all mounts and the file system types used, which is helpful for troubleshooting and system monitoring.</p>
-            <p>
             <div>
                 <pre><code class="language-bash">df -T</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Filesystem     Type     1K-blocks     Used Available Use% Mounted on
 /dev/sda1      ext4      492G  215G  253G  46% /
 udev           devtmpfs   16G     0   16G   0% /dev
 tmpfs          tmpfs     3.2G  1.3M  3.2G   1% /run</code></pre>
             </div>
-            </p>
             <ul>
                 <li>The output shows each file system along with its type (e.g., <code>ext4</code>, <code>devtmpfs</code>, <code>tmpfs</code>). </li>
                 <li>Columns such as 1K-blocks, Used, and Available provide details about total capacity, how much of it is currently used, and what remains free.</li>
@@ -718,13 +693,10 @@ tmpfs          tmpfs     3.2G  1.3M  3.2G   1% /run</code></pre>
             </ul>
             <p>II. <strong>List Block Devices with File System Information</strong></p>
             <p>The <code>lsblk</code> command with the <code>-f</code> option lists all block devices and includes detailed file system information such as file system type, label, UUID, and mount points. This command is useful for understanding the hardware-level layout of storage devices and how partitions are organized.</p>
-            <p>
             <div>
                 <pre><code class="language-bash">lsblk -f</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">NAME   FSTYPE LABEL    UUID                                 MOUNTPOINT
 sda                                                      
@@ -732,7 +704,6 @@ sda
 ├─sda2 ext4   home     12345678-90ab-cdef-1234-567890abcdef /home
 └─sda3 swap            1a2b3c4d-5e6f-7890-abcd-ef1234567890 [SWAP]</code></pre>
             </div>
-            </p>
             <ul>
                 <li>The tree structure (using characters like ├─ and └─) visually represents how partitions (e.g., sda1, sda2, sda3) are organized under the main device (<code>sda</code>).</li>
                 <li>Each partition’s file system type is shown (such as <code>ext4</code> for typical Linux partitions and <code>swap</code> for swap space). This helps in identifying the purpose of each partition.</li>
@@ -741,13 +712,10 @@ sda
             </ul>
             <p>III. <strong>Check Supported File Systems</strong></p>
             <p>To list all file systems currently supported by the kernel, use the following command. This command reads the <code>/proc/filesystems</code> file and outputs the file systems that your kernel can mount. This is useful for verifying compatibility with different file system types before attempting to mount or format new devices.</p>
-            <p>
             <div>
                 <pre><code class="language-bash">cat /proc/filesystems</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">nodev   sysfs
 nodev   tmpfs
@@ -757,7 +725,6 @@ nodev   bdev
         vfat
         xfs</code></pre>
             </div>
-            </p>
             <ul>
                 <li>The output lists both pseudo file systems (marked with <code>nodev</code>) and physical file systems (those without <code>nodev</code>), showing the range of file systems your kernel currently recognizes.</li>
                 <li>Entries like <code>sysfs</code> and <code>tmpfs</code> are not associated with actual disk storage but represent dynamic or temporary file systems, crucial for system operations.</li>
@@ -768,22 +735,17 @@ nodev   bdev
             <p>Before creating a new file system, ensure that your system has the necessary support for it. This involves checking for kernel module support, installing the required utilities, and verifying that your system is compatible with the file system you intend to use.</p>
             <p>I. <strong>Check Kernel Support</strong></p>
             <p>To confirm that your kernel supports the desired file system, check if the module is loaded:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">lsmod | grep xfs</code></pre>
             </div>
-            </p>
             <p>If the output includes lines referencing <code>xfs</code>, it indicates that the XFS module is loaded. If no output appears, the module isn’t loaded and may need to be installed or enabled.</p>
             <p>II. <strong>Install File System Utilities</strong></p>
             <p>Once kernel support is confirmed, install any necessary tools. For example, to manage the XFS file system, you need the <code>xfsprogs</code> package:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo apt update
 sudo apt install xfsprogs</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Reading package lists... Done
 Building dependency tree       
@@ -793,28 +755,22 @@ The following NEW packages will be installed:
 ...
 Setting up xfsprogs (5.4.0-1ubuntu2) ...</code></pre>
             </div>
-            </p>
             <p>This output indicates that <code>xfsprogs</code> has been successfully installed, and you can now proceed with XFS-specific file system tasks.</p>
             <p><strong>Verify Compatibility</strong></p>
             <p>Ensure that your system’s kernel and hardware support the file system by checking the module information:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">modinfo xfs</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
             <p>This command provides details on the XFS module, including its dependencies, supported versions, and any required firmware. Reviewing this information confirms compatibility with your current setup.</p>
             <h4 id="identifying-the-device">Identifying the Device</h4>
             <p>Accurate identification of the target device is crucial to avoid modifying the wrong disk, which could result in data loss. These commands will help you list and inspect block devices.</p>
             <p>I. <strong>List All Block Devices</strong></p>
             <p>To get an overview of all attached storage devices, use:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">lsblk</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
 sda      8:0    0  100G  0 disk 
@@ -822,23 +778,18 @@ sda      8:0    0  100G  0 disk
 sdb      8:16   0  200G  0 disk 
 └─sdb1   8:17   0   50G  0 part /mnt/data</code></pre>
             </div>
-            </p>
             <p>The <code>lsblk</code> output lists all block devices and their partitions, along with their sizes and mount points. This lets you identify the device you intend to work with (e.g., <code>/dev/sdb</code>).</p>
             <p>II. <strong>Detailed Device Information</strong></p>
             <p>To gather further details about each device and its partitions, use <code>fdisk</code>:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo fdisk -l</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Disk /dev/sdb: 100 GiB, 107374182400 bytes, 209715200 sectors
 Units: sectors of 1 * 512 = 512 bytes
 ...</code></pre>
             </div>
-            </p>
             <p>This output provides detailed information on each disk, including size, sector count, and partitioning scheme. Use this to confirm the correct device before making any modifications.</p>
             <p>III. <strong>Identify Unpartitioned Space</strong></p>
             <p>If your target device is new and unpartitioned, you’ll need to partition it first. Use <code>fdisk</code>, <code>gdisk</code>, or <code>parted</code> to create new partitions.</p>
@@ -846,42 +797,32 @@ Units: sectors of 1 * 512 = 512 bytes
             <p>Before modifying a device, it’s essential to ensure that it is not in use. Unmounting prevents accidental data corruption during the process.</p>
             <p>I. <strong>Check if the Device is Mounted</strong></p>
             <p>Determine if the target device is currently mounted:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">mount | grep sdb1</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">/dev/sdb1 on /mnt/data type xfs (rw)</code></pre>
             </div>
-            </p>
             <p>If the output lists the device, it means it’s mounted. Note the mount point (e.g., <code>/mnt/data</code>) so you can unmount it in the next step.</p>
             <p>II. <strong>Unmount the Device</strong></p>
             <p>Unmount the device before making any changes:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo umount /dev/sdb1</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
             <p>No output indicates the device was unmounted successfully.</p>
             <p>III. <strong>Handle Busy Devices</strong></p>
             <p>If you encounter a “device is busy” error, identify processes using the device:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo lsof /dev/sdb1</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
             <p>The output lists any processes using the device. For example:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
 bash     1234 user cwd    DIR   8,17    4096   2 /mnt/data</code></pre>
             </div>
-            </p>
             <p>Terminate these processes or stop the services to release the device, allowing it to be unmounted.</p>
             <h4 id="creating-a-file-system">Creating a File System</h4>
             <p>Once the target device is unmounted, you can proceed with creating the new file system. The file system type you choose will depend on factors like performance, reliability, and feature support.</p>
@@ -889,13 +830,10 @@ bash     1234 user cwd    DIR   8,17    4096   2 /mnt/data</code></pre>
             <p>Select a file system type that meets your needs. For example, <code>ext4</code> is commonly used for general-purpose storage due to its balance of performance and features. Alternatively, you may choose <code>xfs</code> for large filesystems or high-performance needs.</p>
             <p>II. <strong>Create the File System</strong></p>
             <p>To format the device with a specific file system type, use the appropriate <code>mkfs</code> command. For <code>ext4</code>, for instance:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo mkfs.ext4 /dev/sdb1</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">mke2fs 1.45.5 (07-Jan-2020)
 /dev/sdb1 contains a ext4 file system
@@ -910,115 +848,88 @@ Writing inode tables: done
 Creating journal (131072 blocks): done
 Writing superblocks and filesystem accounting information: done</code></pre>
             </div>
-            </p>
             <p>This output shows the <code>mkfs</code> process. It provides details on block allocation, journal creation, and the UUID for the new file system. If asked to proceed, type <code>y</code> to continue. Successful completion indicates the file system is now ready for use.</p>
             <p><strong>3. Label the File System (Optional)</strong></p>
             <p>Assigning a label to your file system makes it easier to identify, especially when managing multiple disks. To label an <code>ext4</code> file system:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo e2label /dev/sdb1 mydata</code></pre>
             </div>
-            </p>
             <p>No output means the label was applied successfully. You can verify the label by running <code>sudo e2label /dev/sdb1</code>.</p>
             <h4 id="changing-existing-file-systems">Changing Existing File Systems</h4>
             <p>Modifying existing file systems requires extra caution. Backup any essential data before proceeding to avoid data loss. Here are common operations:</p>
             <p>I. <strong>Resizing a File System</strong></p>
             <p>To resize a file system, unmount it first:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo umount /dev/sdb1</code></pre>
             </div>
-            </p>
             <p>Then, adjust its size. For example, to shrink an <code>ext4</code> file system to 50 GB:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo resize2fs /dev/sdb1 50G</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">resize2fs 1.45.5 (07-Jan-2020)
 Resizing the filesystem on /dev/sdb1 to 13107200 (4k) blocks.
 The filesystem on /dev/sdb1 is now 13107200 (4k) blocks long.</code></pre>
             </div>
-            </p>
             <p>This output confirms the new size of the file system. Note that shrinking can cause data loss if the specified size is smaller than the amount of data stored on the partition.</p>
             <p>II. <strong>Converting File Systems</strong></p>
             <p>Some file systems support in-place conversions. For example, converting <code>ext2</code> to <code>ext3</code> to enable journaling can be done as follows:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo tune2fs -O has_journal /dev/sdb1</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">tune2fs 1.45.5 (07-Jan-2020)
 Setting filesystem feature 'has_journal'
 Creating journal inode: done
 This filesystem will be automatically checked every 29 mounts or 180 days, whichever comes first.  Use tune2fs -c or -i to override.</code></pre>
             </div>
-            </p>
             <p>This output shows that journaling has been enabled on the file system. This feature enhances data integrity but may slightly reduce performance.</p>
             <p><strong>3. Backup Before Changes</strong></p>
             <p>Backing up important data is always recommended before altering file systems. Tools like <code>rsync</code>, <code>tar</code>, or <code>dd</code> can be used for this purpose. For example:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo rsync -av /mnt/mydata/ /mnt/backup/</code></pre>
             </div>
-            </p>
             <h4 id="mounting-the-new-file-system">Mounting the New File System</h4>
             <p>To make the new file system accessible to your system, you’ll need to mount it. Mounting allows you to interact with the file system and its contents.</p>
             <p><strong>1. Create a Mount Point</strong></p>
             <p>Choose a directory to serve as the mount point. If the directory does not exist, create it with:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo mkdir -p /mnt/mydata</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
             <p>No output indicates successful directory creation.</p>
             <p><strong>2. Mount the File System</strong></p>
             <p>Once the mount point exists, mount the file system:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo mount /dev/sdb1 /mnt/mydata</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
             <p>There’s no output if the mount is successful. You can verify by listing mounted file systems or checking the mount point with <code>df</code>.</p>
             <p><strong>3. Verify the Mount</strong></p>
             <p>To confirm that the file system is mounted correctly, use:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">df -h /mnt/mydata</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Filesystem      Size  Used Avail Use% Mounted on
 /dev/sdb1        99G   60M   94G   1% /mnt/mydata</code></pre>
             </div>
-            </p>
             <p>The output shows disk usage information for <code>/dev/sdb1</code>, confirming it is mounted on <code>/mnt/mydata</code>. You’re now ready to use the new file system for storage or data operations.</p>
             <h4 id="additional-considerations">Additional Considerations</h4>
             <p>When working with file systems, automating mounting, ensuring file system health, and managing permissions are essential practices. Here’s how to handle these additional considerations.</p>
             <p>I. <strong>Automate Mounting at Boot</strong></p>
             <p>To ensure your new file system is automatically mounted at system startup, add it to the <code>/etc/fstab</code> file.</p>
             <p>First, edit the file:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo nano /etc/fstab</code></pre>
             </div>
-            </p>
             <p>Add the following line to the end of the file (replace the UUID and mount point as needed):</p>
-            <p>
             <div>
                 <pre><code class="language-shell">UUID=123e4567-e89b-12d3-a456-426614174000  /mnt/mydata  ext4  defaults  0  2</code></pre>
             </div>
-            </p>
             <p>Entry Components:</p>
             <ul>
                 <li>The <strong>UUID</strong> is a unique identifier for the partition, which can be obtained using the <code>blkid</code> command, ensuring precise identification of the partition across reboots.</li>
@@ -1029,79 +940,60 @@ This filesystem will be automatically checked every 29 mounts or 180 days, which
                 <li>The <strong>2</strong> indicates the order in which <code>fsck</code> performs checks on the partition, with <code>2</code> meaning it will be checked after the root partition, providing structure for file system checks.</li>
             </ul>
             <p>Find the UUID for the device by running:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo blkid /dev/sdb1</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">/dev/sdb1: UUID="123e4567-e89b-12d3-a456-426614174000" TYPE="ext4"</code></pre>
             </div>
-            </p>
             <p>This output provides the UUID for <code>/dev/sdb1</code>. Use this identifier in the <code>/etc/fstab</code> entry to avoid issues if device names change on reboot. After adding this to <code>/etc/fstab</code>, the system will automatically mount the file system at <code>/mnt/mydata</code> on startup.</p>
             <p>II. <strong>File System Maintenance</strong></p>
             <p>Keeping your file system healthy and monitored is crucial for data integrity and performance.</p>
             <p><strong>Check for Errors:</strong></p>
             <p>Use <code>fsck</code> to check the file system for errors and repair any issues. </p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo fsck /dev/sdb1</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">fsck from util-linux 2.34
 e2fsck 1.45.5 (07-Jan-2020)
 /dev/sdb1: clean, 10/6553600 files, 262144/26214400 blocks</code></pre>
             </div>
-            </p>
             <p>This output confirms that the file system check is complete. If <code>fsck</code> finds no errors, it will indicate that the file system is clean. If it detects issues, <code>fsck</code> will attempt to repair them based on the options you specify.</p>
             <p><strong>Monitor Disk Usage:</strong></p>
             <p>Regularly monitor available space and usage with:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">df -h</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Filesystem      Size  Used Avail Use% Mounted on
 /dev/sdb1        99G   60M   94G   1% /mnt/mydata</code></pre>
             </div>
-            </p>
             <p>This output shows disk usage for all mounted file systems, including the newly created one. Use this information to ensure the file system has enough space for your needs.</p>
             <p>III. <strong>Permissions and Ownership</strong></p>
             <p>To control who can access your mounted file system, set ownership and permissions.</p>
             <p>Change ownership to a specific user and group:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo chown user:group /mnt/mydata</code></pre>
             </div>
-            </p>
             <p>No output means the command succeeded.</p>
             <p>Set permissions:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo chmod 755 /mnt/mydata</code></pre>
             </div>
-            </p>
             <p>Again, no output indicates success.</p>
             <p>These commands set the ownership of <code>/mnt/mydata</code> to a specified <code>user</code> and <code>group</code>. The <code>chmod</code> command assigns permissions, where <code>755</code> means the owner has read, write, and execute permissions, while others have read and execute only.</p>
             <p>IV. <strong>Security Considerations</strong></p>
             <p>When storing sensitive data, consider additional security measures, such as encryption and access control.</p>
             <p><strong>Encryption:</strong></p>
             <p>Use LUKS (Linux Unified Key Setup) to encrypt the partition:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo cryptsetup luksFormat /dev/sdb1</code></pre>
             </div>
-            </p>
             <p>Expected Output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">WARNING!
 ========
@@ -1111,15 +1003,12 @@ Are you sure? (Type uppercase yes): YES
 Enter passphrase for /dev/sdb1: 
 Verify passphrase:</code></pre>
             </div>
-            </p>
             <p>LUKS prompts for confirmation before encrypting the partition. Follow the prompts to set a passphrase, which will be required for future access.</p>
             <p><strong>Access Control (ACL):</strong></p>
             <p>To set fine-grained permissions, enable and configure Access Control Lists (ACLs). For example, to grant a user read access:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">sudo setfacl -m u:username:r /mnt/mydata</code></pre>
             </div>
-            </p>
             <p>No output, indicating success.</p>
             <p>This command grants <code>username</code> read-only access to <code>/mnt/mydata</code>. Use <code>getfacl</code> to verify ACLs or to modify permissions for other users as needed.</p>
             <h3 id="challenges">Challenges</h3>

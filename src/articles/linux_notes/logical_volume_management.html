@@ -66,7 +66,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 28, 2019</i></p>
+            <p style="text-align: right;"><i>Last modified: December 27, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="disk-partitions-and-volumes">Disk Partitions and Volumes</h2>
             <p>Think of data storage devices, such as DVDs, USB flash drives, and hard drives (HDDs or SSDs), as an entire cake. This cake can be cut into smaller slices or 'partitions'. These partitions are essentially divisions or sections within the storage device, helping to categorize or organize the storage for diverse uses. For instance, you can segregate different file types or even run multiple operating systems in separate partitions. The structure and arrangement of these partitions resemble a table, which you'd use to keep track of everything.</p>
@@ -82,7 +82,6 @@
                 <li><strong>Logical Volumes (LV)</strong>: These are the storage sections within volume groups. A logical volume can be assigned a file system and mounted for use.</li>
             </ul>
             <p>Let's understand these components with an analogy. Think of a physical volume as a book, a volume group as a bookshelf containing several books, and a logical volume as a chapter in a book.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">|-----------------|     |-----------------|     |-----------------|
 |  Physical       |     |  Physical       |     |  Physical       |
@@ -111,7 +110,6 @@
 |                                                                  |
 |------------------------------------------------------------------|</code></pre>
             </div>
-            </p>
             <p>This diagram illustrates that:</p>
             <ul>
                 <li>Logical Volume Management (LVM) provides a flexible way to manage disk storage by abstracting physical storage into logical volumes.</li>
@@ -129,92 +127,68 @@
             <p>Creating and managing LVM volumes involve a series of steps that utilize different commands. Here is a brief walkthrough:</p>
             <p>I. Creating Physical Volumes</p>
             <p>This is the initial step, where you use the <code>pvcreate</code> command to set up physical volumes on your disks. This command turns the entire disk into a single LVM physical volume. Here's an example using three devices (<code>/dev/sdb</code>, <code>/dev/sdc</code>, and <code>/dev/sdd</code>):</p>
-            <p>
             <div>
                 <pre><code class="language-bash">pvcreate /dev/sdb
 pvcreate /dev/sdc
 pvcreate /dev/sdd</code></pre>
             </div>
-            </p>
             <p>II. Defining Volume Groups</p>
             <p>Next, you create a volume group using the vgcreate command and add your physical volumes to it. The volume group allows you to manage multiple physical volumes as one. Here's an example of creating a volume group named TEST and extending it with additional physical volumes:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">vgcreate TEST /dev/sdb
 vgextend TEST /dev/sdc /dev/sdd</code></pre>
             </div>
-            </p>
             <p>III. Creating Logical Volumes</p>
             <p>After your volume group is set, you can create logical volumes within this group using the <code>lvcreate</code> command. These logical volumes will be your actual storage areas. In this example, two logical volumes (<code>vol_name_1</code> and <code>vol_name_2</code>) of sizes 20GB and 12GB respectively, are created within the TEST volume group:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">lvcreate -L 20G -n vol_name_1 TEST
 lvcreate -L 12G -n vol_name_2 TEST</code></pre>
             </div>
-            </p>
             <p>IV. Creating a File System on the Logical Volume</p>
             <p>Before you can start storing data, you need to create a file system on the logical volume. You can do this using the mkfs command. In this example, an ext4 file system is created on <code>vol_name_1</code>:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">mkfs -t ext4 /dev/TEST/vol_name_1</code></pre>
             </div>
-            </p>
             <p>V. Mounting the Logical Volume</p>
             <p>Finally, you mount the logical volume to a designated mounting point using the mount command. This allows you to start storing and accessing data. In this example, <code>vol_name_1</code> is mounted at <code>/mounting_point</code>:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">mount -t ext4 /dev/TEST/vol_name_1 /mounting_point</code></pre>
             </div>
-            </p>
             <h2 id="extending-a-logical-volume">Extending a Logical Volume</h2>
             <p>If you have available space in a volume group, you can extend a logical volume to use that space. This is done using the <code>lvextend</code> command:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">lvextend -L +10G /dev/TEST/vol_name_1</code></pre>
             </div>
-            </p>
             <p>This command extends <code>vol_name_1</code> by an additional 10GB. The file system on this volume needs to be resized to recognize the additional space:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">resize2fs /dev/TEST/vol_name_1</code></pre>
             </div>
-            </p>
             <h2 id="reducing-a-logical-volume">Reducing a Logical Volume</h2>
             <p>To reduce the size of a logical volume, ensure that the volume has enough free space to avoid losing data. First, unmount the logical volume and check it for errors:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">umount /dev/TEST/vol_name_1
 e2fsck -f /dev/TEST/vol_name_1</code></pre>
             </div>
-            </p>
             <p>Then, reduce the file system size before reducing the logical volume:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">resize2fs /dev/TEST/vol_name_1 15G
 lvreduce -L 15G /dev/TEST/vol_name_1</code></pre>
             </div>
-            </p>
             <h2 id="deleting-a-logical-volume">Deleting a Logical Volume</h2>
             <p>You might need to delete a logical volume to free up space in your volume group. Unmount the logical volume and then use the <code>lvremove</code> command:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">umount /dev/TEST/vol_name_1
 lvremove /dev/TEST/vol_name_1</code></pre>
             </div>
-            </p>
             <h2 id="backup-and-recovery-of-lvm-configurations">Backup and Recovery of LVM Configurations</h2>
             <p>Taking regular snapshots of logical volumes can be an effective backup strategy. A snapshot is a copy of the logical volume at a certain point in time. It's created using the <code>lvcreate</code> command:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">lvcreate -L 1G -s -n snap_vol_name_1 /dev/TEST/vol_name_1</code></pre>
             </div>
-            </p>
             <p>This command creates a 1GB snapshot named <code>snap_vol_name_1</code> of <code>vol_name_1</code>. If a restore is needed, you can revert the logical volume to the snapshot state using the <code>lvconvert</code> command:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">lvconvert --merge /dev/TEST/snap_vol_name_1</code></pre>
             </div>
-            </p>
             <h3 id="partition-types-comparison">Partition Types Comparison</h3>
             <p>
             <table>

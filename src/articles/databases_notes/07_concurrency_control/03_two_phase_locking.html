@@ -66,7 +66,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: May 19, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: December 27, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="two-phase-locking-2pl-">Two‑Phase Locking (2PL)</h2>
             <p>Two‑Phase Locking (2PL) is a <strong>scheduling rule</strong> built into database engines to keep concurrent transactions from stepping on each other. 2PL does <strong>not</strong> change <em>what</em> your application writes—it changes <em>when</em> each transaction is allowed to read or write shared data so that the overall result is the same as some serial order.</p>
@@ -74,7 +74,6 @@
                 <p>Every transaction first grows its set of locks, hits a lock‑point, and only then starts giving locks back. Once it starts giving locks back it may never take another one.</p>
             </blockquote>
             <p>Real‑World Analogy:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">┌── Growing Phase ─────┐         ┌── Shrinking Phase ──┐
 | Collect all library  |         | Start returning     |
@@ -82,7 +81,6 @@
 | No returns allowed   |         | borrow more.        |
 └──────────────────────┘         └─────────────────────┘</code></pre>
             </div>
-            </p>
             <p>While you hold a book, nobody else can annotate it. Once you drop it back, anyone may pick it up—but you may not take another.</p>
             <p>After reading you should be able to answer…</p>
             <ol>
@@ -95,7 +93,6 @@
             <h3 id="overview">Overview</h3>
             <p>Before diving into lock types and variations, it helps to see <strong>where 2-phase locking draws the line</strong> between <em>taking</em> locks and <em>releasing</em> them.
                 The timeline below exaggerates every step so the <strong>lock-point</strong> is unmistakable.</p>
-            <p>
             <div>
                 <pre><code class="language-text">#
            ┌────────────────────────────── Growing Phase ───────────────────────────────┐               ┌──────────── Shrinking Phase ───────────┐
@@ -106,7 +103,6 @@ Timeline ► │  S(A)  │  X(B)  │  X(C)  │  S(D)  │  X(E)  │         
 
 Legend: S = shared/read lock  X = exclusive/write lock</code></pre>
             </div>
-            </p>
             <p>Your application decides <strong>which</strong> rows or tables to lock and <strong>when</strong> the transaction starts and ends.
                 The <strong>database engine</strong> enforces the arrows: once the transaction’s first lock is released it may <em>only</em> release—never again acquire—further locks.</p>
             <h3 id="who-does-what-engine-vs-application-">Who Does What? (Engine vs Application)</h3>
@@ -115,7 +111,6 @@ Legend: S = shared/read lock  X = exclusive/write lock</code></pre>
                 <li>Your <strong>application</strong> is the <strong>director</strong>—it decides the story: which rows/tables to touch and when the scene (transaction) starts and ends.</li>
                 <li>The <strong>database engine</strong> is the <strong>stage manager</strong>—it controls access to the set so no actor bumps into another mid‑scene.</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-shell">┌───────────────────────┐          BEGIN / COMMIT / ROLLBACK
 │   Application Code    │ ───────────────────────────────────▶  starts &amp; ends txn
@@ -127,7 +122,6 @@ Legend: S = shared/read lock  X = exclusive/write lock</code></pre>
 │   (2PL enforcer)      │                            └──────────────────────────┘
 └───────────────────────┘              protects data while letting others run</code></pre>
             </div>
-            </p>
             <p>
             <table>
                 <tr>
@@ -167,21 +161,18 @@ Legend: S = shared/read lock  X = exclusive/write lock</code></pre>
             </blockquote>
             <h3 id="the-two-phases-of-2pl">The Two Phases of 2PL</h3>
             <p>During the <strong>growing phase</strong> the engine takes every lock the transaction asks for. The instant the transaction releases its <strong>first</strong> lock it has crossed the <strong>lock‑point</strong> and entered the <strong>shrinking phase</strong>; from that moment no new locks are permitted.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">time ►   ─┬─── acquire S(A) ── acquire X(B) ──┬─ commit ─▶
           │         (growing)                 │  (shrinking)
           │                                   │
        lock‑point ────────────────────────────┘</code></pre>
             </div>
-            </p>
             <p>Why it works: if every transaction follows that pattern, their critical sections never overlap in a way that produces a non‑serial schedule.</p>
             <h3 id="variations-of-two-phase-locking">Variations of Two‑Phase Locking</h3>
             <h4 id="strict-2pl-default-in-postgresql-mysql-innodb-sql-server-">Strict 2PL (default in PostgreSQL, MySQL‑InnoDB, SQL Server)</h4>
             <blockquote>
                 <p>Keep <strong>X</strong> locks to the very end, release <strong>S</strong> locks earlier. Default in PostgreSQL, MySQL‑InnoDB, SQL Server</p>
             </blockquote>
-            <p>
             <div>
                 <pre><code class="language-shell">time ► ─────────────────────────────────────────────────────────────────────────────→
               growing phase                                  shrinking phase
@@ -191,13 +182,11 @@ Row A   X:            ███████████████████
 Row B   S:     ███████▌ release                           │
 Row B   X:            ████████████████████████████████████┘</code></pre>
             </div>
-            </p>
             <p><em>Prevents</em> dirty reads &amp; cascading aborts while still letting read‑only transactions slip past once they no longer conflict.</p>
             <h4 id="rigorous-2pl">Rigorous 2PL</h4>
             <blockquote>
                 <p>Hold <strong>all</strong> locks (shared &amp; exclusive) until end of transaction.</p>
             </blockquote>
-            <p>
             <div>
                 <pre><code class="language-shell">time ► ─────────────────────────────────────────────────────────────────────────────→
 Row A   S: █████████████████████████████████████████████████┐
@@ -205,13 +194,11 @@ Row A   X:           ███████████████████�
 Row B   S:      ████████████████████████████████████████████│  COMMIT ─► drop every lock
 Row B   X:                  ████████████████████████████████┘</code></pre>
             </div>
-            </p>
             <p><em>Simplest</em> to reason about and fully recoverable, but <strong>worst concurrency</strong>: even read locks block everybody else until the very end.</p>
             <h4 id="conservative-static-2pl">Conservative (Static) 2PL</h4>
             <blockquote>
                 <p>Grab <strong>every</strong> lock you will ever need <strong>before</strong> doing any work. If a lock is unavailable, wait. Deadlock‑free at the cost of longer initial waits.</p>
             </blockquote>
-            <p>
             <div>
                 <pre><code class="language-shell">time ► ─────────────────────────────────────────────────────────────────────────────→
 try‑lock {A,B,C} ─╢ acquired ─┬────────────── work (reads/writes) ─────────────┬── COMMIT ─► release all
@@ -219,11 +206,9 @@ try‑lock {A,B,C} ─╢ acquired ─┬─────────────
                             Row B X: ██████████████████████████████████████████
                             Row C S: ██████████████████████████████████████████</code></pre>
             </div>
-            </p>
             <p>Because the transaction <em>first</em> waits until it can lock <strong>every</strong> object it will ever touch, no cycle of wait‑for edges can form—hence no deadlocks. The trade‑off is potential under‑utilisation while the big lock request is waiting.</p>
             <h3 id="concrete-example-funds-transfer">Concrete Example – Funds Transfer</h3>
             <p>Below is <strong>everything you write</strong> (application layer) versus what the <strong>engine</strong> does silently.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">-- application code ---------------------------------------------
 BEGIN TRANSACTION;           -- start growing phase
@@ -241,7 +226,6 @@ UPDATE Accounts SET balance = balance - 100 WHERE id = 'A';
 UPDATE Accounts SET balance = balance + 100 WHERE id = 'B';
 COMMIT;                      -- locks released automatically (strict 2PL)</code></pre>
             </div>
-            </p>
             <p><strong>Under the hood (engine):</strong></p>
             <ol>
                 <li>Acquires row‑level locks on <code>A</code> and <code>B</code> in exclusive mode (growing phase).</li>
@@ -275,14 +259,12 @@ COMMIT;                      -- locks released automatically (strict 2PL)</code>
             </table>
             </p>
             <p>Deadlock Illustration:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Wait‑for graph
   T1 ───► T2
   ▲       │
   └───────┘  (cycle ⇒ deadlock)</code></pre>
             </div>
-            </p>
             <h3 id="best-practices-when-coding-with-2pl">Best Practices When Coding with 2PL</h3>
             <ul>
                 <li>Keep transactions <strong>small and quick</strong>.</li>

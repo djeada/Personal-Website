@@ -66,7 +66,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: September 22, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: December 27, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="query-optimization-techniques">Query Optimization Techniques</h2>
             <p>Query optimization is about making SQL queries run more efficiently. The database figures out the best way to execute a query so it uses fewer resources and runs faster. This helps keep the system responsive and makes things smoother for the users and applications that depend on the data.</p>
@@ -80,7 +80,6 @@
             </ol>
             <h3 id="indexing">Indexing</h3>
             <p>Indexes are like a smart, alphabetized cheat-sheet for your tables. Instead of rifling through every row (a <strong>full table scan</strong>), the database jumps straight to where the matches live (an <strong>index seek</strong>).</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Without index (slow)                  With index (fast)
 ┌───────────────┐                     ┌───────────────┐
@@ -89,7 +88,6 @@
 │ [millions…]   │  ─────────────────▶ │ A..B..C..S..  │ ─────────────▶ rows
 └───────────────┘                     └───────────────┘</code></pre>
             </div>
-            </p>
             <h4 id="how-indexes-improve-query-performance">How Indexes Improve Query Performance</h4>
             <ul>
                 <li><em>They shortcut the search.</em> On large tables, a full scan is O(n). A B-tree index can make lookups feel closer to O(log n).</li>
@@ -98,20 +96,15 @@
                 <li><em>Writes get a bit slower.</em> Every <code>INSERT/UPDATE/DELETE</code> must also maintain each index. Index only what you’ll actually use.</li>
             </ul>
             <p>Quick visual on selectivity:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">High selectivity (great)         Low selectivity (meh)
 email → 1 match                   is_active → 900k matches</code></pre>
             </div>
-            </p>
             <h4 id="creating-an-index-example">Creating an Index Example</h4>
-            <p>
             <div>
                 <pre><code class="language-sql">CREATE INDEX idx_customers_lastname ON customers(last_name);</code></pre>
             </div>
-            </p>
             <p>That helps queries that <em>filter</em> or <em>sort</em> by <code>last_name</code>:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT * 
 FROM customers 
@@ -121,17 +114,13 @@ SELECT *
 FROM customers 
 ORDER BY last_name;</code></pre>
             </div>
-            </p>
             <p>Level up with common patterns:</p>
             <p><strong>Composite index (left-prefix matters):</strong></p>
-            <p>
             <div>
                 <pre><code class="language-sql">CREATE INDEX idx_orders_cust_date ON orders(customer_id, created_at);</code></pre>
             </div>
-            </p>
             <p>Helps: <code>WHERE customer_id = ?</code> (and optionally <code>AND created_at &gt;= ?</code>) and <code>ORDER BY created_at</code>.</p>
             <p><strong>Covering index (the query lives in the index):</strong></p>
-            <p>
             <div>
                 <pre><code class="language-sql">CREATE INDEX idx_orders_cov ON orders(customer_id, status, total_amount);
 -- then a query like:
@@ -139,10 +128,8 @@ SELECT status, total_amount
 FROM orders 
 WHERE customer_id = 42;</code></pre>
             </div>
-            </p>
             <p>If the DB can answer from just the index, it avoids touching the table (a “heap/cluster” visit).</p>
             <p><strong>Functional/partial index (when you can’t change the query shape):</strong></p>
-            <p>
             <div>
                 <pre><code class="language-sql">-- functional
 CREATE INDEX idx_lower_email ON users(LOWER(email));
@@ -150,9 +137,7 @@ CREATE INDEX idx_lower_email ON users(LOWER(email));
 -- partial (only active users)
 CREATE INDEX idx_active_users ON users(last_login) WHERE is_active = true;</code></pre>
             </div>
-            </p>
             <p>Tip: Avoid functions on the <strong>left side</strong> of predicates unless you have a matching functional index:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">-- Slows down (kills index use):
 WHERE LOWER(email) = LOWER('A@B.COM')
@@ -160,31 +145,24 @@ WHERE LOWER(email) = LOWER('A@B.COM')
 -- Better:
 WHERE email = 'a@b.com'   -- store emails lowercased OR use functional index</code></pre>
             </div>
-            </p>
             <h4 id="example">Example</h4>
-            <p>
             <div>
                 <pre><code class="language-sql">EXPLAIN SELECT * FROM customers WHERE last_name = 'Smith';</code></pre>
             </div>
-            </p>
             <p>Example output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Index Scan using idx_customers_lastname on customers  (cost=0.29..8.31 rows=1 width=83)</code></pre>
             </div>
-            </p>
             <ul>
                 <li><strong>Index Scan</strong> → the index is actually used.</li>
                 <li><strong>cost=0.29..8.31</strong> → the planner’s estimated work.</li>
                 <li><strong>rows=1</strong> → expected matches.</li>
             </ul>
             <p>If you check with <code>EXPLAIN ANALYZE</code>, you’ll see real timings. A typical before/after on a ~10M-row table:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Before (no index)  : Seq Scan on customers  (actual time=0.000..4210.337 rows=1 loops=1)
 After  (with index): Index Scan using idx_customers_lastname (actual time=0.031..0.049 rows=1 loops=1)</code></pre>
             </div>
-            </p>
             <p>That’s roughly <strong>4.2s → 0.04s (~105× faster)</strong> in this scenario.</p>
             <p>Real-world wins we’ve seen:</p>
             <ul>
@@ -194,12 +172,10 @@ After  (with index): Index Scan using idx_customers_lastname (actual time=0.031.
             </ul>
             <h3 id="query-rewriting">Query Rewriting</h3>
             <p>You can often get big wins by rephrasing the same question so the optimizer can pick a cheaper path.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Complicated shape                 Simpler shape
    (nested subquery)    →         (join/exists)  →   better plan</code></pre>
             </div>
-            </p>
             <h4 id="simplifying-complex-queries">Simplifying Complex Queries</h4>
             <ul>
                 <li>Choosing <em>JOIN</em> or <em>EXISTS</em> instead of <code>IN (subquery)</code> helps the planner handle large result sets efficiently, while using <code>IN</code> can slow down queries; for example, checking for matching customer IDs in a sales table performs better with a join than with a subquery returning thousands of IDs.</li>
@@ -211,7 +187,6 @@ After  (with index): Index Scan using idx_customers_lastname (actual time=0.031.
             </ul>
             <h4 id="rewriting-example">Rewriting Example</h4>
             <p>Inefficient query:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT * 
 FROM orders 
@@ -221,9 +196,7 @@ WHERE customer_id IN (
   WHERE city = 'London'
 );</code></pre>
             </div>
-            </p>
             <p>Optimized with a <code>JOIN</code>:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT o.*
 FROM orders AS o
@@ -231,14 +204,12 @@ JOIN customers AS c
   ON o.customer_id = c.customer_id
 WHERE c.city = 'London';</code></pre>
             </div>
-            </p>
             <p>Why it’s faster (with supporting indexes like <code>customers(city, customer_id)</code> and <code>orders(customer_id)</code>):</p>
             <ul>
                 <li>The planner can <strong>seek</strong> into <code>customers</code> by <code>city</code>, then <strong>join</strong> on <code>customer_id</code>.</li>
                 <li>It avoids materializing large intermediate lists for <code>IN (…)</code>.</li>
             </ul>
             <p>Alternative that also performs well:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT o.*
 FROM orders AS o
@@ -249,14 +220,12 @@ WHERE EXISTS (
     AND c.city = 'London'
 );</code></pre>
             </div>
-            </p>
             <blockquote>
                 <p><code>EXISTS</code> can short-circuit on the first match and often pairs nicely with indexes.</p>
             </blockquote>
             <p>Potential duplicate rows? If <code>customers.customer_id</code> isn’t unique in your schema, either fix the model or add <code>SELECT DISTINCT o.*</code>.</p>
             <p>Handy rewrites that routinely help:</p>
             <p><strong>OR → UNION ALL</strong> (when predicates are selective and independent):</p>
-            <p>
             <div>
                 <pre><code class="language-sql">-- Before
 WHERE (status = 'paid' OR shipped_at IS NULL)
@@ -266,9 +235,7 @@ SELECT ... WHERE status = 'paid'
 UNION ALL
 SELECT ... WHERE shipped_at IS NULL AND status &lt;&gt; 'paid';</code></pre>
             </div>
-            </p>
             <p><strong>Pre-aggregate then join</strong> (shrinks data early):</p>
-            <p>
             <div>
                 <pre><code class="language-sql">-- Before: join then group (heavy)
 SELECT c.id, SUM(o.total)
@@ -286,9 +253,7 @@ SELECT c.id, s.total_sum
 FROM customers c
 JOIN sums s ON s.customer_id = c.id;</code></pre>
             </div>
-            </p>
             <p><strong>Window vs subquery</strong> (often clearer + faster):</p>
-            <p>
             <div>
                 <pre><code class="language-sql">-- Top order per customer
 SELECT *
@@ -299,7 +264,6 @@ FROM (
 ) x
 WHERE rn = 1;</code></pre>
             </div>
-            </p>
             <p>Measured improvements from tidy rewrites:</p>
             <ul>
                 <li>Replacing an <em>IN</em> subquery with a <code>JOIN</code> and proper indexes reduces runtime from 2.9 seconds to 110 milliseconds (~26×) on a dataset with 30 million orders and 5 million customers. Without this adjustment, the query repeatedly scans large intermediate sets, which slows reporting features that combine customer and order data.</li>
@@ -308,7 +272,6 @@ WHERE rn = 1;</code></pre>
                 <li>Removing <code>SELECT *</code> and explicitly excluding 20 unused columns enabled a <em>covering index</em> scan, lowering execution from 1.2 seconds to 60 milliseconds (~20×). Without column pruning, extra data is read and transferred, slowing tasks like populating lightweight product lists.</li>
             </ul>
             <p>Tiny plan-reading cheat sheet:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Seq Scan         → table scan (usually slow on big tables)
 Index Scan/Seek  → using index (good)
@@ -317,11 +280,9 @@ Hash/Sort        → watch for big memory use; try to index to avoid
 Nested Loop      → great when outer is small &amp; inner is indexed
 Merge/Hash Join  → better for big sets; order/hash considerations</code></pre>
             </div>
-            </p>
             <p>Pair <strong>the right indexes</strong> with <strong>query shapes that can use them</strong>, and you’ll usually see order-of-magnitude wins. When in doubt, run <code>EXPLAIN ANALYZE</code>, compare before/after timings, and check whether the plan switched from <code>Seq Scan</code> to an index-driven path.</p>
             <h3 id="join-optimization">Join Optimization</h3>
             <p>Joins are common in SQL queries but can be resource-intensive. Optimizing joins can have a substantial impact on performance.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">High level mental model
 ┌─────────┐   join key   ┌─────────┐
@@ -330,10 +291,8 @@ Merge/Hash Join  → better for big sets; order/hash considerations</code></pre>
 └─────────┘              └─────────┘
    filter early, index keys, pick join that matches row counts</code></pre>
             </div>
-            </p>
             <h4 id="choosing-the-right-join-type">Choosing the Right Join Type</h4>
             <p>Different join types (INNER, LEFT, RIGHT, FULL) serve different purposes. Selecting the appropriate type ensures that only the necessary data is processed.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">INNER:   L ⋂ R     keep matches only
 LEFT:    L ⟕ R     keep all L + matches from R (NULLs when no match)
@@ -342,7 +301,6 @@ FULL:    L ⟗ R     keep everything, matched or not
 SEMI:    L where a match exists in R (EXISTS)
 ANTI:    L where no match exists in R (NOT EXISTS)</code></pre>
             </div>
-            </p>
             <p>Quick tips:</p>
             <ul>
                 <li>Prefer <strong>INNER</strong> when unmatched rows aren’t needed—smaller result → less work.</li>
@@ -351,13 +309,11 @@ ANTI:    L where no match exists in R (NOT EXISTS)</code></pre>
                 <li>If you only need columns from the left table but want to filter by right, consider <code>EXISTS</code> over <code>LEFT … IS NOT NULL</code>.</li>
             </ul>
             <p>Join algorithms (what the engine actually runs):</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Nested Loop  : great when outer is small &amp; inner is indexed (fast seeks)
 Hash Join    : shines on large, unsorted sets; needs memory for hash
 Merge Join   : fast if both inputs are pre-sorted on join keys (or can be)</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Small → big with an <strong>index on the big side</strong> ⇒ Nested Loop wins.</li>
                 <li>Big ↔ big without supporting indexes ⇒ Hash/Merge usually wins.</li>
@@ -365,16 +321,13 @@ Merge Join   : fast if both inputs are pre-sorted on join keys (or can be)</code
             <h4 id="example-of-join-order-impact">Example of Join Order Impact</h4>
             <p>Suppose you have two tables, <code>large_table</code> and <code>small_table</code>. Joining <code>small_table</code> to <code>large_table</code> can be more efficient than the reverse <strong>when</strong> the engine uses a nested loop and can seek into <code>large_table</code> by key.</p>
             <p>Optimized join:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT lt.*, st.info
 FROM small_table AS st
 JOIN large_table AS lt
   ON st.id = lt.st_id;</code></pre>
             </div>
-            </p>
             <p>But the bigger lever is <strong>indexes on the join keys</strong>:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">-- On the large side, index the join key it’s probed on:
 CREATE INDEX idx_large_st_id ON large_table(st_id);
@@ -382,19 +335,15 @@ CREATE INDEX idx_large_st_id ON large_table(st_id);
 -- If you filter the small side first, index its filter too:
 CREATE INDEX idx_small_status ON small_table(status);</code></pre>
             </div>
-            </p>
             <p>The heuristic “smaller table first when JOIN” helps reduce work in nested loop joins. Modern databases usually reorder joins themselves, so this rule is mostly for engines with weaker optimizers or cases where you force a join order.</p>
             <p>Extra patterns that help:</p>
             <p><strong>Filter early on the driving table</strong>:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT lt.*, st.info
 FROM (SELECT id FROM small_table WHERE status = 'active') st
 JOIN large_table lt ON st.id = lt.st_id;</code></pre>
             </div>
-            </p>
             <p><strong>Semi-join for existence checks</strong>:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT lt.*
 FROM large_table lt
@@ -402,16 +351,13 @@ WHERE EXISTS (
   SELECT 1 FROM small_table st WHERE st.id = lt.st_id AND st.status='active'
 );</code></pre>
             </div>
-            </p>
             <p>Tiny cardinality + index checklist:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">[ ] Index join keys on BOTH sides
 [ ] Apply filters BEFORE the join (CTE/derived table ok)
 [ ] Return only needed columns (enables covering indexes)
 [ ] Watch out for exploding rows (1:N:N); aggregate early if possible</code></pre>
             </div>
-            </p>
             <p>Measured wins from join tuning:</p>
             <ul>
                 <li>Adding an index on <em>st_id</em> in <code>large_table</code> while filtering <code>small_table</code> first reduces a join on 80 million versus 200 thousand rows from 3.9 seconds to 120 milliseconds (~32×). Without this structure, the database must repeatedly scan the large table, slowing analyses such as matching users with related events.</li>
@@ -420,18 +366,14 @@ WHERE EXISTS (
             </ul>
             <h3 id="using-explain-to-analyze-queries">Using EXPLAIN to Analyze Queries</h3>
             <p>Most databases provide an <code>EXPLAIN</code> command that shows how a query will be executed. This tool is invaluable for understanding and optimizing query performance.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">EXPLAIN SELECT * FROM customers WHERE last_name = 'Smith';</code></pre>
             </div>
-            </p>
             <p>Example output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Seq Scan on customers  (cost=0.00..12.00 rows=1 width=83)
   Filter: (last_name = 'Smith')</code></pre>
             </div>
-            </p>
             <ul>
                 <li><strong>Seq Scan</strong> indicates a sequential scan, meaning the database is reading the entire table.</li>
                 <li>Adding an index on <code>last_name</code> would change this to an <strong>Index Scan</strong>, improving performance.</li>
@@ -450,7 +392,6 @@ WHERE EXISTS (
                 <li>A <em>Nested Loop</em> with giant inner loops shows a missing index on the inner join key, while adding the index allows the loop to run efficiently; for example, joining orders to customers without an index on <code>customer_id</code> forces repeated scans of the customer table.</li>
             </ul>
             <p>Handy EXPLAIN interpretation cheat:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Node          What it hints
 ------------  --------------------------------------------
@@ -461,7 +402,6 @@ Nested Loop   Outer small + inner indexed; or missing index (slow)
 Hash Join     Large sets; ensure enough memory to avoid spills
 Merge Join    Inputs sorted; consider indexes to keep them sorted</code></pre>
             </div>
-            </p>
             <p>Measured “explain-driven” fixes:</p>
             <ul>
                 <li>A nested loop join on 20 million inner iterations was reduced from 8.7 seconds to 180 milliseconds (~48×) by adding an <em>(st_id)</em> index. Without this index, the query repeatedly scans the inner table, which slows processes like matching transactions to their related status records.</li>
@@ -470,7 +410,6 @@ Merge Join    Inputs sorted; consider indexes to keep them sorted</code></pre>
             </ul>
             <h3 id="partitioning">Partitioning</h3>
             <p>Partitioning divides a large table into smaller, more manageable pieces. This can improve query performance by allowing the database to scan only relevant partitions (aka <strong>partition pruning</strong>), and can make maintenance (loads, archiving) safer and faster.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">One big table → many smaller, date-sliced chunks
 ┌──────────────────────── orders ────────────────────────┐
@@ -478,7 +417,6 @@ Merge Join    Inputs sorted; consider indexes to keep them sorted</code></pre>
 └────────────────────────────────────────────────────────┘
    ↑ prune to only what your WHERE clause needs</code></pre>
             </div>
-            </p>
             <p>Common strategies:</p>
             <ul>
                 <li><strong>RANGE</strong> (e.g., by date): great for time-series / logs.</li>
@@ -500,7 +438,6 @@ Merge Join    Inputs sorted; consider indexes to keep them sorted</code></pre>
             </ul>
             <h4 id="partitioning-example">Partitioning Example</h4>
             <p>Partitioning a table by date:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">-- PostgreSQL style (parent + partitions)
 CREATE TABLE orders (
@@ -523,9 +460,7 @@ CREATE TABLE orders_default PARTITION OF orders DEFAULT;
 CREATE INDEX ON orders_2021 (order_date, customer_id);
 CREATE INDEX ON orders_2025 (order_date, customer_id);</code></pre>
             </div>
-            </p>
             <p>Now queries that filter by date can target the specific partition, reducing the amount of data scanned:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT customer_id, SUM(total)
 FROM orders
@@ -533,7 +468,6 @@ WHERE order_date &gt;= DATE '2025-01-01'
   AND order_date &lt;  DATE '2025-02-01'
 GROUP BY customer_id;</code></pre>
             </div>
-            </p>
             <p>Engine notes:</p>
             <ul>
                 <li>In <em>PostgreSQL</em>, partition pruning occurs at both planning and execution time, while ignoring this behavior can cause unnecessary partitions to be scanned; for example, querying recent sales by date only touches relevant partitions if the filter aligns with the partition key.</li>
@@ -556,13 +490,11 @@ GROUP BY customer_id;</code></pre>
             </ul>
             <h3 id="materialized-views">Materialized Views</h3>
             <p>Materialized views store the result of a query <strong>on disk</strong> so future lookups skip heavy joins/aggregations.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Raw tables ──(expensive query)──▶ result
                  ▲                     │
                  └─────── stored as materialized view ────┘</code></pre>
             </div>
-            </p>
             <p>When they shine:</p>
             <ul>
                 <li>Repeating the <strong>same</strong> complex query (dashboards, top-N lists, hourly KPIs).</li>
@@ -576,7 +508,6 @@ GROUP BY customer_id;</code></pre>
                 <li>Accounting for <em>write overhead</em> shows that more moving parts are needed to keep materialized views current, while neglecting this increases maintenance complexity; for example, frequent inserts into an orders table require scheduling refreshes to ensure reports stay accurate.</li>
             </ul>
             <h4 id="creating-a-materialized-view-example">Creating a Materialized View Example</h4>
-            <p>
             <div>
                 <pre><code class="language-sql">-- Base example
 CREATE MATERIALIZED VIEW sales_summary AS
@@ -589,9 +520,7 @@ GROUP BY product_id;
 -- Index it like a real table (fast lookups/joins):
 CREATE INDEX ON sales_summary (product_id);</code></pre>
             </div>
-            </p>
             <p>Level-up variants you’ll likely want:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">-- (PostgreSQL) Create without initial load, then refresh later off-peak
 CREATE MATERIALIZED VIEW sales_summary WITH NO DATA AS
@@ -615,12 +544,10 @@ GROUP BY product_id, date_trunc('day', sold_at);
 
 CREATE INDEX ON sales_summary_daily (product_id, day);</code></pre>
             </div>
-            </p>
             <blockquote>
                 <p>Tip: Query the MV directly (<code>FROM sales_summary_daily</code>) or wire a view/feature flag so you can flip between the MV and the base query during rollout.</p>
             </blockquote>
             <h4 id="refreshing-the-materialized-view">Refreshing the Materialized View</h4>
-            <p>
             <div>
                 <pre><code class="language-sql">-- Basic refresh (locks readers briefly in some engines)
 REFRESH MATERIALIZED VIEW sales_summary;
@@ -633,7 +560,6 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY sales_summary;
 -- Keep the freshness column updated post-refresh
 UPDATE sales_summary SET last_refreshed = clock_timestamp();</code></pre>
             </div>
-            </p>
             <p>Other refresh patterns (engine-specific):</p>
             <ul>
                 <li>Using <em>incremental or fast refresh</em> applies only the changes since the last update, while relying on full refreshes repeatedly reprocesses all data; for example, Oracle’s fast refresh updates a sales summary MV with just yesterday’s transactions instead of the entire history.</li>
@@ -641,7 +567,6 @@ UPDATE sales_summary SET last_refreshed = clock_timestamp();</code></pre>
                 <li>Triggering an <em>event-driven refresh</em> after ETL completion or a Kafka/CDC batch ensures data is timely, while scheduling refreshes blindly risks refreshing before new data arrives; for example, refreshing a customer activity MV immediately after a nightly load guarantees accurate dashboards each morning.</li>
             </ul>
             <p>Common “gotchas” checklist:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">[ ] Index the MV for your read patterns
 [ ] Guarantee a UNIQUE key if you want concurrent/fast refresh
@@ -649,7 +574,6 @@ UPDATE sales_summary SET last_refreshed = clock_timestamp();</code></pre>
 [ ] Document staleness (UI badge: “Updated 08:15”)
 [ ] Schedule around load; stagger multiple MVs</code></pre>
             </div>
-            </p>
             <p>Measured wins we’ve seen:</p>
             <ul>
                 <li>A five-table revenue dashboard over 50 million rows improved from 7.8 seconds to 130 milliseconds (~60×) by introducing an hourly <em>materialized view</em>. Without this structure, each refresh requires scanning and aggregating raw tables, which slows financial overviews.</li>
@@ -658,13 +582,11 @@ UPDATE sales_summary SET last_refreshed = clock_timestamp();</code></pre>
             </ul>
             <h3 id="caching">Caching</h3>
             <p>Caching keeps <strong>recent/frequent</strong> results close to your app so you avoid repeating expensive work.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">client → app → (cache?) → db
            └── hit → fast
            └── miss → compute → store → fast next time</code></pre>
             </div>
-            </p>
             <p>Where to cache:</p>
             <ul>
                 <li>At the <em>database level</em>, features like buffer caches or result caches reduce repeated computation, while skipping them forces every query to be re-executed; for example, PostgreSQL can reuse cached query results for identical statements within a session.</li>
@@ -685,7 +607,6 @@ UPDATE sales_summary SET last_refreshed = clock_timestamp();</code></pre>
             </ul>
             <h4 id="application-level-caching-example">Application-Level Caching Example</h4>
             <p>Basic cache-aside with Redis (Python):</p>
-            <p>
             <div>
                 <pre><code class="language-python">import json, time, random
 import redis
@@ -713,7 +634,6 @@ def get_product_details(product_id):
         val = cache.get(key)
         return json.loads(val) if val else fetch_product_from_db(product_id)</code></pre>
             </div>
-            </p>
             <p>Useful variations:</p>
             <ul>
                 <li>Applying <em>negative caching</em> stores “not found” results briefly to reduce repeated database lookups, while omitting it causes repeated misses to hit the database; for example, caching a 404 for a missing user profile for 30 seconds prevents a surge of identical queries.</li>
@@ -723,7 +643,6 @@ def get_product_details(product_id):
                 <li>Implementing <em>partial caching</em> stores only the most frequently accessed fields and retrieves rare fields on demand, while caching full objects increases storage and invalidation complexity; for example, caching product IDs and names but fetching long descriptions only when needed balances speed and memory.</li>
             </ul>
             <p>Patterns &amp; pitfalls:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">[ ] Version keys (product:{id}:v2) for painless schema changes
 [ ] Add TTL jitter (±5–10%) to avoid synchronized expiries
@@ -731,7 +650,6 @@ def get_product_details(product_id):
 [ ] Size &amp; evict wisely (LRU/LFU); monitor hit rate &amp; memory
 [ ] Don’t cache giant blobs; compress or split</code></pre>
             </div>
-            </p>
             <p>Measured wins:</p>
             <ul>
                 <li>A product detail API reduced its p95 latency from 280 milliseconds to 35 milliseconds (~8×) by applying <em>cache-aside</em> with a one-hour TTL. Without caching, every request hits the database, which slows repeated lookups such as customers frequently revisiting the same item page.</li>
@@ -740,12 +658,10 @@ def get_product_details(product_id):
             </ul>
             <h3 id="statistics-and-histograms">Statistics and Histograms</h3>
             <p>Optimizers aren’t psychic—they bet on plans using <strong>statistics</strong> about your data. When those stats are fresh and detailed, the planner picks smarter joins, uses the right indexes, and avoids ugly scans.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Planner’s crystal ball
    data sample  →  MCV list + histogram  →  cardinality guess  →  plan</code></pre>
             </div>
-            </p>
             <p>What Postgres tracks (via <code>pg_stats</code>):</p>
             <ul>
                 <li>Knowing the <em>n_distinct</em> value helps determine how many unique entries a column contains, while ignoring it can lead to inefficient query planning; for example, if a customer table has 42 distinct regions, the planner can better estimate result sizes for region-based filters.</li>
@@ -755,14 +671,12 @@ def get_product_details(product_id):
                 <li>Considering <em>correlation</em> values shows how ordered a column is on disk, whereas ignoring them can prevent efficient index use; for example, a correlation near +1 in a timestamp column allows faster range scans for recent activity.</li>
             </ul>
             <p>Tiny visual:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">MCV (top-k):    ['New York'(0.18), 'LA'(0.12), 'Chicago'(0.09), ...]
 Histogram:      |---|----|--|-----|---|----|---|--|-----|---|
 Value space →   A                B          C           D
 (equi-height buckets ≈ same row count per bucket)</code></pre>
             </div>
-            </p>
             <p>Why you care:</p>
             <ul>
                 <li>Accurate <strong>cardinality</strong> → right <strong>join order/algorithm</strong>.</li>
@@ -771,50 +685,39 @@ Value space →   A                B          C           D
             </ul>
             <h4 id="updating-statistics-example">Updating Statistics Example</h4>
             <p>In PostgreSQL:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">ANALYZE customers;              -- quick, safe, runs online
 -- or see what it's doing:
 ANALYZE VERBOSE customers;</code></pre>
             </div>
-            </p>
             <p>You can raise detail for skewed columns:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">ALTER TABLE customers ALTER COLUMN city SET STATISTICS 1000;
 ANALYZE customers (city);</code></pre>
             </div>
-            </p>
             <p>(Per-column settings override <code>default_statistics_target</code>.)</p>
             <p><strong>Auto-analyze</strong> will kick in after changes: roughly <code>autovacuum_analyze_threshold + autovacuum_analyze_scale_factor * reltuples</code>. If tables churn a lot, consider lowering those for just the hot tables.</p>
             <h4 id="verifying-updated-statistics">Verifying Updated Statistics</h4>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT attname, n_distinct, most_common_vals, most_common_freqs
 FROM pg_stats
 WHERE schemaname = 'public'
   AND tablename  = 'customers';</code></pre>
             </div>
-            </p>
             <p>Handy ops views:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT relname, last_analyze, n_live_tup
 FROM pg_stat_all_tables
 WHERE schemaname = 'public' AND relname IN ('customers','orders');</code></pre>
             </div>
-            </p>
             <p>If <code>correlation</code> is very high on an important index key, you can sometimes boost locality with:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">-- Cautious: exclusive lock on table during operation; schedule off-peak
 CLUSTER customers USING idx_customers_city;  -- physically order table by index</code></pre>
             </div>
-            </p>
             <h3 id="practical-examples">Practical Examples</h3>
             <p>Let’s bring it together.</p>
             <p><strong>Optimizing a Slow Query</strong></p>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT o.*
 FROM orders o
@@ -822,9 +725,7 @@ JOIN customers c
   ON o.customer_id = c.customer_id
 WHERE c.city = 'New York';</code></pre>
             </div>
-            </p>
             <p><strong>Initial Execution Plan</strong></p>
-            <p>
             <div>
                 <pre><code class="language-sql">EXPLAIN
 SELECT o.*
@@ -832,9 +733,7 @@ FROM orders o
 JOIN customers c ON o.customer_id = c.customer_id
 WHERE c.city = 'New York';</code></pre>
             </div>
-            </p>
             <p>Example output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Nested Loop  (cost=0.00..5000.00 rows=100 width=...)
   -&gt; Seq Scan on customers c  (cost=0.00..1000.00 rows=50 width=...)
@@ -842,7 +741,6 @@ WHERE c.city = 'New York';</code></pre>
   -&gt; Seq Scan on orders o     (cost=0.00..80.00 rows=1 width=...)
         Filter: (o.customer_id = c.customer_id)</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Two <strong>Seq Scans</strong> = suspicious on big tables.</li>
                 <li>The planner thinks only ~50 NYC customers exist (maybe stats are stale).</li>
@@ -850,7 +748,6 @@ WHERE c.city = 'New York';</code></pre>
             <h3 id="step-by-step-fix">Step-by-step Fix</h3>
             <p>I. <strong>Add/confirm the right indexes</strong></p>
             <p>Think of this as laying down fast lanes. We add one index to jump straight to “customers in this city” and grab their IDs, and another to find all their orders without wandering the whole table. Do it so the database stops scanning everything; expect quick, targeted lookups instead of sloggy full scans.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">-- Filter &amp; join key on customers
 CREATE INDEX IF NOT EXISTS idx_customers_city_id
@@ -860,28 +757,22 @@ CREATE INDEX IF NOT EXISTS idx_customers_city_id
 CREATE INDEX IF NOT EXISTS idx_orders_customer_id
   ON orders(customer_id);</code></pre>
             </div>
-            </p>
             <p>II. <strong>Update stats (and make them richer on skewed columns)</strong></p>
             <p>This is giving the planner fresh glasses. We bump the stats target for <code>city</code> (because some cities are way more common) and re-run <code>ANALYZE</code>. Do it so the optimizer guesses row counts realistically; expect better join choices and fewer “why did it do that?” plans.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">ALTER TABLE customers ALTER COLUMN city SET STATISTICS 1000;
 ANALYZE customers;        -- refresh customers stats
 ANALYZE orders;           -- refresh orders stats too</code></pre>
             </div>
-            </p>
             <p>III. <strong>(Optional) Extended statistics</strong> for multi-column estimates (PG 10+)</p>
             <p>Now we clue the planner in on how columns relate. By telling it about distinctness across <code>(city, customer_id)</code>, it stops making naive assumptions. Do it if your data has relationships across columns; expect smarter estimates and, in turn, smarter plans.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">-- Helps the planner understand distinctness across columns
 CREATE STATISTICS stat_c_city_id (ndistinct) ON city, customer_id FROM customers;
 ANALYZE customers;</code></pre>
             </div>
-            </p>
             <p>IV. <strong>Shape the query so the plan can win</strong></p>
             <p>Same result, clearer intent. A plain join is fine, but <code>EXISTS</code> often nudges the planner into a lean “just check if there’s a matching customer” mindset. Do it to avoid generating extra rows or over-complicating the join; expect simpler, index-friendly execution.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">-- Equivalent, often better estimates:
 SELECT o.*
@@ -893,10 +784,8 @@ WHERE EXISTS (
     AND c.city = 'New York'
 );</code></pre>
             </div>
-            </p>
             <p>V. <strong>Re-check the plan</strong></p>
             <p>Quick sanity check. We run <code>EXPLAIN</code> to make sure our indexes and stats actually changed the strategy. Do it to confirm we’re not guessing; expect to see index scans and either a tidy nested loop (when NYC is small) or a hash/bitmap plan (when NYC is big).</p>
-            <p>
             <div>
                 <pre><code class="language-sql">EXPLAIN
 SELECT o.*
@@ -904,9 +793,7 @@ FROM orders o
 JOIN customers c ON o.customer_id = c.customer_id
 WHERE c.city = 'New York';</code></pre>
             </div>
-            </p>
             <p>Typical improved plan A (seek + nested loop):</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Nested Loop
   -&gt; Index Only Scan using idx_customers_city_id on customers c
@@ -914,9 +801,7 @@ WHERE c.city = 'New York';</code></pre>
   -&gt; Index Scan using idx_orders_customer_id on orders o
         Index Cond: (o.customer_id = c.customer_id) -- fast per customer</code></pre>
             </div>
-            </p>
             <p>Typical improved plan B (bitmap/hash, if NYC is “big”):</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Hash Join
   Hash Cond: (o.customer_id = c.customer_id)
@@ -925,7 +810,6 @@ WHERE c.city = 'New York';</code></pre>
        Recheck Cond: (city = 'New York')
        -&gt; Bitmap Index Scan on idx_customers_city_id</code></pre>
             </div>
-            </p>
         </article-section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>

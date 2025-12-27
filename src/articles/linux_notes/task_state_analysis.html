@@ -66,16 +66,14 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: April 05, 2021</i></p>
+            <p style="text-align: right;"><i>Last modified: December 27, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="task-state-analysis-for-monitoring-application-processes">Task-State Analysis for Monitoring Application Processes</h2>
             <p>Monitoring the performance of applications often involves keeping an eye on resource usage like CPU load, memory consumption, and disk I/O. However, to truly understand what's happening inside an application, especially one that's multi-threaded, it's helpful to look at the states of its threads over time. Task-State Analysis offers a way to do this by observing how threads transition between different states, such as running, sleeping, or waiting for I/O. This approach provides deeper insights into the application's behavior without the need for intrusive monitoring tools.</p>
             <h3 id="visualizing-threads-within-a-process">Visualizing Threads Within a Process</h3>
             <p>To grasp how threads operate within a process, imagine a process as a container that holds multiple threads, each performing its own tasks but sharing the same resources.</p>
-            <p>
             <div>
-                <pre><code class="language-shell">+-------------------------------------+
-|             Process A               |
+                <pre><code class="language-+-------------------------------------+">|             Process A               |
 | (Runs in its own memory space)      |
 |                                     |
 |   +-----------+    +-----------+    |
@@ -87,7 +85,6 @@
 |                                     |
 +-------------------------------------+</code></pre>
             </div>
-            </p>
             <p>In this diagram, <strong>Process A</strong> contains <strong>Thread 1</strong> and <strong>Thread 2</strong>, both of which can access shared memory within the process. This setup allows threads to communicate efficiently but also requires careful synchronization to prevent conflicts.</p>
             <h3 id="understanding-thread-states">Understanding Thread States</h3>
             <p>Every thread (also known as a task) has a state that indicates what it's currently doing. These states help the operating system manage resources and schedule tasks effectively. The common thread states include:</p>
@@ -128,27 +125,20 @@
             <h3 id="sampling-thread-states-using-proc">Sampling Thread States Using <code>/proc</code></h3>
             <p>One non-intrusive way to monitor thread states is by sampling data from the <code>/proc</code> file system. This virtual file system provides detailed information about running processes and threads.</p>
             <p>For example, to check the state of a specific process, you can look at <code>/proc/[PID]/stat</code>, where <code>[PID]</code> is the process ID. This file contains various statistics about the process, including its current state.</p>
-            <p>
             <div>
                 <pre><code class="language-bash">cat /proc/1234/stat</code></pre>
             </div>
-            </p>
             <p>The output might look like this (fields are space-separated):</p>
-            <p>
             <div>
                 <pre><code class="language-shell">1234 (myprocess) S 1000 1234 1234 0 -1 4194560 500 0 0 0 0 0 0 0 20 0 1 0 100 0 0 18446744073709551615 4194304 4198400 140736897651776 0 0 0 0 0 0 0 0 0 17 0 0 0 0 0 0</code></pre>
             </div>
-            </p>
             <p>Here, the third field (<code>S</code>) represents the state of the process, which in this case is <code>S</code> for sleeping. By periodically reading this file, you can track how the state changes over time.</p>
             <h3 id="monitoring-thread-states-with-commands">Monitoring Thread States with Commands</h3>
             <p>To get a snapshot of all running processes and their states, the <code>ps</code> command is quite handy. For instance:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">ps -eo pid,tid,stat,comm</code></pre>
             </div>
-            </p>
             <p>This command lists the process ID (<code>pid</code>), thread ID (<code>tid</code>), state (<code>stat</code>), and command name (<code>comm</code>) for all processes and their threads. An example output might be:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">PID   TID STAT COMMAND
     1     1 Ss   systemd
@@ -157,7 +147,6 @@
  1234  1234 S    myprocess
  1234  1235 R    myprocess</code></pre>
             </div>
-            </p>
             <p>In this output:</p>
             <ul>
                 <li>Process <code>1234</code> has two threads: one in a sleeping state (<code>S</code>) and one running (<code>R</code>).</li>
@@ -167,55 +156,43 @@
             <h3 id="interpreting-the-output">Interpreting the Output</h3>
             <p>Suppose you notice that many threads are in the <code>D</code> state (uninterruptible sleep). This could indicate that they are waiting for I/O operations to complete, which might be a sign of disk bottlenecks.</p>
             <p>To dig deeper, you could use:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">ps -eo state,pid,cmd | grep "^D"</code></pre>
             </div>
-            </p>
             <p>This command filters the list to show only threads in the uninterruptible sleep state. The output could be:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">D  5678  [kjournald]
 D  1234  myprocess</code></pre>
             </div>
-            </p>
             <p>Here, <code>myprocess</code> with PID <code>1234</code> is in an uninterruptible sleep state, suggesting it's waiting for an I/O operation.</p>
             <h3 id="using-proc-to-sample-threads-over-time">Using <code>/proc</code> to Sample Threads Over Time</h3>
             <p>By scripting the sampling of thread states, you can collect data over an extended period. For example, a simple Bash script could sample the states every second:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">while true; do
     ps -eo state | sort | uniq -c
     sleep 1
 done</code></pre>
             </div>
-            </p>
             <p>This script counts the number of threads in each state every second. Sample output might be:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">50 R
  200 S
    5 D</code></pre>
             </div>
-            </p>
             <p>Interpreting this, you might see that most threads are sleeping (<code>S</code>), some are running (<code>R</code>), and a few are in uninterruptible sleep (<code>D</code>).</p>
             <h3 id="tools-for-task-state-analysis">Tools for Task-State Analysis</h3>
             <p>While command-line tools provide valuable insights, specialized tools can offer more detailed analysis.</p>
             <h4 id="htop"><code>htop</code></h4>
             <p>An interactive process viewer that shows a real-time overview of system processes.</p>
-            <p>
             <div>
                 <pre><code class="language-bash">htop</code></pre>
             </div>
-            </p>
             <p>In <code>htop</code>, you can see CPU usage per core, memory usage, and a list of processes with their CPU and memory consumption. You can also sort processes by various criteria.</p>
             <h4 id="perf"><code>perf</code></h4>
             <p>A powerful profiling tool that can collect performance data.</p>
-            <p>
             <div>
                 <pre><code class="language-bash">perf top</code></pre>
             </div>
-            </p>
             <p>This command shows a live view of the functions consuming the most CPU time, helping identify hotspots in your application.</p>
             <h3 id="application-in-database-systems">Application in Database Systems</h3>
             <p>Database systems are often multi-threaded and I/O-intensive, making them prime candidates for Task-State Analysis. For example, if a database server experiences slow query performance, monitoring thread states can reveal whether threads are waiting on I/O, locks, or CPU resources.</p>
@@ -239,13 +216,10 @@ done</code></pre>
             <h3 id="example-scenario-diagnosing-a-performance-issue">Example Scenario: Diagnosing a Performance Issue</h3>
             <p>Imagine an application that has become sluggish. Users report slow response times, and initial monitoring shows that CPU usage is low. Using Task-State Analysis, you sample the thread states and find that a significant number of threads are in the <code>D</code> state.</p>
             <p>By examining these threads, you discover they are waiting for disk I/O. Checking the disk performance with <code>iostat</code>, you notice high I/O wait times.</p>
-            <p>
             <div>
                 <pre><code class="language-bash">iostat -x 1 3</code></pre>
             </div>
-            </p>
             <p>Sample output:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">avg-cpu:  %user   %nice %system %iowait  %steal   %idle
            5.00    0.00    2.00   90.00    0.00    3.00
@@ -253,7 +227,6 @@ done</code></pre>
 Device:         rrqm/s wrqm/s   r/s   w/s  rMB/s  wMB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
 sda               0.00   0.00 100.00 50.00    5.00   2.50    70.00     5.00   50.00   30.00   70.00   5.00  75.00</code></pre>
             </div>
-            </p>
             <p>The high <code>%iowait</code> and <code>await</code> times indicate disk latency. In this case, upgrading the storage system or optimizing disk usage could help the performance issues.</p>
             <h3 id="understanding-the-caveats-of-task-state-analysis">Understanding the Caveats of Task-State Analysis</h3>
             <p>While Task-State Analysis provides valuable insights, it's important to consider:</p>

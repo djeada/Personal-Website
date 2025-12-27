@@ -66,7 +66,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: May 06, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: December 27, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="partitioning-vs-sharding">Partitioning vs. Sharding</h2>
             <p>When a database begins to sag under the weight of its own success, engineers reach for two closely-related remedies: <em>partitioning</em> and <em>sharding</em>. Both techniques carve a huge dataset into smaller slices, yet they do so at very different depths of the stack. By the time you finish these notes you should feel comfortable answering why, when, and how each approach shines, along with the trade-offs hiding beneath the surface.</p>
@@ -80,7 +80,6 @@
             </ol>
             <h3 id="partitioning">Partitioning</h3>
             <p>Before diving into syntax or strategies, picture a single table stretching far beyond your screen. By splitting that table into <em>partitions</em> the database can prune irrelevant chunks during a query and treat maintenance tasks like backups or index rebuilds piece-by-piece rather than all-at-once. Think of it as shelving volumes in a giant library rather than piling every book on one table.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">┌─────────────────────────────┐
 │        big_sales            │
@@ -90,7 +89,6 @@
 │  2025-01-…  ▸ Partition p25 │
 └─────────────────────────────┘</code></pre>
             </div>
-            </p>
             <h4 id="how-the-database-decides-where-a-row-lands">How the Database Decides Where a Row Lands</h4>
             <p>Although every engine offers its own bells and whistles, five patterns dominate:</p>
             <ul>
@@ -110,7 +108,6 @@
             <h4 id="hands-on-postgresql-range-partitioning">Hands-On: PostgreSQL Range Partitioning</h4>
             <p>Let's take a look at some examples:</p>
             <p><strong>Create the parent (partitioned) table</strong></p>
-            <p>
             <div>
                 <pre><code class="language-sql">CREATE TABLE orders (
   id         bigint,
@@ -118,56 +115,43 @@
   amount     numeric
 ) PARTITION BY RANGE (order_date);</code></pre>
             </div>
-            </p>
             <p><strong>psql output:</strong></p>
-            <p>
             <div>
                 <pre><code class="language-shell">CREATE TABLE</code></pre>
             </div>
-            </p>
             <ul>
                 <li>By specifying <code>PARTITION BY RANGE (order_date)</code>, you tell PostgreSQL that <code>orders</code> won’t store rows itself but will route them to child tables based on the <code>order_date</code> value.</li>
                 <li>The parent table holds no data; it acts like an index on date ranges. Any insert into <code>orders</code> is automatically redirected to whichever child partition matches.</li>
                 <li>Useful when your data has a natural order (e.g., time series), so you can group rows into contiguous non‐overlapping spans—improving manageability and performance.</li>
             </ul>
             <p><strong>Define a specific partition for the year 2025</strong></p>
-            <p>
             <div>
                 <pre><code class="language-sql">CREATE TABLE orders_2025
   PARTITION OF orders
   FOR VALUES FROM ('2025-01-01') TO ('2026-01-01');</code></pre>
             </div>
-            </p>
             <p><strong>psql output:</strong></p>
-            <p>
             <div>
                 <pre><code class="language-shell">CREATE TABLE</code></pre>
             </div>
-            </p>
             <ul>
                 <li><code>orders_2025</code> is now a real table that will physically contain all rows whose <code>order_date</code> ≥ 2025-01-01 and &lt; 2026-01-01.</li>
                 <li>The <code>FROM</code> value is inclusive, the <code>TO</code> value is exclusive. This ensures partitions don’t overlap and every date is covered exactly once (assuming you add adjacent ranges).</li>
                 <li>From here on, any insertion like</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-sql">INSERT INTO orders (id, order_date, amount)
 VALUES (123, '2025-05-05', 49.95);</code></pre>
             </div>
-            </p>
             <p>will go straight into <code>orders_2025</code> without touching other partitions.</p>
             <p><strong>Verify partition pruning with an <code>EXPLAIN</code></strong></p>
-            <p>
             <div>
                 <pre><code class="language-sql">EXPLAIN SELECT * FROM orders WHERE order_date = '2025-05-05';</code></pre>
             </div>
-            </p>
             <p><strong>psql output:</strong></p>
-            <p>
             <div>
                 <pre><code class="language-shell">-&gt;  Seq Scan on orders_2025  (cost=0.00..35.50 rows=5 width=...)</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Instead of scanning every partition in turn, PostgreSQL’s planner “prunes” away all that don’t match the <code>WHERE</code> clause at plan time.</li>
                 <li>You see only <code>orders_2025</code> in the plan, proving that lookups on <code>orders</code> automatically get optimized to target just the relevant partition.</li>
@@ -201,7 +185,6 @@ VALUES (123, '2025-05-05', 49.95);</code></pre>
             <p>Query latency drops because only relevant partitions are scanned. Maintenance windows shrink: vacuuming a quiet 2022 table can happen while 2025 receives writes. Resource allocation becomes flexible; you might place cold partitions on slower disks. Even fault isolation improves—a corrupt partition rarely topples the rest of the schema.</p>
             <h3 id="sharding">Sharding</h3>
             <p>While partitioning rearranges furniture within one house, sharding is more like buying extra houses in new neighborhoods. Each <em>shard</em> is a full database instance containing a subset of the rows, and together they form a loose federation under the application layer.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">┌───────────────┐
      Client  ►  │ Router / API  │
@@ -213,7 +196,6 @@ VALUES (123, '2025-05-05', 49.95);</code></pre>
    │ users 1-N/2 │               │ users N/2+1 │
    └─────────────┘               └─────────────┘</code></pre>
             </div>
-            </p>
             <h4 id="motivations-that-push-teams-toward-shards">Motivations That Push Teams Toward Shards</h4>
             <p>A single server inevitably runs out of CPU, memory, or I/O bandwidth. By sprinkling data across multiple machines the system gains horizontal scalability. Query throughput rises because shards answer requests in parallel. Resilience improves as well; if shard B disappears during a nightly redeploy shard A soldiers on, keeping part of the application available.</p>
             <h4 id="popular-strategies-for-splitting-the-data">Popular Strategies for Splitting the Data</h4>
@@ -225,34 +207,26 @@ VALUES (123, '2025-05-05', 49.95);</code></pre>
             <h4 id="hands-on-mongodb-hash-sharding">Hands-On: MongoDB Hash Sharding</h4>
             <p>Below you’ll see each shell command, the trimmed MongoDB response, and an expanded explanation—still in a single‐level list for clarity.</p>
             <p><strong>Enable sharding on the target database</strong></p>
-            <p>
             <div>
                 <pre><code class="language-js">sh.enableSharding("ecommerce");</code></pre>
             </div>
-            </p>
             <p><strong>Shell output:</strong></p>
-            <p>
             <div>
                 <pre><code class="language-json">{ "ok" : 1 }</code></pre>
             </div>
-            </p>
             <ul>
                 <li>This tells the cluster’s config servers that the <code>ecommerce</code> database is now eligible to have its collections distributed across shards.</li>
                 <li>Existing collections remain untouched until you shard them explicitly.</li>
                 <li>You must enable sharding on a database before you can shard any of its collections.</li>
             </ul>
             <p><strong>Shard a specific collection using a hashed key</strong></p>
-            <p>
             <div>
                 <pre><code class="language-js">sh.shardCollection("ecommerce.orders", { "user_id" : "hashed" });</code></pre>
             </div>
-            </p>
             <p><strong>Shell output:</strong></p>
-            <p>
             <div>
                 <pre><code class="language-json">{ "collectionsharded" : "ecommerce.orders", "ok" : 1 }</code></pre>
             </div>
-            </p>
             <ul>
                 <li>By choosing <code>{ user_id: "hashed" }</code>, you tell MongoDB to compute a hash of each document’s <code>user_id</code> field and use that to assign it to a chunk.</li>
                 <li>The system splits the key’s hash space into multiple chunks (default 2 per shard initially) to start distributing data.</li>
@@ -263,18 +237,14 @@ VALUES (123, '2025-05-05', 49.95);</code></pre>
                     <p><strong>Inspect how data is distributed across shards</strong></p>
                 </li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-js">db.orders.getShardDistribution();</code></pre>
             </div>
-            </p>
             <p><strong>Shell output:</strong></p>
-            <p>
             <div>
                 <pre><code class="language-shell">Shard shard0000: 45% data
 Shard shard0001: 55% data</code></pre>
             </div>
-            </p>
             <ul>
                 <li>This utility reports the approximate percentage of documents or data size on each shard for the <code>orders</code> collection.</li>
                 <li>A near‐even split (45% vs 55%) confirms the hash function is effectively spreading user records across shards.</li>

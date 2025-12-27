@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Searching</title>
-    <meta content="Searching refers to the process of finding the location of a specific element within a collection of data, such as an array, list, tree, or graph." name="description" />
+    <meta content="Searching refers to the process of finding the location of a specific element within a collection of data." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -66,10 +66,139 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: September 13, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: December 27, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="searching">Searching</h2>
-            <p>Searching refers to the process of finding the location of a specific element within a collection of data, such as an array, list, tree, or graph. It underpins many applications, from databases and information retrieval to routing and artificial intelligence. Depending on the organization of the data, different search techniques are used—such as linear search for unsorted data, binary search for sorted data, and more advanced approaches like hash-based lookup or tree traversals for hierarchical structures. Efficient searching is important because it directly impacts the performance and scalability of software systems.</p>
+            <p>Searching refers to the process of finding the location of a specific element within a collection of data. It underpins many applications, from databases and information retrieval to routing and artificial intelligence. This guide focuses on practical search algorithms for <strong>arrays</strong>, <strong>hash tables</strong>, <strong>probabilistic membership filters</strong>, and <strong>string matching</strong>. Efficient searching is important because it directly impacts the performance and scalability of software systems.</p>
+            <h3 id="which-search-should-i-use-">Which Search Should I Use?</h3>
+            <p>Choosing the right search algorithm depends on your data structure, constraints, and use case. Use this decision guide to quickly identify the best approach:</p>
+            <h4 id="for-arrays-and-lists">For Arrays and Lists</h4>
+            <p><strong>Unsorted data + need exact match?</strong>
+                * <strong>Linear Search</strong> — Simple scan left-to-right; $O(n)$ time, works on any list
+                * <strong>Sentinel Linear Search</strong> — Slight optimization removing bounds checks; still $O(n)$</p>
+            <p><strong>Sorted array + random access?</strong>
+                * <strong>Binary Search</strong> (default choice) — Repeatedly halve the search space; $O(\log n)$ time
+                * <em>When target likely near start or unknown bounds?</em> → <strong>Exponential Search</strong> — Double index until range found, then binary search
+                * <em>Values uniformly distributed numeric?</em> → <strong>Interpolation Search</strong> — Estimate position based on value; expected $O(\log \log n)$ but can degrade to $O(n)$
+                * <em>Want blocky scanning behavior?</em> → <strong>Jump Search</strong> — Jump by $\sqrt{n}$ blocks, then linear scan; $O(\sqrt{n})$ time; better cache locality than binary in some cases</p>
+            <p><strong>Sorted array + finding first/last occurrence?</strong>
+                * <strong>Binary Search variant</strong> — Adjust binary search to continue after finding match</p>
+            <h4 id="for-key-based-lookup-and-membership">For Key-Based Lookup and Membership</h4>
+            <p><strong>Key → value lookup or set membership?</strong>
+                * <strong>Hash Tables</strong> — Expected $O(1)$ lookup with good hash function and load factor
+                * <em>Collision resolution:</em> Choose based on your needs:
+                * <strong>Separate Chaining</strong> — Lists/arrays per bucket; easiest deletions; steady performance at α ≈ 1
+                * <strong>Linear Probing</strong> — Simple and cache-friendly; watch for primary clustering; keep α &lt; 0.7
+                * <strong>Quadratic Probing</strong> — Reduces primary clustering; use prime table sizes
+                * <strong>Double Hashing</strong> — Best probe distribution; minimizes clustering; slightly more complex
+                * <strong>Cuckoo Hashing</strong> — Guarantees $O(1)$ worst-case lookup (checks 2 positions); insertions may trigger rehashing</p>
+            <h4 id="for-approximate-membership-space-efficient-">For Approximate Membership (Space-Efficient)</h4>
+            <p><strong>Need to test "is element in set?" with space priority?</strong>
+                * <strong>Bloom Filter</strong> — Probabilistic membership; answers "maybe present" or "definitely not"; no false negatives; no deletions
+                * <strong>Counting Bloom Filter</strong> — Like Bloom but supports deletions via counters; uses more space
+                * <strong>Cuckoo Filter</strong> — Space-efficient with deletions; high load factors (90%+); better performance than Bloom in many cases</p>
+            <h4 id="for-substring-pattern-search">For Substring/Pattern Search</h4>
+            <p><strong>Need to find pattern in text?</strong>
+                * <strong>Naive String Search</strong> — Simple sliding window; $O(n \cdot m)$ worst case; fine for short patterns
+                * <strong>Knuth–Morris–Pratt (KMP)</strong> — Guaranteed $O(n + m)$; uses failure function to avoid rechecks; best all-rounder
+                * <strong>Boyer–Moore (BM)</strong> — Often fastest in practice; scans right-to-left with smart skips; excellent for long patterns and large alphabets
+                * <strong>Rabin–Karp (RK)</strong> — Rolling hash comparison; $O(n + m)$ expected; great for multiple patterns or streaming data</p>
+            <h4 id="quick-comparison-table">Quick Comparison Table</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Use Case</td>
+                    <td>Data Type</td>
+                    <td>Algorithm</td>
+                    <td>Time Complexity</td>
+                    <td>Notes</td>
+                </tr>
+                <tr>
+                    <td>Unsorted lookup</td>
+                    <td>Array</td>
+                    <td>Linear Search</td>
+                    <td>$O(n)$</td>
+                    <td>Simple, works anywhere</td>
+                </tr>
+                <tr>
+                    <td>Sorted lookup</td>
+                    <td>Array</td>
+                    <td>Binary Search</td>
+                    <td>$O(\log n)$</td>
+                    <td>Default for sorted arrays</td>
+                </tr>
+                <tr>
+                    <td>Target near start</td>
+                    <td>Sorted Array</td>
+                    <td>Exponential Search</td>
+                    <td>$O(\log p)$</td>
+                    <td>p = position found</td>
+                </tr>
+                <tr>
+                    <td>Uniform distribution</td>
+                    <td>Sorted Array</td>
+                    <td>Interpolation Search</td>
+                    <td>$O(\log \log n)$ avg</td>
+                    <td>Can degrade to $O(n)$</td>
+                </tr>
+                <tr>
+                    <td>Block-based scan</td>
+                    <td>Sorted Array</td>
+                    <td>Jump Search</td>
+                    <td>$O(\sqrt{n})$</td>
+                    <td>Better cache locality</td>
+                </tr>
+                <tr>
+                    <td>Key-value pairs</td>
+                    <td>Hash Table</td>
+                    <td>Hash + Chaining/Probing</td>
+                    <td>$O(1)$ expected</td>
+                    <td>Depends on load factor</td>
+                </tr>
+                <tr>
+                    <td>Guaranteed O(1) lookup</td>
+                    <td>Cuckoo Hash</td>
+                    <td>Cuckoo Hashing</td>
+                    <td>$O(1)$ worst</td>
+                    <td>2 hash positions</td>
+                </tr>
+                <tr>
+                    <td>Set membership (space-first)</td>
+                    <td>Bit Array</td>
+                    <td>Bloom Filter</td>
+                    <td>$O(k)$</td>
+                    <td>k = hash functions; FPR tunable</td>
+                </tr>
+                <tr>
+                    <td>Set with deletions</td>
+                    <td>Counters</td>
+                    <td>Counting Bloom / Cuckoo Filter</td>
+                    <td>$O(k)$</td>
+                    <td>Supports removal</td>
+                </tr>
+                <tr>
+                    <td>Substring search</td>
+                    <td>String</td>
+                    <td>KMP</td>
+                    <td>$O(n + m)$</td>
+                    <td>Guaranteed linear time</td>
+                </tr>
+                <tr>
+                    <td>Substring (fast average)</td>
+                    <td>String</td>
+                    <td>Boyer–Moore</td>
+                    <td>$O(n/m)$ avg</td>
+                    <td>Best for long patterns</td>
+                </tr>
+                <tr>
+                    <td>Multiple patterns</td>
+                    <td>String</td>
+                    <td>Rabin–Karp</td>
+                    <td>$O(n + m)$</td>
+                    <td>Rolling hash enables batching</td>
+                </tr>
+            </table>
+            </p>
             <h3 id="linear-sequential-search">Linear &amp; Sequential Search</h3>
             <h4 id="linear-search">Linear Search</h4>
             <p>Scan the list from left to right, comparing the target with each element until you either find a match (return its index) or finish the list (report “not found”).</p>
@@ -98,15 +227,12 @@
             <p><strong>How Linear Search Works</strong></p>
             <p>We start at index <code>0</code>, compare the value with the target, and keep moving right until we either <strong>find it</strong> or reach the <strong>end</strong>.</p>
             <p>Target <strong>5</strong> in <code>[7, 3, 5, 2, 9]</code></p>
-            <p>
             <div>
                 <pre><code class="language-shell">Indexes:   0    1    2    3    4
 List:     [7]  [3]  [5]  [2]  [9]
 Target: 5</code></pre>
             </div>
-            </p>
             <p><em>Step 1:</em> pointer at index 0</p>
-            <p>
             <div>
                 <pre><code class="language-shell">|
 v
@@ -114,9 +240,7 @@ v
 
 → compare 7 vs 5  → no</code></pre>
             </div>
-            </p>
             <p><em>Step 2:</em> pointer moves to index 1</p>
-            <p>
             <div>
                 <pre><code class="language-shell">|
     v
@@ -124,9 +248,7 @@ v
 
 → compare 3 vs 5  → no</code></pre>
             </div>
-            </p>
             <p><em>Step 3:</em> pointer moves to index 2</p>
-            <p>
             <div>
                 <pre><code class="language-shell">|
         v
@@ -134,18 +256,14 @@ v
 
 → compare 5 vs 5  → YES ✅ → return index 2</code></pre>
             </div>
-            </p>
             <p><strong>Worst Case (Not Found)</strong></p>
             <p>Target <strong>9</strong> in <code>[1, 2, 3]</code></p>
-            <p>
             <div>
                 <pre><code class="language-shell">Indexes:   0    1    2
 List:     [1]  [2]  [3]
 Target: 9</code></pre>
             </div>
-            </p>
             <p>Checks:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">→  1 ≠ 9
 →  2 ≠ 9
@@ -153,7 +271,6 @@ Target: 9</code></pre>
 →  end
 → not found ❌</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Works on any list; no sorting or structure required.</li>
                 <li>Returns the first index containing the target; if absent, reports “not found.”</li>
@@ -183,22 +300,17 @@ Target: 9</code></pre>
             <p><strong>How it works</strong></p>
             <p>Put the target at one extra slot at the end so the loop is guaranteed to stop on a match; afterward, check whether the match was inside the original range.</p>
             <p>Target <strong>11</strong> not in the list</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Original list (n=5):
 [ 4 ][ 9 ][ 1 ][ 7 ][ 6 ]
 Target: 11</code></pre>
             </div>
-            </p>
             <p>Add sentinel (extra slot):</p>
-            <p>
             <div>
                 <pre><code class="language-shell">[ 4 ][ 9 ][ 1 ][ 7 ][ 6 ][ 11 ]
   0    1    2    3    4     5  ← sentinel</code></pre>
             </div>
-            </p>
             <p>Scan step by step:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">4 ≠ 11   → pointer at 0
 9 ≠ 11   → pointer at 1
@@ -207,31 +319,24 @@ Target: 11</code></pre>
 6 ≠ 11   → pointer at 4
 11 = 11  → pointer at 5 (sentinel)</code></pre>
             </div>
-            </p>
             <p>Therefore, <strong>not found</strong> in original list.</p>
             <p>Target <strong>6</strong> inside the list</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Original list (n=4):
 [ 12 ][ 8 ][ 6 ][ 15 ]
 Target: 6</code></pre>
             </div>
-            </p>
             <p>Add sentinel:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">[ 12 ][ 8 ][ 6 ][ 15 ][ 6 ]
   0     1    2    3     4</code></pre>
             </div>
-            </p>
             <p>Scan:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">12 ≠ 6   → index 0
  8 ≠ 6   → index 1
  6 = 6   → index 2 ✅</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Removes the per-iteration “have we reached the end?” check; the sentinel guarantees termination.</li>
                 <li>Same $O(n)$ time in big-O terms, but slightly fewer comparisons in tight loops.</li>
@@ -269,14 +374,11 @@ Target: 6</code></pre>
             <p><strong>How it works</strong></p>
             <p>We repeatedly check the <strong>middle</strong> element, and then discard half the list based on comparison.</p>
             <p>Find <strong>16</strong> in:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">A = [  2 ][  5 ][  8 ][ 12 ][ 16 ][ 23 ][ 38 ]
 i =    0     1     2     3     4     5     6</code></pre>
             </div>
-            </p>
             <p><em>Step 1</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">low = 0, high = 6
 mid = (0+6)//2 = 3
@@ -288,9 +390,7 @@ i =    0     1     2     3     4     5     6
         0                 3                 6
 Active range: indices 0..6</code></pre>
             </div>
-            </p>
             <p><em>Step 2</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">low = 4, high = 6
 mid = (4+6)//2 = 5
@@ -302,9 +402,7 @@ i =    0     1     2     3     4     5     6
                               4       5       6
 Active range: indices 4..6</code></pre>
             </div>
-            </p>
             <p><em>Step 3</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">low = 4, high = 4
 mid = 4
@@ -316,7 +414,6 @@ i =    0     1     2     3     4     5     6
                               4
 Active range: indices 4..4</code></pre>
             </div>
-            </p>
             <p>FOUND at index 4</p>
             <ul>
                 <li>Requires a sorted array (assume ascending here).</li>
@@ -349,15 +446,12 @@ Active range: indices 4..4</code></pre>
                 <li>Else if <code>target &gt; A[m2]</code> → search $[m2+1 .. high]$</li>
                 <li>Else → search $[m1+1 .. m2-1]$</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-shell">A = [  1 ][  4 ][  7 ][  9 ][ 12 ][ 15 ]
 i =    0     1     2     3     4     5
 Target: 9</code></pre>
             </div>
-            </p>
             <p><em>Step 1</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">low = 0, high = 5
 
@@ -372,7 +466,6 @@ i =    0     1     2     3     4     5
         ↑L    ↑m1        ↑m2           ↑H
         0     1          3             5</code></pre>
             </div>
-            </p>
             <p>FOUND at index 3</p>
             <ul>
                 <li>Also assumes a sorted array.</li>
@@ -398,7 +491,7 @@ i =    0     1     2     3     4     5
                 \text{Output: } \text{not found}
                 $$</p>
             <p><strong>How it works</strong></p>
-            <p>Perfect — that’s a <strong>jump search trace</strong>. Let me reformat and polish it so the steps are crystal clear and the “jump + linear scan” pattern pops visually:</p>
+            <p>Here’s a clear trace of <strong>jump search</strong> in action:</p>
             <p>We’re applying <strong>jump search</strong> to find $25$ in</p>
             <p>$$
                 A = [1, 4, 9, 16, 25, 36, 49]
@@ -411,30 +504,26 @@ i =    0     1     2     3     4     5
                 <li>probe = 4 → $A[4] = 25 \geq 25$ → stop</li>
             </ul>
             <p>So target is in block $(2..4]$</p>
-            <p>
             <div>
                 <pre><code class="language-shell">[ 1 ][ 4 ] | [ 9 ][16 ] | [25 ][36 ] | [49 ]
     ^            ^            ^            ^
    probe=0      probe=2      probe=4      probe=6</code></pre>
             </div>
-            </p>
             <p>Linear Scan in block (indexes 3..4)</p>
             <ul>
                 <li>i = 3 → $A[3] = 16 &lt; 25$</li>
                 <li>i = 4 → $A[4] = 25 = 25$ ✅ FOUND</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-shell">Block [16 ][25 ]
        ^    ^
       i=3  i=4 (found!)</code></pre>
             </div>
-            </p>
             <p>The element $25$ is found at <strong>index 4</strong>.</p>
             <ul>
                 <li>Works on sorted arrays; pick jump ≈ √n for good balance.</li>
                 <li>Time: $O(√n)$ comparisons on average; Space: $O(1)$.</li>
-                <li>Useful when random access is cheap but full binary search isn’t desirable (e.g., limited CPU branch prediction, or when scanning in blocks is cache-friendly).</li>
+                <li>Useful when binary search isn’t desirable: binary search has poor locality (random jumps); jump search scans a block sequentially, which is more cache-friendly and has better branch prediction.</li>
                 <li>Degrades gracefully to “scan block then stop.”</li>
             </ul>
             <h4 id="exponential-search">Exponential Search</h4>
@@ -455,44 +544,35 @@ i =    0     1     2     3     4     5
                 \text{Output: } \text{not found}
                 $$</p>
             <p><strong>How it works</strong></p>
-            <p>
             <div>
                 <pre><code class="language-shell">A = [  2 ][  3 ][  5 ][  7 ][ 11 ][ 13 ][ 17 ][ 19 ][ 23 ]
 i =    0     1     2     3    4     5     6     7     8
 Target = 19</code></pre>
             </div>
-            </p>
             <p>Find range by exponential jumps</p>
             <p><em>Start</em> at <code>i=1</code>, double each step until <code>A[i] ≥ target</code> (or end).</p>
             <p><em>Jump 1:</em> <code>i=1</code></p>
-            <p>
             <div>
                 <pre><code class="language-shell">A[i]=3 ≤ 19  → continue
 A = [  2 ][  3 ][  5 ][  7 ][ 11 ][ 13 ][ 17 ][ 19 ][ 23 ]
 i =    0     1     2     3    4     5     6     7     8
              ↑</code></pre>
             </div>
-            </p>
             <p><em>Jump 2:</em> <code>i=2</code></p>
-            <p>
             <div>
                 <pre><code class="language-shell">A[i]=5 ≤ 19  → continue
 A = [  2 ][  3 ][  5 ][  7 ][ 11 ][ 13 ][ 17 ][ 19 ][ 23 ]
 i =    0     1     2     3    4     5     6     7     8
                    ↑</code></pre>
             </div>
-            </p>
             <p><em>Jump 3:</em> <code>i=4</code></p>
-            <p>
             <div>
                 <pre><code class="language-shell">A[i]=11 ≤ 19 → continue
 A = [  2 ][  3 ][  5 ][  7 ][ 11 ][ 13 ][ 17 ][ 19 ][ 23 ]
 i =    0     1     2     3    4     5     6     7     8
                                ↑</code></pre>
             </div>
-            </p>
             <p><em>Jump 4:</em> <code>i=8</code></p>
-            <p>
             <div>
                 <pre><code class="language-shell">A[i]=23 &gt; 19  → stop
 Range is (previous power of two .. i] = (4 .. 8] → search indices 5..8
@@ -500,17 +580,13 @@ A = [  2 ][  3 ][  5 ][  7 ][ 11 ][ 13 ][ 17 ][ 19 ][ 23 ]
 i =    0     1     2     3    4     5     6     7     8
                                                          ↑</code></pre>
             </div>
-            </p>
             <p><em>Range for binary search:</em> <code>low=5, high=8</code>.</p>
             <p>Binary search on $A[5..8]$</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Subarray: [ 13 ][ 17 ][ 19 ][ 23 ]
 Indices :    5     6     7     8</code></pre>
             </div>
-            </p>
             <p><em>Step 1</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">low=5, high=8 → mid=(5+8)//2=6
 A[6]=17 &lt; 19 → move right → low=7
@@ -519,9 +595,7 @@ i =    0     1     2     3    4     5     6     7     8
                                     ↑L      ↑M             ↑H
                                     5       6              8</code></pre>
             </div>
-            </p>
             <p><em>Step 2</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">low=7, high=8 → mid=(7+8)//2=7
 A[7]=19 == target ✅ → FOUND
@@ -530,7 +604,6 @@ i =    0     1     2     3    4     5     6     7     8
                                            ↑L M H
                                               7</code></pre>
             </div>
-            </p>
             <p>Found at <strong>index 7</strong>.</p>
             <ul>
                 <li>Great when the target is likely to be near the beginning or when the array is <strong>unbounded</strong>/<strong>stream-like</strong> but sorted (you can probe indices safely).</li>
@@ -570,21 +643,16 @@ i =    0     1     2     3    4     5     6     7     8
                 <li>Assumes <code>A</code> is sorted and values are uniform.</li>
             </ul>
             <p>Probe formula:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">pos ≈ low + (high - low) * (target - A[low]) / (A[high] - A[low])</code></pre>
             </div>
-            </p>
-            <p>Let say we have following array and target:</p>
-            <p>
+            <p>Let's say we have the following array and target:</p>
             <div>
                 <pre><code class="language-shell">A = [ 10 ][ 20 ][ 30 ][ 40 ][ 50 ][ 60 ][ 70 ]
 i =    0     1     2     3     4     5     6
 target = 45</code></pre>
             </div>
-            </p>
             <p><em>Step 1 — initial probe</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">low=0 (A[0]=10), high=6 (A[6]=70)
 
@@ -597,16 +665,13 @@ i =    0     1     2     3     4     5     6
       ↑L                                   ↑H
             ↑pos≈3.5 → choose ⌊pos⌋=3 (or ⌈pos⌉=4)</code></pre>
             </div>
-            </p>
             <p>Probe <strong>index 3</strong>: <code>A[3]=40 &lt; 45</code> → set <code>low = 3 + 1 = 4</code></p>
             <p><em>Step 2 — after moving low</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">A = [ 10 ][ 20 ][ 30 ][ 40 ][ 50 ][ 60 ][ 70 ]
 i =    0     1     2     3     4     5     6
                                 ↑L         ↑H</code></pre>
             </div>
-            </p>
             <p>At this point, an <strong>early-stop check</strong> already tells us <code>target (45) &lt; A[low] (50)</code> → cannot exist in <code>A[4..6]</code> → <strong>not found</strong>.</p>
             <ul>
                 <li>Best on <strong>uniformly distributed</strong> sorted data; expected time $O(log log n)$.</li>
@@ -645,19 +710,16 @@ i =    0     1     2     3     4     5     6
                 \text{Output: } \text{not found}
                 $$</p>
             <p><strong>How it works</strong></p>
-            <p>
             <div>
                 <pre><code class="language-shell">+-----+      hash       +-----------------+      search/compare      +--------+
 | key | --------------&gt; | index in array  | ----------------------&gt; | match? |
 +-----+                  +-----------------+                         +--------+</code></pre>
             </div>
-            </p>
             <ul>
                 <li>With chaining, the “collision path” is the <strong>list inside one bucket</strong>.</li>
                 <li>With linear probing, the “collision path” is the <strong>probe sequence</strong> across buckets (3 → 4 → 5 → …).</li>
                 <li>Both keep your original flow: hash → inspect bucket (and collision path) → match?</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-shell">Array (buckets/indexes 0..6):
 
@@ -666,11 +728,9 @@ Idx:   0     1     2     3     4     5     6
       |   |     |     |     |     |     |     |
       +---+-----+-----+-----+-----+-----+-----+</code></pre>
             </div>
-            </p>
             <p><strong>Example mapping with</strong> <code>h(k) = k mod 7</code>, <strong>stored keys</strong> <code>{10, 24, 31}</code> all hash to index <code>3</code>.</p>
             <p><em>Strategy A — Separate Chaining (linked list per bucket)</em></p>
             <p>Insertions</p>
-            <p>
             <div>
                 <pre><code class="language-shell">10 -&gt; 3
 24 -&gt; 3   (collides with 10; append to bucket[3] list)
@@ -683,9 +743,7 @@ Idx:   0     1     2     3     4     5     6
 
 bucket[3] chain:  [10] → [24] → [31] → ∅</code></pre>
             </div>
-            </p>
             <p><em>Search(24)</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">1) Compute index = h(24) = 3
 2) Inspect bucket 3's chain:
@@ -693,10 +751,8 @@ bucket[3] chain:  [10] → [24] → [31] → ∅</code></pre>
                ↑ found here
 3) Return FOUND (bucket 3)</code></pre>
             </div>
-            </p>
             <p><em>Strategy B — Open Addressing (Linear Probing)</em></p>
             <p>Insertions</p>
-            <p>
             <div>
                 <pre><code class="language-shell">10 -&gt; 3                    place at 3
 24 -&gt; 3  (occupied)  →  probe 4  → place at 4
@@ -707,9 +763,7 @@ Idx:   0     1     2     3     4     5     6
       |   |     |     | 10  | 24  | 31  |     |
       +---+-----+-----+-----+-----+-----+-----+</code></pre>
             </div>
-            </p>
             <p><em>Search(24)</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">1) Compute index = h(24) = 3
 2) Probe sequence:
@@ -717,7 +771,6 @@ Idx:   0     1     2     3     4     5     6
       4: 24 = target  → FOUND at index 4
    (If not found, continue probing until an empty slot or wrap limit.)</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Quality hash + low load factor (α = n/m) ⇒ expected $O(1)$ search/insert/delete.</li>
                 <li>Collisions are inevitable; the collision strategy (open addressing vs. chaining vs. cuckoo) dictates actual steps.</li>
@@ -747,12 +800,10 @@ Idx:   0     1     2     3     4     5     6
                 $$</p>
             <p><strong>How it works</strong></p>
             <p><em>Hash function:</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">h(k) = k mod 10
 Probe sequence: i, i+1, i+2, ... (wrap around)</code></pre>
             </div>
-            </p>
             <p><em>Insertions</em></p>
             <ul>
                 <li>Insert 12 → <code>h(12)=2</code> → place at index 2</li>
@@ -760,14 +811,12 @@ Probe sequence: i, i+1, i+2, ... (wrap around)</code></pre>
                 <li>Insert 32 → <code>h(32)=2</code> occupied → probe 3 (occupied) → probe 4 → place at 4</li>
             </ul>
             <p>Resulting table (indexes 0..9):</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Index:   0   1   2    3    4   5   6   7   8   9
         +---+---+----+----+----+---+---+---+---+---+
 Value:  |   |   | 12 | 22 | 32 |   |   |   |   |   |
         +---+---+----+----+----+---+---+---+---+---+</code></pre>
             </div>
-            </p>
             <p><em>Search(22)</em></p>
             <ul>
                 <li>Start at <code>h(22)=2</code></li>
@@ -775,11 +824,9 @@ Value:  |   |   | 12 | 22 | 32 |   |   |   |   |   |
                 <li>index 3 → 22 ✅ FOUND</li>
             </ul>
             <p>Path followed:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">2 → 3</code></pre>
             </div>
-            </p>
             <p><em>Search(42)</em></p>
             <ul>
                 <li>Start at <code>h(42)=2</code></li>
@@ -789,11 +836,9 @@ Value:  |   |   | 12 | 22 | 32 |   |   |   |   |   |
                 <li>index 5 → empty slot → stop → ❌ NOT FOUND</li>
             </ul>
             <p>Path followed:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">2 → 3 → 4 → 5 (∅)</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Simple and cache-friendly; clusters form (“primary clustering”) which can slow probes.</li>
                 <li>Deletion uses <strong>tombstones</strong> to keep probe chains intact.</li>
@@ -812,7 +857,7 @@ Value:  |   |   | 12 | 22 | 32 |   |   |   |   |   |
                 h(k) = k \bmod m, \quad h(33) = 33 \bmod 11 = 0
                 $$</p>
             <p>$$
-                \text{Output: found (index 4)}
+                \text{Output: found (index 1)}
                 $$</p>
             <p><em>Example 2</em></p>
             <p>$$
@@ -828,24 +873,18 @@ Value:  |   |   | 12 | 22 | 32 |   |   |   |   |   |
                 $$</p>
             <p><strong>How it works</strong></p>
             <p><em>Hash function:</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">h(k) = k mod 11</code></pre>
             </div>
-            </p>
             <p><em>Probe sequence (relative offsets):</em></p>
-            <p>
             <div>
-                <pre><code class="language-shell">+1², +2², +3², ... mod 11
-= +1, +4, +9, +5, +3, +3²… (wrapping around table size)</code></pre>
+                <pre><code class="language-shell">+1², +2², +3², +4², +5², ... mod 11
+= +1, +4, +9, +5, +3, +3, +5, +9, +4, +1, ... (wrapping around table size)</code></pre>
             </div>
-            </p>
             <p>So from <code>h(k)</code>, we try slots in this order:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">h, h+1, h+4, h+9, h+5, h+3, ...   (all mod 11)</code></pre>
             </div>
-            </p>
             <p><em>Insertions</em></p>
             <ul>
                 <li>Insert <strong>22</strong> → <code>h(22)=0</code> → place at index 0</li>
@@ -853,25 +892,21 @@ Value:  |   |   | 12 | 22 | 32 |   |   |   |   |   |
                 <li>Insert <strong>44</strong> → <code>h(44)=0</code> occupied → probe 1 (occupied) → probe <code>0+4=4</code> → place at 4</li>
             </ul>
             <p>Resulting table:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Idx:   0    1    2   3   4   5  6  7  8  9  10
       +----+----+---+---+----+---+--+--+--+---+
 Val:  | 22 | 33 |   |   | 44 |   |  |  |  |  |   |
       +----+----+---+---+----+---+--+--+--+--+---+</code></pre>
             </div>
-            </p>
             <p><em>Search(33)</em></p>
             <ul>
                 <li>Start <code>h(33)=0</code> → slot 0 = 22 ≠ 33</li>
                 <li>Probe <code>0+1²=1</code> → slot 1 = 33 ✅ FOUND</li>
             </ul>
             <p>Path:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">0 → 1</code></pre>
             </div>
-            </p>
             <p><em>Search(55)</em></p>
             <ul>
                 <li>Start <code>h(55)=0</code> → slot 0 = 22 ≠ 55</li>
@@ -880,11 +915,9 @@ Val:  | 22 | 33 |   |   | 44 |   |  |  |  |  |   |
                 <li>Probe <code>0+3²=9</code> → slot 9 = empty → stop → ❌ NOT FOUND</li>
             </ul>
             <p>Path:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">0 → 1 → 4 → 9 (∅)</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Reduces primary clustering but can exhibit <strong>secondary clustering</strong> (keys with same h(k) follow same probe squares).</li>
                 <li>Table size choice matters (often prime); ensure the probe sequence can reach many slots.</li>
@@ -944,18 +977,14 @@ Val:  | 22 | 33 |   |   | 44 |   |  |  |  |  |   |
                 $$</p>
             <p><strong>How it works</strong></p>
             <p>We use <strong>two hash functions</strong>:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">h₁(k) = k mod m
 h₂(k) = 1 + (k mod 10)</code></pre>
             </div>
-            </p>
             <p><em>Probe sequence:</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">i, i + h₂, i + 2·h₂, i + 3·h₂, ...  (all mod m)</code></pre>
             </div>
-            </p>
             <p>This ensures fewer clustering issues compared to linear or quadratic probing.</p>
             <p><em>Insertions (m = 11)</em></p>
             <p>Insert <strong>22</strong></p>
@@ -975,25 +1004,21 @@ h₂(k) = 1 + (k mod 10)</code></pre>
                 <li>Probe sequence: 0, 5 → place at index 5</li>
             </ul>
             <p><em>Table State</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">Idx:   0   1  2  3   4   5  6  7  8  9  10
       +---+---+---+---+---+---+---+---+---+---+
 Val:  |22 |   |   |   |33 |44 |   |   |   |   |   |
       +---+---+---+---+---+---+---+---+---+---+---+</code></pre>
             </div>
-            </p>
             <p><em>Search(33)</em></p>
             <ul>
                 <li>Start at <code>h₁(33)=0</code> → slot 0 = 22 ≠ 33</li>
                 <li>Next: <code>0+1·h₂(33)=0+4=4</code> → slot 4 = 33 ✅ FOUND</li>
             </ul>
             <p>Path:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">0 → 4</code></pre>
             </div>
-            </p>
             <p><em>Search(55)</em></p>
             <ul>
                 <li><code>h₁(55)=0</code>, <code>h₂(55)=1+(55 mod 10)=6</code></li>
@@ -1001,11 +1026,9 @@ Val:  |22 |   |   |   |33 |44 |   |   |   |   |   |
                 <li>slot 6 = empty → stop → ❌ NOT FOUND</li>
             </ul>
             <p>Path:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">0 → 6 (∅)</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Minimizes clustering; probe steps depend on the key.</li>
                 <li>Choose h₂ so it’s <strong>non-zero</strong> and relatively prime to m, ensuring a full cycle.</li>
@@ -1056,7 +1079,6 @@ Val:  |22 |   |   |   |33 |44 |   |   |   |   |   |
                 \text{Output: not found}
                 $$</p>
             <p><strong>How it works</strong></p>
-            <p>
             <div>
                 <pre><code class="language-shell">h(k) = k mod 5
 Buckets store small lists (linked lists or dynamic arrays)
@@ -1072,7 +1094,6 @@ Search(9):
 - b = h(9) = 4
 - Bucket 4: [14] → 9 not present → NOT FOUND</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Simple deletes (remove from a bucket) and no tombstones.</li>
                 <li>Expected $O(1 + α)$ time; with good hashing and α kept near/below 1, bucket lengths stay tiny.</li>
@@ -1131,55 +1152,45 @@ Search(9):
             <p>Every key can live in <strong>exactly one of two slots</strong>: $T_1[h_1(k)]$ or $T_2[h_2(k)]$.
                 If a slot is occupied, we <strong>evict</strong> the old occupant and reinsert it at its alternate location.</p>
             <p><em>Start empty:</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">T₁: [   ][   ][   ][   ][   ]
 T₂: [   ][   ][   ][   ][   ]</code></pre>
             </div>
-            </p>
             <p><em>Insert 10</em> → goes to $T_1[h_1(10)=0]$:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">T₁: [10 ][   ][   ][   ][   ]
 T₂: [   ][   ][   ][   ][   ]</code></pre>
             </div>
-            </p>
             <p><em>Insert 15</em></p>
             <ul>
                 <li>$T_1[0]$ already has 10 → evict 10</li>
                 <li>Place 15 at $T_1[0]$</li>
                 <li>Reinsert evicted 10 at $T_2[h_2(10)=3]$:</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-shell">T₁: [15 ][   ][   ][   ][   ]
 T₂: [   ][   ][   ][10 ][   ]</code></pre>
             </div>
-            </p>
             <p><em>Insert 20</em></p>
             <ul>
                 <li>$T_1[0]$ has 15 → evict 15</li>
                 <li>Place 20 at $T_1[0]$</li>
                 <li>Reinsert 15 at $T_2[h_2(15)=4]$:</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-shell">T₁: [20 ][   ][   ][   ][   ]
 T₂: [   ][   ][   ][10 ][15 ]</code></pre>
             </div>
-            </p>
             <p><em>Insert 25</em></p>
             <ul>
                 <li>$T_1[0]$ has 20 → evict 20</li>
                 <li>Place 25 at $T_1[0]$</li>
                 <li>Reinsert 20 at $T_2[h_2(20)=1]$:</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-shell">T₁: [25 ][   ][   ][   ][   ]
 T₂: [   ][20 ][   ][10 ][15 ]</code></pre>
             </div>
-            </p>
             <p>🔎 <em>Search(15)</em></p>
             <ul>
                 <li>$T_1[h_1(15)=0] \to 25 \neq 15$</li>
@@ -1232,14 +1243,11 @@ T₂: [   ][20 ][   ][10 ][15 ]</code></pre>
                 $$</p>
             <p><strong>How it works</strong></p>
             <p><em>Initial state</em> (all zeros):</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Idx:   0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
 A  =  [0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0]</code></pre>
             </div>
-            </p>
             <p>Insert <code>"cat"</code></p>
-            <p>
             <div>
                 <pre><code class="language-shell">h1(cat) = 3,  h2(cat) = 7,  h3(cat) = 12
 → Set bits at 3, 7, 12
@@ -1249,9 +1257,7 @@ A  =  [0  0  0  1  0  0  0  1  0  0  0  0  1  0  0  0]
                 ^              ^              ^
                 3              7              12</code></pre>
             </div>
-            </p>
             <p>Insert <code>"dog"</code></p>
-            <p>
             <div>
                 <pre><code class="language-shell">h1(dog) = 1,  h2(dog) = 7,  h3(dog) = 9
 → Set bits at 1, 7, 9  (7 already set)
@@ -1261,9 +1267,7 @@ A  =  [0  1  0  1  0  0  0  1  0  1  0  0  1  0  0  0]
           ^              ^     ^
           1              7     9</code></pre>
             </div>
-            </p>
             <p>Query <code>"cow"</code></p>
-            <p>
             <div>
                 <pre><code class="language-shell">h1(cow) = 1 → bit[1] = 1
 h2(cow) = 3 → bit[3] = 1
@@ -1273,10 +1277,8 @@ Idx:   0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
 A  =  [0  1  0  1  0  0  0  1  0  1  0  0  1  0  0  0]
           ✓              ✓     ✗</code></pre>
             </div>
-            </p>
             <p>At least one zero → <strong>DEFINITELY NOT PRESENT</strong></p>
             <p>Query <code>"eel"</code></p>
-            <p>
             <div>
                 <pre><code class="language-shell">h1(eel) = 7 → bit[7] = 1
 h2(eel) = 9 → bit[9] = 1
@@ -1286,7 +1288,6 @@ Idx:   0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
 A  =  [0  1  0  1  0  0  0  1  0  1  0  0  1  0  0  0]
                             ✓     ✓        ✓</code></pre>
             </div>
-            </p>
             <p>All ones → <strong>MAYBE PRESENT</strong> (could be a <strong>false positive</strong>)</p>
             <ul>
                 <li>Answers: <strong>maybe present</strong> / <strong>definitely not present</strong>; never false negatives (without deletions).</li>
@@ -1337,14 +1338,11 @@ A  =  [0  1  0  1  0  0  0  1  0  1  0  0  1  0  0  0]
             <p>Each cell is a <strong>small counter</strong> (e.g. 4-bits, range 0..15).
                 This allows <strong>deletions</strong>: increment on insert, decrement on delete.</p>
             <p>Initial state</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Idx:   0  1  2  3  4  5  6  7  8  9 10 11
 A  =  [0  0  0  0  0  0  0  0  0  0  0  0]</code></pre>
             </div>
-            </p>
             <p>Insert <code>"alpha"</code></p>
-            <p>
             <div>
                 <pre><code class="language-shell">Hashes: {2, 5, 9}
 → Increment those counters
@@ -1354,9 +1352,7 @@ A  =  [0  0  1  0  0  1  0  0  0  1  0  0]
              ↑        ↑              ↑
              2        5              9</code></pre>
             </div>
-            </p>
             <p>Insert <code>"beta"</code></p>
-            <p>
             <div>
                 <pre><code class="language-shell">Hashes: {3, 5, 11}
 → Increment those counters
@@ -1366,9 +1362,7 @@ A  =  [0  0  1  1  0  2  0  0  0  1  0  1]
                 ↑        ↑              ↑
                 3        5              11</code></pre>
             </div>
-            </p>
             <p>Lookup <code>"beta"</code></p>
-            <p>
             <div>
                 <pre><code class="language-shell">Hashes: {3, 5, 11}
 Counters = {1, 2, 1} → all &gt; 0
@@ -1378,9 +1372,7 @@ Idx:   0  1  2  3  4  5  6  7  8  9 10 11
 A  =  [0  0  1  1  0  2  0  0  0  1  0  1]
                 ✓        ✓              ✓</code></pre>
             </div>
-            </p>
             <p>Delete <code>"alpha"</code></p>
-            <p>
             <div>
                 <pre><code class="language-shell">Hashes: {2, 5, 9}
 → Decrement those counters
@@ -1390,9 +1382,7 @@ A  =  [0  0  0  1  0  1  0  0  0  0  0  1]
              ↓        ↓              ↓
              2        5              9</code></pre>
             </div>
-            </p>
             <p>Lookup <code>"alpha"</code></p>
-            <p>
             <div>
                 <pre><code class="language-shell">Hashes: {2, 5, 9}
 Counters = {0, 1, 0}
@@ -1403,7 +1393,6 @@ Idx:   0  1  2  3  4  5  6  7  8  9 10 11
 A  =  [0  0  0  1  0  1  0  0  0  0  0  1]
              ✗        ✓              ✗</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Supports <strong>deletion</strong> by decrementing counters; insertion increments.</li>
                 <li>Still probabilistic: may return false positives; avoids false negatives <strong>if counters never underflow</strong> and hashes are consistent.</li>
@@ -1454,18 +1443,15 @@ A  =  [0  0  0  1  0  1  0  0  0  0  0  1]
                 Two candidate buckets:</p>
             <ul>
                 <li><code>i1 = H(x) mod b</code></li>
-                <li><code>i2 = i1 XOR H(f) mod b</code>
+                <li><code>i2 = (i1 XOR H(f)) mod b</code>
                     (<code>f</code> can be stored in either bucket; moving between buckets preserves the invariant.)</li>
             </ul>
             <p>Start (empty)</p>
-            <p>
             <div>
                 <pre><code class="language-shell">[0]: [ -- , -- ]   [1]: [ -- , -- ]   [2]: [ -- , -- ]   [3]: [ -- , -- ]
 [4]: [ -- , -- ]   [5]: [ -- , -- ]   [6]: [ -- , -- ]   [7]: [ -- , -- ]</code></pre>
             </div>
-            </p>
             <p>Insert <code>"cat"</code></p>
-            <p>
             <div>
                 <pre><code class="language-shell">f = 0xA7
 i1 = 1
@@ -1475,9 +1461,7 @@ Bucket 1 has free slot → place 0xA7 in [1]
 
 [1]: [ A7 , -- ]</code></pre>
             </div>
-            </p>
             <p>Insert <code>"dog"</code></p>
-            <p>
             <div>
                 <pre><code class="language-shell">f = 0x3C
 i1 = 5
@@ -1487,9 +1471,7 @@ Bucket 5 has free slot → place 0x3C in [5]
 
 [1]: [ A7 , -- ]        [5]: [ 3C , -- ]</code></pre>
             </div>
-            </p>
             <p>Insert <code>"eel"</code></p>
-            <p>
             <div>
                 <pre><code class="language-shell">f = 0xD2
 i1 = 1
@@ -1499,18 +1481,14 @@ Bucket 1 has one free slot → place 0xD2 in [1]
 
 [1]: [ A7 , D2 ]        [5]: [ 3C , -- ]</code></pre>
             </div>
-            </p>
             <p>Lookup <code>"cat"</code></p>
-            <p>
             <div>
                 <pre><code class="language-shell">f = 0xA7
 Buckets: i1 = 1, i2 = 5
 Check: bucket[1] has A7 → found</code></pre>
             </div>
-            </p>
             <p>Result: MAYBE PRESENT</p>
             <p>Lookup <code>"fox"</code></p>
-            <p>
             <div>
                 <pre><code class="language-shell">f = 0x9B
 i1 = 0
@@ -1518,7 +1496,6 @@ i2 = 0 XOR H(0x9B) = 7
 
 Check buckets 0 and 7 → fingerprint not found</code></pre>
             </div>
-            </p>
             <p>Result: DEFINITELY NOT PRESENT</p>
             <ul>
                 <li>Stores <strong>fingerprints</strong>, not full keys; answers <strong>maybe present</strong> / <strong>definitely not present</strong>.</li>
@@ -1556,81 +1533,61 @@ Check buckets 0 and 7 → fingerprint not found</code></pre>
                 $$</p>
             <p><strong>How it works</strong></p>
             <p><em>Text</em> (length 11):</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Text:   a b r a c a d a b r  a
 Idx:    0 1 2 3 4 5 6 7 8 9 10</code></pre>
             </div>
-            </p>
             <p><em>Pattern</em> (length 4):</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Pattern: a b r a</code></pre>
             </div>
-            </p>
             <p><em>Shift 0</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">Text:    a b r a
 Pattern: a b r a</code></pre>
             </div>
-            </p>
             <p>✅ All match → <strong>REPORT at index 0</strong></p>
             <p><em>Shift 1</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">Text:     b r a c
 Pattern:  a b r a</code></pre>
             </div>
-            </p>
             <p>❌ Mismatch at first char → advance</p>
             <p><em>Shift 2</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">Text:      r a c a
 Pattern:   a b r a</code></pre>
             </div>
-            </p>
             <p>❌ Mismatch → advance</p>
             <p><em>Shift 3</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">Text:       a c a d
 Pattern:    a b r a</code></pre>
             </div>
-            </p>
             <p>❌ Mismatch → advance</p>
             <p><em>Shift 4</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">Text:        c a d a
 Pattern:     a b r a</code></pre>
             </div>
-            </p>
             <p>❌ Mismatch → advance</p>
             <p><em>Shift 5</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">Text:         a d a b
 Pattern:      a b r a</code></pre>
             </div>
-            </p>
             <p>❌ Mismatch → advance</p>
             <p><em>Shift 6</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">Text:          d a b r
 Pattern:       a b r a</code></pre>
             </div>
-            </p>
             <p>❌ Mismatch → advance</p>
             <p><em>Shift 7</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">Text:           a b r a
 Pattern:        a b r a</code></pre>
             </div>
-            </p>
             <p>✅ All match → <strong>REPORT at index 7</strong></p>
             <ul>
                 <li>Works anywhere; no preprocessing.</li>
@@ -1658,21 +1615,17 @@ Pattern:        a b r a</code></pre>
                 \text{Output: match at index } 2
                 $$</p>
             <p><strong>How it works</strong></p>
-            <p>We want to find the pattern <code>"ababd"</code> in the text <code>"ababcabca babab d"</code>.</p>
+            <p>We want to find the pattern <code>"ababd"</code> in the text <code>"ababcabcabababd"</code>.</p>
             <p><em>1) Precompute LPS (Longest Proper Prefix that is also a Suffix)</em></p>
             <p>Pattern:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">a   b   a   b   d
 0   1   2   3   4   ← index</code></pre>
             </div>
-            </p>
             <p>LPS array:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">0   0   1   2   0</code></pre>
             </div>
-            </p>
             <p>Meaning:</p>
             <ul>
                 <li>At each position, how many chars can we “fall back” within the pattern itself if a mismatch happens.</li>
@@ -1684,44 +1637,34 @@ Pattern:        a b r a</code></pre>
                 <li><code>j</code> = pattern index</li>
             </ul>
             <p>Text:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">a b a b c a b c a b a b a b d
 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14
 Pattern: a b a b d</code></pre>
             </div>
-            </p>
             <p><em>Step A: Initial matches</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">i=0..3: "abab" matched → j=4 points to 'd'</code></pre>
             </div>
-            </p>
             <p><em>Step B: Mismatch at i=4</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">text[i=4] = 'c'
 pattern[j=4] = 'd' → mismatch</code></pre>
             </div>
-            </p>
             <p>Instead of restarting, use LPS:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">j = LPS[j-1] = LPS[3] = 2</code></pre>
             </div>
-            </p>
             <p>So pattern jumps back to <code>"ab"</code> (no wasted text comparisons).
                 i stays at 4.</p>
             <p><em>Step C: Continue scanning</em></p>
             <p>The algorithm keeps moving forward, reusing LPS whenever mismatches occur.</p>
             <p><em>Step D: Full match found</em></p>
             <p>At <code>i=14</code>, j advances to 5 (pattern length).</p>
-            <p>
             <div>
                 <pre><code class="language-shell">→ FULL MATCH found!
 Start index = i - m + 1 = 14 - 5 + 1 = 10</code></pre>
             </div>
-            </p>
             <p>✅ Pattern <code>"ababd"</code> occurs in the text starting at <strong>index 10</strong>.</p>
             <ul>
                 <li>Time: $O(n + m)$ (preprocessing + scan).</li>
@@ -1758,46 +1701,36 @@ Start index = i - m + 1 = 14 - 5 + 1 = 10</code></pre>
                 <li><strong>Good-suffix rule</strong>: if a suffix matched, align another occurrence of it (or a prefix).</li>
             </ul>
             <p><em>Text</em> (with spaces shown as <code>_</code>):</p>
-            <p>
             <div>
                 <pre><code class="language-shell">0        10        20        30
 H E R E _ I S _ A _ S I M P L E _ E X A M P L E</code></pre>
             </div>
-            </p>
             <p><strong>Pattern</strong>: <code>"EXAMPLE"</code> (length = 7)</p>
             <p><em>Step 1: Align pattern at text[10..16] = <code>"SIMPLE"</code></em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">Text:    ... S I M P L E ...
 Pattern:       E X A M P L E
                ↑ (start comparing right → left)</code></pre>
             </div>
-            </p>
             <p>Compare right-to-left:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">E=E, L=L, P=P, M=M, A=A, 
 X vs I → mismatch</code></pre>
             </div>
-            </p>
             <ul>
                 <li>Bad character = <code>I</code> (from text).</li>
                 <li>Does pattern contain <code>I</code>? → ❌ no.</li>
                 <li>→ Shift pattern <strong>past <code>I</code></strong>.</li>
             </ul>
             <p><em>Step 2: Shift until pattern under <code>"EXAMPLE"</code></em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">Text:    ... E X A M P L E
 Pattern:     E X A M P L E</code></pre>
             </div>
-            </p>
             <p>Compare right-to-left:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">E=E, L=L, P=P, M=M, A=A, X=X, E=E</code></pre>
             </div>
-            </p>
             <p>✅ <strong>Full match</strong> found at <strong>index 17</strong>.</p>
             <ul>
                 <li>Average case sublinear (often skips large chunks of text).</li>
@@ -1834,20 +1767,16 @@ Pattern:     E X A M P L E</code></pre>
                 <li>Pattern <strong>P = "ABC"</strong> (length <strong>m = 3</strong>)</li>
                 <li>Text <strong>T = "ABCDABCABCD"</strong> (length 11)</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-shell">Text:    A B C D A B C A B C D
 Index:   0 1 2 3 4 5 6 7 8 9 10
 Pattern: A B C   (m = 3)</code></pre>
             </div>
-            </p>
             <p><em>Precompute</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">pow = B^(m-1) mod M = 256^2 mod 101 = 88
 HP = H(P) = H("ABC")</code></pre>
             </div>
-            </p>
             <p>Start <code>h=0</code>, then for each char <code>h = (B*h + val) mod M</code>:</p>
             <ul>
                 <li>After 'A': <code>(256*0 + 65) % 101 = 65</code></li>
@@ -1863,23 +1792,18 @@ HP = H(P) = H("ABC")</code></pre>
             <p>(If the inner term is negative, add <code>M</code> before multiplying.)</p>
             <p><em>First two rolls</em></p>
             <p>From $[0..2]$ "ABC" $(h0=59)$ → $[1..3]$ "BCD":</p>
-            <p>
             <div>
                 <pre><code class="language-shell">left='A'(65), new='D'(68)
 inner = (59 − 65*88) mod 101 = (59 − 5720) mod 101 = 96
 h1 = (256*96 + 68) mod 101 = 24644 mod 101 = 0</code></pre>
             </div>
-            </p>
             <p>From $[3..5]$ "DAB" $(h3=66)$ → $[4..6]$ "ABC":</p>
-            <p>
             <div>
                 <pre><code class="language-shell">left='D'(68), new='C'(67)
 inner = (66 − 68*88) mod 101 = (66 − 5984) mod 101 = 41
 h4 = (256*41 + 67) mod 101 = 10563 mod 101 = 59  (= HP)</code></pre>
             </div>
-            </p>
             <p><em>All windows (start index s)</em></p>
-            <p>
             <div>
                 <pre><code class="language-shell">s   window   hash   =HP?
 0   ABC      59     ✓  → verify → ✅ MATCH at 0
@@ -1892,7 +1816,6 @@ h4 = (256*41 + 67) mod 101 = 10563 mod 101 = 59  (= HP)</code></pre>
 7   ABC      59     ✓  → verify → ✅ MATCH at 7
 8   BCD       0</code></pre>
             </div>
-            </p>
             <p>Matches at indices: <strong>0, 4, 7</strong>.</p>
             <ul>
                 <li>Expected time $O(n + m)$ with a good modulus and low collision rate; worst case $O(n·m)$ if many collisions.</li>
@@ -1906,6 +1829,15 @@ h4 = (256*41 + 67) mod 101 = 10563 mod 101 = 59  (= HP)</code></pre>
             <h2>Table of Contents</h2>
             <ol><a href="#searching">Searching</a>
                 <ol>
+                    <li><a href="#which-search-should-i-use-">Which Search Should I Use?</a>
+                        <ol>
+                            <li><a href="#for-arrays-and-lists">For Arrays and Lists</a></li>
+                            <li><a href="#for-key-based-lookup-and-membership">For Key-Based Lookup and Membership</a></li>
+                            <li><a href="#for-approximate-membership-space-efficient-">For Approximate Membership (Space-Efficient)</a></li>
+                            <li><a href="#for-substring-pattern-search">For Substring/Pattern Search</a></li>
+                            <li><a href="#quick-comparison-table">Quick Comparison Table</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#linear-sequential-search">Linear &amp; Sequential Search</a>
                         <ol>
                             <li><a href="#linear-search">Linear Search</a></li>

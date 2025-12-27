@@ -66,7 +66,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: May 18, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: December 27, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="handling-the-double-booking-problem-in-databases">Handling the Double-Booking Problem in Databases</h2>
             <p>The double-booking problem is a common issue in database systems, particularly in applications like booking platforms, reservation systems, and inventory management. It occurs when multiple transactions simultaneously attempt to reserve or modify the same resource, leading to conflicts and inconsistencies. This can result in overbooked flights, double-sold tickets, or oversold inventory, causing significant problems for both businesses and customers.</p>
@@ -82,7 +82,6 @@
             <p>At its core, the double-booking problem arises due to concurrent transactions accessing and modifying shared resources without proper synchronization. When two or more transactions read the same data and proceed to update it based on the initial value, they can inadvertently overwrite each other's changes.</p>
             <p><strong>Illustrative Scenario:</strong></p>
             <p>Imagine two customers, Alice and Bob, trying to book the last available seat on a flight at the same time.</p>
-            <p>
             <div>
                 <pre><code class="language-shell">Time    Transaction by Alice            Transaction by Bob
 --------------------------------------------------------------
@@ -91,7 +90,6 @@ T2                                      Read available seats = 1
 T3      Book seat (available seats = 0)
 T4                                      Book seat (available seats = -1)</code></pre>
             </div>
-            </p>
             <p>In this timeline:</p>
             <ul>
                 <li>At <strong>T1</strong>, Alice's transaction reads that there is <strong>1 seat available</strong>.</li>
@@ -139,13 +137,11 @@ T4                                      Book seat (available seats = -1)</code><
             </p>
             <blockquote>
                 <p><strong>Tip for PostgreSQL:</strong> Inspect current locks with</p>
-                <p>
                 <div>
                     <pre><code class="language-sql">&gt; SELECT pid, locktype, relation::regclass, mode, granted
 &gt; FROM pg_locks l JOIN pg_stat_activity a USING(pid);
 &gt;</code></pre>
                 </div>
-                </p>
             </blockquote>
             <h4 id="pick-an-isolation-level-you-can-live-with">Pick an Isolation Level You Can Live With</h4>
             <p>Isolation levels define how visible changes in one transaction are to others. Stricter levels prevent more anomalies but can reduce performance by increasing locking and blocking. Choose the level that meets your consistency needs without unnecessarily hindering throughput.</p>
@@ -175,7 +171,6 @@ T4                                      Book seat (available seats = -1)</code><
             </table>
             </p>
             <p><em>Verification script for MySQL</em></p>
-            <p>
             <div>
                 <pre><code class="language-sql">-- Session A
 SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE;
@@ -186,10 +181,8 @@ SELECT * FROM seats WHERE seat_id = 42 FOR UPDATE;
 START TRANSACTION;
 UPDATE seats SET user_id = 99 WHERE seat_id = 42;</code></pre>
             </div>
-            </p>
             <h4 id="optimistic-concurrency-control-occ-">Optimistic Concurrency Control (OCC)</h4>
             <p>When conflicts are rare, OCC lets you avoid heavy locking by using a version or timestamp column to detect concurrent updates. If a conflict is detected at commit time, the transaction retries, yielding higher throughput under low contention.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">-- Works in: PostgreSQL, SQL Server (rowversion/timestamp), MySQL (generated col), Oracle
 BEGIN;
@@ -206,7 +199,6 @@ WHERE product_id = 101
   AND version   = :old_version;      -- fails (0 rows) if someone changed it
 COMMIT;</code></pre>
             </div>
-            </p>
             <p><em>Verify it</em>:</p>
             <ol>
                 <li>Run above block in two psql sessions simultaneously.</li>
@@ -214,7 +206,6 @@ COMMIT;</code></pre>
             </ol>
             <h4 id="pessimistic-lock-first-work-later">Pessimistic Lock First, Work Later</h4>
             <p>Sometimes you need to lock resources immediately to prevent any concurrent modifications. This approach acquires an exclusive lock up front, ensuring that no one else can read or write the locked rows until you commit.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">-- SQL Server style
 BEGIN TRAN;
@@ -224,7 +215,6 @@ SELECT * FROM seats
 /* proceed with booking */
 COMMIT;</code></pre>
             </div>
-            </p>
             <ul>
                 <li><strong>Where this shines:</strong> hotel room or flight-seat tables during a flash sale.</li>
                 <li><strong>Where it hurts:</strong> large report queries (locks too many rows &amp; slows everyone).</li>
@@ -463,17 +453,14 @@ COMMIT;</code></pre>
             </p>
             <blockquote>
                 <p><strong>Install once</strong></p>
-                <p>
                 <div>
                     <pre><code class="language-bash">&gt; pip install psycopg2-binary
 &gt; # PostgreSQL: brew install postgresql or apt install postgresql
 &gt;</code></pre>
                 </div>
-                </p>
             </blockquote>
             <p>The same SQL works, almost verbatim, on the other databases listed above (the locking keywords differ slightly—see § 5).</p>
             <h4 id="build-a-miniature-ticket-system">Build a miniature ticket system</h4>
-            <p>
             <div>
                 <pre><code class="language-sql">-- file: setup.sql
 DROP TABLE IF EXISTS concerts CASCADE;
@@ -485,16 +472,12 @@ CREATE TABLE concerts (
 
 INSERT INTO concerts (title, tickets_left) VALUES ('RockFest 2025', 1);</code></pre>
             </div>
-            </p>
-            <p>
             <div>
                 <pre><code class="language-bash">psql -U postgres -f setup.sql</code></pre>
             </div>
-            </p>
             <p>We start with <strong>exactly one ticket</strong> left, which is the classic “last-seat” problem.</p>
             <h4 id="reproduce-the-double-booking-bug">Reproduce the double-booking bug</h4>
             <p>Create <code>race_demo.py</code>:</p>
-            <p>
             <div>
                 <pre><code class="language-python">import psycopg2, threading, time, random
 
@@ -535,15 +518,11 @@ with psycopg2.connect(DSN) as check_conn:
         cur.execute("SELECT tickets_left FROM concerts WHERE id = 1;")
         print("After race, tickets_left =", cur.fetchone()[0])</code></pre>
             </div>
-            </p>
             <p>Run it twice:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">python race_demo.py</code></pre>
             </div>
-            </p>
             <p><strong>Expected output without locks (typical run)</strong></p>
-            <p>
             <div>
                 <pre><code class="language-shell">User1: saw 1 ticket(s) left
 User2: saw 1 ticket(s) left
@@ -551,26 +530,20 @@ User1: bought the ticket!
 User2: bought the ticket!
 After race, tickets_left = -1        &lt;-- Over-sale!</code></pre>
             </div>
-            </p>
             <p>Both threads decremented the same row because they <strong>read before each other updated</strong>, demonstrating a real-world overbooking.</p>
             <h4 id="prevent-it-pessimistic-locking-">Prevent it (pessimistic locking)</h4>
             <p>Patch the critical section with <code>SELECT … FOR UPDATE</code>:</p>
-            <p>
             <div>
                 <pre><code class="language-python"># ---------- only the changed part ----------
 cur.execute("SELECT tickets_left FROM concerts WHERE id = 1 FOR UPDATE;")</code></pre>
             </div>
-            </p>
             <p>(Full fixed file: <code>race_demo_fixed.py</code> in the repo below.)</p>
             <p>Reset stock then test again:</p>
-            <p>
             <div>
                 <pre><code class="language-bash">psql -U postgres -c "UPDATE concerts SET tickets_left = 1 WHERE id = 1;"
 python race_demo_fixed.py</code></pre>
             </div>
-            </p>
             <p><strong>Expected output with lock</strong></p>
-            <p>
             <div>
                 <pre><code class="language-shell">User1: saw 1 ticket(s) left
 User1: bought the ticket!
@@ -579,7 +552,6 @@ User2: saw 0 ticket(s) left
 User2: no tickets left
 After race, tickets_left = 0         &lt;-- Correct</code></pre>
             </div>
-            </p>
             <blockquote>
                 <p>In practice you’d intercept “no tickets left” on the application layer and return an <em>HTTP 409 – Sold Out</em>.</p>
             </blockquote>
@@ -631,15 +603,12 @@ After race, tickets_left = 0         &lt;-- Correct</code></pre>
             </p>
             <h4 id="alternative-optimistic-locking">Alternative: optimistic locking</h4>
             <p>If you dislike blocking, add a <strong>version column</strong>:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">ALTER TABLE concerts ADD COLUMN version INTEGER NOT NULL DEFAULT 0;</code></pre>
             </div>
-            </p>
             <p>Application flow:</p>
             <p>I. <code>SELECT tickets_left, version FROM concerts WHERE id = 1;</code></p>
             <p>II. If tickets_left &gt; 0, run</p>
-            <p>
             <div>
                 <pre><code class="language-sql">UPDATE concerts
    SET tickets_left = tickets_left - 1,
@@ -647,7 +616,6 @@ After race, tickets_left = 0         &lt;-- Correct</code></pre>
  WHERE id = 1
    AND version = :previous_version;</code></pre>
             </div>
-            </p>
             <p>III. Check <code>cursor.rowcount</code>:</p>
             <ul>
                 <li><code>1</code> → success</li>

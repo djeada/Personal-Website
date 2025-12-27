@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", function() {
-    // Default configuration constants
+
     const DEFAULT_GRID_SIZE = 20;
     const DEFAULT_SPEED = 5;
     const DEFAULT_WALL_DENSITY = 30;
@@ -19,13 +19,13 @@ document.addEventListener("DOMContentLoaded", function() {
     const resetDefaultsButton = document.getElementById("reset-defaults");
     const toastContainer = document.getElementById("toast-container");
 
-    // Stats elements
+
     const cellsVisitedEl = document.getElementById("cells-visited");
     const pathLengthEl = document.getElementById("path-length");
     const elapsedTimeEl = document.getElementById("elapsed-time");
     const algorithmNameEl = document.getElementById("algorithm-name");
 
-    // Algorithm names map
+
     const algorithmNames = {
         "dfs": "DFS",
         "bfs": "BFS",
@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", function() {
         "astar": "A*"
     };
 
-    // Toast notification function
+
     function showToast(message, type = "info") {
         const toast = document.createElement("div");
         toast.className = `toast ${type}`;
@@ -57,7 +57,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }, 3000);
     }
 
-    // Toggle card functionality
+
     document.querySelectorAll(".card-toggle").forEach(toggle => {
         toggle.addEventListener("click", () => {
             const expanded = toggle.getAttribute("aria-expanded") === "true";
@@ -115,23 +115,23 @@ document.addEventListener("DOMContentLoaded", function() {
             speedInput.addEventListener("input", () => this.handleSpeedChange());
             gridSizeInput.addEventListener("input", () => this.handleGridSizeChange());
             mazeCanvas.addEventListener("click", (e) => this.handleCanvasClick(e));
-            
+
             if (wallDensityInput) {
                 wallDensityInput.addEventListener("input", () => this.handleWallDensityChange());
             }
-            
+
             if (showGridLinesCheckbox) {
                 showGridLinesCheckbox.addEventListener("change", () => {
                     this.showGridLines = showGridLinesCheckbox.checked;
                     this.drawMaze();
                 });
             }
-            
+
             if (resetDefaultsButton) {
                 resetDefaultsButton.addEventListener("click", () => this.resetDefaults());
             }
 
-            // Keyboard shortcuts
+
             document.addEventListener("keydown", (e) => {
                 if (e.code === "Space") {
                     e.preventDefault();
@@ -150,7 +150,7 @@ document.addEventListener("DOMContentLoaded", function() {
             if (wallDensityInput) wallDensityInput.value = DEFAULT_WALL_DENSITY;
             if (showGridLinesCheckbox) showGridLinesCheckbox.checked = DEFAULT_SHOW_GRID_LINES;
             algorithmSelect.value = DEFAULT_ALGORITHM;
-            
+
             this.gridSize = DEFAULT_GRID_SIZE;
             this.speed = DEFAULT_SPEED;
             this.wallDensity = DEFAULT_WALL_DENSITY;
@@ -169,7 +169,7 @@ document.addEventListener("DOMContentLoaded", function() {
         updateStats() {
             cellsVisitedEl.textContent = this.closedSet.length;
             pathLengthEl.textContent = this.path.length;
-            
+
             if (this.startTime) {
                 const elapsed = Date.now() - this.startTime;
                 elapsedTimeEl.textContent = elapsed + "ms";
@@ -216,7 +216,7 @@ document.addEventListener("DOMContentLoaded", function() {
             this.openSet = [];
             this.closedSet = [];
             this.path = [];
-            
+
             for (let row of this.maze) {
                 for (let cell of row) {
                     cell.visited = false;
@@ -225,9 +225,9 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
             }
             this.startNode.distance = 0;
-            
+
             showToast(`Starting ${algorithmNames[this.currentAlgorithm]} search...`, "info");
-            
+
             switch (this.currentAlgorithm) {
                 case "dfs":
                     await this.depthFirstSearch();
@@ -244,25 +244,25 @@ document.addEventListener("DOMContentLoaded", function() {
                 default:
                     break;
             }
-            
+
             this.updateStats();
-            
+
             if (this.path.length > 0) {
                 showToast(`Path found! Length: ${this.path.length}`, "success");
             } else if (this.searchingInProgress) {
                 showToast("No path found!", "warning");
             }
-            
+
             this.searchingInProgress = false;
         }
 
         togglePause() {
             if (this.searchingInProgress) {
                 this.paused = !this.paused;
-                pauseButton.innerHTML = this.paused 
-                    ? '<span class="btn-icon">▶️</span> Resume' 
-                    : '<span class="btn-icon">⏸️</span> Pause';
-                
+                pauseButton.innerHTML = this.paused ?
+                    '<span class="btn-icon">▶️</span> Resume' :
+                    '<span class="btn-icon">⏸️</span> Pause';
+
                 if (this.paused) {
                     showToast("Search paused", "info");
                 } else {
@@ -283,12 +283,12 @@ document.addEventListener("DOMContentLoaded", function() {
             this.startTime = null;
             this.initializeMaze();
             this.drawMaze();
-            
-            // Reset stats
+
+
             cellsVisitedEl.textContent = "0";
             pathLengthEl.textContent = "0";
             elapsedTimeEl.textContent = "0ms";
-            
+
             showToast("Grid reset", "info");
         }
 
@@ -311,12 +311,12 @@ document.addEventListener("DOMContentLoaded", function() {
             this.updateAlgorithmName();
             this.initializeMaze();
             this.drawMaze();
-            
-            // Reset stats
+
+
             cellsVisitedEl.textContent = "0";
             pathLengthEl.textContent = "0";
             elapsedTimeEl.textContent = "0ms";
-            
+
             showToast(`Algorithm changed to ${algorithmNames[this.getSelectedAlgorithm()]}`, "info");
         }
 
@@ -357,8 +357,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     await new Promise((resolve) => setTimeout(resolve, 50));
                 }
             } else {
-                // Speed ranges from 1-10, where 10 is fastest
-                // Delay ranges from 200ms (speed=1) to 5ms (speed=10)
+
+
                 const maxDelay = 200;
                 const minDelay = 5;
                 const delayTime = Math.round(maxDelay - ((this.speed - 1) / 9) * (maxDelay - minDelay));
@@ -541,7 +541,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         this.cellSize,
                         this.cellSize
                     );
-                    
+
                     if (this.showGridLines) {
                         ctx.strokeStyle = getColorForMode("#CCCCCC", "#444444");
                         ctx.strokeRect(

@@ -66,7 +66,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: May 11, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: December 27, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="materialized-views">Materialized Views</h2>
             <p>Materialized views are a database feature that allows you to store the result of a query physically on disk, much like a regular table. Unlike standard views, which are virtual and execute the underlying query each time they are accessed, materialized views cache the query result and can be refreshed periodically. This approach significantly improves performance for complex queries, especially when dealing with large datasets or computationally intensive operations.</p>
@@ -83,7 +83,6 @@
             <p>Imagine you have a complex query that aggregates sales data across multiple regions and products. Running this query every time can be time-consuming and resource-intensive. A materialized view lets you store the result of this query, so subsequent accesses are faster because the database doesn't have to re-execute the computation each time.</p>
             <h4 id="how-it-works-">How it works?</h4>
             <p>Here's a simple representation of how materialized views fit into a database system:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">────────────────────────────────────────────────────────────────
  Phase 1: Materialized-View Refresh (periodic or on-demand)
@@ -114,7 +113,6 @@
     |      Query Result     |                                
     +-----------------------+</code></pre>
             </div>
-            </p>
             <ul>
                 <li>The base tables contain the raw data.</li>
                 <li>A complex query is executed on these tables, and the result is stored in the materialized view.</li>
@@ -144,43 +142,33 @@
             <h4 id="scenario">Scenario</h4>
             <p>Suppose you have a table called <code>sales</code> with millions of records, and you often run a query to get total sales per region.</p>
             <h4 id="creating-the-materialized-view">Creating the Materialized View</h4>
-            <p>
             <div>
                 <pre><code class="language-sql">CREATE MATERIALIZED VIEW sales_summary AS
 SELECT region, SUM(amount) AS total_sales
 FROM sales
 GROUP BY region;</code></pre>
             </div>
-            </p>
             <p>This command creates a materialized view named <code>sales_summary</code> that stores the total sales per region.</p>
             <h4 id="querying-the-materialized-view">Querying the Materialized View</h4>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT * FROM sales_summary;</code></pre>
             </div>
-            </p>
             <p>When you run this query, PostgreSQL retrieves data directly from the <code>sales_summary</code> materialized view, which is faster than executing the aggregation on the entire <code>sales</code> table.</p>
             <h4 id="refreshing-the-materialized-view">Refreshing the Materialized View</h4>
             <p>After new sales data is inserted into the <code>sales</code> table, you can refresh the materialized view to include the latest data:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">REFRESH MATERIALIZED VIEW sales_summary;</code></pre>
             </div>
-            </p>
             <h4 id="automating-the-refresh">Automating the Refresh</h4>
             <p>You can automate the refresh process using a scheduled task or a cron job. For example, to refresh the materialized view every night at midnight, you might set up a cron job with the following command:</p>
-            <p>
             <div>
                 <pre><code class="language-shell">0 0 * * * psql -U username -d database_name -c "REFRESH MATERIALIZED VIEW sales_summary;"</code></pre>
             </div>
-            </p>
             <h3 id="indexing-materialized-views">Indexing Materialized Views</h3>
             <p>Just like regular tables, you can create indexes on materialized views to further enhance query performance.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">CREATE INDEX idx_sales_summary_region ON sales_summary(region);</code></pre>
             </div>
-            </p>
             <p>This index speeds up queries that filter or join on the <code>region</code> column.</p>
             <h3 id="use-cases-for-materialized-views">Use Cases for Materialized Views</h3>
             <p>Materialized views are especially useful in scenarios where complex queries are frequently executed, and real-time data is not a strict requirement.</p>
@@ -209,7 +197,6 @@ GROUP BY region;</code></pre>
             <p>Oracle Database offers robust support for materialized views, including features such as query rewrite, fast (incremental) refresh, and integration with advanced replication and data warehousing scenarios. These views can automatically refresh on demand or according to a schedule, and can even incorporate only the changes made since the last refresh for optimal performance.</p>
             <h5>Creating a Materialized View with Fast Refresh</h5>
             <p>To create a materialized view that can be refreshed incrementally (also known as a fast refresh), you define it with <code>BUILD IMMEDIATE</code> to populate it immediately, and <code>REFRESH FAST ON DEMAND</code> so it can be refreshed on command, only applying changes since the last refresh:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">CREATE MATERIALIZED VIEW sales_mv
 BUILD IMMEDIATE
@@ -219,21 +206,17 @@ SELECT region, SUM(amount) AS total_sales
 FROM sales
 GROUP BY region;</code></pre>
             </div>
-            </p>
             <h5>Setting Up a Materialized View Log</h5>
             <p>Oracle requires a materialized view log on the base table to track changes (inserts, updates, deletes) so that a fast refresh can apply only the incremental differences. The log records rowids and specified columns, capturing new values when data changes:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">CREATE MATERIALIZED VIEW LOG ON sales
 WITH ROWID, SEQUENCE (region, amount)
 INCLUDING NEW VALUES;</code></pre>
             </div>
-            </p>
             <h4 id="microsoft-sql-server">Microsoft SQL Server</h4>
             <p>In Microsoft SQL Server, the equivalent of a materialized view is an <em>indexed view</em>. An indexed view physically materializes the results of a query by creating a unique clustered index on the view definition. Unlike Oracle, SQL Server does not natively support incremental refresh on demand—data changes to the underlying tables automatically propagate through the index during DML operations.</p>
             <h5>Creating an Indexed View</h5>
             <p>To define an indexed view in SQL Server, you must use <code>WITH SCHEMABINDING</code> so the view is tied to the schema of the underlying tables, then create a unique clustered index on the view. This forces SQL Server to maintain the view’s data as the base tables change:</p>
-            <p>
             <div>
                 <pre><code class="language-sql">CREATE VIEW dbo.sales_summary
 WITH SCHEMABINDING AS
@@ -244,7 +227,6 @@ GO
 
 CREATE UNIQUE CLUSTERED INDEX idx_sales_summary ON dbo.sales_summary(region);</code></pre>
             </div>
-            </p>
             <h3 id="limitations">Limitations</h3>
             <ul>
                 <li>They might not reflect the most recent data until refreshed.</li>

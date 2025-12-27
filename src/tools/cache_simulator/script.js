@@ -3,7 +3,7 @@
 document.addEventListener("DOMContentLoaded", function() {
     const $ = selector => document.querySelector(selector);
 
-    // Toast notification system
+
     const toastContainer = $('#toast-container');
 
     function showToast(message, type = "info") {
@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }, 3000);
     }
 
-    // Cache Line class
+
     class Line {
         constructor(sz) {
             this.valid = false;
@@ -39,7 +39,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    // Simulator class
+
     class Sim {
         constructor(cfg) {
             this.cfg = cfg;
@@ -183,7 +183,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    // Cost constants
+
     const cost = {
         H: 10,
         M: 100,
@@ -191,7 +191,7 @@ document.addEventListener("DOMContentLoaded", function() {
     };
     const pct = x => (x * 100).toFixed(1) + '%';
 
-    // Logging function
+
     function log(msg) {
         const o = $('#logOutput');
         const e = document.createElement('div');
@@ -205,10 +205,10 @@ document.addEventListener("DOMContentLoaded", function() {
         o.scrollTop = o.scrollHeight;
     }
 
-    // Build cache table header
+
     function buildCacheHeader(blk) {
         const thead = $('#cache thead tr');
-        
+
         while (thead.children.length > 3) thead.removeChild(thead.lastChild);
 
         for (let off = 0; off < blk; off++) {
@@ -218,7 +218,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    // UI update functions
+
     const ui = {
         table(sim) {
             const tbody = $('#cache tbody');
@@ -282,7 +282,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     };
 
-    // Chart setup
+
     let chart;
 
     function newChart() {
@@ -359,11 +359,13 @@ document.addEventListener("DOMContentLoaded", function() {
         chart.update();
     }
 
-    // Simulation state
-    let sim, seq = [], idx = 0, timer = null;
+
+    let sim, seq = [],
+        idx = 0,
+        timer = null;
     let currentPattern = 'sequential';
 
-    // Get configuration
+
     function cfg() {
         const ram = +$('#ramSize').value;
         const blk = +$('#blkSize').value;
@@ -383,7 +385,7 @@ document.addEventListener("DOMContentLoaded", function() {
         };
     }
 
-    // Build access sequence
+
     function buildSeq() {
         const mode = currentPattern;
         const len = Math.min(+$('#ramSize').value, 256);
@@ -411,7 +413,7 @@ document.addEventListener("DOMContentLoaded", function() {
         return arr;
     }
 
-    // Hard reset
+
     function hardReset() {
         clearInterval(timer);
         newChart();
@@ -433,7 +435,7 @@ document.addEventListener("DOMContentLoaded", function() {
         showToast('Simulation reset', 'success');
     }
 
-    // Step through simulation
+
     function step() {
         if (idx >= seq.length) {
             log('Sequence complete');
@@ -454,7 +456,7 @@ document.addEventListener("DOMContentLoaded", function() {
         pushChart(idx, sim);
     }
 
-    // Play simulation
+
     function play() {
         timer = setInterval(step, 400);
         $('#play').disabled = true;
@@ -463,7 +465,7 @@ document.addEventListener("DOMContentLoaded", function() {
         showToast('Simulation running...', 'info');
     }
 
-    // Pause simulation
+
     function pause() {
         clearInterval(timer);
         $('#pause').disabled = true;
@@ -472,41 +474,41 @@ document.addEventListener("DOMContentLoaded", function() {
         showToast('Simulation paused', 'info');
     }
 
-    // Event listeners for config changes
+
     ['#ramSize', '#blkSize', '#lines', '#assoc', '#pfDist'].forEach(s =>
         $(s).addEventListener('change', hardReset)
     );
 
-    // Pattern button handling
+
     const patternButtons = document.querySelectorAll('.pattern-option');
     patternButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             patternButtons.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentPattern = btn.dataset.pattern;
-            
-            // Show/hide stride control
+
+
             const strideControl = $('#strideControl');
             if (currentPattern === 'strided') {
                 strideControl.classList.add('visible');
             } else {
                 strideControl.classList.remove('visible');
             }
-            
+
             hardReset();
         });
     });
 
-    // Stride input change
+
     $('#stride').addEventListener('change', hardReset);
 
-    // Control buttons
+
     $('#regen').addEventListener('click', hardReset);
     $('#play').addEventListener('click', play);
     $('#pause').addEventListener('click', pause);
     $('#step').addEventListener('click', step);
 
-    // Reset config button
+
     $('#reset-config').addEventListener('click', () => {
         $('#ramSize').value = 128;
         $('#blkSize').value = 4;
@@ -514,16 +516,16 @@ document.addEventListener("DOMContentLoaded", function() {
         $('#assoc').value = 1;
         $('#pfDist').value = 1;
         $('#stride').value = 2;
-        
+
         patternButtons.forEach(b => b.classList.remove('active'));
         document.querySelector('[data-pattern="sequential"]').classList.add('active');
         currentPattern = 'sequential';
         $('#strideControl').classList.remove('visible');
-        
+
         hardReset();
         showToast('Configuration reset to defaults', 'success');
     });
 
-    // Initialize on load
+
     hardReset();
 });

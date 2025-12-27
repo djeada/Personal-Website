@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", function() {
-    // Fallback getCookie function if not defined in parent app.js
+
     function getCookie(name) {
         if (typeof window.getCookie === 'function') {
             return window.getCookie(name);
@@ -44,13 +44,13 @@ document.addEventListener("DOMContentLoaded", function() {
     const bandParameters = document.getElementById('bandParameters');
     const filterQControl = document.getElementById('filterQControl');
 
-    // Stats display elements
+
     const waveformDisplay = document.getElementById('waveform-display');
     const amplitudeDisplay = document.getElementById('amplitude-display');
     const frequencyDisplay = document.getElementById('frequency-display');
     const filterDisplay = document.getElementById('filter-display');
 
-    // Buttons
+
     const pauseBtn = document.getElementById('pause-btn');
     const resetBtn = document.getElementById('reset-btn');
     const screenshotBtn = document.getElementById('screenshot-btn');
@@ -161,7 +161,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     let filter = new Filter(filterSelect.value, cutoffFrequency || centerFrequency, filterQ);
 
-    // Toast notification function
+
     function showToast(message, type = "info") {
         const toast = document.createElement("div");
         toast.className = `toast ${type}`;
@@ -379,7 +379,7 @@ document.addEventListener("DOMContentLoaded", function() {
         updateStats();
     }
 
-    // Presets
+
     const presets = {
         sine: {
             waveform: 'sine',
@@ -445,7 +445,7 @@ document.addEventListener("DOMContentLoaded", function() {
         showToast(`${presetName.charAt(0).toUpperCase() + presetName.slice(1)} preset applied`, 'success');
     }
 
-    // Card toggle functionality
+
     document.querySelectorAll('.card-toggle').forEach(toggle => {
         toggle.addEventListener('click', () => {
             const expanded = toggle.getAttribute('aria-expanded') === 'true';
@@ -453,7 +453,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
-    // Event listeners
+
     waveformSelect.addEventListener('change', updateValues);
     amplitudeSlider.addEventListener('input', updateValues);
     frequencySlider.addEventListener('input', updateValues);
@@ -466,50 +466,50 @@ document.addEventListener("DOMContentLoaded", function() {
     bandwidthSlider.addEventListener('input', updateFilterValues);
     filterQSlider.addEventListener('input', updateFilterValues);
 
-    // Preset buttons
+
     presetButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             applyPreset(btn.dataset.preset);
         });
     });
 
-    // Reset defaults
+
     resetDefaults.addEventListener('click', () => {
         applyPreset('sine');
     });
 
-    // Pause/Play
+
     pauseBtn.addEventListener('click', () => {
         isPaused = !isPaused;
-        pauseBtn.innerHTML = isPaused 
-            ? '<span class="btn-icon">▶️</span><span class="btn-text">Resume</span>'
-            : '<span class="btn-icon">⏸️</span><span class="btn-text">Pause</span>';
+        pauseBtn.innerHTML = isPaused ?
+            '<span class="btn-icon">▶️</span><span class="btn-text">Resume</span>' :
+            '<span class="btn-icon">⏸️</span><span class="btn-text">Pause</span>';
         showToast(isPaused ? 'Animation paused' : 'Animation resumed', 'info');
     });
 
-    // Reset animation
+
     resetBtn.addEventListener('click', () => {
         time = 0;
         filter.reset();
         showToast('Animation reset', 'success');
     });
 
-    // Screenshot
+
     screenshotBtn.addEventListener('click', () => {
         const combinedCanvas = document.createElement('canvas');
         combinedCanvas.width = inputCanvas.width;
         combinedCanvas.height = inputCanvas.height * 2 + 20;
         const ctx = combinedCanvas.getContext('2d');
 
-        // Background
+
         ctx.fillStyle = getColorForMode('#ffffff', '#1e293b');
         ctx.fillRect(0, 0, combinedCanvas.width, combinedCanvas.height);
 
-        // Draw both canvases
+
         ctx.drawImage(inputCanvas, 0, 0);
         ctx.drawImage(filteredCanvas, 0, inputCanvas.height + 20);
 
-        // Add labels
+
         ctx.fillStyle = getColorForMode('#1e293b', '#f1f5f9');
         ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
         ctx.fillText('Input Signal', 10, 20);
@@ -523,22 +523,22 @@ document.addEventListener("DOMContentLoaded", function() {
         showToast('Screenshot saved! 📷', 'success');
     });
 
-    // Keyboard shortcuts
+
     document.addEventListener('keydown', (e) => {
-        // Check if user is focused on an interactive element
+
         const activeElement = document.activeElement;
-        const isInteractiveElement = activeElement.tagName === 'INPUT' || 
-                                     activeElement.tagName === 'SELECT' || 
-                                     activeElement.tagName === 'TEXTAREA' ||
-                                     activeElement.isContentEditable;
-        
+        const isInteractiveElement = activeElement.tagName === 'INPUT' ||
+            activeElement.tagName === 'SELECT' ||
+            activeElement.tagName === 'TEXTAREA' ||
+            activeElement.isContentEditable;
+
         if (e.code === 'Space' && !isInteractiveElement) {
             e.preventDefault();
             pauseBtn.click();
         }
     });
 
-    // Initialize
+
     updateValues();
     updateFilterValues();
     animate();

@@ -66,7 +66,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: May 16, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: December 27, 2025</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="partitioning">Partitioning</h2>
             <p>Partitioning involves dividing a large database table into smaller, more manageable pieces called partitions. This method helps improve query performance because the database can access only the relevant partitions when executing queries, rather than scanning the entire table. It also simplifies data management tasks like backups, archiving, and purging old data.</p>
@@ -80,10 +80,8 @@
             </ol>
             <h3 id="what-do-we-mean-by-partitioning-">What do we mean by Partitioning?</h3>
             <p>Imagine a colossal table that stores millions of rows. Searching through this massive table every time can be time-consuming and inefficient. Partitioning slices the table into smaller sections based on specific criteria, allowing the database engine to quickly locate and retrieve the data it needs.</p>
-            <p>
             <div>
-                <pre><code class="language-shell">+----------------------------------------------+
-|                 Large Table                  |
+                <pre><code class="language-+----------------------------------------------+">|                 Large Table                  |
 +----------------------------------------------+
 |         |         |         |        |       |
 | Part 1  | Part 2  | Part 3  | Part 4 |  ...  |
@@ -94,7 +92,6 @@
 |         | 4000    | 6000    | 8000   |       |
 +---------+---------+---------+--------+-------+</code></pre>
             </div>
-            </p>
             <p>In this diagram, the large table is divided into multiple parts. Part 1 contains rows 1 to 2000, Part 2 holds rows 2001 to 4000, and so on. This approach allows the database to target specific partitions during queries, reducing the amount of data it needs to process.</p>
             <h3 id="purpose-of-partitioning">Purpose of Partitioning</h3>
             <p>The main goal of partitioning is to optimize database performance and enhance manageability, especially for large tables. By dividing a table into smaller partitions, queries can execute more efficiently because they only need to access the relevant partitions. This reduces query response times and improves overall system performance.</p>
@@ -567,7 +564,6 @@
             <p>When managing large volumes of time-series financial data, partitioning can dramatically improve query performance and maintenance operations. Below is an example of how to set up a partitioned MySQL/MariaDB table for daily OHLC (Open-High-Low-Close) stock prices by year.</p>
             <h4 id="create-the-partitioned-table">Create the Partitioned Table</h4>
             <p>Begin by defining your main table schema and specifying a partitioning strategy. Here we use <strong>RANGE</strong> partitioning on the integer expression <code>YEAR(trade_date)</code>, creating one partition per calendar year plus a catch-all for future dates.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">DROP TABLE IF EXISTS stock_prices;
 CREATE TABLE stock_prices (
@@ -591,21 +587,17 @@ PARTITION BY RANGE ( YEAR(trade_date) ) (
   PARTITION p_future VALUES LESS THAN MAXVALUE
 );</code></pre>
             </div>
-            </p>
             <ul>
                 <li><strong>Partition key</strong>: <code>YEAR(trade_date)</code> must appear in every UNIQUE/PRIMARY index (it’s already in the primary key).</li>
                 <li><strong>Partitions</strong>: p2018…p2024 cover past years; <strong>p_future</strong> holds any dates from 2025 onward.</li>
             </ul>
             <h4 id="show-create-table">SHOW CREATE TABLE</h4>
             <p>After creating the table, verify that the partitioning clause is in place by inspecting the full DDL. This ensures your partition definitions are correctly applied.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">SHOW CREATE TABLE stock_prices\G</code></pre>
             </div>
-            </p>
             <h4 id="information_schema-partitions">INFORMATION_SCHEMA.PARTITIONS</h4>
             <p>MySQL exposes partition metadata in <code>INFORMATION_SCHEMA.PARTITIONS</code>. Querying this view lets you confirm partition names, methods, expressions, and boundary values.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">SELECT
   PARTITION_NAME,
@@ -616,7 +608,6 @@ FROM INFORMATION_SCHEMA.PARTITIONS
 WHERE TABLE_SCHEMA = DATABASE()
   AND TABLE_NAME = 'stock_prices';</code></pre>
             </div>
-            </p>
             <p>
             <table>
                 <tr>
@@ -647,7 +638,6 @@ WHERE TABLE_SCHEMA = DATABASE()
             </p>
             <h4 id="querying-with-partition-pruning">Querying with Partition Pruning</h4>
             <p>Partition pruning tells the optimizer to scan only relevant partitions based on the <code>WHERE</code> clause. This avoids full-table scans and speeds up queries dramatically for time-restricted filters.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">EXPLAIN PARTITIONS
 SELECT ticker, close_price
@@ -655,11 +645,9 @@ FROM stock_prices
 WHERE trade_date BETWEEN '2022-01-01' AND '2022-12-31'
   AND ticker = 'AAPL';</code></pre>
             </div>
-            </p>
             <p>The <code>EXPLAIN</code> output will show <code>partitions: p2022</code>, indicating only that partition is scanned before applying the <code>ticker='AAPL'</code> filter.</p>
             <h4 id="adding-next-year-s-partition">Adding Next Year’s Partition</h4>
             <p>As the calendar rolls over, you need to split the catch-all partition to include a new yearly partition and maintain the future placeholder. Execute this once at the start of each year.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">ALTER TABLE stock_prices
   REORGANIZE PARTITION p_future INTO (
@@ -667,22 +655,18 @@ WHERE trade_date BETWEEN '2022-01-01' AND '2022-12-31'
     PARTITION p_future VALUES LESS THAN MAXVALUE
   );</code></pre>
             </div>
-            </p>
             <h4 id="dropping-an-out-of-scope-year">Dropping an Out-of-Scope Year</h4>
             <p>To remove historical data in bulk (e.g., before 2018), drop the corresponding partition. This operation is instantaneous and avoids expensive row-by-row deletes.</p>
-            <p>
             <div>
                 <pre><code class="language-sql">ALTER TABLE stock_prices
   DROP PARTITION p2018;</code></pre>
             </div>
-            </p>
             <h4 id="automating-with-events">Automating with EVENTS</h4>
             <p>MariaDB EVENTS can execute partition management tasks on a schedule, reducing manual overhead. Here are two example events:</p>
             <ol>
                 <li><strong>Add new year’s partition</strong> every January 1st.</li>
                 <li><strong>Drop partitions older than N years</strong> (e.g., keep only the last 7 years), implemented via a stored procedure.</li>
             </ol>
-            <p>
             <div>
                 <pre><code class="language-sql">-- 1. Add partition
 CREATE EVENT ev_add_stock_year
@@ -705,7 +689,6 @@ DO
   -- implement via prepared statements or stored procedure
   CALL drop_old_stock_partitions(@cutoff);</code></pre>
             </div>
-            </p>
             <h4 id="effects-on-normal-queries">Effects on “Normal” Queries</h4>
             <ul>
                 <li><strong>No query syntax change</strong>: You still <code>SELECT * FROM stock_prices WHERE …</code>.</li>
@@ -725,7 +708,6 @@ DO
                 <li>Periodically reorganize or rebuild partitions to prevent imbalance and optimize storage.</li>
                 <li>Balance partition sizes—if annual data becomes too large, switch to monthly ranges, for example:</li>
             </ul>
-            <p>
             <div>
                 <pre><code class="language-sql">PARTITION BY RANGE (TO_DAYS(trade_date)) (
   PARTITION p2024_01 VALUES LESS THAN (TO_DAYS('2024-02-01')),
@@ -733,7 +715,6 @@ DO
   …
 );</code></pre>
             </div>
-            </p>
         </article-section>
         <div id="table-of-contents">
             <h2>Table of Contents</h2>
