@@ -4,11 +4,23 @@
 // Interactive 3D Ring Visualization
 // ===================================
 
-// Canvas and context
+// Canvas and context with high-DPI support
 const canvas = document.getElementById("ringCanvas");
 const ctx = canvas.getContext("2d");
-const cw = canvas.width;
-const ch = canvas.height;
+
+// Set up canvas for high-DPI displays
+const dpr = window.devicePixelRatio || 1;
+const baseWidth = 800;
+const baseHeight = 600;
+canvas.width = baseWidth * dpr;
+canvas.height = baseHeight * dpr;
+canvas.style.width = baseWidth + "px";
+canvas.style.height = baseHeight + "px";
+ctx.scale(dpr, dpr);
+
+// Use logical dimensions for rendering calculations
+const cw = baseWidth;
+const ch = baseHeight;
 
 // UI Elements - Parameters
 const majorRadiusSlider = document.getElementById("majorRadius");
@@ -761,17 +773,33 @@ fullscreenBtn.addEventListener("click", () => {
 });
 
 // Handle fullscreen change to maintain aspect ratio
-document.addEventListener("fullscreenchange", () => {
-    if (document.fullscreenElement === canvas) {
-        // In fullscreen - adjust canvas size
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+function handleFullscreenChange() {
+    const fullscreenElement = document.fullscreenElement || 
+                              document.webkitFullscreenElement || 
+                              document.mozFullScreenElement;
+    
+    if (fullscreenElement === canvas) {
+        // In fullscreen - adjust canvas size with device pixel ratio
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = window.innerWidth * dpr;
+        canvas.height = window.innerHeight * dpr;
+        canvas.style.width = window.innerWidth + "px";
+        canvas.style.height = window.innerHeight + "px";
+        ctx.scale(dpr, dpr);
     } else {
-        // Exit fullscreen - restore original size
-        canvas.width = 800;
-        canvas.height = 600;
+        // Exit fullscreen - restore original size with device pixel ratio
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = 800 * dpr;
+        canvas.height = 600 * dpr;
+        canvas.style.width = "800px";
+        canvas.style.height = "600px";
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
-});
+}
+
+document.addEventListener("fullscreenchange", handleFullscreenChange);
+document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+document.addEventListener("mozfullscreenchange", handleFullscreenChange);
 
 // ===================================
 // Initialization
