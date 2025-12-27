@@ -1,3 +1,10 @@
+// Helper function for dark mode color selection
+function getColorForMode(colorLight, colorDark) {
+    const darkMode = document.cookie.split('; ').find(row => row.startsWith('darkMode='));
+    const isDark = darkMode && darkMode.split('=')[1].toLowerCase() === 'true';
+    return isDark ? colorDark : colorLight;
+}
+
 document.addEventListener("DOMContentLoaded", function() {
 
     const DEFAULT_GRID_SIZE = 20;
