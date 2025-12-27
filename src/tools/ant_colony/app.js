@@ -27,15 +27,27 @@ const CONFIG = {
         sensorDistance: 20,
         sensorAngle: Math.PI / 4,
         wanderStrength: 0.3,
-        turnSpeed: 0.1
+        turnSpeed: 0.1,
+        bounceBaseAngle: Math.PI / 2,
+        bounceRandomVariation: Math.PI / 4,
+        nestNavigationFactor: 0.1
     },
     pheromone: {
         gridSize: 5,
         initialStrength: 100,
         evaporationRate: 0.99,
-        diffusionRate: 0.01
+        diffusionRate: 0.01,
+        homePheromoneStrength: 0.5,
+        foodPheromoneStrength: 0.3
+    },
+    obstacle: {
+        radius: 8,
+        bufferDistance: 10
     }
 };
+
+// Store initial food amounts for reset
+const INITIAL_FOOD_AMOUNTS = CONFIG.food.map(f => f.amount);
 
 // ========================
 // Global State
@@ -191,7 +203,7 @@ class Ant {
             while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
             while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
             
-            this.angle += angleDiff * 0.1;
+            this.angle += angleDiff * CONFIG.ant.nestNavigationFactor;
         }
     }
     
@@ -220,7 +232,7 @@ class Ant {
             this.y = newY;
         } else {
             // Bounce off obstacle
-            this.angle += Math.PI / 2 + (Math.random() - 0.5) * Math.PI / 4;
+            this.angle += CONFIG.ant.bounceBaseAngle + (Math.random() - 0.5) * CONFIG.ant.bounceRandomVariation;
         }
         
         // Wrap around screen edges
@@ -245,9 +257,9 @@ class Ant {
     dropPheromone() {
         const strength = settings.pheromoneStrength;
         if (this.hasFood) {
-            addPheromone('home', this.x, this.y, strength * 0.5);
+            addPheromone('home', this.x, this.y, strength * CONFIG.pheromone.homePheromoneStrength);
         } else {
-            addPheromone('food', this.x, this.y, strength * 0.3);
+            addPheromone('food', this.x, this.y, strength * CONFIG.pheromone.foodPheromoneStrength);
         }
     }
     
@@ -530,9 +542,9 @@ function setupEventListeners() {
         clearPheromones();
         obstacles = [];
         // Reset food amounts
-        CONFIG.food[0].amount = 1000;
-        CONFIG.food[1].amount = 1000;
-        CONFIG.food[2].amount = 800;
+        CONFIG.food.forEach((food, index) => {
+            food.amount = INITIAL_FOOD_AMOUNTS[index];
+        });
         initAnts();
     });
     
@@ -607,14 +619,14 @@ function setupEventListeners() {
 function addObstacle(x, y) {
     // Don't add obstacles on nest or food
     const distToNest = Math.sqrt((x - CONFIG.nest.x) ** 2 + (y - CONFIG.nest.y) ** 2);
-    if (distToNest < CONFIG.nest.radius + 10) return;
+    if (distToNest < CONFIG.nest.radius + CONFIG.obstacle.bufferDistance) return;
     
     for (const food of CONFIG.food) {
         const distToFood = Math.sqrt((x - food.x) ** 2 + (y - food.y) ** 2);
-        if (distToFood < food.radius + 10) return;
+        if (distToFood < food.radius + CONFIG.obstacle.bufferDistance) return;
     }
     
-    obstacles.push({ x, y, radius: 8 });
+    obstacles.push({ x, y, radius: CONFIG.obstacle.radius });
 }
 
 // ========================
