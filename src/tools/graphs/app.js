@@ -478,7 +478,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
         async aStarSearch() {
             this.startNode.distance = 0;
-            this.startNode.heuristic = this.heuristic(this.startNode, this.endNode);
             this.openSet.push(this.startNode);
             const openSetMap = new Set([this.startNode]);
             const closedSetMap = new Set();
