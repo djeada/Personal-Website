@@ -6,147 +6,564 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Frontend-only Python Judge (Pyodide + Classic Worker)</title>
     <style>
-        :root {
+        /* CSS Variables for theming */
+        .sandbox {
             --bg: #0f172a;
+            --bg-elevated: #1a2332;
             --panel: #111827;
+            --panel-hover: #1f2937;
             --ink: #e5e7eb;
+            --ink-bright: #f9fafb;
             --muted: #9ca3af;
+            --muted-dark: #6b7280;
             --accent: #22d3ee;
+            --accent-hover: #06b6d4;
+            --accent-dark: #0891b2;
             --pass: #10b981;
             --fail: #ef4444;
+            --warning: #f59e0b;
+            --border: #1f2937;
+            --border-light: #374151;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
         }
 
-        html,
-        body {
-            height: 100%;
+        /* Base sandbox styling */
+        .sandbox {
             background: var(--bg);
             color: var(--ink);
-            font: 14px/1.4 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            transition: background-color 0.3s ease;
         }
 
-        .wrap {
-            max-width: 1100px;
+        .sandbox .wrap {
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 24px 20px 40px;
         }
 
-        h1 {
-            font-size: 20px;
-            margin: 0 0 8px;
+        /* Header section */
+        .sandbox h1 {
+            font-size: clamp(24px, 5vw, 32px);
+            margin: 0 0 12px;
+            font-weight: 700;
+            color: var(--ink-bright);
+            letter-spacing: -0.02em;
         }
 
-        .row {
-            display: grid;
-            grid-template-columns: 1fr 420px;
+        .sandbox .intro-text {
+            color: var(--muted);
+            font-size: 15px;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        /* Task metadata section */
+        .task-meta {
+            display: flex;
             gap: 16px;
-            align-items: stretch;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
         }
 
-        textarea {
+        .task-meta .difficulty-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            background: rgba(34, 211, 238, 0.1);
+            border: 1px solid rgba(34, 211, 238, 0.3);
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent);
+            gap: 6px;
+        }
+
+        .task-meta a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            padding: 6px 12px;
+            border-radius: 6px;
+        }
+
+        .task-meta a:hover {
+            color: var(--accent-hover);
+            background: rgba(34, 211, 238, 0.1);
+        }
+
+        /* Problem description panel */
+        .task-description {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .task-section h2 {
+            font-size: 20px;
+            margin: 16px 0 10px;
+            font-weight: 600;
+            color: var(--ink-bright);
+        }
+
+        .task-section h2:first-child {
+            margin-top: 0;
+        }
+
+        .task-section h3 {
+            font-size: 16px;
+            margin: 14px 0 8px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .task-section p {
+            color: var(--ink);
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+
+        .task-section pre {
+            background: #0b1022;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+            margin: 10px 0;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        /* Responsive grid layout */
+        .sandbox .row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        /* Desktop: side-by-side layout */
+        @media (min-width: 1024px) {
+            .sandbox .row {
+                grid-template-columns: 1fr 480px;
+                gap: 24px;
+            }
+        }
+
+        /* Tablet: optimized layout */
+        @media (min-width: 768px) and (max-width: 1023px) {
+            .sandbox .row {
+                grid-template-columns: 1fr;
+            }
+
+            .sandbox .wrap {
+                padding: 20px 16px 32px;
+            }
+        }
+
+        /* Mobile: stacked layout */
+        @media (max-width: 767px) {
+            .sandbox .wrap {
+                padding: 16px 12px 24px;
+            }
+
+            .sandbox h1 {
+                font-size: 24px;
+            }
+
+            .task-description {
+                padding: 16px;
+            }
+        }
+
+        /* Code editor section */
+        .editor-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .editor-label {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .editor-label code {
+            background: rgba(34, 211, 238, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: var(--accent);
+        }
+
+        .sandbox textarea {
             width: 100%;
-            height: 420px;
+            min-height: 400px;
+            height: auto;
             background: #0b1022;
             color: var(--ink);
-            border: 1px solid #1f2937;
+            border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 12px;
-            font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            padding: 16px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: vertical;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
-        .panel {
-            background: var(--panel);
-            border: 1px solid #1f2937;
-            border-radius: 12px;
-            padding: 12px;
+        .sandbox textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1), inset 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
-        .controls {
+        @media (max-width: 767px) {
+            .sandbox textarea {
+                min-height: 300px;
+                font-size: 13px;
+                padding: 12px;
+            }
+        }
+
+        /* Control buttons */
+        .sandbox .controls {
             display: flex;
-            gap: 8px;
+            gap: 10px;
             flex-wrap: wrap;
-            margin: 10px 0 0;
+            align-items: center;
+            margin-top: 12px;
         }
 
-        button {
+        .sandbox button {
             border: none;
             border-radius: 10px;
-            padding: 10px 12px;
+            padding: 12px 18px;
             cursor: pointer;
-            background: #1f2937;
+            background: var(--panel-hover);
             color: var(--ink);
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        button.primary {
+        .sandbox button:hover {
+            background: var(--border-light);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
+
+        .sandbox button:active {
+            transform: translateY(0);
+        }
+
+        .sandbox button.primary {
             background: var(--accent);
             color: #00141a;
             font-weight: 600;
         }
 
-        button:disabled {
-            opacity: .5;
-            cursor: not-allowed;
+        .sandbox button.primary:hover {
+            background: var(--accent-hover);
         }
 
-        .muted {
+        .sandbox button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        @media (max-width: 767px) {
+            .sandbox button {
+                padding: 10px 14px;
+                font-size: 13px;
+                flex: 1 1 auto;
+                min-width: 120px;
+            }
+
+            .sandbox .controls {
+                gap: 8px;
+            }
+        }
+
+        /* Status indicator */
+        .status-indicator {
+            margin-left: auto;
             color: var(--muted);
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        @media (max-width: 767px) {
+            .status-indicator {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+
+        /* Panel styling */
+        .sandbox .panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: var(--shadow);
+            transition: box-shadow 0.2s ease;
+        }
+
+        .sandbox .panel:hover {
+            box-shadow: var(--shadow-lg);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .panel-header strong {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--ink-bright);
+        }
+
+        /* Test cases */
+        .sandbox .tests {
+            display: grid;
+            gap: 10px;
+        }
+
+        .sandbox .test {
+            background: #0b1022;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            transition: border-color 0.2s ease;
+        }
+
+        .sandbox .test:hover {
+            border-color: var(--border-light);
+        }
+
+        .test-header {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .test-header strong {
+            font-size: 14px;
+            color: var(--ink-bright);
+        }
+
+        .test-header button {
+            padding: 6px 10px;
             font-size: 12px;
         }
 
-        .tests {
-            display: grid;
-            gap: 8px;
+        .test-label {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 500;
+            margin-top: 8px;
+            margin-bottom: 4px;
         }
 
-        .test {
-            background: #0b1022;
-            border: 1px solid #1f2937;
-            border-radius: 10px;
-            padding: 10px;
+        .sandbox .test pre {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(31, 41, 55, 0.5);
+            border-radius: 6px;
+            padding: 8px;
+            margin: 0;
+            font-size: 12px;
+            line-height: 1.5;
         }
 
-        .badge {
-            display: inline-block;
-            padding: 2px 6px;
+        .sandbox .test pre[contenteditable] {
+            cursor: text;
+            transition: border-color 0.2s ease;
+        }
+
+        .sandbox .test pre[contenteditable]:hover {
+            border-color: var(--border-light);
+        }
+
+        .sandbox .test pre[contenteditable]:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.1);
+        }
+
+        /* Badges */
+        .sandbox .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
             border-radius: 6px;
             font-size: 11px;
-            font-weight: 600;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        .pass {
-            background: rgba(16, 185, 129, .15);
+        .sandbox .pass {
+            background: rgba(16, 185, 129, 0.15);
             color: var(--pass);
-            border: 1px solid rgba(16, 185, 129, .3);
+            border: 1px solid rgba(16, 185, 129, 0.3);
         }
 
-        .fail {
-            background: rgba(239, 68, 68, .15);
+        .sandbox .fail {
+            background: rgba(239, 68, 68, 0.15);
             color: var(--fail);
-            border: 1px solid rgba(239, 68, 68, .3);
+            border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
-        pre {
+        /* Muted text */
+        .sandbox .muted {
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        /* Pre elements */
+        .sandbox pre {
             white-space: pre-wrap;
             word-wrap: break-word;
-            margin: 6px 0 0;
+            margin: 8px 0;
+            overflow-x: auto;
         }
 
-        .log {
-            height: 420px;
+        /* Results log */
+        .sandbox .log {
+            min-height: 300px;
+            max-height: 500px;
             overflow: auto;
             background: #0b1022;
-            border: 1px solid #1f2937;
+            border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 10px;
-            font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            padding: 12px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
-        a {
+        .sandbox .log:empty::before {
+            content: "Run tests to see results here...";
+            color: var(--muted-dark);
+            font-style: italic;
+        }
+
+        @media (max-width: 767px) {
+            .sandbox .log {
+                min-height: 200px;
+                font-size: 12px;
+            }
+        }
+
+        /* Links */
+        .sandbox a {
             color: var(--accent);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .sandbox a:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
+        /* Spacing utilities */
+        .spacer-sm {
+            height: 12px;
+        }
+
+        .spacer-md {
+            height: 16px;
+        }
+
+        /* Scrollbar styling */
+        .sandbox .log::-webkit-scrollbar,
+        .sandbox textarea::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        .sandbox .log::-webkit-scrollbar-track,
+        .sandbox textarea::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 10px;
+        }
+
+        .sandbox .log::-webkit-scrollbar-thumb,
+        .sandbox textarea::-webkit-scrollbar-thumb {
+            background: var(--border-light);
+            border-radius: 10px;
+        }
+
+        .sandbox .log::-webkit-scrollbar-thumb:hover,
+        .sandbox textarea::-webkit-scrollbar-thumb:hover {
+            background: var(--muted-dark);
+        }
+
+        /* Animation for results */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .sandbox .log > div {
+            animation: fadeInUp 0.3s ease;
+        }
+    </style>
+    <link rel="stylesheet" type="text/css" href="../../../resources/style.css">
+    
+    <style>
+        /* Page-level overrides */
+        body.task-page {
+            min-height: 100vh;
+            height: auto;
+            display: block;
+            background-color: #0D1117;
+        }
+
+        body.task-page .sandbox {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0;
         }
     </style>
 </head>
 
-<body>
+<body class="task-page">
     <nav aria-label="Main navigation">
         <a class="logo" href="../../../index.html">
             <img id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" alt="Adam Djellouli - Home Page Logo">
@@ -180,38 +597,58 @@
             </li>
         </ul>
     </nav>
-    <div class="wrap">
-        <h1>Frontend-only Python Judge</h1>
-        <p class="muted">Runs user Python in the browser via WebAssembly (Pyodide) inside a Web Worker, then checks outputs against tests. No server required.</p>
+    <div class="sandbox">
+        <div class="wrap">
+            <h1>Frontend-only Python Judge</h1>
+            <p class="intro-text">Runs user Python in the browser via WebAssembly (Pyodide) inside a Web Worker, then checks outputs against tests. No server required.</p>
 
-        <div class="row">
-            <div>
-                <label class="muted">Your Python (either define <code>solve(s: str) -&gt; str</code> or use <code>input()</code>/<code>print()</code>):</label>
-                <textarea id="code"></textarea>
-                <div class="controls">
-                    <button id="run-public" class="primary">Run public tests</button>
-                    <button id="run-hidden">Run hidden tests</button>
-                    <button id="format">Reset to stub</button>
-                    <span id="status" class="muted" style="margin-left:auto">Pyodide loading…</span>
-                </div>
-            </div>
-            <div>
-                <div class="panel">
-                    <div style="display:flex; justify-content:space-between; align-items:center; gap: 8px;">
-                        <strong>Public tests</strong>
-                        <button id="add-test">+ Add test</button>
+            <div class="row">
+                <div class="editor-container">
+                    <label class="editor-label">Your Python (either define <code>solve(s: str) -&gt; str</code> or use <code>input()</code>/<code>print()</code>):</label>
+                    <textarea id="code" aria-label="Python code editor"></textarea>
+                    <div class="controls">
+                        <button id="run-public" class="primary">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                            Run public tests
+                        </button>
+                        <button id="run-hidden">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                                <path d="M21 12c-2.4 4-6 7-11 7s-8.6-3-11-7c2.4-4 6-7 11-7s8.6 3 11 7z"/>
+                            </svg>
+                            Run hidden tests
+                        </button>
+                        <button id="format">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8"/>
+                                <path d="M21 3v5h-5"/>
+                            </svg>
+                            Reset to stub
+                        </button>
+                        <span id="status" class="status-indicator">Pyodide loading…</span>
                     </div>
-                    <div id="tests" class="tests" style="margin-top:8px"></div>
-                    <p class="muted" style="margin-top:8px">Hidden tests only run locally in the worker and aren't shown here.</p>
                 </div>
-                <div style="height:12px"></div>
-                <div class="panel">
-                    <strong>Results</strong>
-                    <div id="log" class="log"></div>
+                <div>
+                    <div class="panel">
+                        <div class="panel-header">
+                            <strong>Public tests</strong>
+                            <button id="add-test">+ Add test</button>
+                        </div>
+                        <div id="tests" class="tests"></div>
+                        <p class="muted" style="margin-top:12px">Hidden tests only run locally in the worker and aren't shown here.</p>
+                    </div>
+                    <div class="spacer-md"></div>
+                    <div class="panel">
+                        <div class="panel-header">
+                            <strong>Results</strong>
+                        </div>
+                        <div id="log" class="log"></div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
     <script>
         /* ================= Worker source (CLASSIC; no backticks inside) ================= */
@@ -378,13 +815,13 @@ self.addEventListener('message', async (ev) => {\n\
             PUBLIC_TESTS.forEach((t, idx) => {
                 const el = document.createElement('div');
                 el.className = 'test';
-                el.innerHTML = `<div style="display:flex; gap:6px; align-items:center; justify-content:space-between;">
+                el.innerHTML = `<div class="test-header">
             <strong>Case #${idx+1}</strong>
             <button data-idx="${idx}" class="del">Delete</button>
           </div>
-          <div class="muted">Input</div>
+          <div class="test-label">Input</div>
           <pre contenteditable spellcheck="false" class="in">${t.input.replace(/</g,'&lt;')}</pre>
-          <div class="muted">Expected output</div>
+          <div class="test-label">Expected output</div>
           <pre contenteditable spellcheck="false" class="exp">${t.expected.replace(/</g,'&lt;')}</pre>`;
                 testsEl.appendChild(el);
                 el.querySelector('.del').onclick = () => {
