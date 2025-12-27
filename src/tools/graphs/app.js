@@ -1,3 +1,10 @@
+// Helper function for dark mode color selection
+function getColorForMode(colorLight, colorDark) {
+    const darkMode = document.cookie.split('; ').find(row => row.startsWith('darkMode='));
+    const isDark = darkMode && darkMode.split('=')[1].toLowerCase() === 'true';
+    return isDark ? colorDark : colorLight;
+}
+
 document.addEventListener("DOMContentLoaded", function() {
 
     const DEFAULT_GRID_SIZE = 20;
@@ -384,22 +391,21 @@ document.addEventListener("DOMContentLoaded", function() {
 
         async depthFirstSearch() {
             const stack = [this.startNode];
+            this.startNode.visited = true;
             while (stack.length > 0) {
                 if (!this.searchingInProgress) return;
                 const current = stack.pop();
+                this.closedSet.push(current);
                 if (current === this.endNode) {
                     this.buildPath(current);
                     break;
                 }
-                if (!current.visited) {
-                    current.visited = true;
-                    this.closedSet.push(current);
-                    const neighbors = this.getNeighbors(current);
-                    for (let neighbor of neighbors) {
-                        if (!neighbor.visited) {
-                            neighbor.previous = current;
-                            stack.push(neighbor);
-                        }
+                const neighbors = this.getNeighbors(current);
+                for (let neighbor of neighbors) {
+                    if (!neighbor.visited) {
+                        neighbor.visited = true;
+                        neighbor.previous = current;
+                        stack.push(neighbor);
                     }
                 }
                 this.updateStats();
@@ -410,22 +416,21 @@ document.addEventListener("DOMContentLoaded", function() {
 
         async breadthFirstSearch() {
             const queue = [this.startNode];
+            this.startNode.visited = true;
             while (queue.length > 0) {
                 if (!this.searchingInProgress) return;
                 const current = queue.shift();
+                this.closedSet.push(current);
                 if (current === this.endNode) {
                     this.buildPath(current);
                     break;
                 }
-                if (!current.visited) {
-                    current.visited = true;
-                    this.closedSet.push(current);
-                    const neighbors = this.getNeighbors(current);
-                    for (let neighbor of neighbors) {
-                        if (!neighbor.visited) {
-                            neighbor.previous = current;
-                            queue.push(neighbor);
-                        }
+                const neighbors = this.getNeighbors(current);
+                for (let neighbor of neighbors) {
+                    if (!neighbor.visited) {
+                        neighbor.visited = true;
+                        neighbor.previous = current;
+                        queue.push(neighbor);
                     }
                 }
                 this.updateStats();
@@ -439,27 +444,30 @@ document.addEventListener("DOMContentLoaded", function() {
             const unvisited = [];
             for (let row of this.maze) {
                 for (let cell of row) {
-                    unvisited.push(cell);
+                    if (!cell.wall) {
+                        unvisited.push(cell);
+                    }
                 }
             }
             while (unvisited.length > 0) {
                 if (!this.searchingInProgress) return;
                 unvisited.sort((a, b) => a.distance - b.distance);
                 const current = unvisited.shift();
-                if (current.wall) continue;
                 if (current.distance === Infinity) break;
+                current.visited = true;
+                this.closedSet.push(current);
                 if (current === this.endNode) {
                     this.buildPath(current);
                     break;
                 }
-                current.visited = true;
-                this.closedSet.push(current);
                 const neighbors = this.getNeighbors(current);
                 for (let neighbor of neighbors) {
-                    const alt = current.distance + 1;
-                    if (alt < neighbor.distance) {
-                        neighbor.distance = alt;
-                        neighbor.previous = current;
+                    if (!neighbor.visited) {
+                        const alt = current.distance + 1;
+                        if (alt < neighbor.distance) {
+                            neighbor.distance = alt;
+                            neighbor.previous = current;
+                        }
                     }
                 }
                 this.updateStats();
@@ -471,26 +479,38 @@ document.addEventListener("DOMContentLoaded", function() {
         async aStarSearch() {
             this.startNode.distance = 0;
             this.openSet.push(this.startNode);
+            const openSetMap = new Set([this.startNode]);
+            const closedSetMap = new Set();
+            
             while (this.openSet.length > 0) {
                 if (!this.searchingInProgress) return;
                 this.openSet.sort((a, b) => (a.distance + a.heuristic) - (b.distance + b.heuristic));
                 const current = this.openSet.shift();
+                openSetMap.delete(current);
+                
                 if (current === this.endNode) {
                     this.buildPath(current);
                     break;
                 }
+                
                 this.closedSet.push(current);
+                closedSetMap.add(current);
+                
                 const neighbors = this.getNeighbors(current);
                 for (let neighbor of neighbors) {
-                    if (this.closedSet.includes(neighbor)) continue;
+                    if (closedSetMap.has(neighbor)) continue;
+                    
                     const tentativeG = current.distance + 1;
-                    if (!this.openSet.includes(neighbor) || tentativeG < neighbor.distance) {
+                    
+                    if (!openSetMap.has(neighbor)) {
                         neighbor.distance = tentativeG;
                         neighbor.heuristic = this.heuristic(neighbor, this.endNode);
                         neighbor.previous = current;
-                        if (!this.openSet.includes(neighbor)) {
-                            this.openSet.push(neighbor);
-                        }
+                        this.openSet.push(neighbor);
+                        openSetMap.add(neighbor);
+                    } else if (tentativeG < neighbor.distance) {
+                        neighbor.distance = tentativeG;
+                        neighbor.previous = current;
                     }
                 }
                 this.updateStats();
