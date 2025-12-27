@@ -525,7 +525,14 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
-        if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'SELECT') {
+        // Check if user is focused on an interactive element
+        const activeElement = document.activeElement;
+        const isInteractiveElement = activeElement.tagName === 'INPUT' || 
+                                     activeElement.tagName === 'SELECT' || 
+                                     activeElement.tagName === 'TEXTAREA' ||
+                                     activeElement.isContentEditable;
+        
+        if (e.code === 'Space' && !isInteractiveElement) {
             e.preventDefault();
             pauseBtn.click();
         }
