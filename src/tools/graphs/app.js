@@ -1,4 +1,11 @@
 document.addEventListener("DOMContentLoaded", function() {
+    // Default configuration constants
+    const DEFAULT_GRID_SIZE = 20;
+    const DEFAULT_SPEED = 5;
+    const DEFAULT_WALL_DENSITY = 30;
+    const DEFAULT_SHOW_GRID_LINES = true;
+    const DEFAULT_ALGORITHM = "dfs";
+
     const algorithmSelect = document.getElementById("algorithm");
     const mazeCanvas = document.getElementById("maze-canvas");
     const startButton = document.getElementById("start");
@@ -7,16 +14,66 @@ document.addEventListener("DOMContentLoaded", function() {
     const stepButton = document.getElementById("step");
     const speedInput = document.getElementById("speed");
     const gridSizeInput = document.getElementById("grid-size");
+    const wallDensityInput = document.getElementById("wall-density");
+    const showGridLinesCheckbox = document.getElementById("show-grid-lines");
+    const resetDefaultsButton = document.getElementById("reset-defaults");
+    const toastContainer = document.getElementById("toast-container");
+
+    // Stats elements
+    const cellsVisitedEl = document.getElementById("cells-visited");
+    const pathLengthEl = document.getElementById("path-length");
+    const elapsedTimeEl = document.getElementById("elapsed-time");
+    const algorithmNameEl = document.getElementById("algorithm-name");
+
+    // Algorithm names map
+    const algorithmNames = {
+        "dfs": "DFS",
+        "bfs": "BFS",
+        "dijkstra": "Dijkstra",
+        "astar": "A*"
+    };
+
+    // Toast notification function
+    function showToast(message, type = "info") {
+        const toast = document.createElement("div");
+        toast.className = `toast ${type}`;
+
+        const icons = {
+            success: "✅",
+            error: "❌",
+            info: "ℹ️",
+            warning: "⚠️"
+        };
+
+        toast.innerHTML = `
+            <span class="toast-icon">${icons[type] || icons.info}</span>
+            <span class="toast-message">${message}</span>
+        `;
+
+        toastContainer.appendChild(toast);
+
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+
+    // Toggle card functionality
+    document.querySelectorAll(".card-toggle").forEach(toggle => {
+        toggle.addEventListener("click", () => {
+            const expanded = toggle.getAttribute("aria-expanded") === "true";
+            toggle.setAttribute("aria-expanded", !expanded);
+        });
+    });
 
     function setCanvasSize() {
         const availableWidth = window.innerWidth * 0.95;
-        const availableHeight = window.innerHeight * 0.8;
+        const availableHeight = window.innerHeight * 0.6;
+        const maxSize = 600;
 
-        const size = Math.min(availableWidth, availableHeight);
+        const size = Math.min(availableWidth, availableHeight, maxSize);
 
         mazeCanvas.width = size;
         mazeCanvas.height = size;
-
 
         visualizer.cellSize = Math.floor(size / visualizer.gridSize);
         visualizer.drawMaze();
@@ -27,10 +84,11 @@ document.addEventListener("DOMContentLoaded", function() {
 
     class MazeVisualizer {
         constructor() {
-            this.gridSize = parseInt(gridSizeInput.value) || 20;
+            this.gridSize = parseInt(gridSizeInput.value) || DEFAULT_GRID_SIZE;
             this.cellSize = Math.floor(mazeCanvas.width / this.gridSize);
+            this.wallDensity = parseInt(wallDensityInput?.value) || DEFAULT_WALL_DENSITY;
             this.maze = [];
-            this.speed = parseInt(speedInput.value) || 50;
+            this.speed = parseInt(speedInput.value) || DEFAULT_SPEED;
             this.paused = false;
             this.stepMode = false;
             this.searchingInProgress = false;
@@ -40,9 +98,12 @@ document.addEventListener("DOMContentLoaded", function() {
             this.closedSet = [];
             this.path = [];
             this.currentAlgorithm = this.getSelectedAlgorithm();
+            this.showGridLines = showGridLinesCheckbox?.checked !== false;
+            this.startTime = null;
             this.initializeMaze();
             this.bindEvents();
             this.drawMaze();
+            this.updateAlgorithmName();
         }
 
         bindEvents() {
@@ -54,17 +115,77 @@ document.addEventListener("DOMContentLoaded", function() {
             speedInput.addEventListener("input", () => this.handleSpeedChange());
             gridSizeInput.addEventListener("input", () => this.handleGridSizeChange());
             mazeCanvas.addEventListener("click", (e) => this.handleCanvasClick(e));
+            
+            if (wallDensityInput) {
+                wallDensityInput.addEventListener("input", () => this.handleWallDensityChange());
+            }
+            
+            if (showGridLinesCheckbox) {
+                showGridLinesCheckbox.addEventListener("change", () => {
+                    this.showGridLines = showGridLinesCheckbox.checked;
+                    this.drawMaze();
+                });
+            }
+            
+            if (resetDefaultsButton) {
+                resetDefaultsButton.addEventListener("click", () => this.resetDefaults());
+            }
+
+            // Keyboard shortcuts
+            document.addEventListener("keydown", (e) => {
+                if (e.code === "Space") {
+                    e.preventDefault();
+                    if (this.searchingInProgress) {
+                        this.togglePause();
+                    } else {
+                        this.startSearch();
+                    }
+                }
+            });
+        }
+
+        resetDefaults() {
+            gridSizeInput.value = DEFAULT_GRID_SIZE;
+            speedInput.value = DEFAULT_SPEED;
+            if (wallDensityInput) wallDensityInput.value = DEFAULT_WALL_DENSITY;
+            if (showGridLinesCheckbox) showGridLinesCheckbox.checked = DEFAULT_SHOW_GRID_LINES;
+            algorithmSelect.value = DEFAULT_ALGORITHM;
+            
+            this.gridSize = DEFAULT_GRID_SIZE;
+            this.speed = DEFAULT_SPEED;
+            this.wallDensity = DEFAULT_WALL_DENSITY;
+            this.showGridLines = DEFAULT_SHOW_GRID_LINES;
+            this.cellSize = Math.floor(mazeCanvas.width / this.gridSize);
+            this.resetMaze();
+            this.updateAlgorithmName();
+            showToast("Settings reset to defaults", "success");
+        }
+
+        updateAlgorithmName() {
+            const algo = this.getSelectedAlgorithm();
+            algorithmNameEl.textContent = algorithmNames[algo] || algo.toUpperCase();
+        }
+
+        updateStats() {
+            cellsVisitedEl.textContent = this.closedSet.length;
+            pathLengthEl.textContent = this.path.length;
+            
+            if (this.startTime) {
+                const elapsed = Date.now() - this.startTime;
+                elapsedTimeEl.textContent = elapsed + "ms";
+            }
         }
 
         initializeMaze() {
             this.maze = [];
+            const density = this.wallDensity / 100;
             for (let i = 0; i < this.gridSize; i++) {
                 const row = [];
                 for (let j = 0; j < this.gridSize; j++) {
                     row.push({
                         x: j,
                         y: i,
-                        wall: Math.random() < 0.3,
+                        wall: Math.random() < density,
                         visited: false,
                         distance: Infinity,
                         heuristic: 0,
@@ -77,6 +198,7 @@ document.addEventListener("DOMContentLoaded", function() {
             this.endNode = this.maze[this.gridSize - 1][this.gridSize - 1];
             this.startNode.wall = false;
             this.endNode.wall = false;
+            this.startNode.distance = 0;
         }
 
         getSelectedAlgorithm() {
@@ -88,11 +210,13 @@ document.addEventListener("DOMContentLoaded", function() {
             this.searchingInProgress = true;
             this.paused = false;
             this.stepMode = false;
-            pauseButton.textContent = "Pause";
+            this.startTime = Date.now();
+            pauseButton.innerHTML = '<span class="btn-icon">⏸️</span> Pause';
             this.currentAlgorithm = this.getSelectedAlgorithm();
             this.openSet = [];
             this.closedSet = [];
             this.path = [];
+            
             for (let row of this.maze) {
                 for (let cell of row) {
                     cell.visited = false;
@@ -100,6 +224,10 @@ document.addEventListener("DOMContentLoaded", function() {
                     cell.previous = null;
                 }
             }
+            this.startNode.distance = 0;
+            
+            showToast(`Starting ${algorithmNames[this.currentAlgorithm]} search...`, "info");
+            
             switch (this.currentAlgorithm) {
                 case "dfs":
                     await this.depthFirstSearch();
@@ -116,13 +244,30 @@ document.addEventListener("DOMContentLoaded", function() {
                 default:
                     break;
             }
+            
+            this.updateStats();
+            
+            if (this.path.length > 0) {
+                showToast(`Path found! Length: ${this.path.length}`, "success");
+            } else if (this.searchingInProgress) {
+                showToast("No path found!", "warning");
+            }
+            
             this.searchingInProgress = false;
         }
 
         togglePause() {
             if (this.searchingInProgress) {
                 this.paused = !this.paused;
-                pauseButton.textContent = this.paused ? "Resume" : "Pause";
+                pauseButton.innerHTML = this.paused 
+                    ? '<span class="btn-icon">▶️</span> Resume' 
+                    : '<span class="btn-icon">⏸️</span> Pause';
+                
+                if (this.paused) {
+                    showToast("Search paused", "info");
+                } else {
+                    showToast("Search resumed", "info");
+                }
             }
         }
 
@@ -130,10 +275,21 @@ document.addEventListener("DOMContentLoaded", function() {
             if (this.searchingInProgress) {
                 this.searchingInProgress = false;
                 this.paused = false;
-                pauseButton.textContent = "Pause";
+                pauseButton.innerHTML = '<span class="btn-icon">⏸️</span> Pause';
             }
+            this.openSet = [];
+            this.closedSet = [];
+            this.path = [];
+            this.startTime = null;
             this.initializeMaze();
             this.drawMaze();
+            
+            // Reset stats
+            cellsVisitedEl.textContent = "0";
+            pathLengthEl.textContent = "0";
+            elapsedTimeEl.textContent = "0ms";
+            
+            showToast("Grid reset", "info");
         }
 
         stepSearch() {
@@ -150,10 +306,18 @@ document.addEventListener("DOMContentLoaded", function() {
             if (this.searchingInProgress) {
                 this.searchingInProgress = false;
                 this.paused = false;
-                pauseButton.textContent = "Pause";
+                pauseButton.innerHTML = '<span class="btn-icon">⏸️</span> Pause';
             }
+            this.updateAlgorithmName();
             this.initializeMaze();
             this.drawMaze();
+            
+            // Reset stats
+            cellsVisitedEl.textContent = "0";
+            pathLengthEl.textContent = "0";
+            elapsedTimeEl.textContent = "0ms";
+            
+            showToast(`Algorithm changed to ${algorithmNames[this.getSelectedAlgorithm()]}`, "info");
         }
 
         handleSpeedChange() {
@@ -163,6 +327,11 @@ document.addEventListener("DOMContentLoaded", function() {
         handleGridSizeChange() {
             this.gridSize = parseInt(gridSizeInput.value) || 20;
             this.cellSize = Math.floor(mazeCanvas.width / this.gridSize);
+            this.resetMaze();
+        }
+
+        handleWallDensityChange() {
+            this.wallDensity = parseInt(wallDensityInput.value) || 30;
             this.resetMaze();
         }
 
@@ -188,7 +357,12 @@ document.addEventListener("DOMContentLoaded", function() {
                     await new Promise((resolve) => setTimeout(resolve, 50));
                 }
             } else {
-                await new Promise((resolve) => setTimeout(resolve, this.speed));
+                // Speed ranges from 1-10, where 10 is fastest
+                // Delay ranges from 200ms (speed=1) to 5ms (speed=10)
+                const maxDelay = 200;
+                const minDelay = 5;
+                const delayTime = Math.round(maxDelay - ((this.speed - 1) / 9) * (maxDelay - minDelay));
+                await new Promise((resolve) => setTimeout(resolve, delayTime));
                 while (this.paused) {
                     await new Promise((resolve) => setTimeout(resolve, 50));
                 }
@@ -228,6 +402,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         }
                     }
                 }
+                this.updateStats();
                 this.drawMaze();
                 await this.delay();
             }
@@ -253,6 +428,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         }
                     }
                 }
+                this.updateStats();
                 this.drawMaze();
                 await this.delay();
             }
@@ -286,12 +462,14 @@ document.addEventListener("DOMContentLoaded", function() {
                         neighbor.previous = current;
                     }
                 }
+                this.updateStats();
                 this.drawMaze();
                 await this.delay();
             }
         }
 
         async aStarSearch() {
+            this.startNode.distance = 0;
             this.openSet.push(this.startNode);
             while (this.openSet.length > 0) {
                 if (!this.searchingInProgress) return;
@@ -315,6 +493,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         }
                     }
                 }
+                this.updateStats();
                 this.drawMaze();
                 await this.delay();
             }
@@ -340,7 +519,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 for (let j = 0; j < this.gridSize; j++) {
                     const cell = this.maze[i][j];
 
-
                     if (cell.wall) {
                         ctx.fillStyle = getColorForMode("#000000", "#555555");
                     } else if (cell === this.startNode) {
@@ -363,12 +541,16 @@ document.addEventListener("DOMContentLoaded", function() {
                         this.cellSize,
                         this.cellSize
                     );
-                    ctx.strokeRect(
-                        cell.x * this.cellSize,
-                        cell.y * this.cellSize,
-                        this.cellSize,
-                        this.cellSize
-                    );
+                    
+                    if (this.showGridLines) {
+                        ctx.strokeStyle = getColorForMode("#CCCCCC", "#444444");
+                        ctx.strokeRect(
+                            cell.x * this.cellSize,
+                            cell.y * this.cellSize,
+                            this.cellSize,
+                            this.cellSize
+                        );
+                    }
                 }
             }
         }

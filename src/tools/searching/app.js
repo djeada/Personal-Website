@@ -1,6 +1,10 @@
 document.addEventListener("DOMContentLoaded", function() {
+    // Default configuration constants
+    const DEFAULT_ARRAY_SIZE = 50;
+    const DEFAULT_SPEED = 5;
+    const DEFAULT_ALGORITHM = "linear";
+
     const algorithmSelect = document.getElementById("algorithm");
-    const arrayState = document.getElementById("array-state");
     const searchTargetInput = document.getElementById("search-target");
     const arraySizeInput = document.getElementById("array-size");
     const speedInput = document.getElementById("speed");
@@ -9,12 +13,71 @@ document.addEventListener("DOMContentLoaded", function() {
     const pauseButton = document.getElementById("pause");
     const resetButton = document.getElementById("reset");
     const stepButton = document.getElementById("step");
+    const resetDefaultsButton = document.getElementById("reset-defaults");
+    const toastContainer = document.getElementById("toast-container");
 
-    const canvasWidth = Math.floor(window.innerWidth * 0.6);
-    const canvasHeight = Math.floor(window.innerHeight * 0.8);
+    // Stats elements
+    const comparisonsCountEl = document.getElementById("comparisons-count");
+    const targetValueEl = document.getElementById("target-value");
+    const elapsedTimeEl = document.getElementById("elapsed-time");
+    const algorithmNameEl = document.getElementById("algorithm-name");
 
-    searchingCanvas.width = canvasWidth;
-    searchingCanvas.height = canvasHeight;
+    // Algorithm names map
+    const algorithmNames = {
+        "linear": "Linear",
+        "binary": "Binary",
+        "jump": "Jump",
+        "interpolation": "Interpolation"
+    };
+
+    // Toast notification function
+    function showToast(message, type = "info") {
+        const toast = document.createElement("div");
+        toast.className = `toast ${type}`;
+
+        const icons = {
+            success: "✅",
+            error: "❌",
+            info: "ℹ️",
+            warning: "⚠️"
+        };
+
+        toast.innerHTML = `
+            <span class="toast-icon">${icons[type] || icons.info}</span>
+            <span class="toast-message">${message}</span>
+        `;
+
+        toastContainer.appendChild(toast);
+
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+
+    // Toggle card functionality
+    document.querySelectorAll(".card-toggle").forEach(toggle => {
+        toggle.addEventListener("click", () => {
+            const expanded = toggle.getAttribute("aria-expanded") === "true";
+            toggle.setAttribute("aria-expanded", !expanded);
+        });
+    });
+
+    function setCanvasSize() {
+        const availableWidth = window.innerWidth * 0.95;
+        const availableHeight = window.innerHeight * 0.5;
+        const maxWidth = 800;
+        const maxHeight = 400;
+
+        const width = Math.min(availableWidth, maxWidth);
+        const height = Math.min(availableHeight, maxHeight);
+
+        searchingCanvas.width = width;
+        searchingCanvas.height = height;
+
+        if (visualizer) {
+            visualizer.drawArray();
+        }
+    }
 
     const ctx = searchingCanvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
@@ -22,18 +85,20 @@ document.addEventListener("DOMContentLoaded", function() {
     class SearchingVisualizer {
         constructor() {
             this.array = [];
-            this.arrayLength = parseInt(arraySizeInput.value) || 50;
-            this.speed = parseInt(speedInput.value) || 50;
+            this.arrayLength = parseInt(arraySizeInput.value) || DEFAULT_ARRAY_SIZE;
+            this.speed = parseInt(speedInput.value) || DEFAULT_SPEED;
             this.searchingInProgress = false;
             this.paused = false;
             this.stepMode = false;
             this.found = false;
             this.searchCompleted = false;
             this.currentAlgorithm = this.getSelectedAlgorithm();
+            this.comparisons = 0;
+            this.startTime = null;
             this.generateSortedRandomArray();
             this.drawArray();
-            this.updateArrayState();
             this.bindEvents();
+            this.updateAlgorithmName();
         }
 
         bindEvents() {
@@ -44,6 +109,49 @@ document.addEventListener("DOMContentLoaded", function() {
             algorithmSelect.addEventListener("change", () => this.handleAlgorithmChange());
             arraySizeInput.addEventListener("input", () => this.handleArraySizeChange());
             speedInput.addEventListener("input", () => this.handleSpeedChange());
+
+            if (resetDefaultsButton) {
+                resetDefaultsButton.addEventListener("click", () => this.resetDefaults());
+            }
+
+            // Keyboard shortcuts
+            document.addEventListener("keydown", (e) => {
+                if (e.code === "Space") {
+                    e.preventDefault();
+                    if (this.searchingInProgress) {
+                        this.togglePause();
+                    } else {
+                        this.startSearching();
+                    }
+                }
+            });
+        }
+
+        resetDefaults() {
+            arraySizeInput.value = DEFAULT_ARRAY_SIZE;
+            speedInput.value = DEFAULT_SPEED;
+            algorithmSelect.value = DEFAULT_ALGORITHM;
+            searchTargetInput.value = "";
+            
+            this.arrayLength = DEFAULT_ARRAY_SIZE;
+            this.speed = DEFAULT_SPEED;
+            this.resetArray();
+            this.updateAlgorithmName();
+            showToast("Settings reset to defaults", "success");
+        }
+
+        updateAlgorithmName() {
+            const algo = this.getSelectedAlgorithm();
+            algorithmNameEl.textContent = algorithmNames[algo] || algo;
+        }
+
+        updateStats() {
+            comparisonsCountEl.textContent = this.comparisons;
+            
+            if (this.startTime) {
+                const elapsed = Date.now() - this.startTime;
+                elapsedTimeEl.textContent = elapsed + "ms";
+            }
         }
 
         generateSortedRandomArray() {
@@ -67,9 +175,9 @@ document.addEventListener("DOMContentLoaded", function() {
                 const height = this.array[i];
 
                 if (highlightedIndices.includes(i)) {
-                    ctx.fillStyle = found ? "green" : "red";
+                    ctx.fillStyle = found ? "#10b981" : "#ef4444";
                 } else if (searchComplete && !found) {
-                    ctx.fillStyle = "gray";
+                    ctx.fillStyle = "#9ca3af";
                 } else {
                     ctx.fillStyle = "#eec747";
                 }
@@ -83,20 +191,23 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         }
 
-        updateArrayState() {
-            arrayState.value = this.array.join(", ");
-        }
-
         async startSearching() {
             if (this.searchCompleted) return;
             if (this.searchingInProgress) return;
             this.searchingInProgress = true;
             this.paused = false;
             this.stepMode = false;
-            pauseButton.textContent = "Pause";
+            this.comparisons = 0;
+            this.startTime = Date.now();
+            pauseButton.innerHTML = '<span class="btn-icon">⏸️</span> Pause';
             this.currentAlgorithm = this.getSelectedAlgorithm();
+            
             const target = parseInt(searchTargetInput.value) || this.array[Math.floor(Math.random() * this.array.length)];
             searchTargetInput.value = target;
+            targetValueEl.textContent = target;
+            
+            showToast(`Starting ${algorithmNames[this.currentAlgorithm]} search for ${target}...`, "info");
+
             switch (this.currentAlgorithm) {
                 case "linear":
                     await this.linearSearch(target);
@@ -113,6 +224,15 @@ document.addEventListener("DOMContentLoaded", function() {
                 default:
                     break;
             }
+            
+            this.updateStats();
+            
+            if (this.found) {
+                showToast(`Found! ${this.comparisons} comparisons`, "success");
+            } else if (this.searchingInProgress) {
+                showToast(`Not found after ${this.comparisons} comparisons`, "warning");
+            }
+            
             this.searchingInProgress = false;
             this.searchCompleted = true;
         }
@@ -120,7 +240,15 @@ document.addEventListener("DOMContentLoaded", function() {
         togglePause() {
             if (this.searchingInProgress) {
                 this.paused = !this.paused;
-                pauseButton.textContent = this.paused ? "Resume" : "Pause";
+                pauseButton.innerHTML = this.paused 
+                    ? '<span class="btn-icon">▶️</span> Resume' 
+                    : '<span class="btn-icon">⏸️</span> Pause';
+                
+                if (this.paused) {
+                    showToast("Search paused", "info");
+                } else {
+                    showToast("Search resumed", "info");
+                }
             }
         }
 
@@ -128,12 +256,20 @@ document.addEventListener("DOMContentLoaded", function() {
             if (this.searchingInProgress) {
                 this.searchingInProgress = false;
                 this.paused = false;
-                pauseButton.textContent = "Pause";
+                pauseButton.innerHTML = '<span class="btn-icon">⏸️</span> Pause';
             }
             this.searchCompleted = false;
+            this.comparisons = 0;
+            this.startTime = null;
             this.generateSortedRandomArray();
             this.drawArray();
-            this.updateArrayState();
+            
+            // Reset stats
+            comparisonsCountEl.textContent = "0";
+            targetValueEl.textContent = "-";
+            elapsedTimeEl.textContent = "0ms";
+            
+            showToast("Array reset", "info");
         }
 
         stepSearching() {
@@ -153,21 +289,28 @@ document.addEventListener("DOMContentLoaded", function() {
             if (this.searchingInProgress) {
                 this.searchingInProgress = false;
                 this.paused = false;
-                pauseButton.textContent = "Pause";
+                pauseButton.innerHTML = '<span class="btn-icon">⏸️</span> Pause';
             }
             this.searchCompleted = false;
+            this.updateAlgorithmName();
             this.generateSortedRandomArray();
             this.drawArray();
-            this.updateArrayState();
+            
+            // Reset stats
+            comparisonsCountEl.textContent = "0";
+            targetValueEl.textContent = "-";
+            elapsedTimeEl.textContent = "0ms";
+            
+            showToast(`Algorithm changed to ${algorithmNames[this.getSelectedAlgorithm()]}`, "info");
         }
 
         handleArraySizeChange() {
-            this.arrayLength = parseInt(arraySizeInput.value) || 50;
+            this.arrayLength = parseInt(arraySizeInput.value) || DEFAULT_ARRAY_SIZE;
             this.resetArray();
         }
 
         handleSpeedChange() {
-            this.speed = parseInt(speedInput.value) || 50;
+            this.speed = parseInt(speedInput.value) || DEFAULT_SPEED;
         }
 
         getSelectedAlgorithm() {
@@ -181,7 +324,11 @@ document.addEventListener("DOMContentLoaded", function() {
                     await new Promise((resolve) => setTimeout(resolve, 50));
                 }
             } else {
-                await new Promise((resolve) => setTimeout(resolve, this.speed));
+                // Speed ranges from 1-10, where 10 is fastest
+                const maxDelay = 200;
+                const minDelay = 5;
+                const delayTime = Math.round(maxDelay - ((this.speed - 1) / 9) * (maxDelay - minDelay));
+                await new Promise((resolve) => setTimeout(resolve, delayTime));
                 while (this.paused) {
                     await new Promise((resolve) => setTimeout(resolve, 50));
                 }
@@ -193,6 +340,8 @@ document.addEventListener("DOMContentLoaded", function() {
             for (let i = 0; i < this.array.length; i++) {
                 if (!this.searchingInProgress) return;
 
+                this.comparisons++;
+                this.updateStats();
                 this.drawArray([i]);
 
                 if (this.array[i] === target) {
@@ -216,6 +365,8 @@ document.addEventListener("DOMContentLoaded", function() {
             while (left <= right) {
                 if (!this.searchingInProgress) return;
                 const middle = Math.floor((left + right) / 2);
+                this.comparisons++;
+                this.updateStats();
                 this.drawArray([middle]);
 
                 if (this.array[middle] === target) {
@@ -245,6 +396,8 @@ document.addEventListener("DOMContentLoaded", function() {
             while (this.array[Math.min(step, n) - 1] < target) {
                 if (!this.searchingInProgress) return;
 
+                this.comparisons++;
+                this.updateStats();
                 this.drawArray([Math.min(step, n) - 1]);
                 prev = step;
                 step += Math.floor(Math.sqrt(n));
@@ -256,6 +409,8 @@ document.addEventListener("DOMContentLoaded", function() {
             while (this.array[prev] < target) {
                 if (!this.searchingInProgress) return;
 
+                this.comparisons++;
+                this.updateStats();
                 this.drawArray([prev]);
                 prev++;
 
@@ -282,6 +437,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (!this.searchingInProgress) return;
 
                 let pos = low + Math.floor(((high - low) / (this.array[high] - this.array[low])) * (target - this.array[low]));
+                this.comparisons++;
+                this.updateStats();
                 this.drawArray([pos]);
 
                 if (this.array[pos] === target) {
@@ -306,21 +463,14 @@ document.addEventListener("DOMContentLoaded", function() {
 
     }
 
-    function setCanvasDimensions() {
-        let canvasWidth, canvasHeight;
-        if (window.innerWidth <= 480) {
-            canvasWidth = Math.floor(window.innerWidth * 0.8);
-            canvasHeight = Math.floor(window.innerHeight * 0.6);
-        } else {
-            canvasWidth = Math.floor(window.innerWidth * 0.6);
-            canvasHeight = Math.floor(window.innerHeight * 0.8);
-        }
-        searchingCanvas.width = canvasWidth;
-        searchingCanvas.height = canvasHeight;
+    let visualizer;
+
+    function init() {
+        setCanvasSize();
+        visualizer = new SearchingVisualizer();
     }
 
-    setCanvasDimensions();
-    window.addEventListener("resize", setCanvasDimensions);
-    const visualizer = new SearchingVisualizer();
+    window.addEventListener("resize", setCanvasSize);
+    init();
 
 });

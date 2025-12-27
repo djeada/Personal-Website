@@ -6,8 +6,8 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <title>Graph Algorithm Visualization</title>
     <meta charset="utf-8" />
-    <meta content="Select a graph algorithm, and use the controls to visualize the process." name="description" />
-    <meta content="graph algorithms, algorithm visualization, DFS, BFS, Dijkstra, A*, Adam Djellouli" name="keywords" />
+    <meta content="Interactive visualization of pathfinding algorithms. Explore DFS, BFS, Dijkstra, and A* on customizable grids." name="description" />
+    <meta content="graph algorithms, algorithm visualization, DFS, BFS, Dijkstra, A*, Adam Djellouli, pathfinding" name="keywords" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
     <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
     <link href="../../resources/style.css" rel="stylesheet" type="text/css" />
@@ -50,36 +50,206 @@
             </li>
         </ul>
     </nav>
-    <section>
-        <header>
-            <h1>Graph Algorithm Visualization</h1>
-            <p>Select a graph algorithm, and use the controls to visualize the pathfinding process.</p>
+    <!-- Toast Notification Container -->
+    <div aria-live="polite" class="toast-container" id="toast-container"></div>
+
+    <main class="tool-main">
+        <!-- Hero Header -->
+        <header class="tool-header">
+            <div class="header-content">
+                <div class="header-icon">
+                    <span class="icon-sparkle">🔍</span>
+                </div>
+                <h1>Graph Algorithm Visualization</h1>
+                <p class="subtitle">Explore pathfinding algorithms with interactive grid visualization</p>
+                <div class="keyboard-hint">
+                    Click cells to toggle walls • <kbd>Space</kbd> to start/pause
+                </div>
+            </div>
         </header>
-        <div class="col">
-            <label for="algorithm">Algorithm:</label>
-            <select id="algorithm">
-                <option value="dfs">Depth-First Search (DFS)</option>
-                <option value="bfs">Breadth-First Search (BFS)</option>
-                <option value="dijkstra">Dijkstra's Algorithm</option>
-                <option value="astar">A* Algorithm</option>
-            </select>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-item">
+                <span class="stat-icon">📊</span>
+                <span class="stat-value" id="cells-visited">0</span>
+                <span class="stat-label">Cells Visited</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">📏</span>
+                <span class="stat-value" id="path-length">0</span>
+                <span class="stat-label">Path Length</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">⏱️</span>
+                <span class="stat-value" id="elapsed-time">0ms</span>
+                <span class="stat-label">Time</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">🎯</span>
+                <span class="stat-value" id="algorithm-name">DFS</span>
+                <span class="stat-label">Algorithm</span>
+            </div>
         </div>
-        <div class="col">
-            <label for="grid-size">Grid Size:</label>
-            <input id="grid-size" max="100" min="10" type="number" value="20" />
+
+        <section class="tool-content">
+            <!-- Sidebar Options -->
+            <aside class="options-sidebar">
+                <div class="sidebar-header">
+                    <h2><span class="icon">⚙️</span> Settings</h2>
+                    <button class="preset-btn" id="reset-defaults" title="Reset to defaults">
+                        <span>↺</span>
+                    </button>
+                </div>
+
+                <!-- Algorithm Selection -->
+                <div class="option-card preset-card">
+                    <h3><span class="card-icon">🧮</span> Algorithm</h3>
+                    <div class="input-group">
+                        <select id="algorithm">
+                            <option value="dfs">Depth-First Search (DFS)</option>
+                            <option value="bfs">Breadth-First Search (BFS)</option>
+                            <option value="dijkstra">Dijkstra's Algorithm</option>
+                            <option value="astar">A* Algorithm</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Grid Options -->
+                <div class="option-card">
+                    <button aria-expanded="true" class="card-toggle">
+                        <h3><span class="card-icon">📐</span> Grid</h3>
+                        <span class="toggle-icon">▼</span>
+                    </button>
+                    <div class="card-content">
+                        <div class="input-group">
+                            <label for="grid-size">Grid Size</label>
+                            <input id="grid-size" max="50" min="5" type="number" value="20" />
+                        </div>
+                        <div class="input-group">
+                            <label for="wall-density">Wall Density</label>
+                            <input id="wall-density" max="50" min="0" step="5" type="range" value="30" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Visualization Options -->
+                <div class="option-card">
+                    <button aria-expanded="true" class="card-toggle">
+                        <h3><span class="card-icon">🎨</span> Visualization</h3>
+                        <span class="toggle-icon">▼</span>
+                    </button>
+                    <div class="card-content">
+                        <div class="input-group">
+                            <label for="speed">Animation Speed</label>
+                            <input id="speed" max="10" min="1" type="range" value="5" />
+                        </div>
+                        <div class="option-item" title="Show grid lines on the canvas">
+                            <label class="toggle-switch">
+                                <input checked="" id="show-grid-lines" type="checkbox" />
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="option-label">Show Grid Lines</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls Info -->
+                <div class="option-card">
+                    <h3><span class="card-icon">ℹ️</span> Controls</h3>
+                    <div class="card-content">
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0; line-height: 1.6;">
+                            • Click cells to add/remove walls<br>
+                            • Start (green) is at top-left<br>
+                            • End (red) is at bottom-right<br>
+                            • Use Step for manual control
+                        </p>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Canvas Area -->
+            <div class="canvas-area">
+                <!-- Canvas Container -->
+                <div class="canvas-container">
+                    <div class="canvas-header">
+                        <span class="canvas-title">🗺️ Pathfinding Grid</span>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <canvas id="maze-canvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-bar">
+                    <div class="primary-actions">
+                        <button class="action-btn primary large" id="start">
+                            <span class="btn-icon">▶️</span>
+                            <span class="btn-text">Start Search</span>
+                        </button>
+                    </div>
+                    <div class="secondary-actions">
+                        <button class="action-btn warning" id="pause" title="Pause/Resume">
+                            <span class="btn-icon">⏸️</span> Pause
+                        </button>
+                        <button class="action-btn" id="step" title="Step through one iteration">
+                            <span class="btn-icon">⏭️</span> Step
+                        </button>
+                        <button class="action-btn danger" id="reset" title="Reset the grid">
+                            <span class="btn-icon">🔄</span> Reset
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Legend Panel -->
+                <div class="legend-panel">
+                    <div class="legend-header">
+                        <h3><span>🎨</span> Legend</h3>
+                    </div>
+                    <div class="legend-content">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #00FF00;"></div>
+                            <span class="legend-label">Start</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #FF0000;"></div>
+                            <span class="legend-label">End</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #000000;"></div>
+                            <span class="legend-label">Wall</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #87CEEB;"></div>
+                            <span class="legend-label">Open Set</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #FFA500;"></div>
+                            <span class="legend-label">Visited</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #FFFF00;"></div>
+                            <span class="legend-label">Path</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Help Box -->
+        <div class="help-box">
+            <strong>Need Help?</strong>
+            <ul>
+                <li>Select an algorithm from the sidebar dropdown.</li>
+                <li>Adjust grid size and wall density to customize the maze.</li>
+                <li>Click on cells to manually add or remove walls.</li>
+                <li>Click "Start Search" to visualize the pathfinding algorithm.</li>
+                <li>Use "Step" to advance one iteration at a time for detailed analysis.</li>
+                <li>The stats bar shows real-time metrics during the search.</li>
+                <li>Different colors represent different states (see Legend).</li>
+            </ul>
         </div>
-        <div class="col">
-            <label for="speed">Speed:</label>
-            <input id="speed" max="10" min="1" type="range" value="5" />
-        </div>
-        <canvas id="maze-canvas"></canvas>
-        <div class="row">
-            <button id="start">Start</button>
-            <button id="pause">Pause</button>
-            <button id="reset">Reset</button>
-            <button id="step">Step</button>
-        </div>
-    </section>
+    </main>
     <footer>
         <div class="footer-columns">
             <div class="footer-column">

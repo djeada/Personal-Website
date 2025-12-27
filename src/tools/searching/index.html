@@ -6,8 +6,8 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <title>Search Algorithm Visualization</title>
     <meta charset="utf-8" />
-    <meta content="Select an algorithm, and use the controls to visualize the search process." name="description" />
-    <meta content="search algorithms, visualization, linear search, binary search, Adam Djellouli" name="keywords" />
+    <meta content="Interactive visualization of search algorithms. Explore Linear, Binary, Jump, and Interpolation search on sorted arrays." name="description" />
+    <meta content="search algorithms, visualization, linear search, binary search, jump search, interpolation search, Adam Djellouli" name="keywords" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
     <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
     <link href="../../resources/style.css" rel="stylesheet" type="text/css" />
@@ -50,44 +50,191 @@
             </li>
         </ul>
     </nav>
-    <section>
-        <header>
-            <h1>Search Algorithm Visualization</h1>
-            <p>Select an algorithm, and use the controls to visualize the search process.</p>
+
+    <!-- Toast Notification Container -->
+    <div aria-live="polite" class="toast-container" id="toast-container"></div>
+
+    <main class="tool-main">
+        <!-- Hero Header -->
+        <header class="tool-header">
+            <div class="header-content">
+                <div class="header-icon">
+                    <span class="icon-sparkle">🔎</span>
+                </div>
+                <h1>Search Algorithm Visualization</h1>
+                <p class="subtitle">Explore search algorithms with interactive array visualization</p>
+                <div class="keyboard-hint">
+                    Watch elements being checked • <kbd>Space</kbd> to start/pause
+                </div>
+            </div>
         </header>
-        <div class="col">
-            <label for="algorithm">Algorithm:</label>
-            <select id="algorithm">
-                <option value="linear">Linear Search</option>
-                <option value="binary">Binary Search</option>
-                <option value="jump">Jump Search</option>
-                <option value="interpolation">Interpolation Search</option>
-            </select>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-item">
+                <span class="stat-icon">📊</span>
+                <span class="stat-value" id="comparisons-count">0</span>
+                <span class="stat-label">Comparisons</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">🎯</span>
+                <span class="stat-value" id="target-value">-</span>
+                <span class="stat-label">Target</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">⏱️</span>
+                <span class="stat-value" id="elapsed-time">0ms</span>
+                <span class="stat-label">Time</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">🔍</span>
+                <span class="stat-value" id="algorithm-name">Linear</span>
+                <span class="stat-label">Algorithm</span>
+            </div>
         </div>
-        <div class="col">
-            <label for="array-state">Array State:</label>
-            <input id="array-state" readonly="" type="text" />
+
+        <section class="tool-content">
+            <!-- Sidebar Options -->
+            <aside class="options-sidebar">
+                <div class="sidebar-header">
+                    <h2><span class="icon">⚙️</span> Settings</h2>
+                    <button class="preset-btn" id="reset-defaults" title="Reset to defaults">
+                        <span>↺</span>
+                    </button>
+                </div>
+
+                <!-- Algorithm Selection -->
+                <div class="option-card preset-card">
+                    <h3><span class="card-icon">🧮</span> Algorithm</h3>
+                    <div class="input-group">
+                        <select id="algorithm">
+                            <option value="linear">Linear Search</option>
+                            <option value="binary">Binary Search</option>
+                            <option value="jump">Jump Search</option>
+                            <option value="interpolation">Interpolation Search</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Array Options -->
+                <div class="option-card">
+                    <button aria-expanded="true" class="card-toggle">
+                        <h3><span class="card-icon">📐</span> Array</h3>
+                        <span class="toggle-icon">▼</span>
+                    </button>
+                    <div class="card-content">
+                        <div class="input-group">
+                            <label for="array-size">Array Size</label>
+                            <input id="array-size" max="100" min="10" type="number" value="50" />
+                        </div>
+                        <div class="input-group">
+                            <label for="search-target">Search Target</label>
+                            <input id="search-target" max="1000" min="1" type="number" placeholder="Random if empty" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Visualization Options -->
+                <div class="option-card">
+                    <button aria-expanded="true" class="card-toggle">
+                        <h3><span class="card-icon">🎨</span> Visualization</h3>
+                        <span class="toggle-icon">▼</span>
+                    </button>
+                    <div class="card-content">
+                        <div class="input-group">
+                            <label for="speed">Animation Speed</label>
+                            <input id="speed" max="10" min="1" type="range" value="5" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls Info -->
+                <div class="option-card">
+                    <h3><span class="card-icon">ℹ️</span> Controls</h3>
+                    <div class="card-content">
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0; line-height: 1.6;">
+                            • Array is sorted automatically<br>
+                            • Red bar = current element<br>
+                            • Green bar = found target<br>
+                            • Gray = not found
+                        </p>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Canvas Area -->
+            <div class="canvas-area">
+                <!-- Canvas Container -->
+                <div class="canvas-container">
+                    <div class="canvas-header">
+                        <span class="canvas-title">📊 Search Visualization</span>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <canvas id="searching-canvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-bar">
+                    <div class="primary-actions">
+                        <button class="action-btn primary large" id="start">
+                            <span class="btn-icon">▶️</span>
+                            <span class="btn-text">Start Search</span>
+                        </button>
+                    </div>
+                    <div class="secondary-actions">
+                        <button class="action-btn warning" id="pause" title="Pause/Resume">
+                            <span class="btn-icon">⏸️</span> Pause
+                        </button>
+                        <button class="action-btn" id="step" title="Step through one iteration">
+                            <span class="btn-icon">⏭️</span> Step
+                        </button>
+                        <button class="action-btn danger" id="reset" title="Reset the array">
+                            <span class="btn-icon">🔄</span> Reset
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Legend Panel -->
+                <div class="legend-panel">
+                    <div class="legend-header">
+                        <h3><span>🎨</span> Legend</h3>
+                    </div>
+                    <div class="legend-content">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #eec747;"></div>
+                            <span class="legend-label">Array Element</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #ef4444;"></div>
+                            <span class="legend-label">Current Check</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #10b981;"></div>
+                            <span class="legend-label">Found</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #9ca3af;"></div>
+                            <span class="legend-label">Not Found</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Help Box -->
+        <div class="help-box">
+            <strong>Need Help?</strong>
+            <ul>
+                <li>Select a search algorithm from the sidebar dropdown.</li>
+                <li>Adjust array size to change the number of elements.</li>
+                <li>Enter a target value or leave empty for random selection.</li>
+                <li>Click "Start Search" to visualize the algorithm.</li>
+                <li>Use "Step" to advance one comparison at a time.</li>
+                <li>The stats bar shows real-time metrics during search.</li>
+            </ul>
         </div>
-        <div class="col">
-            <label for="search-target">Search Target:</label>
-            <input id="search-target" max="100" min="1" type="number" />
-        </div>
-        <div class="col">
-            <label for="array-size">Array Size:</label>
-            <input id="array-size" max="100" min="10" type="number" value="50" />
-        </div>
-        <div class="col">
-            <label for="speed">Speed:</label>
-            <input id="speed" max="10" min="1" type="range" value="5" />
-        </div>
-        <canvas id="searching-canvas" style="border:1px solid #000000;"></canvas>
-        <div class="row">
-            <button id="start">Start</button>
-            <button id="pause">Pause</button>
-            <button id="reset">Reset</button>
-            <button id="step">Step</button>
-        </div>
-    </section>
+    </main>
     <footer>
         <div class="footer-columns">
             <div class="footer-column">
