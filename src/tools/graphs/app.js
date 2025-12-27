@@ -1,4 +1,11 @@
 document.addEventListener("DOMContentLoaded", function() {
+    // Default configuration constants
+    const DEFAULT_GRID_SIZE = 20;
+    const DEFAULT_SPEED = 5;
+    const DEFAULT_WALL_DENSITY = 30;
+    const DEFAULT_SHOW_GRID_LINES = true;
+    const DEFAULT_ALGORITHM = "dfs";
+
     const algorithmSelect = document.getElementById("algorithm");
     const mazeCanvas = document.getElementById("maze-canvas");
     const startButton = document.getElementById("start");
@@ -77,11 +84,11 @@ document.addEventListener("DOMContentLoaded", function() {
 
     class MazeVisualizer {
         constructor() {
-            this.gridSize = parseInt(gridSizeInput.value) || 20;
+            this.gridSize = parseInt(gridSizeInput.value) || DEFAULT_GRID_SIZE;
             this.cellSize = Math.floor(mazeCanvas.width / this.gridSize);
-            this.wallDensity = parseInt(wallDensityInput?.value) || 30;
+            this.wallDensity = parseInt(wallDensityInput?.value) || DEFAULT_WALL_DENSITY;
             this.maze = [];
-            this.speed = parseInt(speedInput.value) || 50;
+            this.speed = parseInt(speedInput.value) || DEFAULT_SPEED;
             this.paused = false;
             this.stepMode = false;
             this.searchingInProgress = false;
@@ -138,16 +145,16 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         resetDefaults() {
-            gridSizeInput.value = 20;
-            speedInput.value = 5;
-            if (wallDensityInput) wallDensityInput.value = 30;
-            if (showGridLinesCheckbox) showGridLinesCheckbox.checked = true;
-            algorithmSelect.value = "dfs";
+            gridSizeInput.value = DEFAULT_GRID_SIZE;
+            speedInput.value = DEFAULT_SPEED;
+            if (wallDensityInput) wallDensityInput.value = DEFAULT_WALL_DENSITY;
+            if (showGridLinesCheckbox) showGridLinesCheckbox.checked = DEFAULT_SHOW_GRID_LINES;
+            algorithmSelect.value = DEFAULT_ALGORITHM;
             
-            this.gridSize = 20;
-            this.speed = 5;
-            this.wallDensity = 30;
-            this.showGridLines = true;
+            this.gridSize = DEFAULT_GRID_SIZE;
+            this.speed = DEFAULT_SPEED;
+            this.wallDensity = DEFAULT_WALL_DENSITY;
+            this.showGridLines = DEFAULT_SHOW_GRID_LINES;
             this.cellSize = Math.floor(mazeCanvas.width / this.gridSize);
             this.resetMaze();
             this.updateAlgorithmName();
@@ -350,7 +357,11 @@ document.addEventListener("DOMContentLoaded", function() {
                     await new Promise((resolve) => setTimeout(resolve, 50));
                 }
             } else {
-                const delayTime = Math.max(1, 100 - (this.speed * 10));
+                // Speed ranges from 1-10, where 10 is fastest
+                // Delay ranges from 200ms (speed=1) to 5ms (speed=10)
+                const maxDelay = 200;
+                const minDelay = 5;
+                const delayTime = Math.round(maxDelay - ((this.speed - 1) / 9) * (maxDelay - minDelay));
                 await new Promise((resolve) => setTimeout(resolve, delayTime));
                 while (this.paused) {
                     await new Promise((resolve) => setTimeout(resolve, 50));
