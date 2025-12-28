@@ -295,12 +295,12 @@ function initializeThreeJS() {
         window.innerWidth <= 768;
 
     const qualitySettings = {
-        particles: isMobile ? 400 : 2000,
-        stars: isMobile ? 3000 : 8000,
-        orbitParticles: isMobile ? 200 : 600,
+        particles: isMobile ? 300 : 1500,
+        stars: isMobile ? 2000 : 6000,
+        orbitParticles: isMobile ? 150 : 500,
         pixelRatio: isMobile ? 1 : Math.min(window.devicePixelRatio, 2),
         antialias: !isMobile,
-        ringDetail: isMobile ? [24, 96] : [48, 192]
+        ringDetail: isMobile ? [20, 80] : [48, 192]
     };
 
     const colorSchemes = {
@@ -527,9 +527,13 @@ function initializeThreeJS() {
         const config = orbitConfigs[orbitIndex];
         const angle = Math.random() * Math.PI * 2;
         
-        orbitParticlePositions[i * 3] = Math.cos(angle) * config.radius;
-        orbitParticlePositions[i * 3 + 1] = Math.sin(angle) * config.radius * Math.sin(config.tilt);
-        orbitParticlePositions[i * 3 + 2] = Math.sin(angle) * config.radius * Math.cos(config.tilt);
+        const x = Math.cos(angle) * config.radius;
+        const y = Math.sin(angle) * config.radius * Math.sin(config.tilt);
+        const z = Math.sin(angle) * config.radius * Math.cos(config.tilt);
+        
+        orbitParticlePositions[i * 3] = x;
+        orbitParticlePositions[i * 3 + 1] = y;
+        orbitParticlePositions[i * 3 + 2] = z;
         
         const color = new THREE.Color(config.color);
         orbitParticleColors[i * 3] = color.r;
@@ -683,10 +687,10 @@ function initializeThreeJS() {
         handleTouchMove(e);
     }, { passive: true });
     renderer.domElement.addEventListener('touchmove', handleTouchMove, { passive: true });
-    renderer.domElement.addEventListener('touchend', handleInteractionEnd, { passive: true });
 
     let lastClickTime = 0;
     renderer.domElement.addEventListener('touchend', (e) => {
+        handleInteractionEnd();
         const now = Date.now();
         if (now - lastClickTime < 300) {
             handleDoubleClick();
@@ -780,7 +784,8 @@ function initializeThreeJS() {
         });
 
         const positions = particles.geometry.attributes.position.array;
-        for (let i = 0; i < particleCount; i++) {
+        const particleStep = isMobile ? 2 : 1;
+        for (let i = 0; i < particleCount; i += particleStep) {
             const data = particleData[i];
             data.angle += data.speed * deltaTime;
             
@@ -793,16 +798,22 @@ function initializeThreeJS() {
         particles.rotation.y = time * 0.05;
 
         const orbitPositions = orbitParticles.geometry.attributes.position.array;
-        for (let i = 0; i < orbitParticleCount; i++) {
+        const orbitStep = isMobile ? 2 : 1;
+        for (let i = 0; i < orbitParticleCount; i += orbitStep) {
             const data = orbitParticleData[i];
             const config = orbitConfigs[data.orbitIndex];
             data.angle += data.speed * deltaTime;
             
-            orbitPositions[i * 3] = Math.cos(data.angle) * config.radius;
-            orbitPositions[i * 3 + 1] = Math.sin(data.angle) * config.radius * Math.sin(config.tilt);
-            orbitPositions[i * 3 + 2] = Math.sin(data.angle) * config.radius * Math.cos(config.tilt);
+            const x = Math.cos(data.angle) * config.radius;
+            const y = Math.sin(data.angle) * config.radius * Math.sin(config.tilt);
+            const z = Math.sin(data.angle) * config.radius * Math.cos(config.tilt);
+            
+            orbitPositions[i * 3] = x;
+            orbitPositions[i * 3 + 1] = y;
+            orbitPositions[i * 3 + 2] = z;
         }
         orbitParticles.geometry.attributes.position.needsUpdate = true;
+
 
         starField.rotation.y = time * 0.002;
         starField.rotation.x = time * 0.001;
