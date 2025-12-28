@@ -684,7 +684,6 @@ function initializeThreeJS() {
 
     renderer.domElement.addEventListener('touchstart', (e) => {
         handleInteractionStart(e);
-        handleTouchMove(e);
     }, { passive: true });
     renderer.domElement.addEventListener('touchmove', handleTouchMove, { passive: true });
 
@@ -804,9 +803,14 @@ function initializeThreeJS() {
             const config = orbitConfigs[data.orbitIndex];
             data.angle += data.speed * deltaTime;
             
-            const x = Math.cos(data.angle) * config.radius;
-            const y = Math.sin(data.angle) * config.radius * Math.sin(config.tilt);
-            const z = Math.sin(data.angle) * config.radius * Math.cos(config.tilt);
+            const cosA = Math.cos(data.angle);
+            const sinA = Math.sin(data.angle);
+            const cosT = Math.cos(config.tilt);
+            const sinT = Math.sin(config.tilt);
+            
+            const x = cosA * config.radius;
+            const y = sinA * config.radius * sinT;
+            const z = sinA * config.radius * cosT;
             
             orbitPositions[i * 3] = x;
             orbitPositions[i * 3 + 1] = y;
