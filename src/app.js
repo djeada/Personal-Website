@@ -287,41 +287,57 @@ function handleDownloadClick() {
 
 function initializeThreeJS() {
     const container = document.getElementById('threejs-container');
+    if (!container) return;
+    
     let darkMode = getCookie("darkMode") === "true";
-
 
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
         window.innerWidth <= 768;
 
-
     const qualitySettings = {
-        particles: isMobile ? 300 : 1200,
-        stars: isMobile ? 2000 : 6000,
-        shadowMap: isMobile ? 512 : 2048,
+        particles: isMobile ? 400 : 2000,
+        stars: isMobile ? 3000 : 8000,
+        orbitParticles: isMobile ? 200 : 600,
         pixelRatio: isMobile ? 1 : Math.min(window.devicePixelRatio, 2),
         antialias: !isMobile,
-        fog: isMobile ? 0.004 : 0.002,
-        ringDetail: isMobile ? [16, 64] : [32, 128]
+        ringDetail: isMobile ? [24, 96] : [48, 192]
     };
 
+    const colorSchemes = {
+        dark: {
+            bg: 0x050510,
+            primary: 0x00d4ff,
+            secondary: 0xff006a,
+            accent: 0xffaa00,
+            glow: 0x4488ff,
+            star: 0xffffff,
+            nebula1: 0x1a0033,
+            nebula2: 0x000033
+        },
+        light: {
+            bg: 0xf0f4f8,
+            primary: 0x0066cc,
+            secondary: 0xcc0055,
+            accent: 0xdd8800,
+            glow: 0x3366aa,
+            star: 0x333344,
+            nebula1: 0xe8e0f0,
+            nebula2: 0xe0e8f0
+        }
+    };
 
-    let bgColor = darkMode ? 0x0a0a12 : 0xf8f9fa;
-    let fogColor = darkMode ? bgColor : 0xc8d0e0;
-    let ringColor = darkMode ? 0x4a90e2 : 0x2c5aa0;
-    let starColor = darkMode ? 0xffffff : 0x2a2a2a;
-
+    let colors = darkMode ? colorSchemes.dark : colorSchemes.light;
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(fogColor, qualitySettings.fog);
+    scene.background = new THREE.Color(colors.bg);
 
     const camera = new THREE.PerspectiveCamera(
-        isMobile ? 85 : 75,
+        isMobile ? 70 : 60,
         container.clientWidth / container.clientHeight,
         0.1,
         2000
     );
-    camera.position.set(0, 8, isMobile ? 20 : 25);
-
+    camera.position.set(0, 5, isMobile ? 18 : 22);
 
     const renderer = new THREE.WebGLRenderer({
         antialias: qualitySettings.antialias,
@@ -330,662 +346,529 @@ function initializeThreeJS() {
     });
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setPixelRatio(qualitySettings.pixelRatio);
-
-
-    if (!isMobile) {
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    }
-
-    renderer.setClearColor(bgColor, 1);
-    if (!isMobile) {
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.2;
-    }
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = darkMode ? 1.5 : 1.0;
     container.appendChild(renderer.domElement);
 
-
-    const ambient = new THREE.AmbientLight(darkMode ? 0x404040 : 0xc0c0c0, isMobile ? 0.8 : 0.6);
+    const ambient = new THREE.AmbientLight(0xffffff, darkMode ? 0.3 : 0.5);
     scene.add(ambient);
 
-    const sunLight = new THREE.DirectionalLight(0xffffff, isMobile ? 0.8 : 1.0);
-    sunLight.position.set(20, 30, 20);
+    const mainLight = new THREE.DirectionalLight(0xffffff, darkMode ? 0.8 : 1.0);
+    mainLight.position.set(10, 20, 15);
+    scene.add(mainLight);
 
-    if (!isMobile) {
-        sunLight.castShadow = true;
-        sunLight.shadow.mapSize.width = qualitySettings.shadowMap;
-        sunLight.shadow.mapSize.height = qualitySettings.shadowMap;
-        sunLight.shadow.camera.near = 0.5;
-        sunLight.shadow.camera.far = 100;
-        sunLight.shadow.camera.left = -50;
-        sunLight.shadow.camera.right = 50;
-        sunLight.shadow.camera.top = 50;
-        sunLight.shadow.camera.bottom = -50;
-    }
-    scene.add(sunLight);
+    const coreLight = new THREE.PointLight(colors.primary, 2, 30);
+    coreLight.position.set(0, 0, 0);
+    scene.add(coreLight);
 
+    const accentLight1 = new THREE.PointLight(colors.secondary, 1, 25);
+    accentLight1.position.set(8, 3, 0);
+    scene.add(accentLight1);
 
-    const energyLight = new THREE.PointLight(0x44aaff, 0, 100, 1.5);
-    energyLight.position.set(0, 10, 0);
-    scene.add(energyLight);
+    const accentLight2 = new THREE.PointLight(colors.accent, 1, 25);
+    accentLight2.position.set(-8, -3, 0);
+    scene.add(accentLight2);
 
+    const ringGroup = new THREE.Group();
+    scene.add(ringGroup);
 
-    const ringGeo = new THREE.TorusGeometry(4, 0.3, qualitySettings.ringDetail[0], qualitySettings.ringDetail[1]);
-
-
-    const colors = [];
-    const colorCount = isMobile ? ringGeo.attributes.position.count / 4 : ringGeo.attributes.position.count;
-
-    for (let i = 0; i < ringGeo.attributes.position.count; i++) {
-        if (isMobile && i > colorCount) {
-
-            colors.push(
-                ((ringColor >> 16) & 0xff) / 255,
-                ((ringColor >> 8) & 0xff) / 255,
-                ((ringColor) & 0xff) / 255
-            );
-        } else {
-            const stress = Math.random();
-            const isCrack = stress < 0.08;
-            const isWorn = stress < 0.25;
-
-            if (isCrack) {
-                colors.push(1, 0.1, 0);
-            } else if (isWorn) {
-                colors.push(0.8, 0.8, 0.9);
-            } else {
-                colors.push(
-                    ((ringColor >> 16) & 0xff) / 255,
-                    ((ringColor >> 8) & 0xff) / 255,
-                    ((ringColor) & 0xff) / 255
-                );
-            }
-        }
-    }
-    ringGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-
-
-    const ringMat = new THREE.MeshPhysicalMaterial({
-        vertexColors: true,
-        metalness: isMobile ? 0.6 : 0.8,
-        roughness: isMobile ? 0.4 : 0.3,
-        clearcoat: isMobile ? 0.3 : 0.5,
-        clearcoatRoughness: 0.1,
-        reflectivity: isMobile ? 0.7 : 0.9,
-        envMapIntensity: isMobile ? 0.8 : 1.0
+    const mainRingGeo = new THREE.TorusGeometry(5, 0.4, qualitySettings.ringDetail[0], qualitySettings.ringDetail[1]);
+    const mainRingMat = new THREE.MeshPhysicalMaterial({
+        color: colors.primary,
+        metalness: 0.9,
+        roughness: 0.1,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.05,
+        reflectivity: 1.0,
+        envMapIntensity: 1.5,
+        emissive: colors.primary,
+        emissiveIntensity: 0.15
     });
+    const mainRing = new THREE.Mesh(mainRingGeo, mainRingMat);
+    ringGroup.add(mainRing);
 
-    const ring = new THREE.Mesh(ringGeo, ringMat);
-    ring.castShadow = !isMobile;
-    ring.receiveShadow = !isMobile;
-    ring.position.set(0, 10, 0);
-    scene.add(ring);
+    const innerRingGeo = new THREE.TorusGeometry(4.2, 0.15, 16, qualitySettings.ringDetail[1]);
+    const innerRingMat = new THREE.MeshPhysicalMaterial({
+        color: colors.secondary,
+        metalness: 0.95,
+        roughness: 0.05,
+        emissive: colors.secondary,
+        emissiveIntensity: 0.3,
+        transparent: true,
+        opacity: 0.9
+    });
+    const innerRing = new THREE.Mesh(innerRingGeo, innerRingMat);
+    ringGroup.add(innerRing);
 
+    const outerRingGeo = new THREE.TorusGeometry(5.8, 0.08, 12, qualitySettings.ringDetail[1]);
+    const outerRingMat = new THREE.MeshPhysicalMaterial({
+        color: colors.accent,
+        metalness: 0.9,
+        roughness: 0.1,
+        emissive: colors.accent,
+        emissiveIntensity: 0.4,
+        transparent: true,
+        opacity: 0.8
+    });
+    const outerRing = new THREE.Mesh(outerRingGeo, outerRingMat);
+    ringGroup.add(outerRing);
 
-    const GRAVITY = -9.81 * 0.5;
-    const GROUND_LEVEL = 2;
-    const MAX_LAUNCH_VELOCITY = isMobile ? 15 : 20;
-    const MAX_HORIZONTAL_DISTANCE = isMobile ? 30 : 40;
-    const VELOCITY_DAMPING_GROUND = 0.85;
-    const MIN_BOUNCE_VELOCITY = 0.5;
+    const coreGeo = new THREE.SphereGeometry(1.2, 32, 32);
+    const coreMat = new THREE.MeshPhysicalMaterial({
+        color: colors.glow,
+        emissive: colors.glow,
+        emissiveIntensity: 0.8,
+        metalness: 0.3,
+        roughness: 0.2,
+        transparent: true,
+        opacity: 0.9
+    });
+    const core = new THREE.Mesh(coreGeo, coreMat);
+    ringGroup.add(core);
 
-    let ringVelocity = {
-        x: 0,
-        y: 0,
-        z: 0
-    };
-    let ringPosition = {
-        x: 0,
-        y: 10,
-        z: 0
-    };
-    let angularVelocity = {
-        x: 0,
-        y: 0,
-        z: 0
-    };
-    let baseRotationSpeed = 0.005;
-    let ringOnGround = false;
+    const glowGeo = new THREE.SphereGeometry(2, 24, 24);
+    const glowMat = new THREE.MeshBasicMaterial({
+        color: colors.primary,
+        transparent: true,
+        opacity: 0.15,
+        side: THREE.BackSide
+    });
+    const glow = new THREE.Mesh(glowGeo, glowMat);
+    ringGroup.add(glow);
 
+    const orbitRings = [];
+    const orbitConfigs = [
+        { radius: 7, speed: 0.3, tilt: Math.PI / 6, color: colors.primary, opacity: 0.4 },
+        { radius: 8.5, speed: -0.2, tilt: -Math.PI / 4, color: colors.secondary, opacity: 0.3 },
+        { radius: 10, speed: 0.15, tilt: Math.PI / 3, color: colors.accent, opacity: 0.25 }
+    ];
+
+    orbitConfigs.forEach(config => {
+        const orbitGeo = new THREE.RingGeometry(config.radius - 0.02, config.radius + 0.02, 128);
+        const orbitMat = new THREE.MeshBasicMaterial({
+            color: config.color,
+            transparent: true,
+            opacity: config.opacity,
+            side: THREE.DoubleSide
+        });
+        const orbitMesh = new THREE.Mesh(orbitGeo, orbitMat);
+        orbitMesh.rotation.x = config.tilt;
+        orbitMesh.userData = { speed: config.speed, baseTilt: config.tilt };
+        orbitRings.push(orbitMesh);
+        scene.add(orbitMesh);
+    });
 
     const particleCount = qualitySettings.particles;
     const particlePositions = new Float32Array(particleCount * 3);
-    const particleVelocities = new Float32Array(particleCount * 3);
-    const particleLife = new Float32Array(particleCount);
+    const particleColors = new Float32Array(particleCount * 3);
+    const particleSizes = new Float32Array(particleCount);
+    const particleData = [];
 
     for (let i = 0; i < particleCount; i++) {
         const angle = Math.random() * Math.PI * 2;
-        const radius = THREE.MathUtils.randFloat(3.5, 4.5);
-        const i3 = i * 3;
-
-        particlePositions[i3] = Math.cos(angle) * radius;
-        particlePositions[i3 + 1] = ringPosition.y - 2;
-        particlePositions[i3 + 2] = Math.sin(angle) * radius;
-
-        particleVelocities[i3] = (Math.random() - 0.5) * 0.02;
-        particleVelocities[i3 + 1] = Math.random() * 0.05;
-        particleVelocities[i3 + 2] = (Math.random() - 0.5) * 0.02;
-
-        particleLife[i] = Math.random();
+        const radius = 4 + Math.random() * 3;
+        const height = (Math.random() - 0.5) * 2;
+        
+        particlePositions[i * 3] = Math.cos(angle) * radius;
+        particlePositions[i * 3 + 1] = height;
+        particlePositions[i * 3 + 2] = Math.sin(angle) * radius;
+        
+        const colorChoice = Math.random();
+        let color;
+        if (colorChoice < 0.4) {
+            color = new THREE.Color(colors.primary);
+        } else if (colorChoice < 0.7) {
+            color = new THREE.Color(colors.secondary);
+        } else {
+            color = new THREE.Color(colors.accent);
+        }
+        
+        particleColors[i * 3] = color.r;
+        particleColors[i * 3 + 1] = color.g;
+        particleColors[i * 3 + 2] = color.b;
+        
+        particleSizes[i] = Math.random() * 3 + 1;
+        
+        particleData.push({
+            angle: angle,
+            radius: radius,
+            baseHeight: height,
+            speed: 0.2 + Math.random() * 0.5,
+            verticalSpeed: (Math.random() - 0.5) * 0.5,
+            phase: Math.random() * Math.PI * 2
+        });
     }
 
     const particleGeo = new THREE.BufferGeometry();
     particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+    particleGeo.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
+    particleGeo.setAttribute('size', new THREE.BufferAttribute(particleSizes, 1));
 
     const particleMat = new THREE.PointsMaterial({
-        size: isMobile ? 1.0 : 1.5,
+        size: isMobile ? 2.5 : 3.5,
         sizeAttenuation: true,
-        color: darkMode ? 0x66aaff : 0x404040,
+        vertexColors: true,
         transparent: true,
-        opacity: darkMode ? (isMobile ? 0.6 : 0.8) : (isMobile ? 0.4 : 0.6),
-        blending: THREE.SubtractiveBlending,
+        opacity: 0.8,
+        blending: THREE.AdditiveBlending,
         depthWrite: false
     });
+    
     const particles = new THREE.Points(particleGeo, particleMat);
     scene.add(particles);
 
+    const orbitParticleCount = qualitySettings.orbitParticles;
+    const orbitParticlePositions = new Float32Array(orbitParticleCount * 3);
+    const orbitParticleColors = new Float32Array(orbitParticleCount * 3);
+    const orbitParticleData = [];
+
+    for (let i = 0; i < orbitParticleCount; i++) {
+        const orbitIndex = Math.floor(Math.random() * orbitConfigs.length);
+        const config = orbitConfigs[orbitIndex];
+        const angle = Math.random() * Math.PI * 2;
+        
+        orbitParticlePositions[i * 3] = Math.cos(angle) * config.radius;
+        orbitParticlePositions[i * 3 + 1] = Math.sin(angle) * config.radius * Math.sin(config.tilt);
+        orbitParticlePositions[i * 3 + 2] = Math.sin(angle) * config.radius * Math.cos(config.tilt);
+        
+        const color = new THREE.Color(config.color);
+        orbitParticleColors[i * 3] = color.r;
+        orbitParticleColors[i * 3 + 1] = color.g;
+        orbitParticleColors[i * 3 + 2] = color.b;
+        
+        orbitParticleData.push({
+            orbitIndex: orbitIndex,
+            angle: angle,
+            speed: config.speed * (0.8 + Math.random() * 0.4)
+        });
+    }
+
+    const orbitParticleGeo = new THREE.BufferGeometry();
+    orbitParticleGeo.setAttribute('position', new THREE.BufferAttribute(orbitParticlePositions, 3));
+    orbitParticleGeo.setAttribute('color', new THREE.BufferAttribute(orbitParticleColors, 3));
+
+    const orbitParticleMat = new THREE.PointsMaterial({
+        size: isMobile ? 4 : 6,
+        sizeAttenuation: true,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.9,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+    });
+    
+    const orbitParticles = new THREE.Points(orbitParticleGeo, orbitParticleMat);
+    scene.add(orbitParticles);
 
     const starCount = qualitySettings.stars;
     const starPositions = new Float32Array(starCount * 3);
+    const starColors = new Float32Array(starCount * 3);
     const starSizes = new Float32Array(starCount);
 
     for (let i = 0; i < starCount; i++) {
-        const i3 = i * 3;
-        starPositions[i3] = (Math.random() - 0.5) * 1000;
-        starPositions[i3 + 1] = (Math.random() - 0.5) * 1000;
-        starPositions[i3 + 2] = (Math.random() - 0.5) * 1000;
-        starSizes[i] = Math.random() * (isMobile ? 2 : 3) + 1;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        const radius = 200 + Math.random() * 800;
+        
+        starPositions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+        starPositions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+        starPositions[i * 3 + 2] = radius * Math.cos(phi);
+        
+        const brightness = 0.5 + Math.random() * 0.5;
+        const tint = Math.random();
+        if (tint < 0.1) {
+            starColors[i * 3] = brightness;
+            starColors[i * 3 + 1] = brightness * 0.7;
+            starColors[i * 3 + 2] = brightness * 0.5;
+        } else if (tint < 0.2) {
+            starColors[i * 3] = brightness * 0.7;
+            starColors[i * 3 + 1] = brightness * 0.8;
+            starColors[i * 3 + 2] = brightness;
+        } else {
+            starColors[i * 3] = brightness;
+            starColors[i * 3 + 1] = brightness;
+            starColors[i * 3 + 2] = brightness;
+        }
+        
+        starSizes[i] = Math.random() * 2 + 0.5;
     }
 
     const starsGeo = new THREE.BufferGeometry();
     starsGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+    starsGeo.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
     starsGeo.setAttribute('size', new THREE.BufferAttribute(starSizes, 1));
 
     const starsMat = new THREE.PointsMaterial({
         size: isMobile ? 1.5 : 2,
         sizeAttenuation: true,
-        color: starColor,
-        opacity: isMobile ? 0.6 : 0.8,
+        vertexColors: true,
         transparent: true,
-        vertexColors: false
+        opacity: darkMode ? 0.9 : 0.4,
+        blending: darkMode ? THREE.AdditiveBlending : THREE.NormalBlending
     });
-
+    
     const starField = new THREE.Points(starsGeo, starsMat);
     scene.add(starField);
 
-
-    if (!isMobile) {
-        const groundGeo = new THREE.PlaneGeometry(100, 100);
-        const groundMat = new THREE.MeshLambertMaterial({
-            color: darkMode ? 0x1a1a1a : 0xe0e0e0,
-            transparent: true,
-            opacity: 0.3
-        });
-        const ground = new THREE.Mesh(groundGeo, groundMat);
-        ground.rotation.x = -Math.PI / 2;
-        ground.position.y = GROUND_LEVEL;
-        ground.receiveShadow = true;
-        scene.add(ground);
-    }
-
-
-    let isMouseDown = false;
-    let isTouching = false;
-    let mouseForce = {
-        x: 0,
-        y: 0
-    };
-    let cameraAutoRotate = true;
-    let cameraAngle = 0;
+    let mouseX = 0;
+    let mouseY = 0;
+    let targetRotationX = 0;
+    let targetRotationY = 0;
+    let currentRotationX = 0;
+    let currentRotationY = 0;
+    let isInteracting = false;
     let energyLevel = 0;
-    let keysPressed = {};
-    let lastTouchTime = 0;
-    let touchStartPos = {
-        x: 0,
-        y: 0
-    };
+    let pulsePhase = 0;
+    let cameraAngle = 0;
+    let autoRotate = true;
 
     const clock = new THREE.Clock();
     let time = 0;
 
+    function handleMouseMove(e) {
+        const rect = container.getBoundingClientRect();
+        mouseX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+        mouseY = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+        
+        if (isInteracting) {
+            targetRotationY = mouseX * Math.PI * 0.5;
+            targetRotationX = mouseY * Math.PI * 0.3;
+        }
+    }
+
+    function handleTouchMove(e) {
+        if (e.touches.length > 0) {
+            const rect = container.getBoundingClientRect();
+            const touch = e.touches[0];
+            mouseX = ((touch.clientX - rect.left) / rect.width - 0.5) * 2;
+            mouseY = ((touch.clientY - rect.top) / rect.height - 0.5) * 2;
+            
+            if (isInteracting) {
+                targetRotationY = mouseX * Math.PI * 0.5;
+                targetRotationX = mouseY * Math.PI * 0.3;
+            }
+        }
+    }
+
+    function handleInteractionStart(e) {
+        isInteracting = true;
+        autoRotate = false;
+        energyLevel = Math.min(1, energyLevel + 0.3);
+    }
+
+    function handleInteractionEnd() {
+        isInteracting = false;
+        setTimeout(() => { autoRotate = true; }, 3000);
+    }
+
+    function handleClick() {
+        energyLevel = Math.min(1, energyLevel + 0.5);
+        pulsePhase = 0;
+    }
+
+    function handleDoubleClick() {
+        energyLevel = 1;
+        pulsePhase = 0;
+    }
+
+    renderer.domElement.addEventListener('mousemove', handleMouseMove);
+    renderer.domElement.addEventListener('mousedown', handleInteractionStart);
+    renderer.domElement.addEventListener('mouseup', handleInteractionEnd);
+    renderer.domElement.addEventListener('mouseleave', handleInteractionEnd);
+    renderer.domElement.addEventListener('click', handleClick);
+    renderer.domElement.addEventListener('dblclick', handleDoubleClick);
 
     renderer.domElement.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        isTouching = true;
-        cameraAutoRotate = false;
-        const touch = e.touches[0];
-        const rect = renderer.domElement.getBoundingClientRect();
-        touchStartPos.x = touch.clientX - rect.left;
-        touchStartPos.y = touch.clientY - rect.top;
+        handleInteractionStart(e);
+        handleTouchMove(e);
+    }, { passive: true });
+    renderer.domElement.addEventListener('touchmove', handleTouchMove, { passive: true });
+    renderer.domElement.addEventListener('touchend', handleInteractionEnd, { passive: true });
 
-        const currentTime = Date.now();
-        if (currentTime - lastTouchTime < 300) {
-
-            handleDoubleTap();
-        }
-        lastTouchTime = currentTime;
-    }, {
-        passive: false
-    });
-
+    let lastClickTime = 0;
     renderer.domElement.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        isTouching = false;
-        setTimeout(() => cameraAutoRotate = true, 2000);
-
-
-        if (e.changedTouches.length === 1) {
-            setTimeout(() => {
-                if (Date.now() - lastTouchTime > 300) {
-                    handleSingleTap();
-                }
-            }, 300);
+        const now = Date.now();
+        if (now - lastClickTime < 300) {
+            handleDoubleClick();
+        } else {
+            handleClick();
         }
-    }, {
-        passive: false
-    });
-
-    renderer.domElement.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        if (!isTouching) return;
-
-        const touch = e.touches[0];
-        const rect = renderer.domElement.getBoundingClientRect();
-        const currentX = touch.clientX - rect.left;
-        const currentY = touch.clientY - rect.top;
-
-
-        mouseForce.x = ((currentX - touchStartPos.x) / rect.width) * 0.03;
-        mouseForce.y = ((currentY - touchStartPos.y) / rect.height) * -0.03;
-    }, {
-        passive: false
-    });
-
-
-    renderer.domElement.addEventListener('mousedown', (e) => {
-        isMouseDown = true;
-        cameraAutoRotate = false;
-    });
-
-    renderer.domElement.addEventListener('mouseup', () => {
-        isMouseDown = false;
-        setTimeout(() => cameraAutoRotate = true, 2000);
-    });
-
-    renderer.domElement.addEventListener('mousemove', (e) => {
-        if (!isMouseDown) return;
-
-        const rect = renderer.domElement.getBoundingClientRect();
-        mouseForce.x = ((e.clientX - rect.left) / rect.width - 0.5) * 0.05;
-        mouseForce.y = ((e.clientY - rect.top) / rect.height - 0.5) * -0.05;
-    });
-
-    renderer.domElement.addEventListener('click', (e) => {
-        if (!isMobile) {
-            handleSingleTap();
-        }
-    });
-
-    renderer.domElement.addEventListener('dblclick', (e) => {
-        if (!isMobile) {
-            handleDoubleTap();
-        }
-    });
-
-    function handleSingleTap() {
-        const impulse = Math.min(isMobile ? 10 : 12, MAX_LAUNCH_VELOCITY * 0.6);
-        ringVelocity.y += impulse;
-        angularVelocity.x += (Math.random() - 0.5) * 0.2;
-        angularVelocity.y += (Math.random() - 0.5) * 0.2;
-        energyLevel = Math.max(energyLevel, 40);
-        ringOnGround = false;
-
-        energyLight.intensity = 5;
-        setTimeout(() => energyLight.intensity = 0, 200);
-    }
-
-    function handleDoubleTap() {
-        ringVelocity.y = Math.min(isMobile ? 15 : 18, MAX_LAUNCH_VELOCITY * 0.9);
-        angularVelocity.x = (Math.random() - 0.5) * 0.5;
-        angularVelocity.y = (Math.random() - 0.5) * 0.5;
-        angularVelocity.z = (Math.random() - 0.5) * 0.5;
-        energyLevel = 80;
-        ringOnGround = false;
-    }
-
-
-    if (!isMobile) {
-        window.addEventListener('keydown', (e) => {
-            keysPressed[e.code] = true;
-
-            switch (e.code) {
-                case 'Space':
-                    e.preventDefault();
-                    if (ringOnGround) {
-                        ringVelocity.y += 6;
-                        ringOnGround = false;
-                    }
-                    break;
-                case 'KeyR':
-                    resetRing();
-                    break;
-            }
-        });
-
-        window.addEventListener('keyup', (e) => {
-            keysPressed[e.code] = false;
-        });
-    }
-
-    function resetRing() {
-        ringPosition = {
-            x: 0,
-            y: 10,
-            z: 0
-        };
-        ringVelocity = {
-            x: 0,
-            y: 0,
-            z: 0
-        };
-        angularVelocity = {
-            x: 0,
-            y: 0,
-            z: 0
-        };
-        ringOnGround = false;
-    }
-
+        lastClickTime = now;
+    }, { passive: true });
 
     function handleResize() {
         const width = container.clientWidth;
         const height = container.clientHeight;
-
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
         renderer.setSize(width, height);
-
-
-        const wasMobile = isMobile;
-        const nowMobile = window.innerWidth <= 768;
-
-        if (wasMobile !== nowMobile) {
-
-            location.reload();
-        }
     }
 
     window.addEventListener('resize', handleResize);
 
-
-    let frameCount = 0;
-    let lastFPSCheck = performance.now();
-    let lowFPSCount = 0;
-
-    function animate() {
-        requestAnimationFrame(animate);
-        const deltaTime = clock.getDelta();
-        time += deltaTime;
-
-
-        if (isMobile) {
-            frameCount++;
-            const now = performance.now();
-            if (now - lastFPSCheck >= 1000) {
-                const fps = frameCount;
-                frameCount = 0;
-                lastFPSCheck = now;
-
-                if (fps < 25) {
-                    lowFPSCount++;
-                    if (lowFPSCount >= 3) {
-
-                        particleMat.opacity *= 0.8;
-                        starsMat.opacity *= 0.8;
-                        lowFPSCount = 0;
-                    }
-                }
-            }
-        }
-
-
-        if (!isMobile) {
-            if (keysPressed['ArrowLeft'] || keysPressed['KeyA']) {
-                cameraAngle -= deltaTime * 2;
-                cameraAutoRotate = false;
-            }
-            if (keysPressed['ArrowRight'] || keysPressed['KeyD']) {
-                cameraAngle += deltaTime * 2;
-                cameraAutoRotate = false;
-            }
-        }
-
-
+    function updateColors() {
         const newDarkMode = getCookie("darkMode") === "true";
         if (newDarkMode !== darkMode) {
             darkMode = newDarkMode;
-            bgColor = darkMode ? 0x0a0a12 : 0xf8f9fa;
-            fogColor = darkMode ? bgColor : 0xc8d0e0;
-            ringColor = darkMode ? 0x4a90e2 : 0x2c5aa0;
-            starColor = darkMode ? 0xffffff : 0x2a2a2a;
+            colors = darkMode ? colorSchemes.dark : colorSchemes.light;
+            
+            scene.background = new THREE.Color(colors.bg);
+            renderer.toneMappingExposure = darkMode ? 1.5 : 1.0;
+            
+            mainRingMat.color.setHex(colors.primary);
+            mainRingMat.emissive.setHex(colors.primary);
+            innerRingMat.color.setHex(colors.secondary);
+            innerRingMat.emissive.setHex(colors.secondary);
+            outerRingMat.color.setHex(colors.accent);
+            outerRingMat.emissive.setHex(colors.accent);
+            coreMat.color.setHex(colors.glow);
+            coreMat.emissive.setHex(colors.glow);
+            glowMat.color.setHex(colors.primary);
+            coreLight.color.setHex(colors.primary);
+            accentLight1.color.setHex(colors.secondary);
+            accentLight2.color.setHex(colors.accent);
+            
+            starsMat.opacity = darkMode ? 0.9 : 0.4;
+            starsMat.blending = darkMode ? THREE.AdditiveBlending : THREE.NormalBlending;
+        }
+    }
 
-            renderer.setClearColor(bgColor, 1);
-            scene.fog.color.setHex(fogColor);
-            ambient.color.setHex(darkMode ? 0x404040 : 0xc0c0c0);
-            starsMat.color.setHex(starColor);
-            if (!isMobile) {
-                groundMat.color.setHex(darkMode ? 0x1a1a1a : 0xe0e0e0);
-            }
+    function animate() {
+        requestAnimationFrame(animate);
+        
+        const deltaTime = clock.getDelta();
+        time += deltaTime;
+
+        updateColors();
+
+        energyLevel = Math.max(0, energyLevel - deltaTime * 0.15);
+        pulsePhase += deltaTime * 8;
+
+        const pulse = 1 + Math.sin(pulsePhase) * 0.1 * energyLevel;
+        const breathe = 1 + Math.sin(time * 2) * 0.02;
+
+        if (autoRotate) {
+            cameraAngle += deltaTime * 0.1;
+            targetRotationY = Math.sin(time * 0.3) * 0.3;
+            targetRotationX = Math.sin(time * 0.2) * 0.1;
         }
 
+        currentRotationX += (targetRotationX - currentRotationX) * 0.05;
+        currentRotationY += (targetRotationY - currentRotationY) * 0.05;
 
-        if ((isMouseDown || isTouching) && !ringOnGround) {
-            ringVelocity.x += mouseForce.x;
-            ringVelocity.z += mouseForce.y;
-        }
+        ringGroup.rotation.x = currentRotationX + time * 0.1;
+        ringGroup.rotation.y = currentRotationY + time * 0.15;
+        ringGroup.rotation.z = Math.sin(time * 0.5) * 0.05;
 
-        if (!ringOnGround) {
-            ringVelocity.y += GRAVITY * deltaTime;
-        }
+        innerRing.rotation.z = time * 0.5;
+        outerRing.rotation.z = -time * 0.3;
 
+        core.scale.setScalar(pulse * breathe);
+        glow.scale.setScalar(pulse * breathe * 1.5);
+        glowMat.opacity = 0.1 + energyLevel * 0.2 + Math.sin(time * 3) * 0.05;
 
-        const distanceFromCenter = Math.sqrt(ringPosition.x * ringPosition.x + ringPosition.z * ringPosition.z);
-        if (distanceFromCenter > MAX_HORIZONTAL_DISTANCE) {
-            const returnForce = 0.02;
-            ringVelocity.x -= (ringPosition.x / distanceFromCenter) * returnForce;
-            ringVelocity.z -= (ringPosition.z / distanceFromCenter) * returnForce;
-        }
+        mainRingMat.emissiveIntensity = 0.15 + energyLevel * 0.5 + Math.sin(time * 4) * 0.05;
+        innerRingMat.emissiveIntensity = 0.3 + energyLevel * 0.4;
+        outerRingMat.emissiveIntensity = 0.4 + energyLevel * 0.3;
+        coreMat.emissiveIntensity = 0.8 + energyLevel * 0.5 + Math.sin(time * 5) * 0.1;
 
+        coreLight.intensity = 2 + energyLevel * 3 + Math.sin(time * 4) * 0.5;
 
-        ringVelocity.x = Math.max(-MAX_LAUNCH_VELOCITY, Math.min(MAX_LAUNCH_VELOCITY, ringVelocity.x));
-        ringVelocity.y = Math.max(-MAX_LAUNCH_VELOCITY * 1.5, Math.min(MAX_LAUNCH_VELOCITY * 1.5, ringVelocity.y));
-        ringVelocity.z = Math.max(-MAX_LAUNCH_VELOCITY, Math.min(MAX_LAUNCH_VELOCITY, ringVelocity.z));
+        orbitRings.forEach((ring, index) => {
+            ring.rotation.z += ring.userData.speed * deltaTime;
+            ring.rotation.x = ring.userData.baseTilt + Math.sin(time * 0.5 + index) * 0.1;
+        });
 
-
-        if (!ringOnGround) {
-            ringPosition.x += ringVelocity.x * deltaTime * 10;
-            ringPosition.y += ringVelocity.y * deltaTime * 10;
-            ringPosition.z += ringVelocity.z * deltaTime * 10;
-
-            ringVelocity.x *= 0.985;
-            ringVelocity.z *= 0.985;
-        } else {
-            ringVelocity.x *= VELOCITY_DAMPING_GROUND;
-            ringVelocity.z *= VELOCITY_DAMPING_GROUND;
-        }
-
-
-        if (ringPosition.y <= GROUND_LEVEL + 0.3) {
-            ringPosition.y = GROUND_LEVEL + 0.3;
-
-            if (ringVelocity.y < 0) {
-                if (Math.abs(ringVelocity.y) > MIN_BOUNCE_VELOCITY && !ringOnGround) {
-                    ringVelocity.y *= -0.3;
-                    energyLevel = Math.max(energyLevel, 15);
-                } else {
-                    ringVelocity.y = 0;
-                    ringOnGround = true;
-                }
-            }
-        }
-
-
-        angularVelocity.x *= 0.995;
-        angularVelocity.y *= 0.995;
-        angularVelocity.z *= 0.995;
-
-        ring.rotation.x += (angularVelocity.x + baseRotationSpeed) * deltaTime * 10;
-        ring.rotation.y += (angularVelocity.y + baseRotationSpeed * 0.7) * deltaTime * 10;
-        ring.rotation.z += angularVelocity.z * deltaTime * 10;
-
-        ring.position.set(ringPosition.x, ringPosition.y, ringPosition.z);
-
-
-        energyLevel = Math.max(0, energyLevel - deltaTime * 15);
-        const energyFactor = energyLevel / 100;
-
-        ringMat.emissive.setHSL(0.6, energyFactor * 0.8, energyFactor * 0.3);
-        ringMat.emissiveIntensity = energyFactor * 2;
-
-        energyLight.intensity = energyFactor * 3;
-        energyLight.position.set(ringPosition.x, ringPosition.y + 2, ringPosition.z);
-
-
-        const particleUpdateStep = isMobile ? 2 : 1;
-        for (let i = 0; i < particleCount; i += particleUpdateStep) {
-            const i3 = i * 3;
-
-            particleVelocities[i3 + 1] += 0.001;
-            particlePositions[i3] += particleVelocities[i3];
-            particlePositions[i3 + 1] += particleVelocities[i3 + 1];
-            particlePositions[i3 + 2] += particleVelocities[i3 + 2];
-
-            particleLife[i] -= deltaTime * 0.5;
-
-            if (particleLife[i] <= 0 || particlePositions[i3 + 1] > ringPosition.y + 5) {
-                const angle = Math.random() * Math.PI * 2;
-                const radius = THREE.MathUtils.randFloat(3.2, 4.8);
-
-                particlePositions[i3] = Math.cos(angle) * radius + ringPosition.x;
-                particlePositions[i3 + 1] = ringPosition.y - 1;
-                particlePositions[i3 + 2] = Math.sin(angle) * radius + ringPosition.z;
-
-                particleVelocities[i3] = (Math.random() - 0.5) * 0.02;
-                particleVelocities[i3 + 1] = Math.random() * 0.03 + energyFactor * 0.05;
-                particleVelocities[i3 + 2] = (Math.random() - 0.5) * 0.02;
-
-                particleLife[i] = 1;
-            }
+        const positions = particles.geometry.attributes.position.array;
+        for (let i = 0; i < particleCount; i++) {
+            const data = particleData[i];
+            data.angle += data.speed * deltaTime;
+            
+            const radiusMod = data.radius + Math.sin(time * 2 + data.phase) * 0.5;
+            positions[i * 3] = Math.cos(data.angle) * radiusMod;
+            positions[i * 3 + 1] = data.baseHeight + Math.sin(time * data.verticalSpeed + data.phase) * 1.5;
+            positions[i * 3 + 2] = Math.sin(data.angle) * radiusMod;
         }
         particles.geometry.attributes.position.needsUpdate = true;
-        particleMat.opacity = 0.3 + energyFactor * 0.5;
+        particles.rotation.y = time * 0.05;
 
-
-        if (!isMobile || frameCount % 2 === 0) {
-            starsMat.opacity = 0.6 + 0.3 * Math.sin(time * 0.5) + energyFactor * 0.2;
+        const orbitPositions = orbitParticles.geometry.attributes.position.array;
+        for (let i = 0; i < orbitParticleCount; i++) {
+            const data = orbitParticleData[i];
+            const config = orbitConfigs[data.orbitIndex];
+            data.angle += data.speed * deltaTime;
+            
+            orbitPositions[i * 3] = Math.cos(data.angle) * config.radius;
+            orbitPositions[i * 3 + 1] = Math.sin(data.angle) * config.radius * Math.sin(config.tilt);
+            orbitPositions[i * 3 + 2] = Math.sin(data.angle) * config.radius * Math.cos(config.tilt);
         }
+        orbitParticles.geometry.attributes.position.needsUpdate = true;
 
+        starField.rotation.y = time * 0.002;
+        starField.rotation.x = time * 0.001;
 
-        if (cameraAutoRotate) {
-            cameraAngle = time * (isMobile ? 0.03 : 0.05);
-        }
-
-        const radius = (isMobile ? 20 : 25) + Math.sin(time * 0.3) * (isMobile ? 3 : 5);
-        camera.position.x = Math.cos(cameraAngle) * radius;
-        camera.position.z = Math.sin(cameraAngle) * radius + (isMobile ? 8 : 10);
-        camera.position.y = 8 + Math.sin(time * 0.2) * 3 + (ringPosition.y - 10) * 0.2;
-
-        camera.lookAt(ring.position);
+        const camRadius = (isMobile ? 18 : 22) + Math.sin(time * 0.3) * 2;
+        const camHeight = 5 + Math.sin(time * 0.2) * 2 + mouseY * 3;
+        camera.position.x = Math.cos(cameraAngle) * camRadius + mouseX * 5;
+        camera.position.z = Math.sin(cameraAngle) * camRadius;
+        camera.position.y = camHeight;
+        camera.lookAt(0, 0, 0);
 
         renderer.render(scene, camera);
     }
 
     animate();
 
-
     const instructions = document.createElement('div');
-    const instructionStyle = isMobile ? `
+    const instructionStyle = `
         position: absolute;
-        top: 10px;
-        left: 10px;
-        right: 10px;
-        background: rgba(0,0,0,0.8);
-        color: white;
-        padding: 10px;
-        border-radius: 6px;
-        font-family: 'Arial', sans-serif;
-        font-size: 11px;
+        ${isMobile ? 'bottom: 15px; left: 15px; right: 15px;' : 'bottom: 20px; left: 20px;'}
+        background: linear-gradient(135deg, rgba(0,20,40,0.9) 0%, rgba(0,10,30,0.95) 100%);
+        color: #fff;
+        padding: ${isMobile ? '12px 16px' : '16px 20px'};
+        border-radius: 12px;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        font-size: ${isMobile ? '12px' : '13px'};
         pointer-events: none;
         z-index: 1000;
-        border: 1px solid rgba(255,255,255,0.2);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        max-height: 120px;
-        overflow: hidden;
-    ` : `
-        position: absolute;
-        top: 15px;
-        left: 15px;
-        background: rgba(0,0,0,0.8);
-        color: white;
-        padding: 15px;
-        border-radius: 8px;
-        font-family: 'Courier New', monospace;
-        font-size: 13px;
-        pointer-events: none;
-        z-index: 1000;
-        border: 1px solid rgba(255,255,255,0.2);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        border: 1px solid rgba(0,180,255,0.3);
+        box-shadow: 0 8px 32px rgba(0,100,200,0.2), inset 0 1px 0 rgba(255,255,255,0.1);
+        backdrop-filter: blur(10px);
+        max-width: ${isMobile ? 'auto' : '280px'};
     `;
-
     instructions.style.cssText = instructionStyle;
 
     instructions.innerHTML = isMobile ? `
-        <strong style="color: #44aaff;">🎮 RING PHYSICS</strong><br>
-        <span style="color: #ffaa44;">Controls:</span><br>
-        • Tap: Launch ring<br>
-        • Double-tap: Super jump<br>
-        • Drag: Apply force in flight<br>
-        <span style="color: #44ff44;">Optimized for mobile</span>
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span style="font-size: 18px;">✨</span>
+            <strong style="color: #00d4ff; font-size: 14px;">COSMIC RING</strong>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 11px; opacity: 0.9;">
+            <span>👆 Drag to rotate</span>
+            <span>👆👆 Double-tap for energy burst</span>
+        </div>
     ` : `
-        <strong style="color: #44aaff;">🎮 RING PHYSICS CONTROLS</strong><br><br>
-        <span style="color: #ffaa44;">Launch:</span><br>
-        • Click: Launch ring<br>
-        • Double-click: Super jump<br>
-        • Space: Small jump (ground only)<br><br>
-        <span style="color: #ffaa44;">Camera:</span><br>
-        • ← → or A/D: Rotate view<br>
-        • Drag: Apply force (in flight)<br><br>
-        <span style="color: #ffaa44;">Reset:</span><br>
-        • R: Reset position<br><br>
-        <span style="color: #44ff44;">Physics: Realistic gravity & boundaries</span>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+            <span style="font-size: 24px;">✨</span>
+            <strong style="color: #00d4ff; font-size: 16px; letter-spacing: 1px;">COSMIC RING</strong>
+        </div>
+        <div style="display: grid; gap: 6px; font-size: 12px; opacity: 0.9;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: #ff006a;">⟡</span>
+                <span>Click & drag to control rotation</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: #ffaa00;">⟡</span>
+                <span>Click to add energy</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: #00ff88;">⟡</span>
+                <span>Double-click for energy burst</span>
+            </div>
+        </div>
     `;
 
     container.appendChild(instructions);
-
-
-    if (isMobile) {
-        const resetButton = document.createElement('button');
-        resetButton.style.cssText = `
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(68, 170, 255, 0.8);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 8px 12px;
-            font-size: 12px;
-            font-weight: bold;
-            z-index: 1001;
-            touch-action: manipulation;
-        `;
-        resetButton.textContent = 'RESET';
-        resetButton.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            resetRing();
-        });
-        container.appendChild(resetButton);
-    }
 }
 
 
