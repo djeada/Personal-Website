@@ -444,6 +444,9 @@ function initializeThreeJS() {
     ];
 
     orbitConfigs.forEach(config => {
+        config.cosT = Math.cos(config.tilt);
+        config.sinT = Math.sin(config.tilt);
+        
         const orbitGeo = new THREE.RingGeometry(config.radius - 0.02, config.radius + 0.02, 128);
         const orbitMat = new THREE.MeshBasicMaterial({
             color: config.color,
@@ -625,6 +628,7 @@ function initializeThreeJS() {
     let pulsePhase = 0;
     let cameraAngle = 0;
     let autoRotate = true;
+    let frameCount = 0;
 
     const clock = new THREE.Clock();
     let time = 0;
@@ -639,6 +643,7 @@ function initializeThreeJS() {
             targetRotationX = mouseY * Math.PI * 0.3;
         }
     }
+
 
     function handleTouchMove(e) {
         if (e.touches.length > 0) {
@@ -741,6 +746,7 @@ function initializeThreeJS() {
         
         const deltaTime = clock.getDelta();
         time += deltaTime;
+        frameCount++;
 
         updateColors();
 
@@ -783,10 +789,11 @@ function initializeThreeJS() {
         });
 
         const positions = particles.geometry.attributes.position.array;
+        const particleOffset = isMobile ? (frameCount % 2) : 0;
         const particleStep = isMobile ? 2 : 1;
-        for (let i = 0; i < particleCount; i += particleStep) {
+        for (let i = particleOffset; i < particleCount; i += particleStep) {
             const data = particleData[i];
-            data.angle += data.speed * deltaTime;
+            data.angle += data.speed * deltaTime * particleStep;
             
             const radiusMod = data.radius + Math.sin(time * 2 + data.phase) * 0.5;
             positions[i * 3] = Math.cos(data.angle) * radiusMod;
@@ -797,24 +804,19 @@ function initializeThreeJS() {
         particles.rotation.y = time * 0.05;
 
         const orbitPositions = orbitParticles.geometry.attributes.position.array;
+        const orbitOffset = isMobile ? (frameCount % 2) : 0;
         const orbitStep = isMobile ? 2 : 1;
-        for (let i = 0; i < orbitParticleCount; i += orbitStep) {
+        for (let i = orbitOffset; i < orbitParticleCount; i += orbitStep) {
             const data = orbitParticleData[i];
             const config = orbitConfigs[data.orbitIndex];
-            data.angle += data.speed * deltaTime;
+            data.angle += data.speed * deltaTime * orbitStep;
             
             const cosA = Math.cos(data.angle);
             const sinA = Math.sin(data.angle);
-            const cosT = Math.cos(config.tilt);
-            const sinT = Math.sin(config.tilt);
             
-            const x = cosA * config.radius;
-            const y = sinA * config.radius * sinT;
-            const z = sinA * config.radius * cosT;
-            
-            orbitPositions[i * 3] = x;
-            orbitPositions[i * 3 + 1] = y;
-            orbitPositions[i * 3 + 2] = z;
+            orbitPositions[i * 3] = cosA * config.radius;
+            orbitPositions[i * 3 + 1] = sinA * config.radius * config.sinT;
+            orbitPositions[i * 3 + 2] = sinA * config.radius * config.cosT;
         }
         orbitParticles.geometry.attributes.position.needsUpdate = true;
 
