@@ -8,6 +8,11 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+// Constants
+const CITY_BOUNDARY_RADIUS = 80;
+const CITY_BOUNDARY_RADIUS_SQ = CITY_BOUNDARY_RADIUS * CITY_BOUNDARY_RADIUS;
+const PERSON_PAUSE_PROBABILITY = 0.001;
+
 // Global variables
 let scene, camera, renderer, controls;
 let buildings = [];
@@ -951,8 +956,8 @@ function animate() {
             person.position.z += Math.sin(data.walkDirection) * data.walkSpeed * animationSpeed;
             
             // Keep people within city bounds (using squared distance to avoid sqrt)
-            const distFromCenterSq = person.position.x ** 2 + person.position.z ** 2;
-            if (distFromCenterSq > 80 * 80) {
+            const distFromCenterSq = person.position.x * person.position.x + person.position.z * person.position.z;
+            if (distFromCenterSq > CITY_BOUNDARY_RADIUS_SQ) {
                 // Turn around if too far from center
                 data.walkDirection += Math.PI;
                 person.rotation.y = data.walkDirection;
@@ -974,7 +979,7 @@ function animate() {
             }
             
             // Occasionally pause
-            if (Math.random() < 0.001) {
+            if (Math.random() < PERSON_PAUSE_PROBABILITY) {
                 data.isPaused = true;
                 data.pauseCounter = data.pauseTime;
             }
