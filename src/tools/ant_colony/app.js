@@ -608,6 +608,20 @@ function init() {
 // ========================
 // Event Handlers
 // ========================
+function getCanvasCoordinates(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    
+    // Calculate the scale factor between displayed size and internal resolution
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    // Convert client coordinates to canvas coordinates
+    const x = (clientX - rect.left) * scaleX;
+    const y = (clientY - rect.top) * scaleY;
+    
+    return { x, y };
+}
+
 function setupEventListeners() {
     // Control sliders
     const antCountSlider = document.getElementById('ant-count');
@@ -670,17 +684,17 @@ function setupEventListeners() {
     // Canvas drawing for obstacles
     canvas.addEventListener('mousedown', (e) => {
         isDrawing = true;
-        const rect = canvas.getBoundingClientRect();
-        lastMousePos.x = e.clientX - rect.left;
-        lastMousePos.y = e.clientY - rect.top;
+        const coords = getCanvasCoordinates(e.clientX, e.clientY);
+        lastMousePos.x = coords.x;
+        lastMousePos.y = coords.y;
         addObstacle(lastMousePos.x, lastMousePos.y);
     });
     
     canvas.addEventListener('mousemove', (e) => {
         if (isDrawing) {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            const coords = getCanvasCoordinates(e.clientX, e.clientY);
+            const x = coords.x;
+            const y = coords.y;
             
             // Add obstacle if moved enough
             const dx = x - lastMousePos.x;
@@ -705,20 +719,20 @@ function setupEventListeners() {
     canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
         isDrawing = true;
-        const rect = canvas.getBoundingClientRect();
         const touch = e.touches[0];
-        lastMousePos.x = touch.clientX - rect.left;
-        lastMousePos.y = touch.clientY - rect.top;
+        const coords = getCanvasCoordinates(touch.clientX, touch.clientY);
+        lastMousePos.x = coords.x;
+        lastMousePos.y = coords.y;
         addObstacle(lastMousePos.x, lastMousePos.y);
     });
     
     canvas.addEventListener('touchmove', (e) => {
         e.preventDefault();
         if (isDrawing) {
-            const rect = canvas.getBoundingClientRect();
             const touch = e.touches[0];
-            const x = touch.clientX - rect.left;
-            const y = touch.clientY - rect.top;
+            const coords = getCanvasCoordinates(touch.clientX, touch.clientY);
+            const x = coords.x;
+            const y = coords.y;
             
             const dx = x - lastMousePos.x;
             const dy = y - lastMousePos.y;
