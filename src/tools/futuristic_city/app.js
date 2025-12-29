@@ -564,7 +564,9 @@ function createCars() {
             lane: lane,
             isHorizontal: isHorizontal,
             laneOffset: laneOffset,
-            direction: carBody.rotation.y
+            direction: carBody.rotation.y,
+            headlights: [headlightLeft, headlightRight],
+            taillights: [taillightLeft, taillightRight]
         };
         
         scene.add(carBody);
@@ -674,7 +676,13 @@ function createPeople() {
             animationOffset: Math.random() * Math.PI * 2,
             pauseTime: Math.random() * 200,
             pauseCounter: 0,
-            isPaused: Math.random() > 0.7 // Some people standing still
+            isPaused: Math.random() > 0.7, // Some people standing still
+            bodyParts: {
+                leftLeg: leftLeg,
+                rightLeg: rightLeg,
+                leftArm: leftArm,
+                rightArm: rightArm
+            }
         };
         
         scene.add(personGroup);
@@ -913,11 +921,18 @@ function animate() {
         }
         
         // Update headlight intensity based on time of day
-        if (car.children) {
-            car.children.forEach((child) => {
-                if (child.material && child.material.emissive) {
-                    const isNight = currentTime < 6 || currentTime > 18;
-                    child.material.emissiveIntensity = isNight ? 2.0 : 0.5;
+        const isNight = currentTime < 6 || currentTime > 18;
+        if (car.userData.headlights) {
+            car.userData.headlights.forEach(light => {
+                if (light.material) {
+                    light.material.emissiveIntensity = isNight ? 2.0 : 0.5;
+                }
+            });
+        }
+        if (car.userData.taillights) {
+            car.userData.taillights.forEach(light => {
+                if (light.material) {
+                    light.material.emissiveIntensity = isNight ? 1.0 : 0.3;
                 }
             });
         }
@@ -935,31 +950,26 @@ function animate() {
             person.position.x += Math.cos(data.walkDirection) * data.walkSpeed * animationSpeed;
             person.position.z += Math.sin(data.walkDirection) * data.walkSpeed * animationSpeed;
             
-            // Keep people within city bounds
-            const distFromCenter = Math.sqrt(person.position.x ** 2 + person.position.z ** 2);
-            if (distFromCenter > 80) {
+            // Keep people within city bounds (using squared distance to avoid sqrt)
+            const distFromCenterSq = person.position.x ** 2 + person.position.z ** 2;
+            if (distFromCenterSq > 80 * 80) {
                 // Turn around if too far from center
                 data.walkDirection += Math.PI;
                 person.rotation.y = data.walkDirection;
             }
             
             // Animate legs (simple walking motion)
-            if (person.children.length >= 4) {
-                const leftLeg = person.children[2];
-                const rightLeg = person.children[3];
+            if (data.bodyParts) {
+                const { leftLeg, rightLeg, leftArm, rightArm } = data.bodyParts;
                 if (leftLeg && rightLeg) {
                     leftLeg.rotation.x = Math.sin(walkTime) * 0.3;
                     rightLeg.rotation.x = Math.sin(walkTime + Math.PI) * 0.3;
                 }
                 
                 // Animate arms
-                if (person.children.length >= 6) {
-                    const leftArm = person.children[4];
-                    const rightArm = person.children[5];
-                    if (leftArm && rightArm) {
-                        leftArm.rotation.x = Math.sin(walkTime + Math.PI) * 0.2;
-                        rightArm.rotation.x = Math.sin(walkTime) * 0.2;
-                    }
+                if (leftArm && rightArm) {
+                    leftArm.rotation.x = Math.sin(walkTime + Math.PI) * 0.2;
+                    rightArm.rotation.x = Math.sin(walkTime) * 0.2;
                 }
             }
             
