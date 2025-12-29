@@ -76,6 +76,11 @@ function init() {
     // Setup event listeners
     setupEventListeners();
 
+    // Initialize with default values
+    updateDayNightCycle(12);
+    updateFog(20);
+    updateSpeed(100);
+
     // Start animation loop
     animate();
 }
@@ -486,8 +491,3 @@ if (document.readyState === 'loading') {
 } else {
     init();
 }
-
-// Initialize with default values
-updateDayNightCycle(12);
-updateFog(20);
-updateSpeed(100);
