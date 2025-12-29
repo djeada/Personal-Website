@@ -321,17 +321,17 @@ function initializeThreeJS() {
             trail: 0x8844ff
         },
         light: {
-            bg: 0xeef4f8,
-            fog: 0xd8e0e8,
-            ringPrimary: 0x0066cc,
-            ringSecondary: 0xcc0066,
-            ringAccent: 0xff8800,
-            star: 0x222244,
-            nebula1: 0x6688cc,
-            nebula2: 0xcc6688,
-            nebula3: 0x88cc66,
-            energy: 0x0088ff,
-            trail: 0x6644cc
+            bg: 0x1a1a2e,
+            fog: 0x16213e,
+            ringPrimary: 0x00d4ff,
+            ringSecondary: 0xff2d95,
+            ringAccent: 0xffa500,
+            star: 0xffffff,
+            nebula1: 0x7b2cbf,
+            nebula2: 0xe94560,
+            nebula3: 0x0ead69,
+            energy: 0x00d4ff,
+            trail: 0x9d4edd
         }
     };
 
@@ -363,10 +363,10 @@ function initializeThreeJS() {
 
     renderer.setClearColor(colors.bg, 1);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = darkMode ? 1.4 : 1.0;
+    renderer.toneMappingExposure = 1.4;
     container.appendChild(renderer.domElement);
 
-    const ambient = new THREE.AmbientLight(darkMode ? 0x222244 : 0xaabbcc, isMobile ? 0.6 : 0.4);
+    const ambient = new THREE.AmbientLight(0x222244, isMobile ? 0.6 : 0.4);
     scene.add(ambient);
 
     const sunLight = new THREE.DirectionalLight(0xffffff, isMobile ? 0.7 : 0.9);
@@ -388,11 +388,11 @@ function initializeThreeJS() {
     energyLight.position.set(0, 10, 0);
     scene.add(energyLight);
 
-    const cosmicLight1 = new THREE.PointLight(colors.nebula1, darkMode ? 0.4 : 0.2, 150);
+    const cosmicLight1 = new THREE.PointLight(colors.nebula1, 0.4, 150);
     cosmicLight1.position.set(-30, 20, -20);
     scene.add(cosmicLight1);
 
-    const cosmicLight2 = new THREE.PointLight(colors.nebula2, darkMode ? 0.3 : 0.15, 150);
+    const cosmicLight2 = new THREE.PointLight(colors.nebula2, 0.3, 150);
     cosmicLight2.position.set(30, -10, 25);
     scene.add(cosmicLight2);
 
@@ -437,26 +437,46 @@ function initializeThreeJS() {
     const outerGlow = new THREE.Mesh(outerGlowGeo, outerGlowMat);
     ringGroup.add(outerGlow);
 
-    const coreGeo = new THREE.SphereGeometry(0.8, 24, 24);
+    const coreGeo = new THREE.SphereGeometry(0.6, 32, 32);
     const coreMat = new THREE.MeshBasicMaterial({
-        color: colors.energy,
+        color: 0xffffff,
         transparent: true,
-        opacity: 0.7,
-        blending: THREE.AdditiveBlending
+        opacity: 0.95
     });
     const core = new THREE.Mesh(coreGeo, coreMat);
     ringGroup.add(core);
 
-    const coreGlowGeo = new THREE.SphereGeometry(1.5, 16, 16);
+    const coreGlowGeo = new THREE.SphereGeometry(1.0, 24, 24);
     const coreGlowMat = new THREE.MeshBasicMaterial({
         color: colors.energy,
         transparent: true,
-        opacity: 0.2,
-        blending: THREE.AdditiveBlending,
-        side: THREE.BackSide
+        opacity: 0.6,
+        blending: THREE.AdditiveBlending
     });
     const coreGlow = new THREE.Mesh(coreGlowGeo, coreGlowMat);
     ringGroup.add(coreGlow);
+
+    const coreOuterGlowGeo = new THREE.SphereGeometry(1.8, 16, 16);
+    const coreOuterGlowMat = new THREE.MeshBasicMaterial({
+        color: colors.energy,
+        transparent: true,
+        opacity: 0.25,
+        blending: THREE.AdditiveBlending,
+        side: THREE.BackSide
+    });
+    const coreOuterGlow = new THREE.Mesh(coreOuterGlowGeo, coreOuterGlowMat);
+    ringGroup.add(coreOuterGlow);
+
+    const coreHaloGeo = new THREE.SphereGeometry(2.5, 12, 12);
+    const coreHaloMat = new THREE.MeshBasicMaterial({
+        color: colors.energy,
+        transparent: true,
+        opacity: 0.08,
+        blending: THREE.AdditiveBlending,
+        side: THREE.BackSide
+    });
+    const coreHalo = new THREE.Mesh(coreHaloGeo, coreHaloMat);
+    ringGroup.add(coreHalo);
 
 
     const GRAVITY = -9.81 * 0.6;
@@ -616,34 +636,56 @@ function initializeThreeJS() {
     const starPositions = new Float32Array(starCount * 3);
     const starColors = new Float32Array(starCount * 3);
     const starSizes = new Float32Array(starCount);
+    const starTwinklePhases = new Float32Array(starCount);
+    const starTwinkleSpeeds = new Float32Array(starCount);
+    const starBaseBrightness = new Float32Array(starCount);
 
     for (let i = 0; i < starCount; i++) {
         const i3 = i * 3;
         const theta = Math.random() * Math.PI * 2;
         const phi = Math.acos(2 * Math.random() - 1);
-        const radius = 300 + Math.random() * 700;
+        const radius = 150 + Math.random() * 850;
         
         starPositions[i3] = radius * Math.sin(phi) * Math.cos(theta);
         starPositions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
         starPositions[i3 + 2] = radius * Math.cos(phi);
         
-        const brightness = 0.6 + Math.random() * 0.4;
+        const baseBrightness = 0.4 + Math.random() * 0.6;
+        starBaseBrightness[i] = baseBrightness;
+        starTwinklePhases[i] = Math.random() * Math.PI * 2;
+        starTwinkleSpeeds[i] = 0.5 + Math.random() * 2.5;
+        
         const tint = Math.random();
-        if (tint < 0.15) {
-            starColors[i3] = brightness;
-            starColors[i3 + 1] = brightness * 0.8;
-            starColors[i3 + 2] = brightness * 0.6;
-        } else if (tint < 0.3) {
-            starColors[i3] = brightness * 0.7;
-            starColors[i3 + 1] = brightness * 0.8;
-            starColors[i3 + 2] = brightness;
+        if (tint < 0.08) {
+            starColors[i3] = baseBrightness;
+            starColors[i3 + 1] = baseBrightness * 0.6;
+            starColors[i3 + 2] = baseBrightness * 0.4;
+        } else if (tint < 0.16) {
+            starColors[i3] = baseBrightness;
+            starColors[i3 + 1] = baseBrightness * 0.9;
+            starColors[i3 + 2] = baseBrightness * 0.7;
+        } else if (tint < 0.28) {
+            starColors[i3] = baseBrightness * 0.7;
+            starColors[i3 + 1] = baseBrightness * 0.85;
+            starColors[i3 + 2] = baseBrightness;
+        } else if (tint < 0.35) {
+            starColors[i3] = baseBrightness * 0.8;
+            starColors[i3 + 1] = baseBrightness * 0.8;
+            starColors[i3 + 2] = baseBrightness;
         } else {
-            starColors[i3] = brightness;
-            starColors[i3 + 1] = brightness;
-            starColors[i3 + 2] = brightness;
+            starColors[i3] = baseBrightness;
+            starColors[i3 + 1] = baseBrightness;
+            starColors[i3 + 2] = baseBrightness;
         }
         
-        starSizes[i] = Math.random() * (isMobile ? 2.5 : 3.5) + 0.5;
+        const sizeRand = Math.random();
+        if (sizeRand < 0.02) {
+            starSizes[i] = (isMobile ? 4.0 : 6.0) + Math.random() * 2;
+        } else if (sizeRand < 0.1) {
+            starSizes[i] = (isMobile ? 2.5 : 4.0) + Math.random() * 1.5;
+        } else {
+            starSizes[i] = Math.random() * (isMobile ? 2.0 : 3.0) + 0.5;
+        }
     }
 
     const starsGeo = new THREE.BufferGeometry();
@@ -652,12 +694,12 @@ function initializeThreeJS() {
     starsGeo.setAttribute('size', new THREE.BufferAttribute(starSizes, 1));
 
     const starsMat = new THREE.PointsMaterial({
-        size: isMobile ? 1.8 : 2.5,
+        size: isMobile ? 2.2 : 3.0,
         sizeAttenuation: true,
         vertexColors: true,
-        opacity: darkMode ? 0.9 : 0.5,
+        opacity: 0.95,
         transparent: true,
-        blending: darkMode ? THREE.AdditiveBlending : THREE.NormalBlending
+        blending: THREE.AdditiveBlending
     });
 
     const starField = new THREE.Points(starsGeo, starsMat);
@@ -666,12 +708,12 @@ function initializeThreeJS() {
     let groundMat;
     const groundGeo = new THREE.PlaneGeometry(150, 150, 32, 32);
     groundMat = new THREE.MeshPhysicalMaterial({
-        color: darkMode ? 0x0a0a15 : 0xc8d0e0,
+        color: 0x0a0a15,
         metalness: 0.3,
         roughness: 0.7,
         transparent: true,
-        opacity: darkMode ? 0.5 : 0.3,
-        emissive: darkMode ? 0x111122 : 0x000000,
+        opacity: 0.5,
+        emissive: 0x111122,
         emissiveIntensity: 0.2
     });
     const ground = new THREE.Mesh(groundGeo, groundMat);
@@ -705,6 +747,18 @@ function initializeThreeJS() {
         x: 0,
         y: 0
     };
+    
+    let isDraggingRing = false;
+    let dragStartPos = { x: 0, y: 0 };
+    let lastDragPos = { x: 0, y: 0 };
+    let dragDelta = { x: 0, y: 0 };
+    let userRotationSpeed = 1.0;
+    let cameraDistance = isMobile ? 22 : 28;
+    let targetCameraDistance = cameraDistance;
+    let cameraVerticalAngle = 0.3;
+    let targetCameraVerticalAngle = cameraVerticalAngle;
+    let rightMouseDown = false;
+    let middleMouseDown = false;
 
     const clock = new THREE.Clock();
     let time = 0;
@@ -763,26 +817,82 @@ function initializeThreeJS() {
     });
 
 
-    renderer.domElement.addEventListener('mousedown', (e) => {
-        isMouseDown = true;
-        cameraAutoRotate = false;
+    renderer.domElement.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
     });
 
-    renderer.domElement.addEventListener('mouseup', () => {
+    renderer.domElement.addEventListener('mousedown', (e) => {
+        cameraAutoRotate = false;
+        dragStartPos = { x: e.clientX, y: e.clientY };
+        lastDragPos = { x: e.clientX, y: e.clientY };
+        
+        if (e.button === 0) {
+            if (e.shiftKey) {
+                isDraggingRing = true;
+            } else {
+                isMouseDown = true;
+            }
+        } else if (e.button === 2) {
+            rightMouseDown = true;
+        } else if (e.button === 1) {
+            middleMouseDown = true;
+            e.preventDefault();
+        }
+    });
+
+    renderer.domElement.addEventListener('mouseup', (e) => {
+        if (e.button === 0) {
+            isMouseDown = false;
+            isDraggingRing = false;
+        } else if (e.button === 2) {
+            rightMouseDown = false;
+        } else if (e.button === 1) {
+            middleMouseDown = false;
+        }
+        dragDelta = { x: 0, y: 0 };
+        setTimeout(() => cameraAutoRotate = true, 3000);
+    });
+
+    renderer.domElement.addEventListener('mouseleave', () => {
         isMouseDown = false;
-        setTimeout(() => cameraAutoRotate = true, 2000);
+        isDraggingRing = false;
+        rightMouseDown = false;
+        middleMouseDown = false;
     });
 
     renderer.domElement.addEventListener('mousemove', (e) => {
-        if (!isMouseDown) return;
-
-        const rect = renderer.domElement.getBoundingClientRect();
-        mouseForce.x = ((e.clientX - rect.left) / rect.width - 0.5) * 0.06;
-        mouseForce.y = ((e.clientY - rect.top) / rect.height - 0.5) * -0.06;
+        const deltaX = e.clientX - lastDragPos.x;
+        const deltaY = e.clientY - lastDragPos.y;
+        lastDragPos = { x: e.clientX, y: e.clientY };
+        
+        if (rightMouseDown) {
+            cameraAngle += deltaX * 0.01;
+            targetCameraVerticalAngle = Math.max(-0.5, Math.min(1.2, targetCameraVerticalAngle - deltaY * 0.005));
+            return;
+        }
+        
+        if (isDraggingRing) {
+            angularVelocity.y += deltaX * 0.002;
+            angularVelocity.x += deltaY * 0.002;
+            return;
+        }
+        
+        if (isMouseDown) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouseForce.x = ((e.clientX - rect.left) / rect.width - 0.5) * 0.08;
+            mouseForce.y = ((e.clientY - rect.top) / rect.height - 0.5) * -0.08;
+        }
     });
 
+    renderer.domElement.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        targetCameraDistance = Math.max(10, Math.min(60, targetCameraDistance + e.deltaY * 0.03));
+        cameraAutoRotate = false;
+        setTimeout(() => cameraAutoRotate = true, 2000);
+    }, { passive: false });
+
     renderer.domElement.addEventListener('click', (e) => {
-        if (!isMobile) {
+        if (!isMobile && !isDraggingRing && Math.abs(e.clientX - dragStartPos.x) < 5 && Math.abs(e.clientY - dragStartPos.y) < 5) {
             handleSingleTap();
         }
     });
@@ -857,6 +967,20 @@ function initializeThreeJS() {
                         ringVelocity.z += 0.5;
                     }
                     break;
+                case 'KeyQ':
+                    angularVelocity.y -= 0.1;
+                    break;
+                case 'KeyE':
+                    angularVelocity.y += 0.1;
+                    break;
+                case 'Equal':
+                case 'NumpadAdd':
+                    userRotationSpeed = Math.min(3.0, userRotationSpeed + 0.2);
+                    break;
+                case 'Minus':
+                case 'NumpadSubtract':
+                    userRotationSpeed = Math.max(0.1, userRotationSpeed - 0.2);
+                    break;
             }
         });
 
@@ -873,6 +997,9 @@ function initializeThreeJS() {
         energyLevel = 0;
         impactIntensity = 0;
         launchFlash = 0;
+        userRotationSpeed = 1.0;
+        targetCameraDistance = isMobile ? 22 : 28;
+        targetCameraVerticalAngle = 0.3;
     }
 
     function handleResize() {
@@ -935,27 +1062,19 @@ function initializeThreeJS() {
             colors = darkMode ? colorSchemes.dark : colorSchemes.light;
             
             renderer.setClearColor(colors.bg, 1);
-            renderer.toneMappingExposure = darkMode ? 1.4 : 1.0;
             scene.fog.color.setHex(colors.fog);
-            ambient.color.setHex(darkMode ? 0x222244 : 0xaabbcc);
             
             mainRingMat.color.setHex(colors.ringPrimary);
             mainRingMat.emissive.setHex(colors.ringPrimary);
             innerGlowMat.color.setHex(colors.ringSecondary);
             outerGlowMat.color.setHex(colors.ringAccent);
-            coreMat.color.setHex(colors.energy);
             coreGlowMat.color.setHex(colors.energy);
+            coreOuterGlowMat.color.setHex(colors.energy);
+            coreHaloMat.color.setHex(colors.energy);
             energyLight.color.setHex(colors.energy);
             cosmicLight1.color.setHex(colors.nebula1);
             cosmicLight2.color.setHex(colors.nebula2);
             impactRingMat.color.setHex(colors.energy);
-            
-            groundMat.color.setHex(darkMode ? 0x0a0a15 : 0xc8d0e0);
-            groundMat.emissive.setHex(darkMode ? 0x111122 : 0x000000);
-            
-            starsMat.opacity = darkMode ? 0.9 : 0.5;
-            starsMat.blending = darkMode ? THREE.AdditiveBlending : THREE.NormalBlending;
-            nebulaMat.opacity = darkMode ? 0.4 : 0.2;
         }
 
 
@@ -1043,26 +1162,31 @@ function initializeThreeJS() {
         angularVelocity.y *= 0.993;
         angularVelocity.z *= 0.993;
 
-        const rotSpeed = baseRotationSpeed + speed * 0.002;
+        const rotSpeed = (baseRotationSpeed + speed * 0.002) * userRotationSpeed;
         ringGroup.rotation.x += (angularVelocity.x + rotSpeed) * deltaTime * 10;
         ringGroup.rotation.y += (angularVelocity.y + rotSpeed * 0.8) * deltaTime * 10;
         ringGroup.rotation.z += angularVelocity.z * deltaTime * 10;
 
         ringGroup.position.set(ringPosition.x, ringPosition.y, ringPosition.z);
 
-        innerGlow.rotation.z = time * 0.5;
-        outerGlow.rotation.z = -time * 0.3;
+        innerGlow.rotation.z = time * 0.5 * userRotationSpeed;
+        outerGlow.rotation.z = -time * 0.3 * userRotationSpeed;
 
         energyLevel = Math.max(0, energyLevel - deltaTime * 12);
         const energyFactor = energyLevel / 100;
         const speedFactor = Math.min(1, speed / 20);
         const combinedEnergy = Math.max(energyFactor, speedFactor * 0.5, launchFlash * 0.8);
 
-        const pulse = 1 + Math.sin(time * 6) * 0.1 * combinedEnergy;
-        core.scale.setScalar(pulse);
-        coreGlow.scale.setScalar(pulse * 1.8);
-        coreMat.opacity = 0.5 + combinedEnergy * 0.4;
-        coreGlowMat.opacity = 0.15 + combinedEnergy * 0.25;
+        const basePulse = 1 + Math.sin(time * 4) * 0.05;
+        const energyPulse = basePulse + Math.sin(time * 8) * 0.08 * combinedEnergy;
+        core.scale.setScalar(energyPulse);
+        coreGlow.scale.setScalar(energyPulse * 1.6);
+        coreOuterGlow.scale.setScalar(energyPulse * 1.8 + Math.sin(time * 3) * 0.1);
+        coreHalo.scale.setScalar(1 + Math.sin(time * 2) * 0.15 + combinedEnergy * 0.3);
+        
+        coreGlowMat.opacity = 0.4 + combinedEnergy * 0.3 + Math.sin(time * 5) * 0.1;
+        coreOuterGlowMat.opacity = 0.15 + combinedEnergy * 0.2;
+        coreHaloMat.opacity = 0.05 + combinedEnergy * 0.08;
 
         mainRingMat.emissiveIntensity = 0.1 + combinedEnergy * 0.6 + launchFlash * 0.5;
         innerGlowMat.opacity = 0.4 + combinedEnergy * 0.4;
@@ -1133,17 +1257,38 @@ function initializeThreeJS() {
         nebula.rotation.y = time * 0.01;
         nebula.rotation.x = Math.sin(time * 0.05) * 0.1;
 
-        starField.rotation.y = time * 0.003;
-        starField.rotation.x = time * 0.001;
-
-        if (cameraAutoRotate) {
-            cameraAngle = time * (isMobile ? 0.04 : 0.06);
+        if (!isMobile || frameCount % 5 === 0) {
+            const twinkleUpdateCount = isMobile ? Math.floor(starCount / 10) : Math.floor(starCount / 3);
+            for (let i = 0; i < twinkleUpdateCount; i++) {
+                const idx = (frameCount * 7 + i * 13) % starCount;
+                const twinkle = 0.6 + 0.4 * Math.sin(time * starTwinkleSpeeds[idx] + starTwinklePhases[idx]);
+                const brightness = starBaseBrightness[idx] * twinkle;
+                const i3 = idx * 3;
+                const origR = starColors[i3] / starBaseBrightness[idx];
+                const origG = starColors[i3 + 1] / starBaseBrightness[idx];
+                const origB = starColors[i3 + 2] / starBaseBrightness[idx];
+                starColors[i3] = origR * brightness;
+                starColors[i3 + 1] = origG * brightness;
+                starColors[i3 + 2] = origB * brightness;
+            }
+            starsGeo.attributes.color.needsUpdate = true;
         }
 
-        const camRadius = (isMobile ? 22 : 28) + Math.sin(time * 0.3) * (isMobile ? 4 : 6);
-        const camHeight = 8 + Math.sin(time * 0.2) * 4 + (ringPosition.y - 10) * 0.25;
+        starField.rotation.y = time * 0.002;
+        starField.rotation.x = time * 0.0008;
+
+        cameraDistance += (targetCameraDistance - cameraDistance) * 0.05;
+        cameraVerticalAngle += (targetCameraVerticalAngle - cameraVerticalAngle) * 0.05;
+
+        if (cameraAutoRotate) {
+            cameraAngle += deltaTime * (isMobile ? 0.04 : 0.06);
+        }
+
+        const camRadius = cameraDistance + Math.sin(time * 0.3) * (isMobile ? 2 : 3);
+        const baseHeight = 8 + Math.sin(time * 0.2) * 2;
+        const camHeight = baseHeight + cameraVerticalAngle * 15 + (ringPosition.y - 10) * 0.25;
         camera.position.x = Math.cos(cameraAngle) * camRadius + ringPosition.x * 0.3;
-        camera.position.z = Math.sin(cameraAngle) * camRadius + (isMobile ? 8 : 12) + ringPosition.z * 0.3;
+        camera.position.z = Math.sin(cameraAngle) * camRadius + (isMobile ? 5 : 8) + ringPosition.z * 0.3;
         camera.position.y = camHeight;
 
         camera.lookAt(ringGroup.position);
@@ -1168,7 +1313,7 @@ function initializeThreeJS() {
         border: 1px solid rgba(0,200,255,0.25);
         box-shadow: 0 8px 32px rgba(0,100,200,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
         backdrop-filter: blur(12px);
-        max-width: ${isMobile ? 'auto' : '300px'};
+        max-width: ${isMobile ? 'auto' : '340px'};
     `;
 
     instructions.style.cssText = instructionStyle;
@@ -1191,13 +1336,17 @@ function initializeThreeJS() {
                 <div style="font-size: 10px; color: #8899bb; margin-top: 2px;">Interactive 3D Simulation</div>
             </div>
         </div>
-        <div style="display: grid; gap: 5px; font-size: 11px; opacity: 0.95;">
+        <div style="display: grid; gap: 4px; font-size: 11px; opacity: 0.95;">
             <div><span style="color: #ff66aa;">🖱️ Click</span> Launch ring upward</div>
             <div><span style="color: #ffaa44;">🖱️🖱️ Double-click</span> Super launch</div>
-            <div><span style="color: #66ffaa;">↔️ Drag</span> Apply force in flight</div>
-            <div><span style="color: #88aaff;">⌨️ A/D/←/→</span> Rotate camera</div>
-            <div><span style="color: #aabbcc;">⌨️ Space</span> Jump from ground</div>
-            <div><span style="color: #ff8888;">⌨️ R</span> Reset position</div>
+            <div><span style="color: #66ffaa;">↔️ Left-drag</span> Apply force in flight</div>
+            <div><span style="color: #88ddff;">🖱️ Right-drag</span> Rotate camera view</div>
+            <div><span style="color: #ddaaff;">⇧+Drag</span> Rotate ring manually</div>
+            <div><span style="color: #aaddcc;">🖲️ Scroll</span> Zoom in/out</div>
+            <div><span style="color: #88aaff;">⌨️ A/D</span> Rotate camera</div>
+            <div><span style="color: #ffcc88;">⌨️ Q/E</span> Spin ring left/right</div>
+            <div><span style="color: #aabbcc;">⌨️ +/-</span> Speed up/down</div>
+            <div><span style="color: #ff8888;">⌨️ R</span> Reset all</div>
         </div>
     `;
 
