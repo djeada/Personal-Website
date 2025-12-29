@@ -30,9 +30,9 @@ const CONFIG = {
         minSpeed: 0.5,
         acceleration: 0.02,
         friction: 0.98,
-        sensorDistance: 25,
+        sensorDistance: 30,  // Increased from 25 to detect pheromones from farther away
         sensorAngle: Math.PI / 4,
-        wanderStrength: 0.2,
+        wanderStrength: 0.3,  // Increased from 0.2 for better exploration
         turnSpeed: 0.08,
         maxTurnSpeed: 0.15,
         bounceBaseAngle: Math.PI / 2,
@@ -46,7 +46,7 @@ const CONFIG = {
         evaporationRate: 0.99,
         diffusionRate: 0.05,
         homePheromoneStrength: 0.7,
-        foodPheromoneStrength: 0.5
+        foodPheromoneStrength: 1.2  // Increased from 0.5 to make food trails stronger
     },
     obstacle: {
         radius: 8,
@@ -83,12 +83,16 @@ let settings = {
 // ========================
 // Pheromone Grid Management
 // ========================
+// Track cells with active pheromones for performance optimization
+let activePheremoneCells = new Set();
+
 function initPheromoneGrid() {
     const rows = Math.ceil(CONFIG.canvas.height / CONFIG.pheromone.gridSize);
     const cols = Math.ceil(CONFIG.canvas.width / CONFIG.pheromone.gridSize);
     
     pheromoneGrid.food = Array(rows).fill(null).map(() => Array(cols).fill(0));
     pheromoneGrid.home = Array(rows).fill(null).map(() => Array(cols).fill(0));
+    activePheremoneCells.clear();
 }
 
 function getPheromone(type, x, y) {
@@ -109,54 +113,70 @@ function addPheromone(type, x, y, strength) {
     
     if (row >= 0 && row < grid.length && col >= 0 && col < grid[0].length) {
         grid[row][col] = Math.min(grid[row][col] + strength, 255);
+        // Track active cells for performance optimization
+        activePheremoneCells.add(`${row},${col}`);
     }
 }
 
 function evaporatePheromones() {
     const evapRate = settings.evaporationRate;
     const diffusionRate = CONFIG.pheromone.diffusionRate;
-    
-    // Create temporary grids for diffusion
-    const newFoodGrid = pheromoneGrid.food.map(row => [...row]);
-    const newHomeGrid = pheromoneGrid.home.map(row => [...row]);
+    const threshold = 0.5; // Increased threshold for better performance
     
     // Neighbor offsets for diffusion
     const neighborOffsets = [[-1, 0], [1, 0], [0, -1], [0, 1]];
     
-    for (let i = 0; i < pheromoneGrid.food.length; i++) {
-        for (let j = 0; j < pheromoneGrid.food[i].length; j++) {
-            // Evaporate
-            pheromoneGrid.food[i][j] *= evapRate;
-            pheromoneGrid.home[i][j] *= evapRate;
+    // Convert active cells to array for iteration
+    const activeCells = Array.from(activePheremoneCells);
+    const newActiveCells = new Set();
+    
+    // Process only active cells for better performance
+    for (const cellKey of activeCells) {
+        const [i, j] = cellKey.split(',').map(Number);
+        
+        if (i < 0 || i >= pheromoneGrid.food.length || j < 0 || j >= pheromoneGrid.food[0].length) {
+            continue;
+        }
+        
+        // Evaporate
+        pheromoneGrid.food[i][j] *= evapRate;
+        pheromoneGrid.home[i][j] *= evapRate;
+        
+        // Simple diffusion without creating temporary arrays
+        if (pheromoneGrid.food[i][j] > 1 || pheromoneGrid.home[i][j] > 1) {
+            const foodDiff = pheromoneGrid.food[i][j] * diffusionRate / 4;
+            const homeDiff = pheromoneGrid.home[i][j] * diffusionRate / 4;
             
-            // Diffuse to neighbors
-            if (pheromoneGrid.food[i][j] > 1 || pheromoneGrid.home[i][j] > 1) {
-                for (const [di, dj] of neighborOffsets) {
-                    const ni = i + di;
-                    const nj = j + dj;
+            for (const [di, dj] of neighborOffsets) {
+                const ni = i + di;
+                const nj = j + dj;
+                
+                if (ni >= 0 && ni < pheromoneGrid.food.length && 
+                    nj >= 0 && nj < pheromoneGrid.food[0].length) {
+                    pheromoneGrid.food[ni][nj] += foodDiff;
+                    pheromoneGrid.home[ni][nj] += homeDiff;
+                    pheromoneGrid.food[i][j] -= foodDiff;
+                    pheromoneGrid.home[i][j] -= homeDiff;
                     
-                    if (ni >= 0 && ni < pheromoneGrid.food.length && 
-                        nj >= 0 && nj < pheromoneGrid.food[0].length) {
-                        const foodDiff = pheromoneGrid.food[i][j] * diffusionRate;
-                        const homeDiff = pheromoneGrid.home[i][j] * diffusionRate;
-                        
-                        newFoodGrid[ni][nj] += foodDiff / 4;
-                        newHomeGrid[ni][nj] += homeDiff / 4;
-                        newFoodGrid[i][j] -= foodDiff / 4;
-                        newHomeGrid[i][j] -= homeDiff / 4;
+                    // Mark neighbor as active if it has significant pheromone
+                    if (pheromoneGrid.food[ni][nj] > threshold || pheromoneGrid.home[ni][nj] > threshold) {
+                        newActiveCells.add(`${ni},${nj}`);
                     }
                 }
             }
-            
-            // Remove very small values for performance
-            if (pheromoneGrid.food[i][j] < 0.1) pheromoneGrid.food[i][j] = 0;
-            if (pheromoneGrid.home[i][j] < 0.1) pheromoneGrid.home[i][j] = 0;
+        }
+        
+        // Keep cell active if it still has significant pheromone
+        if (pheromoneGrid.food[i][j] > threshold || pheromoneGrid.home[i][j] > threshold) {
+            newActiveCells.add(cellKey);
+        } else {
+            // Clear very small values for performance
+            pheromoneGrid.food[i][j] = 0;
+            pheromoneGrid.home[i][j] = 0;
         }
     }
     
-    // Apply diffusion
-    pheromoneGrid.food = newFoodGrid;
-    pheromoneGrid.home = newHomeGrid;
+    activePheremoneCells = newActiveCells;
 }
 
 function clearPheromones() {
@@ -210,19 +230,19 @@ class Ant {
         // Smoother turning based on pheromone gradient
         const totalPheromone = leftSensor + centerSensor + rightSensor;
         
-        if (totalPheromone > 0.1) {
-            // Follow pheromone gradient
+        if (totalPheromone > 0.05) {  // Reduced threshold from 0.1 for better sensitivity
+            // Follow pheromone gradient with improved response
             const turnStrength = CONFIG.ant.turnSpeed;
             if (centerSensor > leftSensor && centerSensor > rightSensor) {
                 // Continue mostly straight with slight correction
                 const balance = (rightSensor - leftSensor) / (centerSensor + 1);
                 this.targetAngle += balance * turnStrength * 0.5;
             } else if (leftSensor > rightSensor) {
-                const strength = (leftSensor - rightSensor) / (leftSensor + rightSensor + 1);
-                this.targetAngle -= turnStrength * strength;
+                const strength = (leftSensor - rightSensor) / (leftSensor + rightSensor + 0.1);
+                this.targetAngle -= turnStrength * strength * 1.5;  // Increased turning response
             } else if (rightSensor > leftSensor) {
-                const strength = (rightSensor - leftSensor) / (leftSensor + rightSensor + 1);
-                this.targetAngle += turnStrength * strength;
+                const strength = (rightSensor - leftSensor) / (leftSensor + rightSensor + 0.1);
+                this.targetAngle += turnStrength * strength * 1.5;  // Increased turning response
             }
         } else {
             // Random wander with smoother motion
@@ -250,17 +270,17 @@ class Ant {
         const totalPheromone = leftSensor + centerSensor + rightSensor;
         
         // Blend pheromone following with direct navigation
-        if (totalPheromone > 0.1) {
+        if (totalPheromone > 0.05) {  // Reduced threshold from 0.1
             const turnStrength = CONFIG.ant.turnSpeed;
             if (centerSensor > leftSensor && centerSensor > rightSensor) {
                 const balance = (rightSensor - leftSensor) / (centerSensor + 1);
                 this.targetAngle += balance * turnStrength * 0.5;
             } else if (leftSensor > rightSensor) {
-                const strength = (leftSensor - rightSensor) / (leftSensor + rightSensor + 1);
-                this.targetAngle -= turnStrength * strength;
+                const strength = (leftSensor - rightSensor) / (leftSensor + rightSensor + 0.1);
+                this.targetAngle -= turnStrength * strength * 1.5;  // Increased turning response
             } else if (rightSensor > leftSensor) {
-                const strength = (rightSensor - leftSensor) / (leftSensor + rightSensor + 1);
-                this.targetAngle += turnStrength * strength;
+                const strength = (rightSensor - leftSensor) / (leftSensor + rightSensor + 0.1);
+                this.targetAngle += turnStrength * strength * 1.5;  // Increased turning response
             }
         } else {
             // Head towards nest when no pheromone trail
@@ -347,8 +367,8 @@ class Ant {
                     food.amount--;
                     // Turn around
                     this.angle += Math.PI;
-                    // Add strong food pheromone at food source
-                    addPheromone('food', food.x, food.y, settings.pheromoneStrength * 2);
+                    // Add very strong food pheromone at food source to attract other ants
+                    addPheromone('food', food.x, food.y, settings.pheromoneStrength * 5);
                     break;
                 }
             }
@@ -364,8 +384,8 @@ class Ant {
             this.hasFood = false;
             // Turn around
             this.angle += Math.PI;
-            // Add strong home pheromone at nest
-            addPheromone('home', CONFIG.nest.x, CONFIG.nest.y, settings.pheromoneStrength * 2);
+            // Add strong home pheromone at nest to guide returning ants
+            addPheromone('home', CONFIG.nest.x, CONFIG.nest.y, settings.pheromoneStrength * 3);
         }
     }
     
@@ -428,29 +448,34 @@ function drawPheromones() {
     const gridSize = CONFIG.pheromone.gridSize;
     const isDarkMode = document.body.classList.contains('dark-mode');
     
-    for (let i = 0; i < pheromoneGrid.food.length; i++) {
-        for (let j = 0; j < pheromoneGrid.food[i].length; j++) {
-            const foodValue = pheromoneGrid.food[i][j];
-            const homeValue = pheromoneGrid.home[i][j];
-            
-            const x = j * gridSize;
-            const y = i * gridSize;
-            
-            // Draw food pheromone (green) with better visibility in dark mode
-            if (foodValue > 0) {
-                const alpha = Math.min(foodValue / 100, 1);
-                const brightness = isDarkMode ? 0.5 : 0.3;
-                ctx.fillStyle = `rgba(0, 255, 0, ${alpha * brightness})`;
-                ctx.fillRect(x, y, gridSize, gridSize);
-            }
-            
-            // Draw home pheromone (blue) with better visibility in dark mode
-            if (homeValue > 0) {
-                const alpha = Math.min(homeValue / 100, 1);
-                const brightness = isDarkMode ? 0.5 : 0.3;
-                ctx.fillStyle = `rgba(100, 180, 255, ${alpha * brightness})`;
-                ctx.fillRect(x, y, gridSize, gridSize);
-            }
+    // Only draw active pheromone cells for better performance
+    for (const cellKey of activePheremoneCells) {
+        const [i, j] = cellKey.split(',').map(Number);
+        
+        if (i < 0 || i >= pheromoneGrid.food.length || j < 0 || j >= pheromoneGrid.food[0].length) {
+            continue;
+        }
+        
+        const foodValue = pheromoneGrid.food[i][j];
+        const homeValue = pheromoneGrid.home[i][j];
+        
+        const x = j * gridSize;
+        const y = i * gridSize;
+        
+        // Draw food pheromone (green) with better visibility in dark mode
+        if (foodValue > 0) {
+            const alpha = Math.min(foodValue / 100, 1);
+            const brightness = isDarkMode ? 0.5 : 0.3;
+            ctx.fillStyle = `rgba(0, 255, 0, ${alpha * brightness})`;
+            ctx.fillRect(x, y, gridSize, gridSize);
+        }
+        
+        // Draw home pheromone (blue) with better visibility in dark mode
+        if (homeValue > 0) {
+            const alpha = Math.min(homeValue / 100, 1);
+            const brightness = isDarkMode ? 0.5 : 0.3;
+            ctx.fillStyle = `rgba(100, 180, 255, ${alpha * brightness})`;
+            ctx.fillRect(x, y, gridSize, gridSize);
         }
     }
 }
