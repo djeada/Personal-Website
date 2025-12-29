@@ -396,11 +396,20 @@ function initializeThreeJS() {
     cosmicLight2.position.set(30, -10, 25);
     scene.add(cosmicLight2);
 
+    // Ring and particle zone constants
+    const RING_RADIUS = 4.0;  // Main ring radius
+    const RING_TUBE_RADIUS = 0.35;
+    const PARTICLE_INNER_ZONE_MIN = 0.5;
+    const PARTICLE_INNER_ZONE_MAX = 2.5;
+    const PARTICLE_OUTER_ZONE_MIN = 6.0;
+    const PARTICLE_OUTER_ZONE_MAX = 8.0;
+    const PARTICLE_INNER_ZONE_PROBABILITY = 0.5;  // 50% spawn in inner zone
+
     const ringGroup = new THREE.Group();
     ringGroup.position.set(0, 10, 0);
     scene.add(ringGroup);
 
-    const mainRingGeo = new THREE.TorusGeometry(4, 0.35, qualitySettings.ringDetail[0], qualitySettings.ringDetail[1]);
+    const mainRingGeo = new THREE.TorusGeometry(RING_RADIUS, RING_TUBE_RADIUS, qualitySettings.ringDetail[0], qualitySettings.ringDetail[1]);
     const mainRingMat = new THREE.MeshPhysicalMaterial({
         color: colors.ringPrimary,
         metalness: 0.95,
@@ -486,13 +495,6 @@ function initializeThreeJS() {
     const VELOCITY_DAMPING_GROUND = 0.82;
     const MIN_BOUNCE_VELOCITY = 0.4;
 
-    // Particle exclusion zone constants (for negative space around ring)
-    const RING_RADIUS = 4.0;  // Main ring radius
-    const PARTICLE_INNER_ZONE_MIN = 0.5;
-    const PARTICLE_INNER_ZONE_MAX = 2.5;
-    const PARTICLE_OUTER_ZONE_MIN = 6.0;
-    const PARTICLE_OUTER_ZONE_MAX = 8.0;
-
     let ringVelocity = { x: 0, y: 0, z: 0 };
     let ringPosition = { x: 0, y: 10, z: 0 };
     let angularVelocity = { x: 0, y: 0, z: 0 };
@@ -514,7 +516,7 @@ function initializeThreeJS() {
         const angle = Math.random() * Math.PI * 2;
         // Create exclusion zone: particles either inside inner zone or outside outer zone
         // This creates negative space around the ring
-        const radius = Math.random() < 0.5 
+        const radius = Math.random() < PARTICLE_INNER_ZONE_PROBABILITY 
             ? THREE.MathUtils.randFloat(PARTICLE_INNER_ZONE_MIN, PARTICLE_INNER_ZONE_MAX)  // Inner zone
             : THREE.MathUtils.randFloat(PARTICLE_OUTER_ZONE_MIN, PARTICLE_OUTER_ZONE_MAX); // Outer zone
         const i3 = i * 3;
