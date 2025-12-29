@@ -12,6 +12,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 let scene, camera, renderer, controls;
 let buildings = [];
 let highways = [];
+let cars = [];
+let people = [];
 let lights = {
     sun: null,
     ambient: null,
@@ -124,6 +126,8 @@ function init() {
         createGround();
         createBuildings();
         createHighways();
+        createCars();
+        createPeople();
         createParticles();
 
         // Setup event listeners
@@ -453,6 +457,232 @@ function addLaneMarkers(highway, horizontal) {
 }
 
 /**
+ * Create cars that move along highways
+ */
+function createCars() {
+    const carCount = 30;
+    const cityRadius = 100;
+    
+    // Car color palette
+    const carColors = [
+        0xff0000, // Red
+        0x0000ff, // Blue
+        0x00ff00, // Green
+        0xffff00, // Yellow
+        0xff00ff, // Magenta
+        0x00ffff, // Cyan
+        0xffffff, // White
+        0x888888, // Gray
+        0x000000  // Black
+    ];
+
+    for (let i = 0; i < carCount; i++) {
+        // Car body
+        const carWidth = 1.5;
+        const carHeight = 1.2;
+        const carLength = 3;
+        
+        const bodyGeometry = new THREE.BoxGeometry(carWidth, carHeight, carLength);
+        const bodyColor = carColors[Math.floor(Math.random() * carColors.length)];
+        const bodyMaterial = new THREE.MeshStandardMaterial({
+            color: bodyColor,
+            roughness: 0.3,
+            metalness: 0.7
+        });
+        const carBody = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        
+        // Car cabin (top part)
+        const cabinGeometry = new THREE.BoxGeometry(carWidth * 0.8, carHeight * 0.6, carLength * 0.5);
+        const cabinMaterial = new THREE.MeshStandardMaterial({
+            color: 0x333333,
+            roughness: 0.1,
+            metalness: 0.3,
+            transparent: true,
+            opacity: 0.7
+        });
+        const cabin = new THREE.Mesh(cabinGeometry, cabinMaterial);
+        cabin.position.y = carHeight * 0.8;
+        cabin.position.z = -carLength * 0.1;
+        carBody.add(cabin);
+        
+        // Headlights
+        const headlightGeometry = new THREE.SphereGeometry(0.2, 8, 8);
+        const headlightMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffffaa,
+            emissive: 0xffffaa,
+            emissiveIntensity: 2.0
+        });
+        const headlightLeft = new THREE.Mesh(headlightGeometry, headlightMaterial);
+        headlightLeft.position.set(-carWidth * 0.3, -carHeight * 0.3, carLength * 0.5);
+        carBody.add(headlightLeft);
+        
+        const headlightRight = new THREE.Mesh(headlightGeometry, headlightMaterial.clone());
+        headlightRight.position.set(carWidth * 0.3, -carHeight * 0.3, carLength * 0.5);
+        carBody.add(headlightRight);
+        
+        // Taillights
+        const taillightMaterial = new THREE.MeshStandardMaterial({
+            color: 0xff0000,
+            emissive: 0xff0000,
+            emissiveIntensity: 1.0
+        });
+        const taillightLeft = new THREE.Mesh(headlightGeometry, taillightMaterial);
+        taillightLeft.position.set(-carWidth * 0.3, -carHeight * 0.3, -carLength * 0.5);
+        carBody.add(taillightLeft);
+        
+        const taillightRight = new THREE.Mesh(headlightGeometry, taillightMaterial.clone());
+        taillightRight.position.set(carWidth * 0.3, -carHeight * 0.3, -carLength * 0.5);
+        carBody.add(taillightRight);
+        
+        // Position car on a highway lane
+        const lane = Math.floor(Math.random() * 6); // 6 highways (3 horizontal + 3 vertical)
+        const isHorizontal = lane < 3;
+        const laneOffset = (lane % 3 - 1) * 25; // -25, 0, 25
+        
+        if (isHorizontal) {
+            carBody.position.set(
+                (Math.random() - 0.5) * cityRadius,
+                0.8,
+                laneOffset + (Math.random() - 0.5) * 2
+            );
+            carBody.rotation.y = Math.random() > 0.5 ? 0 : Math.PI;
+        } else {
+            carBody.position.set(
+                laneOffset + (Math.random() - 0.5) * 2,
+                0.8,
+                (Math.random() - 0.5) * cityRadius
+            );
+            carBody.rotation.y = Math.random() > 0.5 ? Math.PI / 2 : -Math.PI / 2;
+        }
+        
+        carBody.castShadow = true;
+        carBody.receiveShadow = true;
+        
+        // Store movement data
+        carBody.userData = {
+            speed: 0.1 + Math.random() * 0.15,
+            lane: lane,
+            isHorizontal: isHorizontal,
+            laneOffset: laneOffset,
+            direction: carBody.rotation.y
+        };
+        
+        scene.add(carBody);
+        cars.push(carBody);
+    }
+}
+
+/**
+ * Create people (pedestrians) around the city
+ */
+function createPeople() {
+    const peopleCount = 40;
+    const cityRadius = 70;
+    
+    // People color palette (clothing)
+    const clothingColors = [
+        0xff0000, // Red
+        0x0000ff, // Blue
+        0x00ff00, // Green
+        0xffff00, // Yellow
+        0xff00ff, // Magenta
+        0x00ffff, // Cyan
+        0xffffff, // White
+        0x888888, // Gray
+        0x000000, // Black
+        0x8b4513  // Brown
+    ];
+
+    for (let i = 0; i < peopleCount; i++) {
+        // Create a simple human figure
+        const personGroup = new THREE.Group();
+        
+        // Body (torso)
+        const bodyGeometry = new THREE.BoxGeometry(0.8, 1.5, 0.5);
+        const clothingColor = clothingColors[Math.floor(Math.random() * clothingColors.length)];
+        const bodyMaterial = new THREE.MeshStandardMaterial({
+            color: clothingColor,
+            roughness: 0.8,
+            metalness: 0.1
+        });
+        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        body.position.y = 1.5;
+        body.castShadow = true;
+        personGroup.add(body);
+        
+        // Head
+        const headGeometry = new THREE.SphereGeometry(0.35, 16, 16);
+        const headMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffdbac, // Skin tone
+            roughness: 0.7,
+            metalness: 0.0
+        });
+        const head = new THREE.Mesh(headGeometry, headMaterial);
+        head.position.y = 2.6;
+        head.castShadow = true;
+        personGroup.add(head);
+        
+        // Legs
+        const legGeometry = new THREE.BoxGeometry(0.3, 1.2, 0.4);
+        const legMaterial = new THREE.MeshStandardMaterial({
+            color: 0x333333, // Dark pants
+            roughness: 0.8,
+            metalness: 0.1
+        });
+        
+        const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
+        leftLeg.position.set(-0.25, 0.6, 0);
+        leftLeg.castShadow = true;
+        personGroup.add(leftLeg);
+        
+        const rightLeg = new THREE.Mesh(legGeometry, legMaterial.clone());
+        rightLeg.position.set(0.25, 0.6, 0);
+        rightLeg.castShadow = true;
+        personGroup.add(rightLeg);
+        
+        // Arms
+        const armGeometry = new THREE.BoxGeometry(0.25, 1.0, 0.25);
+        const armMaterial = new THREE.MeshStandardMaterial({
+            color: clothingColor,
+            roughness: 0.8,
+            metalness: 0.1
+        });
+        
+        const leftArm = new THREE.Mesh(armGeometry, armMaterial);
+        leftArm.position.set(-0.6, 1.5, 0);
+        leftArm.castShadow = true;
+        personGroup.add(leftArm);
+        
+        const rightArm = new THREE.Mesh(armGeometry, armMaterial.clone());
+        rightArm.position.set(0.6, 1.5, 0);
+        rightArm.castShadow = true;
+        personGroup.add(rightArm);
+        
+        // Position person on sidewalk or near buildings
+        const angle = (i / peopleCount) * Math.PI * 2;
+        const radius = 15 + Math.random() * cityRadius;
+        const x = Math.cos(angle) * radius + (Math.random() - 0.5) * 10;
+        const z = Math.sin(angle) * radius + (Math.random() - 0.5) * 10;
+        
+        personGroup.position.set(x, 0, z);
+        personGroup.rotation.y = Math.random() * Math.PI * 2;
+        
+        // Store animation data
+        personGroup.userData = {
+            walkSpeed: 0.02 + Math.random() * 0.03,
+            walkDirection: Math.random() * Math.PI * 2,
+            animationOffset: Math.random() * Math.PI * 2,
+            pauseTime: Math.random() * 200,
+            pauseCounter: 0,
+            isPaused: Math.random() > 0.7 // Some people standing still
+        };
+        
+        scene.add(personGroup);
+        people.push(personGroup);
+    }
+}
+
+/**
  * Create atmospheric particles
  */
 function createParticles() {
@@ -654,6 +884,101 @@ function animate() {
             const pulse = Math.sin(time + index * 0.5) * 0.1 + 0.9;
             const baseIntensity = currentTime >= 6 && currentTime <= 18 ? 0.2 : 0.8;
             building.material.emissiveIntensity = baseIntensity * pulse;
+        }
+    });
+
+    // Animate cars
+    cars.forEach((car) => {
+        const data = car.userData;
+        const speed = data.speed * animationSpeed;
+        
+        if (data.isHorizontal) {
+            // Move horizontally
+            if (data.direction === 0) {
+                car.position.x += speed;
+                if (car.position.x > 100) car.position.x = -100;
+            } else {
+                car.position.x -= speed;
+                if (car.position.x < -100) car.position.x = 100;
+            }
+        } else {
+            // Move vertically
+            if (data.direction === Math.PI / 2) {
+                car.position.z += speed;
+                if (car.position.z > 100) car.position.z = -100;
+            } else {
+                car.position.z -= speed;
+                if (car.position.z < -100) car.position.z = 100;
+            }
+        }
+        
+        // Update headlight intensity based on time of day
+        if (car.children) {
+            car.children.forEach((child) => {
+                if (child.material && child.material.emissive) {
+                    const isNight = currentTime < 6 || currentTime > 18;
+                    child.material.emissiveIntensity = isNight ? 2.0 : 0.5;
+                }
+            });
+        }
+    });
+
+    // Animate people
+    people.forEach((person, index) => {
+        const data = person.userData;
+        
+        if (!data.isPaused) {
+            // Walking animation
+            const walkTime = time * 10 + data.animationOffset;
+            
+            // Move person forward
+            person.position.x += Math.cos(data.walkDirection) * data.walkSpeed * animationSpeed;
+            person.position.z += Math.sin(data.walkDirection) * data.walkSpeed * animationSpeed;
+            
+            // Keep people within city bounds
+            const distFromCenter = Math.sqrt(person.position.x ** 2 + person.position.z ** 2);
+            if (distFromCenter > 80) {
+                // Turn around if too far from center
+                data.walkDirection += Math.PI;
+                person.rotation.y = data.walkDirection;
+            }
+            
+            // Animate legs (simple walking motion)
+            if (person.children.length >= 4) {
+                const leftLeg = person.children[2];
+                const rightLeg = person.children[3];
+                if (leftLeg && rightLeg) {
+                    leftLeg.rotation.x = Math.sin(walkTime) * 0.3;
+                    rightLeg.rotation.x = Math.sin(walkTime + Math.PI) * 0.3;
+                }
+                
+                // Animate arms
+                if (person.children.length >= 6) {
+                    const leftArm = person.children[4];
+                    const rightArm = person.children[5];
+                    if (leftArm && rightArm) {
+                        leftArm.rotation.x = Math.sin(walkTime + Math.PI) * 0.2;
+                        rightArm.rotation.x = Math.sin(walkTime) * 0.2;
+                    }
+                }
+            }
+            
+            // Occasionally pause
+            if (Math.random() < 0.001) {
+                data.isPaused = true;
+                data.pauseCounter = data.pauseTime;
+            }
+        } else {
+            // Paused - count down
+            data.pauseCounter--;
+            if (data.pauseCounter <= 0) {
+                data.isPaused = false;
+                // Change direction randomly
+                if (Math.random() > 0.5) {
+                    data.walkDirection = Math.random() * Math.PI * 2;
+                    person.rotation.y = data.walkDirection;
+                }
+            }
         }
     });
 
