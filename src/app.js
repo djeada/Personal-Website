@@ -308,30 +308,30 @@ function initializeThreeJS() {
 
     const colorSchemes = {
         dark: {
-            bg: 0x030308,
-            fog: 0x050510,
-            ringPrimary: 0x00ccff,
-            ringSecondary: 0xff00aa,
-            ringAccent: 0xffaa00,
-            star: 0xffffff,
-            nebula1: 0x4400ff,
-            nebula2: 0xff0066,
-            nebula3: 0x00ffaa,
-            energy: 0x00ffff,
-            trail: 0x8844ff
+            bg: 0x0B1020,           // Deep blue-black (from proposed palette)
+            fog: 0x0F1428,          // Slightly lighter but still very dark
+            ringPrimary: 0x6B7FD7,  // Soft blue (from proposed palette) - main ring
+            ringSecondary: 0x8892E0, // Muted lavender (reduced saturation from original magenta)
+            ringAccent: 0xE0A458,   // Warm amber (from proposed palette) - for interaction
+            star: 0xffffff,         // Keep stars white
+            nebula1: 0x2A2F4F,      // Muted indigo (from proposed palette)
+            nebula2: 0x3D4466,      // Muted blue-grey (reduced from neon pink)
+            nebula3: 0x3A5555,      // Muted teal (reduced from bright cyan)
+            energy: 0xC7D2FF,       // Pale blue glow (from proposed palette)
+            trail: 0x7B86CC         // Desaturated purple (reduced from bright purple)
         },
         light: {
-            bg: 0x1a1a2e,
-            fog: 0x16213e,
-            ringPrimary: 0x00d4ff,
-            ringSecondary: 0xff2d95,
-            ringAccent: 0xffa500,
-            star: 0xffffff,
-            nebula1: 0x7b2cbf,
-            nebula2: 0xe94560,
-            nebula3: 0x0ead69,
-            energy: 0x00d4ff,
-            trail: 0x9d4edd
+            bg: 0x1a1a2e,           // Keep existing (already reasonable)
+            fog: 0x1E2440,          // Slightly adjusted
+            ringPrimary: 0x6B7FD7,  // Soft blue (consistent with dark mode)
+            ringSecondary: 0x9BA5E8, // Even lighter lavender for light mode
+            ringAccent: 0xD9A456,   // Slightly muted amber
+            star: 0xffffff,         // Keep stars white
+            nebula1: 0x5A5F7F,      // More muted indigo for light mode
+            nebula2: 0x7A6B8F,      // Desaturated mauve (reduced from bright pink)
+            nebula3: 0x6B8B8B,      // Muted slate (reduced from bright green)
+            energy: 0xB5C5F5,       // Soft pale blue
+            trail: 0x8B92D8         // Softer purple for light mode
         }
     };
 
@@ -421,7 +421,7 @@ function initializeThreeJS() {
     const innerGlowMat = new THREE.MeshBasicMaterial({
         color: colors.ringSecondary,
         transparent: true,
-        opacity: 0.6,
+        opacity: 0.4,  // Reduced from 0.6 for less visual competition
         blending: THREE.AdditiveBlending
     });
     const innerGlow = new THREE.Mesh(innerGlowGeo, innerGlowMat);
@@ -431,7 +431,7 @@ function initializeThreeJS() {
     const outerGlowMat = new THREE.MeshBasicMaterial({
         color: colors.ringAccent,
         transparent: true,
-        opacity: 0.5,
+        opacity: 0.35,  // Reduced from 0.5 for less visual competition
         blending: THREE.AdditiveBlending
     });
     const outerGlow = new THREE.Mesh(outerGlowGeo, outerGlowMat);
@@ -546,7 +546,7 @@ function initializeThreeJS() {
         sizeAttenuation: true,
         vertexColors: true,
         transparent: true,
-        opacity: 0.8,
+        opacity: 0.5,  // Reduced from 0.8 to reduce background competition
         blending: THREE.AdditiveBlending,
         depthWrite: false
     });
@@ -591,7 +591,7 @@ function initializeThreeJS() {
         sizeAttenuation: true,
         vertexColors: true,
         transparent: true,
-        opacity: darkMode ? 0.4 : 0.2,
+        opacity: darkMode ? 0.25 : 0.15,  // Reduced to ≤40% max (was 0.4/0.2)
         blending: THREE.AdditiveBlending,
         depthWrite: false
     });
@@ -625,7 +625,7 @@ function initializeThreeJS() {
         sizeAttenuation: true,
         vertexColors: true,
         transparent: true,
-        opacity: 0.7,
+        opacity: 0.5,  // Reduced from 0.7 for better hierarchy
         blending: THREE.AdditiveBlending,
         depthWrite: false
     });
@@ -1191,13 +1191,13 @@ function initializeThreeJS() {
         coreOuterGlow.scale.setScalar(energyPulse * 1.8 + Math.sin(time * 3) * 0.1);
         coreHalo.scale.setScalar(1 + Math.sin(time * 2) * 0.15 + combinedEnergy * 0.3);
         
-        coreGlowMat.opacity = 0.4 + combinedEnergy * 0.3 + Math.sin(time * 5) * 0.1;
-        coreOuterGlowMat.opacity = 0.15 + combinedEnergy * 0.2;
-        coreHaloMat.opacity = 0.05 + combinedEnergy * 0.08;
+        coreGlowMat.opacity = 0.35 + combinedEnergy * 0.25 + Math.sin(time * 5) * 0.08;  // Slightly reduced
+        coreOuterGlowMat.opacity = 0.12 + combinedEnergy * 0.15;  // Slightly reduced
+        coreHaloMat.opacity = 0.04 + combinedEnergy * 0.06;  // Slightly reduced
 
-        mainRingMat.emissiveIntensity = 0.1 + combinedEnergy * 0.6 + launchFlash * 0.5;
-        innerGlowMat.opacity = 0.4 + combinedEnergy * 0.4;
-        outerGlowMat.opacity = 0.3 + combinedEnergy * 0.4;
+        mainRingMat.emissiveIntensity = 0.15 + combinedEnergy * 0.7 + launchFlash * 0.6;  // Ring remains brightest
+        innerGlowMat.opacity = 0.25 + combinedEnergy * 0.25;  // Reduced from 0.4 + 0.4
+        outerGlowMat.opacity = 0.2 + combinedEnergy * 0.25;  // Reduced from 0.3 + 0.4
 
         energyLight.intensity = combinedEnergy * 5 + launchFlash * 3;
         energyLight.position.set(ringPosition.x, ringPosition.y, ringPosition.z);
@@ -1234,7 +1234,7 @@ function initializeThreeJS() {
             }
         }
         particles.geometry.attributes.position.needsUpdate = true;
-        particleMat.opacity = 0.6 + combinedEnergy * 0.3;
+        particleMat.opacity = 0.4 + combinedEnergy * 0.2;  // Reduced from 0.6 + 0.3
 
         for (let i = 0; i < trailCount; i++) {
             if (trailParticleData[i].life > 0) {
@@ -1251,7 +1251,7 @@ function initializeThreeJS() {
         }
         trailParticles.geometry.attributes.position.needsUpdate = true;
         trailParticles.geometry.attributes.color.needsUpdate = true;
-        trailMat.opacity = 0.5 + combinedEnergy * 0.3;
+        trailMat.opacity = 0.35 + combinedEnergy * 0.2;  // Reduced from 0.5 + 0.3
 
         if (!isMobile || frameCount % 3 === 0) {
             for (let i = 0; i < nebulaCount; i++) {
