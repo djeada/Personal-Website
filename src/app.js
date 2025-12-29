@@ -635,10 +635,10 @@ function initializeThreeJS() {
     const starCount = qualitySettings.stars;
     const starPositions = new Float32Array(starCount * 3);
     const starColors = new Float32Array(starCount * 3);
+    const starBaseColors = new Float32Array(starCount * 3);
     const starSizes = new Float32Array(starCount);
     const starTwinklePhases = new Float32Array(starCount);
     const starTwinkleSpeeds = new Float32Array(starCount);
-    const starBaseBrightness = new Float32Array(starCount);
 
     for (let i = 0; i < starCount; i++) {
         const i3 = i * 3;
@@ -651,32 +651,39 @@ function initializeThreeJS() {
         starPositions[i3 + 2] = radius * Math.cos(phi);
         
         const baseBrightness = 0.4 + Math.random() * 0.6;
-        starBaseBrightness[i] = baseBrightness;
         starTwinklePhases[i] = Math.random() * Math.PI * 2;
         starTwinkleSpeeds[i] = 0.5 + Math.random() * 2.5;
         
         const tint = Math.random();
+        let r, g, b;
         if (tint < 0.08) {
-            starColors[i3] = baseBrightness;
-            starColors[i3 + 1] = baseBrightness * 0.6;
-            starColors[i3 + 2] = baseBrightness * 0.4;
+            r = baseBrightness;
+            g = baseBrightness * 0.6;
+            b = baseBrightness * 0.4;
         } else if (tint < 0.16) {
-            starColors[i3] = baseBrightness;
-            starColors[i3 + 1] = baseBrightness * 0.9;
-            starColors[i3 + 2] = baseBrightness * 0.7;
+            r = baseBrightness;
+            g = baseBrightness * 0.9;
+            b = baseBrightness * 0.7;
         } else if (tint < 0.28) {
-            starColors[i3] = baseBrightness * 0.7;
-            starColors[i3 + 1] = baseBrightness * 0.85;
-            starColors[i3 + 2] = baseBrightness;
+            r = baseBrightness * 0.7;
+            g = baseBrightness * 0.85;
+            b = baseBrightness;
         } else if (tint < 0.35) {
-            starColors[i3] = baseBrightness * 0.8;
-            starColors[i3 + 1] = baseBrightness * 0.8;
-            starColors[i3 + 2] = baseBrightness;
+            r = baseBrightness * 0.8;
+            g = baseBrightness * 0.8;
+            b = baseBrightness;
         } else {
-            starColors[i3] = baseBrightness;
-            starColors[i3 + 1] = baseBrightness;
-            starColors[i3 + 2] = baseBrightness;
+            r = baseBrightness;
+            g = baseBrightness;
+            b = baseBrightness;
         }
+        
+        starColors[i3] = r;
+        starColors[i3 + 1] = g;
+        starColors[i3 + 2] = b;
+        starBaseColors[i3] = r;
+        starBaseColors[i3 + 1] = g;
+        starBaseColors[i3 + 2] = b;
         
         const sizeRand = Math.random();
         if (sizeRand < 0.02) {
@@ -1257,19 +1264,15 @@ function initializeThreeJS() {
         nebula.rotation.y = time * 0.01;
         nebula.rotation.x = Math.sin(time * 0.05) * 0.1;
 
-        if (!isMobile || frameCount % 5 === 0) {
-            const twinkleUpdateCount = isMobile ? Math.floor(starCount / 10) : Math.floor(starCount / 3);
+        if ((!isMobile && frameCount % 3 === 0) || (isMobile && frameCount % 10 === 0)) {
+            const twinkleUpdateCount = isMobile ? Math.floor(starCount / 25) : Math.floor(starCount / 10);
             for (let i = 0; i < twinkleUpdateCount; i++) {
                 const idx = (frameCount * 7 + i * 13) % starCount;
-                const twinkle = 0.6 + 0.4 * Math.sin(time * starTwinkleSpeeds[idx] + starTwinklePhases[idx]);
-                const brightness = starBaseBrightness[idx] * twinkle;
+                const twinkle = 0.7 + 0.3 * Math.sin(time * starTwinkleSpeeds[idx] + starTwinklePhases[idx]);
                 const i3 = idx * 3;
-                const origR = starColors[i3] / starBaseBrightness[idx];
-                const origG = starColors[i3 + 1] / starBaseBrightness[idx];
-                const origB = starColors[i3 + 2] / starBaseBrightness[idx];
-                starColors[i3] = origR * brightness;
-                starColors[i3 + 1] = origG * brightness;
-                starColors[i3 + 2] = origB * brightness;
+                starColors[i3] = starBaseColors[i3] * twinkle;
+                starColors[i3 + 1] = starBaseColors[i3 + 1] * twinkle;
+                starColors[i3 + 2] = starBaseColors[i3 + 2] * twinkle;
             }
             starsGeo.attributes.color.needsUpdate = true;
         }
