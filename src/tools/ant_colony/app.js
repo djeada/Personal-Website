@@ -24,6 +24,8 @@ const CONFIG = {
     ant: {
         size: 3,
         speed: 0.8,
+        speedVariationMin: 0.8,
+        speedVariationRange: 0.4,
         maxSpeed: 2.0,
         minSpeed: 0.5,
         acceleration: 0.02,
@@ -118,6 +120,9 @@ function evaporatePheromones() {
     const newFoodGrid = pheromoneGrid.food.map(row => [...row]);
     const newHomeGrid = pheromoneGrid.home.map(row => [...row]);
     
+    // Neighbor offsets for diffusion
+    const neighborOffsets = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    
     for (let i = 0; i < pheromoneGrid.food.length; i++) {
         for (let j = 0; j < pheromoneGrid.food[i].length; j++) {
             // Evaporate
@@ -126,11 +131,10 @@ function evaporatePheromones() {
             
             // Diffuse to neighbors
             if (pheromoneGrid.food[i][j] > 1 || pheromoneGrid.home[i][j] > 1) {
-                const neighbors = [
-                    [i-1, j], [i+1, j], [i, j-1], [i, j+1]
-                ];
-                
-                for (const [ni, nj] of neighbors) {
+                for (const [di, dj] of neighborOffsets) {
+                    const ni = i + di;
+                    const nj = j + dj;
+                    
                     if (ni >= 0 && ni < pheromoneGrid.food.length && 
                         nj >= 0 && nj < pheromoneGrid.food[0].length) {
                         const foodDiff = pheromoneGrid.food[i][j] * diffusionRate;
@@ -168,7 +172,7 @@ class Ant {
         this.y = y;
         this.angle = Math.random() * Math.PI * 2;
         this.hasFood = false;
-        this.velocity = CONFIG.ant.speed * (0.8 + Math.random() * 0.4); // Slight speed variation
+        this.velocity = CONFIG.ant.speed * (CONFIG.ant.speedVariationMin + Math.random() * CONFIG.ant.speedVariationRange);
         this.targetAngle = this.angle;
     }
     
@@ -467,7 +471,7 @@ function drawNest() {
     ctx.fill();
     
     // Label
-    ctx.fillStyle = isDarkMode ? '#fff' : '#fff';
+    ctx.fillStyle = '#fff';
     ctx.font = 'bold 12px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
