@@ -23,22 +23,30 @@ const CONFIG = {
     ],
     ant: {
         size: 3,
-        speed: 2,
-        sensorDistance: 20,
+        speed: 0.8,
+        speedVariationMin: 0.8,
+        speedVariationRange: 0.4,
+        maxSpeed: 2.0,
+        minSpeed: 0.5,
+        acceleration: 0.02,
+        friction: 0.98,
+        sensorDistance: 25,
         sensorAngle: Math.PI / 4,
-        wanderStrength: 0.3,
-        turnSpeed: 0.1,
+        wanderStrength: 0.2,
+        turnSpeed: 0.08,
+        maxTurnSpeed: 0.15,
         bounceBaseAngle: Math.PI / 2,
         bounceRandomVariation: Math.PI / 4,
-        nestNavigationFactor: 0.1
+        nestNavigationFactor: 0.15,
+        momentum: 0.85
     },
     pheromone: {
         gridSize: 5,
         initialStrength: 100,
         evaporationRate: 0.99,
-        diffusionRate: 0.01,
-        homePheromoneStrength: 0.5,
-        foodPheromoneStrength: 0.3
+        diffusionRate: 0.05,
+        homePheromoneStrength: 0.7,
+        foodPheromoneStrength: 0.5
     },
     obstacle: {
         radius: 8,
@@ -68,7 +76,8 @@ let settings = {
     pheromoneStrength: 100,
     evaporationRate: 0.99,
     showPheromones: true,
-    showSensors: false
+    showSensors: false,
+    simulationSpeed: 1.0
 };
 
 // ========================
@@ -105,17 +114,49 @@ function addPheromone(type, x, y, strength) {
 
 function evaporatePheromones() {
     const evapRate = settings.evaporationRate;
+    const diffusionRate = CONFIG.pheromone.diffusionRate;
+    
+    // Create temporary grids for diffusion
+    const newFoodGrid = pheromoneGrid.food.map(row => [...row]);
+    const newHomeGrid = pheromoneGrid.home.map(row => [...row]);
+    
+    // Neighbor offsets for diffusion
+    const neighborOffsets = [[-1, 0], [1, 0], [0, -1], [0, 1]];
     
     for (let i = 0; i < pheromoneGrid.food.length; i++) {
         for (let j = 0; j < pheromoneGrid.food[i].length; j++) {
+            // Evaporate
             pheromoneGrid.food[i][j] *= evapRate;
             pheromoneGrid.home[i][j] *= evapRate;
+            
+            // Diffuse to neighbors
+            if (pheromoneGrid.food[i][j] > 1 || pheromoneGrid.home[i][j] > 1) {
+                for (const [di, dj] of neighborOffsets) {
+                    const ni = i + di;
+                    const nj = j + dj;
+                    
+                    if (ni >= 0 && ni < pheromoneGrid.food.length && 
+                        nj >= 0 && nj < pheromoneGrid.food[0].length) {
+                        const foodDiff = pheromoneGrid.food[i][j] * diffusionRate;
+                        const homeDiff = pheromoneGrid.home[i][j] * diffusionRate;
+                        
+                        newFoodGrid[ni][nj] += foodDiff / 4;
+                        newHomeGrid[ni][nj] += homeDiff / 4;
+                        newFoodGrid[i][j] -= foodDiff / 4;
+                        newHomeGrid[i][j] -= homeDiff / 4;
+                    }
+                }
+            }
             
             // Remove very small values for performance
             if (pheromoneGrid.food[i][j] < 0.1) pheromoneGrid.food[i][j] = 0;
             if (pheromoneGrid.home[i][j] < 0.1) pheromoneGrid.home[i][j] = 0;
         }
     }
+    
+    // Apply diffusion
+    pheromoneGrid.food = newFoodGrid;
+    pheromoneGrid.home = newHomeGrid;
 }
 
 function clearPheromones() {
@@ -131,7 +172,8 @@ class Ant {
         this.y = y;
         this.angle = Math.random() * Math.PI * 2;
         this.hasFood = false;
-        this.speed = CONFIG.ant.speed;
+        this.velocity = CONFIG.ant.speed * (CONFIG.ant.speedVariationMin + Math.random() * CONFIG.ant.speedVariationRange);
+        this.targetAngle = this.angle;
     }
     
     update() {
@@ -165,17 +207,33 @@ class Ant {
         const centerSensor = this.getSensorReading('center', 'food');
         const rightSensor = this.getSensorReading('right', 'food');
         
-        // Choose direction based on strongest pheromone
-        if (centerSensor > leftSensor && centerSensor > rightSensor) {
-            // Continue straight
-        } else if (leftSensor > rightSensor) {
-            this.angle -= CONFIG.ant.turnSpeed;
-        } else if (rightSensor > leftSensor) {
-            this.angle += CONFIG.ant.turnSpeed;
+        // Smoother turning based on pheromone gradient
+        const totalPheromone = leftSensor + centerSensor + rightSensor;
+        
+        if (totalPheromone > 0.1) {
+            // Follow pheromone gradient
+            const turnStrength = CONFIG.ant.turnSpeed;
+            if (centerSensor > leftSensor && centerSensor > rightSensor) {
+                // Continue mostly straight with slight correction
+                const balance = (rightSensor - leftSensor) / (centerSensor + 1);
+                this.targetAngle += balance * turnStrength * 0.5;
+            } else if (leftSensor > rightSensor) {
+                const strength = (leftSensor - rightSensor) / (leftSensor + rightSensor + 1);
+                this.targetAngle -= turnStrength * strength;
+            } else if (rightSensor > leftSensor) {
+                const strength = (rightSensor - leftSensor) / (leftSensor + rightSensor + 1);
+                this.targetAngle += turnStrength * strength;
+            }
         } else {
-            // Random wander
-            this.angle += (Math.random() - 0.5) * CONFIG.ant.wanderStrength;
+            // Random wander with smoother motion
+            this.targetAngle += (Math.random() - 0.5) * CONFIG.ant.wanderStrength;
         }
+        
+        // Smooth angle interpolation for realistic turning
+        let angleDiff = this.targetAngle - this.angle;
+        while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+        while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+        this.angle += angleDiff * CONFIG.ant.momentum;
     }
     
     returnToNest() {
@@ -189,22 +247,31 @@ class Ant {
         const dy = CONFIG.nest.y - this.y;
         const angleToNest = Math.atan2(dy, dx);
         
+        const totalPheromone = leftSensor + centerSensor + rightSensor;
+        
         // Blend pheromone following with direct navigation
-        if (centerSensor > leftSensor && centerSensor > rightSensor) {
-            // Continue straight
-        } else if (leftSensor > rightSensor) {
-            this.angle -= CONFIG.ant.turnSpeed;
-        } else if (rightSensor > leftSensor) {
-            this.angle += CONFIG.ant.turnSpeed;
+        if (totalPheromone > 0.1) {
+            const turnStrength = CONFIG.ant.turnSpeed;
+            if (centerSensor > leftSensor && centerSensor > rightSensor) {
+                const balance = (rightSensor - leftSensor) / (centerSensor + 1);
+                this.targetAngle += balance * turnStrength * 0.5;
+            } else if (leftSensor > rightSensor) {
+                const strength = (leftSensor - rightSensor) / (leftSensor + rightSensor + 1);
+                this.targetAngle -= turnStrength * strength;
+            } else if (rightSensor > leftSensor) {
+                const strength = (rightSensor - leftSensor) / (leftSensor + rightSensor + 1);
+                this.targetAngle += turnStrength * strength;
+            }
         } else {
-            // Head towards nest
-            let angleDiff = angleToNest - this.angle;
-            // Normalize angle difference to [-PI, PI]
-            while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-            while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-            
-            this.angle += angleDiff * CONFIG.ant.nestNavigationFactor;
+            // Head towards nest when no pheromone trail
+            this.targetAngle = angleToNest;
         }
+        
+        // Smooth angle interpolation
+        let angleDiff = this.targetAngle - this.angle;
+        while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+        while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+        this.angle += angleDiff * CONFIG.ant.nestNavigationFactor;
     }
     
     getSensorReading(direction, pheromoneType) {
@@ -223,16 +290,21 @@ class Ant {
     }
     
     move() {
-        const newX = this.x + Math.cos(this.angle) * this.speed;
-        const newY = this.y + Math.sin(this.angle) * this.speed;
+        // Apply velocity with momentum
+        this.velocity *= CONFIG.ant.friction;
+        this.velocity = Math.max(CONFIG.ant.minSpeed, Math.min(CONFIG.ant.maxSpeed, this.velocity + CONFIG.ant.acceleration));
+        
+        const newX = this.x + Math.cos(this.angle) * this.velocity;
+        const newY = this.y + Math.sin(this.angle) * this.velocity;
         
         // Check collision with obstacles
         if (!this.isCollidingWithObstacle(newX, newY)) {
             this.x = newX;
             this.y = newY;
         } else {
-            // Bounce off obstacle
-            this.angle += CONFIG.ant.bounceBaseAngle + (Math.random() - 0.5) * CONFIG.ant.bounceRandomVariation;
+            // Bounce off obstacle with momentum consideration
+            this.targetAngle += CONFIG.ant.bounceBaseAngle + (Math.random() - 0.5) * CONFIG.ant.bounceRandomVariation;
+            this.velocity *= 0.5; // Reduce velocity on collision
         }
         
         // Wrap around screen edges
@@ -302,8 +374,9 @@ class Ant {
         ctx.translate(this.x, this.y);
         ctx.rotate(this.angle);
         
-        // Draw ant body
-        ctx.fillStyle = this.hasFood ? '#ff6b6b' : '#333';
+        // Draw ant body with color that's visible in both modes
+        const isDarkMode = document.body.classList.contains('dark-mode');
+        ctx.fillStyle = this.hasFood ? '#ff6b6b' : (isDarkMode ? '#e0e0e0' : '#333');
         ctx.beginPath();
         ctx.ellipse(0, 0, CONFIG.ant.size * 1.5, CONFIG.ant.size, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -353,6 +426,7 @@ function drawPheromones() {
     if (!settings.showPheromones) return;
     
     const gridSize = CONFIG.pheromone.gridSize;
+    const isDarkMode = document.body.classList.contains('dark-mode');
     
     for (let i = 0; i < pheromoneGrid.food.length; i++) {
         for (let j = 0; j < pheromoneGrid.food[i].length; j++) {
@@ -362,17 +436,19 @@ function drawPheromones() {
             const x = j * gridSize;
             const y = i * gridSize;
             
-            // Draw food pheromone (green)
+            // Draw food pheromone (green) with better visibility in dark mode
             if (foodValue > 0) {
                 const alpha = Math.min(foodValue / 100, 1);
-                ctx.fillStyle = `rgba(0, 255, 0, ${alpha * 0.3})`;
+                const brightness = isDarkMode ? 0.5 : 0.3;
+                ctx.fillStyle = `rgba(0, 255, 0, ${alpha * brightness})`;
                 ctx.fillRect(x, y, gridSize, gridSize);
             }
             
-            // Draw home pheromone (blue)
+            // Draw home pheromone (blue) with better visibility in dark mode
             if (homeValue > 0) {
                 const alpha = Math.min(homeValue / 100, 1);
-                ctx.fillStyle = `rgba(0, 136, 255, ${alpha * 0.3})`;
+                const brightness = isDarkMode ? 0.5 : 0.3;
+                ctx.fillStyle = `rgba(100, 180, 255, ${alpha * brightness})`;
                 ctx.fillRect(x, y, gridSize, gridSize);
             }
         }
@@ -380,28 +456,48 @@ function drawPheromones() {
 }
 
 function drawNest() {
-    ctx.fillStyle = '#8b4513';
+    const isDarkMode = document.body.classList.contains('dark-mode');
+    
+    // Outer ring
+    ctx.fillStyle = isDarkMode ? '#8b6914' : '#8b4513';
     ctx.beginPath();
     ctx.arc(CONFIG.nest.x, CONFIG.nest.y, CONFIG.nest.radius, 0, Math.PI * 2);
     ctx.fill();
     
+    // Inner darker circle
+    ctx.fillStyle = isDarkMode ? '#6b4f0a' : '#654321';
+    ctx.beginPath();
+    ctx.arc(CONFIG.nest.x, CONFIG.nest.y, CONFIG.nest.radius * 0.7, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Label
     ctx.fillStyle = '#fff';
-    ctx.font = '12px Arial';
+    ctx.font = 'bold 12px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('NEST', CONFIG.nest.x, CONFIG.nest.y);
 }
 
 function drawFood() {
+    const isDarkMode = document.body.classList.contains('dark-mode');
+    
     for (const food of CONFIG.food) {
         if (food.amount > 0) {
-            ctx.fillStyle = '#4caf50';
+            // Main food circle
+            ctx.fillStyle = isDarkMode ? '#66bb6a' : '#4caf50';
             ctx.beginPath();
             ctx.arc(food.x, food.y, food.radius, 0, Math.PI * 2);
             ctx.fill();
             
-            ctx.fillStyle = '#fff';
-            ctx.font = '10px Arial';
+            // Inner highlight
+            ctx.fillStyle = isDarkMode ? '#81c784' : '#66bb6a';
+            ctx.beginPath();
+            ctx.arc(food.x - food.radius * 0.2, food.y - food.radius * 0.2, food.radius * 0.6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Amount label
+            ctx.fillStyle = isDarkMode ? '#000' : '#fff';
+            ctx.font = 'bold 11px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(food.amount, food.x, food.y);
@@ -410,11 +506,16 @@ function drawFood() {
 }
 
 function drawObstacles() {
-    ctx.fillStyle = '#666';
+    const isDarkMode = document.body.classList.contains('dark-mode');
+    ctx.fillStyle = isDarkMode ? '#999' : '#666';
+    ctx.strokeStyle = isDarkMode ? '#bbb' : '#888';
+    ctx.lineWidth = 1;
+    
     for (const obstacle of obstacles) {
         ctx.beginPath();
         ctx.arc(obstacle.x, obstacle.y, obstacle.radius, 0, Math.PI * 2);
         ctx.fill();
+        ctx.stroke();
     }
 }
 
@@ -432,14 +533,27 @@ function drawStats() {
 // ========================
 // Simulation Loop
 // ========================
-function update() {
-    // Update all ants
-    for (const ant of ants) {
-        ant.update();
-    }
+let lastUpdateTime = 0;
+const BASE_UPDATE_INTERVAL = 16.67; // ~60 FPS
+
+function update(currentTime) {
+    if (!lastUpdateTime) lastUpdateTime = currentTime;
+    const deltaTime = currentTime - lastUpdateTime;
     
-    // Evaporate pheromones
-    evaporatePheromones();
+    // Apply simulation speed multiplier
+    const updateInterval = BASE_UPDATE_INTERVAL / settings.simulationSpeed;
+    
+    if (deltaTime >= updateInterval) {
+        // Update all ants
+        for (const ant of ants) {
+            ant.update();
+        }
+        
+        // Evaporate pheromones
+        evaporatePheromones();
+        
+        lastUpdateTime = currentTime;
+    }
 }
 
 function draw() {
@@ -461,8 +575,8 @@ function draw() {
     drawStats();
 }
 
-function gameLoop() {
-    update();
+function gameLoop(currentTime) {
+    update(currentTime);
     draw();
     requestAnimationFrame(gameLoop);
 }
@@ -516,6 +630,13 @@ function setupEventListeners() {
     evaporationRateSlider.addEventListener('input', (e) => {
         settings.evaporationRate = parseFloat(e.target.value) / 100;
         evaporationRateValue.textContent = settings.evaporationRate.toFixed(2);
+    });
+    
+    const simulationSpeedSlider = document.getElementById('simulation-speed');
+    const simulationSpeedValue = document.getElementById('simulation-speed-value');
+    simulationSpeedSlider.addEventListener('input', (e) => {
+        settings.simulationSpeed = parseFloat(e.target.value) / 100;
+        simulationSpeedValue.textContent = settings.simulationSpeed.toFixed(1) + 'x';
     });
     
     // Checkboxes
