@@ -486,6 +486,13 @@ function initializeThreeJS() {
     const VELOCITY_DAMPING_GROUND = 0.82;
     const MIN_BOUNCE_VELOCITY = 0.4;
 
+    // Particle exclusion zone constants (for negative space around ring)
+    const RING_RADIUS = 4.0;  // Main ring radius
+    const PARTICLE_INNER_ZONE_MIN = 0.5;
+    const PARTICLE_INNER_ZONE_MAX = 2.5;
+    const PARTICLE_OUTER_ZONE_MIN = 6.0;
+    const PARTICLE_OUTER_ZONE_MAX = 8.0;
+
     let ringVelocity = { x: 0, y: 0, z: 0 };
     let ringPosition = { x: 0, y: 10, z: 0 };
     let angularVelocity = { x: 0, y: 0, z: 0 };
@@ -505,11 +512,11 @@ function initializeThreeJS() {
 
     for (let i = 0; i < particleCount; i++) {
         const angle = Math.random() * Math.PI * 2;
-        // Create exclusion zone: particles either inside 2.5 radius or outside 6.0 radius
-        // This creates negative space around the ring (radius ~4.0)
+        // Create exclusion zone: particles either inside inner zone or outside outer zone
+        // This creates negative space around the ring
         const radius = Math.random() < 0.5 
-            ? THREE.MathUtils.randFloat(0.5, 2.5)  // Inner zone
-            : THREE.MathUtils.randFloat(6.0, 8.0); // Outer zone
+            ? THREE.MathUtils.randFloat(PARTICLE_INNER_ZONE_MIN, PARTICLE_INNER_ZONE_MAX)  // Inner zone
+            : THREE.MathUtils.randFloat(PARTICLE_OUTER_ZONE_MIN, PARTICLE_OUTER_ZONE_MAX); // Outer zone
         const i3 = i * 3;
 
         particlePositions[i3] = Math.cos(angle) * radius;
@@ -644,6 +651,13 @@ function initializeThreeJS() {
     const starTwinklePhases = new Float32Array(starCount);
     const starTwinkleSpeeds = new Float32Array(starCount);
 
+    // Star size constants for consistent appearance
+    const STAR_LARGE_PROBABILITY = 0.05;  // 5% of stars are larger
+    const STAR_SIZE_LARGE_BASE = isMobile ? 2.5 : 3.5;
+    const STAR_SIZE_LARGE_VARIANCE = 1.0;
+    const STAR_SIZE_NORMAL_BASE = 0.5;
+    const STAR_SIZE_NORMAL_VARIANCE = isMobile ? 1.5 : 2.0;
+
     for (let i = 0; i < starCount; i++) {
         const i3 = i * 3;
         const theta = Math.random() * Math.PI * 2;
@@ -691,10 +705,10 @@ function initializeThreeJS() {
         
         // Reduced size variety for cleaner look
         const sizeRand = Math.random();
-        if (sizeRand < 0.05) {
-            starSizes[i] = (isMobile ? 2.5 : 3.5) + Math.random() * 1.0;  // Reduced large star size
+        if (sizeRand < STAR_LARGE_PROBABILITY) {
+            starSizes[i] = STAR_SIZE_LARGE_BASE + Math.random() * STAR_SIZE_LARGE_VARIANCE;
         } else {
-            starSizes[i] = Math.random() * (isMobile ? 1.5 : 2.0) + 0.5;  // Smaller standard stars
+            starSizes[i] = STAR_SIZE_NORMAL_BASE + Math.random() * STAR_SIZE_NORMAL_VARIANCE;
         }
     }
 
