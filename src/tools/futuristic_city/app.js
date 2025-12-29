@@ -12,6 +12,10 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 const CITY_BOUNDARY_RADIUS = 80;
 const CITY_BOUNDARY_RADIUS_SQ = CITY_BOUNDARY_RADIUS * CITY_BOUNDARY_RADIUS;
 const PERSON_PAUSE_PROBABILITY = 0.001;
+const CAR_COUNT = 30;
+const CAR_SPAWN_RADIUS = 100;
+const PEOPLE_COUNT = 40;
+const PEOPLE_SPAWN_RADIUS = 70;
 
 // Global variables
 let scene, camera, renderer, controls;
@@ -465,8 +469,8 @@ function addLaneMarkers(highway, horizontal) {
  * Create cars that move along highways
  */
 function createCars() {
-    const carCount = 30;
-    const cityRadius = 100;
+    const carCount = CAR_COUNT;
+    const cityRadius = CAR_SPAWN_RADIUS;
     
     // Car color palette
     const carColors = [
@@ -583,8 +587,8 @@ function createCars() {
  * Create people (pedestrians) around the city
  */
 function createPeople() {
-    const peopleCount = 40;
-    const cityRadius = 70;
+    const peopleCount = PEOPLE_COUNT;
+    const cityRadius = PEOPLE_SPAWN_RADIUS;
     
     // People color palette (clothing)
     const clothingColors = [
