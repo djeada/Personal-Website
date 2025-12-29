@@ -89,10 +89,16 @@ function init() {
                 powerPreference: 'default'
             });
         } catch (webglError) {
-            console.error('WebGL not available, trying basic renderer');
-            renderer = new THREE.WebGLRenderer({ 
-                antialias: false
-            });
+            console.warn('WebGL with antialiasing not available, trying without');
+            try {
+                renderer = new THREE.WebGLRenderer({ 
+                    antialias: false
+                });
+            } catch (fallbackError) {
+                console.error('Futuristic City: WebGL is not available on this device');
+                container.innerHTML = '<p style="color: white; text-align: center; padding: 20px;">WebGL is not available. Please use a browser that supports WebGL.</p>';
+                return;
+            }
         }
         
         renderer.setSize(containerWidth, containerHeight);
@@ -235,8 +241,7 @@ function createBuildings() {
             emissive: new THREE.Color().setHSL(palette.h, 0.5, 0.15),
             emissiveIntensity: 0.3,
             roughness: 0.4,
-            metalness: 0.6,
-            side: THREE.FrontSide
+            metalness: 0.6
         });
 
         const building = new THREE.Mesh(geometry, material);
@@ -662,6 +667,8 @@ function animate() {
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {
-    // Use a small delay to ensure DOM is fully ready
-    setTimeout(init, 100);
+    // Use requestAnimationFrame to ensure DOM is fully ready and painted
+    requestAnimationFrame(() => {
+        requestAnimationFrame(init);
+    });
 }
