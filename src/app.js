@@ -295,10 +295,10 @@ function initializeThreeJS() {
         window.innerWidth <= 768;
 
     const qualitySettings = {
-        particles: isMobile ? 400 : 1800,
+        particles: isMobile ? 100 : 450,  // Reduced by 75% for less clutter
         trailParticles: isMobile ? 150 : 500,
-        nebulaParticles: isMobile ? 300 : 1000,
-        stars: isMobile ? 3000 : 8000,
+        nebulaParticles: isMobile ? 60 : 200,  // Reduced by 80% for minimal abstract shapes
+        stars: isMobile ? 600 : 1600,  // Reduced by 80% for cleaner background
         shadowMap: isMobile ? 512 : 2048,
         pixelRatio: isMobile ? 1 : Math.min(window.devicePixelRatio, 2),
         antialias: !isMobile,
@@ -410,7 +410,7 @@ function initializeThreeJS() {
         reflectivity: 1.0,
         envMapIntensity: 1.5,
         emissive: colors.ringPrimary,
-        emissiveIntensity: 0.1
+        emissiveIntensity: 0.25  // Increased from 0.1 to make ring the brightest object
     });
     const mainRing = new THREE.Mesh(mainRingGeo, mainRingMat);
     mainRing.castShadow = !isMobile;
@@ -505,7 +505,11 @@ function initializeThreeJS() {
 
     for (let i = 0; i < particleCount; i++) {
         const angle = Math.random() * Math.PI * 2;
-        const radius = THREE.MathUtils.randFloat(3.2, 5.0);
+        // Create exclusion zone: particles either inside 2.5 radius or outside 6.0 radius
+        // This creates negative space around the ring (radius ~4.0)
+        const radius = Math.random() < 0.5 
+            ? THREE.MathUtils.randFloat(0.5, 2.5)  // Inner zone
+            : THREE.MathUtils.randFloat(6.0, 8.0); // Outer zone
         const i3 = i * 3;
 
         particlePositions[i3] = Math.cos(angle) * radius;
@@ -546,7 +550,7 @@ function initializeThreeJS() {
         sizeAttenuation: true,
         vertexColors: true,
         transparent: true,
-        opacity: 0.5,  // Reduced from 0.8 to reduce background competition
+        opacity: 0.3,  // Reduced to 0.3 for minimal visual competition with ring
         blending: THREE.AdditiveBlending,
         depthWrite: false
     });
@@ -591,7 +595,7 @@ function initializeThreeJS() {
         sizeAttenuation: true,
         vertexColors: true,
         transparent: true,
-        opacity: darkMode ? 0.25 : 0.15,  // Reduced to ≤40% max (was 0.4/0.2)
+        opacity: darkMode ? 0.15 : 0.10,  // Reduced to ≤15% max for deep background layer
         blending: THREE.AdditiveBlending,
         depthWrite: false
     });
@@ -625,7 +629,7 @@ function initializeThreeJS() {
         sizeAttenuation: true,
         vertexColors: true,
         transparent: true,
-        opacity: 0.5,  // Reduced from 0.7 for better hierarchy
+        opacity: 0.4,  // Reduced to 0.4 for better hierarchy
         blending: THREE.AdditiveBlending,
         depthWrite: false
     });
@@ -650,9 +654,9 @@ function initializeThreeJS() {
         starPositions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
         starPositions[i3 + 2] = radius * Math.cos(phi);
         
-        const baseBrightness = 0.4 + Math.random() * 0.6;
+        const baseBrightness = 0.3 + Math.random() * 0.4;  // Reduced brightness range (was 0.4-1.0, now 0.3-0.7)
         starTwinklePhases[i] = Math.random() * Math.PI * 2;
-        starTwinkleSpeeds[i] = 0.5 + Math.random() * 2.5;
+        starTwinkleSpeeds[i] = 0.3 + Math.random() * 1.5;  // Reduced twinkle speed for calmer background
         
         const tint = Math.random();
         let r, g, b;
@@ -685,13 +689,12 @@ function initializeThreeJS() {
         starBaseColors[i3 + 1] = g;
         starBaseColors[i3 + 2] = b;
         
+        // Reduced size variety for cleaner look
         const sizeRand = Math.random();
-        if (sizeRand < 0.02) {
-            starSizes[i] = (isMobile ? 4.0 : 6.0) + Math.random() * 2;
-        } else if (sizeRand < 0.1) {
-            starSizes[i] = (isMobile ? 2.5 : 4.0) + Math.random() * 1.5;
+        if (sizeRand < 0.05) {
+            starSizes[i] = (isMobile ? 2.5 : 3.5) + Math.random() * 1.0;  // Reduced large star size
         } else {
-            starSizes[i] = Math.random() * (isMobile ? 2.0 : 3.0) + 0.5;
+            starSizes[i] = Math.random() * (isMobile ? 1.5 : 2.0) + 0.5;  // Smaller standard stars
         }
     }
 
@@ -704,7 +707,7 @@ function initializeThreeJS() {
         size: isMobile ? 2.2 : 3.0,
         sizeAttenuation: true,
         vertexColors: true,
-        opacity: 0.95,
+        opacity: 0.6,  // Reduced to 0.6 for deep background layer
         transparent: true,
         blending: THREE.AdditiveBlending
     });
