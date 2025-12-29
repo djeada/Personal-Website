@@ -9,13 +9,11 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // Constants
-const CITY_BOUNDARY_RADIUS = 80;
-const CITY_BOUNDARY_RADIUS_SQ = CITY_BOUNDARY_RADIUS * CITY_BOUNDARY_RADIUS;
 const PERSON_PAUSE_PROBABILITY = 0.001;
 const CAR_COUNT = 30;
 const CAR_SPAWN_RADIUS = 100;
 const PEOPLE_COUNT = 40;
-const PEOPLE_SPAWN_RADIUS = 70;
+const HIGHWAY_OFFSETS = [-75, -50, -25, 25, 50, 75];
 
 // Global variables
 let scene, camera, renderer, controls;
@@ -282,31 +280,60 @@ function createBuildings() {
  * Add glowing windows to a building
  */
 function addBuildingWindows(building, width, height, depth) {
-    const windowCount = Math.floor(height / 3);
-    const windowsPerRow = 3;
+    const floorHeight = 2.6;
+    const windowHeight = 1.2;
+    const windowWidth = 0.7;
+    const windowDepth = 0.08;
+    const verticalPadding = 1.0;
+    const horizontalPadding = 0.8;
+    const inset = 0.05;
+    const floors = Math.max(2, Math.floor((height - verticalPadding * 2) / floorHeight));
+    const frontCols = Math.max(2, Math.floor((width - horizontalPadding * 2) / (windowWidth + 0.4)));
+    const sideCols = Math.max(2, Math.floor((depth - horizontalPadding * 2) / (windowWidth + 0.4)));
+    const frontSpacing = windowWidth + 0.4;
+    const sideSpacing = windowWidth + 0.4;
+    const frontStart = -((frontCols - 1) * frontSpacing) / 2;
+    const sideStart = -((sideCols - 1) * sideSpacing) / 2;
+    const baseY = -height / 2 + verticalPadding + windowHeight * 0.5;
 
-    for (let floor = 0; floor < windowCount; floor++) {
-        for (let col = 0; col < windowsPerRow; col++) {
-            if (Math.random() > 0.3) { // 70% chance of window being lit
-                const windowGeometry = new THREE.BoxGeometry(0.3, 0.8, 0.1);
-                const windowMaterial = new THREE.MeshStandardMaterial({
-                    color: 0xffff99,
-                    emissive: 0xffff66,
-                    emissiveIntensity: 2.0
-                });
-                const window = new THREE.Mesh(windowGeometry, windowMaterial);
-                
-                const offsetX = (col - 1) * (width / 3);
-                const offsetY = (floor - windowCount / 2) * 3 + height / 2;
-                
-                window.position.set(offsetX, offsetY, depth / 2 + 0.05);
-                building.add(window);
+    const windowMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffff99,
+        emissive: 0xffff66,
+        emissiveIntensity: 1.8
+    });
 
-                // Add point light for window glow
-                const pointLight = new THREE.PointLight(0xffff66, 0.3, 10);
-                pointLight.position.copy(window.position);
-                building.add(pointLight);
-                lights.buildingLights.push(pointLight);
+    for (let floor = 0; floor < floors; floor++) {
+        const y = baseY + floor * floorHeight;
+
+        for (let col = 0; col < frontCols; col++) {
+            if (Math.random() > 0.35) {
+                const x = frontStart + col * frontSpacing;
+                const frontWindow = new THREE.Mesh(
+                    new THREE.BoxGeometry(windowWidth, windowHeight, windowDepth),
+                    windowMaterial
+                );
+                frontWindow.position.set(x, y, depth / 2 + inset);
+                building.add(frontWindow);
+
+                const backWindow = frontWindow.clone();
+                backWindow.position.set(x, y, -depth / 2 - inset);
+                building.add(backWindow);
+            }
+        }
+
+        for (let col = 0; col < sideCols; col++) {
+            if (Math.random() > 0.35) {
+                const z = sideStart + col * sideSpacing;
+                const sideWindow = new THREE.Mesh(
+                    new THREE.BoxGeometry(windowDepth, windowHeight, windowWidth),
+                    windowMaterial
+                );
+                sideWindow.position.set(width / 2 + inset, y, z);
+                building.add(sideWindow);
+
+                const otherSideWindow = sideWindow.clone();
+                otherSideWindow.position.set(-width / 2 - inset, y, z);
+                building.add(otherSideWindow);
             }
         }
     }
@@ -407,10 +434,7 @@ function createHighways() {
     });
 
     // Create main highways in grid pattern
-    for (let i = -3; i <= 3; i++) {
-        if (i === 0) continue; // Skip center
-
-        const offset = i * 25;
+    for (const offset of HIGHWAY_OFFSETS) {
 
         // Horizontal highway
         const hHighway = new THREE.Mesh(
@@ -471,6 +495,7 @@ function addLaneMarkers(highway, horizontal) {
 function createCars() {
     const carCount = CAR_COUNT;
     const cityRadius = CAR_SPAWN_RADIUS;
+    const laneOffsets = HIGHWAY_OFFSETS;
     
     // Car color palette
     const carColors = [
@@ -544,24 +569,24 @@ function createCars() {
         carBody.add(taillightRight);
         
         // Position car on a highway lane
-        const lane = Math.floor(Math.random() * 6); // 6 highways (3 horizontal + 3 vertical)
-        const isHorizontal = lane < 3;
-        const laneOffset = (lane % 3 - 1) * 25; // -25, 0, 25
+        const isHorizontal = Math.random() > 0.5;
+        const laneOffset = laneOffsets[Math.floor(Math.random() * laneOffsets.length)];
+        const direction = Math.random() > 0.5 ? 1 : -1;
         
         if (isHorizontal) {
             carBody.position.set(
                 (Math.random() - 0.5) * cityRadius,
                 0.8,
-                laneOffset + (Math.random() - 0.5) * 2
+                laneOffset + (Math.random() > 0.5 ? 1.2 : -1.2)
             );
-            carBody.rotation.y = Math.random() > 0.5 ? 0 : Math.PI;
+            carBody.rotation.y = direction > 0 ? Math.PI / 2 : -Math.PI / 2;
         } else {
             carBody.position.set(
-                laneOffset + (Math.random() - 0.5) * 2,
+                laneOffset + (Math.random() > 0.5 ? 1.2 : -1.2),
                 0.8,
                 (Math.random() - 0.5) * cityRadius
             );
-            carBody.rotation.y = Math.random() > 0.5 ? Math.PI / 2 : -Math.PI / 2;
+            carBody.rotation.y = direction > 0 ? 0 : Math.PI;
         }
         
         carBody.castShadow = true;
@@ -570,10 +595,9 @@ function createCars() {
         // Store movement data
         carBody.userData = {
             speed: 0.1 + Math.random() * 0.15,
-            lane: lane,
             isHorizontal: isHorizontal,
             laneOffset: laneOffset,
-            direction: carBody.rotation.y,
+            direction: direction,
             headlights: [headlightLeft, headlightRight],
             taillights: [taillightLeft, taillightRight]
         };
@@ -588,7 +612,8 @@ function createCars() {
  */
 function createPeople() {
     const peopleCount = PEOPLE_COUNT;
-    const cityRadius = PEOPLE_SPAWN_RADIUS;
+    const laneOffsets = HIGHWAY_OFFSETS;
+    const sidewalkOffset = 3.5;
     
     // People color palette (clothing)
     const clothingColors = [
@@ -669,23 +694,36 @@ function createPeople() {
         rightArm.castShadow = true;
         personGroup.add(rightArm);
         
-        // Position person on sidewalk or near buildings
-        const angle = (i / peopleCount) * Math.PI * 2;
-        const radius = 15 + Math.random() * cityRadius;
-        const x = Math.cos(angle) * radius + (Math.random() - 0.5) * 10;
-        const z = Math.sin(angle) * radius + (Math.random() - 0.5) * 10;
-        
+        const isHorizontal = Math.random() > 0.5;
+        const baseOffset = laneOffsets[Math.floor(Math.random() * laneOffsets.length)];
+        const sideOffset = Math.random() > 0.5 ? sidewalkOffset : -sidewalkOffset;
+        const direction = Math.random() > 0.5 ? 1 : -1;
+        let x = 0;
+        let z = 0;
+
+        if (isHorizontal) {
+            x = (Math.random() - 0.5) * 140;
+            z = baseOffset + sideOffset;
+            personGroup.rotation.y = direction > 0 ? Math.PI / 2 : -Math.PI / 2;
+        } else {
+            x = baseOffset + sideOffset;
+            z = (Math.random() - 0.5) * 140;
+            personGroup.rotation.y = direction > 0 ? 0 : Math.PI;
+        }
+
         personGroup.position.set(x, 0, z);
-        personGroup.rotation.y = Math.random() * Math.PI * 2;
         
         // Store animation data
         personGroup.userData = {
-            walkSpeed: 0.02 + Math.random() * 0.03,
-            walkDirection: Math.random() * Math.PI * 2,
+            walkSpeed: 0.03 + Math.random() * 0.02,
+            isHorizontal: isHorizontal,
+            direction: direction,
+            baseOffset: baseOffset,
+            sideOffset: sideOffset,
             animationOffset: Math.random() * Math.PI * 2,
-            pauseTime: Math.random() * 200,
+            pauseTime: 80 + Math.random() * 120,
             pauseCounter: 0,
-            isPaused: Math.random() > 0.7, // Some people standing still
+            isPaused: Math.random() > 0.75,
             bodyParts: {
                 leftLeg: leftLeg,
                 rightLeg: rightLeg,
@@ -911,22 +949,14 @@ function animate() {
         
         if (data.isHorizontal) {
             // Move horizontally
-            if (data.direction === 0) {
-                car.position.x += speed;
-                if (car.position.x > 100) car.position.x = -100;
-            } else {
-                car.position.x -= speed;
-                if (car.position.x < -100) car.position.x = 100;
-            }
+            car.position.x += speed * data.direction;
+            if (car.position.x > 100) car.position.x = -100;
+            if (car.position.x < -100) car.position.x = 100;
         } else {
             // Move vertically
-            if (data.direction === Math.PI / 2) {
-                car.position.z += speed;
-                if (car.position.z > 100) car.position.z = -100;
-            } else {
-                car.position.z -= speed;
-                if (car.position.z < -100) car.position.z = 100;
-            }
+            car.position.z += speed * data.direction;
+            if (car.position.z > 100) car.position.z = -100;
+            if (car.position.z < -100) car.position.z = 100;
         }
         
         // Update headlight intensity based on time of day
@@ -955,30 +985,34 @@ function animate() {
             // Walking animation
             const walkTime = time * 10 + data.animationOffset;
             
-            // Move person forward
-            person.position.x += Math.cos(data.walkDirection) * data.walkSpeed * animationSpeed;
-            person.position.z += Math.sin(data.walkDirection) * data.walkSpeed * animationSpeed;
+            if (data.isHorizontal) {
+                person.position.x += data.walkSpeed * data.direction * animationSpeed;
+                if (person.position.x > 80) data.direction = -1;
+                if (person.position.x < -80) data.direction = 1;
+            } else {
+                person.position.z += data.walkSpeed * data.direction * animationSpeed;
+                if (person.position.z > 80) data.direction = -1;
+                if (person.position.z < -80) data.direction = 1;
+            }
             
-            // Keep people within city bounds (using squared distance to avoid sqrt)
-            const distFromCenterSq = person.position.x * person.position.x + person.position.z * person.position.z;
-            if (distFromCenterSq > CITY_BOUNDARY_RADIUS_SQ) {
-                // Turn around if too far from center
-                data.walkDirection += Math.PI;
-                person.rotation.y = data.walkDirection;
+            if (data.isHorizontal) {
+                person.rotation.y = data.direction > 0 ? Math.PI / 2 : -Math.PI / 2;
+            } else {
+                person.rotation.y = data.direction > 0 ? 0 : Math.PI;
             }
             
             // Animate legs (simple walking motion)
             if (data.bodyParts) {
                 const { leftLeg, rightLeg, leftArm, rightArm } = data.bodyParts;
                 if (leftLeg && rightLeg) {
-                    leftLeg.rotation.x = Math.sin(walkTime) * 0.3;
-                    rightLeg.rotation.x = Math.sin(walkTime + Math.PI) * 0.3;
+                    leftLeg.rotation.x = Math.sin(walkTime) * 0.25;
+                    rightLeg.rotation.x = Math.sin(walkTime + Math.PI) * 0.25;
                 }
                 
                 // Animate arms
                 if (leftArm && rightArm) {
-                    leftArm.rotation.x = Math.sin(walkTime + Math.PI) * 0.2;
-                    rightArm.rotation.x = Math.sin(walkTime) * 0.2;
+                    leftArm.rotation.x = Math.sin(walkTime + Math.PI) * 0.15;
+                    rightArm.rotation.x = Math.sin(walkTime) * 0.15;
                 }
             }
             
