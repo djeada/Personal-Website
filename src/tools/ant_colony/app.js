@@ -84,7 +84,7 @@ let settings = {
 // Pheromone Grid Management
 // ========================
 // Track cells with active pheromones for performance optimization
-let activePheremoneCells = new Set();
+let activePheromoneCells = new Set();
 
 function initPheromoneGrid() {
     const rows = Math.ceil(CONFIG.canvas.height / CONFIG.pheromone.gridSize);
@@ -92,7 +92,7 @@ function initPheromoneGrid() {
     
     pheromoneGrid.food = Array(rows).fill(null).map(() => Array(cols).fill(0));
     pheromoneGrid.home = Array(rows).fill(null).map(() => Array(cols).fill(0));
-    activePheremoneCells.clear();
+    activePheromoneCells.clear();
 }
 
 function getPheromone(type, x, y) {
@@ -114,7 +114,7 @@ function addPheromone(type, x, y, strength) {
     if (row >= 0 && row < grid.length && col >= 0 && col < grid[0].length) {
         grid[row][col] = Math.min(grid[row][col] + strength, 255);
         // Track active cells for performance optimization
-        activePheremoneCells.add(`${row},${col}`);
+        activePheromoneCells.add(`${row},${col}`);
     }
 }
 
@@ -127,7 +127,7 @@ function evaporatePheromones() {
     const neighborOffsets = [[-1, 0], [1, 0], [0, -1], [0, 1]];
     
     // Convert active cells to array for iteration
-    const activeCells = Array.from(activePheremoneCells);
+    const activeCells = Array.from(activePheromoneCells);
     const newActiveCells = new Set();
     
     // Process only active cells for better performance
@@ -176,7 +176,7 @@ function evaporatePheromones() {
         }
     }
     
-    activePheremoneCells = newActiveCells;
+    activePheromoneCells = newActiveCells;
 }
 
 function clearPheromones() {
@@ -449,7 +449,7 @@ function drawPheromones() {
     const isDarkMode = document.body.classList.contains('dark-mode');
     
     // Only draw active pheromone cells for better performance
-    for (const cellKey of activePheremoneCells) {
+    for (const cellKey of activePheromoneCells) {
         const [i, j] = cellKey.split(',').map(Number);
         
         if (i < 0 || i >= pheromoneGrid.food.length || j < 0 || j >= pheromoneGrid.food[0].length) {
