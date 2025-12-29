@@ -38,7 +38,8 @@ const CONFIG = {
         bounceBaseAngle: Math.PI / 2,
         bounceRandomVariation: Math.PI / 4,
         nestNavigationFactor: 0.15,
-        momentum: 0.85
+        momentum: 0.85,
+        sensorEpsilon: 0.1  // Small value to prevent division by zero in sensor calculations
     },
     pheromone: {
         gridSize: 5,
@@ -134,6 +135,7 @@ function evaporatePheromones() {
     for (const cellKey of activeCells) {
         const [i, j] = cellKey.split(',').map(Number);
         
+        // Defensive check: skip invalid cells (should not happen, but prevents crashes if Set is corrupted)
         if (i < 0 || i >= pheromoneGrid.food.length || j < 0 || j >= pheromoneGrid.food[0].length) {
             continue;
         }
@@ -233,15 +235,16 @@ class Ant {
         if (totalPheromone > 0.05) {  // Reduced threshold from 0.1 for better sensitivity
             // Follow pheromone gradient with improved response
             const turnStrength = CONFIG.ant.turnSpeed;
+            const epsilon = CONFIG.ant.sensorEpsilon;
             if (centerSensor > leftSensor && centerSensor > rightSensor) {
                 // Continue mostly straight with slight correction
                 const balance = (rightSensor - leftSensor) / (centerSensor + 1);
                 this.targetAngle += balance * turnStrength * 0.5;
             } else if (leftSensor > rightSensor) {
-                const strength = (leftSensor - rightSensor) / (leftSensor + rightSensor + 0.1);
+                const strength = (leftSensor - rightSensor) / (leftSensor + rightSensor + epsilon);
                 this.targetAngle -= turnStrength * strength * 1.5;  // Increased turning response
             } else if (rightSensor > leftSensor) {
-                const strength = (rightSensor - leftSensor) / (leftSensor + rightSensor + 0.1);
+                const strength = (rightSensor - leftSensor) / (leftSensor + rightSensor + epsilon);
                 this.targetAngle += turnStrength * strength * 1.5;  // Increased turning response
             }
         } else {
@@ -272,14 +275,15 @@ class Ant {
         // Blend pheromone following with direct navigation
         if (totalPheromone > 0.05) {  // Reduced threshold from 0.1
             const turnStrength = CONFIG.ant.turnSpeed;
+            const epsilon = CONFIG.ant.sensorEpsilon;
             if (centerSensor > leftSensor && centerSensor > rightSensor) {
                 const balance = (rightSensor - leftSensor) / (centerSensor + 1);
                 this.targetAngle += balance * turnStrength * 0.5;
             } else if (leftSensor > rightSensor) {
-                const strength = (leftSensor - rightSensor) / (leftSensor + rightSensor + 0.1);
+                const strength = (leftSensor - rightSensor) / (leftSensor + rightSensor + epsilon);
                 this.targetAngle -= turnStrength * strength * 1.5;  // Increased turning response
             } else if (rightSensor > leftSensor) {
-                const strength = (rightSensor - leftSensor) / (leftSensor + rightSensor + 0.1);
+                const strength = (rightSensor - leftSensor) / (leftSensor + rightSensor + epsilon);
                 this.targetAngle += turnStrength * strength * 1.5;  // Increased turning response
             }
         } else {
@@ -452,6 +456,7 @@ function drawPheromones() {
     for (const cellKey of activePheromoneCells) {
         const [i, j] = cellKey.split(',').map(Number);
         
+        // Defensive check: skip invalid cells (should not happen, but prevents rendering errors)
         if (i < 0 || i >= pheromoneGrid.food.length || j < 0 || j >= pheromoneGrid.food[0].length) {
             continue;
         }
