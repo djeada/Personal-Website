@@ -174,7 +174,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
         updateStats() {
             cellsVisitedEl.textContent = this.closedSet.length;
-            pathLengthEl.textContent = this.path.length;
+            const pathLength = this.path.length > 0 ? this.path.length - 1 : 0;
+            pathLengthEl.textContent = pathLength;
 
             if (this.startTime) {
                 const elapsed = Date.now() - this.startTime;
@@ -477,6 +478,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         async aStarSearch() {
             this.startNode.distance = 0;
+            this.startNode.heuristic = this.heuristic(this.startNode, this.endNode);
             this.openSet.push(this.startNode);
             const openSetMap = new Set([this.startNode]);
             const closedSetMap = new Set();
@@ -497,9 +499,18 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 const neighbors = this.getNeighbors(current);
                 for (let neighbor of neighbors) {
-                    if (closedSetMap.has(neighbor)) continue;
-
                     const tentativeG = current.distance + 1;
+
+                    if (closedSetMap.has(neighbor)) {
+                        if (tentativeG >= neighbor.distance) {
+                            continue;
+                        }
+                        closedSetMap.delete(neighbor);
+                        const closedIndex = this.closedSet.indexOf(neighbor);
+                        if (closedIndex !== -1) {
+                            this.closedSet.splice(closedIndex, 1);
+                        }
+                    }
 
                     if (!openSetMap.has(neighbor)) {
                         neighbor.distance = tentativeG;
@@ -509,6 +520,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         openSetMap.add(neighbor);
                     } else if (tentativeG < neighbor.distance) {
                         neighbor.distance = tentativeG;
+                        neighbor.heuristic = this.heuristic(neighbor, this.endNode);
                         neighbor.previous = current;
                     }
                 }
@@ -525,10 +537,11 @@ document.addEventListener("DOMContentLoaded", function() {
         buildPath(endNode) {
             let current = endNode;
             this.path = [];
-            while (current.previous) {
-                this.path.push(current.previous);
+            while (current) {
+                this.path.push(current);
                 current = current.previous;
             }
+            this.path.reverse();
             this.drawMaze();
         }
 
