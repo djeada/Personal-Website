@@ -288,17 +288,17 @@ function handleDownloadClick() {
 function initializeThreeJS() {
     const container = document.getElementById('threejs-container');
     if (!container) return;
-    
+
     let darkMode = getCookie("darkMode") === "true";
 
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
         window.innerWidth <= 768;
 
     const qualitySettings = {
-        particles: isMobile ? 100 : 450,  // Reduced by 75% for less clutter
+        particles: isMobile ? 100 : 450,
         trailParticles: isMobile ? 150 : 500,
-        nebulaParticles: isMobile ? 60 : 200,  // Reduced by 80% for minimal abstract shapes
-        stars: isMobile ? 600 : 1600,  // Reduced by 80% for cleaner background
+        nebulaParticles: isMobile ? 60 : 200,
+        stars: isMobile ? 600 : 1600,
         shadowMap: isMobile ? 512 : 2048,
         pixelRatio: isMobile ? 1 : Math.min(window.devicePixelRatio, 2),
         antialias: !isMobile,
@@ -308,30 +308,30 @@ function initializeThreeJS() {
 
     const colorSchemes = {
         dark: {
-            bg: 0x0B1020,           // Deep blue-black (from proposed palette)
-            fog: 0x0F1428,          // Slightly lighter but still very dark
-            ringPrimary: 0x6B7FD7,  // Soft blue (from proposed palette) - main ring
-            ringSecondary: 0x8892E0, // Muted lavender (reduced saturation from original magenta)
-            ringAccent: 0xE0A458,   // Warm amber (from proposed palette) - for interaction
-            star: 0xffffff,         // Keep stars white
-            nebula1: 0x2A2F4F,      // Muted indigo (from proposed palette)
-            nebula2: 0x3D4466,      // Muted blue-grey (reduced from neon pink)
-            nebula3: 0x3A5555,      // Muted teal (reduced from bright cyan)
-            energy: 0xC7D2FF,       // Pale blue glow (from proposed palette)
-            trail: 0x7B86CC         // Desaturated purple (reduced from bright purple)
+            bg: 0x0B1020,
+            fog: 0x0F1428,
+            ringPrimary: 0x6B7FD7,
+            ringSecondary: 0x8892E0,
+            ringAccent: 0xE0A458,
+            star: 0xffffff,
+            nebula1: 0x2A2F4F,
+            nebula2: 0x3D4466,
+            nebula3: 0x3A5555,
+            energy: 0xC7D2FF,
+            trail: 0x7B86CC
         },
         light: {
-            bg: 0x1a1a2e,           // Keep existing (already reasonable)
-            fog: 0x1E2440,          // Slightly adjusted
-            ringPrimary: 0x6B7FD7,  // Soft blue (consistent with dark mode)
-            ringSecondary: 0x9BA5E8, // Even lighter lavender for light mode
-            ringAccent: 0xD9A456,   // Slightly muted amber
-            star: 0xffffff,         // Keep stars white
-            nebula1: 0x5A5F7F,      // More muted indigo for light mode
-            nebula2: 0x7A6B8F,      // Desaturated mauve (reduced from bright pink)
-            nebula3: 0x6B8B8B,      // Muted slate (reduced from bright green)
-            energy: 0xB5C5F5,       // Soft pale blue
-            trail: 0x8B92D8         // Softer purple for light mode
+            bg: 0x1a1a2e,
+            fog: 0x1E2440,
+            ringPrimary: 0x6B7FD7,
+            ringSecondary: 0x9BA5E8,
+            ringAccent: 0xD9A456,
+            star: 0xffffff,
+            nebula1: 0x5A5F7F,
+            nebula2: 0x7A6B8F,
+            nebula3: 0x6B8B8B,
+            energy: 0xB5C5F5,
+            trail: 0x8B92D8
         }
     };
 
@@ -396,14 +396,14 @@ function initializeThreeJS() {
     cosmicLight2.position.set(30, -10, 25);
     scene.add(cosmicLight2);
 
-    // Ring and particle zone constants
-    const RING_RADIUS = 4.0;  // Main ring radius
+
+    const RING_RADIUS = 4.0;
     const RING_TUBE_RADIUS = 0.35;
     const PARTICLE_INNER_ZONE_MIN = 0.5;
     const PARTICLE_INNER_ZONE_MAX = 2.5;
     const PARTICLE_OUTER_ZONE_MIN = 6.0;
     const PARTICLE_OUTER_ZONE_MAX = 8.0;
-    const PARTICLE_INNER_ZONE_PROBABILITY = 0.5;  // 50% spawn in inner zone
+    const PARTICLE_INNER_ZONE_PROBABILITY = 0.5;
 
     const ringGroup = new THREE.Group();
     ringGroup.position.set(0, 10, 0);
@@ -419,7 +419,7 @@ function initializeThreeJS() {
         reflectivity: 1.0,
         envMapIntensity: 1.5,
         emissive: colors.ringPrimary,
-        emissiveIntensity: 0.25  // Increased from 0.1 to make ring the brightest object
+        emissiveIntensity: 0.25
     });
     const mainRing = new THREE.Mesh(mainRingGeo, mainRingMat);
     mainRing.castShadow = !isMobile;
@@ -430,7 +430,7 @@ function initializeThreeJS() {
     const innerGlowMat = new THREE.MeshBasicMaterial({
         color: colors.ringSecondary,
         transparent: true,
-        opacity: 0.4,  // Reduced from 0.6 for less visual competition
+        opacity: 0.4,
         blending: THREE.AdditiveBlending
     });
     const innerGlow = new THREE.Mesh(innerGlowGeo, innerGlowMat);
@@ -440,7 +440,7 @@ function initializeThreeJS() {
     const outerGlowMat = new THREE.MeshBasicMaterial({
         color: colors.ringAccent,
         transparent: true,
-        opacity: 0.35,  // Reduced from 0.5 for less visual competition
+        opacity: 0.35,
         blending: THREE.AdditiveBlending
     });
     const outerGlow = new THREE.Mesh(outerGlowGeo, outerGlowMat);
@@ -495,9 +495,21 @@ function initializeThreeJS() {
     const VELOCITY_DAMPING_GROUND = 0.82;
     const MIN_BOUNCE_VELOCITY = 0.4;
 
-    let ringVelocity = { x: 0, y: 0, z: 0 };
-    let ringPosition = { x: 0, y: 10, z: 0 };
-    let angularVelocity = { x: 0, y: 0, z: 0 };
+    let ringVelocity = {
+        x: 0,
+        y: 0,
+        z: 0
+    };
+    let ringPosition = {
+        x: 0,
+        y: 10,
+        z: 0
+    };
+    let angularVelocity = {
+        x: 0,
+        y: 0,
+        z: 0
+    };
     let baseRotationSpeed = 0.008;
     let ringOnGround = false;
     let impactIntensity = 0;
@@ -514,11 +526,11 @@ function initializeThreeJS() {
 
     for (let i = 0; i < particleCount; i++) {
         const angle = Math.random() * Math.PI * 2;
-        // Create exclusion zone: particles either inside inner zone or outside outer zone
-        // This creates negative space around the ring
-        const radius = Math.random() < PARTICLE_INNER_ZONE_PROBABILITY 
-            ? THREE.MathUtils.randFloat(PARTICLE_INNER_ZONE_MIN, PARTICLE_INNER_ZONE_MAX)  // Inner zone
-            : THREE.MathUtils.randFloat(PARTICLE_OUTER_ZONE_MIN, PARTICLE_OUTER_ZONE_MAX); // Outer zone
+
+
+        const radius = Math.random() < PARTICLE_INNER_ZONE_PROBABILITY ?
+            THREE.MathUtils.randFloat(PARTICLE_INNER_ZONE_MIN, PARTICLE_INNER_ZONE_MAX) :
+            THREE.MathUtils.randFloat(PARTICLE_OUTER_ZONE_MIN, PARTICLE_OUTER_ZONE_MAX);
         const i3 = i * 3;
 
         particlePositions[i3] = Math.cos(angle) * radius;
@@ -559,7 +571,7 @@ function initializeThreeJS() {
         sizeAttenuation: true,
         vertexColors: true,
         transparent: true,
-        opacity: 0.3,  // Reduced to 0.3 for minimal visual competition with ring
+        opacity: 0.3,
         blending: THREE.AdditiveBlending,
         depthWrite: false
     });
@@ -576,23 +588,26 @@ function initializeThreeJS() {
         const theta = Math.random() * Math.PI * 2;
         const phi = Math.acos(2 * Math.random() - 1);
         const radius = 40 + Math.random() * 80;
-        
+
         nebulaPositions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
         nebulaPositions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta) * 0.5;
         nebulaPositions[i * 3 + 2] = radius * Math.cos(phi);
-        
+
         const colorChoice = Math.random();
         let c;
         if (colorChoice < 0.33) c = new THREE.Color(colors.nebula1);
         else if (colorChoice < 0.66) c = new THREE.Color(colors.nebula2);
         else c = new THREE.Color(colors.nebula3);
-        
+
         nebulaColors[i * 3] = c.r;
         nebulaColors[i * 3 + 1] = c.g;
         nebulaColors[i * 3 + 2] = c.b;
-        
+
         nebulaSizes[i] = Math.random() * 8 + 4;
-        nebulaData.push({ speed: (Math.random() - 0.5) * 0.002, phase: Math.random() * Math.PI * 2 });
+        nebulaData.push({
+            speed: (Math.random() - 0.5) * 0.002,
+            phase: Math.random() * Math.PI * 2
+        });
     }
 
     const nebulaGeo = new THREE.BufferGeometry();
@@ -604,7 +619,7 @@ function initializeThreeJS() {
         sizeAttenuation: true,
         vertexColors: true,
         transparent: true,
-        opacity: darkMode ? 0.15 : 0.10,  // Reduced to ≤15% max for deep background layer
+        opacity: darkMode ? 0.15 : 0.10,
         blending: THREE.AdditiveBlending,
         depthWrite: false
     });
@@ -620,13 +635,16 @@ function initializeThreeJS() {
         trailParticlePositions[i * 3] = 0;
         trailParticlePositions[i * 3 + 1] = -1000;
         trailParticlePositions[i * 3 + 2] = 0;
-        
+
         const c = new THREE.Color(colors.trail);
         trailParticleColors[i * 3] = c.r;
         trailParticleColors[i * 3 + 1] = c.g;
         trailParticleColors[i * 3 + 2] = c.b;
-        
-        trailParticleData.push({ life: 0, maxLife: 0 });
+
+        trailParticleData.push({
+            life: 0,
+            maxLife: 0
+        });
     }
 
     const trailGeo = new THREE.BufferGeometry();
@@ -638,7 +656,7 @@ function initializeThreeJS() {
         sizeAttenuation: true,
         vertexColors: true,
         transparent: true,
-        opacity: 0.4,  // Reduced to 0.4 for better hierarchy
+        opacity: 0.4,
         blending: THREE.AdditiveBlending,
         depthWrite: false
     });
@@ -653,8 +671,8 @@ function initializeThreeJS() {
     const starTwinklePhases = new Float32Array(starCount);
     const starTwinkleSpeeds = new Float32Array(starCount);
 
-    // Star size constants for consistent appearance
-    const STAR_LARGE_PROBABILITY = 0.05;  // 5% of stars are larger
+
+    const STAR_LARGE_PROBABILITY = 0.05;
     const STAR_SIZE_LARGE_BASE = isMobile ? 2.5 : 3.5;
     const STAR_SIZE_LARGE_VARIANCE = 1.0;
     const STAR_SIZE_NORMAL_BASE = 0.5;
@@ -665,15 +683,15 @@ function initializeThreeJS() {
         const theta = Math.random() * Math.PI * 2;
         const phi = Math.acos(2 * Math.random() - 1);
         const radius = 150 + Math.random() * 850;
-        
+
         starPositions[i3] = radius * Math.sin(phi) * Math.cos(theta);
         starPositions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
         starPositions[i3 + 2] = radius * Math.cos(phi);
-        
-        const baseBrightness = 0.3 + Math.random() * 0.4;  // Reduced brightness range (was 0.4-1.0, now 0.3-0.7)
+
+        const baseBrightness = 0.3 + Math.random() * 0.4;
         starTwinklePhases[i] = Math.random() * Math.PI * 2;
-        starTwinkleSpeeds[i] = 0.3 + Math.random() * 1.5;  // Reduced twinkle speed for calmer background
-        
+        starTwinkleSpeeds[i] = 0.3 + Math.random() * 1.5;
+
         const tint = Math.random();
         let r, g, b;
         if (tint < 0.08) {
@@ -697,15 +715,15 @@ function initializeThreeJS() {
             g = baseBrightness;
             b = baseBrightness;
         }
-        
+
         starColors[i3] = r;
         starColors[i3 + 1] = g;
         starColors[i3 + 2] = b;
         starBaseColors[i3] = r;
         starBaseColors[i3 + 1] = g;
         starBaseColors[i3 + 2] = b;
-        
-        // Reduced size variety for cleaner look
+
+
         const sizeRand = Math.random();
         if (sizeRand < STAR_LARGE_PROBABILITY) {
             starSizes[i] = STAR_SIZE_LARGE_BASE + Math.random() * STAR_SIZE_LARGE_VARIANCE;
@@ -723,7 +741,7 @@ function initializeThreeJS() {
         size: isMobile ? 2.2 : 3.0,
         sizeAttenuation: true,
         vertexColors: true,
-        opacity: 0.6,  // Reduced to 0.6 for deep background layer
+        opacity: 0.6,
         transparent: true,
         blending: THREE.AdditiveBlending
     });
@@ -763,7 +781,10 @@ function initializeThreeJS() {
 
     let isMouseDown = false;
     let isTouching = false;
-    let mouseForce = { x: 0, y: 0 };
+    let mouseForce = {
+        x: 0,
+        y: 0
+    };
     let cameraAutoRotate = true;
     let cameraAngle = 0;
     let energyLevel = 0;
@@ -773,11 +794,20 @@ function initializeThreeJS() {
         x: 0,
         y: 0
     };
-    
+
     let isDraggingRing = false;
-    let dragStartPos = { x: 0, y: 0 };
-    let lastDragPos = { x: 0, y: 0 };
-    let dragDelta = { x: 0, y: 0 };
+    let dragStartPos = {
+        x: 0,
+        y: 0
+    };
+    let lastDragPos = {
+        x: 0,
+        y: 0
+    };
+    let dragDelta = {
+        x: 0,
+        y: 0
+    };
     let userRotationSpeed = 1.0;
     let cameraDistance = isMobile ? 22 : 28;
     let targetCameraDistance = cameraDistance;
@@ -849,9 +879,15 @@ function initializeThreeJS() {
 
     renderer.domElement.addEventListener('mousedown', (e) => {
         cameraAutoRotate = false;
-        dragStartPos = { x: e.clientX, y: e.clientY };
-        lastDragPos = { x: e.clientX, y: e.clientY };
-        
+        dragStartPos = {
+            x: e.clientX,
+            y: e.clientY
+        };
+        lastDragPos = {
+            x: e.clientX,
+            y: e.clientY
+        };
+
         if (e.button === 0) {
             if (e.shiftKey) {
                 isDraggingRing = true;
@@ -875,7 +911,10 @@ function initializeThreeJS() {
         } else if (e.button === 1) {
             middleMouseDown = false;
         }
-        dragDelta = { x: 0, y: 0 };
+        dragDelta = {
+            x: 0,
+            y: 0
+        };
         setTimeout(() => cameraAutoRotate = true, 3000);
     });
 
@@ -889,20 +928,23 @@ function initializeThreeJS() {
     renderer.domElement.addEventListener('mousemove', (e) => {
         const deltaX = e.clientX - lastDragPos.x;
         const deltaY = e.clientY - lastDragPos.y;
-        lastDragPos = { x: e.clientX, y: e.clientY };
-        
+        lastDragPos = {
+            x: e.clientX,
+            y: e.clientY
+        };
+
         if (rightMouseDown) {
             cameraAngle += deltaX * 0.01;
             targetCameraVerticalAngle = Math.max(-0.5, Math.min(1.2, targetCameraVerticalAngle - deltaY * 0.005));
             return;
         }
-        
+
         if (isDraggingRing) {
             angularVelocity.y += deltaX * 0.002;
             angularVelocity.x += deltaY * 0.002;
             return;
         }
-        
+
         if (isMouseDown) {
             const rect = renderer.domElement.getBoundingClientRect();
             mouseForce.x = ((e.clientX - rect.left) / rect.width - 0.5) * 0.08;
@@ -915,7 +957,9 @@ function initializeThreeJS() {
         targetCameraDistance = Math.max(10, Math.min(60, targetCameraDistance + e.deltaY * 0.03));
         cameraAutoRotate = false;
         setTimeout(() => cameraAutoRotate = true, 2000);
-    }, { passive: false });
+    }, {
+        passive: false
+    });
 
     renderer.domElement.addEventListener('click', (e) => {
         if (!isMobile && !isDraggingRing && Math.abs(e.clientX - dragStartPos.x) < 5 && Math.abs(e.clientY - dragStartPos.y) < 5) {
@@ -940,7 +984,9 @@ function initializeThreeJS() {
         ringOnGround = false;
 
         energyLight.intensity = 8;
-        setTimeout(() => { if (energyLevel < 30) energyLight.intensity = 0; }, 150);
+        setTimeout(() => {
+            if (energyLevel < 30) energyLight.intensity = 0;
+        }, 150);
     }
 
     function handleDoubleTap() {
@@ -951,7 +997,7 @@ function initializeThreeJS() {
         energyLevel = 100;
         launchFlash = 1.5;
         ringOnGround = false;
-        
+
         for (let i = 0; i < trailCount; i++) {
             const angle = (i / trailCount) * Math.PI * 2;
             const radius = 4 + Math.random() * 2;
@@ -1016,9 +1062,21 @@ function initializeThreeJS() {
     }
 
     function resetRing() {
-        ringPosition = { x: 0, y: 10, z: 0 };
-        ringVelocity = { x: 0, y: 0, z: 0 };
-        angularVelocity = { x: 0, y: 0, z: 0 };
+        ringPosition = {
+            x: 0,
+            y: 10,
+            z: 0
+        };
+        ringVelocity = {
+            x: 0,
+            y: 0,
+            z: 0
+        };
+        angularVelocity = {
+            x: 0,
+            y: 0,
+            z: 0
+        };
         ringOnGround = false;
         energyLevel = 0;
         impactIntensity = 0;
@@ -1086,10 +1144,10 @@ function initializeThreeJS() {
         if (newDarkMode !== darkMode) {
             darkMode = newDarkMode;
             colors = darkMode ? colorSchemes.dark : colorSchemes.light;
-            
+
             renderer.setClearColor(colors.bg, 1);
             scene.fog.color.setHex(colors.fog);
-            
+
             mainRingMat.color.setHex(colors.ringPrimary);
             mainRingMat.emissive.setHex(colors.ringPrimary);
             innerGlowMat.color.setHex(colors.ringSecondary);
@@ -1133,7 +1191,7 @@ function initializeThreeJS() {
 
             ringVelocity.x *= 0.988;
             ringVelocity.z *= 0.988;
-            
+
             trailSpawnTimer += deltaTime;
             if (trailSpawnTimer > 0.02 && speed > 2) {
                 trailSpawnTimer = 0;
@@ -1163,7 +1221,7 @@ function initializeThreeJS() {
                     ringVelocity.y *= -0.35;
                     impactIntensity = Math.min(1.0, impactSpeed / 15);
                     energyLevel = Math.max(energyLevel, impactIntensity * 40);
-                    
+
                     impactRing.position.x = ringPosition.x;
                     impactRing.position.z = ringPosition.z;
                     impactRing.scale.set(0.5, 0.5, 0.5);
@@ -1209,14 +1267,14 @@ function initializeThreeJS() {
         coreGlow.scale.setScalar(energyPulse * 1.6);
         coreOuterGlow.scale.setScalar(energyPulse * 1.8 + Math.sin(time * 3) * 0.1);
         coreHalo.scale.setScalar(1 + Math.sin(time * 2) * 0.15 + combinedEnergy * 0.3);
-        
-        coreGlowMat.opacity = 0.35 + combinedEnergy * 0.25 + Math.sin(time * 5) * 0.08;  // Slightly reduced
-        coreOuterGlowMat.opacity = 0.12 + combinedEnergy * 0.15;  // Slightly reduced
-        coreHaloMat.opacity = 0.04 + combinedEnergy * 0.06;  // Slightly reduced
 
-        mainRingMat.emissiveIntensity = 0.15 + combinedEnergy * 0.7 + launchFlash * 0.6;  // Ring remains brightest
-        innerGlowMat.opacity = 0.25 + combinedEnergy * 0.25;  // Reduced from 0.4 + 0.4
-        outerGlowMat.opacity = 0.2 + combinedEnergy * 0.25;  // Reduced from 0.3 + 0.4
+        coreGlowMat.opacity = 0.35 + combinedEnergy * 0.25 + Math.sin(time * 5) * 0.08;
+        coreOuterGlowMat.opacity = 0.12 + combinedEnergy * 0.15;
+        coreHaloMat.opacity = 0.04 + combinedEnergy * 0.06;
+
+        mainRingMat.emissiveIntensity = 0.15 + combinedEnergy * 0.7 + launchFlash * 0.6;
+        innerGlowMat.opacity = 0.25 + combinedEnergy * 0.25;
+        outerGlowMat.opacity = 0.2 + combinedEnergy * 0.25;
 
         energyLight.intensity = combinedEnergy * 5 + launchFlash * 3;
         energyLight.position.set(ringPosition.x, ringPosition.y, ringPosition.z);
@@ -1253,14 +1311,14 @@ function initializeThreeJS() {
             }
         }
         particles.geometry.attributes.position.needsUpdate = true;
-        particleMat.opacity = 0.4 + combinedEnergy * 0.2;  // Reduced from 0.6 + 0.3
+        particleMat.opacity = 0.4 + combinedEnergy * 0.2;
 
         for (let i = 0; i < trailCount; i++) {
             if (trailParticleData[i].life > 0) {
                 trailParticleData[i].life -= deltaTime;
                 const lifeRatio = trailParticleData[i].life / trailParticleData[i].maxLife;
                 trailParticlePositions[i * 3 + 1] -= deltaTime * 0.5;
-                
+
                 const c = new THREE.Color(colors.trail);
                 c.multiplyScalar(lifeRatio);
                 trailParticleColors[i * 3] = c.r;
@@ -1270,7 +1328,7 @@ function initializeThreeJS() {
         }
         trailParticles.geometry.attributes.position.needsUpdate = true;
         trailParticles.geometry.attributes.color.needsUpdate = true;
-        trailMat.opacity = 0.35 + combinedEnergy * 0.2;  // Reduced from 0.5 + 0.3
+        trailMat.opacity = 0.35 + combinedEnergy * 0.2;
 
         if (!isMobile || frameCount % 3 === 0) {
             for (let i = 0; i < nebulaCount; i++) {

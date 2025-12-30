@@ -1,4 +1,3 @@
-// Helper function for dark mode color selection
 function getColorForMode(colorLight, colorDark) {
     const darkMode = document.cookie.split('; ').find(row => row.startsWith('darkMode='));
     const isDark = darkMode && darkMode.split('=')[1].toLowerCase() === 'true';
@@ -481,27 +480,27 @@ document.addEventListener("DOMContentLoaded", function() {
             this.openSet.push(this.startNode);
             const openSetMap = new Set([this.startNode]);
             const closedSetMap = new Set();
-            
+
             while (this.openSet.length > 0) {
                 if (!this.searchingInProgress) return;
                 this.openSet.sort((a, b) => (a.distance + a.heuristic) - (b.distance + b.heuristic));
                 const current = this.openSet.shift();
                 openSetMap.delete(current);
-                
+
                 if (current === this.endNode) {
                     this.buildPath(current);
                     break;
                 }
-                
+
                 this.closedSet.push(current);
                 closedSetMap.add(current);
-                
+
                 const neighbors = this.getNeighbors(current);
                 for (let neighbor of neighbors) {
                     if (closedSetMap.has(neighbor)) continue;
-                    
+
                     const tentativeG = current.distance + 1;
-                    
+
                     if (!openSetMap.has(neighbor)) {
                         neighbor.distance = tentativeG;
                         neighbor.heuristic = this.heuristic(neighbor, this.endNode);

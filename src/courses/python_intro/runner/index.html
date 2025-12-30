@@ -4,7 +4,9 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Frontend-only Python Judge (Pyodide + Classic Worker)</title>
+    <title>Srodowisko zadan Pythona</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
     <style>
         /* CSS Variables for Light Mode (default) */
         .sandbox {
@@ -62,6 +64,9 @@
             font-size: 14px;
             line-height: 1.6;
             transition: background-color 0.3s ease, color 0.3s ease;
+            --editor-font-size: 15px;
+            --editor-line-height: 1.7;
+            --editor-pad-y: 12px;
         }
 
         .sandbox .wrap {
@@ -233,38 +238,110 @@
             color: var(--accent);
         }
 
-        .sandbox textarea {
-            width: 100%;
-            min-height: 400px;
-            height: auto;
-            background: var(--code-bg);
-            color: var(--ink);
+        .sandbox .editor-shell {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            background: var(--panel);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 16px;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-            font-size: 14px;
-            line-height: 1.6;
-            resize: vertical;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
         }
 
-        .dark-mode .sandbox textarea {
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        .sandbox .editor-gutter {
+            background: var(--code-bg);
+            border-right: 1px solid var(--border);
+            padding: var(--editor-pad-y) 8px;
+            min-width: 44px;
+            font-size: var(--editor-font-size);
+            text-align: right;
+            line-height: var(--editor-line-height);
+            color: var(--muted);
+            user-select: none;
+            overflow: hidden;
+            font-family: "Fira Code", "JetBrains Mono", Consolas, "Courier New", monospace;
         }
 
-        .sandbox textarea:focus {
+        .sandbox .editor-gutter .line-number.active {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .sandbox .editor-gutter .line-number {
+            height: calc(var(--editor-line-height) * 1em);
+        }
+
+        .sandbox .editor-wrap {
+            position: relative;
+            min-height: 420px;
+            background: var(--code-bg);
+            overflow: hidden;
+        }
+
+        .sandbox .editor-wrap .active-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 1.7em;
+            background: rgba(49, 130, 206, 0.08);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .sandbox .editor-wrap pre {
+            position: absolute;
+            inset: 0;
+            margin: 0;
+            padding: var(--editor-pad-y) 14px;
+            height: 100%;
+            overflow: hidden;
+            background: transparent;
+            font-size: var(--editor-font-size);
+            line-height: var(--editor-line-height);
+            pointer-events: none;
+            z-index: 0;
+            white-space: pre;
+            font-family: "Fira Code", "JetBrains Mono", Consolas, "Courier New", monospace;
+        }
+
+        .sandbox .editor-wrap textarea {
+            position: absolute;
+            inset: 0;
+            margin: 0;
+            padding: var(--editor-pad-y) 14px;
+            border: none;
             outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1), inset 0 2px 4px rgba(0, 0, 0, 0.2);
+            background: transparent;
+            color: transparent;
+            caret-color: var(--ink);
+            font-size: var(--editor-font-size);
+            line-height: var(--editor-line-height);
+            font-family: "Fira Code", "JetBrains Mono", Consolas, "Courier New", monospace;
+            resize: none;
+            z-index: 1;
+            overflow: auto;
+        }
+
+        .sandbox .editor-wrap textarea::selection {
+            background: rgba(49, 130, 206, 0.25);
+        }
+
+        .sandbox .editor-wrap pre code {
+            font-family: "Fira Code", "JetBrains Mono", Consolas, "Courier New", monospace;
+            font-size: var(--editor-font-size);
+            line-height: var(--editor-line-height);
+            display: block;
         }
 
         @media (max-width: 767px) {
-            .sandbox textarea {
-                min-height: 300px;
+            .sandbox .editor-wrap {
+                min-height: 320px;
+            }
+
+            .sandbox .editor-wrap pre,
+            .sandbox .editor-wrap textarea,
+            .sandbox .editor-wrap pre code {
                 font-size: 13px;
-                padding: 12px;
             }
         }
 
@@ -322,6 +399,31 @@
             transform: none;
         }
 
+        .sandbox button.loading {
+            opacity: 0.85;
+            pointer-events: none;
+        }
+
+        .sandbox .spinner {
+            display: none;
+            width: 14px;
+            height: 14px;
+            border: 2px solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .sandbox button.loading .spinner {
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         @media (max-width: 767px) {
             .sandbox button {
                 padding: 10px 14px;
@@ -365,6 +467,50 @@
 
         .sandbox .panel:hover {
             box-shadow: var(--shadow-lg);
+        }
+
+        .sandbox .task-quick {
+            margin-top: 14px;
+        }
+
+        .sandbox .task-quick h4 {
+            font-size: 14px;
+            margin: 10px 0 6px;
+            color: var(--accent);
+        }
+
+        .sandbox .task-quick .empty {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .sandbox .diff {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .sandbox .diff-line {
+            display: block;
+            white-space: pre-wrap;
+        }
+
+        .sandbox .diff-line.add {
+            color: var(--pass);
+        }
+
+        .sandbox .diff-line.rem {
+            color: var(--fail);
+        }
+
+        .sandbox .test pre.empty {
+            background: rgba(113, 128, 150, 0.08);
+            border: 1px dashed var(--border-light);
+            color: var(--muted);
+            font-style: italic;
         }
 
         .panel-header {
@@ -437,21 +583,6 @@
             color: var(--ink);
         }
 
-        .sandbox .test pre[contenteditable] {
-            cursor: text;
-            transition: border-color 0.2s ease;
-        }
-
-        .sandbox .test pre[contenteditable]:hover {
-            border-color: var(--border-light);
-        }
-
-        .sandbox .test pre[contenteditable]:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.1);
-        }
-
         /* Badges */
         .sandbox .badge {
             display: inline-flex;
@@ -476,6 +607,12 @@
             border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
+        .sandbox .warn {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
         /* Muted text */
         .sandbox .muted {
             color: var(--muted);
@@ -491,7 +628,7 @@
             overflow-x: auto;
         }
 
-        /* Results log */
+        /* Log wynikow */
         .sandbox .log {
             min-height: 300px;
             max-height: 500px;
@@ -513,7 +650,7 @@
         }
 
         .sandbox .log:empty::before {
-            content: "Run tests to see results here...";
+            content: "Uruchom testy, aby zobaczyc wyniki...";
             color: var(--muted-dark);
             font-style: italic;
         }
@@ -576,13 +713,14 @@
                 opacity: 0;
                 transform: translateY(10px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
 
-        .sandbox .log > div {
+        .sandbox .log>div {
             animation: fadeInUp 0.3s ease;
         }
     </style>
@@ -645,50 +783,58 @@
     </nav>
     <div class="sandbox">
         <div class="wrap">
-            <h1>Frontend-only Python Judge</h1>
-            <p class="intro-text">Runs user Python in the browser via WebAssembly (Pyodide) inside a Web Worker, then checks outputs against tests. No server required.</p>
+            <h1>Srodowisko zadan Pythona</h1>
+            <p class="intro-text">Uruchamia kod Pythona w przegladarce (Pyodide + Web Worker) i sprawdza wyjscie na podstawie testow. Bez serwera.</p>
+            <!-- TASK:SUMMARY -->
 
             <div class="row">
                 <div class="editor-container">
-                    <label class="editor-label">Your Python (either define <code>solve(s: str) -&gt; str</code> or use <code>input()</code>/<code>print()</code>):</label>
-                    <textarea id="code" aria-label="Python code editor"></textarea>
+                    <div class="panel task-quick" id="task-quick">
+                        <div class="panel-header">
+                            <strong>Opis zadania</strong>
+                        </div>
+                        <div id="task-quick-content" class="task-quick-content">
+                            <p class="empty">Ladowanie opisu...</p>
+                        </div>
+                    </div>
+                    <label class="editor-label">Twoj kod:</label>
+                    <div class="editor-shell">
+                        <div class="editor-gutter" id="line-numbers"></div>
+                        <div class="editor-wrap">
+                            <div class="active-line" id="active-line"></div>
+                            <pre id="highlight" class="language-python"><code id="highlight-code" class="language-python"></code></pre>
+                            <textarea id="code" aria-label="Edytor kodu Pythona" spellcheck="false"></textarea>
+                        </div>
+                    </div>
                     <div class="controls">
                         <button id="run-public" class="primary">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M8 5v14l11-7z"/>
+                                <path d="M8 5v14l11-7z" />
                             </svg>
-                            Run public tests
-                        </button>
-                        <button id="run-hidden">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
-                                <path d="M21 12c-2.4 4-6 7-11 7s-8.6-3-11-7c2.4-4 6-7 11-7s8.6 3 11 7z"/>
-                            </svg>
-                            Run hidden tests
+                            <span class="spinner" aria-hidden="true"></span>
+                            <span class="btn-label">Uruchom</span>
                         </button>
                         <button id="format">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8"/>
-                                <path d="M21 3v5h-5"/>
+                                <path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8" />
+                                <path d="M21 3v5h-5" />
                             </svg>
-                            Reset to stub
+                            Reset
                         </button>
-                        <span id="status" class="status-indicator">Pyodide loading…</span>
+                        <span id="status" class="status-indicator">Ladowanie Pyodide…</span>
                     </div>
                 </div>
                 <div>
-                    <div class="panel">
+                    <div class="panel results-panel">
                         <div class="panel-header">
-                            <strong>Public tests</strong>
-                            <button id="add-test">+ Add test</button>
+                            <strong>Testy publiczne</strong>
                         </div>
                         <div id="tests" class="tests"></div>
-                        <p class="muted" style="margin-top:12px">Hidden tests only run locally in the worker and aren't shown here.</p>
                     </div>
                     <div class="spacer-md"></div>
                     <div class="panel">
                         <div class="panel-header">
-                            <strong>Results</strong>
+                            <strong>Wyniki</strong>
                         </div>
                         <div id="log" class="log"></div>
                     </div>
@@ -696,10 +842,12 @@
             </div>
         </div>
 
-    <script>
-        /* ================= Worker source (CLASSIC; no backticks inside) ================= */
-        const WORKER_SRC =
-            "self.importScripts('https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js');\n\
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+        <script>
+            /* ================= Worker source (CLASSIC; no backticks inside) ================= */
+            const WORKER_SRC =
+                "self.importScripts('https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js');\n\
 \n\
 const TESTS_HIDDEN = JSON.parse(atob('__HIDDEN_B64__'));\n\
 let pyodide;\n\
@@ -725,6 +873,30 @@ function buildProgram() {\n\
     '    if s is None:',\n\
     \"        return ''\",\n\
     \"    return str(s).replace('\\\\r\\\\n', '\\\\n').rstrip()\",\n\
+    '',\n\
+    'def _parse_floats(s: str):',\n\
+    '    if s is None:',\n\
+    '        return None',\n\
+    '    tokens = str(s).strip().split()',\n\
+    '    if not tokens:',\n\
+    '        return []',\n\
+    '    values = []',\n\
+    '    for token in tokens:',\n\
+    '        try:',\n\
+    '            values.append(float(token))',\n\
+    '        except Exception:',\n\
+    '            return None',\n\
+    '    return values',\n\
+    '',\n\
+    'def _approx_equal(a, b, eps=0.01):',\n\
+    '    if a is None or b is None:',\n\
+    '        return False',\n\
+    '    if len(a) != len(b):',\n\
+    '        return False',\n\
+    '    for x, y in zip(a, b):',\n\
+    '        if abs(x - y) > eps:',\n\
+    '            return False',\n\
+    '    return True',\n\
     '',\n\
     'import types',\n\
     \"is_func = bool(re.search(r'^\\\\s*def\\\\s+solve\\\\s*\\\\(', USER_CODE, re.M))\",\n\
@@ -752,7 +924,14 @@ function buildProgram() {\n\
     '            finally:',\n\
     '                sys.stdin, sys.stdout = _in, _out',\n\
     '            out = stdout.getvalue()',\n\
-    '        ok = _norm(out) == _norm(t.expected)',\n\
+    '        out_norm = _norm(out)',\n\
+    '        exp_norm = _norm(t.expected)',\n\
+    '        out_vals = _parse_floats(out_norm)',\n\
+    '        exp_vals = _parse_floats(exp_norm)',\n\
+    '        if out_vals is not None and exp_vals is not None:',\n\
+    '            ok = _approx_equal(out_vals, exp_vals)',\n\
+    '        else:',\n\
+    '            ok = out_norm == exp_norm',\n\
     '    except Exception as e:',\n\
     '        err = traceback.format_exc()',\n\
     \"    results.append({'i': i, 'ok': ok, 'out': out, 'exp': t.expected, 'err': err})\",\n\
@@ -792,226 +971,325 @@ self.addEventListener('message', async (ev) => {\n\
   }\n\
 });\n";
 
-        /* ================= Test data ================= */
-        const PUBLIC_TESTS = [{
-                input: '3\n1 2 3\n',
-                expected: '6'
-            },
-            {
-                input: '2\n100 100\n',
-                expected: '200'
-            },
-            {
-                input: '1\n42\n',
-                expected: '42'
-            },
-            {
-                input: '3\n-1 -2 -3\n',
-                expected: '-6'
-            },
-        ];
+            /* ================= Test data ================= */
+            const PUBLIC_TESTS = [{
+                    input: '3\n1 2 3\n',
+                    expected: '6'
+                },
+                {
+                    input: '2\n100 100\n',
+                    expected: '200'
+                },
+                {
+                    input: '1\n42\n',
+                    expected: '42'
+                },
+                {
+                    input: '3\n-1 -2 -3\n',
+                    expected: '-6'
+                },
+            ];
 
-        const HIDDEN_TESTS = [{
-                input: '1\n-5\n',
-                expected: '-5'
-            },
-            {
-                input: '5\n0 0 0 0 0\n',
-                expected: '0'
-            },
-            {
-                input: '4\n10 20 30 40\n',
-                expected: '100'
-            },
-        ];
+            const HIDDEN_TESTS = [{
+                    input: '1\n-5\n',
+                    expected: '-5'
+                },
+                {
+                    input: '5\n0 0 0 0 0\n',
+                    expected: '0'
+                },
+                {
+                    input: '4\n10 20 30 40\n',
+                    expected: '100'
+                },
+            ];
 
-        const HIDDEN_B64 = btoa(JSON.stringify(HIDDEN_TESTS));
+            const HIDDEN_B64 = btoa(JSON.stringify(HIDDEN_TESTS));
 
-        /* ================= UI wiring ================= */
-        const codeEl = document.getElementById('code');
-        const logEl = document.getElementById('log');
-        const testsEl = document.getElementById('tests');
-        const statusEl = document.getElementById('status');
+            /* ================= UI wiring ================= */
+            const codeEl = document.getElementById('code');
+            const highlightCodeEl = document.getElementById('highlight-code');
+            const highlightEl = document.getElementById('highlight');
+            const lineNumbersEl = document.getElementById('line-numbers');
+            const activeLineEl = document.getElementById('active-line');
+            const logEl = document.getElementById('log');
+            const testsEl = document.getElementById('tests');
+            const statusEl = document.getElementById('status');
+            const runBtn = document.getElementById('run-public');
+            const resetBtn = document.getElementById('format');
+            const runLabelEl = runBtn.querySelector('.btn-label');
+            const quickContentEl = document.getElementById('task-quick-content');
 
-        function setStatus(text) {
-            statusEl.textContent = text;
-        }
-
-        function escapeHtml(s) {
-            return (s || '').replace(/[&<>]/g, c => ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;'
-            } [c]));
-        }
-
-        function appendLog(html) {
-            const div = document.createElement('div');
-            div.innerHTML = html;
-            logEl.appendChild(div);
-            logEl.scrollTop = logEl.scrollHeight;
-        }
-
-        function clearLog() {
-            logEl.innerHTML = '';
-        }
-
-        function renderTests() {
-            testsEl.innerHTML = '';
-            PUBLIC_TESTS.forEach((t, idx) => {
-                const el = document.createElement('div');
-                el.className = 'test';
-                el.innerHTML = `<div class="test-header">
-            <strong>Case #${idx+1}</strong>
-            <button data-idx="${idx}" class="del">Delete</button>
-          </div>
-          <div class="test-label">Input</div>
-          <pre contenteditable spellcheck="false" class="in">${t.input.replace(/</g,'&lt;')}</pre>
-          <div class="test-label">Expected output</div>
-          <pre contenteditable spellcheck="false" class="exp">${t.expected.replace(/</g,'&lt;')}</pre>`;
-                testsEl.appendChild(el);
-                el.querySelector('.del').onclick = () => {
-                    PUBLIC_TESTS.splice(idx, 1);
-                    renderTests();
-                };
-                const inEl = el.querySelector('.in');
-                const expEl = el.querySelector('.exp');
-                const save = () => {
-                    PUBLIC_TESTS[idx] = {
-                        input: inEl.textContent,
-                        expected: expEl.textContent
-                    };
-                };
-                inEl.oninput = expEl.oninput = save;
-            });
-        }
-        renderTests();
-
-        /* ================= Default stub code ================= */
-        const STUB = `# Problem: read N then N integers, output their sum.
-# You can implement either a solve(s) function OR script style using input()/print().
-
-# Option A: function style
-# def solve(s: str) -> str:
-#     data = list(map(int, s.split()))
-#     n, nums = data[0], data[1:]
-#     return str(sum(nums[:n]))
-
-# Option B: script style (stdin/stdout)
-# n = int(input().strip())
-# nums = list(map(int, input().split()))
-# print(sum(nums[:n]))
-`;
-        codeEl.value = STUB;
-
-        document.getElementById('format').onclick = () => {
-            codeEl.value = STUB;
-        };
-        document.getElementById('add-test').onclick = () => {
-            PUBLIC_TESTS.push({
-                input: '',
-                expected: ''
-            });
-            renderTests();
-        };
-
-        /* ================= Worker factory (CLASSIC) ================= */
-        function createWorker() {
-            const src = WORKER_SRC.replace('__HIDDEN_B64__', HIDDEN_B64);
-            const blob = new Blob([src], {
-                type: 'text/javascript'
-            });
-            const url = URL.createObjectURL(blob);
-            const w = new Worker(url); // classic worker (no { type: 'module' })
-            w.addEventListener('error', (e) => {
-                appendLog(`<span class="badge fail">WORKER ERROR</span> ${escapeHtml(e.message || String(e))}`);
-                setStatus('Error');
-            });
-            return w;
-        }
-
-        let worker = createWorker();
-
-        /* ================= Heartbeat ================= */
-        setStatus('Pyodide loading…');
-        const ping = setInterval(() => {
-            try {
-                worker.postMessage({
-                    type: 'ping'
-                });
-            } catch {}
-        }, 1200);
-
-        worker.addEventListener('message', (ev) => {
-            if (ev.data && ev.data.type === 'pong') {
-                clearInterval(ping);
-                setStatus('Ready');
+            function setStatus(text) {
+                statusEl.textContent = text;
             }
-        });
 
-        /* ================= Runner ================= */
-        function run(kind) {
-            clearLog();
-            setStatus('Running ' + kind + ' tests…');
-            const code = codeEl.value;
-
-            if (worker) {
-                try {
-                    worker.terminate();
-                } catch {}
+            function escapeHtml(s) {
+                return (s || '').replace(/[&<>]/g, c => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;'
+                } [c]));
             }
-            worker = createWorker();
 
-            let killed = false;
-            const MAX_MS = Math.min(15000, 2500 * (kind === 'hidden' ? 5 : PUBLIC_TESTS.length || 1));
-            const timer = setTimeout(() => {
-                killed = true;
-                try {
-                    worker.terminate();
-                } catch {}
-                setStatus('Timed out');
-                appendLog(`<span class="badge fail">TIME LIMIT</span> Your program exceeded ${MAX_MS}ms.`);
-            }, MAX_MS);
+            function appendLog(html) {
+                const div = document.createElement('div');
+                div.innerHTML = html;
+                logEl.appendChild(div);
+                logEl.scrollTop = logEl.scrollHeight;
+            }
 
-            worker.addEventListener('message', (ev) => {
-                const {
-                    type,
-                    ok,
-                    res,
-                    error
-                } = ev.data || {};
-                if (type === 'done' && !killed) {
-                    clearTimeout(timer);
-                    if (!ok) {
-                        setStatus('Error');
-                        appendLog(`<span class="badge fail">ERROR</span> ${escapeHtml(error)}`);
-                        return;
+            function clearLog() {
+                logEl.innerHTML = '';
+            }
+
+            const BADGE_OK = '<span class="badge pass">✓ OK</span>';
+            const BADGE_FAIL = '<span class="badge fail">✗ BLAD</span>';
+            const BADGE_WARN = '<span class="badge warn">⚠ BLAD</span>';
+
+            function renderTests() {
+                const formatField = (value) => {
+                    const text = value ?? '';
+                    if (text.trim() === '') {
+                        return '<span class="empty-field">brak</span>';
                     }
-                    const results = res.results || [];
-                    const passed = results.filter(r => r.ok).length;
-                    setStatus(`Done • ${passed}/${results.length} passed`);
-                    results.forEach((r, i) => {
-                        const badge = r.ok ? '<span class="badge pass">PASS</span>' : '<span class="badge fail">FAIL</span>';
-                        let html = `${badge} Case #${i+1}`;
-                        if (!r.ok) {
-                            html += `\n<pre>Expected:\n${escapeHtml(r.exp)}\n\nGot:\n${escapeHtml(r.out || '')}\n</pre>`;
-                            if (r.err) html += `\n<pre>Traceback:\n${escapeHtml(r.err)}\n</pre>`;
+                    return text.replace(/</g, '&lt;');
+                };
+                testsEl.innerHTML = '';
+                PUBLIC_TESTS.forEach((t, idx) => {
+                    const el = document.createElement('div');
+                    el.className = 'test';
+                    const inputEmpty = !t.input || t.input.trim() === '';
+                    const expectedEmpty = !t.expected || t.expected.trim() === '';
+                    el.innerHTML = `<div class="test-header">
+            <strong>Przyklad #${idx+1}</strong>
+          </div>
+          <div class="test-label">Wejscie</div>
+          <pre class="in${inputEmpty ? ' empty' : ''}">${formatField(t.input)}</pre>
+          <div class="test-label">Oczekiwane wyjscie</div>
+          <pre class="exp${expectedEmpty ? ' empty' : ''}">${formatField(t.expected)}</pre>`;
+                    testsEl.appendChild(el);
+                });
+            }
+            renderTests();
+
+            function updateHighlight() {
+                const code = codeEl.value || '';
+                if (window.Prism && Prism.languages && Prism.languages.python) {
+                    highlightCodeEl.innerHTML = Prism.highlight(code, Prism.languages.python, 'python');
+                } else {
+                    highlightCodeEl.textContent = code;
+                }
+            }
+
+            function updateHighlightScroll() {
+                highlightEl.style.transform = `translate(${-codeEl.scrollLeft}px, ${-codeEl.scrollTop}px)`;
+            }
+
+            function updateLineNumbers() {
+                const lines = Math.max(1, codeEl.value.split('\n').length);
+                let html = '';
+                for (let i = 1; i <= lines; i += 1) {
+                    html += `<div class="line-number" data-line="${i}">${i}</div>`;
+                }
+                lineNumbersEl.innerHTML = html;
+            }
+
+            function updateActiveLine() {
+                const text = codeEl.value;
+                const pos = codeEl.selectionStart || 0;
+                const lineIndex = text.slice(0, pos).split('\n').length - 1;
+                const lineHeight = parseFloat(getComputedStyle(codeEl).lineHeight) || 24;
+                activeLineEl.style.top = `${lineIndex * lineHeight - codeEl.scrollTop}px`;
+                const active = lineNumbersEl.querySelector('.line-number.active');
+                if (active) active.classList.remove('active');
+                const target = lineNumbersEl.querySelector(`[data-line="${lineIndex + 1}"]`);
+                if (target) target.classList.add('active');
+            }
+
+            function syncScroll() {
+                lineNumbersEl.scrollTop = codeEl.scrollTop;
+                updateHighlightScroll();
+                updateActiveLine();
+            }
+
+            function refreshEditor() {
+                updateHighlight();
+                updateLineNumbers();
+                updateActiveLine();
+                updateHighlightScroll();
+            }
+
+            function buildDiff(expected, actual) {
+                const expLines = (expected || '').split('\n');
+                const outLines = (actual || '').split('\n');
+                const max = Math.max(expLines.length, outLines.length);
+                const lines = [];
+                for (let i = 0; i < max; i += 1) {
+                    const exp = expLines[i];
+                    const out = outLines[i];
+                    if (exp === out) {
+                        lines.push(`<span class="diff-line">  ${escapeHtml(exp ?? '')}</span>`);
+                    } else {
+                        if (exp !== undefined) {
+                            lines.push(`<span class="diff-line rem">- ${escapeHtml(exp)}</span>`);
                         }
-                        appendLog(html);
-                    });
+                        if (out !== undefined) {
+                            lines.push(`<span class="diff-line add">+ ${escapeHtml(out)}</span>`);
+                        }
+                    }
+                }
+                return `<div class="diff">${lines.join('')}</div>`;
+            }
+
+            function setRunning(isRunning) {
+                runBtn.disabled = isRunning;
+                runBtn.classList.toggle('loading', isRunning);
+                runLabelEl.textContent = isRunning ? 'Uruchamianie...' : 'Uruchom';
+            }
+
+            /* ================= Default stub code ================= */
+            const STUB = `# Wpisz rozwiazanie tutaj.
+# TODO: Rozwiaz problem.
+`;
+            codeEl.value = STUB;
+            refreshEditor();
+
+            resetBtn.onclick = () => {
+                if (!confirm('Zresetowac kod do szablonu?')) {
+                    return;
+                }
+                codeEl.value = STUB;
+                refreshEditor();
+            };
+
+            codeEl.addEventListener('input', () => {
+                refreshEditor();
+            });
+            codeEl.addEventListener('scroll', syncScroll);
+            codeEl.addEventListener('click', updateActiveLine);
+            codeEl.addEventListener('keyup', updateActiveLine);
+            codeEl.addEventListener('keydown', (ev) => {
+                if ((ev.ctrlKey || ev.metaKey) && ev.key === 'Enter') {
+                    ev.preventDefault();
+                    run();
                 }
             });
 
-            worker.postMessage({
-                type: 'run',
-                code,
-                tests: kind === 'hidden' ? 'hidden' : PUBLIC_TESTS
-            });
-        }
+            function buildQuickPanel() {
+                const desc = document.getElementById('task-description-data');
+                if (!desc) {
+                    quickContentEl.innerHTML = '<p class="empty">Brak opisu zadania.</p>';
+                    return;
+                }
+                const html = desc.innerHTML.trim();
+                quickContentEl.innerHTML = html || '<p class="empty">Brak opisu zadania.</p>';
+            }
+            buildQuickPanel();
 
-        document.getElementById('run-public').onclick = () => run('public');
-        document.getElementById('run-hidden').onclick = () => run('hidden');
-    </script>
+            /* ================= Worker factory (CLASSIC) ================= */
+            function createWorker() {
+                const src = WORKER_SRC.replace('__HIDDEN_B64__', HIDDEN_B64);
+                const blob = new Blob([src], {
+                    type: 'text/javascript'
+                });
+                const url = URL.createObjectURL(blob);
+                const w = new Worker(url); // classic worker (no { type: 'module' })
+                w.addEventListener('error', (e) => {
+                    appendLog(`${BADGE_WARN} BLAD WORKERA: ${escapeHtml(e.message || String(e))}`);
+                    setStatus('Blad');
+                });
+                return w;
+            }
+
+            let worker = createWorker();
+
+            /* ================= Heartbeat ================= */
+            setStatus('Ladowanie Pyodide…');
+            const ping = setInterval(() => {
+                try {
+                    worker.postMessage({
+                        type: 'ping'
+                    });
+                } catch {}
+            }, 1200);
+
+            worker.addEventListener('message', (ev) => {
+                if (ev.data && ev.data.type === 'pong') {
+                    clearInterval(ping);
+                    setStatus('Gotowe');
+                }
+            });
+
+            /* ================= Runner ================= */
+            function run() {
+                clearLog();
+                setStatus('Uruchamianie testow…');
+                setRunning(true);
+                const code = codeEl.value;
+
+                if (worker) {
+                    try {
+                        worker.terminate();
+                    } catch {}
+                }
+                worker = createWorker();
+
+                let killed = false;
+                const MAX_MS = Math.min(15000, 2500 * (PUBLIC_TESTS.length || 1));
+                const timer = setTimeout(() => {
+                    killed = true;
+                    try {
+                        worker.terminate();
+                    } catch {}
+                    setStatus('Przekroczono limit czasu');
+                    appendLog(`${BADGE_WARN} LIMIT CZASU: Program przekroczyl ${MAX_MS}ms.`);
+                    setRunning(false);
+                }, MAX_MS);
+
+                worker.addEventListener('message', (ev) => {
+                    const {
+                        type,
+                        ok,
+                        res,
+                        error
+                    } = ev.data || {};
+                    if (type === 'done' && !killed) {
+                        clearTimeout(timer);
+                        if (!ok) {
+                            setStatus('Blad');
+                            appendLog(`${BADGE_WARN} ${escapeHtml(error)}`);
+                            setRunning(false);
+                            return;
+                        }
+                        const results = res.results || [];
+                        const passed = results.filter(r => r.ok).length;
+                        setStatus(`Gotowe • ${passed}/${results.length} zaliczone`);
+                        setRunning(false);
+                        results.forEach((r, i) => {
+                            const badge = r.ok ? BADGE_OK : BADGE_FAIL;
+                            let html = `${badge} Przyklad #${i+1}`;
+                            if (!r.ok) {
+                                html += `\n${buildDiff(r.exp, r.out || '')}`;
+                                html += `\n<pre>Oczekiwano:\n${escapeHtml(r.exp)}\n\nOtrzymano:\n${escapeHtml(r.out || '')}\n</pre>`;
+                                if (r.err) {
+                                    html += `\n<details><summary>Szczegoly bledu</summary><pre>${escapeHtml(r.err)}</pre></details>`;
+                                }
+                            }
+                            appendLog(html);
+                        });
+                    }
+                });
+
+                worker.postMessage({
+                    type: 'run',
+                    code,
+                    tests: PUBLIC_TESTS
+                });
+            }
+
+            runBtn.onclick = () => run();
+        </script>
 </body>
 
 </html>
