@@ -13,7 +13,7 @@ Welcome to the GitHub repository for [adamdjellouli.com](https://adamdjellouli.c
 
 ## 📖 Overview
 
-This repository hosts the code for my personal website. It's a space where I share my thoughts, projects, and various topics that spark my interest. The site is meticulously crafted using HTML, CSS, and TypeScript, augmented with custom Python scripts for updating common elements across pages.
+This repository hosts the code for my personal website. It's a space where I share my thoughts, projects, and various topics that spark my interest. The site is meticulously crafted using HTML, CSS, and TypeScript, augmented with custom Python scripts that generate most of the content and update common elements across pages.
 
 ## 🌐 Live Demo
 

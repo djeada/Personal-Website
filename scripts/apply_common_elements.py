@@ -1,6 +1,8 @@
+import json
 import logging
 import re
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from pathlib import Path
 from typing import Tuple, Dict, Callable
 
@@ -34,6 +36,11 @@ PREDEFINED_DESCRIPTIONS = {
     "statistics_notes": "Detailed notes on statistics covering probability, distributions, hypothesis testing, and data analysis techniques.",
     "vtk_examples": "Examples and tutorials on VTK (Visualization Toolkit) for 3D computer graphics, image processing, and visualization.",
 }
+SITE_BASE_URL = "https://adamdjellouli.com/"
+STRUCTURED_DATA_ID = "structured-data"
+LAST_MODIFIED_PATTERN = re.compile(
+    r'<p style="text-align: right;"><i>Last modified: (.*?)</i></p>'
+)
 
 
 def extract_element_from_html(html: str, tag: str) -> Tuple[re.Match, re.Match]:
@@ -175,6 +182,86 @@ def change_meta_description_in_head(html_content: str, file_path: Path) -> str:
     return str(soup)
 
 
+def build_canonical_url(file_path: Path) -> str:
+    """Build the canonical URL for a given HTML file."""
+    base_dir = Path("../src").resolve()
+    relative_path = file_path.resolve().relative_to(base_dir).as_posix()
+    relative_path = relative_path.replace(".html", "")
+    if relative_path == "index":
+        relative_path = ""
+    elif relative_path.endswith("/index"):
+        relative_path = relative_path[:-5]
+    return f"{SITE_BASE_URL}{relative_path}"
+
+
+def extract_last_modified_date(html_content: str) -> str:
+    """Extract the last modified date from HTML if present."""
+    match = LAST_MODIFIED_PATTERN.search(html_content)
+    if not match:
+        return None
+    try:
+        parsed_date = datetime.strptime(match.group(1), "%B %d, %Y")
+        return parsed_date.strftime("%Y-%m-%d")
+    except ValueError:
+        return None
+
+
+def upsert_canonical_link(soup: BeautifulSoup, canonical_url: str) -> None:
+    """Insert or update the canonical link tag."""
+    canonical_tag = soup.find("link", attrs={"rel": "canonical"})
+    if canonical_tag:
+        canonical_tag["href"] = canonical_url
+        return
+    new_tag = soup.new_tag("link", rel="canonical", href=canonical_url)
+    if soup.head:
+        soup.head.append(new_tag)
+
+
+def build_structured_data(
+    soup: BeautifulSoup, canonical_url: str, page_type: str, last_modified: str
+) -> dict:
+    """Build JSON-LD structured data for the page."""
+    title = soup.title.get_text(strip=True) if soup.title else None
+    meta_desc = soup.find("meta", attrs={"name": "description"})
+    description = meta_desc.get("content", "").strip() if meta_desc else None
+
+    if page_type == "ARTICLES":
+        data = {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": title,
+            "author": {"@type": "Person", "name": "Adam Djellouli"},
+            "mainEntityOfPage": {"@type": "WebPage", "@id": canonical_url},
+            "url": canonical_url,
+        }
+    else:
+        data = {
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "name": title,
+            "url": canonical_url,
+        }
+
+    if description:
+        data["description"] = description
+    if last_modified:
+        data["dateModified"] = last_modified
+
+    return data
+
+
+def upsert_structured_data(soup: BeautifulSoup, structured_data: dict) -> None:
+    """Insert or update JSON-LD structured data in the head."""
+    if not soup.head:
+        return
+    script_tag = soup.find("script", attrs={"id": STRUCTURED_DATA_ID})
+    if script_tag is None:
+        script_tag = soup.new_tag("script", type="application/ld+json")
+        script_tag["id"] = STRUCTURED_DATA_ID
+        soup.head.append(script_tag)
+    script_tag.string = json.dumps(structured_data, ensure_ascii=True)
+
+
 def process_file(
     file_path: Path, category: str, configurations: Dict[str, Callable], depth: int = 1
 ) -> None:
@@ -193,7 +280,40 @@ def process_file(
     html = change_title_in_head(html)
     html = change_meta_description_in_head(html_content=html, file_path=file_path)
 
+    soup = BeautifulSoup(html, "html.parser")
+    canonical_url = build_canonical_url(file_path)
+    upsert_canonical_link(soup, canonical_url)
+    last_modified = extract_last_modified_date(html)
+    structured_data = build_structured_data(
+        soup=soup,
+        canonical_url=canonical_url,
+        page_type=category,
+        last_modified=last_modified,
+    )
+    upsert_structured_data(soup, structured_data)
+    html = str(soup)
+
     file_path.write_text(html)
+
+
+def process_metadata_file(file_path: Path, page_type: str) -> None:
+    """Insert canonical and structured data into an existing HTML file."""
+    html = file_path.read_text()
+    if "<head" not in html and "<html" not in html:
+        return
+
+    soup = BeautifulSoup(html, "html.parser")
+    canonical_url = build_canonical_url(file_path)
+    upsert_canonical_link(soup, canonical_url)
+    last_modified = extract_last_modified_date(html)
+    structured_data = build_structured_data(
+        soup=soup,
+        canonical_url=canonical_url,
+        page_type=page_type,
+        last_modified=last_modified,
+    )
+    upsert_structured_data(soup, structured_data)
+    file_path.write_text(str(soup))
 
 
 def main() -> None:
@@ -218,6 +338,15 @@ def main() -> None:
         for file in tool_dir.rglob("**/*.html"):
             depth = len(file.relative_to(tool_dir).parts) - 1
             executor.submit(process_file, file, "TOOLS", tool_configurations, depth)
+
+    core_dir = Path("../src/core")
+    with ThreadPoolExecutor() as executor:
+        for file in core_dir.rglob("**/*.html"):
+            executor.submit(process_metadata_file, file, "CORE")
+
+    index_file = Path("../src/index.html")
+    if index_file.exists():
+        process_metadata_file(index_file, "CORE")
 
 
 if __name__ == "__main__":
