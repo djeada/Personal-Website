@@ -97,13 +97,15 @@ def create_toc_wrapper(soup: BeautifulSoup, html: str) -> Tag:
 def wrap_article_and_toc(soup: BeautifulSoup, toc_wrapper: Tag) -> None:
     """Wrap the article and table of contents in a common wrapper."""
     article_wrapper = soup.new_tag("div", id="article-wrapper")
+    sidebar_wrapper = soup.new_tag("aside", id="article-sidebar")
 
     article_body_copy = soup.new_tag("article-section", id="article-body")
     article_body_copy.extend(
         soup.find("article-section", {"id": "article-body"}).contents
     )
 
-    article_wrapper.extend([article_body_copy, toc_wrapper])
+    sidebar_wrapper.append(toc_wrapper)
+    article_wrapper.extend([article_body_copy, sidebar_wrapper])
 
     footer = soup.find("footer")
     if footer:

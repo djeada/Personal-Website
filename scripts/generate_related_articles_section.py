@@ -112,10 +112,14 @@ def create_articles_wrapper(soup: BeautifulSoup, articles_in_dir) -> Tag:
 def wrap_article_and_related_articles(
     soup: BeautifulSoup, articles_wrapper: Tag
 ) -> None:
-    """Insert the related articles into the existing table-of-contents div."""
+    """Insert the related articles next to the existing table-of-contents div."""
     table_of_contents = soup.find("div", {"id": "table-of-contents"})
     if table_of_contents:
-        table_of_contents.append(articles_wrapper)
+        toc_parent = table_of_contents.parent
+        if toc_parent and toc_parent.get("id") == "article-sidebar":
+            table_of_contents.insert_after(articles_wrapper)
+        else:
+            table_of_contents.append(articles_wrapper)
     else:
         print(
             "Warning: 'table-of-contents' div not found. No changes made to the HTML."
