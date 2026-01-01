@@ -1201,10 +1201,33 @@ document.addEventListener("DOMContentLoaded", () => {
         return document.fullscreenElement || document.webkitFullscreenElement;
     }
 
+    function isFullscreenActive() {
+        return Boolean(getFullscreenElement()) || fallbackFullscreenActive;
+    }
+
+    function preventScroll(event) {
+        if (isFullscreenActive()) {
+            event.preventDefault();
+        }
+    }
+
+    const scrollPreventOptions = { passive: false };
+
+    function updateScrollPrevention(enabled) {
+        if (enabled) {
+            document.addEventListener("wheel", preventScroll, scrollPreventOptions);
+            document.addEventListener("touchmove", preventScroll, scrollPreventOptions);
+        } else {
+            document.removeEventListener("wheel", preventScroll, scrollPreventOptions);
+            document.removeEventListener("touchmove", preventScroll, scrollPreventOptions);
+        }
+    }
+
     function setFallbackFullscreen(enabled) {
         fallbackFullscreenActive = enabled;
         activityCard.classList.toggle("is-fullscreen", enabled);
         document.body.classList.toggle("activity-fullscreen", enabled);
+        updateScrollPrevention(enabled);
     }
 
     function syncFullscreenState() {
@@ -1213,8 +1236,10 @@ document.addEventListener("DOMContentLoaded", () => {
             document.body.classList.add("activity-fullscreen");
             activityCard.classList.remove("is-fullscreen");
             fallbackFullscreenActive = false;
+            updateScrollPrevention(true);
         } else if (!fallbackFullscreenActive) {
             document.body.classList.remove("activity-fullscreen");
+            updateScrollPrevention(false);
         }
     }
 
@@ -1252,6 +1277,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (exitResult && exitResult.catch) {
                     exitResult.catch(() => {});
                 }
+                updateScrollPrevention(false);
                 return;
             }
         }
