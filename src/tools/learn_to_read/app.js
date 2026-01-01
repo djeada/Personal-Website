@@ -17,6 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const achievementsBadges = document.querySelectorAll(".achievement-badge");
     const streakIndicator = document.getElementById("streak-indicator");
     const streakText = document.getElementById("streak-text");
+    const reactionFace = document.getElementById("reaction-face");
 
     // Stats elements
     const starsCount = document.getElementById("stars-count");
@@ -82,10 +83,12 @@ document.addEventListener("DOMContentLoaded", () => {
             "phase.sounds": "Letters",
             "phase.words": "Words",
             "phase.stories": "Stories",
+            "phase.hint": "Tap a mode to switch.",
             "stats.stars": "Stars",
             "stats.sounds": "Letters",
             "stats.words": "Words",
             "stats.stories": "Stories",
+            "summary.title": "Progress Summary",
             "loading": "Loading activities...",
             "nav.back": "Back",
             "nav.next": "Next",
@@ -131,6 +134,8 @@ document.addEventListener("DOMContentLoaded", () => {
             "toast.welcome": "Welcome to Phonics Adventure! 🎈",
             "toast.achievement": "🏆 Achievement Unlocked: {name}!",
             "streak.day": "Day {count} Streak! 🔥",
+            "fullscreen.enter": "Fullscreen",
+            "fullscreen.exit": "Exit",
             "achievement.firstLetter.label": "First Letter",
             "achievement.firstLetter.title": "First Letter Mastered",
             "achievement.letterMaster.label": "Letter Master",
@@ -148,10 +153,12 @@ document.addEventListener("DOMContentLoaded", () => {
             "phase.sounds": "Buchstaben",
             "phase.words": "Wörter",
             "phase.stories": "Geschichten",
+            "phase.hint": "Tippe auf einen Modus, um zu wechseln.",
             "stats.stars": "Sterne",
             "stats.sounds": "Buchstaben",
             "stats.words": "Wörter",
             "stats.stories": "Geschichten",
+            "summary.title": "Fortschritt",
             "loading": "Aktivitäten werden geladen...",
             "nav.back": "Zurück",
             "nav.next": "Weiter",
@@ -197,6 +204,8 @@ document.addEventListener("DOMContentLoaded", () => {
             "toast.welcome": "Willkommen im Lese-Abenteuer! 🎈",
             "toast.achievement": "🏆 Erfolg freigeschaltet: {name}!",
             "streak.day": "Tag {count} in Folge! 🔥",
+            "fullscreen.enter": "Vollbild",
+            "fullscreen.exit": "Beenden",
             "achievement.firstLetter.label": "Erster Buchstabe",
             "achievement.firstLetter.title": "Ersten Buchstaben gemeistert",
             "achievement.letterMaster.label": "Buchstaben-Meister",
@@ -672,176 +681,215 @@ document.addEventListener("DOMContentLoaded", () => {
     let characterState = {
         mouthOpen: false,
         eyesBlink: false,
-        emotion: "happy" // happy, excited, thinking
+        emotion: "happy"
     };
 
-    function drawCharacter() {
+    let animationFrameId = null;
+    let nextBlinkAt = 0;
+    let blinkUntil = 0;
+
+    function scheduleNextBlink(now) {
+        nextBlinkAt = now + 2000 + Math.random() * 3500;
+    }
+
+    function drawCharacter(time = 0) {
         ctx.clearRect(0, 0, 200, 200);
 
-        // Body gradient fill
-        const gradient = ctx.createRadialGradient(80, 80, 20, 100, 100, 80);
-        gradient.addColorStop(0, "#FFE66D");
-        gradient.addColorStop(0.5, "#FFD93D");
-        gradient.addColorStop(1, "#F5B700");
-        ctx.fillStyle = gradient;
+        const t = time / 1000;
+        const bob = Math.sin(t * 2.2) * 4;
+        const sway = Math.sin(t * 1.4) * 2;
+        const breathe = 1 + Math.sin(t * 1.6) * 0.015;
+
+        // Soft ground shadow
+        ctx.save();
+        ctx.fillStyle = "rgba(15, 23, 42, 0.12)";
         ctx.beginPath();
-        ctx.arc(100, 100, 80, 0, Math.PI * 2);
+        ctx.ellipse(100, 178, 60 - bob * 1.4, 14 - bob * 0.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.save();
+        ctx.translate(100, 102 + bob);
+        ctx.scale(breathe, breathe);
+
+        // Glow halo
+        const halo = ctx.createRadialGradient(0, -10, 40, 0, -10, 110);
+        halo.addColorStop(0, "rgba(250, 204, 21, 0.35)");
+        halo.addColorStop(1, "rgba(250, 204, 21, 0)");
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(0, -10, 110, 0, Math.PI * 2);
         ctx.fill();
 
-        // Body outline with glow effect
-        ctx.strokeStyle = "#E8A800";
-        ctx.lineWidth = 4;
+        // Body gradient
+        const bodyGradient = ctx.createRadialGradient(-20, -30, 10, 0, 0, 85);
+        bodyGradient.addColorStop(0, "#FFF2A6");
+        bodyGradient.addColorStop(0.55, "#FFD54A");
+        bodyGradient.addColorStop(1, "#F59E0B");
+        ctx.fillStyle = bodyGradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, 74, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = "#E88B0C";
         ctx.stroke();
 
-        // Sparkle decorations
-        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-        ctx.font = "16px Arial";
-        ctx.fillText("✨", 150, 40);
-        ctx.fillText("⭐", 30, 50);
+        // Belly patch
+        const bellyGradient = ctx.createRadialGradient(-10, 8, 8, 0, 15, 52);
+        bellyGradient.addColorStop(0, "#FFF6C2");
+        bellyGradient.addColorStop(1, "#FDE68A");
+        ctx.fillStyle = bellyGradient;
+        ctx.beginPath();
+        ctx.ellipse(0, 18, 38, 30, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Arms
+        ctx.fillStyle = "#FDBA4D";
+        ctx.beginPath();
+        ctx.ellipse(-68, 6 + sway, 16, 20, -0.4, 0, Math.PI * 2);
+        ctx.ellipse(68, 6 - sway, 16, 20, 0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Feet
+        ctx.fillStyle = "#F59E0B";
+        ctx.beginPath();
+        ctx.ellipse(-28, 74, 18, 10, 0.2, 0, Math.PI * 2);
+        ctx.ellipse(28, 74, 18, 10, -0.2, 0, Math.PI * 2);
+        ctx.fill();
 
         // Eyes
-        const eyeY = characterState.eyesBlink ? 75 : 70;
-        const eyeHeight = characterState.eyesBlink ? 3 : 22;
+        const eyeYOffset = characterState.eyesBlink ? 0 : -2;
+        const eyeOpenHeight = characterState.eyesBlink ? 4 : 24;
+        const pupilOffsetX = Math.sin(t * 1.7) * 2;
+        const pupilOffsetY = Math.cos(t * 1.3) * 1.5;
 
-        // Left eye
-        ctx.fillStyle = "white";
-        ctx.beginPath();
-        ctx.ellipse(70, eyeY, 17, eyeHeight, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = "#333";
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        function drawEye(x) {
+            ctx.fillStyle = "#FFFFFF";
+            ctx.beginPath();
+            ctx.ellipse(x, -22 + eyeYOffset, 18, eyeOpenHeight, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#1F2937";
+            ctx.lineWidth = 2;
+            ctx.stroke();
 
-        // Left pupil with gradient
-        if (!characterState.eyesBlink) {
-            const pupilGradient = ctx.createRadialGradient(70, 75, 0, 70, 75, 10);
-            pupilGradient.addColorStop(0, "#6366f1");
-            pupilGradient.addColorStop(1, "#1e1b4b");
-            ctx.fillStyle = pupilGradient;
-            ctx.beginPath();
-            ctx.arc(70, 75, 9, 0, Math.PI * 2);
-            ctx.fill();
+            if (!characterState.eyesBlink) {
+                const iris = ctx.createRadialGradient(x, -20, 0, x, -20, 12);
+                iris.addColorStop(0, "#60A5FA");
+                iris.addColorStop(1, "#1E3A8A");
+                ctx.fillStyle = iris;
+                ctx.beginPath();
+                ctx.arc(x + pupilOffsetX, -20 + pupilOffsetY, 8, 0, Math.PI * 2);
+                ctx.fill();
 
-            // Eye shine
-            ctx.fillStyle = "white";
-            ctx.beginPath();
-            ctx.arc(74, 71, 4, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(67, 79, 2, 0, Math.PI * 2);
-            ctx.fill();
+                ctx.fillStyle = "white";
+                ctx.beginPath();
+                ctx.arc(x + 3, -25, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(x - 5, -16, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
-        // Right eye
-        ctx.fillStyle = "white";
-        ctx.beginPath();
-        ctx.ellipse(130, eyeY, 17, eyeHeight, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = "#333";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Right pupil with gradient
-        if (!characterState.eyesBlink) {
-            const pupilGradient2 = ctx.createRadialGradient(130, 75, 0, 130, 75, 10);
-            pupilGradient2.addColorStop(0, "#6366f1");
-            pupilGradient2.addColorStop(1, "#1e1b4b");
-            ctx.fillStyle = pupilGradient2;
-            ctx.beginPath();
-            ctx.arc(130, 75, 9, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Eye shine
-            ctx.fillStyle = "white";
-            ctx.beginPath();
-            ctx.arc(134, 71, 4, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(127, 79, 2, 0, Math.PI * 2);
-            ctx.fill();
-        }
+        drawEye(-26);
+        drawEye(26);
 
         // Eyebrows
-        ctx.strokeStyle = "#8B7355";
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#7C5A2E";
+        ctx.lineWidth = 4;
         ctx.lineCap = "round";
         ctx.beginPath();
-        ctx.moveTo(55, 52);
-        ctx.quadraticCurveTo(70, 48, 85, 52);
+        ctx.moveTo(-42, -46);
+        ctx.quadraticCurveTo(-26, -52, -10, -46);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(115, 52);
-        ctx.quadraticCurveTo(130, 48, 145, 52);
+        ctx.moveTo(10, -46);
+        ctx.quadraticCurveTo(26, -52, 42, -46);
         ctx.stroke();
 
         // Mouth
         if (characterState.mouthOpen) {
-            // Open mouth with gradient
-            const mouthGradient = ctx.createRadialGradient(100, 130, 0, 100, 130, 20);
-            mouthGradient.addColorStop(0, "#FF8888");
-            mouthGradient.addColorStop(1, "#E85555");
+            const mouthGradient = ctx.createRadialGradient(0, 36, 0, 0, 36, 26);
+            mouthGradient.addColorStop(0, "#FF9AA2");
+            mouthGradient.addColorStop(1, "#E85D75");
             ctx.fillStyle = mouthGradient;
             ctx.beginPath();
-            ctx.ellipse(100, 130, 26, 20, 0, 0, Math.PI * 2);
+            ctx.ellipse(0, 36, 24, 18, 0, 0, Math.PI * 2);
             ctx.fill();
-            ctx.strokeStyle = "#C84040";
+            ctx.strokeStyle = "#C2415C";
             ctx.lineWidth = 2;
             ctx.stroke();
-            
-            // Tongue
-            ctx.fillStyle = "#FF9999";
+
+            ctx.fillStyle = "#FFB4BD";
             ctx.beginPath();
-            ctx.ellipse(100, 138, 12, 8, 0, 0, Math.PI);
+            ctx.ellipse(0, 42, 11, 7, 0, 0, Math.PI);
             ctx.fill();
         } else {
-            // Closed smile
-            ctx.strokeStyle = "#E85555";
+            ctx.strokeStyle = "#E85D75";
             ctx.lineWidth = 5;
             ctx.lineCap = "round";
             ctx.beginPath();
-            ctx.arc(100, 128, 22, 0.1 * Math.PI, 0.9 * Math.PI);
+            ctx.arc(0, 34, 20, 0.1 * Math.PI, 0.9 * Math.PI);
             ctx.stroke();
         }
 
-        // Cheeks (blush) with gradient
-        const blushGradient1 = ctx.createRadialGradient(42, 108, 0, 42, 108, 18);
-        blushGradient1.addColorStop(0, "rgba(255, 150, 180, 0.6)");
-        blushGradient1.addColorStop(1, "rgba(255, 150, 180, 0)");
-        ctx.fillStyle = blushGradient1;
+        // Cheeks
+        const blush1 = ctx.createRadialGradient(-50, 16, 0, -50, 16, 20);
+        blush1.addColorStop(0, "rgba(251, 113, 133, 0.6)");
+        blush1.addColorStop(1, "rgba(251, 113, 133, 0)");
+        ctx.fillStyle = blush1;
         ctx.beginPath();
-        ctx.arc(42, 108, 18, 0, Math.PI * 2);
+        ctx.arc(-50, 16, 20, 0, Math.PI * 2);
         ctx.fill();
 
-        const blushGradient2 = ctx.createRadialGradient(158, 108, 0, 158, 108, 18);
-        blushGradient2.addColorStop(0, "rgba(255, 150, 180, 0.6)");
-        blushGradient2.addColorStop(1, "rgba(255, 150, 180, 0)");
-        ctx.fillStyle = blushGradient2;
+        const blush2 = ctx.createRadialGradient(50, 16, 0, 50, 16, 20);
+        blush2.addColorStop(0, "rgba(251, 113, 133, 0.6)");
+        blush2.addColorStop(1, "rgba(251, 113, 133, 0)");
+        ctx.fillStyle = blush2;
         ctx.beginPath();
-        ctx.arc(158, 108, 18, 0, Math.PI * 2);
+        ctx.arc(50, 16, 20, 0, Math.PI * 2);
         ctx.fill();
+
+        // Tiny sparkles
+        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+        ctx.beginPath();
+        ctx.arc(-70, -60 + Math.sin(t * 3) * 2, 4, 0, Math.PI * 2);
+        ctx.arc(70, -52 + Math.cos(t * 2.7) * 2, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
     }
 
     function animateCharacterMouth(open) {
         characterState.mouthOpen = open;
-        drawCharacter();
     }
 
-    function blinkEyes() {
-        characterState.eyesBlink = true;
-        drawCharacter();
-        setTimeout(() => {
-            characterState.eyesBlink = false;
-            drawCharacter();
-        }, 150);
+    function startCharacterAnimation() {
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+        }
+
+        const loop = (time) => {
+            if (time >= nextBlinkAt) {
+                characterState.eyesBlink = true;
+                blinkUntil = time + 160;
+                scheduleNextBlink(time);
+            }
+            if (characterState.eyesBlink && time >= blinkUntil) {
+                characterState.eyesBlink = false;
+            }
+            drawCharacter(time);
+            animationFrameId = requestAnimationFrame(loop);
+        };
+
+        scheduleNextBlink(performance.now());
+        animationFrameId = requestAnimationFrame(loop);
     }
 
-    // Start blinking animation and store interval ID for cleanup
-    let blinkIntervalId = setInterval(blinkEyes, 4000);
-
-    // Cleanup on page unload
-    window.addEventListener('beforeunload', () => {
-        if (blinkIntervalId) {
-            clearInterval(blinkIntervalId);
+    window.addEventListener("beforeunload", () => {
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
         }
     });
 
@@ -851,6 +899,25 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => {
             characterSpeech.classList.remove("visible");
         }, 4000);
+    }
+
+    let reactionTimeoutId = null;
+    const reactionEmojis = ["😝", "😜", "🙃", "😅", "😬"];
+
+    function showReaction() {
+        if (!reactionFace) return;
+        const emoji = reactionEmojis[Math.floor(Math.random() * reactionEmojis.length)];
+        const emojiNode = reactionFace.querySelector(".reaction-emoji");
+        if (emojiNode) {
+            emojiNode.textContent = emoji;
+        }
+        reactionFace.classList.add("show");
+        if (reactionTimeoutId) {
+            clearTimeout(reactionTimeoutId);
+        }
+        reactionTimeoutId = setTimeout(() => {
+            reactionFace.classList.remove("show");
+        }, 900);
     }
 
     // Toast notifications
@@ -881,8 +948,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // Celebration effect with confetti
     function celebrate(intensity = 1) {
         const celebration = document.createElement("div");
-        celebration.className = "celebration";
-        document.body.appendChild(celebration);
+        const useCardOverlay = isFullscreenActive();
+        celebration.className = useCardOverlay ? "celebration in-card" : "celebration";
+        (useCardOverlay ? activityCard : document.body).appendChild(celebration);
 
         const emojis = ["⭐", "🌟", "✨", "🎉", "🎊", "💫", "🌈", "💜", "💖"];
         const count = Math.floor(25 * intensity);
@@ -1193,6 +1261,56 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         updateNavigationButtons();
+        scheduleSlotSizing();
+    }
+
+    function enableActivityGuidance() {
+        activityArea.classList.add("needs-guidance");
+        const clearGuidance = () => {
+            activityArea.classList.remove("needs-guidance");
+        };
+        activityArea.addEventListener("pointerdown", clearGuidance, { once: true });
+        activityArea.addEventListener("keydown", clearGuidance, { once: true });
+    }
+
+    let slotSizingFrame = null;
+
+    function scheduleSlotSizing() {
+        if (slotSizingFrame) {
+            cancelAnimationFrame(slotSizingFrame);
+        }
+        slotSizingFrame = requestAnimationFrame(() => {
+            slotSizingFrame = null;
+            updateSlotSizing();
+        });
+    }
+
+    function updateSlotSizing() {
+        const wordSlots = document.querySelector(".word-slots");
+        if (wordSlots) {
+            const slots = wordSlots.querySelectorAll(".word-slot");
+            if (slots.length) {
+                const gap = parseFloat(getComputedStyle(wordSlots).gap) || 0;
+                const parent = wordSlots.parentElement || wordSlots;
+                const parentWidth = parent.getBoundingClientRect().width;
+                const size = Math.floor((parentWidth - gap * (slots.length - 1)) / slots.length);
+                const clamped = Math.max(18, Math.min(size, 60));
+                wordSlots.style.setProperty("--slot-size", `${clamped}px`);
+            }
+        }
+
+        const storyBlank = document.querySelector(".story-blank");
+        if (storyBlank) {
+            const slots = storyBlank.querySelectorAll(".story-letter-slot");
+            if (slots.length) {
+                const gap = parseFloat(getComputedStyle(storyBlank).gap) || 0;
+                const parent = storyBlank.parentElement || storyBlank;
+                const parentWidth = parent.getBoundingClientRect().width;
+                const size = Math.floor((parentWidth - gap * (slots.length - 1)) / slots.length);
+                const clamped = Math.max(16, Math.min(size, 44));
+                storyBlank.style.setProperty("--slot-size", `${clamped}px`);
+            }
+        }
     }
 
     let fallbackFullscreenActive = false;
@@ -1223,24 +1341,24 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function setFullscreenUi(active) {
+        activityCard.classList.toggle("is-fullscreen", active);
+        document.body.classList.toggle("activity-fullscreen", active);
+        updateScrollPrevention(active);
+    }
+
     function setFallbackFullscreen(enabled) {
         fallbackFullscreenActive = enabled;
-        activityCard.classList.toggle("is-fullscreen", enabled);
-        document.body.classList.toggle("activity-fullscreen", enabled);
-        updateScrollPrevention(enabled);
+        setFullscreenUi(enabled);
     }
 
     function syncFullscreenState() {
         const nativeFullscreen = Boolean(getFullscreenElement());
         if (nativeFullscreen) {
-            document.body.classList.add("activity-fullscreen");
-            activityCard.classList.remove("is-fullscreen");
             fallbackFullscreenActive = false;
-            updateScrollPrevention(true);
-        } else if (!fallbackFullscreenActive) {
-            document.body.classList.remove("activity-fullscreen");
-            updateScrollPrevention(false);
         }
+        setFullscreenUi(nativeFullscreen || fallbackFullscreenActive);
+        scheduleSlotSizing();
     }
 
     function requestActivityFullscreen() {
@@ -1399,6 +1517,8 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
 
         activityArea.innerHTML = html;
+        enableActivityGuidance();
+        scheduleSlotSizing();
 
         const shapeButtons = activityArea.querySelectorAll(".shape-choice");
         const letterCard = document.getElementById("target-letter-card");
@@ -1413,6 +1533,7 @@ document.addEventListener("DOMContentLoaded", () => {
         let hoverTarget = null;
         let suppressShapeClick = false;
         const dragThreshold = 8;
+        const directionThreshold = Math.PI / 4;
 
         shapeButtons.forEach(btn => {
             btn.addEventListener("click", (event) => {
@@ -1463,6 +1584,38 @@ document.addEventListener("DOMContentLoaded", () => {
                 x: rect.left - stageRect.left + rect.width / 2,
                 y: rect.top - stageRect.top + rect.height / 2
             };
+        }
+
+        function getAngle(from, to) {
+            return Math.atan2(to.y - from.y, to.x - from.x);
+        }
+
+        function angleDiff(a, b) {
+            const diff = Math.abs(a - b);
+            return Math.min(diff, Math.PI * 2 - diff);
+        }
+
+        function findDirectionalTarget(from, to) {
+            const dragDistance = Math.hypot(to.x - from.x, to.y - from.y);
+            if (dragDistance < dragThreshold) return null;
+            const dragAngle = getAngle(from, to);
+            let best = null;
+            let bestDiff = Infinity;
+
+            shapeButtons.forEach((btn) => {
+                const center = getButtonCenter(btn);
+                const targetAngle = getAngle(from, center);
+                const diff = angleDiff(dragAngle, targetAngle);
+                if (diff < bestDiff) {
+                    bestDiff = diff;
+                    best = btn;
+                }
+            });
+
+            if (best && bestDiff <= directionThreshold) {
+                return best;
+            }
+            return null;
         }
 
         function updateHoverTarget(targetButton) {
@@ -1524,10 +1677,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     state.currentActivity = (targetIndex + 1) % LETTERS.length;
                     saveProgress();
                     renderSoundsActivity();
-                }, 900);
+                }, 600);
             } else {
                 targetButton.classList.add("wrong");
                 showToast(t("sounds.tryAnotherFace"), "info");
+                showReaction();
                 setTimeout(() => targetButton.classList.remove("wrong"), 350);
             }
         }
@@ -1569,6 +1723,13 @@ document.addEventListener("DOMContentLoaded", () => {
             clearHoverStates();
 
             if (!targetButton) {
+                const from = getLetterCenter();
+                const to = getStagePoint(event);
+                const directionalTarget = findDirectionalTarget(from, to);
+                if (directionalTarget) {
+                    handleSoundMatch(directionalTarget);
+                    return;
+                }
                 showToast(t("sounds.dragToFace"), "info");
                 return;
             }
@@ -1641,6 +1802,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 letterCard.classList.remove("hovered");
 
                 if (!overLetter) {
+                    const from = getButtonCenter(btn);
+                    const to = getStagePoint(event);
+                    const letterCenter = getLetterCenter();
+                    const dragAngle = getAngle(from, to);
+                    const targetAngle = getAngle(from, letterCenter);
+                    const diff = angleDiff(dragAngle, targetAngle);
+                    if (Math.hypot(to.x - from.x, to.y - from.y) >= dragThreshold && diff <= directionThreshold) {
+                        handleSoundMatch(btn);
+                        return;
+                    }
                     showToast(t("sounds.dragToLetter"), "info");
                     return;
                 }
@@ -1690,11 +1861,11 @@ document.addEventListener("DOMContentLoaded", () => {
                         <button class="letter-tile" draggable="false" data-letter="${letter}" data-tile="${index}">${letter}</button>
                     `).join("")}
                 </div>
-                <div class="drag-ghost" id="drag-ghost"></div>
             </div>
         `;
 
         activityArea.innerHTML = html;
+        enableActivityGuidance();
 
         let wordAttempted = false;
         let wordCompleted = false;
@@ -1733,6 +1904,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }, 800);
             } else {
                 showToast(t("words.tryAgain"), "info");
+                showReaction();
             }
         }
 
@@ -1742,7 +1914,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const tiles = Array.from(document.querySelectorAll(".letter-tile"));
         const slots = Array.from(document.querySelectorAll(".drag-slot"));
-        const dragGhost = document.getElementById("drag-ghost");
         let activeTile = null;
         let activeLetter = "";
 
@@ -1755,14 +1926,19 @@ document.addEventListener("DOMContentLoaded", () => {
             if (activeTile) {
                 activeTile.classList.add("picked");
                 activityArea.classList.add("letter-picked");
-                dragGhost.textContent = activeLetter;
-                dragGhost.classList.add("visible");
+                highlightSlots(true);
             } else {
                 activityArea.classList.remove("letter-picked");
-                dragGhost.classList.remove("visible");
+                highlightSlots(false);
             }
             slots.forEach((slot) => {
                 slot.dataset.preview = "";
+            });
+        }
+
+        function highlightSlots(active) {
+            slots.forEach((slot) => {
+                slot.classList.toggle("ready", active && !slot.dataset.letter);
             });
         }
 
@@ -1852,11 +2028,11 @@ document.addEventListener("DOMContentLoaded", () => {
         slots.forEach(slot => {
             slot.addEventListener("mouseenter", () => {
                 if (!activeLetter || slot.dataset.letter) return;
-                slot.dataset.preview = activeLetter;
+                slot.classList.add("hover-fill");
             });
 
             slot.addEventListener("mouseleave", () => {
-                slot.dataset.preview = "";
+                slot.classList.remove("hover-fill");
             });
 
             slot.addEventListener("click", () => {
@@ -1876,13 +2052,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     slot.classList.remove("filled");
                 }
             });
-        });
-
-        activityArea.addEventListener("mousemove", (event) => {
-            if (!activeLetter) return;
-            const x = event.clientX + 12;
-            const y = event.clientY + 12;
-            dragGhost.style.transform = `translate(${x}px, ${y}px)`;
         });
 
         activityArea.addEventListener("pointerup", (event) => {
@@ -1941,11 +2110,12 @@ document.addEventListener("DOMContentLoaded", () => {
                             <button class="letter-tile" draggable="false" data-letter="${letter}" data-tile="${index}">${letter}</button>
                         `).join("")}
                     </div>
-                    <div class="drag-ghost" id="story-drag-ghost"></div>
                 </div>
             `;
 
             activityArea.innerHTML = html;
+            enableActivityGuidance();
+            scheduleSlotSizing();
 
             const blank = document.getElementById("story-blank");
             blank.dataset.letters = "";
@@ -1964,7 +2134,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const slots = Array.from(document.querySelectorAll(".story-letter-slot"));
 
             const tiles = Array.from(document.querySelectorAll(".letter-tile"));
-            const dragGhost = document.getElementById("story-drag-ghost");
             let activeTile = null;
             let activeLetter = "";
 
@@ -1977,14 +2146,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (activeTile) {
                     activeTile.classList.add("picked");
                     activityArea.classList.add("letter-picked");
-                    dragGhost.textContent = activeLetter;
-                    dragGhost.classList.add("visible");
+                    highlightStorySlots(true);
                 } else {
                     activityArea.classList.remove("letter-picked");
-                    dragGhost.classList.remove("visible");
+                    highlightStorySlots(false);
                 }
                 slots.forEach((slot) => {
                     slot.dataset.preview = "";
+                });
+            }
+
+            function highlightStorySlots(active) {
+                slots.forEach((slot) => {
+                    slot.classList.toggle("ready", active && !slot.dataset.letter);
                 });
             }
 
@@ -2016,6 +2190,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     }, 400);
                 } else {
                     showToast(t("words.tryAgain"), "info");
+                    showReaction();
                 }
             }
 
@@ -2115,11 +2290,11 @@ document.addEventListener("DOMContentLoaded", () => {
             slots.forEach(slot => {
                 slot.addEventListener("mouseenter", () => {
                     if (!activeLetter || slot.dataset.letter) return;
-                    slot.dataset.preview = activeLetter;
+                    slot.classList.add("hover-fill");
                 });
 
                 slot.addEventListener("mouseleave", () => {
-                    slot.dataset.preview = "";
+                    slot.classList.remove("hover-fill");
                 });
 
                 slot.addEventListener("click", () => {
@@ -2139,13 +2314,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         slot.classList.remove("filled");
                     }
                 });
-            });
-
-            activityArea.addEventListener("mousemove", (event) => {
-                if (!activeLetter) return;
-                const x = event.clientX + 12;
-                const y = event.clientY + 12;
-                dragGhost.style.transform = `translate(${x}px, ${y}px)`;
             });
 
             activityArea.addEventListener("pointerup", (event) => {
@@ -2221,6 +2389,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.addEventListener("fullscreenchange", syncFullscreenState);
     document.addEventListener("webkitfullscreenchange", syncFullscreenState);
+    window.addEventListener("resize", scheduleSlotSizing);
 
     // Phase item clicks
     document.querySelectorAll(".phase-item").forEach(item => {
@@ -2234,6 +2403,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 requestActivityFullscreen();
             } else {
                 showToast(t("toast.unlockMore"), "info");
+            }
+        });
+
+        item.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                item.click();
             }
         });
     });
@@ -2252,7 +2428,7 @@ document.addEventListener("DOMContentLoaded", () => {
         applyTranslations();
         updateAchievementLabels();
         updateLanguageButtons();
-        drawCharacter();
+        startCharacterAnimation();
         loadActivity();
 
         // Welcome message with slight delay for better UX
