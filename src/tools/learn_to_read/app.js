@@ -22,6 +22,16 @@ document.addEventListener("DOMContentLoaded", () => {
     // Character canvas context
     const ctx = characterCanvas.getContext("2d");
 
+    // Fisher-Yates shuffle algorithm for unbiased randomization
+    function shuffleArray(array) {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    }
+
     // Learning phases
     const PHASES = {
         SOUNDS: "sounds",
@@ -114,12 +124,18 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    // Audio system using Web Speech API
+    // Audio system using Web Speech API with feature detection
     const AudioSystem = {
-        synth: window.speechSynthesis,
+        synth: typeof window !== 'undefined' && window.speechSynthesis ? window.speechSynthesis : null,
         speaking: false,
+        supported: typeof window !== 'undefined' && 'speechSynthesis' in window,
 
         speak(text, rate = 0.8, pitch = 1.2) {
+            if (!this.supported || !this.synth) {
+                console.warn('Web Speech API not supported');
+                return;
+            }
+
             if (this.synth.speaking) {
                 this.synth.cancel();
             }
@@ -129,11 +145,15 @@ document.addEventListener("DOMContentLoaded", () => {
             utterance.pitch = pitch;
             utterance.volume = 1;
 
-            // Try to use a child-friendly voice
+            // Try to use a child-friendly voice with robust detection
             const voices = this.synth.getVoices();
             const preferredVoice = voices.find(v =>
-                v.lang.startsWith("en") && (v.name.includes("Female") || v.name.includes("Samantha"))
-            ) || voices.find(v => v.lang.startsWith("en"));
+                v.lang.startsWith("en") && v.default
+            ) || voices.find(v =>
+                v.lang.startsWith("en-US")
+            ) || voices.find(v =>
+                v.lang.startsWith("en")
+            );
 
             if (preferredVoice) {
                 utterance.voice = preferredVoice;
@@ -296,8 +316,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 150);
     }
 
-    // Start blinking animation
-    setInterval(blinkEyes, 3000 + Math.random() * 2000);
+    // Start blinking animation and store interval ID for cleanup
+    let blinkIntervalId = setInterval(blinkEyes, 4000);
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+        if (blinkIntervalId) {
+            clearInterval(blinkIntervalId);
+        }
+    });
 
     function showCharacterSpeech(text) {
         characterSpeech.textContent = text;
@@ -353,25 +380,34 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Progress management
     function loadProgress() {
-        const saved = localStorage.getItem("learnToReadProgress");
-        if (saved) {
-            try {
+        try {
+            const saved = localStorage.getItem("learnToReadProgress");
+            if (saved) {
                 state = JSON.parse(saved);
-            } catch (e) {
-                console.error("Error loading progress:", e);
             }
+        } catch (e) {
+            console.error("Error loading progress:", e);
         }
         updateUI();
     }
 
     function saveProgress() {
-        localStorage.setItem("learnToReadProgress", JSON.stringify(state));
+        try {
+            localStorage.setItem("learnToReadProgress", JSON.stringify(state));
+        } catch (e) {
+            console.error("Error saving progress:", e);
+            showToast("Could not save progress", "warning");
+        }
         updateUI();
     }
 
     function resetProgress() {
         if (confirm("Are you sure you want to reset all progress?")) {
-            localStorage.removeItem("learnToReadProgress");
+            try {
+                localStorage.removeItem("learnToReadProgress");
+            } catch (e) {
+                console.error("Error clearing progress:", e);
+            }
             state = {
                 currentPhase: PHASES.SOUNDS,
                 currentActivity: 0,
@@ -618,7 +654,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 choices.push(extra);
             }
         }
-        choices.sort(() => Math.random() - 0.5);
+        const shuffledChoices = shuffleArray(choices);
 
         let html = `
             <div class="word-builder">
@@ -632,7 +668,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     `).join("")}
                 </div>
                 <div class="letter-choices" id="letter-choices">
-                    ${choices.map(letter => `
+                    ${shuffledChoices.map(letter => `
                         <button class="choice-btn" data-letter="${letter}">${letter.toUpperCase()}</button>
                     `).join("")}
                 </div>
