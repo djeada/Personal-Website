@@ -590,8 +590,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 item.classList.add("completed");
             } else if (index === currentIndex) {
                 item.classList.add("active");
-            } else {
-                item.classList.add("locked");
             }
         });
 
