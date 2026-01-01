@@ -541,6 +541,58 @@ document.addEventListener("DOMContentLoaded", () => {
             .trim();
     }
 
+    function clampNumber(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+    }
+
+    function getPreferredVoice(utteranceLang) {
+        if (!AudioSystem.synth) return null;
+        const voices = AudioSystem.synth.getVoices();
+        if (!voices.length) return null;
+
+        const langPrefix = utteranceLang.split("-")[0];
+        const preferredNames = {
+            de: [
+                "Google Deutsch",
+                "Google Deutsch Female",
+                "Microsoft Katja",
+                "Microsoft Hedda",
+                "Anna",
+                "Helena",
+                "Yannick"
+            ],
+            en: [
+                "Google US English",
+                "Google UK English Female",
+                "Microsoft Aria",
+                "Microsoft Jenny",
+                "Samantha",
+                "Alex"
+            ]
+        };
+
+        const preferredList = preferredNames[langPrefix] || [];
+        const byName = preferredList.map((name) => (
+            voices.find((voice) => voice.name === name || voice.name.includes(name))
+        )).find(Boolean);
+        if (byName) return byName;
+
+        return voices.find((voice) => voice.lang.startsWith(langPrefix) && voice.default)
+            || voices.find((voice) => voice.lang.startsWith(langPrefix))
+            || null;
+    }
+
+    function adjustProsody(rate, pitch, utteranceLang) {
+        const langPrefix = utteranceLang.split("-")[0];
+        if (langPrefix === "de") {
+            return {
+                rate: clampNumber(rate * 0.95, 0.6, 1.05),
+                pitch: clampNumber(pitch * 0.9, 0.8, 1.15)
+            };
+        }
+        return { rate, pitch };
+    }
+
     // Audio system using Web Speech API with feature detection
     const AudioSystem = {
         synth: typeof window !== 'undefined' && window.speechSynthesis ? window.speechSynthesis : null,
@@ -562,25 +614,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            const utterance = new SpeechSynthesisUtterance(utteranceText);
-            utterance.rate = rate;
-            utterance.pitch = pitch;
-            utterance.volume = 1;
             const utteranceLang = langOverride || (state.language === "de" ? "de-DE" : "en-US");
+            const tuned = adjustProsody(rate, pitch, utteranceLang);
+            const utterance = new SpeechSynthesisUtterance(utteranceText);
+            utterance.rate = tuned.rate;
+            utterance.pitch = tuned.pitch;
+            utterance.volume = 1;
             utterance.lang = utteranceLang;
 
             // Try to use a child-friendly voice with robust detection
-            const voices = this.synth.getVoices();
-            const desiredLang = utteranceLang.split("-")[0];
-            const preferredVoice = voices.find(v =>
-                v.lang.startsWith(desiredLang) && v.default
-            ) || voices.find(v =>
-                v.lang.startsWith(desiredLang)
-            );
-
-            if (preferredVoice) {
-                utterance.voice = preferredVoice;
-            }
+            const preferredVoice = getPreferredVoice(utteranceLang);
+            if (preferredVoice) utterance.voice = preferredVoice;
 
             utterance.onstart = () => {
                 this.speaking = true;
