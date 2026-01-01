@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const prevBtn = document.getElementById("prev-btn");
     const nextBtn = document.getElementById("next-btn");
     const resetBtn = document.getElementById("reset-btn");
+    const langButtons = document.querySelectorAll(".lang-btn");
 
     // Stats elements
     const starsCount = document.getElementById("stars-count");
@@ -38,6 +39,152 @@ document.addEventListener("DOMContentLoaded", () => {
         BLENDS: "blends",
         WORDS: "words",
         SENTENCES: "sentences"
+    };
+
+    const TRANSLATIONS = {
+        en: {
+            "header.title": "Phonics Adventure",
+            "header.subtitle": "Learn to read through sounds, words, and stories! Tap letters to hear sounds, build words, and follow along with fun stories.",
+            "phase.sounds": "Sounds",
+            "phase.blends": "Blends",
+            "phase.words": "Words",
+            "phase.stories": "Stories",
+            "stats.stars": "Stars",
+            "stats.sounds": "Sounds",
+            "stats.words": "Words",
+            "stats.stories": "Stories",
+            "loading": "Loading activities...",
+            "nav.back": "Back",
+            "nav.next": "Next",
+            "help.title": "👨‍👩‍👧 Parent Info",
+            "help.currentPhaseLabel": "Current Phase:",
+            "help.progressLabel": "Progress:",
+            "help.phaseInfo": "Children progress through phases: Sounds → Blends → Words → Stories",
+            "help.masteryInfo": "Each phase must be mastered before moving on",
+            "help.autoSaveInfo": "Progress is saved automatically in this browser",
+            "help.audioHint": "Tap the 🔊 button to hear sounds and words",
+            "help.resetHint": "Use the Reset button below to start over",
+            "help.resetButton": "🔄 Reset Progress",
+            "activity.soundsTitle": "Letter Sounds",
+            "activity.blendsTitle": "Sound Blending",
+            "activity.wordsTitle": "Word Building",
+            "activity.storiesTitle": "Story Time",
+            "sounds.prompt": "Listen to each face, then connect the right sound!",
+            "sounds.instructions": "Tap each face to hear its sound, then drag from the letter to the correct face.",
+            "sounds.letterTitle": "Letter",
+            "sounds.dragToFace": "Drag to a face!",
+            "sounds.matchToast": "You matched \"{letter}\"!",
+            "sounds.matchAgain": "Nice! \"{letter}\" again.",
+            "sounds.tryAnotherFace": "Try another face!",
+            "blends.prompt": "Let's blend sounds to make: {word}",
+            "blends.speak": "Let's blend the sounds together!",
+            "blends.listenLabel": "Listen and blend!",
+            "blends.tapHint": "Tap each sound, then tap 🔊 to hear the whole word!",
+            "words.prompt": "Build the word: {word}",
+            "words.speak": "Can you build the word {word}?",
+            "words.buildLabel": "Build:",
+            "words.builtToast": "You built \"{word}\"!",
+            "words.tryAnotherLetter": "Try another letter!",
+            "stories.prompt": "Let's read a story together!",
+            "stories.speak": "Let's read a story together!",
+            "stories.readButton": "Read Story",
+            "stories.greatReading": "Great reading!",
+            "confirm.reset": "Are you sure you want to reset all progress?",
+            "toast.saveFail": "Could not save progress",
+            "toast.reset": "Progress reset!",
+            "toast.newPhase": "New phase unlocked!",
+            "toast.unlockSpeak": "Great job! You unlocked a new level!",
+            "toast.unlockMore": "Complete more activities to unlock!",
+            "toast.welcome": "Welcome to Phonics Adventure!"
+        },
+        de: {
+            "header.title": "Lese-Abenteuer",
+            "header.subtitle": "Lerne lesen mit Lauten, Wörtern und Geschichten! Tippe auf Buchstaben, höre die Laute, baue Wörter und lies lustige Geschichten.",
+            "phase.sounds": "Laute",
+            "phase.blends": "Mischen",
+            "phase.words": "Wörter",
+            "phase.stories": "Geschichten",
+            "stats.stars": "Sterne",
+            "stats.sounds": "Laute",
+            "stats.words": "Wörter",
+            "stats.stories": "Geschichten",
+            "loading": "Aktivitäten werden geladen...",
+            "nav.back": "Zurück",
+            "nav.next": "Weiter",
+            "help.title": "👨‍👩‍👧 Elterninfo",
+            "help.currentPhaseLabel": "Aktuelle Phase:",
+            "help.progressLabel": "Fortschritt:",
+            "help.phaseInfo": "Kinder durchlaufen Phasen: Laute → Mischen → Wörter → Geschichten",
+            "help.masteryInfo": "Jede Phase muss gemeistert werden, bevor es weitergeht",
+            "help.autoSaveInfo": "Fortschritt wird automatisch in diesem Browser gespeichert",
+            "help.audioHint": "Tippe auf 🔊, um Laute und Wörter zu hören",
+            "help.resetHint": "Nutze den Reset-Button unten, um neu zu starten",
+            "help.resetButton": "🔄 Fortschritt zurücksetzen",
+            "activity.soundsTitle": "Buchstabenlaute",
+            "activity.blendsTitle": "Laute mischen",
+            "activity.wordsTitle": "Wörter bauen",
+            "activity.storiesTitle": "Geschichtenzeit",
+            "sounds.prompt": "Höre dir jedes Gesicht an und verbinde den richtigen Laut!",
+            "sounds.instructions": "Tippe jedes Gesicht an, höre den Laut und ziehe den Buchstaben zum richtigen Gesicht.",
+            "sounds.letterTitle": "Buchstabe",
+            "sounds.dragToFace": "Ziehe zu einem Gesicht!",
+            "sounds.matchToast": "Du hast \"{letter}\" verbunden!",
+            "sounds.matchAgain": "Super! \"{letter}\" nochmal.",
+            "sounds.tryAnotherFace": "Versuch ein anderes Gesicht!",
+            "blends.prompt": "Lass uns Laute mischen für: {word}",
+            "blends.speak": "Lass uns die Laute zusammenmischen!",
+            "blends.listenLabel": "Hör zu und mische!",
+            "blends.tapHint": "Tippe jeden Laut an und dann 🔊, um das ganze Wort zu hören!",
+            "words.prompt": "Baue das Wort: {word}",
+            "words.speak": "Kannst du das Wort {word} bauen?",
+            "words.buildLabel": "Baue:",
+            "words.builtToast": "Du hast \"{word}\" gebaut!",
+            "words.tryAnotherLetter": "Versuch einen anderen Buchstaben!",
+            "stories.prompt": "Lass uns zusammen eine Geschichte lesen!",
+            "stories.speak": "Lass uns zusammen eine Geschichte lesen!",
+            "stories.readButton": "Geschichte vorlesen",
+            "stories.greatReading": "Super gelesen!",
+            "confirm.reset": "Möchtest du den gesamten Fortschritt wirklich zurücksetzen?",
+            "toast.saveFail": "Fortschritt konnte nicht gespeichert werden",
+            "toast.reset": "Fortschritt zurückgesetzt!",
+            "toast.newPhase": "Neue Phase freigeschaltet!",
+            "toast.unlockSpeak": "Super gemacht! Du hast ein neues Level freigeschaltet!",
+            "toast.unlockMore": "Mache mehr Aktivitäten, um freizuschalten!",
+            "toast.welcome": "Willkommen im Lese-Abenteuer!"
+        }
+    };
+
+    function t(key, vars = {}) {
+        const strings = TRANSLATIONS[state.language] || TRANSLATIONS.en;
+        const fallback = TRANSLATIONS.en[key] || key;
+        const template = strings[key] || fallback;
+        return template.replace(/\{(\w+)\}/g, (_, name) => vars[name] ?? "");
+    }
+
+    function applyTranslations() {
+        document.querySelectorAll("[data-i18n]").forEach((el) => {
+            const key = el.dataset.i18n;
+            el.textContent = t(key);
+        });
+    }
+
+    const ENCOURAGEMENTS = {
+        en: [
+            "Great job!",
+            "You did it!",
+            "Wonderful!",
+            "Amazing!",
+            "Keep going!",
+            "You're a star!"
+        ],
+        de: [
+            "Toll gemacht!",
+            "Du hast es geschafft!",
+            "Wunderbar!",
+            "Großartig!",
+            "Mach weiter so!",
+            "Du bist ein Star!"
+        ]
     };
 
     // Letter data with phonics sounds
@@ -116,6 +263,7 @@ document.addEventListener("DOMContentLoaded", () => {
         masteredSounds: [],
         masteredWords: [],
         completedStories: [],
+        language: "en",
         phaseProgress: {
             sounds: 0,
             blends: 0,
@@ -144,15 +292,15 @@ document.addEventListener("DOMContentLoaded", () => {
             utterance.rate = rate;
             utterance.pitch = pitch;
             utterance.volume = 1;
+            utterance.lang = state.language === "de" ? "de-DE" : "en-US";
 
             // Try to use a child-friendly voice with robust detection
             const voices = this.synth.getVoices();
+            const desiredLang = state.language === "de" ? "de" : "en";
             const preferredVoice = voices.find(v =>
-                v.lang.startsWith("en") && v.default
+                v.lang.startsWith(desiredLang) && v.default
             ) || voices.find(v =>
-                v.lang.startsWith("en-US")
-            ) || voices.find(v =>
-                v.lang.startsWith("en")
+                v.lang.startsWith(desiredLang)
             );
 
             if (preferredVoice) {
@@ -195,14 +343,7 @@ document.addEventListener("DOMContentLoaded", () => {
         },
 
         speakEncouragement() {
-            const phrases = [
-                "Great job!",
-                "You did it!",
-                "Wonderful!",
-                "Amazing!",
-                "Keep going!",
-                "You're a star!"
-            ];
+            const phrases = ENCOURAGEMENTS[state.language] || ENCOURAGEMENTS.en;
             const phrase = phrases[Math.floor(Math.random() * phrases.length)];
             this.speak(phrase, 1, 1.3);
         }
@@ -388,6 +529,9 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (e) {
             console.error("Error loading progress:", e);
         }
+        if (!state.language) {
+            state.language = "en";
+        }
         updateUI();
     }
 
@@ -396,13 +540,13 @@ document.addEventListener("DOMContentLoaded", () => {
             localStorage.setItem("learnToReadProgress", JSON.stringify(state));
         } catch (e) {
             console.error("Error saving progress:", e);
-            showToast("Could not save progress", "warning");
+            showToast(t("toast.saveFail"), "warning");
         }
         updateUI();
     }
 
     function resetProgress() {
-        if (confirm("Are you sure you want to reset all progress?")) {
+        if (confirm(t("confirm.reset"))) {
             try {
                 localStorage.removeItem("learnToReadProgress");
             } catch (e) {
@@ -415,6 +559,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 masteredSounds: [],
                 masteredWords: [],
                 completedStories: [],
+                language: state.language || "en",
                 phaseProgress: {
                     sounds: 0,
                     blends: 0,
@@ -424,7 +569,7 @@ document.addEventListener("DOMContentLoaded", () => {
             };
             saveProgress();
             loadActivity();
-            showToast("Progress reset!", "info");
+            showToast(t("toast.reset"), "info");
         }
     }
 
@@ -456,10 +601,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Update parent info
         const phaseNames = {
-            sounds: "Letter Sounds",
-            blends: "Sound Blending",
-            words: "Word Building",
-            sentences: "Stories"
+            sounds: t("activity.soundsTitle"),
+            blends: t("activity.blendsTitle"),
+            words: t("activity.wordsTitle"),
+            sentences: t("activity.storiesTitle")
         };
         parentPhase.textContent = phaseNames[state.currentPhase];
 
@@ -475,18 +620,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function canUnlockPhase(phase) {
-        switch (phase) {
-            case PHASES.SOUNDS:
-                return true;
-            case PHASES.BLENDS:
-                return state.masteredSounds.length >= 10;
-            case PHASES.WORDS:
-                return state.masteredSounds.length >= 20;
-            case PHASES.SENTENCES:
-                return state.masteredWords.length >= 5;
-            default:
-                return false;
-        }
+        return true;
     }
 
     function checkPhaseProgression() {
@@ -499,9 +633,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 state.currentPhase = nextPhase;
                 state.currentActivity = 0;
                 saveProgress();
-                showToast("New phase unlocked!", "success");
+                showToast(t("toast.newPhase"), "success");
                 celebrate();
-                AudioSystem.speak("Great job! You unlocked a new level!");
+                AudioSystem.speak(t("toast.unlockSpeak"));
             }
         }
     }
@@ -536,6 +670,22 @@ document.addEventListener("DOMContentLoaded", () => {
         nextBtn.disabled = !canUnlockPhase(phases[currentIndex + 1]);
     }
 
+    function updateLanguageButtons() {
+        langButtons.forEach((btn) => {
+            btn.classList.toggle("active", btn.dataset.lang === state.language);
+        });
+    }
+
+    function setLanguage(lang) {
+        if (lang === state.language) return;
+        state.language = lang;
+        saveProgress();
+        applyTranslations();
+        updateLanguageButtons();
+        loadActivity();
+        updateUI();
+    }
+
     function getNextSoundIndex() {
         return Math.floor(Math.random() * LETTERS.length);
     }
@@ -554,9 +704,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // Sounds activity
     function renderSoundsActivity() {
         activityIcon.textContent = "🔤";
-        activityTitle.textContent = "Letter Sounds";
+        activityTitle.textContent = t("activity.soundsTitle");
 
-        showCharacterSpeech("Listen to each face, then connect the right sound!");
+        showCharacterSpeech(t("sounds.prompt"));
 
         const targetIndex = getNextSoundIndex();
         state.currentActivity = targetIndex;
@@ -571,12 +721,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
                 <div class="letter-zone">
                     <div class="letter-card" id="target-letter-card" data-letter="${target.letter}">
-                        <span class="letter-title">Letter</span>
+                        <span class="letter-title">${t("sounds.letterTitle")}</span>
                         <span class="letter-display">${target.letter}</span>
                     </div>
                 </div>
                 <div class="shape-zone">
-                    <p class="shape-instructions">Tap each face to hear its sound, then drag from the letter to the correct face.</p>
+                    <p class="shape-instructions">${t("sounds.instructions")}</p>
                     <div class="shape-row">
                         ${choices.map((letter, index) => `
                             <button class="shape-choice" data-letter="${letter}" aria-label="Play a letter sound">
@@ -698,7 +848,7 @@ document.addEventListener("DOMContentLoaded", () => {
             updateHoverTarget(null);
 
             if (!targetButton) {
-                showToast("Drag to a face!", "info");
+                showToast(t("sounds.dragToFace"), "info");
                 return;
             }
 
@@ -718,7 +868,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     state.masteredSounds.push(target.letter);
                     state.stars += 1;
                     saveProgress();
-                    showToast(`You matched "${target.letter}"!`, "success");
+                    showToast(t("sounds.matchToast", { letter: target.letter }), "success");
 
                     if (state.masteredSounds.length % 5 === 0) {
                         celebrate();
@@ -726,7 +876,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     checkPhaseProgression();
                 } else {
-                    showToast(`Nice! "${target.letter}" again.`, "success");
+                    showToast(t("sounds.matchAgain", { letter: target.letter }), "success");
                 }
 
                 setTimeout(() => {
@@ -738,7 +888,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }, 900);
             } else {
                 targetButton.classList.add("wrong");
-                showToast("Try another face!", "info");
+                showToast(t("sounds.tryAnotherFace"), "info");
                 setTimeout(() => targetButton.classList.remove("wrong"), 350);
             }
         });
@@ -757,19 +907,19 @@ document.addEventListener("DOMContentLoaded", () => {
     // Blends activity
     function renderBlendsActivity() {
         activityIcon.textContent = "🔗";
-        activityTitle.textContent = "Sound Blending";
+        activityTitle.textContent = t("activity.blendsTitle");
 
         const wordIndex = state.currentActivity % CVC_WORDS.length;
         const wordData = CVC_WORDS[wordIndex];
 
-        showCharacterSpeech(`Let's blend sounds to make: ${wordData.word}`);
-        AudioSystem.speak(`Let's blend the sounds together!`);
+        showCharacterSpeech(t("blends.prompt", { word: wordData.word }));
+        AudioSystem.speak(t("blends.speak"));
 
         let html = `
             <div class="word-builder">
                 <div class="target-word">
                     <button class="sound-btn" id="play-word-btn">🔊</button>
-                    Listen and blend!
+                    ${t("blends.listenLabel")}
                 </div>
                 <div class="word-slots" id="word-slots">
                     ${wordData.sounds.map((s, i) => `
@@ -779,7 +929,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     `).join("")}
                 </div>
                 <p style="font-size: 1.2rem; color: var(--text-secondary); margin-top: 20px;">
-                    Tap each sound, then tap 🔊 to hear the whole word!
+                    ${t("blends.tapHint")}
                 </p>
             </div>
         `;
@@ -808,13 +958,13 @@ document.addEventListener("DOMContentLoaded", () => {
     // Words activity (word building)
     function renderWordsActivity() {
         activityIcon.textContent = "📝";
-        activityTitle.textContent = "Word Building";
+        activityTitle.textContent = t("activity.wordsTitle");
 
         const wordIndex = state.currentActivity % CVC_WORDS.length;
         const wordData = CVC_WORDS[wordIndex];
 
-        showCharacterSpeech(`Build the word: ${wordData.word}`);
-        AudioSystem.speak(`Can you build the word ${wordData.word}?`);
+        showCharacterSpeech(t("words.prompt", { word: wordData.word }));
+        AudioSystem.speak(t("words.speak", { word: wordData.word }));
 
         // Shuffle letters for choices
         const extraLetters = ["x", "z", "q", "k"];
@@ -831,7 +981,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="word-builder">
                 <div class="target-word">
                     <button class="sound-btn" id="play-target-btn">🔊</button>
-                    Build: <strong>${wordData.word.toUpperCase()}</strong>
+                    ${t("words.buildLabel")} <strong>${wordData.word.toUpperCase()}</strong>
                 </div>
                 <div class="word-slots" id="word-slots">
                     ${wordData.sounds.map((_, i) => `
@@ -880,7 +1030,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                 state.stars += 5;
                                 saveProgress();
                             }
-                            showToast(`You built "${wordData.word}"!`, "success");
+                            showToast(t("words.builtToast", { word: wordData.word }), "success");
                             celebrate();
                             AudioSystem.speakEncouragement();
                             checkPhaseProgression();
@@ -889,7 +1039,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 } else {
                     btn.style.animation = "shake 0.3s ease";
                     setTimeout(() => btn.style.animation = "", 300);
-                    showToast("Try another letter!", "info");
+                    showToast(t("words.tryAnotherLetter"), "info");
                 }
             });
         });
@@ -903,13 +1053,13 @@ document.addEventListener("DOMContentLoaded", () => {
     // Stories activity
     function renderStoriesActivity() {
         activityIcon.textContent = "📖";
-        activityTitle.textContent = "Story Time";
+        activityTitle.textContent = t("activity.storiesTitle");
 
         const storyIndex = state.currentActivity % STORIES.length;
         const story = STORIES[storyIndex];
 
-        showCharacterSpeech("Let's read a story together!");
-        AudioSystem.speak("Let's read a story together!");
+        showCharacterSpeech(t("stories.prompt"));
+        AudioSystem.speak(t("stories.speak"));
 
         // Create word spans for each word
         const wordsHtml = story.text.split(/\s+/).map((word, i) => {
@@ -926,7 +1076,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="story-controls">
                     <button class="nav-btn primary" id="read-story-btn">
                         <span class="btn-icon">🔊</span>
-                        <span class="btn-text">Read Story</span>
+                        <span class="btn-text">${t("stories.readButton")}</span>
                     </button>
                 </div>
             </div>
@@ -967,7 +1117,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         state.stars += 10;
                         saveProgress();
                     }
-                    showToast("Great reading!", "success");
+                    showToast(t("stories.greatReading"), "success");
                     celebrate();
                     AudioSystem.speakEncouragement();
                 }
@@ -1012,6 +1162,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     resetBtn.addEventListener("click", resetProgress);
 
+    langButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+            setLanguage(btn.dataset.lang);
+        });
+    });
+
     // Phase item clicks
     document.querySelectorAll(".phase-item").forEach(item => {
         item.addEventListener("click", () => {
@@ -1022,7 +1178,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 saveProgress();
                 loadActivity();
             } else {
-                showToast("Complete more activities to unlock!", "info");
+                showToast(t("toast.unlockMore"), "info");
             }
         });
     });
@@ -1037,10 +1193,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         loadProgress();
+        applyTranslations();
+        updateLanguageButtons();
         drawCharacter();
         loadActivity();
 
-        showToast("Welcome to Phonics Adventure!", "success");
+        showToast(t("toast.welcome"), "success");
     }
 
     init();
