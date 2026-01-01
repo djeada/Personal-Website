@@ -14,6 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const activityCard = document.getElementById("activity-card");
     const fullscreenExitBtn = document.getElementById("fullscreen-exit-btn");
     const fullscreenEnterBtn = document.getElementById("fullscreen-enter-btn");
+    const achievementsBadges = document.querySelectorAll(".achievement-badge");
+    const streakIndicator = document.getElementById("streak-indicator");
+    const streakText = document.getElementById("streak-text");
 
     // Stats elements
     const starsCount = document.getElementById("stars-count");
@@ -41,6 +44,15 @@ document.addEventListener("DOMContentLoaded", () => {
         SOUNDS: "sounds",
         WORDS: "words",
         SENTENCES: "sentences"
+    };
+
+    // Achievement definitions
+    const ACHIEVEMENTS = {
+        "first-letter": { condition: (s) => s.masteredSounds.length >= 1, label: "First Letter" },
+        "letter-master": { condition: (s) => s.masteredSounds.length >= 10, label: "Letter Master" },
+        "word-builder": { condition: (s) => s.masteredWords.length >= 5, label: "Word Builder" },
+        "story-reader": { condition: (s) => s.completedStories.length >= 1, label: "Story Reader" },
+        "superstar": { condition: (s) => s.stars >= 50, label: "Superstar" }
     };
 
     const TRANSLATIONS = {
@@ -76,26 +88,28 @@ document.addEventListener("DOMContentLoaded", () => {
             "sounds.instructions": "Tap each face to hear its sound, then drag from the letter to the correct face.",
             "sounds.letterTitle": "Letter",
             "sounds.dragToFace": "Drag to a face!",
-            "sounds.matchToast": "You matched \"{letter}\"!",
-            "sounds.matchAgain": "Nice! \"{letter}\" again.",
+            "sounds.matchToast": "You matched \"{letter}\"! ⭐",
+            "sounds.matchAgain": "Nice! \"{letter}\" again. 🌟",
             "sounds.tryAnotherFace": "Try another face!",
             "words.prompt": "Listen to the sound and build the word.",
             "words.speak": "Listen carefully.",
             "words.instructions": "Drag the letters into the boxes to match the sound.",
             "words.tryAgain": "Try again!",
-            "words.builtToast": "You built \"{word}\"!",
+            "words.builtToast": "You built \"{word}\"! 🎉",
             "stories.prompt": "Let's read a story together!",
             "stories.speak": "Let's read a story together!",
-            "stories.readButton": "Read Story",
-            "stories.greatReading": "Great reading!",
+            "stories.readButton": "🔊 Read Story",
+            "stories.greatReading": "Great reading! 📚",
             "stories.instructions": "Fill the missing word to continue the story.",
             "confirm.reset": "Are you sure you want to reset all progress?",
             "toast.saveFail": "Could not save progress",
             "toast.reset": "Progress reset!",
-            "toast.newPhase": "New phase unlocked!",
+            "toast.newPhase": "🎊 New phase unlocked!",
             "toast.unlockSpeak": "Great job! You unlocked a new level!",
             "toast.unlockMore": "Complete more activities to unlock!",
-            "toast.welcome": "Welcome to Phonics Adventure!"
+            "toast.welcome": "Welcome to Phonics Adventure! 🎈",
+            "toast.achievement": "🏆 Achievement Unlocked: {name}!",
+            "streak.day": "Day {count} Streak! 🔥"
         },
         de: {
             "header.title": "Lese-Abenteuer",
@@ -139,16 +153,18 @@ document.addEventListener("DOMContentLoaded", () => {
             "words.builtToast": "Du hast \"{word}\" gebaut!",
             "stories.prompt": "Lass uns zusammen eine Geschichte lesen!",
             "stories.speak": "Lass uns zusammen eine Geschichte lesen!",
-            "stories.readButton": "Geschichte vorlesen",
-            "stories.greatReading": "Super gelesen!",
+            "stories.readButton": "🔊 Geschichte vorlesen",
+            "stories.greatReading": "Super gelesen! 📚",
             "stories.instructions": "Setze das fehlende Wort ein, um weiterzulesen.",
             "confirm.reset": "Möchtest du den gesamten Fortschritt wirklich zurücksetzen?",
             "toast.saveFail": "Fortschritt konnte nicht gespeichert werden",
             "toast.reset": "Fortschritt zurückgesetzt!",
-            "toast.newPhase": "Neue Phase freigeschaltet!",
+            "toast.newPhase": "🎊 Neue Phase freigeschaltet!",
             "toast.unlockSpeak": "Super gemacht! Du hast ein neues Level freigeschaltet!",
             "toast.unlockMore": "Mache mehr Aktivitäten, um freizuschalten!",
-            "toast.welcome": "Willkommen im Lese-Abenteuer!"
+            "toast.welcome": "Willkommen im Lese-Abenteuer! 🎈",
+            "toast.achievement": "🏆 Erfolg freigeschaltet: {name}!",
+            "streak.day": "Tag {count} Streak! 🔥"
         }
     };
 
@@ -168,52 +184,70 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const ENCOURAGEMENTS = {
         en: [
-            "Great job!",
-            "You did it!",
-            "Wonderful!",
-            "Amazing!",
-            "Keep going!",
-            "You're a star!"
+            "Great job! 🌟",
+            "You did it! 🎉",
+            "Wonderful! ✨",
+            "Amazing! 🏆",
+            "Keep going! 💪",
+            "You're a star! ⭐",
+            "Fantastic! 🚀",
+            "Well done! 👏",
+            "Super! 🦸",
+            "Brilliant! 💎"
         ],
         de: [
-            "Toll gemacht!",
-            "Du hast es geschafft!",
-            "Wunderbar!",
-            "Großartig!",
-            "Mach weiter so!",
-            "Du bist ein Star!"
+            "Toll gemacht! 🌟",
+            "Du hast es geschafft! 🎉",
+            "Wunderbar! ✨",
+            "Großartig! 🏆",
+            "Mach weiter so! 💪",
+            "Du bist ein Star! ⭐",
+            "Fantastisch! 🚀",
+            "Super gemacht! 👏",
+            "Klasse! 🦸",
+            "Brillant! 💎"
         ]
     };
 
-    // Letter data with phonics sounds
+    // Letter data with phonics sounds and emojis
     const LETTERS = [
-        { letter: "A", sound: "a", example: "apple" },
-        { letter: "B", sound: "b", example: "ball" },
-        { letter: "C", sound: "k", example: "cat" },
-        { letter: "D", sound: "d", example: "dog" },
-        { letter: "E", sound: "e", example: "egg" },
-        { letter: "F", sound: "f", example: "fish" },
-        { letter: "G", sound: "g", example: "goat" },
-        { letter: "H", sound: "h", example: "hat" },
-        { letter: "I", sound: "i", example: "igloo" },
-        { letter: "J", sound: "j", example: "jam" },
-        { letter: "K", sound: "k", example: "kite" },
-        { letter: "L", sound: "l", example: "lion" },
-        { letter: "M", sound: "m", example: "mouse" },
-        { letter: "N", sound: "n", example: "nest" },
-        { letter: "O", sound: "o", example: "octopus" },
-        { letter: "P", sound: "p", example: "pig" },
-        { letter: "Q", sound: "q", example: "queen" },
-        { letter: "R", sound: "r", example: "rabbit" },
-        { letter: "S", sound: "s", example: "sun" },
-        { letter: "T", sound: "t", example: "turtle" },
-        { letter: "U", sound: "u", example: "umbrella" },
-        { letter: "V", sound: "v", example: "van" },
-        { letter: "W", sound: "w", example: "whale" },
-        { letter: "X", sound: "x", example: "box" },
-        { letter: "Y", sound: "y", example: "yellow" },
-        { letter: "Z", sound: "z", example: "zebra" }
+        { letter: "A", sound: "a", example: "apple", emoji: "🍎" },
+        { letter: "B", sound: "b", example: "ball", emoji: "⚽" },
+        { letter: "C", sound: "k", example: "cat", emoji: "🐱" },
+        { letter: "D", sound: "d", example: "dog", emoji: "🐕" },
+        { letter: "E", sound: "e", example: "egg", emoji: "🥚" },
+        { letter: "F", sound: "f", example: "fish", emoji: "🐟" },
+        { letter: "G", sound: "g", example: "goat", emoji: "🐐" },
+        { letter: "H", sound: "h", example: "hat", emoji: "🎩" },
+        { letter: "I", sound: "i", example: "igloo", emoji: "🏠" },
+        { letter: "J", sound: "j", example: "jam", emoji: "🍓" },
+        { letter: "K", sound: "k", example: "kite", emoji: "🪁" },
+        { letter: "L", sound: "l", example: "lion", emoji: "🦁" },
+        { letter: "M", sound: "m", example: "mouse", emoji: "🐭" },
+        { letter: "N", sound: "n", example: "nest", emoji: "🪺" },
+        { letter: "O", sound: "o", example: "octopus", emoji: "🐙" },
+        { letter: "P", sound: "p", example: "pig", emoji: "🐷" },
+        { letter: "Q", sound: "q", example: "queen", emoji: "👸" },
+        { letter: "R", sound: "r", example: "rabbit", emoji: "🐰" },
+        { letter: "S", sound: "s", example: "sun", emoji: "☀️" },
+        { letter: "T", sound: "t", example: "turtle", emoji: "🐢" },
+        { letter: "U", sound: "u", example: "umbrella", emoji: "☂️" },
+        { letter: "V", sound: "v", example: "van", emoji: "🚐" },
+        { letter: "W", sound: "w", example: "whale", emoji: "🐋" },
+        { letter: "X", sound: "x", example: "box", emoji: "📦" },
+        { letter: "Y", sound: "y", example: "yellow", emoji: "💛" },
+        { letter: "Z", sound: "z", example: "zebra", emoji: "🦓" }
     ];
+
+    // Categorized words for more engaging learning
+    const WORD_CATEGORIES = {
+        animals: ["cat", "dog", "pig", "hen", "cow", "fox", "bat", "bee", "ant", "owl", "rat", "ram"],
+        colors: ["red", "tan", "sky"],
+        food: ["egg", "jam", "pie", "tea", "ham", "fig", "nut", "bun", "pea"],
+        nature: ["sun", "sky", "sea", "mud", "fog", "bay", "oak", "elm", "ash"],
+        body: ["arm", "leg", "ear", "eye", "lip", "toe", "jaw", "hip", "rib"],
+        objects: ["hat", "box", "cup", "bag", "bed", "pen", "pot", "pan", "key", "jar", "can", "mop", "net", "rug"]
+    };
 
     const SHORT_WORDS = [
         "am", "an", "as", "at", "be", "by", "do", "go", "he", "hi",
@@ -250,7 +284,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const STORIES = [
         {
-            title: "The Cat",
+            title: "The Cat 🐱",
+            emoji: "🐱",
             sentences: [
                 { text: "The ____ sat on a mat.", missing: "cat" },
                 { text: "The cat is ____.", missing: "fat" },
@@ -258,7 +293,8 @@ document.addEventListener("DOMContentLoaded", () => {
             ]
         },
         {
-            title: "The Dog",
+            title: "The Dog 🐕",
+            emoji: "🐕",
             sentences: [
                 { text: "The ____ ran to the log.", missing: "dog" },
                 { text: "The dog dug in the ____.", missing: "mud" },
@@ -266,11 +302,57 @@ document.addEventListener("DOMContentLoaded", () => {
             ]
         },
         {
-            title: "The Sun",
+            title: "The Sun ☀️",
+            emoji: "☀️",
             sentences: [
                 { text: "The sun is ____.", missing: "hot" },
                 { text: "The sun is ____.", missing: "up" },
                 { text: "I run in the ____.", missing: "sun" }
+            ]
+        },
+        {
+            title: "The Pig 🐷",
+            emoji: "🐷",
+            sentences: [
+                { text: "The ____ is pink.", missing: "pig" },
+                { text: "The pig sat in the ____.", missing: "mud" },
+                { text: "The pig ate from a ____.", missing: "cup" }
+            ]
+        },
+        {
+            title: "The Fox 🦊",
+            emoji: "🦊",
+            sentences: [
+                { text: "The ____ ran in the woods.", missing: "fox" },
+                { text: "The fox is ____.", missing: "red" },
+                { text: "The fox hid in a ____.", missing: "box" }
+            ]
+        },
+        {
+            title: "The Hen 🐔",
+            emoji: "🐔",
+            sentences: [
+                { text: "The ____ sat on ten eggs.", missing: "hen" },
+                { text: "The hen ate from a ____.", missing: "pan" },
+                { text: "The hen ran to her ____.", missing: "pen" }
+            ]
+        },
+        {
+            title: "The Bee 🐝",
+            emoji: "🐝",
+            sentences: [
+                { text: "The ____ can fly.", missing: "bee" },
+                { text: "The bee sat on a ____.", missing: "bud" },
+                { text: "The bee is on the ____.", missing: "log" }
+            ]
+        },
+        {
+            title: "The Fish 🐟",
+            emoji: "🐟",
+            sentences: [
+                { text: "The ____ swims in the sea.", missing: "fish" },
+                { text: "The fish is ____.", missing: "wet" },
+                { text: "The fish hid by the ____.", missing: "net" }
             ]
         }
     ];
@@ -284,6 +366,9 @@ document.addEventListener("DOMContentLoaded", () => {
         masteredWords: [],
         completedStories: [],
         language: "en",
+        streak: 0,
+        lastPlayDate: null,
+        achievements: [],
         activityStats: {
             sounds: { attempts: 0, correct: 0 },
             words: { attempts: 0, correct: 0 },
@@ -383,92 +468,146 @@ document.addEventListener("DOMContentLoaded", () => {
     function drawCharacter() {
         ctx.clearRect(0, 0, 200, 200);
 
-        // Body (circle)
-        ctx.fillStyle = "#FFD93D";
+        // Body gradient fill
+        const gradient = ctx.createRadialGradient(80, 80, 20, 100, 100, 80);
+        gradient.addColorStop(0, "#FFE66D");
+        gradient.addColorStop(0.5, "#FFD93D");
+        gradient.addColorStop(1, "#F5B700");
+        ctx.fillStyle = gradient;
         ctx.beginPath();
         ctx.arc(100, 100, 80, 0, Math.PI * 2);
         ctx.fill();
 
-        // Body outline
-        ctx.strokeStyle = "#F5B700";
-        ctx.lineWidth = 3;
+        // Body outline with glow effect
+        ctx.strokeStyle = "#E8A800";
+        ctx.lineWidth = 4;
         ctx.stroke();
+
+        // Sparkle decorations
+        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+        ctx.font = "16px Arial";
+        ctx.fillText("✨", 150, 40);
+        ctx.fillText("⭐", 30, 50);
 
         // Eyes
         const eyeY = characterState.eyesBlink ? 75 : 70;
-        const eyeHeight = characterState.eyesBlink ? 3 : 20;
+        const eyeHeight = characterState.eyesBlink ? 3 : 22;
 
         // Left eye
         ctx.fillStyle = "white";
         ctx.beginPath();
-        ctx.ellipse(70, eyeY, 15, eyeHeight, 0, 0, Math.PI * 2);
+        ctx.ellipse(70, eyeY, 17, eyeHeight, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = "#333";
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Left pupil
+        // Left pupil with gradient
         if (!characterState.eyesBlink) {
-            ctx.fillStyle = "#333";
+            const pupilGradient = ctx.createRadialGradient(70, 75, 0, 70, 75, 10);
+            pupilGradient.addColorStop(0, "#6366f1");
+            pupilGradient.addColorStop(1, "#1e1b4b");
+            ctx.fillStyle = pupilGradient;
             ctx.beginPath();
-            ctx.arc(70, 75, 8, 0, Math.PI * 2);
+            ctx.arc(70, 75, 9, 0, Math.PI * 2);
             ctx.fill();
 
             // Eye shine
             ctx.fillStyle = "white";
             ctx.beginPath();
-            ctx.arc(73, 72, 3, 0, Math.PI * 2);
+            ctx.arc(74, 71, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(67, 79, 2, 0, Math.PI * 2);
             ctx.fill();
         }
 
         // Right eye
         ctx.fillStyle = "white";
         ctx.beginPath();
-        ctx.ellipse(130, eyeY, 15, eyeHeight, 0, 0, Math.PI * 2);
+        ctx.ellipse(130, eyeY, 17, eyeHeight, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = "#333";
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Right pupil
+        // Right pupil with gradient
         if (!characterState.eyesBlink) {
-            ctx.fillStyle = "#333";
+            const pupilGradient2 = ctx.createRadialGradient(130, 75, 0, 130, 75, 10);
+            pupilGradient2.addColorStop(0, "#6366f1");
+            pupilGradient2.addColorStop(1, "#1e1b4b");
+            ctx.fillStyle = pupilGradient2;
             ctx.beginPath();
-            ctx.arc(130, 75, 8, 0, Math.PI * 2);
+            ctx.arc(130, 75, 9, 0, Math.PI * 2);
             ctx.fill();
 
             // Eye shine
             ctx.fillStyle = "white";
             ctx.beginPath();
-            ctx.arc(133, 72, 3, 0, Math.PI * 2);
+            ctx.arc(134, 71, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(127, 79, 2, 0, Math.PI * 2);
             ctx.fill();
         }
+
+        // Eyebrows
+        ctx.strokeStyle = "#8B7355";
+        ctx.lineWidth = 3;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(55, 52);
+        ctx.quadraticCurveTo(70, 48, 85, 52);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(115, 52);
+        ctx.quadraticCurveTo(130, 48, 145, 52);
+        ctx.stroke();
 
         // Mouth
         if (characterState.mouthOpen) {
-            ctx.fillStyle = "#FF6B6B";
+            // Open mouth with gradient
+            const mouthGradient = ctx.createRadialGradient(100, 130, 0, 100, 130, 20);
+            mouthGradient.addColorStop(0, "#FF8888");
+            mouthGradient.addColorStop(1, "#E85555");
+            ctx.fillStyle = mouthGradient;
             ctx.beginPath();
-            ctx.ellipse(100, 130, 24, 18, 0, 0, Math.PI * 2);
+            ctx.ellipse(100, 130, 26, 20, 0, 0, Math.PI * 2);
             ctx.fill();
-            ctx.strokeStyle = "#E85555";
+            ctx.strokeStyle = "#C84040";
             ctx.lineWidth = 2;
             ctx.stroke();
+            
+            // Tongue
+            ctx.fillStyle = "#FF9999";
+            ctx.beginPath();
+            ctx.ellipse(100, 138, 12, 8, 0, 0, Math.PI);
+            ctx.fill();
         } else {
+            // Closed smile
             ctx.strokeStyle = "#E85555";
-            ctx.lineWidth = 4;
+            ctx.lineWidth = 5;
             ctx.lineCap = "round";
             ctx.beginPath();
-            ctx.arc(100, 132, 20, 0, Math.PI);
+            ctx.arc(100, 128, 22, 0.1 * Math.PI, 0.9 * Math.PI);
             ctx.stroke();
         }
 
-        // Cheeks (blush)
-        ctx.fillStyle = "rgba(255, 150, 150, 0.4)";
+        // Cheeks (blush) with gradient
+        const blushGradient1 = ctx.createRadialGradient(42, 108, 0, 42, 108, 18);
+        blushGradient1.addColorStop(0, "rgba(255, 150, 180, 0.6)");
+        blushGradient1.addColorStop(1, "rgba(255, 150, 180, 0)");
+        ctx.fillStyle = blushGradient1;
         ctx.beginPath();
-        ctx.arc(45, 110, 15, 0, Math.PI * 2);
+        ctx.arc(42, 108, 18, 0, Math.PI * 2);
         ctx.fill();
+
+        const blushGradient2 = ctx.createRadialGradient(158, 108, 0, 158, 108, 18);
+        blushGradient2.addColorStop(0, "rgba(255, 150, 180, 0.6)");
+        blushGradient2.addColorStop(1, "rgba(255, 150, 180, 0)");
+        ctx.fillStyle = blushGradient2;
         ctx.beginPath();
-        ctx.arc(155, 110, 15, 0, Math.PI * 2);
+        ctx.arc(158, 108, 18, 0, Math.PI * 2);
         ctx.fill();
     }
 
@@ -513,7 +652,8 @@ document.addEventListener("DOMContentLoaded", () => {
             success: "🎉",
             error: "😕",
             info: "💡",
-            warning: "⚠️"
+            warning: "⚠️",
+            achievement: "🏆"
         };
 
         toast.innerHTML = `
@@ -525,27 +665,125 @@ document.addEventListener("DOMContentLoaded", () => {
 
         setTimeout(() => {
             toast.remove();
-        }, 3000);
+        }, 3500);
     }
 
-    // Celebration effect
-    function celebrate() {
+    // Celebration effect with confetti
+    function celebrate(intensity = 1) {
         const celebration = document.createElement("div");
         celebration.className = "celebration";
         document.body.appendChild(celebration);
 
-        const emojis = ["⭐", "🌟", "✨", "🎉", "🎊"];
-        for (let i = 0; i < 20; i++) {
+        const emojis = ["⭐", "🌟", "✨", "🎉", "🎊", "💫", "🌈", "💜", "💖"];
+        const count = Math.floor(25 * intensity);
+        
+        for (let i = 0; i < count; i++) {
             const star = document.createElement("span");
             star.className = "star-burst";
             star.textContent = emojis[Math.floor(Math.random() * emojis.length)];
             star.style.left = Math.random() * 100 + "%";
             star.style.top = Math.random() * 100 + "%";
-            star.style.animationDelay = Math.random() * 0.5 + "s";
+            star.style.animationDelay = Math.random() * 0.6 + "s";
+            star.style.fontSize = (1.5 + Math.random() * 1.5) + "rem";
             celebration.appendChild(star);
         }
 
-        setTimeout(() => celebration.remove(), 2000);
+        // Add confetti
+        const confettiColors = ["#8b5cf6", "#ec4899", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"];
+        for (let i = 0; i < count; i++) {
+            const confetti = document.createElement("div");
+            confetti.className = "confetti";
+            confetti.style.left = Math.random() * 100 + "%";
+            confetti.style.backgroundColor = confettiColors[Math.floor(Math.random() * confettiColors.length)];
+            confetti.style.animationDelay = Math.random() * 1 + "s";
+            confetti.style.animationDuration = (2 + Math.random() * 2) + "s";
+            celebration.appendChild(confetti);
+        }
+
+        setTimeout(() => celebration.remove(), 3500);
+    }
+
+    // Check and award achievements
+    function checkAchievements() {
+        const newAchievements = [];
+        
+        for (const [id, achievement] of Object.entries(ACHIEVEMENTS)) {
+            if (!state.achievements.includes(id) && achievement.condition(state)) {
+                state.achievements.push(id);
+                newAchievements.push({ id, label: achievement.label });
+            }
+        }
+
+        if (newAchievements.length > 0) {
+            saveProgress();
+            updateAchievementBadges();
+            
+            // Show achievement notifications with delay
+            newAchievements.forEach((achievement, index) => {
+                setTimeout(() => {
+                    showToast(t("toast.achievement", { name: achievement.label }), "achievement");
+                    celebrate(1.5);
+                }, index * 1500);
+            });
+        }
+    }
+
+    // Update achievement badge display
+    function updateAchievementBadges() {
+        achievementsBadges.forEach(badge => {
+            const badgeId = badge.dataset.badge;
+            badge.classList.remove("earned", "locked");
+            
+            if (state.achievements.includes(badgeId)) {
+                badge.classList.add("earned");
+            } else {
+                badge.classList.add("locked");
+            }
+        });
+    }
+
+    // Check and update daily streak
+    function checkStreak() {
+        const today = new Date();
+        const todayString = today.toDateString();
+        const lastPlay = state.lastPlayDate;
+        
+        if (!lastPlay) {
+            // First time playing, start streak at 1
+            state.streak = 1;
+        } else if (lastPlay === todayString) {
+            // Already played today, keep current streak without incrementing
+            // This prevents the streak from inflating by multiple plays in one day
+        } else {
+            // Calculate yesterday's date using UTC to avoid timezone issues
+            const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+            const yesterdayString = yesterday.toDateString();
+            
+            if (lastPlay === yesterdayString) {
+                // Played yesterday, increment streak
+                state.streak += 1;
+            } else {
+                // Missed a day or more, reset streak to 1
+                state.streak = 1;
+            }
+        }
+        
+        state.lastPlayDate = todayString;
+        saveProgress();
+        updateStreakDisplay();
+    }
+
+    // Update streak display
+    function updateStreakDisplay() {
+        if (streakIndicator && streakText) {
+            streakText.textContent = t("streak.day", { count: state.streak });
+            
+            if (state.streak >= 7) {
+                streakIndicator.style.background = "linear-gradient(135deg, #fef3c7, #fde68a, #fbbf24)";
+            } else if (state.streak >= 3) {
+                streakIndicator.style.background = "linear-gradient(135deg, #fef3c7, #fed7aa)";
+            }
+        }
     }
 
     // Progress management
@@ -574,7 +812,15 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!state.activityStats.words) {
             state.activityStats.words = { attempts: 0, correct: 0 };
         }
+        if (!state.achievements) {
+            state.achievements = [];
+        }
+        if (!state.streak) {
+            state.streak = 0;
+        }
         updateUI();
+        updateAchievementBadges();
+        updateStreakDisplay();
     }
 
     function saveProgress() {
@@ -602,6 +848,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 masteredWords: [],
                 completedStories: [],
                 language: state.language || "en",
+                streak: 0,
+                lastPlayDate: null,
+                achievements: [],
                 activityStats: {
                     sounds: { attempts: 0, correct: 0 },
                     words: { attempts: 0, correct: 0 },
@@ -615,6 +864,8 @@ document.addEventListener("DOMContentLoaded", () => {
             };
             saveProgress();
             loadActivity();
+            updateAchievementBadges();
+            updateStreakDisplay();
             showToast(t("toast.reset"), "info");
         }
     }
@@ -792,6 +1043,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="letter-card" id="target-letter-card" data-letter="${target.letter}">
                         <span class="letter-title">${t("sounds.letterTitle")}</span>
                         <span class="letter-display">${target.letter}</span>
+                        <span class="letter-example">${target.emoji} ${target.example}</span>
                     </div>
                 </div>
                 <div class="shape-zone">
@@ -943,6 +1195,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     state.stars += 1;
                     saveProgress();
                     showToast(t("sounds.matchToast", { letter: target.letter }), "success");
+                    checkAchievements();
 
                     if (state.masteredSounds.length % 5 === 0) {
                         celebrate();
@@ -1039,6 +1292,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (!state.masteredWords.includes(word)) {
                     state.masteredWords.push(word);
                     saveProgress();
+                    checkAchievements();
                 }
                 setTimeout(() => {
                     state.currentActivity++;
@@ -1246,11 +1500,12 @@ document.addEventListener("DOMContentLoaded", () => {
                                 state.completedStories.push(story.title);
                                 state.stars += 10;
                                 saveProgress();
+                                checkAchievements();
                             }
                             state.activityStats.stories.correct += 1;
                             saveProgress();
                             showToast(t("stories.greatReading"), "success");
-                            celebrate();
+                            celebrate(1.5);
                             AudioSystem.speakEncouragement();
                             state.currentActivity++;
                             saveProgress();
@@ -1420,12 +1675,16 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         loadProgress();
+        checkStreak();
         applyTranslations();
         updateLanguageButtons();
         drawCharacter();
         loadActivity();
 
-        showToast(t("toast.welcome"), "success");
+        // Welcome message with slight delay for better UX
+        setTimeout(() => {
+            showToast(t("toast.welcome"), "success");
+        }, 500);
     }
 
     init();
