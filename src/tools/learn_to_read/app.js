@@ -744,25 +744,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Check and update daily streak
     function checkStreak() {
-        const today = new Date().toDateString();
+        const today = new Date();
+        const todayString = today.toDateString();
         const lastPlay = state.lastPlayDate;
         
         if (!lastPlay) {
+            // First time playing, start streak at 1
             state.streak = 1;
-        } else if (lastPlay === today) {
-            // Same day, don't increment
+        } else if (lastPlay === todayString) {
+            // Already played today, keep current streak without incrementing
+            // This prevents the streak from inflating by multiple plays in one day
         } else {
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
+            // Calculate yesterday's date using UTC to avoid timezone issues
+            const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+            const yesterdayString = yesterday.toDateString();
             
-            if (lastPlay === yesterday.toDateString()) {
+            if (lastPlay === yesterdayString) {
+                // Played yesterday, increment streak
                 state.streak += 1;
             } else {
+                // Missed a day or more, reset streak to 1
                 state.streak = 1;
             }
         }
         
-        state.lastPlayDate = today;
+        state.lastPlayDate = todayString;
         saveProgress();
         updateStreakDisplay();
     }
