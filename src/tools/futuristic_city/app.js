@@ -9,6 +9,7 @@ const CAR_COUNT = 30;
 const CAR_SPAWN_RADIUS = 100;
 const PEOPLE_COUNT = 40;
 const HIGHWAY_OFFSETS = [-75, -50, -25, 25, 50, 75];
+const AUTO_ROTATE_SPEED = 0.5;
 
 
 let scene, camera, renderer, controls;
@@ -27,6 +28,8 @@ let isInitialized = false;
 
 
 let container, timeSlider, timeDisplay, fogSlider, fogDisplay, speedSlider, speedDisplay, resetBtn;
+let btnSunrise, btnMidday, btnSunset, btnNight, autoRotateCheck, screenshotBtn;
+let statTime, statFog, statSpeed, statBuildings;
 
 
 function initDOMElements() {
@@ -38,6 +41,18 @@ function initDOMElements() {
     speedSlider = document.getElementById('speed-slider');
     speedDisplay = document.getElementById('speed-display');
     resetBtn = document.getElementById('reset-btn');
+    
+    btnSunrise = document.getElementById('btnSunrise');
+    btnMidday = document.getElementById('btnMidday');
+    btnSunset = document.getElementById('btnSunset');
+    btnNight = document.getElementById('btnNight');
+    autoRotateCheck = document.getElementById('autoRotate');
+    screenshotBtn = document.getElementById('screenshot-btn');
+    
+    statTime = document.getElementById('stat-time');
+    statFog = document.getElementById('stat-fog');
+    statSpeed = document.getElementById('stat-speed');
+    statBuildings = document.getElementById('stat-buildings');
 
     if (!container) {
         console.error('Futuristic City: canvas-container element not found');
@@ -135,6 +150,7 @@ function init() {
         updateDayNightCycle(12);
         updateFog(20);
         updateSpeed(100);
+        updateStats();
 
         isInitialized = true;
 
@@ -856,6 +872,7 @@ function updateDayNightCycle(time) {
         const minutes = Math.floor((time - hours) * 60);
         timeDisplay.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
     }
+    updateStats();
 }
 
 
@@ -868,6 +885,7 @@ function updateFog(density) {
     if (fogDisplay) {
         fogDisplay.textContent = `${density}%`;
     }
+    updateStats();
 }
 
 
@@ -875,6 +893,60 @@ function updateSpeed(speed) {
     animationSpeed = speed / 100;
     if (speedDisplay) {
         speedDisplay.textContent = `${speed}%`;
+    }
+    updateStats();
+}
+
+
+function updateStats() {
+    if (statTime && timeSlider) {
+        const time = parseFloat(timeSlider.value);
+        const hours = Math.floor(time);
+        const minutes = Math.floor((time - hours) * 60);
+        statTime.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    }
+    if (statFog && fogSlider) {
+        statFog.textContent = `${fogSlider.value}%`;
+    }
+    if (statSpeed && speedSlider) {
+        statSpeed.textContent = `${speedSlider.value}%`;
+    }
+    if (statBuildings) {
+        statBuildings.textContent = buildings.length.toString();
+    }
+}
+
+
+function updatePresetButtons(activeBtn) {
+    [btnSunrise, btnMidday, btnSunset, btnNight].forEach(btn => {
+        if (btn) btn.classList.remove('active');
+    });
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+    }
+}
+
+
+function applyPreset(time, fog, speed, activeBtn) {
+    if (timeSlider) timeSlider.value = time;
+    if (fogSlider) fogSlider.value = fog;
+    if (speedSlider) speedSlider.value = speed;
+    updateDayNightCycle(time);
+    updateFog(fog);
+    updateSpeed(speed);
+    updatePresetButtons(activeBtn);
+}
+
+
+function takeScreenshot() {
+    if (!renderer) return;
+    try {
+        const link = document.createElement('a');
+        link.download = `futuristic-city-${Date.now()}.png`;
+        link.href = renderer.domElement.toDataURL('image/png');
+        link.click();
+    } catch (error) {
+        console.error('Screenshot failed:', error);
     }
 }
 
@@ -893,6 +965,7 @@ function setupEventListeners() {
     if (timeSlider) {
         timeSlider.addEventListener('input', (e) => {
             updateDayNightCycle(parseFloat(e.target.value));
+            updatePresetButtons(null);
         });
     }
 
@@ -900,6 +973,7 @@ function setupEventListeners() {
     if (fogSlider) {
         fogSlider.addEventListener('input', (e) => {
             updateFog(parseInt(e.target.value));
+            updatePresetButtons(null);
         });
     }
 
@@ -907,12 +981,53 @@ function setupEventListeners() {
     if (speedSlider) {
         speedSlider.addEventListener('input', (e) => {
             updateSpeed(parseInt(e.target.value));
+            updatePresetButtons(null);
         });
     }
 
 
     if (resetBtn) {
         resetBtn.addEventListener('click', resetCamera);
+    }
+
+
+    if (btnSunrise) {
+        btnSunrise.addEventListener('click', () => {
+            applyPreset(6, 40, 80, btnSunrise);
+        });
+    }
+
+    if (btnMidday) {
+        btnMidday.addEventListener('click', () => {
+            applyPreset(12, 20, 100, btnMidday);
+        });
+    }
+
+    if (btnSunset) {
+        btnSunset.addEventListener('click', () => {
+            applyPreset(18, 35, 90, btnSunset);
+        });
+    }
+
+    if (btnNight) {
+        btnNight.addEventListener('click', () => {
+            applyPreset(22, 50, 70, btnNight);
+        });
+    }
+
+
+    if (autoRotateCheck) {
+        autoRotateCheck.addEventListener('change', (e) => {
+            if (controls) {
+                controls.autoRotate = e.target.checked;
+                controls.autoRotateSpeed = AUTO_ROTATE_SPEED;
+            }
+        });
+    }
+
+
+    if (screenshotBtn) {
+        screenshotBtn.addEventListener('click', takeScreenshot);
     }
 
 
