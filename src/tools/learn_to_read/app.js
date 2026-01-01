@@ -1270,17 +1270,28 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function exitActivityFullscreen() {
+        // Always try to exit both native and fallback fullscreen
         if (getFullscreenElement()) {
             const exit = document.exitFullscreen || document.webkitExitFullscreen || document.webkitCancelFullScreen;
             if (exit) {
                 const exitResult = exit.call(document);
                 if (exitResult && exitResult.catch) {
-                    exitResult.catch(() => {});
+                    exitResult.catch(() => {
+                        // If native exit fails, still clear fallback
+                        setFallbackFullscreen(false);
+                    });
+                } else {
+                    // For browsers that don't return a promise
+                    setTimeout(() => {
+                        if (!getFullscreenElement()) {
+                            setFallbackFullscreen(false);
+                        }
+                    }, 100);
                 }
-                updateScrollPrevention(false);
                 return;
             }
         }
+        // Always clear fallback state
         setFallbackFullscreen(false);
     }
 
@@ -1756,6 +1767,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         let isDragging = false;
+        let dragStartPos = null;
+        const DRAG_THRESHOLD = 5; // pixels to move before considering it a drag
 
         function placeLetterIntoSlot(slot) {
             if (!activeTile || slot.dataset.letter) return;
@@ -1789,26 +1802,50 @@ document.addEventListener("DOMContentLoaded", () => {
 
             tile.addEventListener("pointerdown", (event) => {
                 if (tile.classList.contains("used")) return;
-                isDragging = true;
+                dragStartPos = { x: event.clientX, y: event.clientY };
+                isDragging = false; // Don't set to true until we've moved enough
                 tile.setPointerCapture(event.pointerId);
-                setActiveTile(tile);
             });
 
-            tile.addEventListener("pointerup", (event) => {
-                if (!isDragging) return;
-                isDragging = false;
-                tile.releasePointerCapture(event.pointerId);
-                const element = document.elementFromPoint(event.clientX, event.clientY);
-                const slot = element ? element.closest(".drag-slot") : null;
-                if (slot) {
-                    placeLetterIntoSlot(slot);
+            tile.addEventListener("pointermove", (event) => {
+                if (!dragStartPos) return;
+                if (tile.classList.contains("used")) return;
+                
+                const dx = event.clientX - dragStartPos.x;
+                const dy = event.clientY - dragStartPos.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (!isDragging && distance > DRAG_THRESHOLD) {
+                    isDragging = true;
+                    setActiveTile(tile);
                 }
             });
 
+            tile.addEventListener("pointerup", (event) => {
+                if (!dragStartPos) return;
+                
+                if (isDragging) {
+                    isDragging = false;
+                    tile.releasePointerCapture(event.pointerId);
+                    const element = document.elementFromPoint(event.clientX, event.clientY);
+                    const slot = element ? element.closest(".drag-slot") : null;
+                    if (slot) {
+                        placeLetterIntoSlot(slot);
+                    } else {
+                        setActiveTile(null);
+                    }
+                }
+                
+                dragStartPos = null;
+            });
+
             tile.addEventListener("pointercancel", (event) => {
-                if (!isDragging) return;
                 isDragging = false;
-                tile.releasePointerCapture(event.pointerId);
+                dragStartPos = null;
+                if (event.pointerId !== undefined) {
+                    tile.releasePointerCapture(event.pointerId);
+                }
+                setActiveTile(null);
             });
         });
 
@@ -1983,6 +2020,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             let isDragging = false;
+            let dragStartPos = null;
+            const DRAG_THRESHOLD = 5; // pixels to move before considering it a drag
 
             function markStoryAttempt() {
                 if (!storyAttempted) {
@@ -2026,26 +2065,50 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 tile.addEventListener("pointerdown", (event) => {
                     if (tile.classList.contains("used")) return;
-                    isDragging = true;
+                    dragStartPos = { x: event.clientX, y: event.clientY };
+                    isDragging = false; // Don't set to true until we've moved enough
                     tile.setPointerCapture(event.pointerId);
-                    setActiveTile(tile);
                 });
 
-                tile.addEventListener("pointerup", (event) => {
-                    if (!isDragging) return;
-                    isDragging = false;
-                    tile.releasePointerCapture(event.pointerId);
-                    const element = document.elementFromPoint(event.clientX, event.clientY);
-                    const slot = element ? element.closest(".story-letter-slot") : null;
-                    if (slot) {
-                        placeLetterIntoSlot(slot);
+                tile.addEventListener("pointermove", (event) => {
+                    if (!dragStartPos) return;
+                    if (tile.classList.contains("used")) return;
+                    
+                    const dx = event.clientX - dragStartPos.x;
+                    const dy = event.clientY - dragStartPos.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (!isDragging && distance > DRAG_THRESHOLD) {
+                        isDragging = true;
+                        setActiveTile(tile);
                     }
                 });
 
+                tile.addEventListener("pointerup", (event) => {
+                    if (!dragStartPos) return;
+                    
+                    if (isDragging) {
+                        isDragging = false;
+                        tile.releasePointerCapture(event.pointerId);
+                        const element = document.elementFromPoint(event.clientX, event.clientY);
+                        const slot = element ? element.closest(".story-letter-slot") : null;
+                        if (slot) {
+                            placeLetterIntoSlot(slot);
+                        } else {
+                            setActiveTile(null);
+                        }
+                    }
+                    
+                    dragStartPos = null;
+                });
+
                 tile.addEventListener("pointercancel", (event) => {
-                    if (!isDragging) return;
                     isDragging = false;
-                    tile.releasePointerCapture(event.pointerId);
+                    dragStartPos = null;
+                    if (event.pointerId !== undefined) {
+                        tile.releasePointerCapture(event.pointerId);
+                    }
+                    setActiveTile(null);
                 });
             });
 
