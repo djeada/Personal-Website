@@ -105,7 +105,7 @@ def wrap_article_and_toc(soup: BeautifulSoup, toc_wrapper: Tag) -> None:
     )
 
     sidebar_wrapper.append(toc_wrapper)
-    article_wrapper.extend([article_body_copy, sidebar_wrapper])
+    article_wrapper.extend([sidebar_wrapper, article_body_copy])
 
     footer = soup.find("footer")
     if footer:

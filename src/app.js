@@ -112,7 +112,7 @@ const PATH_PREPENDS = {
 
 const MAIN_BRANCH = {
     "algorithms_and_data_structures": "master",
-    "frontend_notes": "master",
+    "frontend_notes": "main",
     "numerical_methods": "master",
     "databases_notes": "main",
     "git_notes": "main",
@@ -123,6 +123,7 @@ const MAIN_BRANCH = {
     "kurs_podstaw_pythona": "master",
     "od_c_do_cpp": "master",
     "stanford_machine_learning": "main",
+    "vtk_examples": "main",
 };
 
 
