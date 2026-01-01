@@ -11,6 +11,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const nextBtn = document.getElementById("next-btn");
     const resetBtn = document.getElementById("reset-btn");
     const langButtons = document.querySelectorAll(".lang-btn");
+    const activityCard = document.getElementById("activity-card");
+    const fullscreenExitBtn = document.getElementById("fullscreen-exit-btn");
+    const fullscreenEnterBtn = document.getElementById("fullscreen-enter-btn");
 
     // Stats elements
     const starsCount = document.getElementById("stars-count");
@@ -36,7 +39,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // Learning phases
     const PHASES = {
         SOUNDS: "sounds",
-        BLENDS: "blends",
         WORDS: "words",
         SENTENCES: "sentences"
     };
@@ -45,12 +47,11 @@ document.addEventListener("DOMContentLoaded", () => {
         en: {
             "header.title": "Phonics Adventure",
             "header.subtitle": "Learn to read through sounds, words, and stories! Tap letters to hear sounds, build words, and follow along with fun stories.",
-            "phase.sounds": "Sounds",
-            "phase.blends": "Blends",
+            "phase.sounds": "Letters",
             "phase.words": "Words",
             "phase.stories": "Stories",
             "stats.stars": "Stars",
-            "stats.sounds": "Sounds",
+            "stats.sounds": "Letters",
             "stats.words": "Words",
             "stats.stories": "Stories",
             "loading": "Loading activities...",
@@ -59,15 +60,17 @@ document.addEventListener("DOMContentLoaded", () => {
             "help.title": "👨‍👩‍👧 Parent Info",
             "help.currentPhaseLabel": "Current Phase:",
             "help.progressLabel": "Progress:",
-            "help.phaseInfo": "Children progress through phases: Sounds → Blends → Words → Stories",
+            "help.phaseInfo": "Children progress through phases: Sounds → Words → Stories",
             "help.masteryInfo": "Each phase must be mastered before moving on",
             "help.autoSaveInfo": "Progress is saved automatically in this browser",
             "help.audioHint": "Tap the 🔊 button to hear sounds and words",
             "help.resetHint": "Use the Reset button below to start over",
             "help.resetButton": "🔄 Reset Progress",
-            "activity.soundsTitle": "Letter Sounds",
-            "activity.blendsTitle": "Sound Blending",
-            "activity.wordsTitle": "Word Building",
+            "help.soundsSummary": "Letters tried/right:",
+            "help.wordsSummary": "Words tried/right:",
+            "help.storiesSummary": "Stories tried/right:",
+            "activity.soundsTitle": "Letters",
+            "activity.wordsTitle": "Words",
             "activity.storiesTitle": "Story Time",
             "sounds.prompt": "Listen to each face, then connect the right sound!",
             "sounds.instructions": "Tap each face to hear its sound, then drag from the letter to the correct face.",
@@ -76,19 +79,16 @@ document.addEventListener("DOMContentLoaded", () => {
             "sounds.matchToast": "You matched \"{letter}\"!",
             "sounds.matchAgain": "Nice! \"{letter}\" again.",
             "sounds.tryAnotherFace": "Try another face!",
-            "blends.prompt": "Let's blend sounds to make: {word}",
-            "blends.speak": "Let's blend the sounds together!",
-            "blends.listenLabel": "Listen and blend!",
-            "blends.tapHint": "Tap each sound, then tap 🔊 to hear the whole word!",
-            "words.prompt": "Build the word: {word}",
-            "words.speak": "Can you build the word {word}?",
-            "words.buildLabel": "Build:",
+            "words.prompt": "Listen to the sound and build the word.",
+            "words.speak": "Listen carefully.",
+            "words.instructions": "Drag the letters into the boxes to match the sound.",
+            "words.tryAgain": "Try again!",
             "words.builtToast": "You built \"{word}\"!",
-            "words.tryAnotherLetter": "Try another letter!",
             "stories.prompt": "Let's read a story together!",
             "stories.speak": "Let's read a story together!",
             "stories.readButton": "Read Story",
             "stories.greatReading": "Great reading!",
+            "stories.instructions": "Fill the missing word to continue the story.",
             "confirm.reset": "Are you sure you want to reset all progress?",
             "toast.saveFail": "Could not save progress",
             "toast.reset": "Progress reset!",
@@ -100,12 +100,11 @@ document.addEventListener("DOMContentLoaded", () => {
         de: {
             "header.title": "Lese-Abenteuer",
             "header.subtitle": "Lerne lesen mit Lauten, Wörtern und Geschichten! Tippe auf Buchstaben, höre die Laute, baue Wörter und lies lustige Geschichten.",
-            "phase.sounds": "Laute",
-            "phase.blends": "Mischen",
+            "phase.sounds": "Buchstaben",
             "phase.words": "Wörter",
             "phase.stories": "Geschichten",
             "stats.stars": "Sterne",
-            "stats.sounds": "Laute",
+            "stats.sounds": "Buchstaben",
             "stats.words": "Wörter",
             "stats.stories": "Geschichten",
             "loading": "Aktivitäten werden geladen...",
@@ -114,15 +113,17 @@ document.addEventListener("DOMContentLoaded", () => {
             "help.title": "👨‍👩‍👧 Elterninfo",
             "help.currentPhaseLabel": "Aktuelle Phase:",
             "help.progressLabel": "Fortschritt:",
-            "help.phaseInfo": "Kinder durchlaufen Phasen: Laute → Mischen → Wörter → Geschichten",
+            "help.phaseInfo": "Kinder durchlaufen Phasen: Laute → Wörter → Geschichten",
             "help.masteryInfo": "Jede Phase muss gemeistert werden, bevor es weitergeht",
             "help.autoSaveInfo": "Fortschritt wird automatisch in diesem Browser gespeichert",
             "help.audioHint": "Tippe auf 🔊, um Laute und Wörter zu hören",
             "help.resetHint": "Nutze den Reset-Button unten, um neu zu starten",
             "help.resetButton": "🔄 Fortschritt zurücksetzen",
-            "activity.soundsTitle": "Buchstabenlaute",
-            "activity.blendsTitle": "Laute mischen",
-            "activity.wordsTitle": "Wörter bauen",
+            "help.soundsSummary": "Buchstaben versucht/richtig:",
+            "help.wordsSummary": "Wörter versucht/richtig:",
+            "help.storiesSummary": "Geschichten versucht/richtig:",
+            "activity.soundsTitle": "Buchstaben",
+            "activity.wordsTitle": "Wörter",
             "activity.storiesTitle": "Geschichtenzeit",
             "sounds.prompt": "Höre dir jedes Gesicht an und verbinde den richtigen Laut!",
             "sounds.instructions": "Tippe jedes Gesicht an, höre den Laut und ziehe den Buchstaben zum richtigen Gesicht.",
@@ -131,19 +132,16 @@ document.addEventListener("DOMContentLoaded", () => {
             "sounds.matchToast": "Du hast \"{letter}\" verbunden!",
             "sounds.matchAgain": "Super! \"{letter}\" nochmal.",
             "sounds.tryAnotherFace": "Versuch ein anderes Gesicht!",
-            "blends.prompt": "Lass uns Laute mischen für: {word}",
-            "blends.speak": "Lass uns die Laute zusammenmischen!",
-            "blends.listenLabel": "Hör zu und mische!",
-            "blends.tapHint": "Tippe jeden Laut an und dann 🔊, um das ganze Wort zu hören!",
-            "words.prompt": "Baue das Wort: {word}",
-            "words.speak": "Kannst du das Wort {word} bauen?",
-            "words.buildLabel": "Baue:",
+            "words.prompt": "Höre den Laut und baue das Wort.",
+            "words.speak": "Hör genau zu.",
+            "words.instructions": "Ziehe die Buchstaben in die Kästchen passend zum Laut.",
+            "words.tryAgain": "Versuch es nochmal!",
             "words.builtToast": "Du hast \"{word}\" gebaut!",
-            "words.tryAnotherLetter": "Versuch einen anderen Buchstaben!",
             "stories.prompt": "Lass uns zusammen eine Geschichte lesen!",
             "stories.speak": "Lass uns zusammen eine Geschichte lesen!",
             "stories.readButton": "Geschichte vorlesen",
             "stories.greatReading": "Super gelesen!",
+            "stories.instructions": "Setze das fehlende Wort ein, um weiterzulesen.",
             "confirm.reset": "Möchtest du den gesamten Fortschritt wirklich zurücksetzen?",
             "toast.saveFail": "Fortschritt konnte nicht gespeichert werden",
             "toast.reset": "Fortschritt zurückgesetzt!",
@@ -217,41 +215,63 @@ document.addEventListener("DOMContentLoaded", () => {
         { letter: "Z", sound: "z", example: "zebra" }
     ];
 
-    // CVC words for blending and word building
-    const CVC_WORDS = [
-        { word: "cat", sounds: ["c", "a", "t"] },
-        { word: "dog", sounds: ["d", "o", "g"] },
-        { word: "sun", sounds: ["s", "u", "n"] },
-        { word: "hat", sounds: ["h", "a", "t"] },
-        { word: "bed", sounds: ["b", "e", "d"] },
-        { word: "pig", sounds: ["p", "i", "g"] },
-        { word: "cup", sounds: ["c", "u", "p"] },
-        { word: "map", sounds: ["m", "a", "p"] },
-        { word: "net", sounds: ["n", "e", "t"] },
-        { word: "fox", sounds: ["f", "o", "x"] },
-        { word: "bug", sounds: ["b", "u", "g"] },
-        { word: "red", sounds: ["r", "e", "d"] },
-        { word: "hen", sounds: ["h", "e", "n"] },
-        { word: "jam", sounds: ["j", "a", "m"] },
-        { word: "leg", sounds: ["l", "e", "g"] }
+    const SHORT_WORDS = [
+        "am", "an", "as", "at", "be", "by", "do", "go", "he", "hi",
+        "if", "in", "is", "it", "me", "my", "no", "of", "oh", "on",
+        "or", "ox", "up", "us", "we", "to", "so", "pi", "ex", "ace",
+        "act", "add", "age", "ago", "air", "and", "ant", "any", "ape", "arm",
+        "art", "ash", "ask", "ate", "awe", "bad", "bag", "ban", "bar", "bat",
+        "bay", "bed", "bee", "beg", "bet", "bib", "bid", "big", "bin", "bit",
+        "bog", "box", "boy", "bud", "bug", "bun", "bus", "but", "buy", "cab",
+        "can", "cap", "car", "cat", "cop", "cow", "cry", "cup", "cut", "dad",
+        "dam", "day", "den", "did", "dig", "dim", "din", "dip", "dog", "dot",
+        "dry", "due", "dug", "dye", "ear", "eat", "eel", "egg", "elf", "elk",
+        "elm", "end", "era", "eve", "eye", "fan", "far", "fat", "fed", "fee",
+        "few", "fig", "fin", "fit", "fix", "fog", "for", "fox", "fun", "fur",
+        "gas", "gem", "get", "gig", "gin", "gum", "gun", "guy", "had", "ham",
+        "has", "hat", "hay", "hen", "her", "hid", "him", "hip", "his", "hit",
+        "hog", "hop", "hot", "how", "hug", "hut", "ice", "icy", "ink", "jam",
+        "jar", "jaw", "jet", "job", "jog", "joy", "key", "kid", "kin", "kit",
+        "lab", "lad", "lag", "lap", "law", "lay", "leg", "let", "lid", "lip",
+        "lit", "log", "lot", "low", "mad", "man", "map", "mat", "men", "met",
+        "mix", "mom", "mop", "mud", "mug", "nap", "net", "new", "nod", "nor",
+        "now", "nut", "oak", "odd", "off", "old", "one", "out", "owl", "own",
+        "pad", "pal", "pan", "par", "pat", "paw", "pay", "pen", "pet", "pig",
+        "pin", "pip", "pit", "ply", "pod", "pop", "pot", "put", "rag", "ram",
+        "ran", "rap", "rat", "raw", "red", "rid", "rig", "rim", "rip", "rob",
+        "rod", "rot", "row", "rub", "rug", "run", "sad", "sap", "sat", "say",
+        "sea", "see", "set", "shy", "sip", "sit", "six", "ski", "sky", "sly",
+        "sob", "son", "sow", "sun", "tab", "tag", "tan", "tap", "tar", "tea",
+        "ten", "the", "tie", "tin", "tip", "toe", "ton", "top", "toy", "try",
+        "tub", "tug", "two", "use", "van", "vat", "vet", "vow", "wag", "war",
+        "was", "wax", "way", "web", "wet", "who", "why", "win", "wit", "won",
+        "yes", "yet", "you", "zap", "zig", "zip", "zoo", "able", "acid", "aged"
     ];
 
-    // Simple stories using only learned CVC words
     const STORIES = [
         {
             title: "The Cat",
-            text: "The cat sat on a mat. The cat is fat. The cat can nap.",
-            words: ["the", "cat", "sat", "on", "a", "mat", "is", "fat", "can", "nap"]
+            sentences: [
+                { text: "The ____ sat on a mat.", missing: "cat" },
+                { text: "The cat is ____.", missing: "fat" },
+                { text: "The cat can ____.", missing: "nap" }
+            ]
         },
         {
             title: "The Dog",
-            text: "The dog ran to the log. The dog dug in the mud. The dog is fun.",
-            words: ["the", "dog", "ran", "to", "log", "dug", "in", "mud", "is", "fun"]
+            sentences: [
+                { text: "The ____ ran to the log.", missing: "dog" },
+                { text: "The dog dug in the ____.", missing: "mud" },
+                { text: "The dog is ____.", missing: "fun" }
+            ]
         },
         {
             title: "The Sun",
-            text: "The sun is hot. The sun is up. I run in the sun. It is fun.",
-            words: ["the", "sun", "is", "hot", "up", "i", "run", "in", "it", "fun"]
+            sentences: [
+                { text: "The sun is ____.", missing: "hot" },
+                { text: "The sun is ____.", missing: "up" },
+                { text: "I run in the ____.", missing: "sun" }
+            ]
         }
     ];
 
@@ -264,9 +284,13 @@ document.addEventListener("DOMContentLoaded", () => {
         masteredWords: [],
         completedStories: [],
         language: "en",
+        activityStats: {
+            sounds: { attempts: 0, correct: 0 },
+            words: { attempts: 0, correct: 0 },
+            stories: { attempts: 0, correct: 0 }
+        },
         phaseProgress: {
             sounds: 0,
-            blends: 0,
             words: 0,
             sentences: 0
         }
@@ -421,17 +445,22 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         // Mouth
-        ctx.fillStyle = characterState.mouthOpen ? "#FF6B6B" : "#FF8E8E";
-        ctx.beginPath();
         if (characterState.mouthOpen) {
-            ctx.ellipse(100, 130, 25, 20, 0, 0, Math.PI * 2);
+            ctx.fillStyle = "#FF6B6B";
+            ctx.beginPath();
+            ctx.ellipse(100, 130, 24, 18, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#E85555";
+            ctx.lineWidth = 2;
+            ctx.stroke();
         } else {
-            ctx.ellipse(100, 130, 30, 10, 0, 0, Math.PI);
+            ctx.strokeStyle = "#E85555";
+            ctx.lineWidth = 4;
+            ctx.lineCap = "round";
+            ctx.beginPath();
+            ctx.arc(100, 132, 20, 0, Math.PI);
+            ctx.stroke();
         }
-        ctx.fill();
-        ctx.strokeStyle = "#E85555";
-        ctx.lineWidth = 2;
-        ctx.stroke();
 
         // Cheeks (blush)
         ctx.fillStyle = "rgba(255, 150, 150, 0.4)";
@@ -532,6 +561,19 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!state.language) {
             state.language = "en";
         }
+        if (state.currentPhase === "blends") {
+            state.currentPhase = PHASES.WORDS;
+        }
+        if (!state.activityStats) {
+            state.activityStats = {
+                sounds: { attempts: 0, correct: 0 },
+                words: { attempts: 0, correct: 0 },
+                stories: { attempts: 0, correct: 0 }
+            };
+        }
+        if (!state.activityStats.words) {
+            state.activityStats.words = { attempts: 0, correct: 0 };
+        }
         updateUI();
     }
 
@@ -560,9 +602,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 masteredWords: [],
                 completedStories: [],
                 language: state.language || "en",
+                activityStats: {
+                    sounds: { attempts: 0, correct: 0 },
+                    words: { attempts: 0, correct: 0 },
+                    stories: { attempts: 0, correct: 0 }
+                },
                 phaseProgress: {
                     sounds: 0,
-                    blends: 0,
                     words: 0,
                     sentences: 0
                 }
@@ -581,7 +627,7 @@ document.addEventListener("DOMContentLoaded", () => {
         storiesRead.textContent = state.completedStories.length;
 
         // Update phase indicators
-        const phases = [PHASES.SOUNDS, PHASES.BLENDS, PHASES.WORDS, PHASES.SENTENCES];
+        const phases = [PHASES.SOUNDS, PHASES.WORDS, PHASES.SENTENCES];
         const currentIndex = phases.indexOf(state.currentPhase);
 
         document.querySelectorAll(".phase-item").forEach((item, index) => {
@@ -600,7 +646,6 @@ document.addEventListener("DOMContentLoaded", () => {
         // Update parent info
         const phaseNames = {
             sounds: t("activity.soundsTitle"),
-            blends: t("activity.blendsTitle"),
             words: t("activity.wordsTitle"),
             sentences: t("activity.storiesTitle")
         };
@@ -608,11 +653,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const totalProgress = calculateTotalProgress();
         parentProgress.textContent = totalProgress + "%";
+
+        const soundsTried = document.getElementById("sounds-tried");
+        const soundsRight = document.getElementById("sounds-right");
+        const wordsTried = document.getElementById("words-tried");
+        const wordsRight = document.getElementById("words-right");
+        const storiesTried = document.getElementById("stories-tried");
+        const storiesRight = document.getElementById("stories-right");
+
+        if (soundsTried) soundsTried.textContent = state.activityStats.sounds.attempts;
+        if (soundsRight) soundsRight.textContent = state.activityStats.sounds.correct;
+        if (wordsTried) wordsTried.textContent = state.activityStats.words.attempts;
+        if (wordsRight) wordsRight.textContent = state.activityStats.words.correct;
+        if (storiesTried) storiesTried.textContent = state.activityStats.stories.attempts;
+        if (storiesRight) storiesRight.textContent = state.activityStats.stories.correct;
     }
 
     function calculateTotalProgress() {
         const soundProgress = (state.masteredSounds.length / LETTERS.length) * 25;
-        const wordProgress = (state.masteredWords.length / CVC_WORDS.length) * 50;
+        const wordProgress = (state.masteredWords.length / SHORT_WORDS.length) * 50;
         const storyProgress = (state.completedStories.length / STORIES.length) * 25;
         return Math.round(soundProgress + wordProgress + storyProgress);
     }
@@ -622,7 +681,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function checkPhaseProgression() {
-        const phases = [PHASES.SOUNDS, PHASES.BLENDS, PHASES.WORDS, PHASES.SENTENCES];
+        const phases = [PHASES.SOUNDS, PHASES.WORDS, PHASES.SENTENCES];
         const currentIndex = phases.indexOf(state.currentPhase);
 
         if (currentIndex < phases.length - 1) {
@@ -646,9 +705,6 @@ document.addEventListener("DOMContentLoaded", () => {
             case PHASES.SOUNDS:
                 renderSoundsActivity();
                 break;
-            case PHASES.BLENDS:
-                renderBlendsActivity();
-                break;
             case PHASES.WORDS:
                 renderWordsActivity();
                 break;
@@ -660,8 +716,23 @@ document.addEventListener("DOMContentLoaded", () => {
         updateNavigationButtons();
     }
 
+    function requestActivityFullscreen() {
+        if (!document.fullscreenEnabled || document.fullscreenElement) {
+            return;
+        }
+        if (activityCard && activityCard.requestFullscreen) {
+            activityCard.requestFullscreen().catch(() => {});
+        }
+    }
+
+    function exitActivityFullscreen() {
+        if (document.fullscreenElement) {
+            document.exitFullscreen().catch(() => {});
+        }
+    }
+
     function updateNavigationButtons() {
-        const phases = [PHASES.SOUNDS, PHASES.BLENDS, PHASES.WORDS, PHASES.SENTENCES];
+        const phases = [PHASES.SOUNDS, PHASES.WORDS, PHASES.SENTENCES];
         const currentIndex = phases.indexOf(state.currentPhase);
 
         prevBtn.disabled = currentIndex === 0;
@@ -855,12 +926,17 @@ document.addEventListener("DOMContentLoaded", () => {
             targetButton.classList.add("speaking");
             setTimeout(() => targetButton.classList.remove("speaking"), 700);
 
+            state.activityStats.sounds.attempts += 1;
+            saveProgress();
+
             if (letter === target.letter) {
                 locked = true;
                 targetButton.classList.add("matched");
                 letterCard.classList.add("matched");
                 dragLine.classList.add("visible");
                 setDragLine(getLetterCenter(), getButtonCenter(targetButton));
+                state.activityStats.sounds.correct += 1;
+                saveProgress();
 
                 if (!state.masteredSounds.includes(target.letter)) {
                     state.masteredSounds.push(target.letter);
@@ -902,150 +978,169 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Blends activity
-    function renderBlendsActivity() {
-        activityIcon.textContent = "🔗";
-        activityTitle.textContent = t("activity.blendsTitle");
+    // Words activity
+    function renderWordsActivity() {
+        activityIcon.textContent = "🔡";
+        activityTitle.textContent = t("activity.wordsTitle");
 
-        const wordIndex = state.currentActivity % CVC_WORDS.length;
-        const wordData = CVC_WORDS[wordIndex];
+        const word = SHORT_WORDS[Math.floor(Math.random() * SHORT_WORDS.length)];
+        const targetLetters = word.toUpperCase().split("");
+        const letterBank = shuffleArray([...targetLetters]);
 
-        showCharacterSpeech(t("blends.prompt", { word: wordData.word }));
-        AudioSystem.speak(t("blends.speak"));
+        showCharacterSpeech(t("words.prompt"));
 
         let html = `
-            <div class="word-builder">
+            <div class="word-builder word-dragger">
                 <div class="target-word">
                     <button class="sound-btn" id="play-word-btn">🔊</button>
-                    ${t("blends.listenLabel")}
                 </div>
-                <div class="word-slots" id="word-slots">
-                    ${wordData.sounds.map((s, i) => `
-                        <div class="word-slot" data-index="${i}" data-sound="${s}">
-                            <button class="sound-btn" style="font-size: 1.2rem; width: 40px; height: 40px;">🔊</button>
-                        </div>
+                <p class="blend-instructions">${t("words.instructions")}</p>
+                <div class="word-slots drag-slots" id="drag-slots">
+                    ${targetLetters.map((_, i) => `
+                        <div class="word-slot drag-slot" data-index="${i}"></div>
                     `).join("")}
                 </div>
-                <p style="font-size: 1.2rem; color: var(--text-secondary); margin-top: 20px;">
-                    ${t("blends.tapHint")}
-                </p>
+                <div class="letter-bank" id="letter-bank">
+                    ${letterBank.map((letter, index) => `
+                        <button class="letter-tile" draggable="false" data-letter="${letter}" data-tile="${index}">${letter}</button>
+                    `).join("")}
+                </div>
+                <div class="drag-ghost" id="drag-ghost"></div>
             </div>
         `;
 
         activityArea.innerHTML = html;
 
-        // Play word button
+        let wordAttempted = false;
+        let wordCompleted = false;
+
+        function markWordAttempt() {
+            if (wordAttempted) return;
+            wordAttempted = true;
+            state.activityStats.words.attempts += 1;
+            saveProgress();
+        }
+
+        function checkWordCompletion() {
+            if (wordCompleted) return;
+            const slots = Array.from(document.querySelectorAll(".drag-slot"));
+            if (slots.some(slot => !slot.dataset.letter)) {
+                return;
+            }
+            const spelled = slots.map(slot => slot.dataset.letter).join("");
+            if (spelled === targetLetters.join("")) {
+                wordCompleted = true;
+                state.activityStats.words.correct += 1;
+                state.stars += 5;
+                saveProgress();
+                showToast(t("words.builtToast", { word }), "success");
+                celebrate();
+                AudioSystem.speakEncouragement();
+                if (!state.masteredWords.includes(word)) {
+                    state.masteredWords.push(word);
+                    saveProgress();
+                }
+                setTimeout(() => {
+                    state.currentActivity++;
+                    saveProgress();
+                    renderWordsActivity();
+                }, 800);
+            } else {
+                showToast(t("words.tryAgain"), "info");
+            }
+        }
+
         document.getElementById("play-word-btn").addEventListener("click", () => {
-            AudioSystem.speakWord(wordData.word, true);
+            AudioSystem.speakWord(word);
         });
 
-        // Individual sound buttons
-        document.querySelectorAll(".word-slot .sound-btn").forEach((btn, index) => {
-            btn.addEventListener("click", (e) => {
-                e.stopPropagation();
-                AudioSystem.speakLetter(wordData.sounds[index]);
+        const tiles = Array.from(document.querySelectorAll(".letter-tile"));
+        const slots = Array.from(document.querySelectorAll(".drag-slot"));
+        const dragGhost = document.getElementById("drag-ghost");
+        let activeTile = null;
+        let activeLetter = "";
+
+        function setActiveTile(tile) {
+            if (activeTile) {
+                activeTile.classList.remove("picked");
+            }
+            activeTile = tile;
+            activeLetter = tile ? tile.dataset.letter : "";
+            if (activeTile) {
+                activeTile.classList.add("picked");
+                activityArea.classList.add("letter-picked");
+                dragGhost.textContent = activeLetter;
+                dragGhost.classList.add("visible");
+            } else {
+                activityArea.classList.remove("letter-picked");
+                dragGhost.classList.remove("visible");
+            }
+            slots.forEach((slot) => {
+                slot.dataset.preview = "";
+            });
+        }
+
+        tiles.forEach(tile => {
+            tile.addEventListener("click", () => {
+                if (tile.classList.contains("used")) return;
+                if (activeTile === tile) {
+                    setActiveTile(null);
+                    return;
+                }
+                setActiveTile(tile);
             });
         });
 
-        // Auto-play on load
-        setTimeout(() => {
-            AudioSystem.speakWord(wordData.word, true);
-        }, 500);
-    }
+        slots.forEach(slot => {
+            slot.addEventListener("mouseenter", () => {
+                if (!activeLetter || slot.dataset.letter) return;
+                slot.dataset.preview = activeLetter;
+            });
 
-    // Words activity (word building)
-    function renderWordsActivity() {
-        activityIcon.textContent = "📝";
-        activityTitle.textContent = t("activity.wordsTitle");
+            slot.addEventListener("mouseleave", () => {
+                slot.dataset.preview = "";
+            });
 
-        const wordIndex = state.currentActivity % CVC_WORDS.length;
-        const wordData = CVC_WORDS[wordIndex];
-
-        showCharacterSpeech(t("words.prompt", { word: wordData.word }));
-        AudioSystem.speak(t("words.speak", { word: wordData.word }));
-
-        // Shuffle letters for choices
-        const extraLetters = ["x", "z", "q", "k"];
-        const choices = [...wordData.sounds];
-        while (choices.length < 6) {
-            const extra = extraLetters[Math.floor(Math.random() * extraLetters.length)];
-            if (!choices.includes(extra)) {
-                choices.push(extra);
-            }
-        }
-        const shuffledChoices = shuffleArray(choices);
-
-        let html = `
-            <div class="word-builder">
-                <div class="target-word">
-                    <button class="sound-btn" id="play-target-btn">🔊</button>
-                    ${t("words.buildLabel")} <strong>${wordData.word.toUpperCase()}</strong>
-                </div>
-                <div class="word-slots" id="word-slots">
-                    ${wordData.sounds.map((_, i) => `
-                        <div class="word-slot" data-index="${i}"></div>
-                    `).join("")}
-                </div>
-                <div class="letter-choices" id="letter-choices">
-                    ${shuffledChoices.map(letter => `
-                        <button class="choice-btn" data-letter="${letter}">${letter.toUpperCase()}</button>
-                    `).join("")}
-                </div>
-            </div>
-        `;
-
-        activityArea.innerHTML = html;
-
-        let currentSlot = 0;
-        const slots = document.querySelectorAll(".word-slot");
-        const choiceBtns = document.querySelectorAll(".choice-btn");
-
-        // Play target word
-        document.getElementById("play-target-btn").addEventListener("click", () => {
-            AudioSystem.speakWord(wordData.word);
-        });
-
-        // Letter choice handlers
-        choiceBtns.forEach(btn => {
-            btn.addEventListener("click", () => {
-                if (currentSlot >= wordData.sounds.length || btn.classList.contains("used")) return;
-
-                const letter = btn.dataset.letter;
-                const expectedLetter = wordData.sounds[currentSlot];
-
-                if (letter === expectedLetter) {
-                    slots[currentSlot].textContent = letter.toUpperCase();
-                    slots[currentSlot].classList.add("filled", "correct");
-                    btn.classList.add("used");
-                    AudioSystem.speakLetter(letter);
-                    currentSlot++;
-
-                    if (currentSlot === wordData.sounds.length) {
-                        // Word complete!
-                        setTimeout(() => {
-                            if (!state.masteredWords.includes(wordData.word)) {
-                                state.masteredWords.push(wordData.word);
-                                state.stars += 5;
-                                saveProgress();
-                            }
-                            showToast(t("words.builtToast", { word: wordData.word }), "success");
-                            celebrate();
-                            AudioSystem.speakEncouragement();
-                            checkPhaseProgression();
-                        }, 500);
+            slot.addEventListener("click", () => {
+                if (activeTile) {
+                    markWordAttempt();
+                    if (slot.dataset.tile) {
+                        const previousTile = document.querySelector(`.letter-tile[data-tile="${slot.dataset.tile}"]`);
+                        if (previousTile) {
+                            previousTile.classList.remove("used");
+                            previousTile.removeAttribute("aria-disabled");
+                        }
                     }
-                } else {
-                    btn.style.animation = "shake 0.3s ease";
-                    setTimeout(() => btn.style.animation = "", 300);
-                    showToast(t("words.tryAnotherLetter"), "info");
+                    slot.textContent = activeLetter;
+                    slot.dataset.letter = activeLetter;
+                    slot.dataset.tile = activeTile.dataset.tile;
+                    slot.classList.add("filled");
+                    activeTile.classList.add("used");
+                    activeTile.setAttribute("aria-disabled", "true");
+                    setActiveTile(null);
+                    checkWordCompletion();
+                } else if (slot.dataset.letter) {
+                    if (slot.dataset.tile) {
+                        const previousTile = document.querySelector(`.letter-tile[data-tile="${slot.dataset.tile}"]`);
+                        if (previousTile) {
+                            previousTile.classList.remove("used");
+                            previousTile.removeAttribute("aria-disabled");
+                        }
+                    }
+                    slot.textContent = "";
+                    slot.dataset.letter = "";
+                    slot.dataset.tile = "";
+                    slot.classList.remove("filled");
                 }
             });
         });
 
-        // Auto-play on load
-        setTimeout(() => {
-            AudioSystem.speakWord(wordData.word);
-        }, 500);
+        activityArea.addEventListener("mousemove", (event) => {
+            if (!activeLetter) return;
+            const x = event.clientX + 12;
+            const y = event.clientY + 12;
+            dragGhost.style.transform = `translate(${x}px, ${y}px)`;
+        });
     }
 
     // Stories activity
@@ -1055,106 +1150,227 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const storyIndex = state.currentActivity % STORIES.length;
         const story = STORIES[storyIndex];
+        let sentenceIndex = 0;
+        let storyAttempted = false;
 
         showCharacterSpeech(t("stories.prompt"));
         AudioSystem.speak(t("stories.speak"));
 
-        // Create word spans for each word
-        const wordsHtml = story.text.split(/\s+/).map((word, i) => {
-            const cleanWord = word.replace(/[.,!?]/g, "").toLowerCase();
-            return `<span class="story-word" data-word="${cleanWord}" data-index="${i}">${word} </span>`;
-        }).join("");
+        function renderSentence() {
+            const sentence = story.sentences[sentenceIndex];
+            const missing = sentence.missing.toUpperCase();
+            const missingLetters = shuffleArray(missing.split(""));
 
-        let html = `
-            <div class="story-container">
-                <h3 class="story-title">📖 ${story.title}</h3>
-                <div class="story-text" id="story-text">
-                    ${wordsHtml}
-                </div>
-                <div class="story-controls">
-                    <button class="nav-btn primary" id="read-story-btn">
+            const parts = sentence.text.split("____");
+            const before = parts[0] || "";
+            const after = parts[1] || "";
+
+            let html = `
+                <div class="story-container">
+                    <h3 class="story-title">📖 ${story.title}</h3>
+                    <p class="story-instructions">${t("stories.instructions")}</p>
+                    <button class="nav-btn primary story-speech-btn" id="story-speech-btn" type="button">
                         <span class="btn-icon">🔊</span>
                         <span class="btn-text">${t("stories.readButton")}</span>
                     </button>
+                    <div class="story-sentence">
+                        <span>${before}</span>
+                        <span class="story-blank" id="story-blank">
+                            ${missing.split("").map((_, index) => `
+                                <span class="story-letter-slot" data-index="${index}"></span>
+                            `).join("")}
+                        </span>
+                        <span>${after}</span>
+                    </div>
+                    <div class="letter-bank story-bank" id="story-bank">
+                        ${missingLetters.map((letter, index) => `
+                            <button class="letter-tile" draggable="false" data-letter="${letter}" data-tile="${index}">${letter}</button>
+                        `).join("")}
+                    </div>
+                    <div class="drag-ghost" id="story-drag-ghost"></div>
                 </div>
-            </div>
-        `;
+            `;
 
-        activityArea.innerHTML = html;
+            activityArea.innerHTML = html;
 
-        // Word tap to hear
-        document.querySelectorAll(".story-word").forEach(span => {
-            span.addEventListener("click", () => {
-                const word = span.dataset.word;
-                AudioSystem.speakWord(word);
-                span.classList.add("highlighted");
-                setTimeout(() => span.classList.remove("highlighted"), 500);
+            const blank = document.getElementById("story-blank");
+            blank.dataset.letters = "";
+
+            function speakSentence() {
+                const fullSentence = sentence.text.replace("____", sentence.missing);
+                AudioSystem.speak(fullSentence);
+            }
+
+            document.getElementById("story-speech-btn").addEventListener("click", () => {
+                speakSentence();
             });
-        });
 
-        // Read full story
-        document.getElementById("read-story-btn").addEventListener("click", () => {
-            const words = document.querySelectorAll(".story-word");
-            let wordIndex = 0;
+            speakSentence();
 
-            function highlightNext() {
-                if (wordIndex > 0) {
-                    words[wordIndex - 1].classList.remove("highlighted");
+            const slots = Array.from(document.querySelectorAll(".story-letter-slot"));
+
+            const tiles = Array.from(document.querySelectorAll(".letter-tile"));
+            const dragGhost = document.getElementById("story-drag-ghost");
+            let activeTile = null;
+            let activeLetter = "";
+
+            function setActiveTile(tile) {
+                if (activeTile) {
+                    activeTile.classList.remove("picked");
                 }
-
-                if (wordIndex < words.length) {
-                    words[wordIndex].classList.add("highlighted");
-                    const word = words[wordIndex].dataset.word;
-                    AudioSystem.speakWord(word);
-                    wordIndex++;
-                    setTimeout(highlightNext, 800);
+                activeTile = tile;
+                activeLetter = tile ? tile.dataset.letter : "";
+                if (activeTile) {
+                    activeTile.classList.add("picked");
+                    activityArea.classList.add("letter-picked");
+                    dragGhost.textContent = activeLetter;
+                    dragGhost.classList.add("visible");
                 } else {
-                    // Story complete
-                    if (!state.completedStories.includes(story.title)) {
-                        state.completedStories.push(story.title);
-                        state.stars += 10;
-                        saveProgress();
-                    }
-                    showToast(t("stories.greatReading"), "success");
-                    celebrate();
-                    AudioSystem.speakEncouragement();
+                    activityArea.classList.remove("letter-picked");
+                    dragGhost.classList.remove("visible");
+                }
+                slots.forEach((slot) => {
+                    slot.dataset.preview = "";
+                });
+            }
+
+            function evaluateSentence() {
+                const filled = slots.every(s => s.dataset.letter);
+                if (!filled) return;
+                const spelled = slots.map(s => s.dataset.letter).join("");
+                if (spelled === missing) {
+                    setTimeout(() => {
+                        sentenceIndex += 1;
+                        if (sentenceIndex >= story.sentences.length) {
+                            if (!state.completedStories.includes(story.title)) {
+                                state.completedStories.push(story.title);
+                                state.stars += 10;
+                                saveProgress();
+                            }
+                            state.activityStats.stories.correct += 1;
+                            saveProgress();
+                            showToast(t("stories.greatReading"), "success");
+                            celebrate();
+                            AudioSystem.speakEncouragement();
+                            state.currentActivity++;
+                            saveProgress();
+                            renderStoriesActivity();
+                        } else {
+                            renderSentence();
+                        }
+                    }, 400);
+                } else {
+                    showToast(t("words.tryAgain"), "info");
                 }
             }
 
-            highlightNext();
-        });
+            tiles.forEach(tile => {
+                tile.addEventListener("click", () => {
+                    if (tile.classList.contains("used")) return;
+                    if (activeTile === tile) {
+                        setActiveTile(null);
+                        return;
+                    }
+                    setActiveTile(tile);
+                });
+            });
+
+            slots.forEach(slot => {
+                slot.addEventListener("mouseenter", () => {
+                    if (!activeLetter || slot.dataset.letter) return;
+                    slot.dataset.preview = activeLetter;
+                });
+
+                slot.addEventListener("mouseleave", () => {
+                    slot.dataset.preview = "";
+                });
+
+                slot.addEventListener("click", () => {
+                    if (activeTile) {
+                        if (!storyAttempted) {
+                            storyAttempted = true;
+                            state.activityStats.stories.attempts += 1;
+                            saveProgress();
+                        }
+
+                        if (slot.dataset.tile) {
+                            const prevTile = document.querySelector(`.letter-tile[data-tile="${slot.dataset.tile}"]`);
+                            if (prevTile) {
+                                prevTile.classList.remove("used");
+                                prevTile.removeAttribute("aria-disabled");
+                            }
+                        }
+
+                        slot.textContent = activeLetter;
+                        slot.dataset.letter = activeLetter;
+                        slot.dataset.tile = activeTile.dataset.tile;
+                        slot.classList.add("filled");
+
+                        activeTile.classList.add("used");
+                        activeTile.setAttribute("aria-disabled", "true");
+                        setActiveTile(null);
+                        evaluateSentence();
+                    } else if (slot.dataset.letter) {
+                        if (slot.dataset.tile) {
+                            const prevTile = document.querySelector(`.letter-tile[data-tile="${slot.dataset.tile}"]`);
+                            if (prevTile) {
+                                prevTile.classList.remove("used");
+                                prevTile.removeAttribute("aria-disabled");
+                            }
+                        }
+                        slot.textContent = "";
+                        slot.dataset.letter = "";
+                        slot.dataset.tile = "";
+                        slot.classList.remove("filled");
+                    }
+                });
+            });
+
+            activityArea.addEventListener("mousemove", (event) => {
+                if (!activeLetter) return;
+                const x = event.clientX + 12;
+                const y = event.clientY + 12;
+                dragGhost.style.transform = `translate(${x}px, ${y}px)`;
+            });
+        }
+
+        renderSentence();
     }
 
     // Navigation
     prevBtn.addEventListener("click", () => {
-        const phases = [PHASES.SOUNDS, PHASES.BLENDS, PHASES.WORDS, PHASES.SENTENCES];
+        const phases = [PHASES.SOUNDS, PHASES.WORDS, PHASES.SENTENCES];
         const currentIndex = phases.indexOf(state.currentPhase);
         if (currentIndex > 0) {
             state.currentPhase = phases[currentIndex - 1];
             state.currentActivity = 0;
             saveProgress();
             loadActivity();
+            requestActivityFullscreen();
         }
     });
 
     nextBtn.addEventListener("click", () => {
-        const phases = [PHASES.SOUNDS, PHASES.BLENDS, PHASES.WORDS, PHASES.SENTENCES];
+        const phases = [PHASES.SOUNDS, PHASES.WORDS, PHASES.SENTENCES];
         const currentIndex = phases.indexOf(state.currentPhase);
 
         // Within same phase, go to next activity
-        if (state.currentPhase === PHASES.BLENDS || state.currentPhase === PHASES.WORDS) {
+        if (state.currentPhase === PHASES.WORDS) {
             state.currentActivity++;
             saveProgress();
             loadActivity();
+            requestActivityFullscreen();
         } else if (currentIndex < phases.length - 1 && canUnlockPhase(phases[currentIndex + 1])) {
             state.currentPhase = phases[currentIndex + 1];
             state.currentActivity = 0;
             saveProgress();
             loadActivity();
+            requestActivityFullscreen();
         } else if (state.currentPhase === PHASES.SENTENCES) {
             state.currentActivity++;
             saveProgress();
             loadActivity();
+            requestActivityFullscreen();
         }
     });
 
@@ -1166,6 +1382,18 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    activityCard.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+    });
+
+    fullscreenExitBtn.addEventListener("click", () => {
+        exitActivityFullscreen();
+    });
+
+    fullscreenEnterBtn.addEventListener("click", () => {
+        requestActivityFullscreen();
+    });
+
     // Phase item clicks
     document.querySelectorAll(".phase-item").forEach(item => {
         item.addEventListener("click", () => {
@@ -1175,6 +1403,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 state.currentActivity = 0;
                 saveProgress();
                 loadActivity();
+                requestActivityFullscreen();
             } else {
                 showToast(t("toast.unlockMore"), "info");
             }
