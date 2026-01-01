@@ -9,6 +9,7 @@ const CAR_COUNT = 30;
 const CAR_SPAWN_RADIUS = 100;
 const PEOPLE_COUNT = 40;
 const HIGHWAY_OFFSETS = [-75, -50, -25, 25, 50, 75];
+const AUTO_ROTATE_SPEED = 0.5;
 
 
 let scene, camera, renderer, controls;
@@ -1019,7 +1020,7 @@ function setupEventListeners() {
         autoRotateCheck.addEventListener('change', (e) => {
             if (controls) {
                 controls.autoRotate = e.target.checked;
-                controls.autoRotateSpeed = 0.5;
+                controls.autoRotateSpeed = AUTO_ROTATE_SPEED;
             }
         });
     }
