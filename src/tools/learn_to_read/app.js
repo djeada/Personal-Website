@@ -42,32 +42,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Letter data with phonics sounds
     const LETTERS = [
-        { letter: "A", sound: "ah", example: "apple" },
-        { letter: "B", sound: "buh", example: "ball" },
-        { letter: "C", sound: "kuh", example: "cat" },
-        { letter: "D", sound: "duh", example: "dog" },
-        { letter: "E", sound: "eh", example: "egg" },
-        { letter: "F", sound: "fuh", example: "fish" },
-        { letter: "G", sound: "guh", example: "goat" },
-        { letter: "H", sound: "huh", example: "hat" },
-        { letter: "I", sound: "ih", example: "igloo" },
-        { letter: "J", sound: "juh", example: "jam" },
-        { letter: "K", sound: "kuh", example: "kite" },
-        { letter: "L", sound: "luh", example: "lion" },
-        { letter: "M", sound: "muh", example: "mouse" },
-        { letter: "N", sound: "nuh", example: "nest" },
-        { letter: "O", sound: "oh", example: "octopus" },
-        { letter: "P", sound: "puh", example: "pig" },
-        { letter: "Q", sound: "kwuh", example: "queen" },
-        { letter: "R", sound: "ruh", example: "rabbit" },
-        { letter: "S", sound: "sss", example: "sun" },
-        { letter: "T", sound: "tuh", example: "turtle" },
-        { letter: "U", sound: "uh", example: "umbrella" },
-        { letter: "V", sound: "vuh", example: "van" },
-        { letter: "W", sound: "wuh", example: "whale" },
-        { letter: "X", sound: "ks", example: "box" },
-        { letter: "Y", sound: "yuh", example: "yellow" },
-        { letter: "Z", sound: "zzz", example: "zebra" }
+        { letter: "A", sound: "a", example: "apple" },
+        { letter: "B", sound: "b", example: "ball" },
+        { letter: "C", sound: "k", example: "cat" },
+        { letter: "D", sound: "d", example: "dog" },
+        { letter: "E", sound: "e", example: "egg" },
+        { letter: "F", sound: "f", example: "fish" },
+        { letter: "G", sound: "g", example: "goat" },
+        { letter: "H", sound: "h", example: "hat" },
+        { letter: "I", sound: "i", example: "igloo" },
+        { letter: "J", sound: "j", example: "jam" },
+        { letter: "K", sound: "k", example: "kite" },
+        { letter: "L", sound: "l", example: "lion" },
+        { letter: "M", sound: "m", example: "mouse" },
+        { letter: "N", sound: "n", example: "nest" },
+        { letter: "O", sound: "o", example: "octopus" },
+        { letter: "P", sound: "p", example: "pig" },
+        { letter: "Q", sound: "q", example: "queen" },
+        { letter: "R", sound: "r", example: "rabbit" },
+        { letter: "S", sound: "s", example: "sun" },
+        { letter: "T", sound: "t", example: "turtle" },
+        { letter: "U", sound: "u", example: "umbrella" },
+        { letter: "V", sound: "v", example: "van" },
+        { letter: "W", sound: "w", example: "whale" },
+        { letter: "X", sound: "x", example: "box" },
+        { letter: "Y", sound: "y", example: "yellow" },
+        { letter: "Z", sound: "z", example: "zebra" }
     ];
 
     // CVC words for blending and word building
@@ -536,50 +536,221 @@ document.addEventListener("DOMContentLoaded", () => {
         nextBtn.disabled = !canUnlockPhase(phases[currentIndex + 1]);
     }
 
+    function getNextSoundIndex() {
+        return Math.floor(Math.random() * LETTERS.length);
+    }
+
+    function getSoundChoices(targetLetter) {
+        const choices = [targetLetter];
+        while (choices.length < 3) {
+            const randomLetter = LETTERS[Math.floor(Math.random() * LETTERS.length)].letter;
+            if (!choices.includes(randomLetter)) {
+                choices.push(randomLetter);
+            }
+        }
+        return shuffleArray(choices);
+    }
+
     // Sounds activity
     function renderSoundsActivity() {
         activityIcon.textContent = "🔤";
         activityTitle.textContent = "Letter Sounds";
 
-        showCharacterSpeech("Tap a letter to hear its sound!");
-        AudioSystem.speak("Tap a letter to hear its sound!");
+        showCharacterSpeech("Listen to each face, then connect the right sound!");
 
-        let html = '<div class="letter-grid">';
+        const targetIndex = getNextSoundIndex();
+        state.currentActivity = targetIndex;
+        const target = LETTERS[targetIndex];
+        const choices = getSoundChoices(target.letter);
+        const shapes = ["circle", "squircle", "blob"];
 
-        LETTERS.forEach(({ letter, sound }) => {
-            const isMastered = state.masteredSounds.includes(letter);
-            html += `
-                <button class="letter-btn ${isMastered ? "mastered" : ""}" data-letter="${letter}">
-                    ${letter}
-                    <span class="sound-hint">${sound}</span>
-                </button>
-            `;
-        });
+        let html = `
+            <div class="sounds-stage">
+                <div class="drag-layer" aria-hidden="true">
+                    <span class="drag-line" id="drag-line"></span>
+                </div>
+                <div class="letter-zone">
+                    <div class="letter-card" id="target-letter-card" data-letter="${target.letter}">
+                        <span class="letter-title">Letter</span>
+                        <span class="letter-display">${target.letter}</span>
+                    </div>
+                </div>
+                <div class="shape-zone">
+                    <p class="shape-instructions">Tap each face to hear its sound, then drag from the letter to the correct face.</p>
+                    <div class="shape-row">
+                        ${choices.map((letter, index) => `
+                            <button class="shape-choice" data-letter="${letter}" aria-label="Play a letter sound">
+                                <span class="shape-body shape-${shapes[index % shapes.length]}">
+                                    <span class="shape-face">
+                                        <span class="eye"></span>
+                                        <span class="eye"></span>
+                                        <span class="mouth"></span>
+                                        <span class="blush blush-left"></span>
+                                        <span class="blush blush-right"></span>
+                                    </span>
+                                </span>
+                            </button>
+                        `).join("")}
+                    </div>
+                </div>
+            </div>
+        `;
 
-        html += "</div>";
         activityArea.innerHTML = html;
 
-        // Add click handlers
-        activityArea.querySelectorAll(".letter-btn").forEach(btn => {
+        const shapeButtons = activityArea.querySelectorAll(".shape-choice");
+        const letterCard = document.getElementById("target-letter-card");
+        const dragLine = document.getElementById("drag-line");
+        const stage = activityArea.querySelector(".sounds-stage");
+        let locked = false;
+        let dragging = false;
+        let hoverTarget = null;
+
+        shapeButtons.forEach(btn => {
             btn.addEventListener("click", () => {
+                if (locked) return;
                 const letter = btn.dataset.letter;
                 AudioSystem.speakLetter(letter);
+                btn.classList.add("speaking");
+                setTimeout(() => btn.classList.remove("speaking"), 700);
+            });
+        });
 
-                // Mark as practiced
-                if (!state.masteredSounds.includes(letter)) {
-                    state.masteredSounds.push(letter);
+        function getStagePoint(event) {
+            const rect = stage.getBoundingClientRect();
+            return {
+                x: event.clientX - rect.left,
+                y: event.clientY - rect.top
+            };
+        }
+
+        function getLetterCenter() {
+            const rect = letterCard.getBoundingClientRect();
+            const stageRect = stage.getBoundingClientRect();
+            return {
+                x: rect.left - stageRect.left + rect.width / 2,
+                y: rect.top - stageRect.top + rect.height / 2
+            };
+        }
+
+        function setDragLine(start, end) {
+            const dx = end.x - start.x;
+            const dy = end.y - start.y;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+            dragLine.style.width = `${length}px`;
+            dragLine.style.transform = `translate(${start.x}px, ${start.y}px) rotate(${angle}deg)`;
+        }
+
+        function getButtonCenter(button) {
+            const rect = button.getBoundingClientRect();
+            const stageRect = stage.getBoundingClientRect();
+            return {
+                x: rect.left - stageRect.left + rect.width / 2,
+                y: rect.top - stageRect.top + rect.height / 2
+            };
+        }
+
+        function updateHoverTarget(targetButton) {
+            if (hoverTarget && hoverTarget !== targetButton) {
+                hoverTarget.classList.remove("hovered");
+            }
+            hoverTarget = targetButton;
+            if (hoverTarget) {
+                hoverTarget.classList.add("hovered");
+            }
+        }
+
+        letterCard.addEventListener("pointerdown", (event) => {
+            if (locked) return;
+            dragging = true;
+            letterCard.setPointerCapture(event.pointerId);
+            letterCard.classList.add("dragging");
+            dragLine.classList.add("visible");
+
+            const start = getLetterCenter();
+            const point = getStagePoint(event);
+            setDragLine(start, point);
+        });
+
+        letterCard.addEventListener("pointermove", (event) => {
+            if (!dragging) return;
+            const start = getLetterCenter();
+            const point = getStagePoint(event);
+            setDragLine(start, point);
+
+            const element = document.elementFromPoint(event.clientX, event.clientY);
+            const targetButton = element ? element.closest(".shape-choice") : null;
+            updateHoverTarget(targetButton);
+        });
+
+        letterCard.addEventListener("pointerup", (event) => {
+            if (!dragging) return;
+            dragging = false;
+            letterCard.releasePointerCapture(event.pointerId);
+            letterCard.classList.remove("dragging");
+            dragLine.classList.remove("visible");
+            dragLine.style.width = "0px";
+
+            const element = document.elementFromPoint(event.clientX, event.clientY);
+            const targetButton = element ? element.closest(".shape-choice") : null;
+            updateHoverTarget(null);
+
+            if (!targetButton) {
+                showToast("Drag to a face!", "info");
+                return;
+            }
+
+            const letter = targetButton.dataset.letter;
+            AudioSystem.speakLetter(letter);
+            targetButton.classList.add("speaking");
+            setTimeout(() => targetButton.classList.remove("speaking"), 700);
+
+            if (letter === target.letter) {
+                locked = true;
+                targetButton.classList.add("matched");
+                letterCard.classList.add("matched");
+                dragLine.classList.add("visible");
+                setDragLine(getLetterCenter(), getButtonCenter(targetButton));
+
+                if (!state.masteredSounds.includes(target.letter)) {
+                    state.masteredSounds.push(target.letter);
                     state.stars += 1;
-                    btn.classList.add("mastered");
                     saveProgress();
-                    showToast(`You learned the "${letter}" sound!`, "success");
+                    showToast(`You matched "${target.letter}"!`, "success");
 
                     if (state.masteredSounds.length % 5 === 0) {
                         celebrate();
                     }
 
                     checkPhaseProgression();
+                } else {
+                    showToast(`Nice! "${target.letter}" again.`, "success");
                 }
-            });
+
+                setTimeout(() => {
+                    dragLine.classList.remove("visible");
+                    dragLine.style.width = "0px";
+                    state.currentActivity = (targetIndex + 1) % LETTERS.length;
+                    saveProgress();
+                    renderSoundsActivity();
+                }, 900);
+            } else {
+                targetButton.classList.add("wrong");
+                showToast("Try another face!", "info");
+                setTimeout(() => targetButton.classList.remove("wrong"), 350);
+            }
+        });
+
+        letterCard.addEventListener("pointercancel", (event) => {
+            if (!dragging) return;
+            dragging = false;
+            letterCard.releasePointerCapture(event.pointerId);
+            letterCard.classList.remove("dragging");
+            dragLine.classList.remove("visible");
+            dragLine.style.width = "0px";
+            updateHoverTarget(null);
         });
     }
 
