@@ -48,11 +48,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Achievement definitions
     const ACHIEVEMENTS = {
-        "first-letter": { condition: (s) => s.masteredSounds.length >= 1, label: "First Letter" },
-        "letter-master": { condition: (s) => s.masteredSounds.length >= 10, label: "Letter Master" },
-        "word-builder": { condition: (s) => s.masteredWords.length >= 5, label: "Word Builder" },
-        "story-reader": { condition: (s) => s.completedStories.length >= 1, label: "Story Reader" },
-        "superstar": { condition: (s) => s.stars >= 50, label: "Superstar" }
+        "first-letter": {
+            condition: (s) => s.masteredSounds.length >= 1,
+            labelKey: "achievement.firstLetter.label",
+            titleKey: "achievement.firstLetter.title"
+        },
+        "letter-master": {
+            condition: (s) => s.masteredSounds.length >= 10,
+            labelKey: "achievement.letterMaster.label",
+            titleKey: "achievement.letterMaster.title"
+        },
+        "word-builder": {
+            condition: (s) => s.masteredWords.length >= 5,
+            labelKey: "achievement.wordBuilder.label",
+            titleKey: "achievement.wordBuilder.title"
+        },
+        "story-reader": {
+            condition: (s) => s.completedStories.length >= 1,
+            labelKey: "achievement.storyReader.label",
+            titleKey: "achievement.storyReader.title"
+        },
+        "superstar": {
+            condition: (s) => s.stars >= 50,
+            labelKey: "achievement.superstar.label",
+            titleKey: "achievement.superstar.title"
+        }
     };
 
     const TRANSLATIONS = {
@@ -85,9 +105,10 @@ document.addEventListener("DOMContentLoaded", () => {
             "activity.wordsTitle": "Words",
             "activity.storiesTitle": "Story Time",
             "sounds.prompt": "Listen to each face, then connect the right sound!",
-            "sounds.instructions": "Tap each face to hear its sound, then drag from the letter to the correct face.",
+            "sounds.instructions": "Tap each face to hear its sound, then connect the letter and face from either side.",
             "sounds.letterTitle": "Letter",
             "sounds.dragToFace": "Drag to a face!",
+            "sounds.dragToLetter": "Drag to the letter!",
             "sounds.matchToast": "You matched \"{letter}\"! ⭐",
             "sounds.matchAgain": "Nice! \"{letter}\" again. 🌟",
             "sounds.tryAnotherFace": "Try another face!",
@@ -109,7 +130,17 @@ document.addEventListener("DOMContentLoaded", () => {
             "toast.unlockMore": "Complete more activities to unlock!",
             "toast.welcome": "Welcome to Phonics Adventure! 🎈",
             "toast.achievement": "🏆 Achievement Unlocked: {name}!",
-            "streak.day": "Day {count} Streak! 🔥"
+            "streak.day": "Day {count} Streak! 🔥",
+            "achievement.firstLetter.label": "First Letter",
+            "achievement.firstLetter.title": "First Letter Mastered",
+            "achievement.letterMaster.label": "Letter Master",
+            "achievement.letterMaster.title": "Master 10 Letters",
+            "achievement.wordBuilder.label": "Word Builder",
+            "achievement.wordBuilder.title": "Build 5 Words",
+            "achievement.storyReader.label": "Story Reader",
+            "achievement.storyReader.title": "Complete a Story",
+            "achievement.superstar.label": "Superstar",
+            "achievement.superstar.title": "Earn 50 Stars"
         },
         de: {
             "header.title": "Lese-Abenteuer",
@@ -140,9 +171,10 @@ document.addEventListener("DOMContentLoaded", () => {
             "activity.wordsTitle": "Wörter",
             "activity.storiesTitle": "Geschichtenzeit",
             "sounds.prompt": "Höre dir jedes Gesicht an und verbinde den richtigen Laut!",
-            "sounds.instructions": "Tippe jedes Gesicht an, höre den Laut und ziehe den Buchstaben zum richtigen Gesicht.",
+            "sounds.instructions": "Tippe jedes Gesicht an, höre den Laut und verbinde Buchstabe und Gesicht von beiden Seiten.",
             "sounds.letterTitle": "Buchstabe",
             "sounds.dragToFace": "Ziehe zu einem Gesicht!",
+            "sounds.dragToLetter": "Ziehe zum Buchstaben!",
             "sounds.matchToast": "Du hast \"{letter}\" verbunden!",
             "sounds.matchAgain": "Super! \"{letter}\" nochmal.",
             "sounds.tryAnotherFace": "Versuch ein anderes Gesicht!",
@@ -164,7 +196,17 @@ document.addEventListener("DOMContentLoaded", () => {
             "toast.unlockMore": "Mache mehr Aktivitäten, um freizuschalten!",
             "toast.welcome": "Willkommen im Lese-Abenteuer! 🎈",
             "toast.achievement": "🏆 Erfolg freigeschaltet: {name}!",
-            "streak.day": "Tag {count} Streak! 🔥"
+            "streak.day": "Tag {count} in Folge! 🔥",
+            "achievement.firstLetter.label": "Erster Buchstabe",
+            "achievement.firstLetter.title": "Ersten Buchstaben gemeistert",
+            "achievement.letterMaster.label": "Buchstaben-Meister",
+            "achievement.letterMaster.title": "10 Buchstaben meistern",
+            "achievement.wordBuilder.label": "Wort-Baumeister",
+            "achievement.wordBuilder.title": "5 Wörter bauen",
+            "achievement.storyReader.label": "Geschichtenleser",
+            "achievement.storyReader.title": "Eine Geschichte abschließen",
+            "achievement.superstar.label": "Superstar",
+            "achievement.superstar.title": "50 Sterne verdienen"
         }
     };
 
@@ -211,33 +253,47 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Letter data with phonics sounds and emojis
     const LETTERS = [
-        { letter: "A", sound: "a", example: "apple", emoji: "🍎" },
-        { letter: "B", sound: "b", example: "ball", emoji: "⚽" },
-        { letter: "C", sound: "k", example: "cat", emoji: "🐱" },
-        { letter: "D", sound: "d", example: "dog", emoji: "🐕" },
-        { letter: "E", sound: "e", example: "egg", emoji: "🥚" },
-        { letter: "F", sound: "f", example: "fish", emoji: "🐟" },
-        { letter: "G", sound: "g", example: "goat", emoji: "🐐" },
-        { letter: "H", sound: "h", example: "hat", emoji: "🎩" },
-        { letter: "I", sound: "i", example: "igloo", emoji: "🏠" },
-        { letter: "J", sound: "j", example: "jam", emoji: "🍓" },
-        { letter: "K", sound: "k", example: "kite", emoji: "🪁" },
-        { letter: "L", sound: "l", example: "lion", emoji: "🦁" },
-        { letter: "M", sound: "m", example: "mouse", emoji: "🐭" },
-        { letter: "N", sound: "n", example: "nest", emoji: "🪺" },
-        { letter: "O", sound: "o", example: "octopus", emoji: "🐙" },
-        { letter: "P", sound: "p", example: "pig", emoji: "🐷" },
-        { letter: "Q", sound: "q", example: "queen", emoji: "👸" },
-        { letter: "R", sound: "r", example: "rabbit", emoji: "🐰" },
-        { letter: "S", sound: "s", example: "sun", emoji: "☀️" },
-        { letter: "T", sound: "t", example: "turtle", emoji: "🐢" },
-        { letter: "U", sound: "u", example: "umbrella", emoji: "☂️" },
-        { letter: "V", sound: "v", example: "van", emoji: "🚐" },
-        { letter: "W", sound: "w", example: "whale", emoji: "🐋" },
-        { letter: "X", sound: "x", example: "box", emoji: "📦" },
-        { letter: "Y", sound: "y", example: "yellow", emoji: "💛" },
-        { letter: "Z", sound: "z", example: "zebra", emoji: "🦓" }
+        { letter: "A", sound: "a", example: { en: "apple", de: "apfel" }, emoji: { en: "🍎", de: "🍎" } },
+        { letter: "B", sound: "b", example: { en: "ball", de: "ball" }, emoji: { en: "⚽", de: "⚽" } },
+        { letter: "C", sound: "k", example: { en: "cat", de: "clown" }, emoji: { en: "🐱", de: "🤡" } },
+        { letter: "D", sound: "d", example: { en: "dog", de: "drache" }, emoji: { en: "🐕", de: "🐉" } },
+        { letter: "E", sound: "e", example: { en: "egg", de: "ente" }, emoji: { en: "🥚", de: "🦆" } },
+        { letter: "F", sound: "f", example: { en: "fish", de: "fisch" }, emoji: { en: "🐟", de: "🐟" } },
+        { letter: "G", sound: "g", example: { en: "goat", de: "giraffe" }, emoji: { en: "🐐", de: "🦒" } },
+        { letter: "H", sound: "h", example: { en: "hat", de: "haus" }, emoji: { en: "🎩", de: "🏠" } },
+        { letter: "I", sound: "i", example: { en: "igloo", de: "iglu" }, emoji: { en: "🏠", de: "🧊" } },
+        { letter: "J", sound: "j", example: { en: "jam", de: "joghurt" }, emoji: { en: "🍓", de: "🥣" } },
+        { letter: "K", sound: "k", example: { en: "kite", de: "katze" }, emoji: { en: "🪁", de: "🐱" } },
+        { letter: "L", sound: "l", example: { en: "lion", de: "loewe" }, emoji: { en: "🦁", de: "🦁" } },
+        { letter: "M", sound: "m", example: { en: "mouse", de: "maus" }, emoji: { en: "🐭", de: "🐭" } },
+        { letter: "N", sound: "n", example: { en: "nest", de: "nest" }, emoji: { en: "🪺", de: "🪺" } },
+        { letter: "O", sound: "o", example: { en: "octopus", de: "oktopus" }, emoji: { en: "🐙", de: "🐙" } },
+        { letter: "P", sound: "p", example: { en: "pig", de: "pferd" }, emoji: { en: "🐷", de: "🐴" } },
+        { letter: "Q", sound: "q", example: { en: "queen", de: "qualle" }, emoji: { en: "👸", de: "🪼" } },
+        { letter: "R", sound: "r", example: { en: "rabbit", de: "regen" }, emoji: { en: "🐰", de: "🌧️" } },
+        { letter: "S", sound: "s", example: { en: "sun", de: "sonne" }, emoji: { en: "☀️", de: "☀️" } },
+        { letter: "T", sound: "t", example: { en: "turtle", de: "tiger" }, emoji: { en: "🐢", de: "🐯" } },
+        { letter: "U", sound: "u", example: { en: "umbrella", de: "uhr" }, emoji: { en: "☂️", de: "⏰" } },
+        { letter: "V", sound: "v", example: { en: "van", de: "vogel" }, emoji: { en: "🚐", de: "🐦" } },
+        { letter: "W", sound: "w", example: { en: "whale", de: "wolke" }, emoji: { en: "🐋", de: "☁️" } },
+        { letter: "X", sound: "x", example: { en: "box", de: "xylophon" }, emoji: { en: "📦", de: "🎼" } },
+        { letter: "Y", sound: "y", example: { en: "yellow", de: "yoga" }, emoji: { en: "💛", de: "🧘" } },
+        { letter: "Z", sound: "z", example: { en: "zebra", de: "zebra" }, emoji: { en: "🦓", de: "🦓" } }
     ];
+
+    function getLetterExample(letterData) {
+        if (letterData.example && typeof letterData.example === "object") {
+            return letterData.example[state.language] || letterData.example.en || "";
+        }
+        return letterData.example || "";
+    }
+
+    function getLetterEmoji(letterData) {
+        if (letterData.emoji && typeof letterData.emoji === "object") {
+            return letterData.emoji[state.language] || letterData.emoji.en || "";
+        }
+        return letterData.emoji || "";
+    }
 
     // Categorized words for more engaging learning
     const WORD_CATEGORIES = {
@@ -280,6 +336,19 @@ document.addEventListener("DOMContentLoaded", () => {
         "tub", "tug", "two", "use", "van", "vat", "vet", "vow", "wag", "war",
         "was", "wax", "way", "web", "wet", "who", "why", "win", "wit", "won",
         "yes", "yet", "you", "zap", "zig", "zip", "zoo", "able", "acid", "aged"
+    ];
+
+    const SHORT_WORDS_DE = [
+        "am", "an", "auf", "aus", "bei", "bin", "bis", "das", "der", "die",
+        "du", "ein", "er", "es", "ganz", "gut", "hat", "ich", "im", "in",
+        "ist", "ja", "mit", "nur", "ohne", "sie", "so", "und", "wie", "wir",
+        "zu", "oma", "opa", "mama", "papa", "haus", "maus", "baum", "ball",
+        "boot", "brot", "hand", "kind", "hund", "katze", "fisch", "vogel",
+        "biene", "blume", "sonne", "mond", "stern", "wald", "garten", "kiste",
+        "stall", "hof", "trog", "netz", "nass", "warm", "hell", "rot", "rosa",
+        "fett", "lieb", "spielt", "rennt", "sitzt", "schlaf", "schlafen",
+        "see", "schwein", "huhn", "fuchs", "honig", "fliegen", "schlamm",
+        "ei", "spiel", "spiele"
     ];
 
     const STORIES = [
@@ -357,6 +426,89 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     ];
 
+    const STORIES_DE = [
+        {
+            title: "Die Katze 🐱",
+            emoji: "🐱",
+            sentences: [
+                { text: "Die ____ sitzt auf der Matte.", missing: "katze" },
+                { text: "Die katze ist ____.", missing: "fett" },
+                { text: "Die katze kann ____.", missing: "schlafen" }
+            ]
+        },
+        {
+            title: "Der Hund 🐕",
+            emoji: "🐕",
+            sentences: [
+                { text: "Der ____ rennt zum Baum.", missing: "hund" },
+                { text: "Der hund spielt im ____.", missing: "garten" },
+                { text: "Der hund ist ____.", missing: "lieb" }
+            ]
+        },
+        {
+            title: "Die Sonne ☀️",
+            emoji: "☀️",
+            sentences: [
+                { text: "Die ____ ist hell.", missing: "sonne" },
+                { text: "Die sonne ist ____.", missing: "warm" },
+                { text: "Ich spiele in der ____.", missing: "sonne" }
+            ]
+        },
+        {
+            title: "Das Schwein 🐷",
+            emoji: "🐷",
+            sentences: [
+                { text: "Das ____ ist rosa.", missing: "schwein" },
+                { text: "Das schwein rollt im ____.", missing: "schlamm" },
+                { text: "Das schwein isst aus dem ____.", missing: "trog" }
+            ]
+        },
+        {
+            title: "Der Fuchs 🦊",
+            emoji: "🦊",
+            sentences: [
+                { text: "Der ____ rennt im Wald.", missing: "fuchs" },
+                { text: "Der fuchs ist ____.", missing: "rot" },
+                { text: "Der fuchs sitzt auf der ____.", missing: "kiste" }
+            ]
+        },
+        {
+            title: "Das Huhn 🐔",
+            emoji: "🐔",
+            sentences: [
+                { text: "Das ____ sitzt auf dem Ei.", missing: "huhn" },
+                { text: "Das huhn rennt zum ____.", missing: "stall" },
+                { text: "Das huhn pickt im ____.", missing: "hof" }
+            ]
+        },
+        {
+            title: "Die Biene 🐝",
+            emoji: "🐝",
+            sentences: [
+                { text: "Die ____ kann fliegen.", missing: "biene" },
+                { text: "Die biene sitzt auf der ____.", missing: "blume" },
+                { text: "Die biene macht ____.", missing: "honig" }
+            ]
+        },
+        {
+            title: "Der Fisch 🐟",
+            emoji: "🐟",
+            sentences: [
+                { text: "Der ____ schwimmt im See.", missing: "fisch" },
+                { text: "Der fisch ist ____.", missing: "nass" },
+                { text: "Der fisch schwimmt im ____.", missing: "netz" }
+            ]
+        }
+    ];
+
+    function getShortWords() {
+        return state.language === "de" ? SHORT_WORDS_DE : SHORT_WORDS;
+    }
+
+    function getStories() {
+        return state.language === "de" ? STORIES_DE : STORIES;
+    }
+
     // Progress state
     let state = {
         currentPhase: PHASES.SOUNDS,
@@ -374,6 +526,7 @@ document.addEventListener("DOMContentLoaded", () => {
             words: { attempts: 0, correct: 0 },
             stories: { attempts: 0, correct: 0 }
         },
+        lastSoundIndex: null,
         phaseProgress: {
             sounds: 0,
             words: 0,
@@ -381,13 +534,20 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    function stripEmojis(text) {
+        return text
+            .replace(/[\p{Extended_Pictographic}\u200d\uFE0F]/gu, "")
+            .replace(/\s{2,}/g, " ")
+            .trim();
+    }
+
     // Audio system using Web Speech API with feature detection
     const AudioSystem = {
         synth: typeof window !== 'undefined' && window.speechSynthesis ? window.speechSynthesis : null,
         speaking: false,
         supported: typeof window !== 'undefined' && 'speechSynthesis' in window,
 
-        speak(text, rate = 0.8, pitch = 1.2) {
+        speak(text, rate = 0.8, pitch = 1.2, langOverride = "") {
             if (!this.supported || !this.synth) {
                 console.warn('Web Speech API not supported');
                 return;
@@ -397,15 +557,21 @@ document.addEventListener("DOMContentLoaded", () => {
                 this.synth.cancel();
             }
 
-            const utterance = new SpeechSynthesisUtterance(text);
+            const utteranceText = stripEmojis(text);
+            if (!utteranceText) {
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(utteranceText);
             utterance.rate = rate;
             utterance.pitch = pitch;
             utterance.volume = 1;
-            utterance.lang = state.language === "de" ? "de-DE" : "en-US";
+            const utteranceLang = langOverride || (state.language === "de" ? "de-DE" : "en-US");
+            utterance.lang = utteranceLang;
 
             // Try to use a child-friendly voice with robust detection
             const voices = this.synth.getVoices();
-            const desiredLang = state.language === "de" ? "de" : "en";
+            const desiredLang = utteranceLang.split("-")[0];
             const preferredVoice = voices.find(v =>
                 v.lang.startsWith(desiredLang) && v.default
             ) || voices.find(v =>
@@ -703,6 +869,20 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => celebration.remove(), 3500);
     }
 
+    function updateAchievementLabels() {
+        achievementsBadges.forEach((badge) => {
+            const badgeId = badge.dataset.badge;
+            const achievement = ACHIEVEMENTS[badgeId];
+            if (!achievement) return;
+
+            const label = badge.querySelector(".badge-label");
+            if (label) {
+                label.textContent = t(achievement.labelKey);
+            }
+            badge.title = t(achievement.titleKey);
+        });
+    }
+
     // Check and award achievements
     function checkAchievements() {
         const newAchievements = [];
@@ -710,7 +890,7 @@ document.addEventListener("DOMContentLoaded", () => {
         for (const [id, achievement] of Object.entries(ACHIEVEMENTS)) {
             if (!state.achievements.includes(id) && achievement.condition(state)) {
                 state.achievements.push(id);
-                newAchievements.push({ id, label: achievement.label });
+                newAchievements.push({ id, labelKey: achievement.labelKey });
             }
         }
 
@@ -721,7 +901,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // Show achievement notifications with delay
             newAchievements.forEach((achievement, index) => {
                 setTimeout(() => {
-                    showToast(t("toast.achievement", { name: achievement.label }), "achievement");
+                    showToast(t("toast.achievement", { name: t(achievement.labelKey) }), "achievement");
                     celebrate(1.5);
                 }, index * 1500);
             });
@@ -818,6 +998,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!state.streak) {
             state.streak = 0;
         }
+        if (state.lastSoundIndex === undefined) {
+            state.lastSoundIndex = null;
+        }
         updateUI();
         updateAchievementBadges();
         updateStreakDisplay();
@@ -856,6 +1039,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     words: { attempts: 0, correct: 0 },
                     stories: { attempts: 0, correct: 0 }
                 },
+                lastSoundIndex: null,
                 phaseProgress: {
                     sounds: 0,
                     words: 0,
@@ -922,8 +1106,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function calculateTotalProgress() {
         const soundProgress = (state.masteredSounds.length / LETTERS.length) * 25;
-        const wordProgress = (state.masteredWords.length / SHORT_WORDS.length) * 50;
-        const storyProgress = (state.completedStories.length / STORIES.length) * 25;
+        const wordProgress = (state.masteredWords.length / getShortWords().length) * 50;
+        const storyProgress = (state.completedStories.length / getStories().length) * 25;
         return Math.round(soundProgress + wordProgress + storyProgress);
     }
 
@@ -967,19 +1151,67 @@ document.addEventListener("DOMContentLoaded", () => {
         updateNavigationButtons();
     }
 
-    function requestActivityFullscreen() {
-        if (!document.fullscreenEnabled || document.fullscreenElement) {
-            return;
-        }
-        if (activityCard && activityCard.requestFullscreen) {
-            activityCard.requestFullscreen().catch(() => {});
+    let fallbackFullscreenActive = false;
+
+    function getFullscreenElement() {
+        return document.fullscreenElement || document.webkitFullscreenElement;
+    }
+
+    function setFallbackFullscreen(enabled) {
+        fallbackFullscreenActive = enabled;
+        activityCard.classList.toggle("is-fullscreen", enabled);
+        document.body.classList.toggle("activity-fullscreen", enabled);
+    }
+
+    function syncFullscreenState() {
+        const nativeFullscreen = Boolean(getFullscreenElement());
+        if (nativeFullscreen) {
+            document.body.classList.add("activity-fullscreen");
+            activityCard.classList.remove("is-fullscreen");
+            fallbackFullscreenActive = false;
+        } else if (!fallbackFullscreenActive) {
+            document.body.classList.remove("activity-fullscreen");
         }
     }
 
-    function exitActivityFullscreen() {
-        if (document.fullscreenElement) {
-            document.exitFullscreen().catch(() => {});
+    function requestActivityFullscreen() {
+        if (getFullscreenElement()) {
+            return;
         }
+
+        if (activityCard && activityCard.requestFullscreen) {
+            const requestResult = activityCard.requestFullscreen();
+            if (requestResult && requestResult.catch) {
+                requestResult.catch(() => {
+                    setFallbackFullscreen(true);
+                });
+            }
+            return;
+        }
+
+        if (activityCard) {
+            const webkitRequest = activityCard.webkitRequestFullscreen || activityCard.webkitRequestFullScreen;
+            if (webkitRequest) {
+                webkitRequest.call(activityCard);
+                return;
+            }
+        }
+
+        setFallbackFullscreen(true);
+    }
+
+    function exitActivityFullscreen() {
+        if (getFullscreenElement()) {
+            const exit = document.exitFullscreen || document.webkitExitFullscreen || document.webkitCancelFullScreen;
+            if (exit) {
+                const exitResult = exit.call(document);
+                if (exitResult && exitResult.catch) {
+                    exitResult.catch(() => {});
+                }
+                return;
+            }
+        }
+        setFallbackFullscreen(false);
     }
 
     function updateNavigationButtons() {
@@ -1002,23 +1234,37 @@ document.addEventListener("DOMContentLoaded", () => {
         saveProgress();
         applyTranslations();
         updateLanguageButtons();
+        updateAchievementLabels();
+        updateStreakDisplay();
         loadActivity();
         updateUI();
     }
 
     function getNextSoundIndex() {
-        return Math.floor(Math.random() * LETTERS.length);
+        if (LETTERS.length <= 1) {
+            return 0;
+        }
+
+        let idx = Math.floor(Math.random() * LETTERS.length);
+        if (typeof state.lastSoundIndex === "number") {
+            let guard = 0;
+            while (idx === state.lastSoundIndex && guard < 10) {
+                idx = Math.floor(Math.random() * LETTERS.length);
+                guard += 1;
+            }
+            if (idx === state.lastSoundIndex) {
+                idx = (state.lastSoundIndex + 1) % LETTERS.length;
+            }
+        }
+        return idx;
     }
 
     function getSoundChoices(targetLetter) {
-        const choices = [targetLetter];
-        while (choices.length < 3) {
-            const randomLetter = LETTERS[Math.floor(Math.random() * LETTERS.length)].letter;
-            if (!choices.includes(randomLetter)) {
-                choices.push(randomLetter);
-            }
-        }
-        return shuffleArray(choices);
+        const pool = LETTERS
+            .map((item) => item.letter)
+            .filter((letter) => letter !== targetLetter);
+        const wrongChoices = shuffleArray(pool).slice(0, 2);
+        return shuffleArray([targetLetter, ...wrongChoices]);
     }
 
     // Sounds activity
@@ -1029,8 +1275,12 @@ document.addEventListener("DOMContentLoaded", () => {
         showCharacterSpeech(t("sounds.prompt"));
 
         const targetIndex = getNextSoundIndex();
+        state.lastSoundIndex = targetIndex;
+        saveProgress();
         state.currentActivity = targetIndex;
         const target = LETTERS[targetIndex];
+        const exampleText = getLetterExample(target);
+        const exampleEmoji = getLetterEmoji(target);
         const choices = getSoundChoices(target.letter);
         const shapes = ["circle", "squircle", "blob"];
 
@@ -1043,7 +1293,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="letter-card" id="target-letter-card" data-letter="${target.letter}">
                         <span class="letter-title">${t("sounds.letterTitle")}</span>
                         <span class="letter-display">${target.letter}</span>
-                        <span class="letter-example">${target.emoji} ${target.example}</span>
+                        <span class="letter-example">${exampleEmoji} ${exampleText}</span>
                     </div>
                 </div>
                 <div class="shape-zone">
@@ -1075,10 +1325,21 @@ document.addEventListener("DOMContentLoaded", () => {
         const stage = activityArea.querySelector(".sounds-stage");
         let locked = false;
         let dragging = false;
+        let dragSource = null;
+        let dragStartButton = null;
+        let dragCandidate = null;
+        let dragStartPoint = null;
         let hoverTarget = null;
+        let suppressShapeClick = false;
+        const dragThreshold = 8;
 
         shapeButtons.forEach(btn => {
-            btn.addEventListener("click", () => {
+            btn.addEventListener("click", (event) => {
+                if (suppressShapeClick) {
+                    suppressShapeClick = false;
+                    event.preventDefault();
+                    return;
+                }
                 if (locked) return;
                 const letter = btn.dataset.letter;
                 AudioSystem.speakLetter(letter);
@@ -1133,46 +1394,17 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        letterCard.addEventListener("pointerdown", (event) => {
-            if (locked) return;
-            dragging = true;
-            letterCard.setPointerCapture(event.pointerId);
-            letterCard.classList.add("dragging");
-            dragLine.classList.add("visible");
+        function clearHoverStates() {
+            updateHoverTarget(null);
+            letterCard.classList.remove("hovered");
+        }
 
-            const start = getLetterCenter();
-            const point = getStagePoint(event);
-            setDragLine(start, point);
-        });
-
-        letterCard.addEventListener("pointermove", (event) => {
-            if (!dragging) return;
-            const start = getLetterCenter();
-            const point = getStagePoint(event);
-            setDragLine(start, point);
-
-            const element = document.elementFromPoint(event.clientX, event.clientY);
-            const targetButton = element ? element.closest(".shape-choice") : null;
-            updateHoverTarget(targetButton);
-        });
-
-        letterCard.addEventListener("pointerup", (event) => {
-            if (!dragging) return;
-            dragging = false;
-            letterCard.releasePointerCapture(event.pointerId);
-            letterCard.classList.remove("dragging");
+        function resetDragLine() {
             dragLine.classList.remove("visible");
             dragLine.style.width = "0px";
+        }
 
-            const element = document.elementFromPoint(event.clientX, event.clientY);
-            const targetButton = element ? element.closest(".shape-choice") : null;
-            updateHoverTarget(null);
-
-            if (!targetButton) {
-                showToast(t("sounds.dragToFace"), "info");
-                return;
-            }
-
+        function handleSoundMatch(targetButton) {
             const letter = targetButton.dataset.letter;
             AudioSystem.speakLetter(letter);
             targetButton.classList.add("speaking");
@@ -1207,8 +1439,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
                 setTimeout(() => {
-                    dragLine.classList.remove("visible");
-                    dragLine.style.width = "0px";
+                    resetDragLine();
                     state.currentActivity = (targetIndex + 1) % LETTERS.length;
                     saveProgress();
                     renderSoundsActivity();
@@ -1218,16 +1449,135 @@ document.addEventListener("DOMContentLoaded", () => {
                 showToast(t("sounds.tryAnotherFace"), "info");
                 setTimeout(() => targetButton.classList.remove("wrong"), 350);
             }
+        }
+
+        letterCard.addEventListener("pointerdown", (event) => {
+            if (locked) return;
+            dragging = true;
+            dragSource = "letter";
+            letterCard.setPointerCapture(event.pointerId);
+            letterCard.classList.add("dragging");
+            dragLine.classList.add("visible");
+
+            const start = getLetterCenter();
+            const point = getStagePoint(event);
+            setDragLine(start, point);
+        });
+
+        letterCard.addEventListener("pointermove", (event) => {
+            if (!dragging || dragSource !== "letter") return;
+            const start = getLetterCenter();
+            const point = getStagePoint(event);
+            setDragLine(start, point);
+
+            const element = document.elementFromPoint(event.clientX, event.clientY);
+            const targetButton = element ? element.closest(".shape-choice") : null;
+            updateHoverTarget(targetButton);
+        });
+
+        letterCard.addEventListener("pointerup", (event) => {
+            if (!dragging || dragSource !== "letter") return;
+            dragging = false;
+            dragSource = null;
+            letterCard.releasePointerCapture(event.pointerId);
+            letterCard.classList.remove("dragging");
+            resetDragLine();
+
+            const element = document.elementFromPoint(event.clientX, event.clientY);
+            const targetButton = element ? element.closest(".shape-choice") : null;
+            clearHoverStates();
+
+            if (!targetButton) {
+                showToast(t("sounds.dragToFace"), "info");
+                return;
+            }
+
+            handleSoundMatch(targetButton);
         });
 
         letterCard.addEventListener("pointercancel", (event) => {
-            if (!dragging) return;
+            if (!dragging || dragSource !== "letter") return;
             dragging = false;
+            dragSource = null;
             letterCard.releasePointerCapture(event.pointerId);
             letterCard.classList.remove("dragging");
-            dragLine.classList.remove("visible");
-            dragLine.style.width = "0px";
-            updateHoverTarget(null);
+            resetDragLine();
+            clearHoverStates();
+        });
+
+        shapeButtons.forEach((btn) => {
+            btn.addEventListener("pointerdown", (event) => {
+                if (locked) return;
+                dragCandidate = { button: btn, pointerId: event.pointerId };
+                dragStartPoint = { x: event.clientX, y: event.clientY };
+                btn.setPointerCapture(event.pointerId);
+            });
+
+            btn.addEventListener("pointermove", (event) => {
+                if (!dragCandidate || dragCandidate.button !== btn) return;
+                const dx = event.clientX - dragStartPoint.x;
+                const dy = event.clientY - dragStartPoint.y;
+                if (!dragging && Math.hypot(dx, dy) > dragThreshold) {
+                    dragging = true;
+                    dragSource = "shape";
+                    dragStartButton = btn;
+                    dragLine.classList.add("visible");
+                }
+
+                if (!dragging || dragSource !== "shape") return;
+                const start = getButtonCenter(dragStartButton);
+                const point = getStagePoint(event);
+                setDragLine(start, point);
+
+                const element = document.elementFromPoint(event.clientX, event.clientY);
+                const overLetter = element ? element.closest("#target-letter-card") : null;
+                letterCard.classList.toggle("hovered", Boolean(overLetter));
+            });
+
+            btn.addEventListener("pointerup", (event) => {
+                if (!dragCandidate || dragCandidate.button !== btn) return;
+                const wasDragging = dragging && dragSource === "shape";
+                dragging = false;
+                dragSource = null;
+                dragStartButton = null;
+                btn.releasePointerCapture(event.pointerId);
+                dragCandidate = null;
+                dragStartPoint = null;
+
+                if (!wasDragging) {
+                    letterCard.classList.remove("hovered");
+                    return;
+                }
+
+                suppressShapeClick = true;
+                setTimeout(() => {
+                    suppressShapeClick = false;
+                }, 0);
+                resetDragLine();
+
+                const element = document.elementFromPoint(event.clientX, event.clientY);
+                const overLetter = element ? element.closest("#target-letter-card") : null;
+                letterCard.classList.remove("hovered");
+
+                if (!overLetter) {
+                    showToast(t("sounds.dragToLetter"), "info");
+                    return;
+                }
+
+                handleSoundMatch(btn);
+            });
+
+            btn.addEventListener("pointercancel", (event) => {
+                if (!dragCandidate || dragCandidate.button !== btn) return;
+                dragging = false;
+                dragSource = null;
+                dragStartButton = null;
+                btn.releasePointerCapture(event.pointerId);
+                dragCandidate = null;
+                dragStartPoint = null;
+                resetDragLine();
+                clearHoverStates();
+            });
         });
     }
 
@@ -1236,7 +1586,8 @@ document.addEventListener("DOMContentLoaded", () => {
         activityIcon.textContent = "🔡";
         activityTitle.textContent = t("activity.wordsTitle");
 
-        const word = SHORT_WORDS[Math.floor(Math.random() * SHORT_WORDS.length)];
+        const shortWords = getShortWords();
+        const word = shortWords[Math.floor(Math.random() * shortWords.length)];
         const targetLetters = word.toUpperCase().split("");
         const letterBank = shuffleArray([...targetLetters]);
 
@@ -1334,6 +1685,28 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
+        let isDragging = false;
+
+        function placeLetterIntoSlot(slot) {
+            if (!activeTile || slot.dataset.letter) return;
+            markWordAttempt();
+            if (slot.dataset.tile) {
+                const previousTile = document.querySelector(`.letter-tile[data-tile="${slot.dataset.tile}"]`);
+                if (previousTile) {
+                    previousTile.classList.remove("used");
+                    previousTile.removeAttribute("aria-disabled");
+                }
+            }
+            slot.textContent = activeLetter;
+            slot.dataset.letter = activeLetter;
+            slot.dataset.tile = activeTile.dataset.tile;
+            slot.classList.add("filled");
+            activeTile.classList.add("used");
+            activeTile.setAttribute("aria-disabled", "true");
+            setActiveTile(null);
+            checkWordCompletion();
+        }
+
         tiles.forEach(tile => {
             tile.addEventListener("click", () => {
                 if (tile.classList.contains("used")) return;
@@ -1342,6 +1715,30 @@ document.addEventListener("DOMContentLoaded", () => {
                     return;
                 }
                 setActiveTile(tile);
+            });
+
+            tile.addEventListener("pointerdown", (event) => {
+                if (tile.classList.contains("used")) return;
+                isDragging = true;
+                tile.setPointerCapture(event.pointerId);
+                setActiveTile(tile);
+            });
+
+            tile.addEventListener("pointerup", (event) => {
+                if (!isDragging) return;
+                isDragging = false;
+                tile.releasePointerCapture(event.pointerId);
+                const element = document.elementFromPoint(event.clientX, event.clientY);
+                const slot = element ? element.closest(".drag-slot") : null;
+                if (slot) {
+                    placeLetterIntoSlot(slot);
+                }
+            });
+
+            tile.addEventListener("pointercancel", (event) => {
+                if (!isDragging) return;
+                isDragging = false;
+                tile.releasePointerCapture(event.pointerId);
             });
         });
 
@@ -1357,22 +1754,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             slot.addEventListener("click", () => {
                 if (activeTile) {
-                    markWordAttempt();
-                    if (slot.dataset.tile) {
-                        const previousTile = document.querySelector(`.letter-tile[data-tile="${slot.dataset.tile}"]`);
-                        if (previousTile) {
-                            previousTile.classList.remove("used");
-                            previousTile.removeAttribute("aria-disabled");
-                        }
-                    }
-                    slot.textContent = activeLetter;
-                    slot.dataset.letter = activeLetter;
-                    slot.dataset.tile = activeTile.dataset.tile;
-                    slot.classList.add("filled");
-                    activeTile.classList.add("used");
-                    activeTile.setAttribute("aria-disabled", "true");
-                    setActiveTile(null);
-                    checkWordCompletion();
+                    placeLetterIntoSlot(slot);
                 } else if (slot.dataset.letter) {
                     if (slot.dataset.tile) {
                         const previousTile = document.querySelector(`.letter-tile[data-tile="${slot.dataset.tile}"]`);
@@ -1395,6 +1777,16 @@ document.addEventListener("DOMContentLoaded", () => {
             const y = event.clientY + 12;
             dragGhost.style.transform = `translate(${x}px, ${y}px)`;
         });
+
+        activityArea.addEventListener("pointerup", (event) => {
+            if (!isDragging) return;
+            isDragging = false;
+            const element = document.elementFromPoint(event.clientX, event.clientY);
+            const slot = element ? element.closest(".drag-slot") : null;
+            if (slot) {
+                placeLetterIntoSlot(slot);
+            }
+        });
     }
 
     // Stories activity
@@ -1402,8 +1794,9 @@ document.addEventListener("DOMContentLoaded", () => {
         activityIcon.textContent = "📖";
         activityTitle.textContent = t("activity.storiesTitle");
 
-        const storyIndex = state.currentActivity % STORIES.length;
-        const story = STORIES[storyIndex];
+        const stories = getStories();
+        const storyIndex = state.currentActivity % stories.length;
+        const story = stories[storyIndex];
         let sentenceIndex = 0;
         let storyAttempted = false;
 
@@ -1452,7 +1845,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             function speakSentence() {
                 const fullSentence = sentence.text.replace("____", sentence.missing);
-                AudioSystem.speak(fullSentence);
+                AudioSystem.speak(fullSentence, 0.8, 1.2);
             }
 
             document.getElementById("story-speech-btn").addEventListener("click", () => {
@@ -1519,6 +1912,38 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
 
+            let isDragging = false;
+
+            function markStoryAttempt() {
+                if (!storyAttempted) {
+                    storyAttempted = true;
+                    state.activityStats.stories.attempts += 1;
+                    saveProgress();
+                }
+            }
+
+            function placeLetterIntoSlot(slot) {
+                if (!activeTile || slot.dataset.letter) return;
+                markStoryAttempt();
+                if (slot.dataset.tile) {
+                    const prevTile = document.querySelector(`.letter-tile[data-tile="${slot.dataset.tile}"]`);
+                    if (prevTile) {
+                        prevTile.classList.remove("used");
+                        prevTile.removeAttribute("aria-disabled");
+                    }
+                }
+
+                slot.textContent = activeLetter;
+                slot.dataset.letter = activeLetter;
+                slot.dataset.tile = activeTile.dataset.tile;
+                slot.classList.add("filled");
+
+                activeTile.classList.add("used");
+                activeTile.setAttribute("aria-disabled", "true");
+                setActiveTile(null);
+                evaluateSentence();
+            }
+
             tiles.forEach(tile => {
                 tile.addEventListener("click", () => {
                     if (tile.classList.contains("used")) return;
@@ -1527,6 +1952,30 @@ document.addEventListener("DOMContentLoaded", () => {
                         return;
                     }
                     setActiveTile(tile);
+                });
+
+                tile.addEventListener("pointerdown", (event) => {
+                    if (tile.classList.contains("used")) return;
+                    isDragging = true;
+                    tile.setPointerCapture(event.pointerId);
+                    setActiveTile(tile);
+                });
+
+                tile.addEventListener("pointerup", (event) => {
+                    if (!isDragging) return;
+                    isDragging = false;
+                    tile.releasePointerCapture(event.pointerId);
+                    const element = document.elementFromPoint(event.clientX, event.clientY);
+                    const slot = element ? element.closest(".story-letter-slot") : null;
+                    if (slot) {
+                        placeLetterIntoSlot(slot);
+                    }
+                });
+
+                tile.addEventListener("pointercancel", (event) => {
+                    if (!isDragging) return;
+                    isDragging = false;
+                    tile.releasePointerCapture(event.pointerId);
                 });
             });
 
@@ -1542,29 +1991,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 slot.addEventListener("click", () => {
                     if (activeTile) {
-                        if (!storyAttempted) {
-                            storyAttempted = true;
-                            state.activityStats.stories.attempts += 1;
-                            saveProgress();
-                        }
-
-                        if (slot.dataset.tile) {
-                            const prevTile = document.querySelector(`.letter-tile[data-tile="${slot.dataset.tile}"]`);
-                            if (prevTile) {
-                                prevTile.classList.remove("used");
-                                prevTile.removeAttribute("aria-disabled");
-                            }
-                        }
-
-                        slot.textContent = activeLetter;
-                        slot.dataset.letter = activeLetter;
-                        slot.dataset.tile = activeTile.dataset.tile;
-                        slot.classList.add("filled");
-
-                        activeTile.classList.add("used");
-                        activeTile.setAttribute("aria-disabled", "true");
-                        setActiveTile(null);
-                        evaluateSentence();
+                        placeLetterIntoSlot(slot);
                     } else if (slot.dataset.letter) {
                         if (slot.dataset.tile) {
                             const prevTile = document.querySelector(`.letter-tile[data-tile="${slot.dataset.tile}"]`);
@@ -1586,6 +2013,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 const x = event.clientX + 12;
                 const y = event.clientY + 12;
                 dragGhost.style.transform = `translate(${x}px, ${y}px)`;
+            });
+
+            activityArea.addEventListener("pointerup", (event) => {
+                if (!isDragging) return;
+                isDragging = false;
+                const element = document.elementFromPoint(event.clientX, event.clientY);
+                const slot = element ? element.closest(".story-letter-slot") : null;
+                if (slot) {
+                    placeLetterIntoSlot(slot);
+                }
             });
         }
 
@@ -1649,6 +2086,9 @@ document.addEventListener("DOMContentLoaded", () => {
         requestActivityFullscreen();
     });
 
+    document.addEventListener("fullscreenchange", syncFullscreenState);
+    document.addEventListener("webkitfullscreenchange", syncFullscreenState);
+
     // Phase item clicks
     document.querySelectorAll(".phase-item").forEach(item => {
         item.addEventListener("click", () => {
@@ -1677,6 +2117,7 @@ document.addEventListener("DOMContentLoaded", () => {
         loadProgress();
         checkStreak();
         applyTranslations();
+        updateAchievementLabels();
         updateLanguageButtons();
         drawCharacter();
         loadActivity();
