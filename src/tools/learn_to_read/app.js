@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // DOM Elements
+
     const activityArea = document.getElementById("activity-area");
     const loadingMessage = document.getElementById("loading-message");
     const activityIcon = document.getElementById("activity-icon");
@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const streakText = document.getElementById("streak-text");
     const reactionFace = document.getElementById("reaction-face");
 
-    // Stats elements
+
     const starsCount = document.getElementById("stars-count");
     const soundsLearned = document.getElementById("sounds-learned");
     const wordsLearned = document.getElementById("words-learned");
@@ -27,10 +27,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const parentPhase = document.getElementById("parent-phase");
     const parentProgress = document.getElementById("parent-progress");
 
-    // Character canvas context
+
     const ctx = characterCanvas.getContext("2d");
 
-    // Fisher-Yates shuffle algorithm for unbiased randomization
+
     function shuffleArray(array) {
         const shuffled = [...array];
         for (let i = shuffled.length - 1; i > 0; i--) {
@@ -40,14 +40,14 @@ document.addEventListener("DOMContentLoaded", () => {
         return shuffled;
     }
 
-    // Learning phases
+
     const PHASES = {
         SOUNDS: "sounds",
         WORDS: "words",
         SENTENCES: "sentences"
     };
 
-    // Achievement definitions
+
     const ACHIEVEMENTS = {
         "first-letter": {
             condition: (s) => s.masteredSounds.length >= 1,
@@ -84,6 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
             "phase.words": "Words",
             "phase.stories": "Stories",
             "phase.hint": "Tap a mode to switch.",
+            "phase.tap": "Tap",
             "stats.stars": "Stars",
             "stats.sounds": "Letters",
             "stats.words": "Words",
@@ -154,6 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
             "phase.words": "Wörter",
             "phase.stories": "Geschichten",
             "phase.hint": "Tippe auf einen Modus, um zu wechseln.",
+            "phase.tap": "Tippen",
             "stats.stars": "Sterne",
             "stats.sounds": "Buchstaben",
             "stats.words": "Wörter",
@@ -260,34 +262,319 @@ document.addEventListener("DOMContentLoaded", () => {
         ]
     };
 
-    // Letter data with phonics sounds and emojis
-    const LETTERS = [
-        { letter: "A", sound: "a", example: { en: "apple", de: "apfel" }, emoji: { en: "🍎", de: "🍎" } },
-        { letter: "B", sound: "b", example: { en: "ball", de: "ball" }, emoji: { en: "⚽", de: "⚽" } },
-        { letter: "C", sound: "k", example: { en: "cat", de: "clown" }, emoji: { en: "🐱", de: "🤡" } },
-        { letter: "D", sound: "d", example: { en: "dog", de: "drache" }, emoji: { en: "🐕", de: "🐉" } },
-        { letter: "E", sound: "e", example: { en: "egg", de: "ente" }, emoji: { en: "🥚", de: "🦆" } },
-        { letter: "F", sound: "f", example: { en: "fish", de: "fisch" }, emoji: { en: "🐟", de: "🐟" } },
-        { letter: "G", sound: "g", example: { en: "goat", de: "giraffe" }, emoji: { en: "🐐", de: "🦒" } },
-        { letter: "H", sound: "h", example: { en: "hat", de: "haus" }, emoji: { en: "🎩", de: "🏠" } },
-        { letter: "I", sound: "i", example: { en: "igloo", de: "iglu" }, emoji: { en: "🏠", de: "🧊" } },
-        { letter: "J", sound: "j", example: { en: "jam", de: "joghurt" }, emoji: { en: "🍓", de: "🥣" } },
-        { letter: "K", sound: "k", example: { en: "kite", de: "katze" }, emoji: { en: "🪁", de: "🐱" } },
-        { letter: "L", sound: "l", example: { en: "lion", de: "loewe" }, emoji: { en: "🦁", de: "🦁" } },
-        { letter: "M", sound: "m", example: { en: "mouse", de: "maus" }, emoji: { en: "🐭", de: "🐭" } },
-        { letter: "N", sound: "n", example: { en: "nest", de: "nest" }, emoji: { en: "🪺", de: "🪺" } },
-        { letter: "O", sound: "o", example: { en: "octopus", de: "oktopus" }, emoji: { en: "🐙", de: "🐙" } },
-        { letter: "P", sound: "p", example: { en: "pig", de: "pferd" }, emoji: { en: "🐷", de: "🐴" } },
-        { letter: "Q", sound: "q", example: { en: "queen", de: "qualle" }, emoji: { en: "👸", de: "🪼" } },
-        { letter: "R", sound: "r", example: { en: "rabbit", de: "regen" }, emoji: { en: "🐰", de: "🌧️" } },
-        { letter: "S", sound: "s", example: { en: "sun", de: "sonne" }, emoji: { en: "☀️", de: "☀️" } },
-        { letter: "T", sound: "t", example: { en: "turtle", de: "tiger" }, emoji: { en: "🐢", de: "🐯" } },
-        { letter: "U", sound: "u", example: { en: "umbrella", de: "uhr" }, emoji: { en: "☂️", de: "⏰" } },
-        { letter: "V", sound: "v", example: { en: "van", de: "vogel" }, emoji: { en: "🚐", de: "🐦" } },
-        { letter: "W", sound: "w", example: { en: "whale", de: "wolke" }, emoji: { en: "🐋", de: "☁️" } },
-        { letter: "X", sound: "x", example: { en: "box", de: "xylophon" }, emoji: { en: "📦", de: "🎼" } },
-        { letter: "Y", sound: "y", example: { en: "yellow", de: "yoga" }, emoji: { en: "💛", de: "🧘" } },
-        { letter: "Z", sound: "z", example: { en: "zebra", de: "zebra" }, emoji: { en: "🦓", de: "🦓" } }
+
+    const LETTERS = [{
+            letter: "A",
+            sound: "a",
+            example: {
+                en: "apple",
+                de: "apfel"
+            },
+            emoji: {
+                en: "🍎",
+                de: "🍎"
+            }
+        },
+        {
+            letter: "B",
+            sound: "b",
+            example: {
+                en: "ball",
+                de: "ball"
+            },
+            emoji: {
+                en: "⚽",
+                de: "⚽"
+            }
+        },
+        {
+            letter: "C",
+            sound: "k",
+            example: {
+                en: "cat",
+                de: "clown"
+            },
+            emoji: {
+                en: "🐱",
+                de: "🤡"
+            }
+        },
+        {
+            letter: "D",
+            sound: "d",
+            example: {
+                en: "dog",
+                de: "drache"
+            },
+            emoji: {
+                en: "🐕",
+                de: "🐉"
+            }
+        },
+        {
+            letter: "E",
+            sound: "e",
+            example: {
+                en: "egg",
+                de: "ente"
+            },
+            emoji: {
+                en: "🥚",
+                de: "🦆"
+            }
+        },
+        {
+            letter: "F",
+            sound: "f",
+            example: {
+                en: "fish",
+                de: "fisch"
+            },
+            emoji: {
+                en: "🐟",
+                de: "🐟"
+            }
+        },
+        {
+            letter: "G",
+            sound: "g",
+            example: {
+                en: "goat",
+                de: "giraffe"
+            },
+            emoji: {
+                en: "🐐",
+                de: "🦒"
+            }
+        },
+        {
+            letter: "H",
+            sound: "h",
+            example: {
+                en: "hat",
+                de: "haus"
+            },
+            emoji: {
+                en: "🎩",
+                de: "🏠"
+            }
+        },
+        {
+            letter: "I",
+            sound: "i",
+            example: {
+                en: "igloo",
+                de: "iglu"
+            },
+            emoji: {
+                en: "🏠",
+                de: "🧊"
+            }
+        },
+        {
+            letter: "J",
+            sound: "j",
+            example: {
+                en: "jam",
+                de: "joghurt"
+            },
+            emoji: {
+                en: "🍓",
+                de: "🥣"
+            }
+        },
+        {
+            letter: "K",
+            sound: "k",
+            example: {
+                en: "kite",
+                de: "katze"
+            },
+            emoji: {
+                en: "🪁",
+                de: "🐱"
+            }
+        },
+        {
+            letter: "L",
+            sound: "l",
+            example: {
+                en: "lion",
+                de: "loewe"
+            },
+            emoji: {
+                en: "🦁",
+                de: "🦁"
+            }
+        },
+        {
+            letter: "M",
+            sound: "m",
+            example: {
+                en: "mouse",
+                de: "maus"
+            },
+            emoji: {
+                en: "🐭",
+                de: "🐭"
+            }
+        },
+        {
+            letter: "N",
+            sound: "n",
+            example: {
+                en: "nest",
+                de: "nest"
+            },
+            emoji: {
+                en: "🪺",
+                de: "🪺"
+            }
+        },
+        {
+            letter: "O",
+            sound: "o",
+            example: {
+                en: "octopus",
+                de: "oktopus"
+            },
+            emoji: {
+                en: "🐙",
+                de: "🐙"
+            }
+        },
+        {
+            letter: "P",
+            sound: "p",
+            example: {
+                en: "pig",
+                de: "pferd"
+            },
+            emoji: {
+                en: "🐷",
+                de: "🐴"
+            }
+        },
+        {
+            letter: "Q",
+            sound: "q",
+            example: {
+                en: "queen",
+                de: "qualle"
+            },
+            emoji: {
+                en: "👸",
+                de: "🪼"
+            }
+        },
+        {
+            letter: "R",
+            sound: "r",
+            example: {
+                en: "rabbit",
+                de: "regen"
+            },
+            emoji: {
+                en: "🐰",
+                de: "🌧️"
+            }
+        },
+        {
+            letter: "S",
+            sound: "s",
+            example: {
+                en: "sun",
+                de: "sonne"
+            },
+            emoji: {
+                en: "☀️",
+                de: "☀️"
+            }
+        },
+        {
+            letter: "T",
+            sound: "t",
+            example: {
+                en: "turtle",
+                de: "tiger"
+            },
+            emoji: {
+                en: "🐢",
+                de: "🐯"
+            }
+        },
+        {
+            letter: "U",
+            sound: "u",
+            example: {
+                en: "umbrella",
+                de: "uhr"
+            },
+            emoji: {
+                en: "☂️",
+                de: "⏰"
+            }
+        },
+        {
+            letter: "V",
+            sound: "v",
+            example: {
+                en: "van",
+                de: "vogel"
+            },
+            emoji: {
+                en: "🚐",
+                de: "🐦"
+            }
+        },
+        {
+            letter: "W",
+            sound: "w",
+            example: {
+                en: "whale",
+                de: "wolke"
+            },
+            emoji: {
+                en: "🐋",
+                de: "☁️"
+            }
+        },
+        {
+            letter: "X",
+            sound: "x",
+            example: {
+                en: "box",
+                de: "xylophon"
+            },
+            emoji: {
+                en: "📦",
+                de: "🎼"
+            }
+        },
+        {
+            letter: "Y",
+            sound: "y",
+            example: {
+                en: "yellow",
+                de: "yoga"
+            },
+            emoji: {
+                en: "💛",
+                de: "🧘"
+            }
+        },
+        {
+            letter: "Z",
+            sound: "z",
+            example: {
+                en: "zebra",
+                de: "zebra"
+            },
+            emoji: {
+                en: "🦓",
+                de: "🦓"
+            }
+        }
     ];
 
     function getLetterExample(letterData) {
@@ -304,7 +591,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return letterData.emoji || "";
     }
 
-    // Categorized words for more engaging learning
+
     const WORD_CATEGORIES = {
         animals: ["cat", "dog", "pig", "hen", "cow", "fox", "bat", "bee", "ant", "owl", "rat", "ram"],
         colors: ["red", "tan", "sky"],
@@ -360,152 +647,278 @@ document.addEventListener("DOMContentLoaded", () => {
         "ei", "spiel", "spiele"
     ];
 
-    const STORIES = [
-        {
+    const STORIES = [{
             title: "The Cat 🐱",
             emoji: "🐱",
-            sentences: [
-                { text: "The ____ sat on a mat.", missing: "cat" },
-                { text: "The cat is ____.", missing: "fat" },
-                { text: "The cat can ____.", missing: "nap" }
+            sentences: [{
+                    text: "The ____ sat on a mat.",
+                    missing: "cat"
+                },
+                {
+                    text: "The cat is ____.",
+                    missing: "fat"
+                },
+                {
+                    text: "The cat can ____.",
+                    missing: "nap"
+                }
             ]
         },
         {
             title: "The Dog 🐕",
             emoji: "🐕",
-            sentences: [
-                { text: "The ____ ran to the log.", missing: "dog" },
-                { text: "The dog dug in the ____.", missing: "mud" },
-                { text: "The dog is ____.", missing: "fun" }
+            sentences: [{
+                    text: "The ____ ran to the log.",
+                    missing: "dog"
+                },
+                {
+                    text: "The dog dug in the ____.",
+                    missing: "mud"
+                },
+                {
+                    text: "The dog is ____.",
+                    missing: "fun"
+                }
             ]
         },
         {
             title: "The Sun ☀️",
             emoji: "☀️",
-            sentences: [
-                { text: "The sun is ____.", missing: "hot" },
-                { text: "The sun is ____.", missing: "up" },
-                { text: "I run in the ____.", missing: "sun" }
+            sentences: [{
+                    text: "The sun is ____.",
+                    missing: "hot"
+                },
+                {
+                    text: "The sun is ____.",
+                    missing: "up"
+                },
+                {
+                    text: "I run in the ____.",
+                    missing: "sun"
+                }
             ]
         },
         {
             title: "The Pig 🐷",
             emoji: "🐷",
-            sentences: [
-                { text: "The ____ is pink.", missing: "pig" },
-                { text: "The pig sat in the ____.", missing: "mud" },
-                { text: "The pig ate from a ____.", missing: "cup" }
+            sentences: [{
+                    text: "The ____ is pink.",
+                    missing: "pig"
+                },
+                {
+                    text: "The pig sat in the ____.",
+                    missing: "mud"
+                },
+                {
+                    text: "The pig ate from a ____.",
+                    missing: "cup"
+                }
             ]
         },
         {
             title: "The Fox 🦊",
             emoji: "🦊",
-            sentences: [
-                { text: "The ____ ran in the woods.", missing: "fox" },
-                { text: "The fox is ____.", missing: "red" },
-                { text: "The fox hid in a ____.", missing: "box" }
+            sentences: [{
+                    text: "The ____ ran in the woods.",
+                    missing: "fox"
+                },
+                {
+                    text: "The fox is ____.",
+                    missing: "red"
+                },
+                {
+                    text: "The fox hid in a ____.",
+                    missing: "box"
+                }
             ]
         },
         {
             title: "The Hen 🐔",
             emoji: "🐔",
-            sentences: [
-                { text: "The ____ sat on ten eggs.", missing: "hen" },
-                { text: "The hen ate from a ____.", missing: "pan" },
-                { text: "The hen ran to her ____.", missing: "pen" }
+            sentences: [{
+                    text: "The ____ sat on ten eggs.",
+                    missing: "hen"
+                },
+                {
+                    text: "The hen ate from a ____.",
+                    missing: "pan"
+                },
+                {
+                    text: "The hen ran to her ____.",
+                    missing: "pen"
+                }
             ]
         },
         {
             title: "The Bee 🐝",
             emoji: "🐝",
-            sentences: [
-                { text: "The ____ can fly.", missing: "bee" },
-                { text: "The bee sat on a ____.", missing: "bud" },
-                { text: "The bee is on the ____.", missing: "log" }
+            sentences: [{
+                    text: "The ____ can fly.",
+                    missing: "bee"
+                },
+                {
+                    text: "The bee sat on a ____.",
+                    missing: "bud"
+                },
+                {
+                    text: "The bee is on the ____.",
+                    missing: "log"
+                }
             ]
         },
         {
             title: "The Fish 🐟",
             emoji: "🐟",
-            sentences: [
-                { text: "The ____ swims in the sea.", missing: "fish" },
-                { text: "The fish is ____.", missing: "wet" },
-                { text: "The fish hid by the ____.", missing: "net" }
+            sentences: [{
+                    text: "The ____ swims in the sea.",
+                    missing: "fish"
+                },
+                {
+                    text: "The fish is ____.",
+                    missing: "wet"
+                },
+                {
+                    text: "The fish hid by the ____.",
+                    missing: "net"
+                }
             ]
         }
     ];
 
-    const STORIES_DE = [
-        {
+    const STORIES_DE = [{
             title: "Die Katze 🐱",
             emoji: "🐱",
-            sentences: [
-                { text: "Die ____ sitzt auf der Matte.", missing: "katze" },
-                { text: "Die katze ist ____.", missing: "fett" },
-                { text: "Die katze kann ____.", missing: "schlafen" }
+            sentences: [{
+                    text: "Die ____ sitzt auf der Matte.",
+                    missing: "katze"
+                },
+                {
+                    text: "Die katze ist ____.",
+                    missing: "fett"
+                },
+                {
+                    text: "Die katze kann ____.",
+                    missing: "schlafen"
+                }
             ]
         },
         {
             title: "Der Hund 🐕",
             emoji: "🐕",
-            sentences: [
-                { text: "Der ____ rennt zum Baum.", missing: "hund" },
-                { text: "Der hund spielt im ____.", missing: "garten" },
-                { text: "Der hund ist ____.", missing: "lieb" }
+            sentences: [{
+                    text: "Der ____ rennt zum Baum.",
+                    missing: "hund"
+                },
+                {
+                    text: "Der hund spielt im ____.",
+                    missing: "garten"
+                },
+                {
+                    text: "Der hund ist ____.",
+                    missing: "lieb"
+                }
             ]
         },
         {
             title: "Die Sonne ☀️",
             emoji: "☀️",
-            sentences: [
-                { text: "Die ____ ist hell.", missing: "sonne" },
-                { text: "Die sonne ist ____.", missing: "warm" },
-                { text: "Ich spiele in der ____.", missing: "sonne" }
+            sentences: [{
+                    text: "Die ____ ist hell.",
+                    missing: "sonne"
+                },
+                {
+                    text: "Die sonne ist ____.",
+                    missing: "warm"
+                },
+                {
+                    text: "Ich spiele in der ____.",
+                    missing: "sonne"
+                }
             ]
         },
         {
             title: "Das Schwein 🐷",
             emoji: "🐷",
-            sentences: [
-                { text: "Das ____ ist rosa.", missing: "schwein" },
-                { text: "Das schwein rollt im ____.", missing: "schlamm" },
-                { text: "Das schwein isst aus dem ____.", missing: "trog" }
+            sentences: [{
+                    text: "Das ____ ist rosa.",
+                    missing: "schwein"
+                },
+                {
+                    text: "Das schwein rollt im ____.",
+                    missing: "schlamm"
+                },
+                {
+                    text: "Das schwein isst aus dem ____.",
+                    missing: "trog"
+                }
             ]
         },
         {
             title: "Der Fuchs 🦊",
             emoji: "🦊",
-            sentences: [
-                { text: "Der ____ rennt im Wald.", missing: "fuchs" },
-                { text: "Der fuchs ist ____.", missing: "rot" },
-                { text: "Der fuchs sitzt auf der ____.", missing: "kiste" }
+            sentences: [{
+                    text: "Der ____ rennt im Wald.",
+                    missing: "fuchs"
+                },
+                {
+                    text: "Der fuchs ist ____.",
+                    missing: "rot"
+                },
+                {
+                    text: "Der fuchs sitzt auf der ____.",
+                    missing: "kiste"
+                }
             ]
         },
         {
             title: "Das Huhn 🐔",
             emoji: "🐔",
-            sentences: [
-                { text: "Das ____ sitzt auf dem Ei.", missing: "huhn" },
-                { text: "Das huhn rennt zum ____.", missing: "stall" },
-                { text: "Das huhn pickt im ____.", missing: "hof" }
+            sentences: [{
+                    text: "Das ____ sitzt auf dem Ei.",
+                    missing: "huhn"
+                },
+                {
+                    text: "Das huhn rennt zum ____.",
+                    missing: "stall"
+                },
+                {
+                    text: "Das huhn pickt im ____.",
+                    missing: "hof"
+                }
             ]
         },
         {
             title: "Die Biene 🐝",
             emoji: "🐝",
-            sentences: [
-                { text: "Die ____ kann fliegen.", missing: "biene" },
-                { text: "Die biene sitzt auf der ____.", missing: "blume" },
-                { text: "Die biene macht ____.", missing: "honig" }
+            sentences: [{
+                    text: "Die ____ kann fliegen.",
+                    missing: "biene"
+                },
+                {
+                    text: "Die biene sitzt auf der ____.",
+                    missing: "blume"
+                },
+                {
+                    text: "Die biene macht ____.",
+                    missing: "honig"
+                }
             ]
         },
         {
             title: "Der Fisch 🐟",
             emoji: "🐟",
-            sentences: [
-                { text: "Der ____ schwimmt im See.", missing: "fisch" },
-                { text: "Der fisch ist ____.", missing: "nass" },
-                { text: "Der fisch schwimmt im ____.", missing: "netz" }
+            sentences: [{
+                    text: "Der ____ schwimmt im See.",
+                    missing: "fisch"
+                },
+                {
+                    text: "Der fisch ist ____.",
+                    missing: "nass"
+                },
+                {
+                    text: "Der fisch schwimmt im ____.",
+                    missing: "netz"
+                }
             ]
         }
     ];
@@ -518,7 +931,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return state.language === "de" ? STORIES_DE : STORIES;
     }
 
-    // Progress state
+
     let state = {
         currentPhase: PHASES.SOUNDS,
         currentActivity: 0,
@@ -531,9 +944,18 @@ document.addEventListener("DOMContentLoaded", () => {
         lastPlayDate: null,
         achievements: [],
         activityStats: {
-            sounds: { attempts: 0, correct: 0 },
-            words: { attempts: 0, correct: 0 },
-            stories: { attempts: 0, correct: 0 }
+            sounds: {
+                attempts: 0,
+                correct: 0
+            },
+            words: {
+                attempts: 0,
+                correct: 0
+            },
+            stories: {
+                attempts: 0,
+                correct: 0
+            }
         },
         lastSoundIndex: null,
         phaseProgress: {
@@ -586,9 +1008,9 @@ document.addEventListener("DOMContentLoaded", () => {
         )).find(Boolean);
         if (byName) return byName;
 
-        return voices.find((voice) => voice.lang.startsWith(langPrefix) && voice.default)
-            || voices.find((voice) => voice.lang.startsWith(langPrefix))
-            || null;
+        return voices.find((voice) => voice.lang.startsWith(langPrefix) && voice.default) ||
+            voices.find((voice) => voice.lang.startsWith(langPrefix)) ||
+            null;
     }
 
     function adjustProsody(rate, pitch, utteranceLang) {
@@ -599,10 +1021,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 pitch: clampNumber(pitch * 0.9, 0.8, 1.15)
             };
         }
-        return { rate, pitch };
+        return {
+            rate,
+            pitch
+        };
     }
 
-    // Audio system using Web Speech API with feature detection
+
     const AudioSystem = {
         synth: typeof window !== 'undefined' && window.speechSynthesis ? window.speechSynthesis : null,
         speaking: false,
@@ -631,7 +1056,7 @@ document.addEventListener("DOMContentLoaded", () => {
             utterance.volume = 1;
             utterance.lang = utteranceLang;
 
-            // Try to use a child-friendly voice with robust detection
+
             const preferredVoice = getPreferredVoice(utteranceLang);
             if (preferredVoice) utterance.voice = preferredVoice;
 
@@ -657,7 +1082,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         speakWord(word, slow = false) {
             if (slow) {
-                // Speak each letter sound, then the word
+
                 const letters = word.split("");
                 let delay = 0;
                 letters.forEach((letter, index) => {
@@ -677,7 +1102,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    // Character animation system
+
     let characterState = {
         mouthOpen: false,
         eyesBlink: false,
@@ -700,7 +1125,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const sway = Math.sin(t * 1.4) * 2;
         const breathe = 1 + Math.sin(t * 1.6) * 0.015;
 
-        // Soft ground shadow
+
         ctx.save();
         ctx.fillStyle = "rgba(15, 23, 42, 0.12)";
         ctx.beginPath();
@@ -712,7 +1137,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.translate(100, 102 + bob);
         ctx.scale(breathe, breathe);
 
-        // Glow halo
+
         const halo = ctx.createRadialGradient(0, -10, 40, 0, -10, 110);
         halo.addColorStop(0, "rgba(250, 204, 21, 0.35)");
         halo.addColorStop(1, "rgba(250, 204, 21, 0)");
@@ -721,7 +1146,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.arc(0, -10, 110, 0, Math.PI * 2);
         ctx.fill();
 
-        // Body gradient
+
         const bodyGradient = ctx.createRadialGradient(-20, -30, 10, 0, 0, 85);
         bodyGradient.addColorStop(0, "#FFF2A6");
         bodyGradient.addColorStop(0.55, "#FFD54A");
@@ -735,7 +1160,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.strokeStyle = "#E88B0C";
         ctx.stroke();
 
-        // Belly patch
+
         const bellyGradient = ctx.createRadialGradient(-10, 8, 8, 0, 15, 52);
         bellyGradient.addColorStop(0, "#FFF6C2");
         bellyGradient.addColorStop(1, "#FDE68A");
@@ -744,21 +1169,21 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.ellipse(0, 18, 38, 30, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Arms
+
         ctx.fillStyle = "#FDBA4D";
         ctx.beginPath();
         ctx.ellipse(-68, 6 + sway, 16, 20, -0.4, 0, Math.PI * 2);
         ctx.ellipse(68, 6 - sway, 16, 20, 0.4, 0, Math.PI * 2);
         ctx.fill();
 
-        // Feet
+
         ctx.fillStyle = "#F59E0B";
         ctx.beginPath();
         ctx.ellipse(-28, 74, 18, 10, 0.2, 0, Math.PI * 2);
         ctx.ellipse(28, 74, 18, 10, -0.2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Eyes
+
         const eyeYOffset = characterState.eyesBlink ? 0 : -2;
         const eyeOpenHeight = characterState.eyesBlink ? 4 : 24;
         const pupilOffsetX = Math.sin(t * 1.7) * 2;
@@ -795,7 +1220,7 @@ document.addEventListener("DOMContentLoaded", () => {
         drawEye(-26);
         drawEye(26);
 
-        // Eyebrows
+
         ctx.strokeStyle = "#7C5A2E";
         ctx.lineWidth = 4;
         ctx.lineCap = "round";
@@ -808,7 +1233,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.quadraticCurveTo(26, -52, 42, -46);
         ctx.stroke();
 
-        // Mouth
+
         if (characterState.mouthOpen) {
             const mouthGradient = ctx.createRadialGradient(0, 36, 0, 0, 36, 26);
             mouthGradient.addColorStop(0, "#FF9AA2");
@@ -834,7 +1259,7 @@ document.addEventListener("DOMContentLoaded", () => {
             ctx.stroke();
         }
 
-        // Cheeks
+
         const blush1 = ctx.createRadialGradient(-50, 16, 0, -50, 16, 20);
         blush1.addColorStop(0, "rgba(251, 113, 133, 0.6)");
         blush1.addColorStop(1, "rgba(251, 113, 133, 0)");
@@ -851,7 +1276,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.arc(50, 16, 20, 0, Math.PI * 2);
         ctx.fill();
 
-        // Tiny sparkles
+
         ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
         ctx.beginPath();
         ctx.arc(-70, -60 + Math.sin(t * 3) * 2, 4, 0, Math.PI * 2);
@@ -920,7 +1345,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 900);
     }
 
-    // Toast notifications
+
     function showToast(message, type = "info") {
         const toast = document.createElement("div");
         toast.className = `toast ${type}`;
@@ -945,7 +1370,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 3500);
     }
 
-    // Celebration effect with confetti
+
     function celebrate(intensity = 1) {
         const celebration = document.createElement("div");
         const useCardOverlay = isFullscreenActive();
@@ -954,7 +1379,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const emojis = ["⭐", "🌟", "✨", "🎉", "🎊", "💫", "🌈", "💜", "💖"];
         const count = Math.floor(25 * intensity);
-        
+
         for (let i = 0; i < count; i++) {
             const star = document.createElement("span");
             star.className = "star-burst";
@@ -966,7 +1391,7 @@ document.addEventListener("DOMContentLoaded", () => {
             celebration.appendChild(star);
         }
 
-        // Add confetti
+
         const confettiColors = ["#8b5cf6", "#ec4899", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"];
         for (let i = 0; i < count; i++) {
             const confetti = document.createElement("div");
@@ -995,37 +1420,42 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Check and award achievements
+
     function checkAchievements() {
         const newAchievements = [];
-        
+
         for (const [id, achievement] of Object.entries(ACHIEVEMENTS)) {
             if (!state.achievements.includes(id) && achievement.condition(state)) {
                 state.achievements.push(id);
-                newAchievements.push({ id, labelKey: achievement.labelKey });
+                newAchievements.push({
+                    id,
+                    labelKey: achievement.labelKey
+                });
             }
         }
 
         if (newAchievements.length > 0) {
             saveProgress();
             updateAchievementBadges();
-            
-            // Show achievement notifications with delay
+
+
             newAchievements.forEach((achievement, index) => {
                 setTimeout(() => {
-                    showToast(t("toast.achievement", { name: t(achievement.labelKey) }), "achievement");
+                    showToast(t("toast.achievement", {
+                        name: t(achievement.labelKey)
+                    }), "achievement");
                     celebrate(1.5);
                 }, index * 1500);
             });
         }
     }
 
-    // Update achievement badge display
+
     function updateAchievementBadges() {
         achievementsBadges.forEach(badge => {
             const badgeId = badge.dataset.badge;
             badge.classList.remove("earned", "locked");
-            
+
             if (state.achievements.includes(badgeId)) {
                 badge.classList.add("earned");
             } else {
@@ -1034,42 +1464,44 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Check and update daily streak
+
     function checkStreak() {
         const today = new Date();
         const todayString = today.toDateString();
         const lastPlay = state.lastPlayDate;
-        
+
         if (!lastPlay) {
-            // First time playing, start streak at 1
+
             state.streak = 1;
         } else if (lastPlay === todayString) {
-            // Already played today, keep current streak without incrementing
-            // This prevents the streak from inflating by multiple plays in one day
+
+
         } else {
-            // Calculate yesterday's date using UTC to avoid timezone issues
+
             const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
             const yesterdayString = yesterday.toDateString();
-            
+
             if (lastPlay === yesterdayString) {
-                // Played yesterday, increment streak
+
                 state.streak += 1;
             } else {
-                // Missed a day or more, reset streak to 1
+
                 state.streak = 1;
             }
         }
-        
+
         state.lastPlayDate = todayString;
         saveProgress();
         updateStreakDisplay();
     }
 
-    // Update streak display
+
     function updateStreakDisplay() {
         if (streakIndicator && streakText) {
-            streakText.textContent = t("streak.day", { count: state.streak });
-            
+            streakText.textContent = t("streak.day", {
+                count: state.streak
+            });
+
             if (state.streak >= 7) {
                 streakIndicator.style.background = "linear-gradient(135deg, #fef3c7, #fde68a, #fbbf24)";
             } else if (state.streak >= 3) {
@@ -1078,7 +1510,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Progress management
+
     function loadProgress() {
         try {
             const saved = localStorage.getItem("learnToReadProgress");
@@ -1096,13 +1528,25 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         if (!state.activityStats) {
             state.activityStats = {
-                sounds: { attempts: 0, correct: 0 },
-                words: { attempts: 0, correct: 0 },
-                stories: { attempts: 0, correct: 0 }
+                sounds: {
+                    attempts: 0,
+                    correct: 0
+                },
+                words: {
+                    attempts: 0,
+                    correct: 0
+                },
+                stories: {
+                    attempts: 0,
+                    correct: 0
+                }
             };
         }
         if (!state.activityStats.words) {
-            state.activityStats.words = { attempts: 0, correct: 0 };
+            state.activityStats.words = {
+                attempts: 0,
+                correct: 0
+            };
         }
         if (!state.achievements) {
             state.achievements = [];
@@ -1147,9 +1591,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 lastPlayDate: null,
                 achievements: [],
                 activityStats: {
-                    sounds: { attempts: 0, correct: 0 },
-                    words: { attempts: 0, correct: 0 },
-                    stories: { attempts: 0, correct: 0 }
+                    sounds: {
+                        attempts: 0,
+                        correct: 0
+                    },
+                    words: {
+                        attempts: 0,
+                        correct: 0
+                    },
+                    stories: {
+                        attempts: 0,
+                        correct: 0
+                    }
                 },
                 lastSoundIndex: null,
                 phaseProgress: {
@@ -1167,13 +1620,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function updateUI() {
-        // Update stats
+
         starsCount.textContent = state.stars;
         soundsLearned.textContent = state.masteredSounds.length;
         wordsLearned.textContent = state.masteredWords.length;
         storiesRead.textContent = state.completedStories.length;
 
-        // Update phase indicators
+
         const phases = [PHASES.SOUNDS, PHASES.WORDS, PHASES.SENTENCES];
         const currentIndex = phases.indexOf(state.currentPhase);
 
@@ -1190,7 +1643,7 @@ document.addEventListener("DOMContentLoaded", () => {
             connector.classList.toggle("completed", index < currentIndex);
         });
 
-        // Update parent info
+
         const phaseNames = {
             sounds: t("activity.soundsTitle"),
             words: t("activity.wordsTitle"),
@@ -1244,7 +1697,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Activity rendering
+
     function loadActivity() {
         loadingMessage.style.display = "none";
 
@@ -1269,8 +1722,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const clearGuidance = () => {
             activityArea.classList.remove("needs-guidance");
         };
-        activityArea.addEventListener("pointerdown", clearGuidance, { once: true });
-        activityArea.addEventListener("keydown", clearGuidance, { once: true });
+        activityArea.addEventListener("pointerdown", clearGuidance, {
+            once: true
+        });
+        activityArea.addEventListener("keydown", clearGuidance, {
+            once: true
+        });
     }
 
     let slotSizingFrame = null;
@@ -1329,7 +1786,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    const scrollPreventOptions = { passive: false };
+    const scrollPreventOptions = {
+        passive: false
+    };
 
     function updateScrollPrevention(enabled) {
         if (enabled) {
@@ -1388,18 +1847,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function exitActivityFullscreen() {
-        // Always try to exit both native and fallback fullscreen
+
         if (getFullscreenElement()) {
             const exit = document.exitFullscreen || document.webkitExitFullscreen || document.webkitCancelFullScreen;
             if (exit) {
                 const exitResult = exit.call(document);
                 if (exitResult && exitResult.catch) {
                     exitResult.catch(() => {
-                        // If native exit fails, still clear fallback
+
                         setFallbackFullscreen(false);
                     });
                 } else {
-                    // For browsers that don't return a promise
+
                     setTimeout(() => {
                         if (!getFullscreenElement()) {
                             setFallbackFullscreen(false);
@@ -1409,7 +1868,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
         }
-        // Always clear fallback state
+
         setFallbackFullscreen(false);
     }
 
@@ -1466,7 +1925,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return shuffleArray([targetLetter, ...wrongChoices]);
     }
 
-    // Sounds activity
+
     function renderSoundsActivity() {
         activityIcon.textContent = "🔤";
         activityTitle.textContent = t("activity.soundsTitle");
@@ -1660,7 +2119,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     state.masteredSounds.push(target.letter);
                     state.stars += 1;
                     saveProgress();
-                    showToast(t("sounds.matchToast", { letter: target.letter }), "success");
+                    showToast(t("sounds.matchToast", {
+                        letter: target.letter
+                    }), "success");
                     checkAchievements();
 
                     if (state.masteredSounds.length % 5 === 0) {
@@ -1669,7 +2130,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     checkPhaseProgression();
                 } else {
-                    showToast(t("sounds.matchAgain", { letter: target.letter }), "success");
+                    showToast(t("sounds.matchAgain", {
+                        letter: target.letter
+                    }), "success");
                 }
 
                 setTimeout(() => {
@@ -1750,8 +2213,14 @@ document.addEventListener("DOMContentLoaded", () => {
         shapeButtons.forEach((btn) => {
             btn.addEventListener("pointerdown", (event) => {
                 if (locked) return;
-                dragCandidate = { button: btn, pointerId: event.pointerId };
-                dragStartPoint = { x: event.clientX, y: event.clientY };
+                dragCandidate = {
+                    button: btn,
+                    pointerId: event.pointerId
+                };
+                dragStartPoint = {
+                    x: event.clientX,
+                    y: event.clientY
+                };
                 btn.setPointerCapture(event.pointerId);
             });
 
@@ -1833,7 +2302,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Words activity
+
     function renderWordsActivity() {
         activityIcon.textContent = "🔡";
         activityTitle.textContent = t("activity.wordsTitle");
@@ -1889,7 +2358,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 state.activityStats.words.correct += 1;
                 state.stars += 5;
                 saveProgress();
-                showToast(t("words.builtToast", { word }), "success");
+                showToast(t("words.builtToast", {
+                    word
+                }), "success");
                 celebrate();
                 AudioSystem.speakEncouragement();
                 if (!state.masteredWords.includes(word)) {
@@ -1944,7 +2415,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         let isDragging = false;
         let dragStartPos = null;
-        const DRAG_THRESHOLD = 5; // pixels to move before considering it a drag
+        const DRAG_THRESHOLD = 5;
 
         function placeLetterIntoSlot(slot) {
             if (!activeTile || slot.dataset.letter) return;
@@ -1978,19 +2449,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
             tile.addEventListener("pointerdown", (event) => {
                 if (tile.classList.contains("used")) return;
-                dragStartPos = { x: event.clientX, y: event.clientY };
-                isDragging = false; // Don't set to true until we've moved enough
+                dragStartPos = {
+                    x: event.clientX,
+                    y: event.clientY
+                };
+                isDragging = false;
                 tile.setPointerCapture(event.pointerId);
             });
 
             tile.addEventListener("pointermove", (event) => {
                 if (!dragStartPos) return;
                 if (tile.classList.contains("used")) return;
-                
+
                 const dx = event.clientX - dragStartPos.x;
                 const dy = event.clientY - dragStartPos.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
-                
+
                 if (!isDragging && distance > DRAG_THRESHOLD) {
                     isDragging = true;
                     setActiveTile(tile);
@@ -1999,7 +2473,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             tile.addEventListener("pointerup", (event) => {
                 if (!dragStartPos) return;
-                
+
                 if (isDragging) {
                     isDragging = false;
                     tile.releasePointerCapture(event.pointerId);
@@ -2011,7 +2485,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         setActiveTile(null);
                     }
                 }
-                
+
                 dragStartPos = null;
             });
 
@@ -2065,7 +2539,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Stories activity
+
     function renderStoriesActivity() {
         activityIcon.textContent = "📖";
         activityTitle.textContent = t("activity.storiesTitle");
@@ -2196,7 +2670,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             let isDragging = false;
             let dragStartPos = null;
-            const DRAG_THRESHOLD = 5; // pixels to move before considering it a drag
+            const DRAG_THRESHOLD = 5;
 
             function markStoryAttempt() {
                 if (!storyAttempted) {
@@ -2240,19 +2714,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 tile.addEventListener("pointerdown", (event) => {
                     if (tile.classList.contains("used")) return;
-                    dragStartPos = { x: event.clientX, y: event.clientY };
-                    isDragging = false; // Don't set to true until we've moved enough
+                    dragStartPos = {
+                        x: event.clientX,
+                        y: event.clientY
+                    };
+                    isDragging = false;
                     tile.setPointerCapture(event.pointerId);
                 });
 
                 tile.addEventListener("pointermove", (event) => {
                     if (!dragStartPos) return;
                     if (tile.classList.contains("used")) return;
-                    
+
                     const dx = event.clientX - dragStartPos.x;
                     const dy = event.clientY - dragStartPos.y;
                     const distance = Math.sqrt(dx * dx + dy * dy);
-                    
+
                     if (!isDragging && distance > DRAG_THRESHOLD) {
                         isDragging = true;
                         setActiveTile(tile);
@@ -2261,7 +2738,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 tile.addEventListener("pointerup", (event) => {
                     if (!dragStartPos) return;
-                    
+
                     if (isDragging) {
                         isDragging = false;
                         tile.releasePointerCapture(event.pointerId);
@@ -2273,7 +2750,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             setActiveTile(null);
                         }
                     }
-                    
+
                     dragStartPos = null;
                 });
 
@@ -2330,7 +2807,7 @@ document.addEventListener("DOMContentLoaded", () => {
         renderSentence();
     }
 
-    // Navigation
+
     prevBtn.addEventListener("click", () => {
         const phases = [PHASES.SOUNDS, PHASES.WORDS, PHASES.SENTENCES];
         const currentIndex = phases.indexOf(state.currentPhase);
@@ -2347,7 +2824,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const phases = [PHASES.SOUNDS, PHASES.WORDS, PHASES.SENTENCES];
         const currentIndex = phases.indexOf(state.currentPhase);
 
-        // Within same phase, go to next activity
+
         if (state.currentPhase === PHASES.WORDS) {
             state.currentActivity++;
             saveProgress();
@@ -2391,7 +2868,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("webkitfullscreenchange", syncFullscreenState);
     window.addEventListener("resize", scheduleSlotSizing);
 
-    // Phase item clicks
+
     document.querySelectorAll(".phase-item").forEach(item => {
         item.addEventListener("click", () => {
             const phase = item.dataset.phase;
@@ -2414,9 +2891,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // Initialize
+
     function init() {
-        // Load voices for Web Speech API
+
         if (speechSynthesis.onvoiceschanged !== undefined) {
             speechSynthesis.onvoiceschanged = () => {
                 AudioSystem.synth.getVoices();
@@ -2431,7 +2908,7 @@ document.addEventListener("DOMContentLoaded", () => {
         startCharacterAnimation();
         loadActivity();
 
-        // Welcome message with slight delay for better UX
+
         setTimeout(() => {
             showToast(t("toast.welcome"), "success");
         }, 500);

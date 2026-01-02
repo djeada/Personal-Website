@@ -41,14 +41,14 @@ function initDOMElements() {
     speedSlider = document.getElementById('speed-slider');
     speedDisplay = document.getElementById('speed-display');
     resetBtn = document.getElementById('reset-btn');
-    
+
     btnSunrise = document.getElementById('btnSunrise');
     btnMidday = document.getElementById('btnMidday');
     btnSunset = document.getElementById('btnSunset');
     btnNight = document.getElementById('btnNight');
     autoRotateCheck = document.getElementById('autoRotate');
     screenshotBtn = document.getElementById('screenshot-btn');
-    
+
     statTime = document.getElementById('stat-time');
     statFog = document.getElementById('stat-fog');
     statSpeed = document.getElementById('stat-speed');

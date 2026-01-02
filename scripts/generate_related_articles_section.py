@@ -1,11 +1,15 @@
+import json
 import re
 from concurrent.futures import ThreadPoolExecutor
 from math import log2
+from typing import Optional
 
 from bs4 import BeautifulSoup, Tag
 from pathlib import Path
 
 INPUT_ARTICLES_DIR = Path("../src/articles")
+SCRIPT_DIR = Path(__file__).resolve().parent
+INPUT_CONFIG_PATH = SCRIPT_DIR / "input.json"
 LOWERCASE_WORDS = [
     "a",
     "vs",
@@ -57,6 +61,73 @@ def build_articles_tree(articles_in_dir, root):
         current_node["__files__"].append(article)
 
     return articles_tree
+
+
+def _process_component(string: str) -> str:
+    exceptions = {
+        "neo4j": "neo4j",
+    }
+
+    for key, replacement in exceptions.items():
+        if key in string.lower():
+            string = string.lower().replace(key, replacement)
+
+    string = re.sub(r"(?<=[a-z0-9A-Z])[A-Z]", r"_\g<0>", string)
+    string = re.sub(r"\s+", "_", string)
+    string = re.sub(r"[^a-zA-Z0-9./]", "_", string.strip())
+    return string.lower()
+
+
+def _article_output_path(entry: dict) -> Optional[Path]:
+    category = entry.get("category")
+    title = entry.get("title")
+    if not isinstance(category, list) or not title:
+        return None
+
+    categories = "/".join(_process_component(cat) for cat in category)
+    title_part = _process_component(title)
+    return INPUT_ARTICLES_DIR / f"{categories}/{title_part}.html"
+
+
+def load_article_order(config_path: Path) -> list[Path]:
+    if not config_path.exists():
+        return []
+
+    data = json.loads(config_path.read_text(encoding="utf-8"))
+    ordered_paths = []
+    for entry in data:
+        if not isinstance(entry, dict):
+            continue
+        path = _article_output_path(entry)
+        if path is not None:
+            ordered_paths.append(path)
+    return ordered_paths
+
+
+def _is_relative_to(path: Path, base: Path) -> bool:
+    try:
+        path.relative_to(base)
+        return True
+    except ValueError:
+        return False
+
+
+def order_articles_for_subdir(
+    subdir: Path, articles_in_dir: list[Path], ordered_paths: list[Path]
+) -> list[Path]:
+    ordered = []
+    remaining = {article: article for article in articles_in_dir}
+
+    for path in ordered_paths:
+        if not _is_relative_to(path, subdir):
+            continue
+        if path in remaining:
+            ordered.append(remaining.pop(path))
+
+    if remaining:
+        ordered.extend(sorted(remaining.values(), key=lambda x: x.parent.name + x.name))
+
+    return ordered
 
 
 def populate_ol_with_tree(soup, ol_tag, articles_tree, path_parts=[]):
@@ -144,17 +215,20 @@ def process_file(file, articles_in_dir):
 
 
 def main():
+    ordered_paths = load_article_order(INPUT_CONFIG_PATH)
+
     for subdir in INPUT_ARTICLES_DIR.iterdir():
         if subdir.is_dir():
-            articles_in_dir = sorted(
-                list(subdir.rglob("*.html")), key=lambda x: x.parent.name + x.name
+            articles_in_dir = list(subdir.rglob("*.html"))
+            ordered_articles = order_articles_for_subdir(
+                subdir, articles_in_dir, ordered_paths
             )
             with ThreadPoolExecutor() as executor:
 
                 executor.map(
                     process_file,
-                    articles_in_dir,
-                    [articles_in_dir] * len(articles_in_dir),
+                    ordered_articles,
+                    [ordered_articles] * len(ordered_articles),
                 )
 
 
