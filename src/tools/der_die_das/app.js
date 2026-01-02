@@ -137,9 +137,8 @@ function getCookie(name) {
 }
 
 
-function isDarkMode() {
-    const darkModeValue = getCookie("darkMode");
-    // Always return true for immersive dark theme
+function isImmersiveTheme() {
+    // Always return true for immersive dark theme experience
     return true;
 }
 
@@ -942,6 +941,7 @@ function checkLevelUp() {
 function checkCollisions() {
     if (!currentWord) return;
 
+    // Container dimensions match drawContainers() - larger containers for better visual appeal
     const containerHeight = 100;
     const bottomMargin = 0;
     const hitY = gameHeight - containerHeight - bottomMargin;
