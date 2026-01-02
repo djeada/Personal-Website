@@ -84,12 +84,14 @@ let currentWord = null;
 let highlightContainerIndex = -1;
 let highlightDuration = 400;
 let highlightStartTime = 0;
+let lastAnswerCorrect = null;
 const articles = ['der', 'die', 'das'];
 const moveAmount = 35;
 
 
 let lastTapTime = 0;
 const doubleTapDelay = 300;
+let isDraggingWord = false;
 
 
 let particles = [];
@@ -100,9 +102,23 @@ let soundEnabled = true;
 
 let isGameOver = false;
 let isGameStarted = false;
+let gameEndMessage = '';
+let isPluralPromptActive = false;
 
 
 let containerAnimations = [0, 0, 0];
+let recentArticles = [];
+const maxSameArticleStreak = 3;
+
+let isColorlessMode = false;
+let showMeanings = false;
+let pluralBonusEnabled = false;
+
+let multiArticles = {};
+let multiWords = [];
+let meaningsMap = {};
+let pluralsMap = {};
+let correctWordSet = new Set();
 
 
 function getCookie(name) {
@@ -121,24 +137,33 @@ function isDarkMode() {
 
 function getColors() {
     const dark = isDarkMode();
+    const containerColors = isColorlessMode ? [
+        dark ? '#64748b' : '#94a3b8',
+        dark ? '#475569' : '#cbd5f5',
+        dark ? '#334155' : '#e2e8f0'
+    ] : [
+        '#E69F00',
+        '#56B4E9',
+        '#009E73'
+    ];
+
+    const containerHover = isColorlessMode ?
+        containerColors.map(color => color) : [
+            '#F0B429',
+            '#6FC5F6',
+            '#1AB085'
+        ];
+
     return {
         bgGradientStart: dark ? '#1a1a2e' : '#667eea',
         bgGradientEnd: dark ? '#16213e' : '#764ba2',
         wordColor: dark ? '#f1f5f9' : '#1f2937',
         wordShadow: dark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.2)',
-        containerColors: [
-            dark ? '#ef4444' : '#f87171',
-            dark ? '#22c55e' : '#4ade80',
-            dark ? '#3b82f6' : '#60a5fa'
-        ],
-        containerHover: [
-            dark ? '#dc2626' : '#ef4444',
-            dark ? '#16a34a' : '#22c55e',
-            dark ? '#2563eb' : '#3b82f6'
-        ],
+        containerColors,
+        containerHover,
         labelColor: '#ffffff',
-        highlightCorrect: dark ? 'rgba(34, 197, 94, 0.9)' : 'rgba(74, 222, 128, 0.95)',
-        highlightIncorrect: dark ? 'rgba(239, 68, 68, 0.9)' : 'rgba(248, 113, 113, 0.95)',
+        highlightCorrect: dark ? 'rgba(251, 191, 36, 0.95)' : 'rgba(245, 158, 11, 0.95)',
+        highlightIncorrect: dark ? 'rgba(249, 115, 22, 0.95)' : 'rgba(234, 88, 12, 0.95)',
         gameOverBg: dark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(0, 0, 0, 0.85)',
         gameOverText: '#ffffff',
         particleColors: dark ? ['#fbbf24', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7'] : ['#fbbf24', '#f59e0b', '#10b981', '#6366f1', '#8b5cf6']
@@ -179,6 +204,8 @@ const wordListFiles = {
     das: 'das.json'
 };
 
+const dataBaseUrl = new URL('.', (document.currentScript && document.currentScript.src) || window.location.href);
+
 const fetchWordList = (url, article) => fetch(url).then(response => {
     if (!response.ok) {
         throw new Error(`Failed to load ${article} words from server.`);
@@ -186,6 +213,15 @@ const fetchWordList = (url, article) => fetch(url).then(response => {
     return response.json();
 }).catch(error => {
     console.error(`Error fetching ${article} words: ${error.message}`);
+});
+
+const fetchJson = (url, label) => fetch(url).then(response => {
+    if (!response.ok) {
+        throw new Error(`Failed to load ${label}.`);
+    }
+    return response.json();
+}).catch(error => {
+    console.error(`Error fetching ${label}: ${error.message}`);
 });
 
 function normalizeWordList(data) {
@@ -204,14 +240,23 @@ function normalizeWordList(data) {
 }
 
 function loadWords() {
-
+    if (window.location.protocol === 'file:') {
+        multiArticles = {};
+        multiWords = [];
+        meaningsMap = {};
+        pluralsMap = {};
+        return;
+    }
 
     Promise.all([
-            fetchWordList(wordListFiles.der, 'der'),
-            fetchWordList(wordListFiles.die, 'die'),
-            fetchWordList(wordListFiles.das, 'das')
+            fetchWordList(new URL(wordListFiles.der, dataBaseUrl), 'der'),
+            fetchWordList(new URL(wordListFiles.die, dataBaseUrl), 'die'),
+            fetchWordList(new URL(wordListFiles.das, dataBaseUrl), 'das'),
+            fetchJson(new URL('multi_articles.json', dataBaseUrl), 'multi-articles'),
+            fetchJson(new URL('meanings.json', dataBaseUrl), 'meanings'),
+            fetchJson(new URL('plurals.json', dataBaseUrl), 'plurals')
         ])
-        .then(([derWords, dieWords, dasWords]) => {
+        .then(([derWords, dieWords, dasWords, multiData, meaningsData, pluralsData]) => {
             const normalizedDer = normalizeWordList(derWords);
             const normalizedDie = normalizeWordList(dieWords);
             const normalizedDas = normalizeWordList(dasWords);
@@ -219,9 +264,28 @@ function loadWords() {
             if (normalizedDer) wordLists.der = normalizedDer;
             if (normalizedDie) wordLists.die = normalizedDie;
             if (normalizedDas) wordLists.das = normalizedDas;
+
+            if (multiData && typeof multiData === 'object') {
+                multiArticles = multiData;
+                multiWords = Object.keys(multiArticles);
+                removeMultiFromLists();
+            }
+
+            if (meaningsData && typeof meaningsData === 'object') {
+                meaningsMap = meaningsData;
+            }
+
+            if (pluralsData && typeof pluralsData === 'object') {
+                pluralsMap = pluralsData;
+            }
             console.log('Extended word lists loaded successfully');
+            updateMeaningDisplay(currentWord ? currentWord.text : '');
         })
         .catch(err => {
+            multiArticles = {};
+            multiWords = [];
+            meaningsMap = {};
+            pluralsMap = {};
             console.log('Using pre-cached word lists:', err.message);
         });
 }
@@ -453,19 +517,192 @@ function resizeCanvas() {
     colors = getColors();
 }
 
+function normalizeWord(word) {
+    return word.trim().toLowerCase();
+}
+
+function getTouchX(event) {
+    const rect = gameCanvas.getBoundingClientRect();
+    const touch = event.touches[0] || event.changedTouches[0];
+    return touch.clientX - rect.left;
+}
+
 function measureWordWidth(word) {
     return ctx.measureText(word).width;
+}
+
+function removeMultiFromLists() {
+    const multiSet = new Set(multiWords.map(word => normalizeWord(word)));
+    for (const article of articles) {
+        const list = wordLists[article];
+        if (!list) continue;
+        DIFFICULTY_LEVELS.forEach(level => {
+            list[level] = (list[level] || []).filter(word => !multiSet.has(normalizeWord(word)));
+        });
+    }
+}
+
+function chooseArticle() {
+    if (recentArticles.length >= maxSameArticleStreak) {
+        const recent = recentArticles.slice(-maxSameArticleStreak);
+        if (recent.every(article => article === recent[0])) {
+            const alternatives = articles.filter(article => article !== recent[0]);
+            return alternatives[Math.floor(Math.random() * alternatives.length)];
+        }
+    }
+    return articles[Math.floor(Math.random() * articles.length)];
+}
+
+function getAvailableWords(words) {
+    return words.filter(word => !correctWordSet.has(normalizeWord(word)));
+}
+
+function getMultiAllowedArticles(word) {
+    if (!multiArticles) return null;
+    return multiArticles[word] || multiArticles[normalizeWord(word)] || null;
+}
+
+function updateMeaningDisplay(wordText) {
+    const meaningDisplay = document.getElementById('meaningDisplay');
+    if (!meaningDisplay) return;
+
+    if (!showMeanings) {
+        meaningDisplay.textContent = '';
+        return;
+    }
+
+    const meaning = meaningsMap[wordText] || meaningsMap[normalizeWord(wordText)];
+    meaningDisplay.textContent = meaning ? `Meaning: ${meaning}` : 'Meaning: —';
+}
+
+function formatArticleList(articleList) {
+    if (!Array.isArray(articleList)) return '';
+    return articleList.join('/');
+}
+
+function showMultiArticleHint(wordText, articleList) {
+    const hint = document.getElementById('multiArticleHint');
+    if (!hint) return;
+
+    if (!articleList || !articleList.length) {
+        hint.textContent = '';
+        return;
+    }
+
+    hint.textContent = `"${wordText}" can take multiple articles (${formatArticleList(articleList)}). Meaning can change.`;
+}
+
+function maybeTriggerPluralBonus(wordText) {
+    if (!pluralBonusEnabled) return;
+    if (isPluralPromptActive) return;
+    if (!pluralsMap || !getPluralAnswers(wordText).length) return;
+    if (streak > 0 && streak % 5 === 0) {
+        openPluralPrompt(wordText);
+    }
+}
+
+function getPluralAnswers(wordText) {
+    const entry = pluralsMap[wordText] || pluralsMap[normalizeWord(wordText)];
+    if (!entry) return [];
+    if (Array.isArray(entry)) {
+        return entry;
+    }
+    if (typeof entry === 'string') {
+        return entry.split(/[,/;]/).map(item => item.trim()).filter(Boolean);
+    }
+    return [];
+}
+
+function openPluralPrompt(wordText) {
+    const overlay = document.getElementById('pluralOverlay');
+    const wordEl = document.getElementById('pluralWord');
+    const inputEl = document.getElementById('pluralInput');
+    const feedbackEl = document.getElementById('pluralFeedback');
+    if (!overlay || !wordEl || !inputEl || !feedbackEl) return;
+
+    const answers = getPluralAnswers(wordText);
+    if (!answers.length) return;
+
+    overlay.dataset.answers = answers.join('|');
+    wordEl.textContent = wordText;
+    inputEl.value = '';
+    feedbackEl.textContent = '';
+    overlay.style.display = 'flex';
+    overlay.setAttribute('aria-hidden', 'false');
+    isPluralPromptActive = true;
+    inputEl.focus();
+}
+
+function closePluralPrompt() {
+    const overlay = document.getElementById('pluralOverlay');
+    if (!overlay) return;
+    overlay.style.display = 'none';
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.dataset.answers = '';
+    isPluralPromptActive = false;
+}
+
+function submitPluralPrompt() {
+    const overlay = document.getElementById('pluralOverlay');
+    const inputEl = document.getElementById('pluralInput');
+    const feedbackEl = document.getElementById('pluralFeedback');
+    if (!overlay || !inputEl || !feedbackEl) return;
+
+    const answersRaw = overlay.dataset.answers || '';
+    const answers = answersRaw.split('|').map(item => item.trim().toLowerCase()).filter(Boolean);
+    const guess = inputEl.value.trim().toLowerCase();
+
+    if (!guess) {
+        feedbackEl.textContent = 'Enter a plural form.';
+        return;
+    }
+
+    if (answers.includes(guess)) {
+        feedbackEl.textContent = 'Correct! +15 bonus';
+        score += 15;
+        updateStats();
+        setTimeout(() => closePluralPrompt(), 600);
+        return;
+    }
+
+    feedbackEl.textContent = `Not quite. Answer: ${answersRaw.replace(/\\|/g, ' / ')}`;
+    setTimeout(() => closePluralPrompt(), 900);
 }
 
 function generateWord(timestamp) {
     if (currentWord) return;
 
-    const randomArticle = articles[Math.floor(Math.random() * articles.length)];
-    const words = getWordsForDifficulty(randomArticle);
-    if (!words.length) {
-        return;
+    const useMulti = multiWords.length > 0 && Math.random() < 0.12;
+    let randomArticle = chooseArticle();
+    let wordText = '';
+    let allowedArticles = null;
+
+    if (useMulti) {
+        const availableMulti = getAvailableWords(multiWords);
+        if (availableMulti.length) {
+            wordText = availableMulti[Math.floor(Math.random() * availableMulti.length)];
+            allowedArticles = getMultiAllowedArticles(wordText);
+        }
     }
-    const wordText = words[Math.floor(Math.random() * words.length)];
+
+    if (!wordText) {
+        const articleOrder = [randomArticle, ...articles.filter(article => article !== randomArticle)];
+        for (const article of articleOrder) {
+            const words = getWordsForDifficulty(article);
+            const availableWords = getAvailableWords(words);
+            if (availableWords.length) {
+                randomArticle = article;
+                wordText = availableWords[Math.floor(Math.random() * availableWords.length)];
+                break;
+            }
+        }
+
+        if (!wordText) {
+            isGameOver = true;
+            gameEndMessage = 'All words completed!';
+            return;
+        }
+    }
     const wordWidth = measureWordWidth(wordText);
     const maxPositionX = gameWidth - wordWidth - 20;
     const randomX = Math.random() * maxPositionX + wordWidth / 2 + 10;
@@ -473,12 +710,21 @@ function generateWord(timestamp) {
     currentWord = {
         text: wordText,
         article: randomArticle,
+        allowedArticles,
         x: Math.max(wordWidth / 2 + 10, randomX),
         y: -30,
         width: wordWidth,
         opacity: 0,
         scale: 0.5
     };
+    if (!allowedArticles) {
+        recentArticles.push(randomArticle);
+        if (recentArticles.length > maxSameArticleStreak) {
+            recentArticles.shift();
+        }
+    }
+    showMultiArticleHint('', null);
+    updateMeaningDisplay(wordText);
     lastWordTime = timestamp;
 }
 
@@ -507,6 +753,7 @@ function moveWords(deltaTime) {
 
         if (lives <= 0) {
             isGameOver = true;
+            gameEndMessage = 'Game Over!';
             playGameOverSound();
         } else {
             playIncorrectSound();
@@ -609,11 +856,12 @@ function checkCollisions() {
     if (highlightContainerIndex !== -1) {
         highlightStartTime = Date.now();
         const userArticle = articles[highlightContainerIndex];
-        const correctArticle = currentWord.article;
+        const allowedArticles = currentWord.allowedArticles || [currentWord.article];
+        const correctArticle = formatArticleList(allowedArticles) || currentWord.article;
 
         totalAttempts++;
 
-        if (userArticle === correctArticle) {
+        if (allowedArticles.includes(userArticle)) {
 
             streak++;
             correctAttempts++;
@@ -625,24 +873,31 @@ function checkCollisions() {
             if (streak > maxStreak) maxStreak = streak;
 
             highlightColor = colors.highlightCorrect;
+            lastAnswerCorrect = true;
+            correctWordSet.add(normalizeWord(currentWord.text));
             addWordToTable(correctWordsTable, currentWord.text, userArticle, correctArticle);
 
             playCorrectSound();
             createParticles(currentWord.x, currentWord.y, 20, true);
 
             checkLevelUp();
+            showMultiArticleHint(currentWord.text, allowedArticles.length > 1 ? allowedArticles : null);
+            maybeTriggerPluralBonus(currentWord.text);
         } else {
 
             lives--;
             streak = 0;
             highlightColor = colors.highlightIncorrect;
+            lastAnswerCorrect = false;
             addWordToTable(incorrectWordsTable, currentWord.text, userArticle, correctArticle);
 
             playIncorrectSound();
             createParticles(currentWord.x, currentWord.y, 15, false);
+            showMultiArticleHint(currentWord.text, allowedArticles.length > 1 ? allowedArticles : null);
 
             if (lives <= 0) {
                 isGameOver = true;
+                gameEndMessage = 'Game Over!';
                 playGameOverSound();
             }
         }
@@ -784,6 +1039,14 @@ function drawContainers() {
         ctx.fillStyle = colors.labelColor;
         ctx.fillText(label, centerX, centerY);
 
+        if (index === highlightContainerIndex && lastAnswerCorrect !== null) {
+            const elapsedTime = Date.now() - highlightStartTime;
+            if (elapsedTime < highlightDuration) {
+                ctx.font = 'bold 18px "Segoe UI", Arial, sans-serif';
+                ctx.fillText(lastAnswerCorrect ? '✓' : '✕', centerX + containerWidth / 2 - 26, centerY);
+            }
+        }
+
         ctx.restore();
     });
 }
@@ -799,7 +1062,7 @@ function drawGameOver() {
     ctx.textBaseline = 'middle';
 
     ctx.font = 'bold 48px "Segoe UI", Arial, sans-serif';
-    ctx.fillText('Game Over!', gameWidth / 2, gameHeight / 2 - 80);
+    ctx.fillText(gameEndMessage || 'Game Over!', gameWidth / 2, gameHeight / 2 - 80);
 
 
     ctx.font = '24px "Segoe UI", Arial, sans-serif';
@@ -833,7 +1096,7 @@ function updateCanvas() {
 function gameLoop(timestamp) {
     if (!isGameStarted) return;
 
-    if (isGameOver) {
+    if (isGameOver || isPluralPromptActive) {
         updateCanvas();
         return;
     }
@@ -853,6 +1116,7 @@ function gameLoop(timestamp) {
 
 function resetGame() {
     isGameOver = false;
+    gameEndMessage = '';
     score = 0;
     lives = 3;
     streak = 0;
@@ -869,6 +1133,12 @@ function resetGame() {
     containerAnimations = [0, 0, 0];
     isFastDropping = false;
     lastTapTime = 0;
+    lastAnswerCorrect = null;
+    recentArticles = [];
+    correctWordSet.clear();
+    isPluralPromptActive = false;
+    updateMeaningDisplay('');
+    closePluralPrompt();
 
 
     baseSpeed = difficulties[currentDifficulty].baseSpeed;
@@ -983,6 +1253,31 @@ gameCanvas.addEventListener('touchstart', (e) => {
         }
     }
     lastTapTime = currentTime;
+
+    if (currentWord && !isGameOver) {
+        isDraggingWord = true;
+        const touchX = getTouchX(e);
+        currentWord.x = Math.min(
+            gameWidth - currentWord.width / 2 - 10,
+            Math.max(currentWord.width / 2 + 10, touchX)
+        );
+    }
+});
+
+gameCanvas.addEventListener('touchmove', (e) => {
+    if (!isGameStarted || isGameOver || !currentWord || !isDraggingWord) return;
+    e.preventDefault();
+    const touchX = getTouchX(e);
+    currentWord.x = Math.min(
+        gameWidth - currentWord.width / 2 - 10,
+        Math.max(currentWord.width / 2 + 10, touchX)
+    );
+}, {
+    passive: false
+});
+
+gameCanvas.addEventListener('touchend', () => {
+    isDraggingWord = false;
 });
 
 startBtn.addEventListener('click', startGame);
@@ -996,6 +1291,50 @@ soundToggle.addEventListener('click', () => {
         audioContext.resume();
     }
 });
+
+const pluralSubmitBtn = document.getElementById('pluralSubmit');
+const pluralSkipBtn = document.getElementById('pluralSkip');
+const pluralInput = document.getElementById('pluralInput');
+
+if (pluralSubmitBtn) {
+    pluralSubmitBtn.addEventListener('click', submitPluralPrompt);
+}
+if (pluralSkipBtn) {
+    pluralSkipBtn.addEventListener('click', closePluralPrompt);
+}
+if (pluralInput) {
+    pluralInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            submitPluralPrompt();
+        }
+    });
+}
+
+const colorlessToggle = document.getElementById('colorlessToggle');
+if (colorlessToggle) {
+    colorlessToggle.addEventListener('change', () => {
+        isColorlessMode = colorlessToggle.checked;
+        colors = getColors();
+        drawBackground();
+        drawContainers();
+    });
+}
+
+const meaningToggle = document.getElementById('meaningToggle');
+if (meaningToggle) {
+    meaningToggle.addEventListener('change', () => {
+        showMeanings = meaningToggle.checked;
+        updateMeaningDisplay(currentWord ? currentWord.text : '');
+    });
+}
+
+const pluralToggle = document.getElementById('pluralToggle');
+if (pluralToggle) {
+    pluralToggle.addEventListener('change', () => {
+        pluralBonusEnabled = pluralToggle.checked;
+    });
+}
 
 difficultyBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1023,6 +1362,18 @@ window.onload = function() {
 
 
     loadWords();
+
+    if (meaningToggle) {
+        showMeanings = meaningToggle.checked;
+        updateMeaningDisplay(currentWord ? currentWord.text : '');
+    }
+    if (pluralToggle) {
+        pluralBonusEnabled = pluralToggle.checked;
+    }
+    if (colorlessToggle) {
+        isColorlessMode = colorlessToggle.checked;
+        colors = getColors();
+    }
 
 
     showStartScreen();
