@@ -137,44 +137,44 @@ function getCookie(name) {
 }
 
 
-function isDarkMode() {
-    const darkModeValue = getCookie("darkMode");
-    return darkModeValue && darkModeValue.toLowerCase() === "true";
+function isImmersiveTheme() {
+    // Always return true for immersive dark theme experience
+    return true;
 }
 
 
 function getColors() {
-    const dark = isDarkMode();
+    const dark = true; // Always use dark mode for immersive experience
     const containerColors = isColorlessMode ? [
-        dark ? '#64748b' : '#94a3b8',
-        dark ? '#475569' : '#cbd5f5',
-        dark ? '#334155' : '#e2e8f0'
+        '#64748b',
+        '#475569',
+        '#334155'
     ] : [
-        '#E69F00',
-        '#56B4E9',
-        '#009E73'
+        '#ff6b35',  // Warm orange for der
+        '#00d9ff',  // Cyan for die
+        '#00ff88'   // Green for das
     ];
 
     const containerHover = isColorlessMode ?
         containerColors.map(color => color) : [
-            '#F0B429',
-            '#6FC5F6',
-            '#1AB085'
+            '#ff8c5a',
+            '#33e3ff',
+            '#33ffa3'
         ];
 
     return {
-        bgGradientStart: dark ? '#1a1a2e' : '#667eea',
-        bgGradientEnd: dark ? '#16213e' : '#764ba2',
-        wordColor: dark ? '#f1f5f9' : '#1f2937',
-        wordShadow: dark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.2)',
+        bgGradientStart: '#0f0f23',
+        bgGradientEnd: '#1a1a2e',
+        wordColor: '#f8fafc',
+        wordShadow: 'rgba(0,0,0,0.6)',
         containerColors,
         containerHover,
         labelColor: '#ffffff',
-        highlightCorrect: dark ? 'rgba(251, 191, 36, 0.95)' : 'rgba(245, 158, 11, 0.95)',
-        highlightIncorrect: dark ? 'rgba(249, 115, 22, 0.95)' : 'rgba(234, 88, 12, 0.95)',
-        gameOverBg: dark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(0, 0, 0, 0.85)',
+        highlightCorrect: 'rgba(0, 255, 136, 0.95)',
+        highlightIncorrect: 'rgba(255, 107, 53, 0.95)',
+        gameOverBg: 'rgba(10, 10, 26, 0.95)',
         gameOverText: '#ffffff',
-        particleColors: dark ? ['#fbbf24', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7'] : ['#fbbf24', '#f59e0b', '#10b981', '#6366f1', '#8b5cf6']
+        particleColors: ['#fbbf24', '#f59e0b', '#00ff88', '#00d9ff', '#ff6b35', '#a855f7']
     };
 }
 
@@ -321,12 +321,14 @@ class Particle {
         this.x = x;
         this.y = y;
         this.color = color;
-        this.size = Math.random() * 6 + 3;
-        this.speedX = (Math.random() - 0.5) * 8;
-        this.speedY = isSuccess ? -(Math.random() * 6 + 2) : (Math.random() - 0.5) * 4;
-        this.gravity = 0.15;
+        this.size = Math.random() * 8 + 4;
+        this.speedX = (Math.random() - 0.5) * 10;
+        this.speedY = isSuccess ? -(Math.random() * 8 + 3) : (Math.random() - 0.5) * 5;
+        this.gravity = 0.12;
         this.life = 1;
-        this.decay = Math.random() * 0.02 + 0.015;
+        this.decay = Math.random() * 0.015 + 0.012;
+        this.rotation = Math.random() * Math.PI * 2;
+        this.rotationSpeed = (Math.random() - 0.5) * 0.2;
     }
 
     update() {
@@ -334,22 +336,29 @@ class Particle {
         this.y += this.speedY;
         this.speedY += this.gravity;
         this.life -= this.decay;
-        this.size *= 0.97;
+        this.size *= 0.98;
+        this.rotation += this.rotationSpeed;
     }
 
     draw(ctx) {
         ctx.save();
         ctx.globalAlpha = this.life;
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
         ctx.fillStyle = this.color;
+        ctx.shadowColor = this.color;
+        ctx.shadowBlur = 8;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.arc(0, 0, this.size, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
     }
 }
 
 function createParticles(x, y, count, isSuccess) {
-    const particleColors = isSuccess ? ['#22c55e', '#4ade80', '#86efac', '#fbbf24'] : ['#ef4444', '#f87171', '#fca5a5'];
+    const particleColors = isSuccess ? 
+        ['#00ff88', '#33ffa3', '#66ffbb', '#fbbf24', '#00d9ff'] : 
+        ['#ff6b35', '#ff8c5a', '#ffad80', '#ff4444'];
 
     for (let i = 0; i < count; i++) {
         const color = particleColors[Math.floor(Math.random() * particleColors.length)];
@@ -932,8 +941,9 @@ function checkLevelUp() {
 function checkCollisions() {
     if (!currentWord) return;
 
-    const containerHeight = 55;
-    const bottomMargin = 10;
+    // Container dimensions match drawContainers() - larger containers for better visual appeal
+    const containerHeight = 100;
+    const bottomMargin = 0;
     const hitY = gameHeight - containerHeight - bottomMargin;
 
     if (currentWord.y < hitY) return;
@@ -998,21 +1008,69 @@ function checkCollisions() {
 }
 
 function drawBackground() {
-    const gradient = ctx.createLinearGradient(0, 0, 0, gameHeight);
-    gradient.addColorStop(0, colors.bgGradientStart);
-    gradient.addColorStop(1, colors.bgGradientEnd);
+    // Create immersive gradient background
+    const gradient = ctx.createLinearGradient(0, 0, gameWidth * 0.3, gameHeight);
+    gradient.addColorStop(0, '#0f0f23');
+    gradient.addColorStop(0.5, '#1a1a2e');
+    gradient.addColorStop(1, '#16213e');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, gameWidth, gameHeight);
 
-
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
-    for (let i = 0; i < gameWidth; i += 40) {
-        for (let j = 0; j < gameHeight; j += 40) {
-            if ((i + j) % 80 === 0) {
-                ctx.fillRect(i, j, 20, 20);
-            }
-        }
+    // Subtle grid pattern for depth
+    ctx.strokeStyle = 'rgba(99, 102, 241, 0.03)';
+    ctx.lineWidth = 1;
+    const gridSize = 50;
+    for (let x = 0; x < gameWidth; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, gameHeight);
+        ctx.stroke();
     }
+    for (let y = 0; y < gameHeight; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(gameWidth, y);
+        ctx.stroke();
+    }
+
+    // Floating orbs effect
+    const time = Date.now() * 0.001;
+    ctx.save();
+    
+    // First orb
+    const orb1X = gameWidth * 0.15 + Math.sin(time * 0.5) * 20;
+    const orb1Y = gameHeight * 0.2 + Math.cos(time * 0.3) * 15;
+    const orb1Gradient = ctx.createRadialGradient(orb1X, orb1Y, 0, orb1X, orb1Y, 80);
+    orb1Gradient.addColorStop(0, 'rgba(99, 102, 241, 0.12)');
+    orb1Gradient.addColorStop(1, 'transparent');
+    ctx.fillStyle = orb1Gradient;
+    ctx.beginPath();
+    ctx.arc(orb1X, orb1Y, 80, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Second orb
+    const orb2X = gameWidth * 0.85 + Math.cos(time * 0.4) * 25;
+    const orb2Y = gameHeight * 0.6 + Math.sin(time * 0.6) * 20;
+    const orb2Gradient = ctx.createRadialGradient(orb2X, orb2Y, 0, orb2X, orb2Y, 100);
+    orb2Gradient.addColorStop(0, 'rgba(139, 92, 246, 0.1)');
+    orb2Gradient.addColorStop(1, 'transparent');
+    ctx.fillStyle = orb2Gradient;
+    ctx.beginPath();
+    ctx.arc(orb2X, orb2Y, 100, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Third orb
+    const orb3X = gameWidth * 0.5 + Math.sin(time * 0.7) * 30;
+    const orb3Y = gameHeight * 0.35 + Math.cos(time * 0.5) * 25;
+    const orb3Gradient = ctx.createRadialGradient(orb3X, orb3Y, 0, orb3X, orb3Y, 60);
+    orb3Gradient.addColorStop(0, 'rgba(251, 191, 36, 0.06)');
+    orb3Gradient.addColorStop(1, 'transparent');
+    ctx.fillStyle = orb3Gradient;
+    ctx.beginPath();
+    ctx.arc(orb3X, orb3Y, 60, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
 }
 
 function drawWord() {
@@ -1020,19 +1078,19 @@ function drawWord() {
 
     ctx.save();
 
-
+    // Smooth animations
     ctx.globalAlpha = currentWord.opacity;
     ctx.translate(currentWord.x, currentWord.y);
     ctx.scale(currentWord.scale, currentWord.scale);
     ctx.translate(-currentWord.x, -currentWord.y);
 
-
-    ctx.shadowColor = colors.wordShadow;
-    ctx.shadowBlur = 18;
+    // Enhanced shadow with glow
+    ctx.shadowColor = 'rgba(99, 102, 241, 0.4)';
+    ctx.shadowBlur = 30;
     ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 4;
+    ctx.shadowOffsetY = 8;
 
-
+    // Calculate dimensions
     const wordFont = getWordFont();
     const meaningFont = getMeaningFont();
     const hintFont = getHintFont();
@@ -1044,13 +1102,13 @@ function drawWord() {
     const hintWidth = measureTextWidth(hintText, hintFont);
     currentWord.width = Math.max(wordWidth, meaningWidth, hintWidth);
 
-    const paddingX = 20;
-    const paddingY = 16;
+    const paddingX = 28;
+    const paddingY = 20;
     const wordFontSize = getWordFontSize();
     const meaningFontSize = getMeaningFontSize();
     const hintFontSize = getHintFontSize();
-    const lineGap = 8;
-    const hintGap = meaningText ? 6 : 8;
+    const lineGap = 10;
+    const hintGap = meaningText ? 8 : 10;
     const textHeight = wordFontSize +
         (meaningText ? meaningFontSize + lineGap : 0) +
         (hintText ? hintFontSize + hintGap : 0);
@@ -1059,22 +1117,53 @@ function drawWord() {
     currentWord.pillWidth = pillWidth;
     currentWord.pillHeight = pillHeight;
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.97)';
-    ctx.beginPath();
-    ctx.roundRect(
-        currentWord.x - pillWidth / 2,
-        currentWord.y - pillHeight / 2,
-        pillWidth,
-        pillHeight,
-        22
+    // Frosted glass card with gradient border
+    const cardX = currentWord.x - pillWidth / 2;
+    const cardY = currentWord.y - pillHeight / 2;
+    
+    // Outer glow
+    const glowGradient = ctx.createRadialGradient(
+        currentWord.x, currentWord.y, pillWidth * 0.3,
+        currentWord.x, currentWord.y, pillWidth * 0.8
     );
+    glowGradient.addColorStop(0, 'rgba(99, 102, 241, 0.15)');
+    glowGradient.addColorStop(1, 'transparent');
+    ctx.fillStyle = glowGradient;
+    ctx.beginPath();
+    ctx.arc(currentWord.x, currentWord.y, pillWidth * 0.8, 0, Math.PI * 2);
     ctx.fill();
 
+    // Card background with gradient
+    const cardGradient = ctx.createLinearGradient(cardX, cardY, cardX, cardY + pillHeight);
+    cardGradient.addColorStop(0, 'rgba(255, 255, 255, 0.98)');
+    cardGradient.addColorStop(1, 'rgba(248, 250, 252, 0.95)');
+    ctx.fillStyle = cardGradient;
+    ctx.beginPath();
+    ctx.roundRect(cardX, cardY, pillWidth, pillHeight, 24);
+    ctx.fill();
 
+    // Subtle border highlight
+    ctx.strokeStyle = 'rgba(99, 102, 241, 0.2)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Top shine effect
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(cardX, cardY, pillWidth, pillHeight / 2, [24, 24, 0, 0]);
+    ctx.clip();
+    const shineGradient = ctx.createLinearGradient(cardX, cardY, cardX, cardY + pillHeight / 2);
+    shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+    shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = shineGradient;
+    ctx.fillRect(cardX, cardY, pillWidth, pillHeight / 2);
+    ctx.restore();
+
+    // Reset shadow for text
     ctx.shadowColor = 'transparent';
 
-
-    ctx.fillStyle = colors.wordColor;
+    // Word text
+    ctx.fillStyle = '#1a1a2e';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.font = wordFont;
@@ -1082,18 +1171,20 @@ function drawWord() {
     const textTop = currentWord.y - textHeight / 2;
     ctx.fillText(currentWord.text, currentWord.x, textTop);
 
+    // Meaning text
     if (meaningText) {
         ctx.font = meaningFont;
-        ctx.fillStyle = meaningRevealActive ? colors.wordColor : (isDarkMode() ? 'rgba(241, 245, 249, 0.65)' : 'rgba(31, 41, 55, 0.65)');
+        ctx.fillStyle = meaningRevealActive ? '#374151' : 'rgba(55, 65, 81, 0.6)';
         ctx.globalAlpha = Math.min(1, currentWord.opacity);
         ctx.fillText(meaningText, currentWord.x, textTop + wordFontSize + lineGap);
     }
 
+    // Hint text
     if (hintText) {
         const hintY = textTop + wordFontSize +
             (meaningText ? meaningFontSize + lineGap : 0) + hintGap;
         ctx.font = hintFont;
-        ctx.fillStyle = isDarkMode() ? 'rgba(241, 245, 249, 0.7)' : 'rgba(31, 41, 55, 0.7)';
+        ctx.fillStyle = '#6366f1';
         ctx.fillText(hintText, currentWord.x, hintY);
     }
 
@@ -1112,40 +1203,43 @@ function isPointInWord(x, y) {
 
 function drawContainers() {
     const containerWidth = gameWidth / 3;
-    const containerHeight = 86;
+    const containerHeight = 100;
     const labels = ['der', 'die', 'das'];
     const sublabels = ['MASC', 'FEM', 'NEUT'];
-    const icons = ['▲', '●', '■'];
-    const bottomMargin = 6;
+    const icons = ['♂', '♀', '◆'];
+    const bottomMargin = 0;
     const containerY = gameHeight - containerHeight - bottomMargin;
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
+    // Container colors for vibrant look
+    const containerGradients = [
+        ['#ff6b35', '#ff8c5a'], // Orange for der
+        ['#00d9ff', '#33e3ff'], // Cyan for die  
+        ['#00ff88', '#33ffa3']  // Green for das
+    ];
+
     labels.forEach((label, index) => {
         const x = index * containerWidth;
-        const padding = 8;
+        const padding = 6;
 
-
+        // Animation decay
         if (containerAnimations[index] > 0) {
-            containerAnimations[index] -= 0.05;
+            containerAnimations[index] -= 0.04;
         }
 
-
-        let fillColor = colors.containerColors[index];
-        if (index === highlightContainerIndex) {
-            const elapsedTime = Date.now() - highlightStartTime;
-            if (elapsedTime < highlightDuration) {
-                fillColor = highlightColor;
-            } else {
-                highlightContainerIndex = -1;
-            }
+        // Determine fill color
+        let isHighlighted = index === highlightContainerIndex;
+        const elapsedTime = isHighlighted ? Date.now() - highlightStartTime : 0;
+        if (isHighlighted && elapsedTime >= highlightDuration) {
+            highlightContainerIndex = -1;
+            isHighlighted = false;
         }
-
 
         ctx.save();
 
-        const animScale = 1 + containerAnimations[index] * 0.05;
+        const animScale = 1 + containerAnimations[index] * 0.08;
         const centerX = x + containerWidth / 2;
         const centerY = containerY + containerHeight / 2;
 
@@ -1153,48 +1247,99 @@ function drawContainers() {
         ctx.scale(animScale, animScale);
         ctx.translate(-centerX, -centerY);
 
+        // Container shadow and glow
+        if (isHighlighted) {
+            ctx.shadowColor = lastAnswerCorrect ? 'rgba(0, 255, 136, 0.6)' : 'rgba(255, 107, 53, 0.6)';
+            ctx.shadowBlur = 25;
+        } else {
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+            ctx.shadowBlur = 15;
+        }
+        ctx.shadowOffsetY = 4;
 
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
-        ctx.shadowBlur = 10;
-        ctx.shadowOffsetY = 3;
+        // Create gradient for container
+        const gradientColors = containerGradients[index];
+        const containerGradient = ctx.createLinearGradient(
+            x + padding, containerY,
+            x + padding, containerY + containerHeight
+        );
+        
+        if (isHighlighted) {
+            const highlightBaseColor = lastAnswerCorrect ? '#00ff88' : '#ff6b35';
+            containerGradient.addColorStop(0, highlightBaseColor);
+            containerGradient.addColorStop(1, lastAnswerCorrect ? '#00cc6a' : '#cc5528');
+        } else {
+            containerGradient.addColorStop(0, gradientColors[0]);
+            containerGradient.addColorStop(1, gradientColors[1]);
+        }
 
-
-        ctx.fillStyle = fillColor;
+        // Draw container shape
+        ctx.fillStyle = containerGradient;
         ctx.beginPath();
         ctx.roundRect(
             x + padding,
             containerY + padding / 2,
             containerWidth - padding * 2,
             containerHeight - padding,
-            16
+            [20, 20, 0, 0]
         );
         ctx.fill();
-        ctx.lineWidth = 2;
+
+        // Border highlight
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+        ctx.lineWidth = 2;
         ctx.stroke();
 
+        // Top shine effect
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(
+            x + padding,
+            containerY + padding / 2,
+            containerWidth - padding * 2,
+            (containerHeight - padding) * 0.4,
+            [20, 20, 0, 0]
+        );
+        ctx.clip();
+        const shineGradient = ctx.createLinearGradient(
+            x + padding, containerY + padding / 2,
+            x + padding, containerY + containerHeight * 0.4
+        );
+        shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+        shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = shineGradient;
+        ctx.fillRect(x + padding, containerY + padding / 2, containerWidth - padding * 2, containerHeight * 0.4);
+        ctx.restore();
 
+        // Reset shadow
         ctx.shadowColor = 'transparent';
 
-
-        ctx.font = '700 16px "Segoe UI", Arial, sans-serif';
+        // Icon
+        ctx.font = '700 20px "Segoe UI Symbol", Arial, sans-serif';
         ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.fillText(icons[index], centerX, centerY - 26);
+        ctx.fillText(icons[index], centerX, centerY - 28);
 
-        ctx.font = 'bold 24px "Segoe UI", Arial, sans-serif';
+        // Article label
+        ctx.font = 'bold 28px "Segoe UI", Arial, sans-serif';
         ctx.fillStyle = colors.labelColor;
-        ctx.fillText(label, centerX, centerY - 8);
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetY = 2;
+        ctx.fillText(label, centerX, centerY - 4);
+        ctx.shadowColor = 'transparent';
 
-        ctx.font = '600 12px "Segoe UI", Arial, sans-serif';
+        // Sublabel
+        ctx.font = '700 13px "Segoe UI", Arial, sans-serif';
         ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-        ctx.fillText(sublabels[index], centerX, centerY + 16);
+        ctx.fillText(sublabels[index], centerX, centerY + 22);
 
-        if (index === highlightContainerIndex && lastAnswerCorrect !== null) {
-            const elapsedTime = Date.now() - highlightStartTime;
-            if (elapsedTime < highlightDuration) {
-                ctx.font = 'bold 18px "Segoe UI", Arial, sans-serif';
-                ctx.fillText(lastAnswerCorrect ? '✓' : '✕', centerX + containerWidth / 2 - 26, centerY);
-            }
+        // Feedback indicator
+        if (isHighlighted && lastAnswerCorrect !== null) {
+            ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif';
+            ctx.fillStyle = 'white';
+            ctx.shadowColor = lastAnswerCorrect ? 'rgba(0, 255, 136, 0.8)' : 'rgba(255, 107, 53, 0.8)';
+            ctx.shadowBlur = 10;
+            ctx.fillText(lastAnswerCorrect ? '✓' : '✕', centerX + containerWidth / 2 - 30, centerY - 4);
         }
 
         ctx.restore();
@@ -1202,31 +1347,62 @@ function drawContainers() {
 }
 
 function drawGameOver() {
-
-    ctx.fillStyle = colors.gameOverBg;
+    // Dark overlay with gradient
+    const overlayGradient = ctx.createRadialGradient(
+        gameWidth / 2, gameHeight / 2, 0,
+        gameWidth / 2, gameHeight / 2, gameWidth * 0.8
+    );
+    overlayGradient.addColorStop(0, 'rgba(10, 10, 26, 0.92)');
+    overlayGradient.addColorStop(1, 'rgba(10, 10, 26, 0.98)');
+    ctx.fillStyle = overlayGradient;
     ctx.fillRect(0, 0, gameWidth, gameHeight);
 
+    // Decorative glow
+    const glowGradient = ctx.createRadialGradient(
+        gameWidth / 2, gameHeight / 2 - 60, 0,
+        gameWidth / 2, gameHeight / 2 - 60, 200
+    );
+    glowGradient.addColorStop(0, 'rgba(99, 102, 241, 0.15)');
+    glowGradient.addColorStop(1, 'transparent');
+    ctx.fillStyle = glowGradient;
+    ctx.beginPath();
+    ctx.arc(gameWidth / 2, gameHeight / 2 - 60, 200, 0, Math.PI * 2);
+    ctx.fill();
 
-    ctx.fillStyle = colors.gameOverText;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    ctx.font = 'bold 48px "Segoe UI", Arial, sans-serif';
-    ctx.fillText(gameEndMessage || 'Game Over!', gameWidth / 2, gameHeight / 2 - 80);
+    // Title with glow
+    ctx.shadowColor = 'rgba(251, 191, 36, 0.5)';
+    ctx.shadowBlur = 30;
+    ctx.font = 'bold 52px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillText(gameEndMessage || 'Game Over!', gameWidth / 2, gameHeight / 2 - 100);
+    ctx.shadowColor = 'transparent';
 
-
-    ctx.font = '24px "Segoe UI", Arial, sans-serif';
-    ctx.fillText(`Final Score: ${score}`, gameWidth / 2, gameHeight / 2 - 20);
-    ctx.fillText(`Level: ${level}`, gameWidth / 2, gameHeight / 2 + 20);
-    ctx.fillText(`Best Streak: ${maxStreak}`, gameWidth / 2, gameHeight / 2 + 60);
+    // Stats with icons
+    ctx.font = '600 26px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    
+    ctx.fillText(`⭐ Final Score: ${score}`, gameWidth / 2, gameHeight / 2 - 30);
+    ctx.fillText(`📈 Level: ${level}`, gameWidth / 2, gameHeight / 2 + 15);
+    ctx.fillText(`🔥 Best Streak: ${maxStreak}`, gameWidth / 2, gameHeight / 2 + 60);
 
     const accuracy = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 100;
-    ctx.fillText(`Accuracy: ${accuracy}%`, gameWidth / 2, gameHeight / 2 + 100);
+    ctx.fillText(`🎯 Accuracy: ${accuracy}%`, gameWidth / 2, gameHeight / 2 + 105);
 
+    // Restart prompt with animation hint
+    ctx.font = '600 20px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+    ctx.fillText('Press R or tap to restart', gameWidth / 2, gameHeight / 2 + 175);
 
-    ctx.font = '18px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.fillText('Press R or tap to restart', gameWidth / 2, gameHeight / 2 + 160);
+    // Decorative line
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.4)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(gameWidth / 2 - 100, gameHeight / 2 - 60);
+    ctx.lineTo(gameWidth / 2 + 100, gameHeight / 2 - 60);
+    ctx.stroke();
 }
 
 function updateCanvas() {
