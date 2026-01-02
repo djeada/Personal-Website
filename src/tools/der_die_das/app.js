@@ -36,6 +36,8 @@ const incorrectWordsTable = document.getElementById('incorrectWordsTable');
 const startScreen = document.getElementById('startScreen');
 const startBtn = document.getElementById('startBtn');
 const soundToggle = document.getElementById('soundToggle');
+const soundToggleIcon = soundToggle ? soundToggle.querySelector('.sound-icon') : null;
+const soundToggleLabel = soundToggle ? soundToggle.querySelector('.sound-label') : null;
 const difficultyBtns = document.querySelectorAll('.difficulty-btn');
 
 
@@ -92,6 +94,10 @@ const moveAmount = 35;
 let lastTapTime = 0;
 const doubleTapDelay = 300;
 let isDraggingWord = false;
+let touchStartX = 0;
+let touchStartY = 0;
+let touchMoved = false;
+let skipRevealTap = false;
 
 
 let particles = [];
@@ -111,14 +117,16 @@ let recentArticles = [];
 const maxSameArticleStreak = 3;
 
 let isColorlessMode = false;
-let showMeanings = false;
-let pluralBonusEnabled = false;
+let showMeanings = true;
+let pluralBonusEnabled = true;
 
 let multiArticles = {};
 let multiWords = [];
 let meaningsMap = {};
 let pluralsMap = {};
 let correctWordSet = new Set();
+let meaningRevealActive = false;
+const MEANING_REVEAL_PROMPT = 'Tap to reveal meaning';
 
 
 function getCookie(name) {
@@ -511,8 +519,7 @@ function resizeCanvas() {
 
     fallingSpeed = baseSpeed * gameHeight;
 
-    let fontSize = gameWidth <= 500 ? 20 : 28;
-    ctx.font = `bold ${fontSize}px 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif`;
+    ctx.font = getWordFont();
 
     colors = getColors();
 }
@@ -527,8 +534,68 @@ function getTouchX(event) {
     return touch.clientX - rect.left;
 }
 
+function getTouchY(event) {
+    const rect = gameCanvas.getBoundingClientRect();
+    const touch = event.touches[0] || event.changedTouches[0];
+    return touch.clientY - rect.top;
+}
+
 function measureWordWidth(word) {
+    ctx.font = getWordFont();
     return ctx.measureText(word).width;
+}
+
+function getWordFontSize() {
+    return gameWidth <= 500 ? 32 : 44;
+}
+
+function getMeaningFontSize() {
+    return gameWidth <= 500 ? 15 : 18;
+}
+
+function getWordFont() {
+    return `700 ${getWordFontSize()}px 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif`;
+}
+
+function getMeaningFont() {
+    return `600 ${getMeaningFontSize()}px 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif`;
+}
+
+function getHintFontSize() {
+    return gameWidth <= 500 ? 12 : 14;
+}
+
+function getHintFont() {
+    return `600 ${getHintFontSize()}px 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif`;
+}
+
+function getMeaningForWord(wordText) {
+    if (!wordText) return '';
+    return meaningsMap[wordText] || meaningsMap[normalizeWord(wordText)] || '';
+}
+
+function getMeaningDisplayText(wordText) {
+    if (!showMeanings) return '';
+    if (!meaningRevealActive) return MEANING_REVEAL_PROMPT;
+    const meaning = getMeaningForWord(wordText);
+    return meaning || 'Meaning unavailable';
+}
+
+function truncateText(text, maxWidth, font) {
+    if (!text) return '';
+    ctx.font = font;
+    if (ctx.measureText(text).width <= maxWidth) return text;
+    let truncated = text;
+    while (truncated.length > 3 && ctx.measureText(`${truncated}...`).width > maxWidth) {
+        truncated = truncated.slice(0, -1);
+    }
+    return `${truncated}...`;
+}
+
+function measureTextWidth(text, font) {
+    if (!text) return 0;
+    ctx.font = font;
+    return ctx.measureText(text).width;
 }
 
 function removeMultiFromLists() {
@@ -564,15 +631,27 @@ function getMultiAllowedArticles(word) {
 
 function updateMeaningDisplay(wordText) {
     const meaningDisplay = document.getElementById('meaningDisplay');
-    if (!meaningDisplay) return;
-
-    if (!showMeanings) {
+    if (meaningDisplay) {
         meaningDisplay.textContent = '';
-        return;
     }
 
-    const meaning = meaningsMap[wordText] || meaningsMap[normalizeWord(wordText)];
-    meaningDisplay.textContent = meaning ? `Meaning: ${meaning}` : 'Meaning: —';
+    if (currentWord && normalizeWord(currentWord.text) === normalizeWord(wordText)) {
+        if (!showMeanings) {
+            currentWord.meaning = '';
+            currentWord.width = measureWordWidth(currentWord.text);
+            return;
+        }
+        const meaning = getMeaningDisplayText(wordText);
+        const maxLineWidth = Math.min(gameWidth - 80, 520);
+        const meaningText = truncateText(meaning, maxLineWidth, getMeaningFont());
+        currentWord.meaning = meaningText;
+        const hintWidth = measureTextWidth(currentWord.hint || '', getHintFont());
+        currentWord.width = Math.max(
+            measureWordWidth(currentWord.text),
+            measureTextWidth(meaningText, getMeaningFont()),
+            hintWidth
+        );
+    }
 }
 
 function formatArticleList(articleList) {
@@ -581,15 +660,12 @@ function formatArticleList(articleList) {
 }
 
 function showMultiArticleHint(wordText, articleList) {
-    const hint = document.getElementById('multiArticleHint');
-    if (!hint) return;
-
+    if (!currentWord || normalizeWord(currentWord.text) !== normalizeWord(wordText)) return;
     if (!articleList || !articleList.length) {
-        hint.textContent = '';
+        currentWord.hint = '';
         return;
     }
-
-    hint.textContent = `"${wordText}" can take multiple articles (${formatArticleList(articleList)}). Meaning can change.`;
+    currentWord.hint = `Multiple: ${formatArticleList(articleList)}`;
 }
 
 function maybeTriggerPluralBonus(wordText) {
@@ -703,7 +779,16 @@ function generateWord(timestamp) {
             return;
         }
     }
-    const wordWidth = measureWordWidth(wordText);
+    meaningRevealActive = false;
+    const meaning = getMeaningDisplayText(wordText);
+    const maxLineWidth = Math.min(gameWidth - 80, 520);
+    const meaningText = showMeanings ? truncateText(meaning, maxLineWidth, getMeaningFont()) : '';
+    const hintText = allowedArticles && allowedArticles.length > 1 ? `Multiple: ${formatArticleList(allowedArticles)}` : '';
+    const wordWidth = Math.max(
+        measureWordWidth(wordText),
+        measureTextWidth(meaningText, getMeaningFont()),
+        measureTextWidth(hintText, getHintFont())
+    );
     const maxPositionX = gameWidth - wordWidth - 20;
     const randomX = Math.random() * maxPositionX + wordWidth / 2 + 10;
 
@@ -714,6 +799,8 @@ function generateWord(timestamp) {
         x: Math.max(wordWidth / 2 + 10, randomX),
         y: -30,
         width: wordWidth,
+        meaning: meaningText,
+        hint: hintText,
         opacity: 0,
         scale: 0.5
     };
@@ -941,20 +1028,42 @@ function drawWord() {
 
 
     ctx.shadowColor = colors.wordShadow;
-    ctx.shadowBlur = 15;
+    ctx.shadowBlur = 18;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 4;
 
 
-    const padding = 16;
-    const pillWidth = currentWord.width + padding * 2;
-    const pillHeight = 44;
+    const wordFont = getWordFont();
+    const meaningFont = getMeaningFont();
+    const hintFont = getHintFont();
+    const maxLineWidth = Math.min(gameWidth - 80, 520);
+    const meaningText = showMeanings ? truncateText(currentWord.meaning || getMeaningDisplayText(currentWord.text), maxLineWidth, meaningFont) : '';
+    const hintText = currentWord.hint || '';
+    const wordWidth = measureWordWidth(currentWord.text);
+    const meaningWidth = measureTextWidth(meaningText, meaningFont);
+    const hintWidth = measureTextWidth(hintText, hintFont);
+    currentWord.width = Math.max(wordWidth, meaningWidth, hintWidth);
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    const paddingX = 20;
+    const paddingY = 16;
+    const wordFontSize = getWordFontSize();
+    const meaningFontSize = getMeaningFontSize();
+    const hintFontSize = getHintFontSize();
+    const lineGap = 8;
+    const hintGap = meaningText ? 6 : 8;
+    const textHeight = wordFontSize +
+        (meaningText ? meaningFontSize + lineGap : 0) +
+        (hintText ? hintFontSize + hintGap : 0);
+    const pillWidth = currentWord.width + paddingX * 2;
+    const pillHeight = textHeight + paddingY * 2;
+    currentWord.pillWidth = pillWidth;
+    currentWord.pillHeight = pillHeight;
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.97)';
     ctx.beginPath();
     ctx.roundRect(
         currentWord.x - pillWidth / 2,
-        currentWord.y - pillHeight / 2 - 5,
+        currentWord.y - pillHeight / 2,
         pillWidth,
         pillHeight,
         22
@@ -965,19 +1074,49 @@ function drawWord() {
     ctx.shadowColor = 'transparent';
 
 
-    ctx.fillStyle = '#1f2937';
+    ctx.fillStyle = colors.wordColor;
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(currentWord.text, currentWord.x, currentWord.y);
+    ctx.textBaseline = 'top';
+    ctx.font = wordFont;
+
+    const textTop = currentWord.y - textHeight / 2;
+    ctx.fillText(currentWord.text, currentWord.x, textTop);
+
+    if (meaningText) {
+        ctx.font = meaningFont;
+        ctx.fillStyle = meaningRevealActive ? colors.wordColor : (isDarkMode() ? 'rgba(241, 245, 249, 0.65)' : 'rgba(31, 41, 55, 0.65)');
+        ctx.globalAlpha = Math.min(1, currentWord.opacity);
+        ctx.fillText(meaningText, currentWord.x, textTop + wordFontSize + lineGap);
+    }
+
+    if (hintText) {
+        const hintY = textTop + wordFontSize +
+            (meaningText ? meaningFontSize + lineGap : 0) + hintGap;
+        ctx.font = hintFont;
+        ctx.fillStyle = isDarkMode() ? 'rgba(241, 245, 249, 0.7)' : 'rgba(31, 41, 55, 0.7)';
+        ctx.fillText(hintText, currentWord.x, hintY);
+    }
 
     ctx.restore();
 }
 
+function isPointInWord(x, y) {
+    if (!currentWord) return false;
+    const halfWidth = (currentWord.pillWidth || currentWord.width + 40) / 2;
+    const halfHeight = (currentWord.pillHeight || 60) / 2;
+    return x >= currentWord.x - halfWidth &&
+        x <= currentWord.x + halfWidth &&
+        y >= currentWord.y - halfHeight &&
+        y <= currentWord.y + halfHeight;
+}
+
 function drawContainers() {
     const containerWidth = gameWidth / 3;
-    const containerHeight = 55;
+    const containerHeight = 86;
     const labels = ['der', 'die', 'das'];
-    const bottomMargin = 10;
+    const sublabels = ['MASC', 'FEM', 'NEUT'];
+    const icons = ['▲', '●', '■'];
+    const bottomMargin = 6;
     const containerY = gameHeight - containerHeight - bottomMargin;
 
     ctx.textAlign = 'center';
@@ -1030,14 +1169,25 @@ function drawContainers() {
             16
         );
         ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+        ctx.stroke();
 
 
         ctx.shadowColor = 'transparent';
 
 
-        ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif';
+        ctx.font = '700 16px "Segoe UI", Arial, sans-serif';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.fillText(icons[index], centerX, centerY - 26);
+
+        ctx.font = 'bold 24px "Segoe UI", Arial, sans-serif';
         ctx.fillStyle = colors.labelColor;
-        ctx.fillText(label, centerX, centerY);
+        ctx.fillText(label, centerX, centerY - 8);
+
+        ctx.font = '600 12px "Segoe UI", Arial, sans-serif';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.fillText(sublabels[index], centerX, centerY + 16);
 
         if (index === highlightContainerIndex && lastAnswerCorrect !== null) {
             const elapsedTime = Date.now() - highlightStartTime;
@@ -1134,6 +1284,7 @@ function resetGame() {
     isFastDropping = false;
     lastTapTime = 0;
     lastAnswerCorrect = null;
+    meaningRevealActive = false;
     recentArticles = [];
     correctWordSet.clear();
     isPluralPromptActive = false;
@@ -1219,6 +1370,13 @@ function handleKeyDown(event) {
                 requestAnimationFrame(gameLoop);
             }
             break;
+        case 'm':
+        case 'M':
+            if (currentWord && showMeanings && !meaningRevealActive) {
+                meaningRevealActive = true;
+                updateMeaningDisplay(currentWord.text);
+            }
+            break;
     }
 }
 
@@ -1247,16 +1405,21 @@ gameCanvas.addEventListener('touchstart', (e) => {
 
     const currentTime = Date.now();
     if (currentTime - lastTapTime < doubleTapDelay) {
-
         if (currentWord) {
             isFastDropping = true;
         }
+        skipRevealTap = true;
+    } else {
+        skipRevealTap = false;
     }
     lastTapTime = currentTime;
 
     if (currentWord && !isGameOver) {
         isDraggingWord = true;
-        const touchX = getTouchX(e);
+        touchStartX = getTouchX(e);
+        touchStartY = getTouchY(e);
+        touchMoved = false;
+        const touchX = touchStartX;
         currentWord.x = Math.min(
             gameWidth - currentWord.width / 2 - 10,
             Math.max(currentWord.width / 2 + 10, touchX)
@@ -1268,6 +1431,10 @@ gameCanvas.addEventListener('touchmove', (e) => {
     if (!isGameStarted || isGameOver || !currentWord || !isDraggingWord) return;
     e.preventDefault();
     const touchX = getTouchX(e);
+    const touchY = getTouchY(e);
+    if (Math.abs(touchX - touchStartX) > 8 || Math.abs(touchY - touchStartY) > 8) {
+        touchMoved = true;
+    }
     currentWord.x = Math.min(
         gameWidth - currentWord.width / 2 - 10,
         Math.max(currentWord.width / 2 + 10, touchX)
@@ -1276,15 +1443,45 @@ gameCanvas.addEventListener('touchmove', (e) => {
     passive: false
 });
 
-gameCanvas.addEventListener('touchend', () => {
+gameCanvas.addEventListener('touchend', (e) => {
+    if (skipRevealTap) {
+        skipRevealTap = false;
+        isDraggingWord = false;
+        return;
+    }
+    if (showMeanings && !meaningRevealActive && currentWord && !touchMoved) {
+        const touchX = getTouchX(e);
+        const touchY = getTouchY(e);
+        if (isPointInWord(touchX, touchY)) {
+            meaningRevealActive = true;
+            updateMeaningDisplay(currentWord.text);
+        }
+    }
     isDraggingWord = false;
+});
+
+gameCanvas.addEventListener('click', (e) => {
+    if (!isGameStarted || isGameOver || !currentWord || !showMeanings || meaningRevealActive) return;
+    const rect = gameCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    if (isPointInWord(x, y)) {
+        meaningRevealActive = true;
+        updateMeaningDisplay(currentWord.text);
+    }
 });
 
 startBtn.addEventListener('click', startGame);
 
 soundToggle.addEventListener('click', () => {
     soundEnabled = !soundEnabled;
-    soundToggle.textContent = soundEnabled ? '🔊' : '🔇';
+    if (soundToggleIcon) {
+        soundToggleIcon.textContent = soundEnabled ? '🔊' : '🔇';
+    }
+    if (soundToggleLabel) {
+        soundToggleLabel.textContent = soundEnabled ? 'Sound' : 'Muted';
+    }
+    soundToggle.setAttribute('aria-label', soundEnabled ? 'Sound on' : 'Sound off');
     soundToggle.classList.toggle('muted', !soundEnabled);
 
     if (soundEnabled && audioContext && audioContext.state === 'suspended') {
@@ -1321,21 +1518,6 @@ if (colorlessToggle) {
     });
 }
 
-const meaningToggle = document.getElementById('meaningToggle');
-if (meaningToggle) {
-    meaningToggle.addEventListener('change', () => {
-        showMeanings = meaningToggle.checked;
-        updateMeaningDisplay(currentWord ? currentWord.text : '');
-    });
-}
-
-const pluralToggle = document.getElementById('pluralToggle');
-if (pluralToggle) {
-    pluralToggle.addEventListener('change', () => {
-        pluralBonusEnabled = pluralToggle.checked;
-    });
-}
-
 difficultyBtns.forEach(btn => {
     btn.addEventListener('click', () => {
         difficultyBtns.forEach(b => b.classList.remove('active'));
@@ -1363,13 +1545,6 @@ window.onload = function() {
 
     loadWords();
 
-    if (meaningToggle) {
-        showMeanings = meaningToggle.checked;
-        updateMeaningDisplay(currentWord ? currentWord.text : '');
-    }
-    if (pluralToggle) {
-        pluralBonusEnabled = pluralToggle.checked;
-    }
     if (colorlessToggle) {
         isColorlessMode = colorlessToggle.checked;
         colors = getColors();
