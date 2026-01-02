@@ -98,6 +98,8 @@ let touchStartX = 0;
 let touchStartY = 0;
 let touchMoved = false;
 let skipRevealTap = false;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
 
 
 let particles = [];
@@ -555,6 +557,10 @@ function normalizeWord(word) {
     return word.trim().toLowerCase();
 }
 
+function isCompactLayout() {
+    return gameWidth <= 500;
+}
+
 function getTouchX(event) {
     const rect = gameCanvas.getBoundingClientRect();
     const touch = event.touches[0] || event.changedTouches[0];
@@ -573,11 +579,11 @@ function measureWordWidth(word) {
 }
 
 function getWordFontSize() {
-    return gameWidth <= 500 ? 32 : 44;
+    return isCompactLayout() ? 28 : 44;
 }
 
 function getMeaningFontSize() {
-    return gameWidth <= 500 ? 15 : 18;
+    return isCompactLayout() ? 13 : 18;
 }
 
 function getWordFont() {
@@ -589,7 +595,7 @@ function getMeaningFont() {
 }
 
 function getHintFontSize() {
-    return gameWidth <= 500 ? 12 : 14;
+    return isCompactLayout() ? 11 : 14;
 }
 
 function getHintFont() {
@@ -892,6 +898,9 @@ function moveWords(deltaTime) {
         currentWord.scale = Math.min(1, currentWord.scale + 0.03);
     }
 
+    if (isDraggingWord) {
+        return;
+    }
 
     const currentSpeed = isFastDropping ? fallingSpeed * fastDropSpeed : fallingSpeed;
     currentWord.y += currentSpeed * deltaTime;
@@ -913,12 +922,6 @@ function moveWords(deltaTime) {
         }
         currentWord = null;
     }
-}
-
-function getHitContainerIndex(wordX) {
-    const containerWidth = gameWidth / 3;
-    const containerIndex = Math.floor(wordX / containerWidth);
-    return containerIndex >= 0 && containerIndex < 3 ? containerIndex : -1;
 }
 
 function addWordToTable(table, wordText, userArticle, correctArticle) {
@@ -998,19 +1001,29 @@ function checkLevelUp() {
 function checkCollisions() {
     if (!currentWord) return;
 
-    // Container dimensions match drawContainers() - larger containers for better visual appeal
-    const containerHeight = 100;
-    const bottomMargin = 0;
-    const hitY = gameHeight - containerHeight - bottomMargin;
+    const { containerY } = getContainerLayout();
+    const hitY = containerY;
 
     if (currentWord.y < hitY) return;
 
-    highlightContainerIndex = getHitContainerIndex(currentWord.x);
+    const overlapInfo = getContainerOverlapInfo(currentWord);
+    if (overlapInfo.maxIndex === -1) return;
+
+    highlightContainerIndex = overlapInfo.maxIndex;
 
     if (highlightContainerIndex !== -1) {
         highlightStartTime = Date.now();
-        const userArticle = articles[highlightContainerIndex];
         const allowedArticles = currentWord.allowedArticles || [currentWord.article];
+        const allowedIndices = allowedArticles
+            .map(article => articles.indexOf(article))
+            .filter(index => index >= 0);
+        const closeAllowedIndex = overlapInfo.closeIndices.find(index => allowedIndices.includes(index));
+        const acceptedIndex = allowedIndices.includes(highlightContainerIndex) || closeAllowedIndex === undefined
+            ? highlightContainerIndex
+            : closeAllowedIndex;
+
+        highlightContainerIndex = acceptedIndex;
+        const userArticle = articles[acceptedIndex];
         const correctArticle = formatArticleList(allowedArticles) || currentWord.article;
 
         totalAttempts++;
@@ -1159,8 +1172,8 @@ function drawWord() {
     const hintWidth = measureTextWidth(hintText, hintFont);
     currentWord.width = Math.max(wordWidth, meaningWidth, hintWidth);
 
-    const paddingX = 28;
-    const paddingY = 20;
+    const paddingX = isCompactLayout() ? 22 : 28;
+    const paddingY = isCompactLayout() ? 16 : 20;
     const wordFontSize = getWordFontSize();
     const meaningFontSize = getMeaningFontSize();
     const hintFontSize = getHintFontSize();
@@ -1250,22 +1263,92 @@ function drawWord() {
 
 function isPointInWord(x, y) {
     if (!currentWord) return false;
-    const halfWidth = (currentWord.pillWidth || currentWord.width + 40) / 2;
-    const halfHeight = (currentWord.pillHeight || 60) / 2;
+    const paddingX = isCompactLayout() ? 22 : 28;
+    const paddingY = isCompactLayout() ? 16 : 20;
+    const halfWidth = (currentWord.pillWidth || currentWord.width + paddingX * 2) / 2;
+    const halfHeight = (currentWord.pillHeight || (getWordFontSize() + paddingY * 2)) / 2;
     return x >= currentWord.x - halfWidth &&
         x <= currentWord.x + halfWidth &&
         y >= currentWord.y - halfHeight &&
         y <= currentWord.y + halfHeight;
 }
 
-function drawContainers() {
+function clampWordPosition(x, y) {
+    if (!currentWord) return;
+    const paddingX = isCompactLayout() ? 22 : 28;
+    const paddingY = isCompactLayout() ? 16 : 20;
+    const pillWidth = currentWord.pillWidth || (currentWord.width + paddingX * 2);
+    const pillHeight = currentWord.pillHeight || (getWordFontSize() + paddingY * 2);
+    const halfWidth = pillWidth / 2;
+    const halfHeight = pillHeight / 2;
+    const clampedX = Math.min(gameWidth - halfWidth - 10, Math.max(halfWidth + 10, x));
+    const clampedY = Math.min(gameHeight - halfHeight - 10, Math.max(halfHeight + 10, y));
+    currentWord.x = clampedX;
+    currentWord.y = clampedY;
+}
+
+function getContainerLayout() {
     const containerWidth = gameWidth / 3;
-    const containerHeight = 100;
+    const containerHeight = isCompactLayout() ? 84 : 100;
+    const padding = isCompactLayout() ? 4 : 6;
+    const bottomMargin = 0;
+    const containerY = gameHeight - containerHeight - bottomMargin;
+    return {
+        containerWidth,
+        containerHeight,
+        padding,
+        bottomMargin,
+        containerY
+    };
+}
+
+function getContainerOverlapInfo(word) {
+    const layout = getContainerLayout();
+    const paddingX = isCompactLayout() ? 22 : 28;
+    const pillWidth = word.pillWidth || (word.width + paddingX * 2);
+    const wordLeft = word.x - pillWidth / 2;
+    const wordRight = word.x + pillWidth / 2;
+    const overlaps = [];
+
+    for (let i = 0; i < 3; i++) {
+        const containerLeft = i * layout.containerWidth + layout.padding;
+        const containerRight = (i + 1) * layout.containerWidth - layout.padding;
+        const overlap = Math.max(0, Math.min(wordRight, containerRight) - Math.max(wordLeft, containerLeft));
+        overlaps.push(overlap);
+    }
+
+    const maxOverlap = Math.max(...overlaps);
+    if (maxOverlap <= 0) {
+        return {
+            maxOverlap,
+            maxIndex: -1,
+            closeIndices: []
+        };
+    }
+
+    const overlapTolerance = Math.max(10, layout.containerWidth * 0.08);
+    const closeIndices = overlaps
+        .map((overlap, index) => (overlap > 0 && maxOverlap - overlap <= overlapTolerance ? index : null))
+        .filter(index => index !== null);
+
+    return {
+        maxOverlap,
+        maxIndex: overlaps.indexOf(maxOverlap),
+        closeIndices
+    };
+}
+
+function drawContainers() {
+    const {
+        containerWidth,
+        containerHeight,
+        padding,
+        containerY
+    } = getContainerLayout();
     const labels = ['der', 'die', 'das'];
     const sublabels = ['MASC', 'FEM', 'NEUT'];
     const icons = ['♂', '♀', '◆'];
-    const bottomMargin = 0;
-    const containerY = gameHeight - containerHeight - bottomMargin;
+    const isCompact = isCompactLayout();
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -1278,8 +1361,6 @@ function drawContainers() {
 
     labels.forEach((label, index) => {
         const x = index * containerWidth;
-        const padding = 6;
-
         // Animation decay
         if (containerAnimations[index] > 0) {
             containerAnimations[index] -= 0.04;
@@ -1337,7 +1418,7 @@ function drawContainers() {
             containerY + padding / 2,
             containerWidth - padding * 2,
             containerHeight - padding,
-            [20, 20, 0, 0]
+            [isCompact ? 16 : 20, isCompact ? 16 : 20, 0, 0]
         );
         ctx.fill();
 
@@ -1354,7 +1435,7 @@ function drawContainers() {
             containerY + padding / 2,
             containerWidth - padding * 2,
             (containerHeight - padding) * 0.4,
-            [20, 20, 0, 0]
+            [isCompact ? 16 : 20, isCompact ? 16 : 20, 0, 0]
         );
         ctx.clip();
         const shineGradient = ctx.createLinearGradient(
@@ -1370,13 +1451,17 @@ function drawContainers() {
         // Reset shadow
         ctx.shadowColor = 'transparent';
 
+        const iconOffset = isCompact ? 22 : 28;
+        const sublabelOffset = isCompact ? 18 : 22;
+        const feedbackOffset = isCompact ? 24 : 30;
+
         // Icon
-        ctx.font = '700 20px "Segoe UI Symbol", Arial, sans-serif';
+        ctx.font = `700 ${isCompact ? 16 : 20}px "Segoe UI Symbol", Arial, sans-serif`;
         ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.fillText(icons[index], centerX, centerY - 28);
+        ctx.fillText(icons[index], centerX, centerY - iconOffset);
 
         // Article label
-        ctx.font = 'bold 28px "Segoe UI", Arial, sans-serif';
+        ctx.font = `bold ${isCompact ? 22 : 28}px "Segoe UI", Arial, sans-serif`;
         ctx.fillStyle = colors.labelColor;
         ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
         ctx.shadowBlur = 4;
@@ -1385,17 +1470,17 @@ function drawContainers() {
         ctx.shadowColor = 'transparent';
 
         // Sublabel
-        ctx.font = '700 13px "Segoe UI", Arial, sans-serif';
+        ctx.font = `700 ${isCompact ? 11 : 13}px "Segoe UI", Arial, sans-serif`;
         ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-        ctx.fillText(sublabels[index], centerX, centerY + 22);
+        ctx.fillText(sublabels[index], centerX, centerY + sublabelOffset);
 
         // Feedback indicator
         if (isHighlighted && lastAnswerCorrect !== null) {
-            ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif';
+            ctx.font = `bold ${isCompact ? 18 : 22}px "Segoe UI", Arial, sans-serif`;
             ctx.fillStyle = 'white';
             ctx.shadowColor = lastAnswerCorrect ? 'rgba(0, 255, 136, 0.8)' : 'rgba(255, 107, 53, 0.8)';
             ctx.shadowBlur = 10;
-            ctx.fillText(lastAnswerCorrect ? '✓' : '✕', centerX + containerWidth / 2 - 30, centerY - 4);
+            ctx.fillText(lastAnswerCorrect ? '✓' : '✕', centerX + containerWidth / 2 - feedbackOffset, centerY - 4);
         }
 
         ctx.restore();
@@ -1648,15 +1733,18 @@ gameCanvas.addEventListener('touchstart', (e) => {
     lastTapTime = currentTime;
 
     if (currentWord && !isGameOver) {
-        isDraggingWord = true;
-        touchStartX = getTouchX(e);
-        touchStartY = getTouchY(e);
-        touchMoved = false;
-        const touchX = touchStartX;
-        currentWord.x = Math.min(
-            gameWidth - currentWord.width / 2 - 10,
-            Math.max(currentWord.width / 2 + 10, touchX)
-        );
+        const touchX = getTouchX(e);
+        const touchY = getTouchY(e);
+        if (isPointInWord(touchX, touchY)) {
+            isDraggingWord = true;
+            touchStartX = touchX;
+            touchStartY = touchY;
+            dragOffsetX = touchX - currentWord.x;
+            dragOffsetY = touchY - currentWord.y;
+            touchMoved = false;
+        } else {
+            isDraggingWord = false;
+        }
     }
 });
 
@@ -1668,10 +1756,7 @@ gameCanvas.addEventListener('touchmove', (e) => {
     if (Math.abs(touchX - touchStartX) > 8 || Math.abs(touchY - touchStartY) > 8) {
         touchMoved = true;
     }
-    currentWord.x = Math.min(
-        gameWidth - currentWord.width / 2 - 10,
-        Math.max(currentWord.width / 2 + 10, touchX)
-    );
+    clampWordPosition(touchX - dragOffsetX, touchY - dragOffsetY);
 }, {
     passive: false
 });
