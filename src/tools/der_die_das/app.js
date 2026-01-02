@@ -127,6 +127,7 @@ let pluralsMap = {};
 let correctWordSet = new Set();
 let meaningRevealActive = false;
 const MEANING_REVEAL_PROMPT = 'Tap to reveal meaning';
+let multiArticlePopupTimeout = null;
 
 
 function getCookie(name) {
@@ -144,37 +145,54 @@ function isImmersiveTheme() {
 
 
 function getColors() {
-    const dark = true; // Always use dark mode for immersive experience
+    const dark = document.body.classList.contains('dark-mode');
     const containerColors = isColorlessMode ? [
         '#64748b',
         '#475569',
         '#334155'
     ] : [
-        '#ff6b35',  // Warm orange for der
-        '#00d9ff',  // Cyan for die
-        '#00ff88'   // Green for das
+        '#3b82f6',  // Blue for der (masc)
+        '#ec4899',  // Pink for die (fem)
+        '#9ca3af'   // Gray for das (neut)
     ];
 
     const containerHover = isColorlessMode ?
         containerColors.map(color => color) : [
-            '#ff8c5a',
-            '#33e3ff',
-            '#33ffa3'
+            '#60a5fa',
+            '#f472b6',
+            '#d1d5db'
         ];
 
+    const highlightCorrect = isColorlessMode ? 'rgba(148, 163, 184, 0.95)' : 'rgba(0, 255, 136, 0.95)';
+    const highlightIncorrect = isColorlessMode ? 'rgba(71, 85, 105, 0.95)' : 'rgba(255, 107, 53, 0.95)';
+    const particleColors = isColorlessMode
+        ? ['#cbd5f5', '#94a3b8', '#64748b', '#475569', '#e2e8f0', '#94a3b8']
+        : ['#fbbf24', '#f59e0b', '#3b82f6', '#ec4899', '#9ca3af', '#a855f7'];
+
     return {
-        bgGradientStart: '#0f0f23',
-        bgGradientEnd: '#1a1a2e',
+        bgGradientStart: dark ? '#0f0f23' : '#f8fafc',
+        bgGradientMid: dark ? '#1a1a2e' : '#e2e8f0',
+        bgGradientEnd: dark ? '#16213e' : '#dbe3f0',
+        gridColor: dark ? 'rgba(99, 102, 241, 0.03)' : 'rgba(15, 23, 42, 0.06)',
+        orbColors: dark ? [
+            'rgba(99, 102, 241, 0.12)',
+            'rgba(139, 92, 246, 0.1)',
+            'rgba(251, 191, 36, 0.06)'
+        ] : [
+            'rgba(59, 130, 246, 0.18)',
+            'rgba(236, 72, 153, 0.14)',
+            'rgba(148, 163, 184, 0.16)'
+        ],
         wordColor: '#f8fafc',
         wordShadow: 'rgba(0,0,0,0.6)',
         containerColors,
         containerHover,
         labelColor: '#ffffff',
-        highlightCorrect: 'rgba(0, 255, 136, 0.95)',
-        highlightIncorrect: 'rgba(255, 107, 53, 0.95)',
+        highlightCorrect,
+        highlightIncorrect,
         gameOverBg: 'rgba(10, 10, 26, 0.95)',
         gameOverText: '#ffffff',
-        particleColors: ['#fbbf24', '#f59e0b', '#00ff88', '#00d9ff', '#ff6b35', '#a855f7']
+        particleColors
     };
 }
 
@@ -669,12 +687,53 @@ function formatArticleList(articleList) {
 }
 
 function showMultiArticleHint(wordText, articleList) {
-    if (!currentWord || normalizeWord(currentWord.text) !== normalizeWord(wordText)) return;
-    if (!articleList || !articleList.length) {
-        currentWord.hint = '';
+    const popup = document.getElementById('multiArticlePopup');
+    if (!popup) return;
+    if (multiArticlePopupTimeout) {
+        clearTimeout(multiArticlePopupTimeout);
+        multiArticlePopupTimeout = null;
+    }
+    popup.classList.remove('show');
+    popup.textContent = '';
+
+    const normalizedArticles = Array.isArray(articleList)
+        ? articleList
+        : String(articleList || '')
+            .split(/[\\/|,]/)
+            .map(item => item.trim())
+            .filter(Boolean);
+
+    if (!normalizedArticles.length || !wordText) {
         return;
     }
-    currentWord.hint = `Multiple: ${formatArticleList(articleList)}`;
+
+    const title = document.createElement('div');
+    title.className = 'multi-article-title';
+    title.textContent = 'Multiple articles';
+
+    const wordEl = document.createElement('div');
+    wordEl.className = 'multi-article-word';
+    wordEl.textContent = wordText;
+
+    const chips = document.createElement('div');
+    chips.className = 'multi-article-chips';
+    normalizedArticles.forEach((article) => {
+        const chip = document.createElement('span');
+        const normalized = String(article || '').toLowerCase();
+        const classSuffix = ['der', 'die', 'das'].includes(normalized) ? normalized : 'unknown';
+        chip.className = `article-chip article-chip--${classSuffix}`;
+        chip.textContent = article;
+        chips.appendChild(chip);
+    });
+
+    popup.appendChild(title);
+    popup.appendChild(wordEl);
+    popup.appendChild(chips);
+    popup.classList.add('show');
+    multiArticlePopupTimeout = setTimeout(() => {
+        popup.classList.remove('show');
+        multiArticlePopupTimeout = null;
+    }, 3500);
 }
 
 function maybeTriggerPluralBonus(wordText) {
@@ -792,11 +851,9 @@ function generateWord(timestamp) {
     const meaning = getMeaningDisplayText(wordText);
     const maxLineWidth = Math.min(gameWidth - 80, 520);
     const meaningText = showMeanings ? truncateText(meaning, maxLineWidth, getMeaningFont()) : '';
-    const hintText = allowedArticles && allowedArticles.length > 1 ? `Multiple: ${formatArticleList(allowedArticles)}` : '';
     const wordWidth = Math.max(
         measureWordWidth(wordText),
-        measureTextWidth(meaningText, getMeaningFont()),
-        measureTextWidth(hintText, getHintFont())
+        measureTextWidth(meaningText, getMeaningFont())
     );
     const maxPositionX = gameWidth - wordWidth - 20;
     const randomX = Math.random() * maxPositionX + wordWidth / 2 + 10;
@@ -809,7 +866,7 @@ function generateWord(timestamp) {
         y: -30,
         width: wordWidth,
         meaning: meaningText,
-        hint: hintText,
+        hint: '',
         opacity: 0,
         scale: 0.5
     };
@@ -1010,14 +1067,14 @@ function checkCollisions() {
 function drawBackground() {
     // Create immersive gradient background
     const gradient = ctx.createLinearGradient(0, 0, gameWidth * 0.3, gameHeight);
-    gradient.addColorStop(0, '#0f0f23');
-    gradient.addColorStop(0.5, '#1a1a2e');
-    gradient.addColorStop(1, '#16213e');
+    gradient.addColorStop(0, colors.bgGradientStart);
+    gradient.addColorStop(0.5, colors.bgGradientMid);
+    gradient.addColorStop(1, colors.bgGradientEnd);
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, gameWidth, gameHeight);
 
     // Subtle grid pattern for depth
-    ctx.strokeStyle = 'rgba(99, 102, 241, 0.03)';
+    ctx.strokeStyle = colors.gridColor;
     ctx.lineWidth = 1;
     const gridSize = 50;
     for (let x = 0; x < gameWidth; x += gridSize) {
@@ -1041,7 +1098,7 @@ function drawBackground() {
     const orb1X = gameWidth * 0.15 + Math.sin(time * 0.5) * 20;
     const orb1Y = gameHeight * 0.2 + Math.cos(time * 0.3) * 15;
     const orb1Gradient = ctx.createRadialGradient(orb1X, orb1Y, 0, orb1X, orb1Y, 80);
-    orb1Gradient.addColorStop(0, 'rgba(99, 102, 241, 0.12)');
+    orb1Gradient.addColorStop(0, colors.orbColors[0]);
     orb1Gradient.addColorStop(1, 'transparent');
     ctx.fillStyle = orb1Gradient;
     ctx.beginPath();
@@ -1052,7 +1109,7 @@ function drawBackground() {
     const orb2X = gameWidth * 0.85 + Math.cos(time * 0.4) * 25;
     const orb2Y = gameHeight * 0.6 + Math.sin(time * 0.6) * 20;
     const orb2Gradient = ctx.createRadialGradient(orb2X, orb2Y, 0, orb2X, orb2Y, 100);
-    orb2Gradient.addColorStop(0, 'rgba(139, 92, 246, 0.1)');
+    orb2Gradient.addColorStop(0, colors.orbColors[1]);
     orb2Gradient.addColorStop(1, 'transparent');
     ctx.fillStyle = orb2Gradient;
     ctx.beginPath();
@@ -1063,7 +1120,7 @@ function drawBackground() {
     const orb3X = gameWidth * 0.5 + Math.sin(time * 0.7) * 30;
     const orb3Y = gameHeight * 0.35 + Math.cos(time * 0.5) * 25;
     const orb3Gradient = ctx.createRadialGradient(orb3X, orb3Y, 0, orb3X, orb3Y, 60);
-    orb3Gradient.addColorStop(0, 'rgba(251, 191, 36, 0.06)');
+    orb3Gradient.addColorStop(0, colors.orbColors[2]);
     orb3Gradient.addColorStop(1, 'transparent');
     ctx.fillStyle = orb3Gradient;
     ctx.beginPath();
@@ -1213,12 +1270,11 @@ function drawContainers() {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Container colors for vibrant look
-    const containerGradients = [
-        ['#ff6b35', '#ff8c5a'], // Orange for der
-        ['#00d9ff', '#33e3ff'], // Cyan for die  
-        ['#00ff88', '#33ffa3']  // Green for das
-    ];
+    // Container colors (respect colorblind mode palette)
+    const containerGradients = colors.containerColors.map((baseColor, index) => [
+        baseColor,
+        colors.containerHover[index] || baseColor
+    ]);
 
     labels.forEach((label, index) => {
         const x = index * containerWidth;
@@ -1465,6 +1521,7 @@ function resetGame() {
     correctWordSet.clear();
     isPluralPromptActive = false;
     updateMeaningDisplay('');
+    showMultiArticleHint('', null);
     closePluralPrompt();
 
 
@@ -1685,12 +1742,36 @@ if (pluralInput) {
 }
 
 const colorlessToggle = document.getElementById('colorlessToggle');
+const darkModeButton = document.getElementById('dark-mode-button');
+const resetGameButton = document.getElementById('resetGameButton');
 if (colorlessToggle) {
     colorlessToggle.addEventListener('change', () => {
         isColorlessMode = colorlessToggle.checked;
         colors = getColors();
         drawBackground();
         drawContainers();
+    });
+}
+if (darkModeButton) {
+    darkModeButton.addEventListener('click', () => {
+        requestAnimationFrame(() => {
+            colors = getColors();
+            drawBackground();
+            drawContainers();
+        });
+    });
+}
+if (resetGameButton) {
+    resetGameButton.addEventListener('click', () => {
+        const wasGameOver = isGameOver;
+        resetGame();
+        if (!isGameStarted) {
+            showStartScreen();
+            return;
+        }
+        if (wasGameOver) {
+            requestAnimationFrame(gameLoop);
+        }
     });
 }
 
