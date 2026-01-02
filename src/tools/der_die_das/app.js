@@ -155,7 +155,7 @@ function getColors() {
         dark ? '#32CD32' : '#228B22'   // Green for das (with patterns)
     ] : [
         dark ? '#3b82f6' : '#2563eb',  // Blue for der (masc)
-        dark ? '#f43f5e' : '#db2777',  // Pink for die (fem)
+        dark ? '#ec4899' : '#f472b6',  // Pink for die (fem)
         dark ? '#10b981' : '#059669'   // Green for das (neut)
     ];
 
@@ -165,7 +165,7 @@ function getColors() {
         dark ? '#98FB98' : '#90EE90'   // Lighter green
     ] : [
         dark ? '#60a5fa' : '#3b82f6',
-        dark ? '#fb7185' : '#ec4899',
+        dark ? '#f472b6' : '#f9a8d4',
         dark ? '#34d399' : '#10b981'
     ];
 
