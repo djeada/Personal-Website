@@ -156,7 +156,7 @@ function getColors() {
     ] : [
         dark ? '#3b82f6' : '#2563eb',  // Blue for der (masc)
         dark ? '#ec4899' : '#f472b6',  // Pink for die (fem)
-        dark ? '#10b981' : '#059669'   // Green for das (neut)
+        dark ? '#6b7280' : '#9ca3af'   // Gray for das (neut)
     ];
 
     const containerHover = isColorlessMode ? [
@@ -166,7 +166,7 @@ function getColors() {
     ] : [
         dark ? '#60a5fa' : '#3b82f6',
         dark ? '#f472b6' : '#f9a8d4',
-        dark ? '#34d399' : '#10b981'
+        dark ? '#94a3b8' : '#cbd5e1'
     ];
 
     const highlightCorrect = isColorlessMode 
