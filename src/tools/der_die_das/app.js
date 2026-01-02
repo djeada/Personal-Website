@@ -785,6 +785,7 @@ function openPluralPrompt(wordText) {
     const answers = getPluralAnswers(wordText);
     if (!answers.length) return;
 
+    overlay.classList.remove('plural-correct', 'plural-wrong');
     overlay.dataset.answers = answers.join('|');
     wordEl.textContent = wordText;
     inputEl.value = '';
@@ -798,6 +799,7 @@ function openPluralPrompt(wordText) {
 function closePluralPrompt() {
     const overlay = document.getElementById('pluralOverlay');
     if (!overlay) return;
+    overlay.classList.remove('plural-correct', 'plural-wrong');
     overlay.style.display = 'none';
     overlay.setAttribute('aria-hidden', 'true');
     overlay.dataset.answers = '';
@@ -820,6 +822,8 @@ function submitPluralPrompt() {
     }
 
     if (answers.includes(guess)) {
+        overlay.classList.remove('plural-wrong');
+        overlay.classList.add('plural-correct');
         feedbackEl.textContent = 'Correct! +15 bonus, +1 health';
         score += 15;
         lives += 1;
@@ -828,6 +832,8 @@ function submitPluralPrompt() {
         return;
     }
 
+    overlay.classList.remove('plural-correct');
+    overlay.classList.add('plural-wrong');
     feedbackEl.textContent = `Not quite. Answer: ${answersRaw.replace(/\\|/g, ' / ')}`;
     setTimeout(() => closePluralPrompt(), 900);
 }
@@ -1399,7 +1405,7 @@ function drawContainers() {
 
         // Container shadow and glow
         if (isHighlighted) {
-            ctx.shadowColor = lastAnswerCorrect ? 'rgba(0, 255, 136, 0.6)' : 'rgba(255, 107, 53, 0.6)';
+            ctx.shadowColor = lastAnswerCorrect ? 'rgba(16, 185, 129, 0.65)' : 'rgba(239, 68, 68, 0.65)';
             ctx.shadowBlur = 25;
         } else {
             ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
@@ -1415,9 +1421,9 @@ function drawContainers() {
         );
         
         if (isHighlighted) {
-            const highlightBaseColor = lastAnswerCorrect ? '#00ff88' : '#ff6b35';
+            const highlightBaseColor = lastAnswerCorrect ? '#10b981' : '#ef4444';
             containerGradient.addColorStop(0, highlightBaseColor);
-            containerGradient.addColorStop(1, lastAnswerCorrect ? '#00cc6a' : '#cc5528');
+            containerGradient.addColorStop(1, lastAnswerCorrect ? '#059669' : '#dc2626');
         } else {
             containerGradient.addColorStop(0, gradientColors[0]);
             containerGradient.addColorStop(1, gradientColors[1]);
@@ -1512,12 +1518,29 @@ function drawContainers() {
         ctx.fillRect(x + padding, containerY + padding / 2, containerWidth - padding * 2, containerHeight * 0.4);
         ctx.restore();
 
+        if (isHighlighted && lastAnswerCorrect !== null) {
+            const feedbackFill = lastAnswerCorrect ? 'rgba(16, 185, 129, 0.85)' : 'rgba(239, 68, 68, 0.85)';
+            const feedbackBorder = lastAnswerCorrect ? 'rgba(16, 185, 129, 0.95)' : 'rgba(239, 68, 68, 0.95)';
+            ctx.fillStyle = feedbackFill;
+            ctx.beginPath();
+            ctx.roundRect(
+                x + padding,
+                containerY + padding / 2,
+                containerWidth - padding * 2,
+                containerHeight - padding,
+                [isCompact ? 16 : 20, isCompact ? 16 : 20, 0, 0]
+            );
+            ctx.fill();
+            ctx.strokeStyle = feedbackBorder;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+
         // Reset shadow
         ctx.shadowColor = 'transparent';
 
         const iconOffset = isCompact ? 22 : 28;
         const sublabelOffset = isCompact ? 18 : 22;
-        const feedbackOffset = isCompact ? 24 : 30;
 
         // Icon
         ctx.font = `700 ${isCompact ? 16 : 20}px "Segoe UI Symbol", Arial, sans-serif`;
@@ -1540,11 +1563,14 @@ function drawContainers() {
 
         // Feedback indicator
         if (isHighlighted && lastAnswerCorrect !== null) {
-            ctx.font = `bold ${isCompact ? 18 : 22}px "Segoe UI", Arial, sans-serif`;
-            ctx.fillStyle = 'white';
-            ctx.shadowColor = lastAnswerCorrect ? 'rgba(0, 255, 136, 0.8)' : 'rgba(255, 107, 53, 0.8)';
-            ctx.shadowBlur = 10;
-            ctx.fillText(lastAnswerCorrect ? '✓' : '✕', centerX + containerWidth / 2 - feedbackOffset, centerY - 4);
+            ctx.fillStyle = '#ffffff';
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+            ctx.shadowBlur = 8;
+            ctx.font = `800 ${isCompact ? 22 : 28}px "Segoe UI Symbol", Arial, sans-serif`;
+            ctx.fillText(lastAnswerCorrect ? '✓' : '✕', centerX, centerY - (isCompact ? 8 : 10));
+            ctx.font = `800 ${isCompact ? 15 : 18}px "Segoe UI", Arial, sans-serif`;
+            ctx.fillText(lastAnswerCorrect ? 'CORRECT' : 'WRONG', centerX, centerY + (isCompact ? 12 : 14));
+            ctx.shadowColor = 'transparent';
         }
 
         ctx.restore();
