@@ -61,7 +61,7 @@ const difficulties = {
         baseSpeed: 0.00006,
         speedIncrement: 0.000005
     },
-    medium: {
+    intermediate: {
         baseSpeed: 0.00009,
         speedIncrement: 0.00001
     },
@@ -75,7 +75,7 @@ let baseSpeed = difficulties.easy.baseSpeed;
 let speedIncrement = difficulties.easy.speedIncrement;
 
 let fallingSpeed = 0.5;
-let fastDropSpeed = 5;
+let fastDropSpeed = 8;
 let isFastDropping = false;
 let lastWordTime = 0;
 let lastFrameTime = 0;
@@ -149,42 +149,98 @@ let colors = getColors();
 let highlightColor = colors.highlightCorrect;
 
 
-const wordLists = {
-    'der': ['Baum', 'Stuhl', 'Tisch', 'Apfel', 'Berg', 'Wagen', 'Zug', 'Hund', 'Vogel', 'Fluss', 'Mond', 'Stern', 'Garten', 'Schuh', 'Schlüssel', 'Stift', 'Boden', 'See', 'Wald', 'Himmel', 'Strom', 'Zweig', 'Vorhang', 'Bürgersteig', 'Hut', 'Löffel', 'Pfirsich', 'Vulkan', 'Ring', 'Teller', 'Turm', 'Ball', 'Schrank', 'Computer', 'Kuchen'],
-    'die': ['Frau', 'Katze', 'Blume', 'Tür', 'Nacht', 'Straße', 'Wiese', 'Lampe', 'Uhr', 'Karte', 'Tasche', 'Brücke', 'Wand', 'Zeitung', 'Wolke', 'Flasche', 'Gabel', 'Schere', 'Kerze', 'Taste', 'Küche', 'Treppe', 'Decke', 'Brille', 'Giraffe', 'Pflanze', 'Sonne', 'Bank', 'Schrift', 'Farbe', 'Jacke', 'Maus', 'Tafel', 'Bluse', 'Kamera'],
-    'das': ['Buch', 'Bild', 'Fenster', 'Haus', 'Bett', 'Kind', 'Spiel', 'Lied', 'Licht', 'Radio', 'Auto', 'Schiff', 'Pferd', 'Flugzeug', 'Telefon', 'Zimmer', 'Büro', 'Restaurant', 'Theater', 'Fahrrad', 'Sofa', 'Schloss', 'Hotel', 'Programm', 'Papier', 'Instrument', 'Projekt', 'Frühstück', 'Badezimmer', 'Geschenk', 'Handy', 'Konto', 'Bücherregal', 'Motorrad', 'Messer']
+const DIFFICULTY_LEVELS = ['easy', 'intermediate', 'hard'];
+
+const baseWordLists = {
+    der: ['Baum', 'Stuhl', 'Tisch', 'Apfel', 'Berg', 'Wagen', 'Zug', 'Hund', 'Vogel', 'Fluss', 'Mond', 'Stern', 'Garten', 'Schuh', 'Schlüssel', 'Stift', 'Boden', 'See', 'Wald', 'Himmel', 'Strom', 'Zweig', 'Vorhang', 'Bürgersteig', 'Hut', 'Löffel', 'Pfirsich', 'Vulkan', 'Ring', 'Teller', 'Turm', 'Ball', 'Schrank', 'Computer', 'Kuchen'],
+    die: ['Frau', 'Katze', 'Blume', 'Tür', 'Nacht', 'Straße', 'Wiese', 'Lampe', 'Uhr', 'Karte', 'Tasche', 'Brücke', 'Wand', 'Zeitung', 'Wolke', 'Flasche', 'Gabel', 'Schere', 'Kerze', 'Taste', 'Küche', 'Treppe', 'Decke', 'Brille', 'Giraffe', 'Pflanze', 'Sonne', 'Bank', 'Schrift', 'Farbe', 'Jacke', 'Maus', 'Tafel', 'Bluse', 'Kamera'],
+    das: ['Buch', 'Bild', 'Fenster', 'Haus', 'Bett', 'Kind', 'Spiel', 'Lied', 'Licht', 'Radio', 'Auto', 'Schiff', 'Pferd', 'Flugzeug', 'Telefon', 'Zimmer', 'Büro', 'Restaurant', 'Theater', 'Fahrrad', 'Sofa', 'Schloss', 'Hotel', 'Programm', 'Papier', 'Instrument', 'Projekt', 'Frühstück', 'Badezimmer', 'Geschenk', 'Handy', 'Konto', 'Bücherregal', 'Motorrad', 'Messer']
 };
 
+function splitIntoTiers(words) {
+    const cleanWords = words.map(word => word.trim()).filter(Boolean);
+    const tierSize = Math.ceil(cleanWords.length / 3);
+    return {
+        easy: cleanWords.slice(0, tierSize),
+        intermediate: cleanWords.slice(tierSize, tierSize * 2),
+        hard: cleanWords.slice(tierSize * 2)
+    };
+}
 
-const proxyUrl = 'https://api.allorigins.win/get?url=';
+const wordLists = {
+    der: splitIntoTiers(baseWordLists.der),
+    die: splitIntoTiers(baseWordLists.die),
+    das: splitIntoTiers(baseWordLists.das)
+};
 
-const fetchWordList = (url, article) => fetch(proxyUrl + encodeURIComponent(url)).then(response => {
-    if (response.ok) {
-        return response.json();
-    } else {
+const wordListFiles = {
+    der: 'der.json',
+    die: 'die.json',
+    das: 'das.json'
+};
+
+const fetchWordList = (url, article) => fetch(url).then(response => {
+    if (!response.ok) {
         throw new Error(`Failed to load ${article} words from server.`);
     }
-}).then(data => data.contents).catch(error => {
+    return response.json();
+}).catch(error => {
     console.error(`Error fetching ${article} words: ${error.message}`);
 });
+
+function normalizeWordList(data) {
+    if (Array.isArray(data)) {
+        return splitIntoTiers(data);
+    }
+    if (data && typeof data === 'object') {
+        const normalized = {};
+        DIFFICULTY_LEVELS.forEach(level => {
+            const words = Array.isArray(data[level]) ? data[level] : [];
+            normalized[level] = words.map(word => word.trim()).filter(Boolean);
+        });
+        return normalized;
+    }
+    return null;
+}
 
 function loadWords() {
 
 
     Promise.all([
-            fetchWordList('https://adamdjellouli.com/tools/der_die_das/der.txt', 'der'),
-            fetchWordList('https://adamdjellouli.com/tools/der_die_das/die.txt', 'die'),
-            fetchWordList('https://adamdjellouli.com/tools/der_die_das/das.txt', 'das')
+            fetchWordList(wordListFiles.der, 'der'),
+            fetchWordList(wordListFiles.die, 'die'),
+            fetchWordList(wordListFiles.das, 'das')
         ])
         .then(([derWords, dieWords, dasWords]) => {
-            if (derWords) wordLists['der'] = derWords.split('\n').filter(w => w.trim());
-            if (dieWords) wordLists['die'] = dieWords.split('\n').filter(w => w.trim());
-            if (dasWords) wordLists['das'] = dasWords.split('\n').filter(w => w.trim());
+            const normalizedDer = normalizeWordList(derWords);
+            const normalizedDie = normalizeWordList(dieWords);
+            const normalizedDas = normalizeWordList(dasWords);
+
+            if (normalizedDer) wordLists.der = normalizedDer;
+            if (normalizedDie) wordLists.die = normalizedDie;
+            if (normalizedDas) wordLists.das = normalizedDas;
             console.log('Extended word lists loaded successfully');
         })
         .catch(err => {
             console.log('Using pre-cached word lists:', err.message);
         });
+}
+
+function getWordsForDifficulty(article) {
+    const list = wordLists[article];
+    if (!list) return [];
+
+    const easy = Array.isArray(list.easy) ? list.easy : [];
+    const intermediate = Array.isArray(list.intermediate) ? list.intermediate : [];
+    const hard = Array.isArray(list.hard) ? list.hard : [];
+
+    if (currentDifficulty === 'easy') {
+        return easy;
+    }
+    if (currentDifficulty === 'intermediate') {
+        return easy.concat(intermediate);
+    }
+    return easy.concat(intermediate, hard);
 }
 
 
@@ -405,7 +461,10 @@ function generateWord(timestamp) {
     if (currentWord) return;
 
     const randomArticle = articles[Math.floor(Math.random() * articles.length)];
-    const words = wordLists[randomArticle];
+    const words = getWordsForDifficulty(randomArticle);
+    if (!words.length) {
+        return;
+    }
     const wordText = words[Math.floor(Math.random() * words.length)];
     const wordWidth = measureWordWidth(wordText);
     const maxPositionX = gameWidth - wordWidth - 20;
@@ -874,13 +933,13 @@ function handleKeyDown(event) {
             moveRight();
             break;
         case ' ':
+        case 'ArrowDown':
             event.preventDefault();
             if (currentWord && !isGameOver) {
                 isFastDropping = true;
             }
             break;
         case 'ArrowUp':
-        case 'ArrowDown':
             event.preventDefault();
             break;
         case 'r':
