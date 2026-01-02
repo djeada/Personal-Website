@@ -140,36 +140,48 @@ function getCookie(name) {
 }
 
 
-function isImmersiveTheme() {
-    // Always return true for immersive dark theme experience
-    return true;
+function isDarkMode() {
+    return document.body.classList.contains('dark-mode');
 }
 
 
 function getColors() {
-    const dark = document.body.classList.contains('dark-mode');
+    const dark = isDarkMode();
+    
+    // Colorblind mode uses high-contrast distinct colors
     const containerColors = isColorlessMode ? [
-        '#64748b',
-        '#475569',
-        '#334155'
+        dark ? '#4169E1' : '#0047AB',  // Blue for der (with patterns)
+        dark ? '#FF1493' : '#DC143C',  // Red for die (with patterns)
+        dark ? '#32CD32' : '#228B22'   // Green for das (with patterns)
     ] : [
-        '#3b82f6',  // Blue for der (masc)
-        '#ec4899',  // Pink for die (fem)
-        '#9ca3af'   // Gray for das (neut)
+        dark ? '#3b82f6' : '#2563eb',  // Blue for der (masc)
+        dark ? '#f43f5e' : '#db2777',  // Pink for die (fem)
+        dark ? '#10b981' : '#059669'   // Green for das (neut)
     ];
 
-    const containerHover = isColorlessMode ?
-        containerColors.map(color => color) : [
-            '#60a5fa',
-            '#f472b6',
-            '#d1d5db'
-        ];
+    const containerHover = isColorlessMode ? [
+        dark ? '#87CEEB' : '#1E90FF',  // Lighter blue
+        dark ? '#FFB6C1' : '#FF6B6B',  // Lighter red
+        dark ? '#98FB98' : '#90EE90'   // Lighter green
+    ] : [
+        dark ? '#60a5fa' : '#3b82f6',
+        dark ? '#fb7185' : '#ec4899',
+        dark ? '#34d399' : '#10b981'
+    ];
 
-    const highlightCorrect = isColorlessMode ? 'rgba(148, 163, 184, 0.95)' : 'rgba(0, 255, 136, 0.95)';
-    const highlightIncorrect = isColorlessMode ? 'rgba(71, 85, 105, 0.95)' : 'rgba(255, 107, 53, 0.95)';
+    const highlightCorrect = isColorlessMode 
+        ? (dark ? 'rgba(50, 205, 50, 0.95)' : 'rgba(34, 139, 34, 0.95)')
+        : 'rgba(16, 185, 129, 0.95)';
+    const highlightIncorrect = isColorlessMode 
+        ? (dark ? 'rgba(255, 20, 147, 0.95)' : 'rgba(220, 20, 60, 0.95)')
+        : 'rgba(239, 68, 68, 0.95)';
     const particleColors = isColorlessMode
-        ? ['#cbd5f5', '#94a3b8', '#64748b', '#475569', '#e2e8f0', '#94a3b8']
-        : ['#fbbf24', '#f59e0b', '#3b82f6', '#ec4899', '#9ca3af', '#a855f7'];
+        ? dark 
+            ? ['#87CEEB', '#98FB98', '#FFB6C1', '#4169E1', '#32CD32', '#FF1493']
+            : ['#1E90FF', '#90EE90', '#FF6B6B', '#0047AB', '#228B22', '#DC143C']
+        : dark
+            ? ['#fbbf24', '#f59e0b', '#60a5fa', '#fb7185', '#34d399', '#c084fc']
+            : ['#f59e0b', '#d97706', '#3b82f6', '#ec4899', '#10b981', '#a855f7'];
 
     return {
         bgGradientStart: dark ? '#0f0f23' : '#f8fafc',
@@ -1427,6 +1439,57 @@ function drawContainers() {
         ctx.lineWidth = 2;
         ctx.stroke();
 
+        // Add patterns for colorblind mode to make containers more distinguishable
+        if (isColorlessMode && !isHighlighted) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.roundRect(
+                x + padding,
+                containerY + padding / 2,
+                containerWidth - padding * 2,
+                containerHeight - padding,
+                [isCompact ? 16 : 20, isCompact ? 16 : 20, 0, 0]
+            );
+            ctx.clip();
+            
+            ctx.globalAlpha = 0.3;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.lineWidth = 3;
+            
+            const patternX = x + padding;
+            const patternY = containerY + padding / 2;
+            const patternW = containerWidth - padding * 2;
+            const patternH = containerHeight - padding;
+            
+            if (index === 0) { // der - vertical stripes
+                for (let i = 0; i < patternW; i += 12) {
+                    ctx.beginPath();
+                    ctx.moveTo(patternX + i, patternY);
+                    ctx.lineTo(patternX + i, patternY + patternH);
+                    ctx.stroke();
+                }
+            } else if (index === 1) { // die - dots pattern
+                const dotSize = 4;
+                const spacing = 14;
+                for (let dy = 0; dy < patternH; dy += spacing) {
+                    for (let dx = 0; dx < patternW; dx += spacing) {
+                        ctx.beginPath();
+                        ctx.arc(patternX + dx + spacing/2, patternY + dy + spacing/2, dotSize, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            } else if (index === 2) { // das - diagonal lines
+                for (let i = -patternH; i < patternW + patternH; i += 15) {
+                    ctx.beginPath();
+                    ctx.moveTo(patternX + i, patternY);
+                    ctx.lineTo(patternX + i + patternH, patternY + patternH);
+                    ctx.stroke();
+                }
+            }
+            ctx.restore();
+        }
+
         // Top shine effect
         ctx.save();
         ctx.beginPath();
@@ -1839,11 +1902,19 @@ if (colorlessToggle) {
 }
 if (darkModeButton) {
     darkModeButton.addEventListener('click', () => {
-        requestAnimationFrame(() => {
+        // Wait for dark mode class to be applied, then refresh colors
+        const checkAndUpdate = () => {
             colors = getColors();
-            drawBackground();
-            drawContainers();
-        });
+            if (isGameStarted) {
+                updateCanvas();
+            } else {
+                drawBackground();
+                drawContainers();
+            }
+        };
+        
+        // Check immediately and after a short delay to ensure class is applied
+        setTimeout(checkAndUpdate, 50);
     });
 }
 if (resetGameButton) {
