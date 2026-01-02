@@ -1550,6 +1550,173 @@ function drawContainers() {
     });
 }
 
+function exportSessionToPDF() {
+    // Check if jsPDF is available
+    if (typeof window.jspdf === 'undefined') {
+        console.error('jsPDF library not loaded');
+        alert('PDF export is not available. Please refresh the page and try again.');
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Set document properties
+    doc.setProperties({
+        title: 'Der Die Das - Session Recap',
+        subject: 'Game Session Statistics',
+        author: 'Der Die Das Game',
+        keywords: 'german, articles, game, statistics',
+        creator: 'Der Die Das Game'
+    });
+
+    // Title
+    doc.setFontSize(24);
+    doc.setTextColor(59, 130, 246);
+    doc.text('Der Die Das', 105, 20, { align: 'center' });
+    
+    doc.setFontSize(18);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Session Recap', 105, 30, { align: 'center' });
+
+    // Game Over Message
+    doc.setFontSize(16);
+    doc.setTextColor(251, 191, 36);
+    doc.text(gameEndMessage || 'Game Over!', 105, 45, { align: 'center' });
+
+    // Session date
+    doc.setFontSize(10);
+    doc.setTextColor(150, 150, 150);
+    const sessionDate = new Date().toLocaleString();
+    doc.text(`Session Date: ${sessionDate}`, 105, 52, { align: 'center' });
+
+    // Statistics Section
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Game Statistics', 20, 65);
+
+    doc.setFontSize(11);
+    doc.setTextColor(60, 60, 60);
+    const accuracy = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 100;
+    
+    const stats = [
+        `Final Score: ${score}`,
+        `Level Reached: ${level}`,
+        `Best Streak: ${maxStreak}`,
+        `Accuracy: ${accuracy}%`,
+        `Total Attempts: ${totalAttempts}`,
+        `Correct Answers: ${correctAttempts}`,
+        `Incorrect Answers: ${totalAttempts - correctAttempts}`,
+        `Difficulty: ${currentDifficulty.charAt(0).toUpperCase() + currentDifficulty.slice(1)}`
+    ];
+
+    let yPos = 75;
+    stats.forEach(stat => {
+        doc.text(stat, 25, yPos);
+        yPos += 8;
+    });
+
+    // Incorrect Words Section
+    yPos += 10;
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Incorrect Words', 20, yPos);
+    
+    yPos += 8;
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 60);
+    
+    const incorrectRows = incorrectWordsTable.querySelectorAll('tbody tr');
+    if (incorrectRows.length > 0) {
+        // Table headers
+        doc.setFont(undefined, 'bold');
+        doc.text('Word', 25, yPos);
+        doc.text('Your Choice', 80, yPos);
+        doc.text('Correct', 130, yPos);
+        doc.setFont(undefined, 'normal');
+        yPos += 6;
+
+        // Table rows
+        incorrectRows.forEach((row, index) => {
+            if (yPos > 270) {
+                doc.addPage();
+                yPos = 20;
+            }
+            const cells = row.querySelectorAll('td');
+            doc.text(cells[0].textContent, 25, yPos);
+            doc.text(cells[1].textContent, 80, yPos);
+            doc.text(cells[2].textContent, 130, yPos);
+            yPos += 6;
+        });
+    } else {
+        doc.text('No incorrect words! Perfect game!', 25, yPos);
+        yPos += 6;
+    }
+
+    // Correct Words Section
+    yPos += 10;
+    if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+    }
+
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Correct Words', 20, yPos);
+    
+    yPos += 8;
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 60);
+    
+    const correctRows = correctWordsTable.querySelectorAll('tbody tr');
+    if (correctRows.length > 0) {
+        // Table headers
+        doc.setFont(undefined, 'bold');
+        doc.text('Word', 25, yPos);
+        doc.text('Your Choice', 80, yPos);
+        doc.text('Correct', 130, yPos);
+        doc.setFont(undefined, 'normal');
+        yPos += 6;
+
+        // Limit to first 20 correct words to avoid overly long PDFs
+        const displayRows = Array.from(correctRows).slice(0, 20);
+        displayRows.forEach((row, index) => {
+            if (yPos > 270) {
+                doc.addPage();
+                yPos = 20;
+            }
+            const cells = row.querySelectorAll('td');
+            doc.text(cells[0].textContent, 25, yPos);
+            doc.text(cells[1].textContent, 80, yPos);
+            doc.text(cells[2].textContent, 130, yPos);
+            yPos += 6;
+        });
+
+        if (correctRows.length > 20) {
+            yPos += 2;
+            doc.setFontSize(9);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`... and ${correctRows.length - 20} more correct words`, 25, yPos);
+        }
+    } else {
+        doc.text('No correct words recorded.', 25, yPos);
+    }
+
+    // Footer
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.text(`Page ${i} of ${pageCount}`, 105, 290, { align: 'center' });
+        doc.text('Generated by Der Die Das Game - https://adamdjellouli.com', 105, 285, { align: 'center' });
+    }
+
+    // Save the PDF
+    const filename = `der-die-das-session-${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(filename);
+}
+
 function drawGameOver() {
     // Dark overlay with gradient
     const overlayGradient = ctx.createRadialGradient(
@@ -1595,10 +1762,15 @@ function drawGameOver() {
     const accuracy = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 100;
     ctx.fillText(`🎯 Accuracy: ${accuracy}%`, gameWidth / 2, gameHeight / 2 + 105);
 
+    // Export to PDF button hint
+    ctx.font = '600 18px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = 'rgba(99, 102, 241, 0.9)';
+    ctx.fillText('📄 Export to PDF', gameWidth / 2, gameHeight / 2 + 145);
+
     // Restart prompt with animation hint
     ctx.font = '600 20px "Segoe UI", Arial, sans-serif';
     ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
-    ctx.fillText('Press R or tap to restart', gameWidth / 2, gameHeight / 2 + 175);
+    ctx.fillText('Press R or tap to restart', gameWidth / 2, gameHeight / 2 + 180);
 
     // Decorative line
     ctx.strokeStyle = 'rgba(251, 191, 36, 0.4)';
@@ -1751,6 +1923,13 @@ function handleKeyDown(event) {
                 requestAnimationFrame(gameLoop);
             }
             break;
+        case 'p':
+        case 'P':
+            if (isGameOver) {
+                event.preventDefault();
+                exportSessionToPDF();
+            }
+            break;
         case 'm':
         case 'M':
             if (currentWord && showMeanings && !meaningRevealActive) {
@@ -1778,6 +1957,23 @@ document.getElementById('rightButton').addEventListener('click', moveRight);
 gameCanvas.addEventListener('touchstart', (e) => {
     if (!isGameStarted) return;
     if (isGameOver) {
+        // Check if user tapped on PDF export area
+        const touchX = getTouchX(e);
+        const touchY = getTouchY(e);
+        const pdfButtonY = gameHeight / 2 + 145;
+        const pdfButtonHeight = 30;
+        
+        if (touchY >= pdfButtonY - pdfButtonHeight / 2 && 
+            touchY <= pdfButtonY + pdfButtonHeight / 2 &&
+            touchX >= gameWidth / 2 - 100 &&
+            touchX <= gameWidth / 2 + 100) {
+            // User tapped on PDF export button
+            e.preventDefault();
+            exportSessionToPDF();
+            return;
+        }
+        
+        // Otherwise restart the game
         resetGame();
         requestAnimationFrame(gameLoop);
         return;
@@ -1842,7 +2038,28 @@ gameCanvas.addEventListener('touchend', (e) => {
 });
 
 gameCanvas.addEventListener('click', (e) => {
-    if (!isGameStarted || isGameOver || !currentWord || !showMeanings || meaningRevealActive) return;
+    if (!isGameStarted) return;
+    
+    // Handle game over screen clicks
+    if (isGameOver) {
+        const rect = gameCanvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const pdfButtonY = gameHeight / 2 + 145;
+        const pdfButtonHeight = 30;
+        
+        if (y >= pdfButtonY - pdfButtonHeight / 2 && 
+            y <= pdfButtonY + pdfButtonHeight / 2 &&
+            x >= gameWidth / 2 - 100 &&
+            x <= gameWidth / 2 + 100) {
+            // User clicked on PDF export button
+            exportSessionToPDF();
+            return;
+        }
+        return;
+    }
+    
+    if (!currentWord || !showMeanings || meaningRevealActive) return;
     const rect = gameCanvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
