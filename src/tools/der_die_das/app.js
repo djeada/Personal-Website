@@ -758,7 +758,7 @@ function maybeTriggerPluralBonus(wordText) {
     if (!pluralBonusEnabled) return;
     if (isPluralPromptActive) return;
     if (!pluralsMap || !getPluralAnswers(wordText).length) return;
-    if (streak > 0 && streak % 5 === 0) {
+    if (streak > 0 && streak % 5 === 0 && Math.random() < 0.25) {
         openPluralPrompt(wordText);
     }
 }
@@ -820,8 +820,9 @@ function submitPluralPrompt() {
     }
 
     if (answers.includes(guess)) {
-        feedbackEl.textContent = 'Correct! +15 bonus';
+        feedbackEl.textContent = 'Correct! +15 bonus, +1 health';
         score += 15;
+        lives += 1;
         updateStats();
         setTimeout(() => closePluralPrompt(), 600);
         return;
@@ -1798,8 +1799,13 @@ function updateCanvas() {
 function gameLoop(timestamp) {
     if (!isGameStarted) return;
 
-    if (isGameOver || isPluralPromptActive) {
+    if (isGameOver) {
         updateCanvas();
+        return;
+    }
+    if (isPluralPromptActive) {
+        updateCanvas();
+        requestAnimationFrame(gameLoop);
         return;
     }
 
