@@ -1454,6 +1454,7 @@ function drawContainers() {
             
             ctx.globalAlpha = 0.3;
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
             ctx.lineWidth = 3;
             
             const patternX = x + padding;
@@ -1901,8 +1902,8 @@ if (colorlessToggle) {
 }
 if (darkModeButton) {
     darkModeButton.addEventListener('click', () => {
-        // Wait for dark mode class to be applied
-        setTimeout(() => {
+        // Wait for dark mode class to be applied, then refresh colors
+        const checkAndUpdate = () => {
             colors = getColors();
             if (isGameStarted) {
                 updateCanvas();
@@ -1910,7 +1911,10 @@ if (darkModeButton) {
                 drawBackground();
                 drawContainers();
             }
-        }, 50);
+        };
+        
+        // Check immediately and after a short delay to ensure class is applied
+        setTimeout(checkAndUpdate, 50);
     });
 }
 if (resetGameButton) {
