@@ -58,15 +58,19 @@ function getLayout() {
     const cavityHeight = showEnergyLevels.checked ? 180 : 220;
     const energyHeight = 110;
     const minGraphHeight = 120;
+    const cavityLabelSpace = 50;
+    const cardPaddingTop = 30;
 
     const cavityTop = paddingTop;
     const cavityBottom = cavityTop + cavityHeight;
     const cavityLeft = 70;
     const cavityRight = cw - 70;
 
-    let levelTop = cavityBottom + sectionGap;
+    let levelTop = cavityBottom + cavityLabelSpace + sectionGap + cardPaddingTop;
     let levelBottom = levelTop + energyHeight;
-    let graphTop = showEnergyLevels.checked ? levelBottom + sectionGap : cavityBottom + sectionGap;
+    let graphTop = showEnergyLevels.checked ?
+        levelBottom + sectionGap + cardPaddingTop :
+        cavityBottom + cavityLabelSpace + sectionGap + cardPaddingTop;
     const graphBottom = ch - 30;
 
     if (graphTop > graphBottom - minGraphHeight) {
