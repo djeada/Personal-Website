@@ -147,41 +147,37 @@ function isDarkMode() {
 
 function getColors() {
     const dark = isDarkMode();
-    
-    // Colorblind mode uses high-contrast distinct colors
+
+
     const containerColors = isColorlessMode ? [
-        dark ? '#4169E1' : '#0047AB',  // Blue for der (with patterns)
-        dark ? '#FF1493' : '#DC143C',  // Red for die (with patterns)
-        dark ? '#32CD32' : '#228B22'   // Green for das (with patterns)
+        dark ? '#4169E1' : '#0047AB',
+        dark ? '#FF1493' : '#DC143C',
+        dark ? '#32CD32' : '#228B22'
     ] : [
-        dark ? '#3b82f6' : '#2563eb',  // Blue for der (masc)
-        dark ? '#ec4899' : '#f472b6',  // Pink for die (fem)
-        dark ? '#6b7280' : '#9ca3af'   // Gray for das (neut)
+        dark ? '#3b82f6' : '#2563eb',
+        dark ? '#ec4899' : '#f472b6',
+        dark ? '#6b7280' : '#9ca3af'
     ];
 
     const containerHover = isColorlessMode ? [
-        dark ? '#87CEEB' : '#1E90FF',  // Lighter blue
-        dark ? '#FFB6C1' : '#FF6B6B',  // Lighter red
-        dark ? '#98FB98' : '#90EE90'   // Lighter green
+        dark ? '#87CEEB' : '#1E90FF',
+        dark ? '#FFB6C1' : '#FF6B6B',
+        dark ? '#98FB98' : '#90EE90'
     ] : [
         dark ? '#60a5fa' : '#3b82f6',
         dark ? '#f472b6' : '#f9a8d4',
         dark ? '#94a3b8' : '#cbd5e1'
     ];
 
-    const highlightCorrect = isColorlessMode 
-        ? (dark ? 'rgba(50, 205, 50, 0.95)' : 'rgba(34, 139, 34, 0.95)')
-        : 'rgba(16, 185, 129, 0.95)';
-    const highlightIncorrect = isColorlessMode 
-        ? (dark ? 'rgba(255, 20, 147, 0.95)' : 'rgba(220, 20, 60, 0.95)')
-        : 'rgba(239, 68, 68, 0.95)';
-    const particleColors = isColorlessMode
-        ? dark 
-            ? ['#87CEEB', '#98FB98', '#FFB6C1', '#4169E1', '#32CD32', '#FF1493']
-            : ['#1E90FF', '#90EE90', '#FF6B6B', '#0047AB', '#228B22', '#DC143C']
-        : dark
-            ? ['#fbbf24', '#f59e0b', '#60a5fa', '#fb7185', '#34d399', '#c084fc']
-            : ['#f59e0b', '#d97706', '#3b82f6', '#ec4899', '#10b981', '#a855f7'];
+    const highlightCorrect = isColorlessMode ?
+        (dark ? 'rgba(50, 205, 50, 0.95)' : 'rgba(34, 139, 34, 0.95)') :
+        'rgba(16, 185, 129, 0.95)';
+    const highlightIncorrect = isColorlessMode ?
+        (dark ? 'rgba(255, 20, 147, 0.95)' : 'rgba(220, 20, 60, 0.95)') :
+        'rgba(239, 68, 68, 0.95)';
+    const particleColors = isColorlessMode ?
+        dark ? ['#87CEEB', '#98FB98', '#FFB6C1', '#4169E1', '#32CD32', '#FF1493'] : ['#1E90FF', '#90EE90', '#FF6B6B', '#0047AB', '#228B22', '#DC143C'] :
+        dark ? ['#fbbf24', '#f59e0b', '#60a5fa', '#fb7185', '#34d399', '#c084fc'] : ['#f59e0b', '#d97706', '#3b82f6', '#ec4899', '#10b981', '#a855f7'];
 
     return {
         bgGradientStart: dark ? '#0f0f23' : '#f8fafc',
@@ -388,9 +384,7 @@ class Particle {
 }
 
 function createParticles(x, y, count, isSuccess) {
-    const particleColors = isSuccess ? 
-        ['#00ff88', '#33ffa3', '#66ffbb', '#fbbf24', '#00d9ff'] : 
-        ['#ff6b35', '#ff8c5a', '#ffad80', '#ff4444'];
+    const particleColors = isSuccess ? ['#00ff88', '#33ffa3', '#66ffbb', '#fbbf24', '#00d9ff'] : ['#ff6b35', '#ff8c5a', '#ffad80', '#ff4444'];
 
     for (let i = 0; i < count; i++) {
         const color = particleColors[Math.floor(Math.random() * particleColors.length)];
@@ -714,12 +708,12 @@ function showMultiArticleHint(wordText, articleList) {
     popup.classList.remove('show');
     popup.textContent = '';
 
-    const normalizedArticles = Array.isArray(articleList)
-        ? articleList
-        : String(articleList || '')
-            .split(/[\\/|,]/)
-            .map(item => item.trim())
-            .filter(Boolean);
+    const normalizedArticles = Array.isArray(articleList) ?
+        articleList :
+        String(articleList || '')
+        .split(/[\\/|,]/)
+        .map(item => item.trim())
+        .filter(Boolean);
 
     if (!normalizedArticles.length || !wordText) {
         return;
@@ -1020,7 +1014,9 @@ function checkLevelUp() {
 function checkCollisions() {
     if (!currentWord) return;
 
-    const { containerY } = getContainerLayout();
+    const {
+        containerY
+    } = getContainerLayout();
     const hitY = containerY;
 
     if (currentWord.y < hitY) return;
@@ -1037,9 +1033,9 @@ function checkCollisions() {
             .map(article => articles.indexOf(article))
             .filter(index => index >= 0);
         const closeAllowedIndex = overlapInfo.closeIndices.find(index => allowedIndices.includes(index));
-        const acceptedIndex = allowedIndices.includes(highlightContainerIndex) || closeAllowedIndex === undefined
-            ? highlightContainerIndex
-            : closeAllowedIndex;
+        const acceptedIndex = allowedIndices.includes(highlightContainerIndex) || closeAllowedIndex === undefined ?
+            highlightContainerIndex :
+            closeAllowedIndex;
 
         highlightContainerIndex = acceptedIndex;
         const userArticle = articles[acceptedIndex];
@@ -1097,7 +1093,7 @@ function checkCollisions() {
 }
 
 function drawBackground() {
-    // Create immersive gradient background
+
     const gradient = ctx.createLinearGradient(0, 0, gameWidth * 0.3, gameHeight);
     gradient.addColorStop(0, colors.bgGradientStart);
     gradient.addColorStop(0.5, colors.bgGradientMid);
@@ -1105,7 +1101,7 @@ function drawBackground() {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, gameWidth, gameHeight);
 
-    // Subtle grid pattern for depth
+
     ctx.strokeStyle = colors.gridColor;
     ctx.lineWidth = 1;
     const gridSize = 50;
@@ -1122,11 +1118,11 @@ function drawBackground() {
         ctx.stroke();
     }
 
-    // Floating orbs effect
+
     const time = Date.now() * 0.001;
     ctx.save();
-    
-    // First orb
+
+
     const orb1X = gameWidth * 0.15 + Math.sin(time * 0.5) * 20;
     const orb1Y = gameHeight * 0.2 + Math.cos(time * 0.3) * 15;
     const orb1Gradient = ctx.createRadialGradient(orb1X, orb1Y, 0, orb1X, orb1Y, 80);
@@ -1137,7 +1133,7 @@ function drawBackground() {
     ctx.arc(orb1X, orb1Y, 80, 0, Math.PI * 2);
     ctx.fill();
 
-    // Second orb
+
     const orb2X = gameWidth * 0.85 + Math.cos(time * 0.4) * 25;
     const orb2Y = gameHeight * 0.6 + Math.sin(time * 0.6) * 20;
     const orb2Gradient = ctx.createRadialGradient(orb2X, orb2Y, 0, orb2X, orb2Y, 100);
@@ -1148,7 +1144,7 @@ function drawBackground() {
     ctx.arc(orb2X, orb2Y, 100, 0, Math.PI * 2);
     ctx.fill();
 
-    // Third orb
+
     const orb3X = gameWidth * 0.5 + Math.sin(time * 0.7) * 30;
     const orb3Y = gameHeight * 0.35 + Math.cos(time * 0.5) * 25;
     const orb3Gradient = ctx.createRadialGradient(orb3X, orb3Y, 0, orb3X, orb3Y, 60);
@@ -1167,19 +1163,19 @@ function drawWord() {
 
     ctx.save();
 
-    // Smooth animations
+
     ctx.globalAlpha = currentWord.opacity;
     ctx.translate(currentWord.x, currentWord.y);
     ctx.scale(currentWord.scale, currentWord.scale);
     ctx.translate(-currentWord.x, -currentWord.y);
 
-    // Enhanced shadow with glow
+
     ctx.shadowColor = 'rgba(99, 102, 241, 0.4)';
     ctx.shadowBlur = 30;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 8;
 
-    // Calculate dimensions
+
     const wordFont = getWordFont();
     const meaningFont = getMeaningFont();
     const hintFont = getHintFont();
@@ -1206,11 +1202,11 @@ function drawWord() {
     currentWord.pillWidth = pillWidth;
     currentWord.pillHeight = pillHeight;
 
-    // Frosted glass card with gradient border
+
     const cardX = currentWord.x - pillWidth / 2;
     const cardY = currentWord.y - pillHeight / 2;
-    
-    // Outer glow
+
+
     const glowGradient = ctx.createRadialGradient(
         currentWord.x, currentWord.y, pillWidth * 0.3,
         currentWord.x, currentWord.y, pillWidth * 0.8
@@ -1222,7 +1218,7 @@ function drawWord() {
     ctx.arc(currentWord.x, currentWord.y, pillWidth * 0.8, 0, Math.PI * 2);
     ctx.fill();
 
-    // Card background with gradient
+
     const cardGradient = ctx.createLinearGradient(cardX, cardY, cardX, cardY + pillHeight);
     cardGradient.addColorStop(0, 'rgba(255, 255, 255, 0.98)');
     cardGradient.addColorStop(1, 'rgba(248, 250, 252, 0.95)');
@@ -1231,12 +1227,12 @@ function drawWord() {
     ctx.roundRect(cardX, cardY, pillWidth, pillHeight, 24);
     ctx.fill();
 
-    // Subtle border highlight
+
     ctx.strokeStyle = 'rgba(99, 102, 241, 0.2)';
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Top shine effect
+
     ctx.save();
     ctx.beginPath();
     ctx.roundRect(cardX, cardY, pillWidth, pillHeight / 2, [24, 24, 0, 0]);
@@ -1248,10 +1244,10 @@ function drawWord() {
     ctx.fillRect(cardX, cardY, pillWidth, pillHeight / 2);
     ctx.restore();
 
-    // Reset shadow for text
+
     ctx.shadowColor = 'transparent';
 
-    // Word text
+
     ctx.fillStyle = '#1a1a2e';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
@@ -1260,7 +1256,7 @@ function drawWord() {
     const textTop = currentWord.y - textHeight / 2;
     ctx.fillText(currentWord.text, currentWord.x, textTop);
 
-    // Meaning text
+
     if (meaningText) {
         ctx.font = meaningFont;
         ctx.fillStyle = meaningRevealActive ? '#374151' : 'rgba(55, 65, 81, 0.6)';
@@ -1268,7 +1264,7 @@ function drawWord() {
         ctx.fillText(meaningText, currentWord.x, textTop + wordFontSize + lineGap);
     }
 
-    // Hint text
+
     if (hintText) {
         const hintY = textTop + wordFontSize +
             (meaningText ? meaningFontSize + lineGap : 0) + hintGap;
@@ -1372,7 +1368,7 @@ function drawContainers() {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Container colors (respect colorblind mode palette)
+
     const containerGradients = colors.containerColors.map((baseColor, index) => [
         baseColor,
         colors.containerHover[index] || baseColor
@@ -1380,12 +1376,12 @@ function drawContainers() {
 
     labels.forEach((label, index) => {
         const x = index * containerWidth;
-        // Animation decay
+
         if (containerAnimations[index] > 0) {
             containerAnimations[index] -= 0.04;
         }
 
-        // Determine fill color
+
         let isHighlighted = index === highlightContainerIndex;
         const elapsedTime = isHighlighted ? Date.now() - highlightStartTime : 0;
         if (isHighlighted && elapsedTime >= highlightDuration) {
@@ -1403,7 +1399,7 @@ function drawContainers() {
         ctx.scale(animScale, animScale);
         ctx.translate(-centerX, -centerY);
 
-        // Container shadow and glow
+
         if (isHighlighted) {
             ctx.shadowColor = lastAnswerCorrect ? 'rgba(16, 185, 129, 0.65)' : 'rgba(239, 68, 68, 0.65)';
             ctx.shadowBlur = 25;
@@ -1413,13 +1409,13 @@ function drawContainers() {
         }
         ctx.shadowOffsetY = 4;
 
-        // Create gradient for container
+
         const gradientColors = containerGradients[index];
         const containerGradient = ctx.createLinearGradient(
             x + padding, containerY,
             x + padding, containerY + containerHeight
         );
-        
+
         if (isHighlighted) {
             const highlightBaseColor = lastAnswerCorrect ? '#10b981' : '#ef4444';
             containerGradient.addColorStop(0, highlightBaseColor);
@@ -1429,7 +1425,7 @@ function drawContainers() {
             containerGradient.addColorStop(1, gradientColors[1]);
         }
 
-        // Draw container shape
+
         ctx.fillStyle = containerGradient;
         ctx.beginPath();
         ctx.roundRect(
@@ -1441,12 +1437,12 @@ function drawContainers() {
         );
         ctx.fill();
 
-        // Border highlight
+
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Add patterns for colorblind mode to make containers more distinguishable
+
         if (isColorlessMode && !isHighlighted) {
             ctx.save();
             ctx.beginPath();
@@ -1458,35 +1454,35 @@ function drawContainers() {
                 [isCompact ? 16 : 20, isCompact ? 16 : 20, 0, 0]
             );
             ctx.clip();
-            
+
             ctx.globalAlpha = 0.3;
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
             ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
             ctx.lineWidth = 3;
-            
+
             const patternX = x + padding;
             const patternY = containerY + padding / 2;
             const patternW = containerWidth - padding * 2;
             const patternH = containerHeight - padding;
-            
-            if (index === 0) { // der - vertical stripes
+
+            if (index === 0) {
                 for (let i = 0; i < patternW; i += 12) {
                     ctx.beginPath();
                     ctx.moveTo(patternX + i, patternY);
                     ctx.lineTo(patternX + i, patternY + patternH);
                     ctx.stroke();
                 }
-            } else if (index === 1) { // die - dots pattern
+            } else if (index === 1) {
                 const dotSize = 4;
                 const spacing = 14;
                 for (let dy = 0; dy < patternH; dy += spacing) {
                     for (let dx = 0; dx < patternW; dx += spacing) {
                         ctx.beginPath();
-                        ctx.arc(patternX + dx + spacing/2, patternY + dy + spacing/2, dotSize, 0, Math.PI * 2);
+                        ctx.arc(patternX + dx + spacing / 2, patternY + dy + spacing / 2, dotSize, 0, Math.PI * 2);
                         ctx.fill();
                     }
                 }
-            } else if (index === 2) { // das - diagonal lines
+            } else if (index === 2) {
                 for (let i = -patternH; i < patternW + patternH; i += 15) {
                     ctx.beginPath();
                     ctx.moveTo(patternX + i, patternY);
@@ -1497,7 +1493,7 @@ function drawContainers() {
             ctx.restore();
         }
 
-        // Top shine effect
+
         ctx.save();
         ctx.beginPath();
         ctx.roundRect(
@@ -1536,18 +1532,18 @@ function drawContainers() {
             ctx.stroke();
         }
 
-        // Reset shadow
+
         ctx.shadowColor = 'transparent';
 
         const iconOffset = isCompact ? 22 : 28;
         const sublabelOffset = isCompact ? 18 : 22;
 
-        // Icon
+
         ctx.font = `700 ${isCompact ? 16 : 20}px "Segoe UI Symbol", Arial, sans-serif`;
         ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
         ctx.fillText(icons[index], centerX, centerY - iconOffset);
 
-        // Article label
+
         ctx.font = `bold ${isCompact ? 22 : 28}px "Segoe UI", Arial, sans-serif`;
         ctx.fillStyle = colors.labelColor;
         ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
@@ -1556,12 +1552,12 @@ function drawContainers() {
         ctx.fillText(label, centerX, centerY - 4);
         ctx.shadowColor = 'transparent';
 
-        // Sublabel
+
         ctx.font = `700 ${isCompact ? 11 : 13}px "Segoe UI", Arial, sans-serif`;
         ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
         ctx.fillText(sublabels[index], centerX, centerY + sublabelOffset);
 
-        // Feedback indicator
+
         if (isHighlighted && lastAnswerCorrect !== null) {
             ctx.fillStyle = '#ffffff';
             ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
@@ -1578,17 +1574,19 @@ function drawContainers() {
 }
 
 function exportSessionToPDF() {
-    // Check if jsPDF is available
+
     if (typeof window.jspdf === 'undefined') {
         console.error('jsPDF library not loaded');
         alert('PDF export is not available. Please refresh the page and try again.');
         return;
     }
 
-    const { jsPDF } = window.jspdf;
+    const {
+        jsPDF
+    } = window.jspdf;
     const doc = new jsPDF();
 
-    // Set document properties
+
     doc.setProperties({
         title: 'Der Die Das - Session Recap',
         subject: 'Game Session Statistics',
@@ -1597,27 +1595,35 @@ function exportSessionToPDF() {
         creator: 'Der Die Das Game'
     });
 
-    // Title
+
     doc.setFontSize(24);
     doc.setTextColor(59, 130, 246);
-    doc.text('Der Die Das', 105, 20, { align: 'center' });
-    
+    doc.text('Der Die Das', 105, 20, {
+        align: 'center'
+    });
+
     doc.setFontSize(18);
     doc.setTextColor(100, 100, 100);
-    doc.text('Session Recap', 105, 30, { align: 'center' });
+    doc.text('Session Recap', 105, 30, {
+        align: 'center'
+    });
 
-    // Game Over Message
+
     doc.setFontSize(16);
     doc.setTextColor(251, 191, 36);
-    doc.text(gameEndMessage || 'Game Over!', 105, 45, { align: 'center' });
+    doc.text(gameEndMessage || 'Game Over!', 105, 45, {
+        align: 'center'
+    });
 
-    // Session date
+
     doc.setFontSize(10);
     doc.setTextColor(150, 150, 150);
     const sessionDate = new Date().toLocaleString();
-    doc.text(`Session Date: ${sessionDate}`, 105, 52, { align: 'center' });
+    doc.text(`Session Date: ${sessionDate}`, 105, 52, {
+        align: 'center'
+    });
 
-    // Statistics Section
+
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
     doc.text('Game Statistics', 20, 65);
@@ -1625,7 +1631,7 @@ function exportSessionToPDF() {
     doc.setFontSize(11);
     doc.setTextColor(60, 60, 60);
     const accuracy = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 100;
-    
+
     const stats = [
         `Final Score: ${score}`,
         `Level Reached: ${level}`,
@@ -1643,19 +1649,19 @@ function exportSessionToPDF() {
         yPos += 8;
     });
 
-    // Incorrect Words Section
+
     yPos += 10;
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
     doc.text('Incorrect Words', 20, yPos);
-    
+
     yPos += 8;
     doc.setFontSize(10);
     doc.setTextColor(60, 60, 60);
-    
+
     const incorrectRows = incorrectWordsTable.querySelectorAll('tbody tr');
     if (incorrectRows.length > 0) {
-        // Table headers
+
         doc.setFont(undefined, 'bold');
         doc.text('Word', 25, yPos);
         doc.text('Your Choice', 80, yPos);
@@ -1663,7 +1669,7 @@ function exportSessionToPDF() {
         doc.setFont(undefined, 'normal');
         yPos += 6;
 
-        // Table rows
+
         incorrectRows.forEach((row, index) => {
             if (yPos > 270) {
                 doc.addPage();
@@ -1680,7 +1686,7 @@ function exportSessionToPDF() {
         yPos += 6;
     }
 
-    // Correct Words Section
+
     yPos += 10;
     if (yPos > 250) {
         doc.addPage();
@@ -1690,14 +1696,14 @@ function exportSessionToPDF() {
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
     doc.text('Correct Words', 20, yPos);
-    
+
     yPos += 8;
     doc.setFontSize(10);
     doc.setTextColor(60, 60, 60);
-    
+
     const correctRows = correctWordsTable.querySelectorAll('tbody tr');
     if (correctRows.length > 0) {
-        // Table headers
+
         doc.setFont(undefined, 'bold');
         doc.text('Word', 25, yPos);
         doc.text('Your Choice', 80, yPos);
@@ -1705,7 +1711,7 @@ function exportSessionToPDF() {
         doc.setFont(undefined, 'normal');
         yPos += 6;
 
-        // Limit to first 20 correct words to avoid overly long PDFs
+
         const displayRows = Array.from(correctRows).slice(0, 20);
         displayRows.forEach((row, index) => {
             if (yPos > 270) {
@@ -1729,23 +1735,27 @@ function exportSessionToPDF() {
         doc.text('No correct words recorded.', 25, yPos);
     }
 
-    // Footer
+
     doc.setFontSize(8);
     doc.setTextColor(150, 150, 150);
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
-        doc.text(`Page ${i} of ${pageCount}`, 105, 290, { align: 'center' });
-        doc.text('Generated by Der Die Das Game - https://adamdjellouli.com', 105, 285, { align: 'center' });
+        doc.text(`Page ${i} of ${pageCount}`, 105, 290, {
+            align: 'center'
+        });
+        doc.text('Generated by Der Die Das Game - https://adamdjellouli.com', 105, 285, {
+            align: 'center'
+        });
     }
 
-    // Save the PDF
+
     const filename = `der-die-das-session-${new Date().toISOString().split('T')[0]}.pdf`;
     doc.save(filename);
 }
 
 function drawGameOver() {
-    // Dark overlay with gradient
+
     const overlayGradient = ctx.createRadialGradient(
         gameWidth / 2, gameHeight / 2, 0,
         gameWidth / 2, gameHeight / 2, gameWidth * 0.8
@@ -1755,7 +1765,7 @@ function drawGameOver() {
     ctx.fillStyle = overlayGradient;
     ctx.fillRect(0, 0, gameWidth, gameHeight);
 
-    // Decorative glow
+
     const glowGradient = ctx.createRadialGradient(
         gameWidth / 2, gameHeight / 2 - 60, 0,
         gameWidth / 2, gameHeight / 2 - 60, 200
@@ -1770,7 +1780,7 @@ function drawGameOver() {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Title with glow
+
     ctx.shadowColor = 'rgba(251, 191, 36, 0.5)';
     ctx.shadowBlur = 30;
     ctx.font = 'bold 52px "Segoe UI", Arial, sans-serif';
@@ -1778,10 +1788,10 @@ function drawGameOver() {
     ctx.fillText(gameEndMessage || 'Game Over!', gameWidth / 2, gameHeight / 2 - 100);
     ctx.shadowColor = 'transparent';
 
-    // Stats with icons
+
     ctx.font = '600 26px "Segoe UI", Arial, sans-serif';
     ctx.fillStyle = '#ffffff';
-    
+
     ctx.fillText(`⭐ Final Score: ${score}`, gameWidth / 2, gameHeight / 2 - 30);
     ctx.fillText(`📈 Level: ${level}`, gameWidth / 2, gameHeight / 2 + 15);
     ctx.fillText(`🔥 Best Streak: ${maxStreak}`, gameWidth / 2, gameHeight / 2 + 60);
@@ -1789,17 +1799,17 @@ function drawGameOver() {
     const accuracy = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 100;
     ctx.fillText(`🎯 Accuracy: ${accuracy}%`, gameWidth / 2, gameHeight / 2 + 105);
 
-    // Export to PDF button hint
+
     ctx.font = '600 18px "Segoe UI", Arial, sans-serif';
     ctx.fillStyle = 'rgba(99, 102, 241, 0.9)';
     ctx.fillText('📄 Export to PDF', gameWidth / 2, gameHeight / 2 + 145);
 
-    // Restart prompt with animation hint
+
     ctx.font = '600 20px "Segoe UI", Arial, sans-serif';
     ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
     ctx.fillText('Press R or tap to restart', gameWidth / 2, gameHeight / 2 + 180);
 
-    // Decorative line
+
     ctx.strokeStyle = 'rgba(251, 191, 36, 0.4)';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -1989,23 +1999,23 @@ document.getElementById('rightButton').addEventListener('click', moveRight);
 gameCanvas.addEventListener('touchstart', (e) => {
     if (!isGameStarted) return;
     if (isGameOver) {
-        // Check if user tapped on PDF export area
+
         const touchX = getTouchX(e);
         const touchY = getTouchY(e);
         const pdfButtonY = gameHeight / 2 + 145;
         const pdfButtonHeight = 30;
-        
-        if (touchY >= pdfButtonY - pdfButtonHeight / 2 && 
+
+        if (touchY >= pdfButtonY - pdfButtonHeight / 2 &&
             touchY <= pdfButtonY + pdfButtonHeight / 2 &&
             touchX >= gameWidth / 2 - 100 &&
             touchX <= gameWidth / 2 + 100) {
-            // User tapped on PDF export button
+
             e.preventDefault();
             exportSessionToPDF();
             return;
         }
-        
-        // Otherwise restart the game
+
+
         resetGame();
         requestAnimationFrame(gameLoop);
         return;
@@ -2071,26 +2081,26 @@ gameCanvas.addEventListener('touchend', (e) => {
 
 gameCanvas.addEventListener('click', (e) => {
     if (!isGameStarted) return;
-    
-    // Handle game over screen clicks
+
+
     if (isGameOver) {
         const rect = gameCanvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
         const pdfButtonY = gameHeight / 2 + 145;
         const pdfButtonHeight = 30;
-        
-        if (y >= pdfButtonY - pdfButtonHeight / 2 && 
+
+        if (y >= pdfButtonY - pdfButtonHeight / 2 &&
             y <= pdfButtonY + pdfButtonHeight / 2 &&
             x >= gameWidth / 2 - 100 &&
             x <= gameWidth / 2 + 100) {
-            // User clicked on PDF export button
+
             exportSessionToPDF();
             return;
         }
         return;
     }
-    
+
     if (!currentWord || !showMeanings || meaningRevealActive) return;
     const rect = gameCanvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -2151,7 +2161,7 @@ if (colorlessToggle) {
 }
 if (darkModeButton) {
     darkModeButton.addEventListener('click', () => {
-        // Wait for dark mode class to be applied, then refresh colors
+
         const checkAndUpdate = () => {
             colors = getColors();
             if (isGameStarted) {
@@ -2161,8 +2171,8 @@ if (darkModeButton) {
                 drawContainers();
             }
         };
-        
-        // Check immediately and after a short delay to ensure class is applied
+
+
         setTimeout(checkAndUpdate, 50);
     });
 }
