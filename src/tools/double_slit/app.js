@@ -41,6 +41,9 @@ function getCSSColor(variableName) {
 
 function getDefaultColor(variableName) {
     const defaults = {
+        '--border-color': '#e2e8f0',
+        '--text-primary': '#1e293b',
+        '--text-secondary': '#64748b',
         '--text-muted': '#94a3b8',
         '--primary-color': '#ea8400'
     };
@@ -105,6 +108,11 @@ function updateStats() {
     const fringeSpacing = (wavelength * screenDistance * 1000) / slitSeparation;
     const visibleFringes = Math.floor((ch / 2) / (fringeSpacing * 0.02)) * 2 + 1;
     statFringes.textContent = Math.min(visibleFringes, 25);
+}
+
+function getFringeScale() {
+    const spacing = (wavelength * screenDistance) / slitSeparation;
+    return Math.max(6, spacing * 0.02);
 }
 
 function updatePresetButtons(activeBtn) {
@@ -254,7 +262,7 @@ function drawIncomingWaves(slitInfo) {
 }
 
 function drawScreen() {
-    const screenX = cw - 60;
+    const screenX = cw - 120;
     const screenWidth = 8;
     const cy = ch / 2;
 
@@ -271,21 +279,14 @@ function drawScreen() {
 
 function drawIntensityPattern(screenX, slitInfo) {
     const cy = ch / 2;
-    const d = slitSeparation;
-    const lambda = wavelength;
-    const L = screenDistance;
-
-    const scale = (lambda * L) / d * 0.02;
+    const scale = getFringeScale();
     const waveColor = wavelengthToColor(wavelength);
 
     ctx.lineWidth = 2;
 
     for (let y = 20; y < ch - 20; y++) {
         const yPos = y - cy;
-        const theta = Math.atan2(Math.abs(yPos), screenDistance * 10);
-        const pathDiff = d * Math.sin(theta);
-        const phase = (2 * Math.PI * pathDiff) / lambda;
-        const intensity = Math.pow(Math.cos(phase / 2), 2);
+        const intensity = Math.pow(Math.cos(Math.PI * yPos / scale), 2);
 
         ctx.fillStyle = waveColor;
         ctx.globalAlpha = intensity * 0.9;
@@ -298,8 +299,8 @@ function drawIntensityPattern(screenX, slitInfo) {
 function drawIntensityPlot(slitInfo) {
     if (!showIntensityCheck.checked) return;
 
-    const plotX = cw - 45;
-    const plotWidth = 35;
+    const plotX = cw - 70;
+    const plotWidth = 55;
     const plotHeight = ch - 80;
     const cy = ch / 2;
 
@@ -309,9 +310,7 @@ function drawIntensityPlot(slitInfo) {
     ctx.lineWidth = 1;
     ctx.strokeRect(plotX, 40, plotWidth, plotHeight);
 
-    const d = slitSeparation;
-    const lambda = wavelength;
-    const L = screenDistance;
+    const scale = getFringeScale();
 
     ctx.beginPath();
     ctx.strokeStyle = getCSSColor('--primary-color');
@@ -319,12 +318,9 @@ function drawIntensityPlot(slitInfo) {
 
     for (let y = 40; y < 40 + plotHeight; y++) {
         const yPos = y - cy;
-        const theta = Math.atan2(Math.abs(yPos), L * 10);
-        const pathDiff = d * Math.sin(theta);
-        const phase = (2 * Math.PI * pathDiff) / lambda;
-        const intensity = Math.pow(Math.cos(phase / 2), 2);
+        const intensity = Math.pow(Math.cos(Math.PI * yPos / scale), 2);
 
-        const x = plotX + intensity * (plotWidth - 5);
+        const x = plotX + 6 + intensity * (plotWidth - 12);
         if (y === 40) {
             ctx.moveTo(x, y);
         } else {
@@ -336,11 +332,7 @@ function drawIntensityPlot(slitInfo) {
     ctx.fillStyle = getCSSColor('--text-muted');
     ctx.font = "10px Arial";
     ctx.textAlign = "center";
-    ctx.save();
-    ctx.translate(plotX + plotWidth + 12, cy);
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillText("Intensity", 0, 0);
-    ctx.restore();
+    ctx.fillText("Intensity", plotX + plotWidth / 2, 55);
 }
 
 function drawLabels(slitInfo, screenX) {
