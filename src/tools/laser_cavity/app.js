@@ -42,6 +42,7 @@ let frameCount = 0;
 let intensity = 0.01;
 let intensityHistory = [];
 const maxHistoryLength = 100;
+const outputBeamThreshold = 0.5;
 
 // Photon particles for animation
 let photons = [];
@@ -50,6 +51,46 @@ const maxPhotons = 50;
 // Atom energy level display
 let atoms = [];
 const numAtoms = 12;
+
+function getLayout() {
+    const paddingTop = 80;
+    const sectionGap = 30;
+    const cavityHeight = showEnergyLevels.checked ? 180 : 220;
+    const energyHeight = 110;
+    const minGraphHeight = 120;
+
+    const cavityTop = paddingTop;
+    const cavityBottom = cavityTop + cavityHeight;
+    const cavityLeft = 70;
+    const cavityRight = cw - 70;
+
+    let levelTop = cavityBottom + sectionGap;
+    let levelBottom = levelTop + energyHeight;
+    let graphTop = showEnergyLevels.checked ? levelBottom + sectionGap : cavityBottom + sectionGap;
+    const graphBottom = ch - 30;
+
+    if (graphTop > graphBottom - minGraphHeight) {
+        const squeeze = graphTop - (graphBottom - minGraphHeight);
+        if (showEnergyLevels.checked) {
+            levelTop -= squeeze;
+            levelBottom -= squeeze;
+            graphTop -= squeeze;
+        } else {
+            graphTop = graphBottom - minGraphHeight;
+        }
+    }
+
+    return {
+        cavityTop,
+        cavityBottom,
+        cavityLeft,
+        cavityRight,
+        levelTop,
+        levelBottom,
+        graphTop,
+        graphBottom
+    };
+}
 
 // Initialize atoms
 function initAtoms() {
@@ -81,7 +122,8 @@ function getDefaultColor(variableName) {
 // Calculate laser parameters
 function getParams() {
     const pump = +pumpSlider.value / 100;
-    const reflectivity = +reflectivitySlider.value / 100;
+    const outputReflectivity = +reflectivitySlider.value / 100;
+    const backReflectivity = 0.99;
     const length = +lengthSlider.value;
     const loss = +lossSlider.value / 100;
 
@@ -89,14 +131,24 @@ function getParams() {
     const gain = pump * 1.5;
 
     // Total losses = mirror transmission + internal losses
-    const mirrorLoss = 1 - reflectivity;
+    const mirrorLoss = (1 - backReflectivity) + (1 - outputReflectivity);
     const totalLoss = mirrorLoss + loss;
 
     // Threshold condition: gain > losses
     const isAboveThreshold = gain > totalLoss;
     const thresholdRatio = gain / Math.max(totalLoss, 0.01);
 
-    return { pump, reflectivity, length, loss, gain, totalLoss, isAboveThreshold, thresholdRatio };
+    return {
+        pump,
+        outputReflectivity,
+        backReflectivity,
+        length,
+        loss,
+        gain,
+        totalLoss,
+        isAboveThreshold,
+        thresholdRatio
+    };
 }
 
 // Update stats display
@@ -249,16 +301,17 @@ function createPhoton(x, direction) {
 // Update simulation state
 function updateSimulation() {
     const params = getParams();
+    const roundTripScale = 10 / Math.max(params.length, 1);
 
     // Update intensity based on gain vs loss
     if (params.isAboveThreshold) {
         // Exponential growth towards saturation
         const saturationIntensity = (params.gain - params.totalLoss) * 10;
-        intensity += (saturationIntensity - intensity) * 0.02;
+        intensity += (saturationIntensity - intensity) * 0.02 * roundTripScale;
         intensity = Math.min(intensity, 10);
     } else {
         // Decay below threshold
-        intensity *= 0.98;
+        intensity *= 1 - (0.02 * roundTripScale);
         intensity = Math.max(intensity, 0.01);
     }
 
@@ -269,8 +322,8 @@ function updateSimulation() {
     }
 
     // Update atoms - excitation and de-excitation
-    const excitationProb = params.pump * 0.05;
-    const stimulatedProb = intensity * 0.02 * params.pump;
+    const excitationProb = Math.min(params.pump * 0.05 * roundTripScale, 1);
+    const stimulatedProb = Math.min(intensity * 0.02 * params.pump * roundTripScale, 1);
 
     atoms.forEach(atom => {
         atom.transitionTimer = Math.max(0, atom.transitionTimer - 1);
@@ -287,7 +340,7 @@ function updateSimulation() {
                 if (params.isAboveThreshold) {
                     createPhoton(atom.x, Math.random() < 0.5 ? 1 : -1);
                 }
-            } else if (atom.excited && Math.random() < 0.01) {
+            } else if (atom.excited && Math.random() < Math.min(0.01 * roundTripScale, 1)) {
                 // Spontaneous emission (random direction, usually lost)
                 atom.excited = false;
                 atom.transitionTimer = 10;
@@ -296,14 +349,14 @@ function updateSimulation() {
     });
 
     // Update photons
-    const photonSpeed = 0.015;
+    const photonSpeed = 0.015 * roundTripScale;
     photons = photons.filter(photon => {
         photon.x += photon.direction * photonSpeed;
         photon.age++;
 
         // Reflect at mirrors
         if (photon.x <= 0.1) {
-            if (Math.random() < params.reflectivity) {
+            if (Math.random() < params.backReflectivity) {
                 photon.x = 0.1;
                 photon.direction = 1;
                 // Stimulated emission - create another photon
@@ -314,7 +367,7 @@ function updateSimulation() {
                 return false; // Photon escapes or is absorbed
             }
         } else if (photon.x >= 0.9) {
-            if (Math.random() < params.reflectivity * 0.95) { // Output coupler has slightly less reflectivity
+            if (Math.random() < params.outputReflectivity) {
                 photon.x = 0.9;
                 photon.direction = -1;
                 if (params.isAboveThreshold && Math.random() < params.gain * 0.3) {
@@ -326,7 +379,7 @@ function updateSimulation() {
         }
 
         // Remove old photons due to losses
-        if (Math.random() < params.loss * 0.02) {
+        if (Math.random() < params.loss * 0.02 * roundTripScale) {
             return false;
         }
 
@@ -334,7 +387,7 @@ function updateSimulation() {
     });
 
     // Spontaneously add photons based on pump rate
-    if (Math.random() < params.pump * 0.1 && photons.length < maxPhotons * 0.5) {
+    if (Math.random() < params.pump * 0.1 * roundTripScale && photons.length < maxPhotons * 0.5) {
         createPhoton(0.3 + Math.random() * 0.4, Math.random() < 0.5 ? 1 : -1);
     }
 }
@@ -342,10 +395,11 @@ function updateSimulation() {
 // Drawing functions
 function drawCavity() {
     const params = getParams();
-    const cavityTop = 80;
-    const cavityBottom = showEnergyLevels.checked ? 280 : 380;
-    const cavityLeft = 70;
-    const cavityRight = cw - 70;
+    const layout = getLayout();
+    const cavityTop = layout.cavityTop;
+    const cavityBottom = layout.cavityBottom;
+    const cavityLeft = layout.cavityLeft;
+    const cavityRight = layout.cavityRight;
 
     // Draw gain medium (rectangle in center)
     const gainLeft = cavityLeft + 80;
@@ -387,7 +441,7 @@ function drawCavity() {
     ctx.fillText("(R=" + reflectivitySlider.value + "%)", cavityRight, cavityBottom + 35);
 
     // Draw output beam if above threshold
-    if (params.isAboveThreshold && intensity > 0.5) {
+    if (params.isAboveThreshold && intensity > outputBeamThreshold) {
         const beamIntensity = Math.min(intensity / 5, 1);
         const gradient = ctx.createLinearGradient(cavityRight, 0, cavityRight + 100, 0);
         gradient.addColorStop(0, `rgba(255, 0, 0, ${beamIntensity})`);
@@ -430,8 +484,9 @@ function drawEnergyLevels() {
     if (!showEnergyLevels.checked) return;
 
     const params = getParams();
-    const levelTop = 320;
-    const levelBottom = 420;
+    const layout = getLayout();
+    const levelTop = layout.levelTop;
+    const levelBottom = layout.levelBottom;
     const levelLeft = 100;
     const levelRight = cw - 100;
     const levelWidth = levelRight - levelLeft;
@@ -558,8 +613,9 @@ function drawIntensityGraph() {
     const params = getParams();
     const graphLeft = 100;
     const graphRight = cw - 100;
-    const graphTop = showEnergyLevels.checked ? 440 : 400;
-    const graphBottom = ch - 20;
+    const layout = getLayout();
+    const graphTop = layout.graphTop;
+    const graphBottom = layout.graphBottom;
     const graphWidth = graphRight - graphLeft;
     const graphHeight = graphBottom - graphTop;
 
@@ -598,18 +654,18 @@ function drawIntensityGraph() {
     ctx.restore();
 
     // Draw threshold line
-    const thresholdY = graphBottom - (0.5 / 10) * graphHeight;
-    ctx.strokeStyle = "#f59e0b";
+    const beamThresholdY = graphBottom - (outputBeamThreshold / 10) * graphHeight;
+    ctx.strokeStyle = "#ef4444";
     ctx.lineWidth = 1;
     ctx.setLineDash([5, 5]);
     ctx.beginPath();
-    ctx.moveTo(graphLeft, thresholdY);
-    ctx.lineTo(graphRight, thresholdY);
+    ctx.moveTo(graphLeft, beamThresholdY);
+    ctx.lineTo(graphRight, beamThresholdY);
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = "#f59e0b";
+    ctx.fillStyle = "#ef4444";
     ctx.textAlign = "right";
-    ctx.fillText("Threshold", graphRight + 5, thresholdY - 5);
+    ctx.fillText("Output Beam", graphRight + 5, beamThresholdY - 5);
 
     // Draw intensity history
     if (intensityHistory.length > 1) {
