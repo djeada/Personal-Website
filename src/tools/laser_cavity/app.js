@@ -63,8 +63,8 @@ function getLayout() {
 
     const cavityTop = paddingTop;
     const cavityBottom = cavityTop + cavityHeight;
-    const cavityLeft = 70;
-    const cavityRight = cw - 70;
+    const cavityLeft = 110;
+    const cavityRight = cw - 110;
 
     let levelTop = cavityBottom + cavityLabelSpace + sectionGap + cardPaddingTop;
     let levelBottom = levelTop + energyHeight;
@@ -406,8 +406,8 @@ function drawCavity() {
     const cavityRight = layout.cavityRight;
 
     // Draw gain medium (rectangle in center)
-    const gainLeft = cavityLeft + 80;
-    const gainRight = cavityRight - 80;
+    const gainLeft = cavityLeft + 60;
+    const gainRight = cavityRight - 60;
     ctx.fillStyle = params.isAboveThreshold ? "rgba(255, 100, 100, 0.3)" : "rgba(200, 200, 200, 0.3)";
     ctx.fillRect(gainLeft, cavityTop, gainRight - gainLeft, cavityBottom - cavityTop);
     ctx.strokeStyle = getCSSColor('--text-muted');
