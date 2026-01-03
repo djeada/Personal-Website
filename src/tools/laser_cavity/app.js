@@ -42,7 +42,7 @@ let frameCount = 0;
 let intensity = 0.01;
 let intensityHistory = [];
 const maxHistoryLength = 100;
-const outputBeamThreshold = 0.5;
+const outputBeamThreshold = 0.3;
 
 // Photon particles for animation
 let photons = [];
@@ -54,12 +54,12 @@ const numAtoms = 12;
 
 function getLayout() {
     const paddingTop = 80;
-    const sectionGap = 30;
+    const sectionGap = 36;
     const cavityHeight = showEnergyLevels.checked ? 180 : 220;
     const energyHeight = 110;
-    const minGraphHeight = 120;
-    const cavityLabelSpace = 50;
-    const cardPaddingTop = 30;
+    const minGraphHeight = 140;
+    const cavityLabelSpace = 60;
+    const cardPaddingTop = 32;
 
     const cavityTop = paddingTop;
     const cavityBottom = cavityTop + cavityHeight;
@@ -446,13 +446,13 @@ function drawCavity() {
 
     // Draw output beam if above threshold
     if (params.isAboveThreshold && intensity > outputBeamThreshold) {
-        const beamIntensity = Math.min(intensity / 5, 1);
+        const beamIntensity = Math.min(intensity / 4, 1);
         const gradient = ctx.createLinearGradient(cavityRight, 0, cavityRight + 100, 0);
         gradient.addColorStop(0, `rgba(255, 0, 0, ${beamIntensity})`);
         gradient.addColorStop(1, `rgba(255, 0, 0, 0)`);
 
         ctx.fillStyle = gradient;
-        const beamHeight = 20 + intensity * 5;
+        const beamHeight = 24 + intensity * 8;
         ctx.fillRect(cavityRight, (cavityTop + cavityBottom) / 2 - beamHeight / 2, 100, beamHeight);
 
         // Beam label
