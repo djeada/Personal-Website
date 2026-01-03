@@ -96,19 +96,26 @@ def change_title_in_head(html: str) -> str:
     soup = BeautifulSoup(html, "html.parser")
 
     title_text = None
-    h1 = soup.find("h1")
-    if h1 and h1.get_text(strip=True):
-        title_text = h1.get_text(strip=True)
-    else:
-        header = soup.find("header")
-        if header:
-            h1_in_header = header.find("h1")
-            if h1_in_header and h1_in_header.get_text(strip=True):
-                title_text = h1_in_header.get_text(strip=True)
-        if not title_text:
-            h2 = soup.find("h2")
-            if h2 and h2.get_text(strip=True):
-                title_text = h2.get_text(strip=True)
+    article_body = soup.find("article-section", {"id": "article-body"})
+    if article_body:
+        first_heading = article_body.find(["h1", "h2", "h3", "h4"])
+        if first_heading and first_heading.get_text(strip=True):
+            title_text = first_heading.get_text(strip=True)
+
+    if not title_text:
+        h1 = soup.find("h1")
+        if h1 and h1.get_text(strip=True):
+            title_text = h1.get_text(strip=True)
+        else:
+            header = soup.find("header")
+            if header:
+                h1_in_header = header.find("h1")
+                if h1_in_header and h1_in_header.get_text(strip=True):
+                    title_text = h1_in_header.get_text(strip=True)
+            if not title_text:
+                h2 = soup.find("h2")
+                if h2 and h2.get_text(strip=True):
+                    title_text = h2.get_text(strip=True)
 
     if not title_text:
         return str(soup)
