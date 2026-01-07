@@ -163,12 +163,12 @@ function drawAxesWaves() {
     const axisColor = getCSSColor('--text-muted');
     ctx.strokeStyle = axisColor;
     ctx.lineWidth = 1;
-    
+
     ctx.beginPath();
     ctx.moveTo(30, cy);
     ctx.lineTo(cw - 30, cy);
     ctx.stroke();
-    
+
     ctx.beginPath();
     ctx.moveTo(40, 60);
     ctx.lineTo(40, ch - 60);
@@ -340,14 +340,14 @@ function drawAll() {
         drawPhasorDiagram();
     } else {
         drawAxesWaves();
-        
+
         if (showWave1Check.checked) {
             drawWave(1, 0, 1, "#3b82f6", 0.5);
         }
         if (showWave2Check.checked) {
             drawWave(ampRatio, phase, waveRatio, "#22c55e", 0.5);
         }
-        
+
         drawResultantWave();
         drawLegend();
     }

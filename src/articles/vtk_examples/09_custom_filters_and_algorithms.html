@@ -33,7 +33,7 @@
             },
             "url": "https://adamdjellouli.com/articles/vtk_examples/09_custom_filters_and_algorithms",
             "description": "Creating custom filters and algorithms opens up a world of possibilities for tailored data processing and visualization.",
-            "dateModified": "2025-12-30"
+            "dateModified": "2026-01-05"
         }
     </script>
 </head>
@@ -119,13 +119,13 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: December 30, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: January 05, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="developing-custom-filters-and-algorithms-in-vtk">Developing Custom Filters and Algorithms in VTK</h2>
             <p>Creating custom filters and algorithms opens up a world of possibilities for tailored data processing and visualization. By extending VTK's capabilities, specialized techniques can be introduced that meet the unique needs of scientific research, engineering, medical imaging, or data analysis.</p>
             <p>The reason custom filters matter is that real projects rarely fit perfectly inside “stock” tooling. Built-in filters cover the common cases, but the moment a workflow needs a domain-specific metric, a bespoke feature extractor, or a new way to manipulate geometry, a custom filter turns that requirement into a reusable pipeline block instead of a one-off script.</p>
-            <p><strong>Do:</strong> treat custom filters as reusable building blocks that can live alongside VTK’s built-ins.
-                <strong>Don’t:</strong> keep important computations outside the pipeline in ad-hoc loops that are hard to reuse, debug, or chain.
+            <p><strong>Do</strong> treat custom filters as reusable building blocks that can live alongside VTK’s built-ins.
+                <strong>Don’t</strong> keep important computations outside the pipeline in ad-hoc loops that are hard to reuse, debug, or chain.
             </p>
             <p>VTK comes with a broad range of built-in filters and classes that cover many common visualization tasks, but there may be occasions when you need more specific functionality. For instance, you might need to process data from specialized scientific instruments, create a custom metric for point analysis, or experiment with novel geometry-manipulation algorithms. In these cases, developing a custom filter allows you to:</p>
             <ul>
@@ -139,8 +139,8 @@
             <h3 id="understanding-the-vtk-pipeline">Understanding the VTK Pipeline</h3>
             <p>The VTK pipeline is the backbone of VTK’s data processing and visualization workflow. It’s designed around a demand-driven architecture, meaning that data flows through the pipeline when something downstream (like a renderer) requests it. The pipeline consists of sources, filters, and mappers, connected in a sequence where each filter takes data from its predecessor, processes it, and passes it on to the next stage.</p>
             <p>The “why” behind this design is simple: pipelines make large workflows scalable. Each step does one job, and everything downstream benefits from that one job being done consistently. It also means custom filters should behave like good citizens: read inputs, write outputs, and only compute when asked.</p>
-            <p><strong>Do:</strong> keep each pipeline stage focused on a single responsibility.
-                <strong>Don’t:</strong> mix rendering/UI logic into a data-processing filter.
+            <p><strong>Do</strong> keep each pipeline stage focused on a single responsibility.
+                <strong>Don’t</strong> mix rendering/UI logic into a data-processing filter.
             </p>
             <p>Here’s a simple ASCII diagram illustrating the VTK pipeline:</p>
             <div>
@@ -158,8 +158,8 @@
             <h3 id="steps-to-create-a-custom-filter">Steps to Create a Custom Filter</h3>
             <p>Building a custom filter in VTK is a multi-step process that ensures your new filter integrates seamlessly with the existing framework. Below is an outline of the typical steps you’ll follow:</p>
             <p>These steps exist so a custom filter doesn’t just “work once,” but continues working as workflows grow: more data, more filters, more outputs, more parameters. Following the conventions is what unlocks interoperability.</p>
-            <p><strong>Do:</strong> follow VTK conventions even in small prototypes—prototypes tend to become production.
-                <strong>Don’t:</strong> skip setters/getters and <code>Modified()</code> calls; stale pipelines are a common source of confusion.
+            <p><strong>Do</strong> follow VTK conventions even in small prototypes—prototypes tend to become production.
+                <strong>Don’t</strong> skip setters/getters and <code>Modified()</code> calls; stale pipelines are a common source of confusion.
             </p>
             <p>I. Identify Your Data and Goals</p>
             <p>Determine the type of data you want to process and the computations or transformations you intend to apply. For example, are you dealing with polygonal data (<code>vtkPolyData</code>), image data (<code>vtkImageData</code>), or unstructured grids (<code>vtkUnstructuredGrid</code>)? Identifying this will help you choose the appropriate base class.</p>
@@ -191,8 +191,8 @@
                 <li><code>vtkAlgorithm</code> is the most general and flexible if you have an unusual data structure or want to support multiple data types.</li>
             </ul>
             <p>Choosing the right base class is mostly about correctness and convenience. It reduces boilerplate and ensures that input/output expectations match the dataset type. That makes the filter easier to use and harder to misuse.</p>
-            <p><strong>Do:</strong> pick the most specific base class that matches the primary input type.
-                <strong>Don’t:</strong> default to <code>vtkAlgorithm</code> when the data type is known and stable.
+            <p><strong>Do</strong> pick the most specific base class that matches the primary input type.
+                <strong>Don’t</strong> default to <code>vtkAlgorithm</code> when the data type is known and stable.
             </p>
             <p>III. Subclass the Chosen Base Class</p>
             <p>In languages like C++, you’ll create a header (<code>.h</code>) and implementation (<code>.cxx</code>) file, then subclass the base class. In Python, you can just subclass directly. Your subclass should define any member variables you need (like parameters for your filter) and override the relevant methods.</p>
@@ -205,8 +205,8 @@
             </ul>
             <p>Properly managing input and output ports is necessary. You need to specify how many inputs your filter expects (<code>SetNumberOfInputPorts</code>) and how many outputs it will provide (<code>SetNumberOfOutputPorts</code>) if you deviate from the defaults.</p>
             <p>The important idea is that computation belongs in the execution phase (<code>RequestData()</code>), not sprinkled throughout initialization or setters. That keeps results consistent and makes sure pipeline updates happen at the right time.</p>
-            <p><strong>Do:</strong> compute in <code>RequestData()</code> and treat setters as configuration only.
-                <strong>Don’t:</strong> hide heavy computation inside setters or constructors.
+            <p><strong>Do</strong> compute in <code>RequestData()</code> and treat setters as configuration only.
+                <strong>Don’t</strong> hide heavy computation inside setters or constructors.
             </p>
             <p>V. Expose Parameters and Methods</p>
             <p>If your filter has parameters (e.g., a threshold value, a coordinate, or a scaling factor), create setter and getter methods so users can configure your filter. Keep them in sync with the VTK naming conventions (e.g., <code>SetX</code>, <code>GetX</code>, etc.) if possible.</p>
@@ -223,8 +223,8 @@
                 <li>Engineering – to measure distance from a design feature to a reference location, or to measure design tolerances.</li>
             </ul>
             <p>This example is a good “starter” custom filter because it demonstrates the classic VTK pattern: compute something per point, store it as a VTK array, then let the rest of VTK use it (coloring, thresholding, contours, statistics). That’s the core loop of many real filters.</p>
-            <p><strong>Do:</strong> store derived results as VTK arrays (point data or cell data) so they are usable downstream.
-                <strong>Don’t:</strong> keep computed results only in Python lists if they are meant for visualization or pipeline processing.
+            <p><strong>Do</strong> store derived results as VTK arrays (point data or cell data) so they are usable downstream.
+                <strong>Don’t</strong> keep computed results only in Python lists if they are meant for visualization or pipeline processing.
             </p>
             <p>When the distance for each point is computed, it’s often stored in a scalar array so it can be used for:</p>
             <ul>
@@ -320,8 +320,8 @@ class DistanceToPointFilter(vtk.vtkPolyDataAlgorithm):
 # to specify extents or other meta-information.</code></pre>
             </div>
             <p>This implementation focuses on being pipeline-friendly: it reads from the pipeline, writes back into the output object, and stores results in point data. That keeps the output immediately usable by mappers and by any other filters that operate on scalar fields.</p>
-            <p><strong>Do:</strong> use <code>ShallowCopy</code> when adding arrays to an existing dataset without changing geometry.
-                <strong>Don’t:</strong> use <code>DeepCopy</code> unless independent geometry/connectivity duplication is actually required.
+            <p><strong>Do</strong> use <code>ShallowCopy</code> when adding arrays to an existing dataset without changing geometry.
+                <strong>Don’t</strong> use <code>DeepCopy</code> unless independent geometry/connectivity duplication is actually required.
             </p>
             <p>Here’s a breakdown of what’s happening in <code>RequestData()</code>:</p>
             <ul>
@@ -337,10 +337,10 @@ class DistanceToPointFilter(vtk.vtkPolyDataAlgorithm):
             <h4 id="using-the-custom-distance-filter">Using the Custom Distance Filter</h4>
             <p>This custom VTK filter calculates the Euclidean distance from each point in a vtkPolyData to a specified target point. Below is an example demonstrating how to use it with a sphere visualization.</p>
             <p>The key is to connect the filter into the pipeline so it behaves like any other VTK algorithm: source → filter → mapper. That ensures updates happen correctly and makes it easy to insert additional filters later.</p>
-            <p><strong>Do:</strong> connect with <code>SetInputConnection(...)</code> when working with sources/filters.
-                <strong>Don’t:</strong> rely on non-pipeline shortcuts when the goal is a reusable workflow.
+            <p><strong>Do</strong> connect with <code>SetInputConnection(...)</code> when working with sources/filters.
+                <strong>Don’t</strong> rely on non-pipeline shortcuts when the goal is a reusable workflow.
             </p>
-            <p><strong>Creating and configuring the distance filter:</strong></p>
+            <p><strong>Creating and configuring the distance filter</strong></p>
             <div>
                 <pre><code class="language-python">import vtk
 
@@ -358,7 +358,7 @@ distance_filter.Update()
 
 output_data = distance_filter.GetOutput()</code></pre>
             </div>
-            <p><strong>Setting up the visualization pipeline with color mapping:</strong></p>
+            <p><strong>Setting up the visualization pipeline with color mapping</strong></p>
             <div>
                 <pre><code class="language-python"># Create mapper and configure scalar visualization
 mapper = vtk.vtkPolyDataMapper()
