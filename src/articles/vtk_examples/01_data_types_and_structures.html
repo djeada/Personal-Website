@@ -33,7 +33,7 @@
             },
             "url": "https://adamdjellouli.com/articles/vtk_examples/01_data_types_and_structures",
             "description": "VTK is built to carry real-world 2D/3D data all the way from \u201cnumbers in memory\u201d to \u201csomething you can see and reason about.\u201d That means it needs data types that don\u2019t just store values, but also store where those values live in space and how they connect.",
-            "dateModified": "2026-01-05"
+            "dateModified": "2026-01-12"
         }
     </script>
 </head>
@@ -78,13 +78,14 @@
                 <h2>Table of Contents</h2>
                 <ol><a href="#data-types-and-structures">Data Types and Structures</a>
                     <ol>
+                        <li><a href="#topology-vs-geometry">Topology vs. Geometry</a></li>
                         <li><a href="#vtkdataobject">vtkDataObject</a></li>
                         <li><a href="#vtkimagedata">vtkImageData</a></li>
                         <li><a href="#vtkrectilineargrid">vtkRectilinearGrid</a></li>
                         <li><a href="#vtkpolydata">vtkPolyData</a></li>
                         <li><a href="#vtkstructuredgrid">vtkStructuredGrid</a></li>
                         <li><a href="#vtkunstructuredgrid">vtkUnstructuredGrid</a></li>
-                        <li><a href="#structured-vs-unstructured-grids">Structured vs Unstructured Grids</a></li>
+                        <li><a href="#structured-vs-unstructured-grids">Structured vs. Unstructured Grids</a></li>
                         <li><a href="#multiblock-dataset">Multiblock Dataset</a></li>
                         <li><a href="#choosing-the-right-data-structure">Choosing the Right Data Structure</a></li>
                     </ol>
@@ -120,12 +121,67 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 05, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: January 12, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="data-types-and-structures">Data Types and Structures</h2>
             <p>VTK is built to carry <em>real-world</em> 2D/3D data all the way from “numbers in memory” to “something you can see and reason about.” That means it needs data types that don’t just store values, but also store <strong>where</strong> those values live in space and <strong>how</strong> they connect. If you pick the right structure early, everything downstream, filters, rendering, memory usage, speed, gets smoother. Pick the wrong one, and you’ll spend time converting, losing information, or wondering why performance tanks.</p>
             <p>VTK uses 3D geometries, including points, lines, polygons, and volumes. It handles images and volumetric data for 2D and 3D visualization. It works with scalar, vector, and tensor fields for complex data representation. Supports structured and unstructured grid types for various spatial data layouts. Includes support for time-series data and hierarchical datasets.</p>
             <p>The mental model to keep in your pocket is simple: <strong>data in VTK is more than values</strong>. It’s values + geometry + topology + metadata. That combination is what lets VTK do “smart visualization” instead of just drawing triangles.</p>
+            <h3 id="topology-vs-geometry">Topology vs. Geometry</h3>
+            <p>Topology, <em>How things are connected</em></p>
+            <p><strong>Topology</strong> describes the <strong>connectivity and structure</strong> of the mesh:</p>
+            <ul>
+                <li>Which points form a cell</li>
+                <li>Which cells are neighbors</li>
+                <li>How cells are arranged logically</li>
+                <li>Whether indexing is regular or arbitrary</li>
+            </ul>
+            <p>Topology answers questions like:</p>
+            <ul>
+                <li>“Which points make up this cell?”</li>
+                <li>“What cell is next to this one?”</li>
+                <li>“Is there a predictable i-j-k layout?”</li>
+            </ul>
+            <p>📌 <strong>Topology does <em>not</em> care about distances, angles, or shape.</strong></p>
+            <p>Geometry, <em>Where things are in space</em></p>
+            <p><strong>Geometry</strong> describes the <strong>actual spatial position</strong> of points:</p>
+            <ul>
+                <li>Coordinates of each point</li>
+                <li>Cell shape, size, and orientation</li>
+                <li>Curvature, skew, and deformation</li>
+            </ul>
+            <p>Geometry answers questions like:</p>
+            <ul>
+                <li>“Where is this point in 3D space?”</li>
+                <li>“Is this cell stretched, bent, or rotated?”</li>
+                <li>“Does this mesh follow a curved boundary?”</li>
+            </ul>
+            <p>📌 <strong>Geometry does <em>not</em> care about connectivity rules—only positions.</strong></p>
+            <blockquote>
+                <p><strong>Topology is about “who is connected to whom.”
+                        Geometry is about “where they are.”</strong></p>
+            </blockquote>
+            <p>You can:</p>
+            <ul>
+                <li>Change geometry without changing topology (warp a structured grid)</li>
+                <li>Change topology without changing geometry (re-mesh the same shape)</li>
+            </ul>
+            <p>VTK grid types encode <strong>which of these freedoms you’re allowed to change</strong>.</p>
+            <p>Imagine a cube:</p>
+            <p>Same <strong>topology</strong>:</p>
+            <ul>
+                <li>8 points</li>
+                <li>6 faces</li>
+                <li>1 cell</li>
+            </ul>
+            <p>Different <strong>geometry</strong>:</p>
+            <ul>
+                <li>Perfect cube</li>
+                <li>Stretched box</li>
+                <li>Skewed hexahedron</li>
+                <li>Curved boundary-following cell</li>
+            </ul>
+            <p>All are <strong>topologically identical</strong>, but geometrically different.</p>
             <h3 id="vtkdataobject">vtkDataObject</h3>
             <p>Before you meet the “fancy” datasets, it helps to understand the trunk of the tree. <code>vtkDataObject</code> is VTK’s universal container: it’s the “everything starts here” base class. You care because once you know what <em>every</em> data object guarantees, you can navigate the VTK ecosystem without feeling like you’re memorizing random class names.</p>
             <p><strong>Do</strong> treat <code>vtkDataObject</code> as the shared contract. When you’re writing general pipelines or utilities, thinking at this level keeps your code flexible.
@@ -187,6 +243,18 @@
                 <li>CT and MRI scans, where vtkImageData stores pixel values at each grid point for 3D visualization.</li>
             </ul>
             <p><img alt="image_data" src="https://github.com/djeada/Vtk-Examples/assets/37275728/1dd504e1-9532-4863-bd88-29f03ca6e449" /></p>
+            <p><em>Allowed cells</em></p>
+            <ul>
+                <li>Voxel (3D)</li>
+                <li>Pixel (2D)</li>
+                <li>Line (1D)</li>
+            </ul>
+            <p><em>Notes</em></p>
+            <ul>
+                <li>Uniform spacing only</li>
+                <li>Axis-aligned</li>
+                <li>Implicit topology and geometry</li>
+            </ul>
             <h3 id="vtkrectilineargrid">vtkRectilinearGrid</h3>
             <p>Think of <code>vtkRectilinearGrid</code> as “structured, but with stretchy spacing.” Topology is still a neat grid, but the points along each axis can be unevenly spaced. This matters when your data’s resolution changes by design, common in scientific models where you want more detail in certain regions without paying the cost everywhere else.</p>
             <p><strong>Do</strong> use this when you still want the simplicity of a structured grid, but your sampling is non-uniform.
@@ -198,17 +266,74 @@
                 <li>Climate models with varying altitude resolution, or terrain data with resolution changing with slope.</li>
             </ul>
             <p><img alt="rectilinear_grid" src="https://github.com/djeada/Vtk-Examples/assets/37275728/1fd2f697-73aa-40aa-a319-302f37751b63" /></p>
+            <p><em>Allowed cells</em></p>
+            <ul>
+                <li>Voxel (3D)</li>
+                <li>Pixel (2D)</li>
+                <li>Line (1D)</li>
+            </ul>
+            <p><em>Notes</em></p>
+            <ul>
+                <li>Same cell types as <code>vtkImageData</code></li>
+                <li>Non-uniform spacing allowed</li>
+                <li>Cells are always axis-aligned</li>
+                <li>No skewing, no warping</li>
+            </ul>
+            <p>📌 <em>Important:</em></p>
+            <p>Rectilinear grids <strong>do not introduce new cell shapes</strong>, only variable spacing.</p>
             <h3 id="vtkpolydata">vtkPolyData</h3>
             <p>If <code>vtkImageData</code> is “voxels,” <code>vtkPolyData</code> is “surfaces.” This is the workhorse for meshes you’d actually model or export: triangle surfaces, polygon soups, lines, contours, and anything you’d describe as <em>geometry you can touch</em>. You care because most interactive 3D models and many visualization outputs end up as <code>vtkPolyData</code>.</p>
             <p><strong>Do</strong> use <code>vtkPolyData</code> for surfaces, contour results, boundaries, and models that are primarily skins/shells.
                 <strong>Don’t</strong> store volumetric cells here, <code>vtkPolyData</code> isn’t meant for full 3D cell types like tetrahedra or hexahedra.
             </p>
             <ul>
-                <li><strong>Description</strong>: Represents a dataset comprising points, vertices, lines, polygons, and triangle strips.</li>
-                <li><strong>Applications</strong>: Ideal for surface meshes and 3D models.</li>
-                <li><strong>Examples</strong>: Models of 3D objects (e.g., vehicles, buildings), terrain surfaces (mountains, valleys).</li>
+                <li>Represents a dataset comprising points, vertices, lines, polygons, and triangle strips.</li>
+                <li>Ideal for surface meshes and 3D models.</li>
+                <li>Models of 3D objects (e.g., vehicles, buildings), terrain surfaces (mountains, valleys).</li>
             </ul>
             <p><img alt="poly_data" src="https://github.com/djeada/VTK-Examples/assets/37275728/4c642d3b-ecd0-4397-9bdb-2e7a89095416" /></p>
+            <p><em>Cells Allowed in vtkPolyData</em></p>
+            <p>0D Cells (Points)</p>
+            <ul>
+                <li>Vertex</li>
+                <li>PolyVertex (multiple disconnected points)</li>
+            </ul>
+            <p>1D Cells (Lines)</p>
+            <ul>
+                <li>Line</li>
+                <li>PolyLine (connected line segments)</li>
+            </ul>
+            <p>2D Cells (Surfaces)</p>
+            <ul>
+                <li>Triangle</li>
+                <li>Quadrilateral</li>
+                <li>Polygon (n-gon)</li>
+                <li>TriangleStrip</li>
+            </ul>
+            <p><code>vtkPolyData</code> <strong>cannot</strong> contain:</p>
+            <ul>
+                <li>Tetrahedra</li>
+                <li>Hexahedra</li>
+                <li>Voxels</li>
+                <li>Wedges</li>
+                <li>Pyramids</li>
+                <li>Polyhedra</li>
+                <li>Any volumetric (3D) cells</li>
+            </ul>
+            <p>📌 If a cell encloses volume, it <strong>does not belong</strong> in <code>vtkPolyData</code>.|</p>
+            <p><code>vtkPolyData</code> is optimized for:</p>
+            <ul>
+                <li>Rendering speed</li>
+                <li>Surface-based algorithms</li>
+                <li>Graphics pipelines</li>
+            </ul>
+            <p>It assumes:</p>
+            <ul>
+                <li>No interior volume</li>
+                <li>No need for volumetric neighbors</li>
+                <li>No 3D cell traversal</li>
+            </ul>
+            <p>That’s why it’s <strong>much faster and lighter</strong> than volumetric grids—but also more limited.</p>
             <h3 id="vtkstructuredgrid">vtkStructuredGrid</h3>
             <p>A <code>vtkStructuredGrid</code> is where structure meets flexibility. The grid topology is still orderly (i,j,k indexing), but the points can warp through space, making it perfect for curvilinear coordinate systems and simulation meshes that bend around objects.</p>
             <p><strong>Do</strong> use this when you have a logical 3D grid layout but the geometry isn’t axis-aligned.
@@ -220,6 +345,25 @@
                 <li>Fluid flow simulations around objects, finite volume method simulations with a fixed cell division.</li>
             </ul>
             <p><img alt="structured_grid" src="https://github.com/djeada/VTK-Examples/assets/37275728/c55c5b5a-e6ae-45bc-aa3a-e591eda64e1d" /></p>
+            <p><strong>Allowed cells</strong></p>
+            <ul>
+                <li>Hexahedron (3D)</li>
+                <li>Quadrilateral (2D)</li>
+                <li>Line (1D)</li>
+            </ul>
+            <p><em>Notes</em></p>
+            <ul>
+                <li>Cells may be warped, skewed, or curved</li>
+                <li>Topology is still implicit (i-j-k)</li>
+                <li>Geometry is fully explicit</li>
+                <li>Hexahedra are <strong>not required to be axis-aligned</strong></li>
+            </ul>
+            <p>📌 <em>Important distinction:</em></p>
+            <p>A <strong>voxel</strong> is a special case of a <strong>hexahedron</strong>.
+                Structured grids use <strong>general hexes</strong>, not voxels.</p>
+            <p>So <code>vtkStructuredGrid</code> sounds so far very much like <code>vtkRectilinearGrid</code> but the crucial difference lies in how much geometric freedom each grid allows. While both data types share the same structured, i-j-k topology and implicit connectivity, a <code>vtkRectilinearGrid</code> restricts all grid lines to remain aligned with the Cartesian axes. Its geometry can only be stretched or compressed through non-uniform spacing along X, Y, and Z, making it memory-efficient and fast, but fundamentally limited to axis-aligned cells.</p>
+            <p>A <code>vtkStructuredGrid</code>, by contrast, removes this geometric constraint. Each point in the grid is stored explicitly and can occupy an arbitrary position in space, allowing the mesh to bend, skew, or follow curved boundaries while preserving its logical structure. This added flexibility comes at the cost of increased memory usage and slightly more expensive traversal, but it enables accurate representation of warped domains and boundary-fitted meshes that cannot be expressed using a rectilinear grid.</p>
+            <p>In practice, <code>vtkRectilinearGrid</code> should be preferred whenever axis-aligned geometry is sufficient, while <code>vtkStructuredGrid</code> becomes necessary when the grid must conform to complex or curved physical domains without abandoning structured topology.</p>
             <h3 id="vtkunstructuredgrid">vtkUnstructuredGrid</h3>
             <p><code>vtkUnstructuredGrid</code> is VTK’s “anything goes” dataset. It can mix cell types and represent very complex geometries. The tradeoff is that you have to explicitly store connectivity, which costs memory and computation, but you gain freedom.</p>
             <p>This is the one you choose when the world stops being neat: adaptive meshes, FEM simulations, irregular domains, complex anatomy, fractured geology, you name it.</p>
@@ -232,11 +376,56 @@
                 <li>Finite element method simulations with complex, dynamic domains, models of intricate 3D geometries (human brain, aircraft wings).</li>
             </ul>
             <p><img alt="unstructured_grid" src="https://github.com/djeada/VTK-Examples/assets/37275728/aa34d289-5cc4-4611-bae3-368b3ac49ac4" /></p>
-            <h3 id="structured-vs-unstructured-grids">Structured vs Unstructured Grids</h3>
-            <p>This is one of the most practical forks in the road. If you remember nothing else, remember this: <strong>structured grids buy you speed and simplicity</strong>, unstructured grids buy you <strong>geometric freedom</strong>. Your “best” choice is usually the simplest structure that still represents your data truthfully.</p>
-            <p><strong>Do</strong> pick structured when the indexing is predictable and the domain is regular-ish.
-                <strong>Don’t</strong> pick unstructured just because it sounds more powerful, it’s powerful, but you pay for it.
-            </p>
+            <p><strong>Allowed cells (all VTK cell types)</strong></p>
+            <p><em>1D</em></p>
+            <ul>
+                <li>Line</li>
+                <li>PolyLine</li>
+            </ul>
+            <p><em>2D</em></p>
+            <ul>
+                <li>Triangle</li>
+                <li>Quadrilateral</li>
+                <li>Polygon</li>
+                <li>TriangleStrip</li>
+                <li>Pixel (rare but allowed)</li>
+            </ul>
+            <p><em>3D</em></p>
+            <ul>
+                <li>Tetrahedron</li>
+                <li>Hexahedron</li>
+                <li>Voxel</li>
+                <li>Wedge (Prism)</li>
+                <li>Pyramid</li>
+                <li>Polyhedron</li>
+            </ul>
+            <p><em>Higher-order (quadratic / curved)</em></p>
+            <ul>
+                <li>Quadratic Line</li>
+                <li>Quadratic Triangle</li>
+                <li>Quadratic Quad</li>
+                <li>Quadratic Tetra</li>
+                <li>Quadratic Hexahedron</li>
+                <li>Bezier and Lagrange variants (if enabled)</li>
+            </ul>
+            <p><em>Notes</em></p>
+            <ul>
+                <li>Mixed cell types allowed in one mesh</li>
+                <li>Explicit connectivity</li>
+                <li>Maximum flexibility, maximum cost</li>
+            </ul>
+            <h3 id="structured-vs-unstructured-grids">Structured vs. Unstructured Grids</h3>
+            <p>This is one of the most important and practical decision points in VTK. If you remember only one thing, remember this:</p>
+            <blockquote>
+                <p><strong>Structured grids buy you speed and simplicity; unstructured grids buy you geometric freedom.</strong></p>
+            </blockquote>
+            <p>The “best” grid is almost always the <strong>simplest structure that can still represent your data faithfully</strong>. More flexibility comes with real costs—in memory, performance, and complexity.</p>
+            <p>As a rule of thumb:</p>
+            <ul>
+                <li><strong>Do</strong> choose structured grids when indexing is predictable and the domain is reasonably regular.</li>
+                <li><strong>Don’t</strong> choose unstructured grids just because they sound more powerful. They <em>are</em> powerful—but you pay for that power.</li>
+            </ul>
+            <p>High-level comparison:</p>
             <p>
             <table>
                 <tr>
@@ -245,9 +434,9 @@
                     <td><strong>Unstructured Grids</strong></td>
                 </tr>
                 <tr>
-                    <td><strong>Characteristics</strong></td>
-                    <td>Regular grids with fixed topology</td>
-                    <td>Irregular grids with flexible topology</td>
+                    <td><strong>Topology</strong></td>
+                    <td>Regular, fixed (i-j-k indexing)</td>
+                    <td>Irregular, explicitly defined</td>
                 </tr>
                 <tr>
                     <td><strong>Examples</strong></td>
@@ -256,16 +445,39 @@
                 </tr>
                 <tr>
                     <td><strong>Advantages</strong></td>
-                    <td>Easier to work with, more memory-efficient</td>
-                    <td>Highly versatile in handling complex shapes</td>
+                    <td>Memory-efficient, fast traversal, simpler algorithms</td>
+                    <td>Handles complex shapes and arbitrary topology</td>
                 </tr>
                 <tr>
                     <td><strong>Disadvantages</strong></td>
-                    <td>Limited flexibility in representing complex geometries</td>
-                    <td>Less memory-efficient and can be computationally intensive</td>
+                    <td>Limited geometric flexibility</td>
+                    <td>Higher memory use, slower traversal, more complex logic</td>
                 </tr>
             </table>
             </p>
+            <p>Structured grids come in multiple flavors, and you should prefer the most constrained one that still works.</p>
+            <p><strong>Choose <code>vtkRectilinearGrid</code> if:</strong></p>
+            <ul>
+                <li>Grid lines are axis-aligned</li>
+                <li>Spacing varies, but geometry remains straight</li>
+                <li>Performance and memory efficiency matter</li>
+                <li>Data comes from regular sampling</li>
+            </ul>
+            <p><strong>Choose <code>vtkStructuredGrid</code> if:</strong></p>
+            <ul>
+                <li>The grid must follow curved or warped geometry</li>
+                <li>Boundary layers or deformed domains are required</li>
+                <li>Topology is still logically structured</li>
+                <li>You want better performance than an unstructured grid</li>
+            </ul>
+            <p>A useful mental model is that many workflows <em>progressively relax constraints</em> only when necessary:</p>
+            <div>
+                <pre><code class="language-text">RectilinearGrid → StructuredGrid → UnstructuredGrid</code></pre>
+            </div>
+            <p>Each step increases geometric freedom, but also increases cost.</p>
+            <blockquote>
+                <p><strong>If you can describe point locations using only <code>X[i]</code>, <code>Y[j]</code>, and <code>Z[k]</code>, use <code>vtkRectilinearGrid</code>; otherwise, use <code>vtkStructuredGrid</code>.</strong></p>
+            </blockquote>
             <h3 id="multiblock-dataset">Multiblock Dataset</h3>
             <p>Once your datasets get big, or naturally split into parts, you’ll want a container that preserves that structure. <code>vtkMultiBlockDataSet</code> lets you keep data organized the way <em>you</em> think about it: domains, components, LOD levels, timesteps, regions, etc. This matters because organization isn’t just neatness, it affects pipeline clarity, debugging, and how easily you can process or render subsets.</p>
             <p><strong>Do</strong> use multiblock when your data is naturally “many datasets,” especially for multi-domain simulations or grouped assets.
