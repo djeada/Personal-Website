@@ -28,7 +28,14 @@ from urllib3.util.retry import Retry
 
 
 URL_TO_CATEGORY: Dict[str, str] = {
-    "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/quizzes/intro.md": "parallel_programming",
+    "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/quizzes/01_basic_terminology.md": "parallel_programming",
+    "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/quizzes/02_threading.md": "parallel_programming",
+    "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/quizzes/03_processes.md": "parallel_programming",
+    "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/quizzes/04_async.md": "parallel_programming",
+    "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/quizzes/05_distributed.md": "parallel_programming",
+    "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/quizzes/06_hardware.md": "parallel_programming",
+    "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/quizzes/07_performance.md": "parallel_programming",
+    "https://raw.githubusercontent.com/djeada/Parallel-And-Concurrent-Programming/master/quizzes/08_parallel_design.md": "parallel_programming",
     "https://raw.githubusercontent.com/djeada/Frontend-Notes/main/quizzes/html.md": "frontend",
     "https://raw.githubusercontent.com/djeada/Frontend-Notes/main/quizzes/css.md": "frontend",
     "https://raw.githubusercontent.com/djeada/Frontend-Notes/main/quizzes/js.md": "frontend",
