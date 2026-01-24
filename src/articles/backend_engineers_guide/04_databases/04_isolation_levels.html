@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Isolation Levels</title>
+    <meta content="Isolation levels in relational-database systems govern how simultaneously running transactions perceive one another’s changes." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/04_isolation_levels" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Isolation Levels",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/04_isolation_levels"
+            },
+            "url": "https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/04_isolation_levels",
+            "description": "Isolation levels in relational-database systems govern how simultaneously running transactions perceive one another\u2019s changes.",
+            "dateModified": "2026-01-24"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol><a href="#isolation-levels">Isolation Levels</a>
+                    <ol>
+                        <li><a href="#introduction-to-transaction-isolation">Introduction to Transaction Isolation</a>
+                            <ol>
+                                <li><a href="#the-acid-properties">The "ACID" Properties</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#concurrency-phenomena">Concurrency Phenomena</a>
+                            <ol>
+                                <li><a href="#dirty-reads">Dirty Reads</a></li>
+                                <li><a href="#non-repeatable-reads">Non-Repeatable Reads</a></li>
+                                <li><a href="#phantom-reads">Phantom Reads</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#isolation-level-definitions">Isolation Level Definitions</a>
+                            <ol>
+                                <li><a href="#1-read-uncommitted">1. Read Uncommitted</a></li>
+                                <li><a href="#2-read-committed">2. Read Committed</a></li>
+                                <li><a href="#3-repeatable-read">3. Repeatable Read</a></li>
+                                <li><a href="#4-serializable">4. Serializable</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#isolation-levels-in-popular-databases">Isolation Levels in Popular Databases</a>
+                            <ol>
+                                <li><a href="#postgresql">PostgreSQL</a></li>
+                                <li><a href="#mysql-innodb-">MySQL (InnoDB)</a></li>
+                                <li><a href="#sql-server">SQL Server</a></li>
+                                <li><a href="#oracle">Oracle</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#ansi-sql-commands-for-isolation-levels">ANSI SQL Commands for Isolation Levels</a></li>
+                        <li><a href="#illustrating-isolation-levels-with-an-example">Illustrating Isolation Levels with an Example</a>
+                            <ol>
+                                <li><a href="#dirty-read-read-uncommitted-">Dirty Read (Read Uncommitted)</a></li>
+                                <li><a href="#non-repeatable-read-read-committed-">Non-Repeatable Read (Read Committed)</a></li>
+                                <li><a href="#phantom-rows-repeatable-read-">Phantom Rows (Repeatable Read)</a></li>
+                                <li><a href="#serializable-no-phantoms">Serializable – No Phantoms</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#performance-and-locking-overheads">Performance and Locking Overheads</a></li>
+                        <li><a href="#choosing-the-right-isolation-level">Choosing the Right Isolation Level</a></li>
+                        <li><a href="#practical-examples">Practical Examples</a></li>
+                        <li><a href="#common-pitfalls-and-tips">Common Pitfalls and Tips</a></li>
+                    </ol>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Api Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/01_api_communication_protocols.html">Api Communication Protocols</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/02_rest.html">Rest</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/03_graphql.html">Graphql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/04_grpc.html">Grpc</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/05_state_management.html">State Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/06_data_transmission.html">Data Transmission</a></li>
+                        </ol>
+                    </li>
+                    <li>Network Communications<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/01_network_communications.html">Network Communications</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/02_tcp_and_udp.html">Tcp and Udp</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/03_http_protocol.html">Http Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/04_web_sockets.html">Web Sockets</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/05_metrics_and_analysis.html">Metrics and Analysis</a></li>
+                        </ol>
+                    </li>
+                    <li>Server Technologies<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/01_web_server_overview.html">Web Server Overview</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/02_static_dynamic_content.html">Static Dynamic Content</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/03_tomcat.html">Tomcat</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/04_apache.html">Apache</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/05_nginx.html">Nginx</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/06_forward_proxies.html">Forward Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/07_reverse_proxies.html">Reverse Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/08_load_balancing.html">Load Balancing</a></li>
+                        </ol>
+                    </li>
+                    <li>Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/01_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/02_transactions.html">Transactions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/03_indexes.html">Indexes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/04_isolation_levels.html">Isolation Levels</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/05_data_warehousing.html">Data Warehousing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/06_replication.html">Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/07_halloween_problem.html">Halloween Problem</a></li>
+                        </ol>
+                    </li>
+                    <li>Caching<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/01_caching_strategies.html">Caching Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/02_redis.html">Redis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/03_content_delivery_networks.html">Content Delivery Networks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/04_database_caching.html">Database Caching</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Processing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/01_pub_sub_vs_queue.html">Pub Sub vs Queue</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/02_messaging_system_integration.html">Messaging System Integration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/03_batch_processing.html">Batch Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing.html">Stream Processing</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Formats<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/01_protocol_buffers.html">Protocol Buffers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/02_xml.html">Xml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/03_json.html">Json</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/04_yaml.html">Yaml</a></li>
+                        </ol>
+                    </li>
+                    <li>Security<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/01_auth.html">Auth</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/02_tls.html">Tls</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/03_security_vulnerabilities.html">Security Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/04_security_best_practices_and_measures.html">Security Best Practices and Measures</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/05_third_party_cookies_vulnerabilities.html">Third Party Cookies Vulnerabilities</a></li>
+                        </ol>
+                    </li>
+                    <li>Deployment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/01_centos_digital_ocean.html">Centos Digital Ocean</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/02_static_python_website_netlify.html">Static Python Website Netlify</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Systems<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/01_coordination_services.html">Coordination Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/02_gossip_protocol.html">Gossip Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/03_linearizability.html">Linearizability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/04_concurrent_writes.html">Concurrent Writes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/05_operational_transform.html">Operational Transform</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/06_algorithms_summary.html">Algorithms Summary</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/07_optimistic_vs_pessimistic_locking.html">Optimistic vs Pessimistic Locking</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="isolation-levels">Isolation Levels</h2>
+            <p>Isolation levels in relational-database systems govern how simultaneously running transactions perceive one another’s changes. They sit on a spectrum that trades <strong>consistency guarantees</strong>—how “correct” every read is—against <strong>concurrency</strong>—how many transactions can safely overlap. Choosing the right level is therefore a tuning exercise: too little isolation risks logical errors; too much sacrifices throughput and invites blocking or rollbacks.</p>
+            <h3 id="introduction-to-transaction-isolation">Introduction to Transaction Isolation</h3>
+            <p>A <strong>transaction</strong> bundles multiple SQL statements into a single, atomic unit of work: either every statement’s effect is made permanent, or none are. Isolation ensures that the <em>partially complete</em> state of one transaction never leaks in ways that would confuse another. Durability, the “D” of ACID, then locks in those committed changes so that even power failures or crashes cannot erase them.</p>
+            <h4 id="the-acid-properties">The "ACID" Properties</h4>
+            <ul>
+                <li><strong>Atomicity</strong> – The transaction’s individual steps are inseparable; all succeed or all fail together.</li>
+                <li><strong>Consistency</strong> – Every commit must leave the database in a valid state that honors all constraints, cascades, and invariants.</li>
+                <li><strong>Isolation</strong> – Concurrent transactions cannot step on each other’s toes; each proceeds as if it were the sole user, within the chosen level.</li>
+                <li><strong>Durability</strong> – Once the commit command returns, data is irreversibly logged or flushed so that recovery will replay it.</li>
+            </ul>
+            <p>Isolation levels chiefly shape the <em>visibility</em> dimension of consistency. The SQL standard formally names four:</p>
+            <p>I. <strong>Read Uncommitted</strong>  </p>
+            <p>II. <strong>Read Committed</strong> </p>
+            <p>III. <strong>Repeatable Read</strong>  </p>
+            <p>IV. <strong>Serializable</strong></p>
+            <p>Real-world engines often extend or tweak these definitions.</p>
+            <h3 id="concurrency-phenomena">Concurrency Phenomena</h3>
+            <h4 id="dirty-reads">Dirty Reads</h4>
+            <p>A transaction fetches data written by another that has not yet committed; if the writer later rolls back, the reader has relied on nonsense.</p>
+            <h4 id="non-repeatable-reads">Non-Repeatable Reads</h4>
+            <p>A transaction reads the <em>same</em> row twice but gets two different versions because some concurrent transaction committed an update in between.</p>
+            <h4 id="phantom-reads">Phantom Reads</h4>
+            <p>A re-issued range query returns a <em>different set of rows</em>—new inserts or deletes qualify—even though the predicate is unchanged.</p>
+            <div>
+                <pre><code class="language-shell">Transaction A                          Transaction B
+     Time
+       | ------------ BEGIN ------------              (anytime)
+  (1)  |   SELECT COUNT(*) FROM employees;
+       |     → 100 rows
+  (2)  |                                           INSERT INTO employees VALUES ('New Hire');
+       |                                                 COMMIT;
+  (3)  |   SELECT COUNT(*) FROM employees;
+       |     → 101 rows  (phantom)
+       | ------------- END -------------
+       v</code></pre>
+            </div>
+            <h3 id="isolation-level-definitions">Isolation Level Definitions</h3>
+            <h4 id="1-read-uncommitted">1. Read Uncommitted</h4>
+            <p><strong>Allows</strong>: Dirty, non-repeatable, phantom reads.
+                <strong>Behavior</strong>: Statements can see data still in limbo; excellent throughput, terrible reliability. Many vendors quietly upgrade it to Read Committed by still hiding uncommitted writes in row-versioned engines.
+            </p>
+            <h4 id="2-read-committed">2. Read Committed</h4>
+            <p><strong>Prevents</strong>: Dirty reads.
+                <strong>Allows</strong>: Non-repeatable and phantom reads.
+                <strong>Behavior</strong>: Every statement gets the <em>latest committed value</em> at its start time, so successive statements may observe newer versions.
+            </p>
+            <h5>Example: Non-Repeatable Read</h5>
+            <div>
+                <pre><code class="language-shell">Tx A                                Tx B
+BEGIN;                              ———
+SELECT salary FROM emp WHERE id=10;   -- 50 000
+                                    BEGIN;
+                                    UPDATE emp SET salary=55 000 WHERE id=10;
+                                    COMMIT;
+SELECT salary FROM emp WHERE id=10;   -- 55 000
+COMMIT;</code></pre>
+            </div>
+            <h4 id="3-repeatable-read">3. Repeatable Read</h4>
+            <p><strong>Prevents</strong>: Dirty reads, non-repeatable reads.
+                <strong>Allows</strong>: Phantoms (though some engines—MySQL InnoDB, SAP HANA—block them with gap or next-key locks).
+                <strong>Behavior</strong>: The <em>snapshot</em> of any row stays frozen for the whole transaction. Inserts into still-unlocked gaps may slip through unless extra range locks or MVCC tricks stop them.
+            </p>
+            <h4 id="4-serializable">4. Serializable</h4>
+            <p><strong>Prevents</strong>: Dirty, non-repeatable, and phantom reads.
+                <strong>Behavior</strong>: Each transaction executes as if in a strictly serial schedule. Implementations choose between heavy locking (two-phase locking) and optimistic validation (snapshot isolation plus conflict checks). Either technique may force rollbacks when overlap would break serial order.
+            </p>
+            <div>
+                <pre><code class="language-+--------------------------------+">| Isolation vs. Anomalies        |
++----------------+-----+-----+----+
+| Level          |Dirty|NR  |Phan|
+|----------------+-----+-----+----|
+| Read Uncommitted| ✔  | ✔  | ✔ |
+| Read Committed  | ✘  | ✔  | ✔ |
+| Repeatable Read | ✘  | ✘  | ✔*|
+| Serializable    | ✘  | ✘  | ✘ |
++----------------+-----+-----+----+
+(*May be blocked in some engines)</code></pre>
+            </div>
+            <h3 id="isolation-levels-in-popular-databases">Isolation Levels in Popular Databases</h3>
+            <h4 id="postgresql">PostgreSQL</h4>
+            <ul>
+                <li><strong>Default</strong>: Read Committed.</li>
+                <li><strong>Higher</strong>: Repeatable Read, Serializable (SSI algorithm).</li>
+                <li><strong>Lower</strong>: Read Uncommitted maps to Read Committed; MVCC hides uncommitted rows anyway.</li>
+            </ul>
+            <div>
+                <pre><code class="language-sql">BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;</code></pre>
+            </div>
+            <h4 id="mysql-innodb-">MySQL (InnoDB)</h4>
+            <ul>
+                <li><strong>Default</strong>: Repeatable Read.</li>
+                <li><strong>Others</strong>: Read Committed, Read Uncommitted, Serializable.</li>
+                <li><strong>Phantoms</strong>: Blocked via next-key locks in most common cases.</li>
+            </ul>
+            <div>
+                <pre><code class="language-sql">SET SESSION transaction_isolation = 'READ COMMITTED';</code></pre>
+            </div>
+            <h4 id="sql-server">SQL Server</h4>
+            <ul>
+                <li><strong>Default</strong>: Read Committed.</li>
+                <li><strong>Extras</strong>: Snapshot (MVCC-based) and Read Committed Snapshot.</li>
+                <li><strong>Serializable</strong>: Two-phase locking unless Snapshot is enabled, in which case it validates at commit.</li>
+            </ul>
+            <div>
+                <pre><code class="language-sql">SET TRANSACTION ISOLATION LEVEL SNAPSHOT;</code></pre>
+            </div>
+            <h4 id="oracle">Oracle</h4>
+            <ul>
+                <li><strong>Default</strong>: Read Committed (with MVCC).</li>
+                <li><strong>Serializable</strong>: Provides repeatable reads with predicate locking; Oracle treats Read Uncommitted as Read Committed.</li>
+                <li><strong>Repeatable Read</strong>: Not exposed separately.</li>
+            </ul>
+            <h3 id="ansi-sql-commands-for-isolation-levels">ANSI SQL Commands for Isolation Levels</h3>
+            <div>
+                <pre><code class="language-sql">SET TRANSACTION ISOLATION LEVEL 
+    READ UNCOMMITTED | READ COMMITTED |
+    REPEATABLE READ  | SERIALIZABLE;</code></pre>
+            </div>
+            <p>Issue either inside an open transaction or immediately before <code>BEGIN</code>, per vendor rules.</p>
+            <h3 id="illustrating-isolation-levels-with-an-example">Illustrating Isolation Levels with an Example</h3>
+            <h4 id="dirty-read-read-uncommitted-">Dirty Read (Read Uncommitted)</h4>
+            <div>
+                <pre><code class="language-shell">Tx A                                   Tx B
+BEGIN;                                 BEGIN;
+UPDATE acct SET bal = bal - 100 WHERE id=1;
+-- uncommitted write                   SELECT bal FROM acct WHERE id=1;  -- dirty
+ROLLBACK;                              — uses bogus balance —</code></pre>
+            </div>
+            <h4 id="non-repeatable-read-read-committed-">Non-Repeatable Read (Read Committed)</h4>
+            <div>
+                <pre><code class="language-shell">Tx A                                   Tx B
+BEGIN;                                 —
+SELECT bal FROM acct WHERE id=1;  -- 1000
+                                      UPDATE acct SET bal=1200 WHERE id=1; COMMIT;
+SELECT bal FROM acct WHERE id=1;  -- 1200
+COMMIT;</code></pre>
+            </div>
+            <h4 id="phantom-rows-repeatable-read-">Phantom Rows (Repeatable Read)</h4>
+            <div>
+                <pre><code class="language-shell">Tx A                         Tx B
+BEGIN;                       —
+SELECT * FROM orders
+ WHERE date BETWEEN '2025-01-01' AND '2025-01-31'; -- 10 rows
+                              INSERT INTO orders VALUES ('2025-01-15', …); COMMIT;
+SELECT * FROM orders
+ WHERE date BETWEEN '2025-01-01' AND '2025-01-31'; -- 11 rows
+COMMIT;</code></pre>
+            </div>
+            <h4 id="serializable-no-phantoms">Serializable – No Phantoms</h4>
+            <p>Under Serializable, Tx B would block or Tx A would abort to preserve a serial order.</p>
+            <h3 id="performance-and-locking-overheads">Performance and Locking Overheads</h3>
+            <ul>
+                <li><strong>Row &amp; Range Locks</strong>: Higher isolation can pin more rows longer, increasing wait times and deadlock probability.</li>
+                <li><strong>Snapshot Isolation</strong>: MVCC engines (PostgreSQL, Oracle, SQL Server snapshot) favor <em>version reads</em> over blocking, but still validate write overlaps at commit.</li>
+                <li><strong>Deadlocks</strong>: More locks + longer lifetimes → greater risk; engines automatically pick a victim to roll back.</li>
+            </ul>
+            <h3 id="choosing-the-right-isolation-level">Choosing the Right Isolation Level</h3>
+            <p>I. <strong>Read Uncommitted</strong> – Diagnostics or ETL where stale or transient data is acceptable. Rarely used.</p>
+            <p>II. <strong>Read Committed</strong> – Safe default that eliminates dirty reads yet scales well.</p>
+            <p>III. <strong>Repeatable Read</strong> – Critical when multiple selects must agree on row values; good for financial summaries.</p>
+            <p>IV. <strong>Serializable</strong> – Regulatory or business rules require absolute correctness; expect more contention and occasional retry logic.</p>
+            <p><strong>Rule of Thumb</strong>: Start with the vendor’s default, profile real workloads, then escalate only where tests prove anomalies would harm correctness.</p>
+            <h3 id="practical-examples">Practical Examples</h3>
+            <p>PostgreSQL – Demonstrating Non-Repeatable vs. Repeatable Read:</p>
+            <div>
+                <pre><code class="language-sql">-- Session A
+BEGIN;
+SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+SELECT bal FROM test_balance WHERE id = 1;  -- 1000
+
+-- Session B
+BEGIN;
+UPDATE test_balance SET bal = 1100 WHERE id = 1;
+COMMIT;
+
+-- Session A again
+SELECT bal FROM test_balance WHERE id = 1;  -- still 1000
+COMMIT;</code></pre>
+            </div>
+            <p>SQL Server – Checking Isolation:</p>
+            <div>
+                <pre><code class="language-sql">SELECT transaction_isolation_level
+FROM sys.dm_exec_sessions
+WHERE session_id = @@SPID;  -- returns 0–5 per MSDN table</code></pre>
+            </div>
+            <p>MySQL – Viewing / Changing Isolation:</p>
+            <div>
+                <pre><code class="language-sql">SHOW VARIABLES LIKE 'transaction_isolation';
+SET SESSION transaction_isolation = 'SERIALIZABLE';</code></pre>
+            </div>
+            <h3 id="common-pitfalls-and-tips">Common Pitfalls and Tips</h3>
+            <p>I. <strong>Long Transactions</strong> – Hold locks or versions longer; keep business logic outside the transaction where possible.</p>
+            <p>II. <strong>Phantom Handling</strong> – Verify whether your engine blocks phantoms at Repeatable Read; assumptions differ.</p>
+            <p>III. <strong>Lock Escalation</strong> – Some systems upgrade many row locks to a table lock; monitor and tune thresholds.</p>
+            <p>IV. <strong>Snapshot vs. Repeatable Read</strong> – Do not conflate them: snapshot may allow write-skew anomalies absent in true Repeatable Read.</p>
+            <p>V. <strong>Read-Only Transactions</strong> – Declare <code>SET TRANSACTION READ ONLY</code> to let the optimizer skip superfluous locks or validation.</p>
+            <p>VI. <strong>Serializable Rollbacks</strong> – Code retry loops around <code>SerializationFailure</code> errors; this is normal, not a bug.</p>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Overview</title>
+    <meta content="This document describes the Windows code signing implementation for Standard of Iron." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/standard_of_iron/windows_code_signing" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Overview",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/standard_of_iron/windows_code_signing"
+            },
+            "url": "https://adamdjellouli.com/articles/standard_of_iron/windows_code_signing",
+            "description": "This document describes the Windows code signing implementation for Standard of Iron.",
+            "dateModified": "2026-01-24"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#overview">Overview</a></li>
+                    <li><a href="#implementation">Implementation</a>
+                        <ol>
+                            <li><a href="#build-pipeline">Build Pipeline</a></li>
+                            <li><a href="#signed-files">Signed Files</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#setup-instructions">Setup Instructions</a>
+                        <ol>
+                            <li><a href="#prerequisites">Prerequisites</a></li>
+                            <li><a href="#github-secrets-configuration">GitHub Secrets Configuration</a></li>
+                            <li><a href="#verification">Verification</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#security-considerations">Security Considerations</a></li>
+                    <li><a href="#troubleshooting">Troubleshooting</a>
+                        <ol>
+                            <li><a href="#signing-step-skipped">Signing Step Skipped</a></li>
+                            <li><a href="#signing-fails">Signing Fails</a></li>
+                            <li><a href="#smartscreen-still-shows-warnings">SmartScreen Still Shows Warnings</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#future-enhancements">Future Enhancements</a></li>
+                    <li><a href="#references">References</a></li>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ai_architecture.html">Ai Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/macos_signing.html">Macos Signing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_framework.html">Mission Framework</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture.html">Rendering Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/windows_code_signing.html">Windows Code Signing</a></li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <header>Windows Code Signing</header>
+            <p>This document describes the Windows code signing implementation for Standard of Iron.</p>
+            <h2 id="overview">Overview</h2>
+            <p>The Windows build pipeline automatically signs the <code>.exe</code> file with Authenticode using an organization EV (Extended Validation) certificate. Code signing provides:</p>
+            <ul>
+                <li><strong>Verified publisher</strong>: Windows displays the organization name as a verified publisher</li>
+                <li><strong>Reduced SmartScreen friction</strong>: Signed executables are less likely to trigger Windows Defender SmartScreen warnings</li>
+                <li><strong>Trust and authenticity</strong>: Users can verify the software comes from the legitimate publisher</li>
+            </ul>
+            <h2 id="implementation">Implementation</h2>
+            <h3 id="build-pipeline">Build Pipeline</h3>
+            <p>The code signing step is integrated into the Windows build workflow (<code>.github/workflows/windows.yml</code>) and runs automatically when tags are pushed (e.g., <code>v1.2.3</code>).</p>
+            <p>The signing process:
+                1. Runs after the build step completes
+                2. Only executes if the <code>WINDOWS_CERTIFICATE</code> secret is configured
+                3. Signs the main executable (<code>standard_of_iron.exe</code>)
+                4. Uses SHA-256 algorithm for both file digest and timestamp
+                5. Timestamps the signature using DigiCert's timestamp server
+                6. Verifies the signature after signing</p>
+            <h3 id="signed-files">Signed Files</h3>
+            <p>Currently, the pipeline signs:
+                - <code>standard_of_iron.exe</code> - The main game executable</p>
+            <p><strong>Note</strong>: Qt DLLs and other third-party libraries are not signed by this pipeline as they should already be signed by their respective publishers (e.g., Qt Company).</p>
+            <h2 id="setup-instructions">Setup Instructions</h2>
+            <h3 id="prerequisites">Prerequisites</h3>
+            <ol>
+                <li><strong>EV Code Signing Certificate</strong>: Obtain an Extended Validation code signing certificate from a trusted Certificate Authority (CA) such as:</li>
+                <li>DigiCert</li>
+                <li>Sectigo</li>
+                <li>GlobalSign</li>
+                <li>
+                    <p>Entrust</p>
+                </li>
+                <li>
+                    <p><strong>Certificate Format</strong>: Export the certificate as a <code>.pfx</code> (PKCS#12) file with a strong password</p>
+                </li>
+            </ol>
+            <h3 id="github-secrets-configuration">GitHub Secrets Configuration</h3>
+            <p>To enable code signing in GitHub Actions, configure the following repository secrets:</p>
+            <ol>
+                <li><strong>WINDOWS_CERTIFICATE</strong> (Required)</li>
+                <li>Navigate to: Repository Settings → Secrets and variables → Actions → New repository secret</li>
+                <li>Name: <code>WINDOWS_CERTIFICATE</code></li>
+                <li>Value: Base64-encoded content of your <code>.pfx</code> certificate file</li>
+            </ol>
+            <p>To encode your certificate on Linux/macOS:</p>
+            <div>
+                <pre><code class="language-bash">base64 -i certificate.pfx | tr -d '\n' &gt; certificate.txt
+   cat certificate.txt</code></pre>
+            </div>
+            <p>On Windows PowerShell:</p>
+            <div>
+                <pre><code class="language-powershell">$certBytes = [System.IO.File]::ReadAllBytes("certificate.pfx")
+   $certBase64 = [System.Convert]::ToBase64String($certBytes)
+   $certBase64 | Out-File -FilePath certificate.txt -NoNewline
+   Get-Content certificate.txt</code></pre>
+            </div>
+            <p>Copy the entire base64 string and paste it as the secret value.</p>
+            <ol>
+                <li><strong>WINDOWS_CERTIFICATE_PASSWORD</strong> (Required)</li>
+                <li>Name: <code>WINDOWS_CERTIFICATE_PASSWORD</code></li>
+                <li>Value: The password used to protect the <code>.pfx</code> certificate file</li>
+            </ol>
+            <h3 id="verification">Verification</h3>
+            <p>After pushing a tag and completing the build:</p>
+            <ol>
+                <li>Download the Windows artifact from GitHub Actions</li>
+                <li>Extract the <code>.exe</code> file</li>
+                <li>Right-click the <code>.exe</code> → Properties → Digital Signatures tab</li>
+                <li>Verify that:</li>
+                <li>The signature shows your organization name</li>
+                <li>The signature is valid</li>
+                <li>The timestamp is present and valid</li>
+            </ol>
+            <p>Alternatively, use <code>signtool</code> to verify from the command line:</p>
+            <div>
+                <pre><code class="language-cmd">signtool verify /pa /v standard_of_iron.exe</code></pre>
+            </div>
+            <h2 id="security-considerations">Security Considerations</h2>
+            <ol>
+                <li><strong>Certificate Protection</strong>: </li>
+                <li>Store the certificate securely</li>
+                <li>Use a strong password</li>
+                <li>Limit access to the certificate and password</li>
+                <li>
+                    <p>Use GitHub's encrypted secrets feature (never commit certificates to the repository)</p>
+                </li>
+                <li>
+                    <p><strong>Certificate Expiration</strong>:</p>
+                </li>
+                <li>Monitor certificate expiration dates</li>
+                <li>Plan for renewal well in advance</li>
+                <li>
+                    <p>Update the GitHub secret when renewing</p>
+                </li>
+                <li>
+                    <p><strong>Timestamping</strong>:</p>
+                </li>
+                <li>The signature includes a trusted timestamp via RFC 3161 protocol</li>
+                <li>Timestamp URL uses HTTP (not HTTPS) as per RFC 3161 standard - the timestamp response is cryptographically signed</li>
+                <li>Signatures remain valid even after the certificate expires (as long as signed before expiration)</li>
+                <li>If the timestamp server is unavailable, signing will fail (this is expected behavior)</li>
+            </ol>
+            <h2 id="troubleshooting">Troubleshooting</h2>
+            <h3 id="signing-step-skipped">Signing Step Skipped</h3>
+            <p>If the signing step is skipped, verify:
+                - The <code>WINDOWS_CERTIFICATE</code> secret is configured
+                - The secret name matches exactly (case-sensitive)
+                - The workflow has permission to access secrets</p>
+            <h3 id="signing-fails">Signing Fails</h3>
+            <p>If signing fails, check:
+                1. Certificate is valid and not expired
+                2. Password is correct
+                3. Certificate is in <code>.pfx</code> format
+                4. Base64 encoding is correct (no line breaks or extra characters)
+                5. Timestamp server (http://timestamp.digicert.com) is accessible</p>
+            <h3 id="smartscreen-still-shows-warnings">SmartScreen Still Shows Warnings</h3>
+            <p>Even with a valid signature, SmartScreen may show warnings if:
+                - The certificate is new and hasn't built reputation yet
+                - The executable hasn't been downloaded by many users yet
+                - The signature is from a standard (non-EV) certificate</p>
+            <p>EV certificates typically bypass these warnings immediately, but standard certificates may require time to build reputation.</p>
+            <h2 id="future-enhancements">Future Enhancements</h2>
+            <p>Potential improvements for the code signing implementation:</p>
+            <ol>
+                <li><strong>Sign Custom DLLs</strong>: If the project adds custom DLL libraries, include them in the signing process</li>
+                <li><strong>Dual Signing</strong>: Add SHA-1 signatures for older Windows versions (Windows 7, 8)</li>
+                <li><strong>Azure SignTool</strong>: Migrate to Azure Key Vault for certificate storage if using Azure DevOps</li>
+                <li><strong>Signature Verification</strong>: Add automated signature verification to CI/CD pipeline</li>
+            </ol>
+            <h2 id="references">References</h2>
+            <ul>
+                <li><a href="https://learn.microsoft.com/en-us/windows/win32/seccrypto/signtool">Microsoft SignTool Documentation</a></li>
+                <li><a href="https://learn.microsoft.com/en-us/windows-hardware/drivers/install/authenticode">Windows Authenticode Documentation</a></li>
+                <li><a href="https://docs.github.com/en/actions/security-guides/encrypted-secrets">GitHub Actions Encrypted Secrets</a></li>
+            </ul>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

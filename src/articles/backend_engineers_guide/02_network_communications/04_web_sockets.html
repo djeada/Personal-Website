@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>WebSockets</title>
+    <meta content="WebSockets introduce an event-driven, two-way communication channel between clients and servers over a single TCP connection." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/04_web_sockets" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "WebSockets",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/04_web_sockets"
+            },
+            "url": "https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/04_web_sockets",
+            "description": "WebSockets introduce an event-driven, two-way communication channel between clients and servers over a single TCP connection.",
+            "dateModified": "2026-01-24"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol><a href="#websockets">WebSockets</a>
+                    <ol>
+                        <li><a href="#the-websocket-protocol-and-handshake">The WebSocket Protocol and Handshake</a>
+                            <ol>
+                                <li><a href="#http-upgrade-flow">HTTP Upgrade Flow</a></li>
+                                <li><a href="#handshake-headers">Handshake Headers</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#frame-based-communication">Frame-Based Communication</a>
+                            <ol>
+                                <li><a href="#types-of-frames">Types of Frames</a></li>
+                                <li><a href="#example-frame-layout">Example Frame Layout</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#full-duplex-communication">Full-Duplex Communication</a></li>
+                        <li><a href="#example-simple-websocket-in-javascript-and-node-js">Example: Simple WebSocket in JavaScript and Node.js</a>
+                            <ol>
+                                <li><a href="#server-side-node-js-">Server-Side (Node.js)</a></li>
+                                <li><a href="#client-side-browser-">Client-Side (Browser)</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#subprotocols-and-extensions">Subprotocols and Extensions</a></li>
+                        <li><a href="#load-balancing-and-horizontal-scaling">Load Balancing and Horizontal Scaling</a></li>
+                        <li><a href="#common-use-cases">Common Use Cases</a></li>
+                        <li><a href="#security-considerations">Security Considerations</a></li>
+                        <li><a href="#heartbeats-ping-pong-and-connection-stability">Heartbeats, Ping/Pong, and Connection Stability</a></li>
+                        <li><a href="#best-practices">Best Practices</a></li>
+                        <li><a href="#comparison-with-other-real-time-techniques">Comparison with Other Real-Time Techniques</a></li>
+                    </ol>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Api Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/01_api_communication_protocols.html">Api Communication Protocols</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/02_rest.html">Rest</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/03_graphql.html">Graphql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/04_grpc.html">Grpc</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/05_state_management.html">State Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/06_data_transmission.html">Data Transmission</a></li>
+                        </ol>
+                    </li>
+                    <li>Network Communications<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/01_network_communications.html">Network Communications</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/02_tcp_and_udp.html">Tcp and Udp</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/03_http_protocol.html">Http Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/04_web_sockets.html">Web Sockets</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/05_metrics_and_analysis.html">Metrics and Analysis</a></li>
+                        </ol>
+                    </li>
+                    <li>Server Technologies<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/01_web_server_overview.html">Web Server Overview</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/02_static_dynamic_content.html">Static Dynamic Content</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/03_tomcat.html">Tomcat</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/04_apache.html">Apache</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/05_nginx.html">Nginx</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/06_forward_proxies.html">Forward Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/07_reverse_proxies.html">Reverse Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/08_load_balancing.html">Load Balancing</a></li>
+                        </ol>
+                    </li>
+                    <li>Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/01_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/02_transactions.html">Transactions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/03_indexes.html">Indexes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/04_isolation_levels.html">Isolation Levels</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/05_data_warehousing.html">Data Warehousing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/06_replication.html">Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/07_halloween_problem.html">Halloween Problem</a></li>
+                        </ol>
+                    </li>
+                    <li>Caching<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/01_caching_strategies.html">Caching Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/02_redis.html">Redis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/03_content_delivery_networks.html">Content Delivery Networks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/04_database_caching.html">Database Caching</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Processing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/01_pub_sub_vs_queue.html">Pub Sub vs Queue</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/02_messaging_system_integration.html">Messaging System Integration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/03_batch_processing.html">Batch Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing.html">Stream Processing</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Formats<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/01_protocol_buffers.html">Protocol Buffers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/02_xml.html">Xml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/03_json.html">Json</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/04_yaml.html">Yaml</a></li>
+                        </ol>
+                    </li>
+                    <li>Security<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/01_auth.html">Auth</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/02_tls.html">Tls</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/03_security_vulnerabilities.html">Security Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/04_security_best_practices_and_measures.html">Security Best Practices and Measures</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/05_third_party_cookies_vulnerabilities.html">Third Party Cookies Vulnerabilities</a></li>
+                        </ol>
+                    </li>
+                    <li>Deployment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/01_centos_digital_ocean.html">Centos Digital Ocean</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/02_static_python_website_netlify.html">Static Python Website Netlify</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Systems<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/01_coordination_services.html">Coordination Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/02_gossip_protocol.html">Gossip Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/03_linearizability.html">Linearizability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/04_concurrent_writes.html">Concurrent Writes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/05_operational_transform.html">Operational Transform</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/06_algorithms_summary.html">Algorithms Summary</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/07_optimistic_vs_pessimistic_locking.html">Optimistic vs Pessimistic Locking</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="websockets">WebSockets</h2>
+            <p>WebSockets introduce an event-driven, two-way communication channel between clients and servers over a single TCP connection. Unlike traditional HTTP request-response systems, WebSockets enable real-time data exchange with minimal overhead, effectively eliminating the need for repeated polling or long-polling methods. They are widely adopted in scenarios such as chat applications, collaborative editing, live dashboards, and multiplayer gaming. </p>
+            <p>A WebSocket connection begins with an HTTP-based handshake, but after the upgrade succeeds, both client and server can freely send messages back and forth at any time. This design grants WebSockets a distinct advantage over the more rigid request-response pattern of conventional HTTP, where the client must always initiate communication.</p>
+            <h3 id="the-websocket-protocol-and-handshake">The WebSocket Protocol and Handshake</h3>
+            <p>WebSockets rely on a combination of HTTP headers and a special handshake request to upgrade the connection from HTTP (or HTTPS) to the WebSocket protocol. After this upgrade, further communication operates outside the constraints of the HTTP request-response cycle.</p>
+            <h4 id="http-upgrade-flow">HTTP Upgrade Flow</h4>
+            <p>1) A client initiates an HTTP request containing headers that request an upgrade to WebSockets.<br />
+                2) The server verifies these headers, including a Sec-WebSocket-Key that helps confirm a legitimate request.<br />
+                3) The server responds with an HTTP 101 Switching Protocols status code and includes a Sec-WebSocket-Accept header.<br />
+                4) Once the handshake completes, the connection no longer adheres to the standard HTTP sequence and transitions into a WebSocket. </p>
+            <p>The diagram below shows how the handshake transforms an ordinary HTTP connection into a WebSocket:</p>
+            <div>
+                <pre><code class="language-shell">Client (Browser/App)                    Server
+       |                                   |
+       |   1. GET /chat HTTP/1.1          |
+       |   Host: example.com              |
+       |   Upgrade: websocket             |
+       |   Connection: Upgrade            |
+       |   Sec-WebSocket-Key: &lt;key&gt;       |
+       |----------------------------------&gt;|
+       |                                   |
+       |       2. HTTP/1.1 101 Switching Protocols   |
+       |          Upgrade: websocket                 |
+       |          Connection: Upgrade                |
+       |          Sec-WebSocket-Accept: &lt;serverKey&gt;  |
+       |&lt;--------------------------------------------|
+       |                                   |
+       | 3. WebSocket Connection Established         |
+       |&lt;=================  Messages  ==============&gt;|</code></pre>
+            </div>
+            <p>Once the 101 status arrives, the protocol moves from HTTP to WebSockets. The communication is then bidirectional until the connection closes.</p>
+            <h4 id="handshake-headers">Handshake Headers</h4>
+            <ul>
+                <li><strong>Upgrade</strong>: Must include “websocket.” </li>
+                <li><strong>Connection</strong>: Typically set to “Upgrade.” </li>
+                <li><strong>Sec-WebSocket-Key</strong>: A random base64-encoded key from the client. </li>
+                <li><strong>Sec-WebSocket-Accept</strong>: Generated by the server using the key from the client and a GUID, then base64-encoded. </li>
+            </ul>
+            <h3 id="frame-based-communication">Frame-Based Communication</h3>
+            <p>Where HTTP deals in request and response messages, the WebSocket specification defines a frame structure that carries data in a compact format. Each message can contain one or more frames, allowing partial sends and chunked transmissions. Frames are masked client-side for security reasons and can include text, binary data, or control signals (like ping/pong).</p>
+            <h4 id="types-of-frames">Types of Frames</h4>
+            <ul>
+                <li><strong>Text</strong>: Typically encoded in UTF-8. Used for sending string data. </li>
+                <li><strong>Binary</strong>: Ideal for sending images, audio, or any raw byte stream. </li>
+                <li><strong>Control</strong>: Special frames (ping, pong, close) handle connection management and keepalives. </li>
+            </ul>
+            <h4 id="example-frame-layout">Example Frame Layout</h4>
+            <div>
+                <pre><code class="language-shell">0               1               2               3  
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7
+ +-+-+-+-+-------+-------------------------------+------------+
+ |F|R|R|R| Opcode|   Payload Length  | Mask Bit   |  Mask/Key |
+ |I|S|S|S|  (4)  |      (7+)         | (1 bit)    |   (0/4B)  |
+ +-+-+-+-+-------+-------------------------------+------------+
+ |                  Extended Payload Length (if needed)       |
+ +------------------------------------------------------------+
+ |                     Payload Data (if masked, XORed)        |
+ +------------------------------------------------------------+</code></pre>
+            </div>
+            <p>In the diagram, F indicates final frame, and Opcode clarifies message type. The “Mask Bit” indicates whether the client must mask the payload. The details enable partial transmissions, fragmentation, or immediate control signals.</p>
+            <h3 id="full-duplex-communication">Full-Duplex Communication</h3>
+            <p>A significant advantage over standard HTTP is that once the WebSocket is established, both sides can independently initiate sends. The server can push messages whenever data updates occur, and the client can respond or request additional updates without overhead from repeated requests or polling.</p>
+            <div>
+                <pre><code class="language-+------------------+">| Client           |  
+| (Websocket)      |  
+| (Browser/App)    | &lt;--------------------\
++------------------+                      \
+        ^                                  \
+        |  Bi-Directional,                 \
+        |  Full-Duplex Channel             \
+        v                                  /
++------------------+                       /
+| Server           | &lt;--------------------/
+| (Websocket Host) |
++------------------+</code></pre>
+            </div>
+            <p>This event-driven approach radically improves real-time functionality. A chat room app can broadcast messages as soon as one user sends them, or a collaborative editor can push updates instantly to all connected peers.</p>
+            <h3 id="example-simple-websocket-in-javascript-and-node-js">Example: Simple WebSocket in JavaScript and Node.js</h3>
+            <h4 id="server-side-node-js-">Server-Side (Node.js)</h4>
+            <p>Using the <code>ws</code> library, developers can set up a basic WebSocket server:</p>
+            <div>
+                <pre><code class="language-js">// server.js
+const WebSocket = require('ws');
+const wss = new WebSocket.Server({ port: 8080 });
+
+wss.on('connection', (ws) =&gt; {
+  console.log('Client connected.');
+  
+  ws.on('message', (message) =&gt; {
+    console.log('Received:', message);
+    // Echo the message back to the client
+    ws.send(<code>Server received: ${message}</code>);
+  });
+  
+  ws.on('close', () =&gt; {
+    console.log('Client disconnected.');
+  });
+});
+
+console.log('WebSocket server running on ws://localhost:8080');</code></pre>
+            </div>
+            <p>Explanation:<br />
+                - A WebSocket server is created on port 8080.<br />
+                - When a new client connection is established, the <code>connection</code> event fires.<br />
+                - Incoming messages are logged, and the server echoes the same message back.<br />
+                - The <code>close</code> event notifies the server when a client disconnects.</p>
+            <h4 id="client-side-browser-">Client-Side (Browser)</h4>
+            <p>In a browser-based application:</p>
+            <div>
+                <pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;title&gt;WebSocket Example&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;textarea id="log" rows="10" cols="50" readonly&gt;&lt;/textarea&gt;&lt;br&gt;
+  &lt;input type="text" id="msg" /&gt;
+  &lt;button id="sendBtn"&gt;Send&lt;/button&gt;
+
+  &lt;script&gt;
+    const socket = new WebSocket('ws://localhost:8080');
+    const logArea = document.getElementById('log');
+    const input = document.getElementById('msg');
+    const sendBtn = document.getElementById('sendBtn');
+
+    socket.addEventListener('open', () =&gt; {
+      logArea.value += 'Connected to server\n';
+    });
+
+    socket.addEventListener('message', (event) =&gt; {
+      logArea.value += 'Server says: ' + event.data + '\n';
+    });
+
+    sendBtn.addEventListener('click', () =&gt; {
+      socket.send(input.value);
+      logArea.value += 'You sent: ' + input.value + '\n';
+      input.value = '';
+    });
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+            </div>
+            <p>Explanation:<br />
+                - The client establishes a connection to the <code>ws://</code> endpoint on localhost:8080.<br />
+                - <code>socket.addEventListener('message', ...)</code> handles receiving messages from the server.<br />
+                - A button triggers sending the user’s text to the server, which in turn echoes it back.</p>
+            <h3 id="subprotocols-and-extensions">Subprotocols and Extensions</h3>
+            <p>The WebSocket specification allows specifying subprotocols in the initial handshake, such as STOMP or custom domain-specific protocols. Extensions like permessage-deflate compress messages on the fly, improving bandwidth usage.</p>
+            <h3 id="load-balancing-and-horizontal-scaling">Load Balancing and Horizontal Scaling</h3>
+            <p>Large-scale deployments often place a load balancer in front of multiple WebSocket server instances. Because WebSockets remain open for long periods, sticky sessions or consistent hashing might be required so messages from the same client always reach the correct server. </p>
+            <p>One simple concurrency formula might be:</p>
+            <div>
+                <pre><code class="language-shell">Max_Connections = (Memory_Per_Server / Connection_Overhead) * Number_of_Servers</code></pre>
+            </div>
+            <p>where Connection_Overhead is how much memory one WebSocket connection uses. If each connection uses a small overhead, the server can handle many thousands of concurrent connections.</p>
+            <h3 id="common-use-cases">Common Use Cases</h3>
+            <p>Real-time requirements often prompt teams to adopt WebSockets:</p>
+            <ul>
+                <li>Collaborative editing (live document or code editing with multiple participants). </li>
+                <li>Gaming dashboards, especially turn-based or real-time notifications. </li>
+                <li>Financial tickers and dashboards with rapidly updating data. </li>
+                <li>Chat and messaging applications that require immediate message updates. </li>
+                <li>IoT device monitoring or remote control where sensors push events to a central console.</li>
+            </ul>
+            <h3 id="security-considerations">Security Considerations</h3>
+            <p>WebSockets generally run over WSS (WebSocket Secure), which sits atop TLS, analogous to HTTPS. This ensures confidentiality and integrity. Authorization often involves passing session cookies or tokens during the handshake and verifying them on connection. </p>
+            <p>Consider:<br />
+                - Authenticating the handshake with existing cookies or tokens.<br />
+                - Validating the origin header to prevent cross-site attacks.<br />
+                - Handling abrupt disconnections and cleanup. </p>
+            <h3 id="heartbeats-ping-pong-and-connection-stability">Heartbeats, Ping/Pong, and Connection Stability</h3>
+            <p>Because these connections can remain open indefinitely, the WebSocket protocol includes ping and pong frames. Either endpoint can send a ping to check if the other side is alive. A healthy endpoint replies with a pong. Servers typically close the connection if they detect inactivity beyond a certain threshold.</p>
+            <h3 id="best-practices">Best Practices</h3>
+            <ul>
+                <li>Gracefully handle dropped connections or network issues by listening for the <code>close</code> event and retrying if needed. </li>
+                <li>Use subprotocols or custom message formats to clearly define how data is structured. </li>
+                <li>Implement basic rate limiting or message-size checks to prevent flooding attacks. </li>
+                <li>Monitor connection counts and resource usage. WebSockets can scale, but each open connection consumes memory. </li>
+                <li>For production deployments, ensure load balancers or proxies support the <code>Upgrade</code> header correctly.</li>
+            </ul>
+            <h3 id="comparison-with-other-real-time-techniques">Comparison with Other Real-Time Techniques</h3>
+            <p>Before WebSockets gained traction, developers often used short-polling or long-polling (Comet) to simulate real-time behavior. These approaches rely on multiple or persistent HTTP requests, which can create extra overhead. Alternatively, Server-Sent Events (SSE) allow servers to push data to clients, but only one-way. WebSockets stand out with their bidirectional, full-duplex design, making them highly flexible and efficient for real-time interactions.</p>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

@@ -57,6 +57,17 @@ EN_INPUT_URLS = [
     "https://github.com/djeada/Numerical-Methods/tree/main/notes/5_matrices",
     "https://github.com/djeada/Numerical-Methods/tree/main/notes/6_regression",
     "https://github.com/djeada/Numerical-Methods/tree/main/notes/7_ordinary_differential_equations",
+    "https://github.com/djeada/Standard-of-Iron/tree/main/docs",
+    "https://github.com/djeada/Backend-Engineers-Guide/tree/main/notes/01_api_design",
+    "https://github.com/djeada/Backend-Engineers-Guide/tree/main/notes/02_network_communications",
+    "https://github.com/djeada/Backend-Engineers-Guide/tree/main/notes/03_server_technologies",
+    "https://github.com/djeada/Backend-Engineers-Guide/tree/main/notes/04_databases",
+    "https://github.com/djeada/Backend-Engineers-Guide/tree/main/notes/05_caching",
+    "https://github.com/djeada/Backend-Engineers-Guide/tree/main/notes/06_data_processing",
+    "https://github.com/djeada/Backend-Engineers-Guide/tree/main/notes/07_data_formats",
+    "https://github.com/djeada/Backend-Engineers-Guide/tree/main/notes/08_security",
+    "https://github.com/djeada/Backend-Engineers-Guide/tree/main/notes/09_deployment",
+    "https://github.com/djeada/Backend-Engineers-Guide/tree/main/notes/10_distributed_systems",
 ]
 
 EN_LANG = "EN"
@@ -95,6 +106,8 @@ def fetch_github_contents_recursive(
 
         for item in contents:
             if item["type"] == "file" and item["name"].endswith(".md"):
+                if "readme" in item["name"].lower():
+                    continue
                 raw_url = item["download_url"]
                 title = Path(item["path"]).stem.replace("_", " ").title()
                 category_parts = Path(base_path, item["path"]).parts[:-1]

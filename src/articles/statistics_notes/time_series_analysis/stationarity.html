@@ -33,7 +33,7 @@
             },
             "url": "https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/stationarity",
             "description": "Stationarity is an important idea in time series analysis.",
-            "dateModified": "2023-11-30"
+            "dateModified": "2026-01-24"
         }
     </script>
 </head>
@@ -86,10 +86,13 @@
                             <ol>
                                 <li><a href="#mean-variance-and-autocovariance-functions">Mean, Variance, and Autocovariance Functions</a></li>
                                 <li><a href="#autocorrelation-and-bounds">Autocorrelation and Bounds</a></li>
+                                <li><a href="#q-dependence-and-q-correlation">q-Dependence and q-Correlation</a></li>
+                                <li><a href="#linear-processes-and-linear-filters">Linear Processes and Linear Filters</a></li>
                             </ol>
                         </li>
                         <li><a href="#examples-of-stationary-processes">Examples of Stationary Processes</a>
                             <ol>
+                                <li><a href="#iid-noise-vs-white-noise">IID Noise vs. White Noise</a></li>
                                 <li><a href="#white-noise">White Noise</a></li>
                                 <li><a href="#moving-average-ma-process">Moving Average (MA) Process</a></li>
                             </ol>
@@ -168,8 +171,8 @@
                             <li>Intro<ol>
                                     <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/intro/central_limit_theorem.html">Central Limit Theorem</a></li>
                                     <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/intro/introduction_to_distributions.html">Introduction to Distributions</a></li>
-                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/intro/statistical_moments.html">Statistical Moments</a></li>
                                     <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/intro/normal_curve_and_z_score.html">Normal Curve and z Score</a></li>
+                                    <li><a href="https://adamdjellouli.com/articles/statistics_notes/probability_distributions/intro/statistical_moments.html">Statistical Moments</a></li>
                                 </ol>
                             </li>
                         </ol>
@@ -181,10 +184,13 @@
                             <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/autoregressive_models.html">Autoregressive Models</a></li>
                             <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/backward_shift_operator.html">Backward Shift Operator</a></li>
                             <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/difference_equations.html">Difference Equations</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/financial_time_series_models.html">Financial Time Series Models</a></li>
                             <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/forecasting.html">Forecasting</a></li>
                             <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/invertibility.html">Invertibility</a></li>
                             <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/moving_average_models.html">Moving Average Models</a></li>
                             <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/random_walk.html">Random Walk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/randomness_tests.html">Randomness Tests</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/regression_with_arma_errors.html">Regression with Arma Errors</a></li>
                             <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/seasonality_and_trends.html">Seasonality and Trends</a></li>
                             <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/series.html">Series</a></li>
                             <li><a href="https://adamdjellouli.com/articles/statistics_notes/time_series_analysis/stationarity.html">Stationarity</a></li>
@@ -212,7 +218,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: November 30, 2023</i></p>
+            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="stationarity-in-time-series">Stationarity in Time Series</h2>
             <p>Stationarity is an important idea in time series analysis. A time series is considered stationary if its statistical properties—like the mean, variance, and autocovariance—stay constant over time. This matters because methods like ARIMA and ARMA are designed to work with stationary data, so it’s a good idea to check for stationarity before using these models.</p>
@@ -238,6 +244,8 @@
                 <li>Top panel displays the synthetic stock prices over time with a fitted linear trend (red dashed line) using least squares regression. This trend captures the overall upward movement in stock prices.</li>
                 <li>Bottom panel shows the detrended stock prices (residuals), highlighting the seasonal variations after removing the linear trend. These residuals are more suitable for analyzing periodic patterns without the confounding effect of the trend.</li>
             </ul>
+            <p>Another synthetic detrending example:</p>
+            <p><img alt="detrending example" src="../../assets/time_series/detrending_example.png" /></p>
             <h3 id="intuition-for-stationary-time-series">Intuition for Stationary Time Series</h3>
             <p>A <strong>stationary time series</strong> behaves similarly over time, meaning:</p>
             <ul>
@@ -273,13 +281,46 @@
                 <li>The <strong>variance function</strong> $\sigma^2(t) = \text{Var}(X_t)$ gives the variance at time $t$, which must also be constant for stationarity.</li>
                 <li>The <strong>autocovariance function</strong> $\gamma(k) = \text{Cov}(X_t, X_{t+k})$ measures how the process correlates with itself at different time lags $k$, and for a stationary process, it depends only on the lag $k$, not on time $t$.</li>
             </ul>
+            <p>More generally, the covariance function can be written as:</p>
+            <p>$$
+                \gamma(r, s) = \text{Cov}(X_r, X_s)
+                $$</p>
+            <p>Weak stationarity implies $\mu(t) = \mu$ and $\gamma(r, s)$ depends only on the lag $h = s - r$.</p>
             <h4 id="autocorrelation-and-bounds">Autocorrelation and Bounds</h4>
             <p>For a weakly stationary process, the <strong>autocorrelation function</strong> $\rho(k)$, which measures the correlation between two points in the series separated by lag $k$, is bounded by -1 and 1:</p>
             <p>$$
                 -1 \leq \rho(k) \leq 1
                 $$</p>
             <p>This bound can be derived from basic linear algebra principles that apply to correlations between random variables.</p>
+            <h4 id="q-dependence-and-q-correlation">q-Dependence and q-Correlation</h4>
+            <p>A stationary series is <strong>q-dependent</strong> if observations more than $q$ time units apart are independent. In particular:</p>
+            <ul>
+                <li><strong>IID noise</strong> is <strong>0-dependent</strong>.</li>
+                <li>Many short-memory models are <strong>q-dependent</strong> for some small $q$.</li>
+            </ul>
+            <p>A series is <strong>q-correlated</strong> if its autocovariance vanishes beyond lag $q$:</p>
+            <p>$$
+                \gamma(h) = 0 \quad \text{for} \quad |h| &gt; q
+                $$</p>
+            <p>Examples:</p>
+            <ul>
+                <li><strong>White noise</strong> is <strong>0-correlated</strong>.</li>
+                <li><strong>MA(q)</strong> processes are <strong>q-correlated</strong>.</li>
+                <li>Conversely, any <strong>mean-zero stationary</strong> series that is <strong>q-correlated</strong> can be represented as an <strong>MA(q)</strong> process.</li>
+            </ul>
+            <h4 id="linear-processes-and-linear-filters">Linear Processes and Linear Filters</h4>
+            <p>If $\{Y_t\}$ is a stationary series with mean 0 and autocovariance $\gamma_Y$, then a linear filter:</p>
+            <p>$$
+                X_t = \sum_{j=-\infty}^{\infty} \psi_j Y_{t-j} = \psi(B) Y_t
+                $$</p>
+            <p>is also stationary when $\sum_{j=-\infty}^{\infty} |\psi_j| &lt; \infty$. Many ARMA models can be viewed as linear filters applied to white noise.</p>
+            <p>The autocovariance of the filtered process is:</p>
+            <p>$$
+                \gamma_X(h) = \sum_{j=-\infty}^{\infty} \sum_{k=-\infty}^{\infty} \psi_j \psi_k\, \gamma_Y(h - k + j)
+                $$</p>
             <h3 id="examples-of-stationary-processes">Examples of Stationary Processes</h3>
+            <h4 id="iid-noise-vs-white-noise">IID Noise vs. White Noise</h4>
+            <p>IID noise with mean 0 and variance $\sigma^2$ is the simplest stationary building block. White noise is slightly weaker: it only requires zero mean and zero autocovariance for nonzero lags (uncorrelated), not full independence.</p>
             <h4 id="white-noise"><strong>White Noise</strong></h4>
             <p>White noise is the simplest example of a stationary process. It is defined as a sequence of uncorrelated, identically distributed random variables:</p>
             <p>$$
@@ -375,6 +416,16 @@
                 <li>This method is particularly effective for data exhibiting exponential growth or multiplicative seasonality. </li>
                 <li>It also compresses the scale of large values, making trends easier to identify visually. </li>
             </ul>
+            <p><strong>Box-Cox Transformations</strong></p>
+            <p>The Box-Cox transform generalizes the log transform for positive series:</p>
+            <p>$$
+                Y_t^{(\lambda)} =
+                \begin{cases}
+                \frac{Y_t^{\lambda} - 1}{\lambda}, &amp; \lambda \neq 0 \\\
+                \log(Y_t), &amp; \lambda = 0
+                \end{cases}
+                $$</p>
+            <p>Choosing $\lambda$ can stabilize variance and improve linearity before modeling.</p>
             <p><strong>Detrending</strong></p>
             <ul>
                 <li>Detrending removes long-term trends from data to highlight short-term fluctuations. </li>

@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Apache HTTP Server</title>
+    <meta content="Apache HTTP Server (commonly referred to as “Apache”) is one of the most widely used web servers in the world." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/04_apache" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Apache HTTP Server",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/04_apache"
+            },
+            "url": "https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/04_apache",
+            "description": "Apache HTTP Server (commonly referred to as \u201cApache\u201d) is one of the most widely used web servers in the world.",
+            "dateModified": "2026-01-24"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol><a href="#apache-http-server">Apache HTTP Server</a>
+                    <ol>
+                        <li><a href="#core-architecture-and-concepts">Core Architecture and Concepts</a>
+                            <ol>
+                                <li><a href="#process-models-mpms-">Process Models (MPMs)</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#installation-and-directory-structure">Installation and Directory Structure</a>
+                            <ol>
+                                <li><a href="#installation">Installation</a></li>
+                                <li><a href="#key-directories-and-files">Key Directories and Files</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#core-configuration-files">Core Configuration Files</a>
+                            <ol>
+                                <li><a href="#main-configuration-httpd-conf-or-apache2-conf-">Main Configuration (httpd.conf or apache2.conf)</a></li>
+                                <li><a href="#virtual-hosts">Virtual Hosts</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#modules-mods-available-mods-enabled-">Modules (mods-available / mods-enabled)</a></li>
+                        <li><a href="#serving-static-files">Serving Static Files</a></li>
+                        <li><a href="#dynamic-content-with-modules">Dynamic Content with Modules</a></li>
+                        <li><a href="#mod_php-or-php-fpm">mod_php or PHP-FPM</a>
+                            <ol>
+                                <li><a href="#mod_wsgi-python-">mod_wsgi (Python)</a></li>
+                                <li><a href="#mod_jk-or-ajp-for-java-tomcat-">mod_jk or AJP for Java (Tomcat)</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#reverse-proxy-and-load-balancing">Reverse Proxy and Load Balancing</a></li>
+                        <li><a href="#ssl-tls-configuration-with-mod_ssl">SSL/TLS Configuration with mod_ssl</a></li>
+                        <li><a href="#logging-and-monitoring">Logging and Monitoring</a></li>
+                        <li><a href="#performance-tuning">Performance Tuning</a>
+                            <ol>
+                                <li><a href="#mpm-settings">MPM Settings</a></li>
+                                <li><a href="#keepalive">KeepAlive</a></li>
+                                <li><a href="#compression">Compression</a></li>
+                                <li><a href="#caching-headers-and-mod_expires">Caching Headers and mod_expires</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#security-hardening">Security Hardening</a></li>
+                        <li><a href="#common-administrative-tasks">Common Administrative Tasks</a>
+                            <ol>
+                                <li><a href="#starting-and-stopping">Starting and Stopping</a></li>
+                                <li><a href="#reloading-configuration">Reloading Configuration</a></li>
+                                <li><a href="#checking-configuration">Checking Configuration</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#example-architecture-diagram">Example Architecture Diagram</a></li>
+                    </ol>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Api Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/01_api_communication_protocols.html">Api Communication Protocols</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/02_rest.html">Rest</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/03_graphql.html">Graphql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/04_grpc.html">Grpc</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/05_state_management.html">State Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/06_data_transmission.html">Data Transmission</a></li>
+                        </ol>
+                    </li>
+                    <li>Network Communications<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/01_network_communications.html">Network Communications</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/02_tcp_and_udp.html">Tcp and Udp</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/03_http_protocol.html">Http Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/04_web_sockets.html">Web Sockets</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/05_metrics_and_analysis.html">Metrics and Analysis</a></li>
+                        </ol>
+                    </li>
+                    <li>Server Technologies<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/01_web_server_overview.html">Web Server Overview</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/02_static_dynamic_content.html">Static Dynamic Content</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/03_tomcat.html">Tomcat</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/04_apache.html">Apache</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/05_nginx.html">Nginx</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/06_forward_proxies.html">Forward Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/07_reverse_proxies.html">Reverse Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/08_load_balancing.html">Load Balancing</a></li>
+                        </ol>
+                    </li>
+                    <li>Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/01_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/02_transactions.html">Transactions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/03_indexes.html">Indexes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/04_isolation_levels.html">Isolation Levels</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/05_data_warehousing.html">Data Warehousing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/06_replication.html">Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/07_halloween_problem.html">Halloween Problem</a></li>
+                        </ol>
+                    </li>
+                    <li>Caching<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/01_caching_strategies.html">Caching Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/02_redis.html">Redis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/03_content_delivery_networks.html">Content Delivery Networks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/04_database_caching.html">Database Caching</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Processing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/01_pub_sub_vs_queue.html">Pub Sub vs Queue</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/02_messaging_system_integration.html">Messaging System Integration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/03_batch_processing.html">Batch Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing.html">Stream Processing</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Formats<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/01_protocol_buffers.html">Protocol Buffers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/02_xml.html">Xml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/03_json.html">Json</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/04_yaml.html">Yaml</a></li>
+                        </ol>
+                    </li>
+                    <li>Security<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/01_auth.html">Auth</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/02_tls.html">Tls</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/03_security_vulnerabilities.html">Security Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/04_security_best_practices_and_measures.html">Security Best Practices and Measures</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/05_third_party_cookies_vulnerabilities.html">Third Party Cookies Vulnerabilities</a></li>
+                        </ol>
+                    </li>
+                    <li>Deployment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/01_centos_digital_ocean.html">Centos Digital Ocean</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/02_static_python_website_netlify.html">Static Python Website Netlify</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Systems<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/01_coordination_services.html">Coordination Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/02_gossip_protocol.html">Gossip Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/03_linearizability.html">Linearizability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/04_concurrent_writes.html">Concurrent Writes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/05_operational_transform.html">Operational Transform</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/06_algorithms_summary.html">Algorithms Summary</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/07_optimistic_vs_pessimistic_locking.html">Optimistic vs Pessimistic Locking</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="apache-http-server">Apache HTTP Server</h2>
+            <p>Apache HTTP Server (commonly referred to as “Apache”) is one of the most widely used web servers in the world. It is maintained by the Apache Software Foundation and offers robust, flexible, and highly configurable capabilities for serving static and dynamic content. Over the decades, Apache has become a cornerstone of the modern web, powering websites of all sizes, from personal blogs to large enterprise systems. This guide explores Apache’s architecture, configuration files, modules, and common tasks. ASCII diagrams provide insight into request flows and how Apache interacts with operating system resources and other services.</p>
+            <h3 id="core-architecture-and-concepts">Core Architecture and Concepts</h3>
+            <h4 id="process-models-mpms-">Process Models (MPMs)</h4>
+            <p>Apache’s architecture revolves around “Multi-Processing Modules” (MPMs) that define how it manages child processes or threads to handle incoming requests. Common MPMs include:</p>
+            <ul>
+                <li><strong>Prefork</strong>: Spawns multiple child processes, each handling one request at a time using a single thread. Historically favored for compatibility with non-thread-safe modules (like certain older PHP modules). </li>
+                <li><strong>Worker</strong>: Uses a pool of child processes, each containing multiple threads, which can handle more requests concurrently with fewer system processes. </li>
+                <li><strong>Event</strong>: Similar to Worker but optimizes keep-alive connections by assigning them to dedicated threads, potentially reducing thread blocking.</li>
+            </ul>
+            <p>A simplified diagram of how Apache might handle connections using the Worker MPM:</p>
+            <div>
+                <pre><code class="language-shell">+----------------+    (Incoming Connections)
+   |   Internet     | ------------+
+   | (Clients)      |            |
+   +--------+-------+            |
+            |                    |
+            v                    v
+       +-----------+    +-----------+    +-----------+
+       |  Apache   |    |  Apache   |    |  Apache   |
+       |  Parent   |... |  Child1   |..  |  Child2   |...
+       |  Process  |    +-----+-----+    +-----+-----+
+       +-----------+          |               |
+                   (Thread 1,2,...n)    (Thread 1,2,...n)</code></pre>
+            </div>
+            <p>In this diagram, the main Apache parent process spawns child processes (in Worker/Event MPM) that each manage a pool of threads. Each thread can handle one client connection at a time.</p>
+            <h3 id="installation-and-directory-structure">Installation and Directory Structure</h3>
+            <h4 id="installation">Installation</h4>
+            <p>How you install Apache depends on your OS:</p>
+            <ul>
+                <li><strong>Debian/Ubuntu</strong>: </li>
+            </ul>
+            <p>CODE_BLOCK_PLACEHOLDER
+                - <strong>CentOS/Red Hat</strong>: </p>
+            <p>CODE_BLOCK_PLACEHOLDER
+                - <strong>macOS (Homebrew)</strong>: </p>
+            <div>
+                <pre><code class="language-bash">sudo apt-get update
+  sudo apt-get install apache2</code></pre>
+            </div>
+            <p>Once installed, Apache typically runs as a service (e.g., <code>apache2.service</code> or <code>httpd.service</code>). You can start, stop, or restart it via your distribution’s service manager (<code>systemctl</code>, <code>service</code>, etc.).</p>
+            <h4 id="key-directories-and-files">Key Directories and Files</h4>
+            <p>Although file paths vary across distributions, a general layout might look like this:</p>
+            <div>
+                <pre><code class="language-bash">sudo yum install httpd</code></pre>
+            </div>
+            <ul>
+                <li><strong>httpd.conf / apache2.conf</strong>: Primary configuration file. </li>
+                <li><strong>sites-available/</strong> and <strong>sites-enabled/</strong>: Where virtual host configurations are stored (Debian/Ubuntu style). </li>
+                <li><strong>mods-available/</strong> and <strong>mods-enabled/</strong>: Scripts or configuration files that load modules. </li>
+                <li><strong>conf.d/</strong>: Additional global configuration snippets.</li>
+            </ul>
+            <h3 id="core-configuration-files">Core Configuration Files</h3>
+            <h4 id="main-configuration-httpd-conf-or-apache2-conf-">Main Configuration (httpd.conf or apache2.conf)</h4>
+            <p>This file sets up fundamental directives like <code>ServerRoot</code>, <code>ServerAdmin</code>, <code>ServerName</code>, MPM settings, and includes references to other config files. For example:</p>
+            <div>
+                <pre><code class="language-bash">brew install httpd</code></pre>
+            </div>
+            <h4 id="virtual-hosts">Virtual Hosts</h4>
+            <p>Virtual hosts allow Apache to serve different websites or applications from a single server instance by matching domain names or IP addresses. A common pattern on Debian-based systems is to have site-specific config files in <code>sites-available/</code>, then symlink them into <code>sites-enabled/</code>. A simple <code>mywebsite.conf</code> might look like:</p>
+            <div>
+                <pre><code class="language-shell">/etc/apache2/           (Debian/Ubuntu) or /etc/httpd/ (Red Hat/CentOS)
+├── apache2.conf        or httpd.conf (Main config file)
+├── mods-available/     or modules.d/
+├── mods-enabled/
+├── sites-available/
+├── sites-enabled/
+└── conf.d/             (Additional config fragments)</code></pre>
+            </div>
+            <p>Then enable it (Debian/Ubuntu style) via: </p>
+            <div>
+                <pre><code class="language-apache">ServerRoot "/etc/httpd"
+ServerAdmin admin@example.com
+ServerName www.example.com
+Listen 80
+
+LoadModule mpm_event_module modules/mod_mpm_event.so
+LoadModule rewrite_module modules/mod_rewrite.so
+# ...
+Include conf.modules.d/*.conf
+Include conf.d/*.conf</code></pre>
+            </div>
+            <p>On Red Hat-based systems, you manually include it in <code>httpd.conf</code> or place it in <code>conf.d/</code>, ensuring <code>NameVirtualHost *:80</code> is set if needed (for older versions).</p>
+            <h3 id="modules-mods-available-mods-enabled-">Modules (mods-available / mods-enabled)</h3>
+            <p>Apache’s functionality can be extended with modules such as <code>mod_rewrite</code> (URL rewriting), <code>mod_ssl</code> (SSL/TLS), <code>mod_proxy</code> (reverse proxy), etc. </p>
+            <p>On Debian-based systems, commands like <code>a2enmod</code> and <code>a2dismod</code> enable or disable modules. On Red Hat-based systems, you typically edit <code>httpd.conf</code> or a related file to load them (e.g., <code>LoadModule rewrite_module modules/mod_rewrite.so</code>).</p>
+            <h3 id="serving-static-files">Serving Static Files</h3>
+            <p>Apache can serve static assets like HTML, CSS, images, and more. By default, the <code>DocumentRoot</code> directive designates the root directory for static content. For instance, if <code>DocumentRoot</code> is <code>/var/www/html</code>, then requests to <code>http://server/index.html</code> map to <code>/var/www/html/index.html</code>.</p>
+            <div>
+                <pre><code class="language-apache">&lt;VirtualHost *:80&gt;
+    ServerName mywebsite.com
+    ServerAlias www.mywebsite.com
+    DocumentRoot /var/www/mywebsite
+
+    &lt;Directory /var/www/mywebsite&gt;
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    &lt;/Directory&gt;
+
+    ErrorLog  /var/log/apache2/mywebsite_error.log
+    CustomLog /var/log/apache2/mywebsite_access.log combined
+&lt;/VirtualHost&gt;</code></pre>
+            </div>
+            <h3 id="dynamic-content-with-modules">Dynamic Content with Modules</h3>
+            <h3 id="mod_php-or-php-fpm">mod_php or PHP-FPM</h3>
+            <p>To serve PHP pages, Apache traditionally used <code>mod_php</code> which runs PHP code within the Apache worker processes. However, a more modern approach is using <code>mod_proxy_fcgi</code> with PHP-FPM:</p>
+            <div>
+                <pre><code class="language-bash">sudo a2ensite mywebsite
+sudo systemctl reload apache2</code></pre>
+            </div>
+            <p>In this case, <code>.php</code> requests are forwarded through a FastCGI socket managed by PHP-FPM. This separation can offer better security and performance than older mod_php approaches.</p>
+            <h4 id="mod_wsgi-python-">mod_wsgi (Python)</h4>
+            <p>For Python-based applications (e.g., Django or Flask), <code>mod_wsgi</code> is commonly used:</p>
+            <div>
+                <pre><code class="language-apache">&lt;VirtualHost *:80&gt;
+    DocumentRoot /var/www/html
+    &lt;Directory "/var/www/html"&gt;
+        Options Indexes FollowSymLinks
+        AllowOverride None
+        Require all granted
+    &lt;/Directory&gt;
+&lt;/VirtualHost&gt;</code></pre>
+            </div>
+            <h4 id="mod_jk-or-ajp-for-java-tomcat-">mod_jk or AJP for Java (Tomcat)</h4>
+            <p>When integrating with Tomcat, you might use the AJP connector and <code>mod_jk</code>. The configuration references a <code>workers.properties</code> file specifying the Tomcat backend.</p>
+            <h3 id="reverse-proxy-and-load-balancing">Reverse Proxy and Load Balancing</h3>
+            <p>Apache’s <code>mod_proxy</code> can forward requests to another server or service, acting as a reverse proxy. For example:</p>
+            <div>
+                <pre><code class="language-apache">&lt;VirtualHost *:80&gt;
+    ServerName phpexample.com
+    DocumentRoot /var/www/phpapp
+
+    &lt;FilesMatch \.php$&gt;
+        SetHandler "proxy:unix:/run/php/php7.4-fpm.sock|fcgi://localhost/"
+    &lt;/FilesMatch&gt;
+&lt;/VirtualHost&gt;</code></pre>
+            </div>
+            <p>Requests to <code>http://proxyexample.com/</code> are internally proxied to a local service on port 3000. For load balancing multiple backends, use <code>mod_proxy_balancer</code>:</p>
+            <div>
+                <pre><code class="language-apache">&lt;VirtualHost *:80&gt;
+    ServerName pythonapp.com
+    WSGIDaemonProcess myapp python-path=/var/www/myapp
+    WSGIScriptAlias / /var/www/myapp/myapp/wsgi.py process-group=myapp
+
+    &lt;Directory /var/www/myapp/myapp&gt;
+        &lt;Files wsgi.py&gt;
+            Require all granted
+        &lt;/Files&gt;
+    &lt;/Directory&gt;
+&lt;/VirtualHost&gt;</code></pre>
+            </div>
+            <p>Apache can distribute requests among those two servers using the default (round-robin) or other algorithms.</p>
+            <h3 id="ssl-tls-configuration-with-mod_ssl">SSL/TLS Configuration with mod_ssl</h3>
+            <p>Enable HTTPS to secure traffic. On many systems, <code>mod_ssl</code> is included but may need enabling (<code>a2enmod ssl</code> on Debian/Ubuntu). Then configure a virtual host on port 443:</p>
+            <div>
+                <pre><code class="language-apache">&lt;VirtualHost *:80&gt;
+    ServerName proxyexample.com
+
+    ProxyPreserveHost On
+    ProxyRequests Off
+
+    &lt;Location /&gt;
+        ProxyPass http://127.0.0.1:3000/
+        ProxyPassReverse http://127.0.0.1:3000/
+    &lt;/Location&gt;
+&lt;/VirtualHost&gt;</code></pre>
+            </div>
+            <p>You can enforce HTTP to HTTPS redirection:</p>
+            <div>
+                <pre><code class="language-apache">&lt;Proxy balancer://mycluster&gt;
+    BalancerMember http://192.168.0.10:3000
+    BalancerMember http://192.168.0.11:3000
+&lt;/Proxy&gt;
+
+&lt;VirtualHost *:80&gt;
+    ProxyPreserveHost On
+
+    &lt;Location /api/&gt;
+        ProxyPass balancer://mycluster/
+        ProxyPassReverse balancer://mycluster/
+    &lt;/Location&gt;
+&lt;/VirtualHost&gt;</code></pre>
+            </div>
+            <h3 id="logging-and-monitoring">Logging and Monitoring</h3>
+            <p>Apache logs requests and errors in typically two separate files:</p>
+            <ul>
+                <li><strong>Access Log</strong>: By default, stored in <code>/var/log/apache2/access.log</code> or <code>/var/log/httpd/access_log</code>. Captures each request line, status code, bytes sent, user agent, etc. </li>
+                <li><strong>Error Log</strong>: <code>/var/log/apache2/error.log</code> or <code>/var/log/httpd/error_log</code> for errors, warnings, and diagnostic messages.</li>
+            </ul>
+            <p>You can customize the log format using the <code>LogFormat</code> directive:</p>
+            <div>
+                <pre><code class="language-apache">&lt;VirtualHost *:443&gt;
+    ServerName secure.example.com
+    SSLEngine on
+    SSLCertificateFile    /etc/ssl/certs/example.crt
+    SSLCertificateKeyFile /etc/ssl/private/example.key
+
+    DocumentRoot /var/www/secure
+    &lt;Directory "/var/www/secure"&gt;
+        Require all granted
+    &lt;/Directory&gt;
+&lt;/VirtualHost&gt;</code></pre>
+            </div>
+            <p>Monitoring solutions like <strong>GoAccess</strong>, <strong>AWStats</strong>, or <strong>Elastic Stack</strong> can parse and visualize these logs, revealing traffic volumes, response codes, and performance bottlenecks.</p>
+            <h3 id="performance-tuning">Performance Tuning</h3>
+            <h4 id="mpm-settings">MPM Settings</h4>
+            <p>For the <code>worker</code> or <code>event</code> MPM, you might configure:</p>
+            <div>
+                <pre><code class="language-apache">&lt;VirtualHost *:80&gt;
+    ServerName secure.example.com
+    Redirect / https://secure.example.com/
+&lt;/VirtualHost&gt;</code></pre>
+            </div>
+            <p>The <code>MaxRequestWorkers</code> sets the total threads available. Adjust these for your application’s concurrency needs.</p>
+            <h4 id="keepalive">KeepAlive</h4>
+            <p>Keep-alive allows multiple requests over a single TCP connection, reducing overhead. You can tweak:</p>
+            <div>
+                <pre><code class="language-apache">LogFormat "%h %l %u %t \"%r\" %&gt;s %b \"%{Referer}i\" \"%{User-Agent}i\"" combined
+CustomLog /var/log/apache2/access.log combined</code></pre>
+            </div>
+            <h4 id="compression">Compression</h4>
+            <p>Use <code>mod_deflate</code> to compress text-based responses:</p>
+            <div>
+                <pre><code class="language-apache">&lt;IfModule mpm_worker_module&gt;
+    StartServers           2
+    MinSpareThreads       25
+    MaxSpareThreads       75
+    ThreadLimit           64
+    ThreadsPerChild       25
+    MaxRequestWorkers     150
+    MaxConnectionsPerChild 0
+&lt;/IfModule&gt;</code></pre>
+            </div>
+            <h4 id="caching-headers-and-mod_expires">Caching Headers and mod_expires</h4>
+            <p>Set caching headers for static content:</p>
+            <div>
+                <pre><code class="language-apache">KeepAlive On
+MaxKeepAliveRequests 100
+KeepAliveTimeout 5</code></pre>
+            </div>
+            <h3 id="security-hardening">Security Hardening</h3>
+            <ol>
+                <li><strong>Disable Unused Modules</strong>: Turn off modules you don’t need (e.g., <code>mod_autoindex</code> if you don’t want directory listings). </li>
+                <li><strong>Hide Apache Version</strong>: Set <code>ServerTokens Prod</code> and <code>ServerSignature Off</code> to not reveal internal version details. </li>
+                <li><strong>Use Strong TLS Ciphers</strong>: Adjust <code>SSLCipherSuite</code> and <code>SSLProtocol</code> to avoid outdated cryptography. </li>
+                <li><strong>Restrict .htaccess</strong>: If possible, manage config at the server or virtual host level instead of allowing arbitrary <code>.htaccess</code> overrides. </li>
+                <li><strong>WAF</strong>: Consider adding a Web Application Firewall module, like <strong>ModSecurity</strong>, to block malicious traffic. </li>
+            </ol>
+            <h3 id="common-administrative-tasks">Common Administrative Tasks</h3>
+            <h4 id="starting-and-stopping">Starting and Stopping</h4>
+            <p>Use your system’s service manager:</p>
+            <div>
+                <pre><code class="language-apache">&lt;IfModule mod_deflate.c&gt;
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript
+&lt;/IfModule&gt;</code></pre>
+            </div>
+            <h4 id="reloading-configuration">Reloading Configuration</h4>
+            <p>To apply config changes without dropping active connections abruptly:</p>
+            <div>
+                <pre><code class="language-apache">&lt;IfModule mod_expires.c&gt;
+    ExpiresActive On
+    ExpiresByType text/css "access plus 7 days"
+    ExpiresByType application/javascript "access plus 7 days"
+    ExpiresByType image/png "access plus 30 days"
+&lt;/IfModule&gt;</code></pre>
+            </div>
+            <h4 id="checking-configuration">Checking Configuration</h4>
+            <p>Apache has a built-in config test:</p>
+            <p>CODE_BLOCK_PLACEHOLDER
+                or</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl start apache2   # Debian/Ubuntu
+sudo systemctl enable apache2
+
+sudo systemctl stop httpd      # Red Hat/CentOS</code></pre>
+            </div>
+            <p>It reports syntax errors and other issues before you reload or restart.</p>
+            <h3 id="example-architecture-diagram">Example Architecture Diagram</h3>
+            <div>
+                <pre><code class="language-bash">sudo systemctl reload apache2  # or httpd</code></pre>
+            </div>
+            <p>In this diagram, Apache listens on ports 80 or 443. Static files are served directly, while dynamic requests are routed to backend services (PHP-FPM, Tomcat, etc.) or proxied to external APIs.</p>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

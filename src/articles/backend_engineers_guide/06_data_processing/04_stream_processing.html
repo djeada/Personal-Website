@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Stream Processing</title>
+    <meta content="Stream processing involves ingesting, analyzing, and taking action on data as it is produced." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Stream Processing",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing"
+            },
+            "url": "https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing",
+            "description": "Stream processing involves ingesting, analyzing, and taking action on data as it is produced.",
+            "dateModified": "2026-01-24"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#stream-processing">Stream Processing</a>
+                        <ol>
+                            <li><a href="#message-brokers">Message Brokers</a></li>
+                            <li><a href="#log-based-message-brokers">Log-Based Message Brokers</a></li>
+                            <li><a href="#change-data-capture-cdc-">Change Data Capture (CDC)</a></li>
+                            <li><a href="#event-sourcing">Event Sourcing</a></li>
+                            <li><a href="#streams-and-time">Streams and Time</a></li>
+                            <li><a href="#stream-joins">Stream Joins</a></li>
+                            <li><a href="#fault-tolerance">Fault Tolerance</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#key-stream-processing-technologies">Key Stream Processing Technologies</a>
+                        <ol>
+                            <li><a href="#when-to-use-stream-processing">When to Use Stream Processing</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Api Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/01_api_communication_protocols.html">Api Communication Protocols</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/02_rest.html">Rest</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/03_graphql.html">Graphql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/04_grpc.html">Grpc</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/05_state_management.html">State Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/06_data_transmission.html">Data Transmission</a></li>
+                        </ol>
+                    </li>
+                    <li>Network Communications<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/01_network_communications.html">Network Communications</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/02_tcp_and_udp.html">Tcp and Udp</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/03_http_protocol.html">Http Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/04_web_sockets.html">Web Sockets</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/05_metrics_and_analysis.html">Metrics and Analysis</a></li>
+                        </ol>
+                    </li>
+                    <li>Server Technologies<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/01_web_server_overview.html">Web Server Overview</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/02_static_dynamic_content.html">Static Dynamic Content</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/03_tomcat.html">Tomcat</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/04_apache.html">Apache</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/05_nginx.html">Nginx</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/06_forward_proxies.html">Forward Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/07_reverse_proxies.html">Reverse Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/08_load_balancing.html">Load Balancing</a></li>
+                        </ol>
+                    </li>
+                    <li>Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/01_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/02_transactions.html">Transactions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/03_indexes.html">Indexes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/04_isolation_levels.html">Isolation Levels</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/05_data_warehousing.html">Data Warehousing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/06_replication.html">Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/07_halloween_problem.html">Halloween Problem</a></li>
+                        </ol>
+                    </li>
+                    <li>Caching<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/01_caching_strategies.html">Caching Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/02_redis.html">Redis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/03_content_delivery_networks.html">Content Delivery Networks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/04_database_caching.html">Database Caching</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Processing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/01_pub_sub_vs_queue.html">Pub Sub vs Queue</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/02_messaging_system_integration.html">Messaging System Integration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/03_batch_processing.html">Batch Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing.html">Stream Processing</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Formats<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/01_protocol_buffers.html">Protocol Buffers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/02_xml.html">Xml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/03_json.html">Json</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/04_yaml.html">Yaml</a></li>
+                        </ol>
+                    </li>
+                    <li>Security<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/01_auth.html">Auth</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/02_tls.html">Tls</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/03_security_vulnerabilities.html">Security Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/04_security_best_practices_and_measures.html">Security Best Practices and Measures</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/05_third_party_cookies_vulnerabilities.html">Third Party Cookies Vulnerabilities</a></li>
+                        </ol>
+                    </li>
+                    <li>Deployment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/01_centos_digital_ocean.html">Centos Digital Ocean</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/02_static_python_website_netlify.html">Static Python Website Netlify</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Systems<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/01_coordination_services.html">Coordination Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/02_gossip_protocol.html">Gossip Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/03_linearizability.html">Linearizability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/04_concurrent_writes.html">Concurrent Writes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/05_operational_transform.html">Operational Transform</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/06_algorithms_summary.html">Algorithms Summary</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/07_optimistic_vs_pessimistic_locking.html">Optimistic vs Pessimistic Locking</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="stream-processing">Stream Processing</h2>
+            <p>Stream processing involves ingesting, analyzing, and taking action on data <em>as it is produced</em>. This near-real-time or real-time methodology is <em>helpful</em> for applications that need to respond quickly to continuously updating information, such as IoT sensor readings, financial transactions, or social media data. By processing events or records as they arrive, systems can <em>quickly</em> generate insights, trigger alerts, or update dashboards without waiting for a complete batch.</p>
+            <div>
+                <pre><code class="language-shell">ASCII DIAGRAM: Stream Processing Overview
+
++---------------+      +---------------------------------+      +--------------+
+|               |      | Stream Processing               |      |              |
+| Data Sources  +-----&gt;+    (Real-time/Near-real-time)   +-----&gt;+ Final Output |
+| (Sensors, etc.)      |   +-----+   +-----+   +-----+   |      | (Dashboard, |
++---------------+      |   | P1  |   | P2  |   | P3  |   |      |  Alerts, etc.) 
+                       +----+-----+---+-----+---+-----+---+      +--------------+</code></pre>
+            </div>
+            <ul>
+                <li>A data stream is <strong>continuously</strong> produced by various sources, like logs, sensors, or user activities. </li>
+                <li>A stream processing system <strong>consumes</strong> these events as they arrive, applying transformations, aggregations, or filtering. </li>
+                <li>Final results, such as alerts, dashboards, or enriched data records, are <strong>emitted</strong> with minimal delay.</li>
+            </ul>
+            <h3 id="message-brokers">Message Brokers</h3>
+            <p>Message brokers provide asynchronous communication between producing and consuming services, often serving as a backbone for stream processing pipelines.</p>
+            <ul>
+                <li><strong>Load Balancing</strong>: Distributes incoming messages across <em>multiple</em> consumers. </li>
+                <li><strong>Fan-out</strong>: Broadcasts messages so every subscribed consumer can <em>receive</em> a copy. </li>
+                <li><strong>Queue vs. Pub-Sub</strong>: A queue model is <em>often</em> used for point-to-point communication (one consumer), while pub-sub broadcasts messages to multiple subscribers.</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">ASCII DIAGRAM: Message Broker in the Pipeline
+
+  Publisher(s)             Message Broker           Consumer(s)
++------------+     (Push)     +-----------+     (Pull)  +------------+
+|  Service A |  ----------&gt;   |   Topic   |  &lt;----------|  Service B |
++------------+               +-----+-----+             +------------+
+                                     \
+                                      +------------+
+                                      | Service C  |
+                                      +------------+</code></pre>
+            </div>
+            <ul>
+                <li>This log-based structure can be <strong>critical</strong> in ensuring message ordering and replay capabilities for consumers. </li>
+                <li>Topic partitioning is <strong>often</strong> used to scale throughput and handle fault tolerance.</li>
+            </ul>
+            <h3 id="log-based-message-brokers">Log-Based Message Brokers</h3>
+            <p>Log-based brokers (like Apache Kafka) store messages in an immutable, append-only log. Consumers read from an <strong>offset</strong> that tracks their position, allowing for replaying messages or consuming them at different rates.</p>
+            <ul>
+                <li><strong>Sequential</strong> processing lets consumers receive messages in the order produced, crucial for maintaining consistency. </li>
+                <li><strong>Partitioning</strong> topics across multiple logs provides <strong>scalability</strong>; each partition can be processed by a separate consumer or consumer group.</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">ASCII DIAGRAM: Log-Based Broker (Conceptual)
+
+               +---------+
+Producer ---&gt;  | Partition 0 | ---&gt; Consumer Group 1
+               +---------+
+Producer ---&gt;  | Partition 1 | ---&gt; Consumer Group 2
+               +---------+
+Producer ---&gt;  | Partition 2 | ---&gt; Consumer Group 2
+               +---------+</code></pre>
+            </div>
+            <ul>
+                <li>Each partition is <strong>independent</strong>, so reading from one partition does not affect the offsets in another. </li>
+                <li>If a consumer fails, another consumer in the group can <strong>take over</strong> reading from the partition where it left off.</li>
+            </ul>
+            <h3 id="change-data-capture-cdc-">Change Data Capture (CDC)</h3>
+            <p>CDC captures and streams <strong>row-level</strong> database changes in real time. By converting inserts, updates, and deletes into event streams, CDC simplifies synchronizing data across systems.</p>
+            <ul>
+                <li><strong>Event Generation</strong>: Whenever a record in the database changes, an event is appended to the stream. </li>
+                <li><strong>Data Synchronization</strong>: Downstream services or microservices can <strong>subscribe</strong> to these change events, ensuring they have up-to-date data without heavy polling.</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">ASCII DIAGRAM: CDC Flow
+
+   Database            CDC Engine                Message Broker               Consumers
++------------+   +---------------+           +---------------+          +-----------------+
+|  Table(s)  |--&gt;| Binlog Reader | --------&gt; |   Topic(s)    |  -----&gt;  | Microservices  |
++------------+   +---------------+           +-------+-------+          +-----------------+
+                                                    |
+                                                    v
+                                             +---------------+
+                                             |   Analytics   |
+                                             +---------------+</code></pre>
+            </div>
+            <p>This approach is <strong>especially</strong> popular for maintaining read replicas, caches, or downstream analytics systems in near real time.</p>
+            <h3 id="event-sourcing">Event Sourcing</h3>
+            <p>Event Sourcing maintains an append-only log of all <strong>state changes</strong> in an application, rather than storing only the latest state. By replaying these events, the application’s state can be reconstructed at any point in time, providing excellent <strong>auditability</strong> and historical insight.</p>
+            <ul>
+                <li><strong>Event Log</strong>: All changes are appended as discrete events, forming a chronological record. </li>
+                <li><strong>State Reconstruction</strong>: The current or past state is obtained by replaying every event from the start, or from a known checkpoint. </li>
+                <li><strong>Debugging &amp; Auditing</strong>: Full history of changes can be <strong>helpful</strong> for diagnosing issues or analyzing user actions.</li>
+            </ul>
+            <h3 id="streams-and-time">Streams and Time</h3>
+            <p>Time management in distributed stream systems can be <strong>complex</strong> due to network delays and clock drift. Common windowing strategies address how events are grouped over time:</p>
+            <ol>
+                <li><strong>Hopping Windows</strong> </li>
+                <li>Fixed-size windows, with a “hop” period that is <strong>larger</strong> than the window size, leaving gaps in coverage. </li>
+                <li>
+                    <p>Example: Window of size 6 minutes, but a new window starts every 10 minutes, leading to partial coverage. </p>
+                </li>
+                <li>
+                    <p><strong>Sliding Windows</strong> </p>
+                </li>
+                <li>Overlapping windows, each capturing a fixed duration but <strong>starting</strong> at smaller intervals. </li>
+                <li>
+                    <p>Example: A 6-minute window slides every 2 minutes, allowing continuous coverage of data. </p>
+                </li>
+                <li>
+                    <p><strong>Tumbling Windows</strong> </p>
+                </li>
+                <li>Consecutive, non-overlapping windows of a fixed <strong>size</strong>. </li>
+                <li>Example: Every 6 minutes forms a new batch of events with no overlap or gap.</li>
+            </ol>
+            <div>
+                <pre><code class="language-shell">ASCII DIAGRAM: Time Window Examples (Conceptual)
+
+Hopping (Size=6, Hop=10)
+[0---6]             [10--16]            [20--26]  
+
+Sliding (Size=6, Slide=2)
+[0---6]
+   [2---8]
+      [4---10]
+         [6---12]  
+
+Tumbling (Size=6)
+[0---6][6---12][12--18][18--24]</code></pre>
+            </div>
+            <h3 id="stream-joins">Stream Joins</h3>
+            <p>Joining data in a streaming environment allows correlation of events from multiple sources or combining real-time events with reference data.</p>
+            <ul>
+                <li><strong>Stream-Stream Join</strong>: Correlates events arriving on two (or more) streams, requiring stateful tracking of unjoined events until a corresponding match arrives. </li>
+                <li><strong>Stream-Table Join</strong>: Combines a stream of incoming events with a static or slowly changing table (often a cached copy). </li>
+                <li><strong>Table-Table Join</strong>: Involves joining two changing datasets, typically kept in sync via CDC or event sourcing.</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">ASCII DIAGRAM: Stream-Stream Join (Conceptual)
+
+Stream A (Orders)         Join on OrderID          Stream B (Payments)
+     (A1)  ------------------&gt;   +--------------+   &lt;---------------- (B1)
+     (A2)  ------------------&gt;   |  Join State  |   &lt;---------------- (B2)
+     (A3)  ------------------&gt;   +--------------+   &lt;---------------- (B3)</code></pre>
+            </div>
+            <p>Intermediate state must be <strong>maintained</strong> to match events from each stream within a specified time window.</p>
+            <h3 id="fault-tolerance">Fault Tolerance</h3>
+            <p>Ensuring a streaming system remains reliable in the face of failures is <strong>critical</strong>:</p>
+            <ul>
+                <li><strong>Micro-batching</strong> can simplify fault-tolerance, treating short spans of data as a batch. </li>
+                <li><strong>Checkpointing</strong> periodically saves the progress (offsets, partial aggregations) to stable storage. </li>
+                <li><strong>Idempotent</strong> operations allow reprocessing events without duplicating side effects.</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">ASCII DIAGRAM: Checkpointing Example
+
+        Stream
+          |
+          v
++---------+---------+
+| Stream Processing |
++---------+---------+
+          |
+          | (Periodic Save State)
+          v
++------------------+
+|  Checkpoint Store|
++------------------+</code></pre>
+            </div>
+            <p>When a node fails, it can <strong>recover</strong> from the latest checkpoint, replaying only the events since that point.</p>
+            <h2 id="key-stream-processing-technologies">Key Stream Processing Technologies</h2>
+            <ul>
+                <li><strong>Apache Kafka</strong>: A widely used log-based message broker with support for streams via Kafka Streams or ksqlDB. </li>
+                <li><strong>Apache Flink</strong>: Offers low-latency, high-throughput stream processing with advanced state management. </li>
+                <li><strong>Apache Spark Streaming</strong>: Built on Spark’s micro-batch model, helpful for near-real-time processing of large datasets. </li>
+                <li><strong>Apache Pulsar</strong>: Combines a scalable message queue with stream processing capabilities, including geo-replication. </li>
+            </ul>
+            <h3 id="when-to-use-stream-processing">When to Use Stream Processing</h3>
+            <ul>
+                <li><strong>Real-time Analytics</strong>: Dashboards showing up-to-the-second metrics (e.g., IoT sensor readings, site traffic). </li>
+                <li><strong>Fraud Detection</strong>: Financial transactions monitored as they occur, triggering <strong>immediate</strong> alerts on anomalies. </li>
+                <li><strong>Monitoring &amp; Alerting</strong>: Infrastructure logs and events analyzed on the fly, <strong>responding</strong> to performance issues quickly. </li>
+                <li><strong>Personalization</strong>: Recommending items or content to users in near real time based on new interactions. </li>
+            </ul>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

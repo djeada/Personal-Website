@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Metrics Analysis</title>
+    <meta content="In modern distributed systems, the performance and reliability of communication channels, APIs, and network infrastructure are critical factors that determine user experience." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/05_metrics_and_analysis" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Metrics Analysis",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/05_metrics_and_analysis"
+            },
+            "url": "https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/05_metrics_and_analysis",
+            "description": "In modern distributed systems, the performance and reliability of communication channels, APIs, and network infrastructure are critical factors that determine user experience.",
+            "dateModified": "2026-01-24"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol><a href="#metrics-analysis">Metrics Analysis</a>
+                    <ol>
+                        <li><a href="#why-metrics-matter">Why Metrics Matter</a></li>
+                        <li><a href="#common-terminology-and-formulas">Common Terminology and Formulas</a>
+                            <ol>
+                                <li><a href="#latency-and-response-times">Latency and Response Times</a></li>
+                                <li><a href="#throughput-and-requests-per-second-rps-qps-">Throughput and Requests per Second (RPS/QPS)</a></li>
+                                <li><a href="#concurrency">Concurrency</a></li>
+                                <li><a href="#error-rates">Error Rates</a></li>
+                                <li><a href="#uptime-and-availability">Uptime and Availability</a></li>
+                                <li><a href="#packet-loss-and-network-metrics">Packet Loss and Network Metrics</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#metrics-for-apis">Metrics for APIs</a>
+                            <ol>
+                                <li><a href="#http-restful-apis">HTTP/RESTful APIs</a></li>
+                                <li><a href="#graphql-apis">GraphQL APIs</a></li>
+                                <li><a href="#grpc">gRPC</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#network-level-metrics">Network-Level Metrics</a>
+                            <ol>
+                                <li><a href="#tcp-metrics">TCP Metrics</a></li>
+                                <li><a href="#udp-metrics">UDP Metrics</a></li>
+                                <li><a href="#bandwidth-and-utilization">Bandwidth and Utilization</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#analyzing-and-visualizing-metrics">Analyzing and Visualizing Metrics</a>
+                            <ol>
+                                <li><a href="#dashboards-and-tools">Dashboards and Tools</a></li>
+                                <li><a href="#histograms-vs-averages">Histograms vs Averages</a></li>
+                                <li><a href="#error-budgets-and-slis-slos">Error Budgets and SLIs/SLOs</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#load-and-stress-testing">Load and Stress Testing</a></li>
+                        <li><a href="#distributed-tracing">Distributed Tracing</a></li>
+                        <li><a href="#putting-it-all-together-example-monitoring-architecture">Putting It All Together: Example Monitoring Architecture</a></li>
+                        <li><a href="#best-practices-and-recommendations">Best Practices and Recommendations</a></li>
+                    </ol>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Api Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/01_api_communication_protocols.html">Api Communication Protocols</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/02_rest.html">Rest</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/03_graphql.html">Graphql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/04_grpc.html">Grpc</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/05_state_management.html">State Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/06_data_transmission.html">Data Transmission</a></li>
+                        </ol>
+                    </li>
+                    <li>Network Communications<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/01_network_communications.html">Network Communications</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/02_tcp_and_udp.html">Tcp and Udp</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/03_http_protocol.html">Http Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/04_web_sockets.html">Web Sockets</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/05_metrics_and_analysis.html">Metrics and Analysis</a></li>
+                        </ol>
+                    </li>
+                    <li>Server Technologies<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/01_web_server_overview.html">Web Server Overview</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/02_static_dynamic_content.html">Static Dynamic Content</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/03_tomcat.html">Tomcat</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/04_apache.html">Apache</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/05_nginx.html">Nginx</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/06_forward_proxies.html">Forward Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/07_reverse_proxies.html">Reverse Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/08_load_balancing.html">Load Balancing</a></li>
+                        </ol>
+                    </li>
+                    <li>Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/01_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/02_transactions.html">Transactions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/03_indexes.html">Indexes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/04_isolation_levels.html">Isolation Levels</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/05_data_warehousing.html">Data Warehousing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/06_replication.html">Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/07_halloween_problem.html">Halloween Problem</a></li>
+                        </ol>
+                    </li>
+                    <li>Caching<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/01_caching_strategies.html">Caching Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/02_redis.html">Redis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/03_content_delivery_networks.html">Content Delivery Networks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/04_database_caching.html">Database Caching</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Processing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/01_pub_sub_vs_queue.html">Pub Sub vs Queue</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/02_messaging_system_integration.html">Messaging System Integration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/03_batch_processing.html">Batch Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing.html">Stream Processing</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Formats<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/01_protocol_buffers.html">Protocol Buffers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/02_xml.html">Xml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/03_json.html">Json</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/04_yaml.html">Yaml</a></li>
+                        </ol>
+                    </li>
+                    <li>Security<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/01_auth.html">Auth</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/02_tls.html">Tls</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/03_security_vulnerabilities.html">Security Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/04_security_best_practices_and_measures.html">Security Best Practices and Measures</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/05_third_party_cookies_vulnerabilities.html">Third Party Cookies Vulnerabilities</a></li>
+                        </ol>
+                    </li>
+                    <li>Deployment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/01_centos_digital_ocean.html">Centos Digital Ocean</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/02_static_python_website_netlify.html">Static Python Website Netlify</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Systems<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/01_coordination_services.html">Coordination Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/02_gossip_protocol.html">Gossip Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/03_linearizability.html">Linearizability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/04_concurrent_writes.html">Concurrent Writes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/05_operational_transform.html">Operational Transform</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/06_algorithms_summary.html">Algorithms Summary</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/07_optimistic_vs_pessimistic_locking.html">Optimistic vs Pessimistic Locking</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="metrics-analysis">Metrics Analysis</h2>
+            <p>In modern distributed systems, the performance and reliability of communication channels, APIs, and network infrastructure are critical factors that determine user experience. Metrics and analysis offer insights into system behavior under varying loads, help identify bottlenecks, and guide capacity planning. Capturing the right metrics and interpreting them correctly leads to robust, scalable architectures. This document explores the core metrics for communication, API usage, and network layers, alongside common formulas, analysis techniques, and best practices in monitoring and diagnostics.</p>
+            <h3 id="why-metrics-matter">Why Metrics Matter</h3>
+            <p>Data-driven decisions about scaling, optimization, and resource allocation rely on the proper collection and interpretation of metrics. Without measurable indicators, developers and operators are left guessing about system performance and reliability. Metrics also facilitate:</p>
+            <ol>
+                <li><strong>Troubleshooting</strong>: Pinpointing service or network segments causing latency spikes or errors. </li>
+                <li><strong>Capacity Planning</strong>: Predicting future infrastructure needs based on historical load. </li>
+                <li><strong>Service-Level Objectives (SLOs)</strong>: Establishing performance targets and tracking whether services meet those targets. </li>
+                <li><strong>Trend Analysis</strong>: Spotting gradual performance degradations before they become outages. </li>
+            </ol>
+            <h3 id="common-terminology-and-formulas">Common Terminology and Formulas</h3>
+            <h4 id="latency-and-response-times">Latency and Response Times</h4>
+            <p><strong>Latency</strong> is the time it takes for a request to travel from a client to a server and for the server to respond, often including network travel time and server processing. Commonly measured as:</p>
+            <ul>
+                <li><strong>p50 (Median)</strong>: Half of requests complete below this time. </li>
+                <li><strong>p95, p99</strong>: High percentiles that reveal the “worst” performance user experiences. </li>
+                <li><strong>p100 (Max)</strong>: Maximum observed latency (sometimes too spiky to be useful).</li>
+            </ul>
+            <p>A simplified latency equation for an HTTP request might be:</p>
+            <div>
+                <pre><code class="language-shell">Total_Latency = RTT_network + Server_Processing_Time + (Possible_Queueing_Delay)</code></pre>
+            </div>
+            <ul>
+                <li><strong>RTT_network</strong>: Round-trip time for packets to travel between client and server. </li>
+                <li><strong>Server_Processing_Time</strong>: The time the server spends handling the request (compute, I/O, DB calls, etc.). </li>
+                <li><strong>Possible_Queueing_Delay</strong>: Delays in load balancers, proxies, or OS-level buffers.</li>
+            </ul>
+            <h4 id="throughput-and-requests-per-second-rps-qps-">Throughput and Requests per Second (RPS/QPS)</h4>
+            <p><strong>Throughput</strong> indicates how many requests or messages a system can handle over a given time, often expressed as Requests per Second (RPS) or Queries per Second (QPS). If <code>N_req</code> is the total number of requests within a measurement window <code>T</code>, throughput can be approximated as:</p>
+            <div>
+                <pre><code class="language-shell">Throughput = N_req / T</code></pre>
+            </div>
+            <h4 id="concurrency">Concurrency</h4>
+            <p><strong>Concurrency</strong> measures how many requests or connections a system is serving simultaneously. A system that supports large concurrency can handle many in-flight requests at once, but each active request may consume memory and CPU resources.</p>
+            <h4 id="error-rates">Error Rates</h4>
+            <p>Common ways to measure errors:</p>
+            <ul>
+                <li><strong>4XX Error Rate</strong>: Fraction of client errors (e.g., 400, 404, 401). </li>
+                <li><strong>5XX Error Rate</strong>: Fraction of server errors (e.g., 500, 503). </li>
+                <li><strong>Overall Error Rate</strong>: <code>(Number_of_Error_Responses) / (Total_Requests)</code>. </li>
+            </ul>
+            <h4 id="uptime-and-availability">Uptime and Availability</h4>
+            <p>Often expressed as a percentage of time the service is fully operational:</p>
+            <div>
+                <pre><code class="language-shell">Availability (%) = 100 * (Uptime / Total_Time)</code></pre>
+            </div>
+            <p>For critical services, SLOs might require 99.9% or 99.99% availability, corresponding to allowable downtime of minutes or seconds per month.</p>
+            <h4 id="packet-loss-and-network-metrics">Packet Loss and Network Metrics</h4>
+            <p>In lower-level network contexts (TCP, UDP), metrics like <strong>packet loss</strong>, <strong>retransmissions</strong>, and <strong>bandwidth utilization</strong> are key:</p>
+            <div>
+                <pre><code class="language-shell">Packet_Loss_Rate = (Packets_Lost / Packets_Sent) * 100</code></pre>
+            </div>
+            <p>Excessive packet loss degrades application performance, especially for real-time or streaming protocols.</p>
+            <h3 id="metrics-for-apis">Metrics for APIs</h3>
+            <h4 id="http-restful-apis">HTTP/RESTful APIs</h4>
+            <p>For RESTful services, typical metrics include:</p>
+            <ol>
+                <li><strong>Request Latencies</strong> by endpoint and method (GET, POST, etc.). </li>
+                <li><strong>Request Throughput</strong> in requests per second or per minute. </li>
+                <li><strong>Response Codes</strong>: Monitoring distribution of 2xx, 4xx, 5xx for quick error detection. </li>
+                <li><strong>Payload Sizes</strong>: Large payloads can affect network usage and latency. </li>
+                <li><strong>Caching Metrics</strong>: Cache hit/miss rates if a caching layer is in use.</li>
+            </ol>
+            <p>A representation of data flow with potential metric collection points:</p>
+            <div>
+                <pre><code class="language-shell">Client (Browser/App) ----&gt; [Load Balancer] ----&gt; [API Server(s)] ----&gt; [Database/Cache]
+     |                        |                       |                      |
+     | metrics??             | metrics??             | metrics??            | metrics??
+     v                        v                       v                      v
+
+Logging &amp; Monitoring Infrastructure (e.g., Prometheus, Grafana, ELK stack)</code></pre>
+            </div>
+            <p>At each stage, logs and performance counters gather metrics on request durations, error rates, and resource usage (CPU/memory).</p>
+            <h4 id="graphql-apis">GraphQL APIs</h4>
+            <p>Similar to REST, but the queries can be more dynamic. Important metrics include:</p>
+            <ol>
+                <li><strong>Resolver Latencies</strong>: Identifying slow resolvers. </li>
+                <li><strong>Field Usage</strong>: Finding which fields in the schema are frequently queried. </li>
+                <li><strong>Depth and Complexity</strong>: Monitoring how complex queries might degrade performance.</li>
+            </ol>
+            <h4 id="grpc">gRPC</h4>
+            <p>Because gRPC uses HTTP/2 and Protobuf, typical metrics include:</p>
+            <ol>
+                <li><strong>RPC Latencies</strong> (per method). </li>
+                <li><strong>Inbound/Outbound Traffic</strong> (in bytes). </li>
+                <li><strong>Deadline/Timeout Exceeded</strong> events. </li>
+                <li><strong>Streaming Metrics</strong> (message count, stream duration).</li>
+            </ol>
+            <h3 id="network-level-metrics">Network-Level Metrics</h3>
+            <h4 id="tcp-metrics">TCP Metrics</h4>
+            <ul>
+                <li><strong>RTT (Round Trip Time)</strong>: Base measure of latency. </li>
+                <li><strong>Window Size</strong>: Congestion window for flow control. </li>
+                <li><strong>Retransmissions</strong>: High retransmissions can indicate congestion or packet loss. </li>
+            </ul>
+            <h4 id="udp-metrics">UDP Metrics</h4>
+            <ul>
+                <li><strong>Packet Loss</strong>: Particularly relevant in real-time streaming contexts. </li>
+                <li><strong>Jitter</strong>: Variation in packet arrival times, crucial for voice/video. </li>
+                <li><strong>Datagram Throughput</strong>: How many datagrams per second can be handled?</li>
+            </ul>
+            <h4 id="bandwidth-and-utilization">Bandwidth and Utilization</h4>
+            <p><strong>Bandwidth</strong> is the theoretical max data rate, while <strong>utilization</strong> measures how much of that bandwidth is in use. Monitoring helps avoid saturation. If you see throughput near the link’s capacity, you risk increased latency and packet drops.</p>
+            <h3 id="analyzing-and-visualizing-metrics">Analyzing and Visualizing Metrics</h3>
+            <h4 id="dashboards-and-tools">Dashboards and Tools</h4>
+            <p>Systems like Prometheus, Graphite, InfluxDB, or DataDog store metrics. Tools like Grafana or Kibana help create real-time dashboards. A typical setup might ingest counters and histograms from applications, store them in a time-series database, and visualize them in charts.</p>
+            <h4 id="histograms-vs-averages">Histograms vs Averages</h4>
+            <p>Relying on averages can be misleading—some users might experience extreme delays while the average remains fine. <strong>Histograms</strong> reveal distribution across multiple buckets, giving better insight into tail latencies (p95, p99).</p>
+            <h4 id="error-budgets-and-slis-slos">Error Budgets and SLIs/SLOs</h4>
+            <ul>
+                <li><strong>SLI (Service Level Indicator)</strong>: A measured metric (e.g., request success rate). </li>
+                <li><strong>SLO (Service Level Objective)</strong>: A target threshold for that SLI (e.g., 99.9% success rate). </li>
+                <li><strong>Error Budget</strong>: The allowable number of errors/time of unavailability before the SLO is violated.</li>
+            </ul>
+            <p>Example formula for an SLO around error rate:</p>
+            <div>
+                <pre><code class="language-shell">Error_Rate_SLI = (Number_of_Error_Requests / Total_Requests)
+Target: Error_Rate_SLI &lt;= 0.1%</code></pre>
+            </div>
+            <p>If the error rate goes beyond 0.1%, you exceed your error budget.</p>
+            <h3 id="load-and-stress-testing">Load and Stress Testing</h3>
+            <p>Performance analysis relies on simulating realistic traffic:</p>
+            <ol>
+                <li><strong>Load Testing</strong>: Evaluate normal to peak loads, measuring throughput, latency, and resource usage. </li>
+                <li><strong>Stress Testing</strong>: Push the system beyond capacity to see how it fails and recovers. </li>
+                <li><strong>Soak/Endurance Testing</strong>: Sustain high load for an extended period, revealing memory leaks or degrade over time.</li>
+            </ol>
+            <p>Tools like <strong>Apache JMeter</strong>, <strong>Locust</strong>, or <strong>k6</strong> let you define test scripts that emulate real client behavior. Metrics from these tests guide capacity planning and highlight scaling bottlenecks.</p>
+            <h3 id="distributed-tracing">Distributed Tracing</h3>
+            <p>In microservice architectures, a single request can span multiple services. <strong>Distributed tracing</strong> with solutions like Jaeger or Zipkin tracks how requests hop between services. The system collects timestamps and metadata at each node:</p>
+            <div>
+                <pre><code class="language-shell">[Service A] -- calls --&gt; [Service B] -- calls --&gt; [Service C]
+       |                         |                        |
+       v                         v                        v
+   (Trace A)                (Trace B)                 (Trace C)
+
+Traces aggregated and visualized in a central UI</code></pre>
+            </div>
+            <p>This reveals which segments of a request path consume the most time or fail often. Tracing complements standard metrics by delivering a request-centric timeline rather than aggregated counters.</p>
+            <h3 id="putting-it-all-together-example-monitoring-architecture">Putting It All Together: Example Monitoring Architecture</h3>
+            <p>Below is a conceptual diagram of how metrics might flow:</p>
+            <div>
+                <pre><code class="language-+---------------------+">|   Various Clients   | -- Make Requests --&gt;  [Load Balancer] -&gt; [API/Services]
++---------------------+                                           |
+                                                                   | Generate logs
+                                                                   | and metrics
+                                                                   v
+                                                        +-----------------------+
+                                                        |   Metrics Exporter    |
+                                                        | (Prometheus, StatsD)  |
+                                                        +-----------+-----------+
+                                                                    |
+                                                                    v
+                                                        +-----------------------+
+                                                        |   Time-Series DB      |
+                                                        | (Prometheus, InfluxDB)|
+                                                        +-----------+-----------+
+                                                                    |
+                                                                    v
+                                                        +-----------------------+
+                                                        |   Visualization       |
+                                                        |   (Grafana, Kibana)   |
+                                                        +-----------------------+</code></pre>
+            </div>
+            <p>Steps in this pipeline: </p>
+            <ol>
+                <li><strong>Requests Enter</strong>: Clients call the API through a load balancer. </li>
+                <li><strong>Services Process</strong>: Each service logs data or updates counters/histograms. </li>
+                <li><strong>Metric Scraping</strong>: A metrics exporter (Prometheus) scrapes data from the services. </li>
+                <li><strong>Storage</strong>: The time-series database retains historical metrics. </li>
+                <li><strong>Dashboards</strong>: Operators view performance, latencies, error rates, etc., in real time.</li>
+            </ol>
+            <h3 id="best-practices-and-recommendations">Best Practices and Recommendations</h3>
+            <ol>
+                <li><strong>Capture the Right Granularity</strong>: Overly detailed metrics can overwhelm storage, but too coarse metrics hide issues. Start with endpoint-level latencies, throughput, and error rates. </li>
+                <li><strong>Measure Tail Latencies</strong>: Focus on p95 or p99 to ensure outliers are not ignored. </li>
+                <li><strong>Define Clear SLOs</strong>: Tying metrics to business outcomes helps teams prioritize fixes. </li>
+                <li><strong>Automate Alerts</strong>: Set up threshold-based or anomaly-based alerts for critical metrics (e.g., 5xx rate spikes, high latencies). </li>
+                <li><strong>Integrate Tracing</strong>: Combine logs, metrics, and traces for a complete observability picture. </li>
+                <li><strong>Plan for Scale</strong>: As systems grow, you’ll need a robust architecture for metric collection and storage. </li>
+                <li><strong>Stress and Chaos Testing</strong>: Explore system limits and resiliency under adverse conditions (random instance termination, network partition). </li>
+            </ol>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

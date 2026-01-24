@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Load Balancing in Distributed Systems</title>
+    <meta content="Load balancing is central to designing robust distributed systems." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/08_load_balancing" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Load Balancing in Distributed Systems",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/08_load_balancing"
+            },
+            "url": "https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/08_load_balancing",
+            "description": "Load balancing is central to designing robust distributed systems.",
+            "dateModified": "2026-01-24"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol><a href="#load-balancing-in-distributed-systems">Load Balancing in Distributed Systems</a>
+                    <ol>
+                        <li><a href="#significance-of-load-balancing">Significance of Load Balancing</a></li>
+                        <li><a href="#how-load-balancers-work">How Load Balancers Work</a>
+                            <ol>
+                                <li><a href="#health-checks">Health Checks</a></li>
+                                <li><a href="#traffic-distribution-techniques">Traffic Distribution Techniques</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#load-balancer-resilience">Load Balancer Resilience</a></li>
+                        <li><a href="#best-practices-for-load-balancing">Best Practices for Load Balancing</a></li>
+                    </ol>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Api Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/01_api_communication_protocols.html">Api Communication Protocols</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/02_rest.html">Rest</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/03_graphql.html">Graphql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/04_grpc.html">Grpc</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/05_state_management.html">State Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/06_data_transmission.html">Data Transmission</a></li>
+                        </ol>
+                    </li>
+                    <li>Network Communications<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/01_network_communications.html">Network Communications</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/02_tcp_and_udp.html">Tcp and Udp</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/03_http_protocol.html">Http Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/04_web_sockets.html">Web Sockets</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/05_metrics_and_analysis.html">Metrics and Analysis</a></li>
+                        </ol>
+                    </li>
+                    <li>Server Technologies<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/01_web_server_overview.html">Web Server Overview</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/02_static_dynamic_content.html">Static Dynamic Content</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/03_tomcat.html">Tomcat</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/04_apache.html">Apache</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/05_nginx.html">Nginx</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/06_forward_proxies.html">Forward Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/07_reverse_proxies.html">Reverse Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/08_load_balancing.html">Load Balancing</a></li>
+                        </ol>
+                    </li>
+                    <li>Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/01_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/02_transactions.html">Transactions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/03_indexes.html">Indexes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/04_isolation_levels.html">Isolation Levels</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/05_data_warehousing.html">Data Warehousing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/06_replication.html">Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/07_halloween_problem.html">Halloween Problem</a></li>
+                        </ol>
+                    </li>
+                    <li>Caching<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/01_caching_strategies.html">Caching Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/02_redis.html">Redis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/03_content_delivery_networks.html">Content Delivery Networks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/04_database_caching.html">Database Caching</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Processing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/01_pub_sub_vs_queue.html">Pub Sub vs Queue</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/02_messaging_system_integration.html">Messaging System Integration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/03_batch_processing.html">Batch Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing.html">Stream Processing</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Formats<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/01_protocol_buffers.html">Protocol Buffers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/02_xml.html">Xml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/03_json.html">Json</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/04_yaml.html">Yaml</a></li>
+                        </ol>
+                    </li>
+                    <li>Security<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/01_auth.html">Auth</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/02_tls.html">Tls</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/03_security_vulnerabilities.html">Security Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/04_security_best_practices_and_measures.html">Security Best Practices and Measures</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/05_third_party_cookies_vulnerabilities.html">Third Party Cookies Vulnerabilities</a></li>
+                        </ol>
+                    </li>
+                    <li>Deployment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/01_centos_digital_ocean.html">Centos Digital Ocean</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/02_static_python_website_netlify.html">Static Python Website Netlify</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Systems<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/01_coordination_services.html">Coordination Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/02_gossip_protocol.html">Gossip Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/03_linearizability.html">Linearizability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/04_concurrent_writes.html">Concurrent Writes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/05_operational_transform.html">Operational Transform</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/06_algorithms_summary.html">Algorithms Summary</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/07_optimistic_vs_pessimistic_locking.html">Optimistic vs Pessimistic Locking</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="load-balancing-in-distributed-systems">Load Balancing in Distributed Systems</h2>
+            <p>Load balancing is central to designing robust distributed systems. It ensures that incoming requests or workloads are equitably distributed across multiple servers or nodes, thereby preventing any single server from becoming a bottleneck. This technique also boosts system resilience, providing higher availability and scalability.</p>
+            <div>
+                <pre><code class="language-shell">ASCII DIAGRAM: High-Level Load Balancing
+
+         +---------+
+         |  Client |
+         +----+----+
+              |
+      (HTTP/TCP Requests)
+              v
+        +-----+------+
+        | Load       |
+        | Balancer   |
+        +-----+------+
+              |
+      (Distributes requests)
+              v
+  +-----------+-----------+
+  |    Server 1 (S1)     |
+  +-----------+-----------+
+  |    Server 2 (S2)     |
+  +-----------+-----------+
+  |    Server 3 (S3)     |
+  +-----------+-----------+</code></pre>
+            </div>
+            <ul>
+                <li>A client sends requests to the <strong>Load Balancer (LB)</strong> instead of a single server. </li>
+                <li>The load balancer <strong>distributes</strong> requests among multiple servers based on a chosen algorithm. </li>
+                <li><strong>Responses</strong> are returned to the load balancer, which then passes them back to the client.</li>
+            </ul>
+            <h3 id="significance-of-load-balancing">Significance of Load Balancing</h3>
+            <p>Implementing a load balancer in a distributed system offers <strong>multiple</strong> advantages:</p>
+            <ul>
+                <li><strong>Resource Utilization</strong> </li>
+                <li>Each server handles a fair portion of the traffic, avoiding under-utilization or overburdening.</li>
+                <li><strong>Reduced Latency</strong> </li>
+                <li>Requests can be processed <strong>concurrently</strong>, leading to faster response times.</li>
+                <li><strong>High Availability</strong> </li>
+                <li>If a server fails, the load balancer redirects traffic to other active servers. </li>
+                <li>Ensures minimal disruption during hardware or software failures.</li>
+                <li><strong>Scalability</strong> </li>
+                <li>Additional servers can be <strong>added</strong> seamlessly behind the load balancer to handle increased loads.</li>
+            </ul>
+            <h3 id="how-load-balancers-work">How Load Balancers Work</h3>
+            <p>Load balancers apply algorithms to decide where each incoming request goes. They typically include:</p>
+            <h4 id="health-checks">Health Checks</h4>
+            <ul>
+                <li>The load balancer <strong>pings</strong> or <strong>sends heartbeats</strong> to servers to verify if they are up and responding correctly. </li>
+                <li>Unresponsive servers are <strong>taken</strong> out of rotation until they recover.</li>
+            </ul>
+            <h4 id="traffic-distribution-techniques">Traffic Distribution Techniques</h4>
+            <p>Below are common methods for distributing requests:</p>
+            <ol>
+                <li><strong>Least Connection</strong> </li>
+                <li>Routes new requests to the server with the fewest active connections. </li>
+                <li>
+                    <p>Helpful if requests have varying durations, preventing busy servers from becoming overloaded.</p>
+                </li>
+                <li>
+                    <p><strong>Least Response Time</strong> </p>
+                </li>
+                <li>Considers both the <strong>current number</strong> of active connections and the <strong>average latency</strong>. </li>
+                <li>
+                    <p>Aims to pick the server that can respond <strong>fastest</strong>.</p>
+                </li>
+                <li>
+                    <p><strong>Least Bandwidth</strong> </p>
+                </li>
+                <li>
+                    <p>Monitors ongoing traffic in Mbps or Gbps and sends new requests to the server with the <strong>lowest</strong> bandwidth utilization.</p>
+                </li>
+                <li>
+                    <p><strong>Round Robin</strong> </p>
+                </li>
+                <li>Sequentially distributes requests across servers in a <strong>cyclical</strong> order (S1 → S2 → S3 → S1 …). </li>
+                <li>
+                    <p><strong>Weighted Round Robin</strong> accounts for each server’s capacity, giving a powerful server more requests.</p>
+                </li>
+                <li>
+                    <p><strong>IP Hash</strong> </p>
+                </li>
+                <li>Uses a <strong>hash</strong> of the client’s IP address to pick a server. </li>
+                <li>
+                    <p>Ensures the same client IP typically routes to the same server (session persistence), common in Layer 4 load balancing.</p>
+                </li>
+                <li>
+                    <p><strong>Consistent Hashing</strong> </p>
+                </li>
+                <li>The hash of the request (e.g., session ID, cache key) maps to a server “ring.” </li>
+                <li>
+                    <p>When a server is <strong>added</strong> or <strong>removed</strong>, only a small subset of the keys or requests are remapped, aiding caching consistency.</p>
+                </li>
+                <li>
+                    <p><strong>Layer 7 Load Balancing</strong> </p>
+                </li>
+                <li><strong>Application-level</strong> load balancing that inspects HTTP headers, URLs, cookies, etc. </li>
+                <li>Allows content-aware routing (e.g., static file requests go to a specialized cluster, API requests go elsewhere). </li>
+                <li>More resource-intensive but offers <strong>fine-grained</strong> control.</li>
+            </ol>
+            <div>
+                <pre><code class="language-shell">ASCII DIAGRAM: Multiple Load Balancing Methods
+
+           +------------------+
+           |   Load Balancer  |
+           +--------+---------+
+                    |
+    +---------------+---------------+
+    |                               |
+    v                               v
++----------------+            +----------------+
+|   Server Pool  |            |   Routing via  |
+| (LeastConn, RR)|            |   IP/Consistent|
+| etc.           |            |   Hash, etc.   |
++----------------+            +----------------+</code></pre>
+            </div>
+            <h3 id="load-balancer-resilience">Load Balancer Resilience</h3>
+            <p>Ironically, load balancers can become a <strong>single point of failure</strong> if not designed carefully. Various techniques mitigate this risk:</p>
+            <ol>
+                <li><strong>Load Balancer Clustering</strong> </li>
+                <li>Multiple load balancers run in <strong>active-active</strong> or <strong>active-passive</strong> configurations. </li>
+                <li>
+                    <p>A <em>heartbeat</em> mechanism monitors whether a load balancer node has failed.</p>
+                </li>
+                <li>
+                    <p><strong>Active-Passive Pair</strong> </p>
+                </li>
+                <li>If the <strong>active</strong> LB node fails, the <strong>passive</strong> node takes over, preventing downtime. </li>
+                <li>
+                    <p>Usually involves sharing a <strong>virtual IP</strong> or using DNS-based failover.</p>
+                </li>
+                <li>
+                    <p><strong>DNS-based Load Balancing</strong> </p>
+                </li>
+                <li>DNS records (like <code>round-robin DNS</code>) distribute traffic among multiple LB IPs. </li>
+                <li>Can be combined with <strong>health checks</strong> at the DNS level.</li>
+            </ol>
+            <h3 id="best-practices-for-load-balancing">Best Practices for Load Balancing</h3>
+            <ul>
+                <li><strong>Use Health Checks</strong>: Regularly verify server availability to avoid sending requests to unhealthy nodes.</li>
+                <li><strong>Monitor Performance</strong>: Track metrics like <strong>requests per second</strong>, <strong>latency</strong>, <strong>error rates</strong>, and <strong>connection counts</strong> to optimize distribution.</li>
+                <li><strong>Enable TLS Offloading</strong>: Terminate SSL/TLS at the load balancer to reduce CPU overhead on backend servers.</li>
+                <li><strong>Implement Caching</strong>: If feasible, use <strong>edge caching</strong> or LB caching to minimize requests hitting servers.</li>
+                <li><strong>Session Persistence</strong>: For applications needing sticky sessions, configure IP hash, cookies, or other <em>persistence</em> methods carefully.</li>
+                <li><strong>Automate Scaling</strong>: Integrate load balancer configuration with <strong>auto-scaling</strong> groups so that adding/removing servers updates load balancing pools dynamically.</li>
+            </ul>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Optimistic vs. Pessimistic Locking</title>
+    <meta content="Locking is about managing concurrent access to shared data." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/07_optimistic_vs_pessimistic_locking" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Optimistic vs. Pessimistic Locking",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/07_optimistic_vs_pessimistic_locking"
+            },
+            "url": "https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/07_optimistic_vs_pessimistic_locking",
+            "description": "Locking is about managing concurrent access to shared data.",
+            "dateModified": "2026-01-24"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol><a href="#optimistic-vs-pessimistic-locking">Optimistic vs. Pessimistic Locking</a>
+                    <ol>
+                        <li><a href="#conceptual-diagram">Conceptual Diagram</a></li>
+                        <li><a href="#understanding-optimistic-locking">Understanding Optimistic Locking</a></li>
+                        <li><a href="#exploring-pessimistic-locking">Exploring Pessimistic Locking</a></li>
+                        <li><a href="#interaction-and-trade-offs">Interaction and Trade-offs</a></li>
+                        <li><a href="#practical-examples">Practical Examples</a>
+                            <ol>
+                                <li><a href="#optimistic-lock-in-action">Optimistic Lock in Action</a></li>
+                                <li><a href="#pessimistic-lock-in-action">Pessimistic Lock in Action</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#best-practices-for-locking-strategy">Best Practices for Locking Strategy</a></li>
+                        <li><a href="#deadlocks-in-pessimistic-locking">Deadlocks in Pessimistic Locking</a></li>
+                    </ol>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Api Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/01_api_communication_protocols.html">Api Communication Protocols</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/02_rest.html">Rest</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/03_graphql.html">Graphql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/04_grpc.html">Grpc</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/05_state_management.html">State Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/06_data_transmission.html">Data Transmission</a></li>
+                        </ol>
+                    </li>
+                    <li>Network Communications<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/01_network_communications.html">Network Communications</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/02_tcp_and_udp.html">Tcp and Udp</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/03_http_protocol.html">Http Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/04_web_sockets.html">Web Sockets</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/05_metrics_and_analysis.html">Metrics and Analysis</a></li>
+                        </ol>
+                    </li>
+                    <li>Server Technologies<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/01_web_server_overview.html">Web Server Overview</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/02_static_dynamic_content.html">Static Dynamic Content</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/03_tomcat.html">Tomcat</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/04_apache.html">Apache</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/05_nginx.html">Nginx</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/06_forward_proxies.html">Forward Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/07_reverse_proxies.html">Reverse Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/08_load_balancing.html">Load Balancing</a></li>
+                        </ol>
+                    </li>
+                    <li>Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/01_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/02_transactions.html">Transactions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/03_indexes.html">Indexes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/04_isolation_levels.html">Isolation Levels</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/05_data_warehousing.html">Data Warehousing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/06_replication.html">Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/07_halloween_problem.html">Halloween Problem</a></li>
+                        </ol>
+                    </li>
+                    <li>Caching<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/01_caching_strategies.html">Caching Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/02_redis.html">Redis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/03_content_delivery_networks.html">Content Delivery Networks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/04_database_caching.html">Database Caching</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Processing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/01_pub_sub_vs_queue.html">Pub Sub vs Queue</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/02_messaging_system_integration.html">Messaging System Integration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/03_batch_processing.html">Batch Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing.html">Stream Processing</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Formats<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/01_protocol_buffers.html">Protocol Buffers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/02_xml.html">Xml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/03_json.html">Json</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/04_yaml.html">Yaml</a></li>
+                        </ol>
+                    </li>
+                    <li>Security<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/01_auth.html">Auth</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/02_tls.html">Tls</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/03_security_vulnerabilities.html">Security Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/04_security_best_practices_and_measures.html">Security Best Practices and Measures</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/05_third_party_cookies_vulnerabilities.html">Third Party Cookies Vulnerabilities</a></li>
+                        </ol>
+                    </li>
+                    <li>Deployment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/01_centos_digital_ocean.html">Centos Digital Ocean</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/02_static_python_website_netlify.html">Static Python Website Netlify</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Systems<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/01_coordination_services.html">Coordination Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/02_gossip_protocol.html">Gossip Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/03_linearizability.html">Linearizability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/04_concurrent_writes.html">Concurrent Writes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/05_operational_transform.html">Operational Transform</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/06_algorithms_summary.html">Algorithms Summary</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/07_optimistic_vs_pessimistic_locking.html">Optimistic vs Pessimistic Locking</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="optimistic-vs-pessimistic-locking">Optimistic vs. Pessimistic Locking</h2>
+            <p>Locking is about managing concurrent access to shared data. Engineers often make it sound harder than it is, but the core idea is simple: choose between optimistic or pessimistic approaches depending on how costly retries are.</p>
+            <ul>
+                <li><strong>Optimistic Lock → Application-level control</strong></li>
+                <li><strong>Pessimistic Lock → Database-level control</strong></li>
+            </ul>
+            <p><strong>Optimistic = “trust first, verify at the end.”</strong></p>
+            <p>Analogy: Editing a shared whiteboard snapshot. Imagine you take a picture of a whiteboard, add your ideas, and then return to update the board. If someone else has already changed it, you notice the mismatch and must reapply your changes.</p>
+            <p><strong>Pessimistic = “reserve first, then act.”</strong></p>
+            <p>Analogy: Using a single restroom stall. Once the door is locked, nobody else can enter until it’s unlocked. This prevents awkward collisions but can create a line.</p>
+            <p><strong>Rule of thumb</strong></p>
+            <ul>
+                <li>When do-overs are <strong>quick and low-cost</strong>, lean on <strong>Optimistic Locking</strong>.</li>
+                <li>When do-overs are <strong>slow, risky, or expensive</strong>, rely on <strong>Pessimistic Locking</strong>.</li>
+            </ul>
+            <p>✅ After reading this, you should be able to explain:</p>
+            <ol>
+                <li>What optimistic and pessimistic locks are, and how they differ.</li>
+                <li>Why optimistic locks are app-level and pessimistic locks are DB-level.</li>
+                <li>The retry vs. blocking trade-off.</li>
+                <li>Which strategy fits different workloads (cheap retry vs. expensive retry).</li>
+                <li>How to avoid deadlocks when using pessimistic locking.</li>
+            </ol>
+            <h3 id="conceptual-diagram">Conceptual Diagram</h3>
+            <p>We’re looking at how two users, A and B, interact with the same database record using two different locking strategies.</p>
+            <div>
+                <pre><code class="language-shell">[Resource: Record X]
+
+Optimistic Lock:
+   |-- User A edits freely
+   |-- User B edits freely
+   |
+   |-- Both try to save
+   |-- Conflict check (timestamps / version numbers)
+   |-- One succeeds, the other retries
+
+Pessimistic Lock:
+   |-- User A begins edit --&gt; Database locks record
+   |-- User B tries to edit --&gt; Must wait
+   |
+   |-- Lock released after User A commits/rolls back</code></pre>
+            </div>
+            <p>Optimistic locking lets multiple users edit the same record at the same time without restrictions. Each user works with their own copy, and only when they try to save does the system check for conflicts using a version number or timestamp. If no changes have happened since the user started editing, the save goes through; if another user has already updated the record, the save fails and the user must reload and try again. In contrast, pessimistic locking places an immediate lock on the record as soon as the first user begins editing. While the lock is active, no other user can make changes—anyone who tries has to wait until the first user commits or cancels their update. This guarantees consistency by blocking conflicts up front but also reduces concurrency.</p>
+            <h3 id="understanding-optimistic-locking">Understanding Optimistic Locking</h3>
+            <p>Optimistic locking assumes <strong>conflicts are rare</strong>.
+                Instead of blocking others, each transaction works independently, and a conflict check happens <strong>only at commit time</strong>.</p>
+            <ul>
+                <li>Typically implemented using <strong>version columns</strong> or <strong>timestamps</strong>.</li>
+                <li>If data has changed since you read it, your update fails, and you must retry.</li>
+                <li>Works best in <strong>read-heavy systems</strong> where collisions are infrequent and retries are inexpensive.</li>
+            </ul>
+            <p><strong>Example scenario:</strong>
+                An e-commerce website where many users browse and occasionally update their shopping carts. Since collisions are rare, optimistic control avoids unnecessary blocking.</p>
+            <p><strong>Code sample (application-level check):</strong></p>
+            <div>
+                <pre><code class="language-sql">-- Table has 'version' column
+UPDATE Products
+SET Stock = Stock - 1, version = version + 1
+WHERE ProductID = 42 AND version = 7;
+-- Update succeeds only if version hasn’t changed</code></pre>
+            </div>
+            <h3 id="exploring-pessimistic-locking">Exploring Pessimistic Locking</h3>
+            <p>Pessimistic locking assumes <strong>conflicts are likely</strong>.
+                It prevents them by blocking others at the database level as soon as one transaction begins.</p>
+            <ul>
+                <li>Typically implemented with <code>SELECT … FOR UPDATE</code> or row/table locks.</li>
+                <li>Guarantees no one else can read/write until the lock is released.</li>
+                <li>Works best in <strong>write-heavy or critical systems</strong> where retries are too costly.</li>
+            </ul>
+            <p><strong>Example scenario:</strong>
+                A banking system transferring money. Losing or retrying a transfer is expensive, so the database enforces strict locks.</p>
+            <p><strong>Code sample (database-level lock):</strong></p>
+            <div>
+                <pre><code class="language-sql">BEGIN TRANSACTION;
+SELECT * FROM Accounts WHERE AccountID = 123 FOR UPDATE;
+-- Row is locked until commit/rollback
+UPDATE Accounts SET Balance = Balance - 100 WHERE AccountID = 123;
+COMMIT;</code></pre>
+            </div>
+            <h3 id="interaction-and-trade-offs">Interaction and Trade-offs</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Lock Type</td>
+                    <td>Where Enforced</td>
+                    <td>Concurrency</td>
+                    <td>Failure Handling</td>
+                    <td>Best Use Case</td>
+                </tr>
+                <tr>
+                    <td><strong>Optimistic</strong></td>
+                    <td>Application</td>
+                    <td>High</td>
+                    <td>Retry if conflict detected</td>
+                    <td>Read-heavy, cheap retries (e.g., CRMs, shopping carts)</td>
+                </tr>
+                <tr>
+                    <td><strong>Pessimistic</strong></td>
+                    <td>Database</td>
+                    <td>Lower</td>
+                    <td>Prevented by blocking others</td>
+                    <td>Write-heavy, costly retries (e.g., banking, reservations)</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="practical-examples">Practical Examples</h3>
+            <h4 id="optimistic-lock-in-action">Optimistic Lock in Action</h4>
+            <ul>
+                <li>User A and User B both edit a customer profile.</li>
+                <li>User A saves first.</li>
+                <li>User B tries to save, but version check fails.</li>
+                <li>User B reloads the latest record and retries.</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">[Resource: Record X]
+
+--- Optimistic Lock (App-Level) ---
+   |
+   |-- User A edits locally (no lock)
+   |-- User B edits locally (no lock)
+   |
+   |-- Both try to save
+   |     -&gt; DB checks version/timestamp
+   |     -&gt; One succeeds, the other retries
+   |
+   [High concurrency, occasional retry]</code></pre>
+            </div>
+            <p>Here’s a simple example showing how optimistic locking might work in practice. This version uses a <strong>version column</strong> in the database to detect conflicts:</p>
+            <div>
+                <pre><code class="language-python"># Example: Optimistic Lock in Action (Python + SQLAlchemy style)
+
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import StaleDataError
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+class Customer(Base):
+    __tablename__ = "customers"
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    email = Column(String)
+    version = Column(Integer, nullable=False, default=1)
+
+# Simulating User A and User B editing the same record
+def update_customer(session: Session, customer_id: int, new_email: str, expected_version: int):
+    try:
+        customer = session.query(Customer).filter(
+            Customer.id == customer_id,
+            Customer.version == expected_version  # check version matches
+        ).one()
+
+        customer.email = new_email
+        customer.version += 1  # increment version on successful update
+        session.commit()
+        print("Update successful")
+
+    except Exception:
+        session.rollback()
+        print("Conflict detected, reload latest record and retry")
+
+# Example flow
+# User A reads record (version=1)
+# User B reads record (version=1)
+
+# User A saves first → succeeds (version now 2)
+update_customer(sessionA, customer_id=1, new_email="userA@email.com", expected_version=1)
+
+# User B tries to save with old version=1 → fails
+update_customer(sessionB, customer_id=1, new_email="userB@email.com", expected_version=1)
+
+# User B reloads record (now version=2) and retries → succeeds
+update_customer(sessionB, customer_id=1, new_email="userB@email.com", expected_version=2)</code></pre>
+            </div>
+            <p>This pattern enforces that only the <strong>first save</strong> on the expected version succeeds. Any later saves with an outdated version will fail, prompting the user to <strong>reload the latest data</strong> and try again.</p>
+            <h4 id="pessimistic-lock-in-action">Pessimistic Lock in Action</h4>
+            <ul>
+                <li>User A starts editing a hotel booking.</li>
+                <li>Database locks the row.</li>
+                <li>User B tries to edit the same booking → blocked until User A finishes.</li>
+                <li>Ensures no double-bookings.</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">[Resource: Record X]
+
+--- Pessimistic Lock (DB-Level) ---
+   |
+   |-- User A starts edit --&gt; DB places lock
+   |-- User B tries to edit --&gt; Blocked until A finishes
+   |
+   [Lower concurrency, no retry, but possible waiting]</code></pre>
+            </div>
+            <p>Here’s a practical example of <strong>pessimistic locking</strong> in action, where the database itself prevents concurrent edits by holding a lock on the row until the first transaction finishes:</p>
+            <div>
+                <pre><code class="language-python"># Example: Pessimistic Lock in Action (Python + SQLAlchemy style)
+
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import Session
+
+class Booking(Base):
+    __tablename__ = "bookings"
+    id = Column(Integer, primary_key=True)
+    room_number = Column(Integer)
+    guest_name = Column(String)
+
+# User A: starts editing a booking
+def user_a_edit(session: Session, booking_id: int):
+    # SELECT ... FOR UPDATE acquires a row-level lock
+    booking = session.query(Booking).filter_by(id=booking_id).with_for_update().one()
+    print("User A locked the booking record")
+
+    # simulate edit
+    booking.guest_name = "Alice"
+    session.commit()  # lock released after commit
+    print("User A finished editing, lock released")
+
+# User B: tries to edit at the same time
+def user_b_edit(session: Session, booking_id: int):
+    try:
+        booking = session.query(Booking).filter_by(id=booking_id).with_for_update().one()
+        print("User B acquired the lock after A finished")
+
+        # simulate edit
+        booking.guest_name = "Bob"
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        print("User B failed:", e)
+
+# Flow:
+# 1. User A calls user_a_edit → acquires lock on row.
+# 2. User B calls user_b_edit → blocked until A commits.
+# 3. Once A finishes, B can proceed safely.</code></pre>
+            </div>
+            <ul>
+                <li>The database uses <code>SELECT ... FOR UPDATE</code> to lock the row.</li>
+                <li>While the lock is active, any other transaction trying to edit the same row must <strong>wait</strong>.</li>
+                <li>This ensures <strong>no double-bookings</strong> or conflicting changes, at the cost of reduced concurrency.</li>
+            </ul>
+            <h3 id="best-practices-for-locking-strategy">Best Practices for Locking Strategy</h3>
+            <ul>
+                <li>Prefer <strong>optimistic</strong> if retries are acceptable and collisions are rare.</li>
+                <li>Use <strong>pessimistic</strong> if conflicts are common or retries are too costly.</li>
+                <li>Keep transactions <strong>short</strong> to minimize lock contention.</li>
+                <li>Avoid mixing application-level and database-level locks unless absolutely necessary.</li>
+                <li>Monitor retries, deadlocks, and wait times to tune strategy.</li>
+            </ul>
+            <h3 id="deadlocks-in-pessimistic-locking">Deadlocks in Pessimistic Locking</h3>
+            <p>Because pessimistic locks block, they can lead to deadlocks if two transactions wait on each other’s locks.</p>
+            <div>
+                <pre><code class="language-shell">Transaction 1:
+   LOCK Row A
+   WAIT Row B
+
+Transaction 2:
+   LOCK Row B
+   WAIT Row A</code></pre>
+            </div>
+            <p><strong>Strategies to handle:</strong></p>
+            <ul>
+                <li>Enforce <strong>consistent lock ordering</strong>.</li>
+                <li>Use <strong>timeouts</strong> on lock acquisition.</li>
+                <li>Keep transactions <strong>as short as possible</strong>.</li>
+            </ul>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

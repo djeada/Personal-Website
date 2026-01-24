@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Distributed Database System</title>
+    <meta content="A distributed database system (DDS) is a collection of logically interrelated databases distributed across multiple physical locations, connected by a network." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/08_distributed_database_systems" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Distributed Database System",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/08_distributed_database_systems"
+            },
+            "url": "https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/08_distributed_database_systems",
+            "description": "A distributed database system (DDS) is a collection of logically interrelated databases distributed across multiple physical locations, connected by a network.",
+            "dateModified": "2026-01-24"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol><a href="#distributed-database-system">Distributed Database System</a>
+                    <ol>
+                        <li><a href="#motivation">Motivation</a></li>
+                        <li><a href="#challenges">Challenges</a></li>
+                        <li><a href="#distributed-database-architectures">Distributed Database Architectures</a>
+                            <ol>
+                                <li><a href="#shared-nothing-shared-disk-and-shared-memory">Shared-Nothing, Shared-Disk, and Shared-Memory</a></li>
+                                <li><a href="#centralized-vs-decentralized-coordination">Centralized vs. Decentralized Coordination</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#data-distribution-strategies">Data Distribution Strategies</a>
+                            <ol>
+                                <li><a href="#replication">Replication</a></li>
+                                <li><a href="#partitioning-sharding">Partitioning / Sharding</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#distributed-concurrency-control">Distributed Concurrency Control</a>
+                            <ol>
+                                <li><a href="#two-phase-locking-2pl-">Two-Phase Locking (2PL)</a></li>
+                                <li><a href="#timestamp-ordering">Timestamp Ordering</a></li>
+                                <li><a href="#optimistic-concurrency-control-occ-">Optimistic Concurrency Control (OCC)</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#distributed-transaction-management">Distributed Transaction Management</a>
+                            <ol>
+                                <li><a href="#acid-properties">ACID Properties</a></li>
+                                <li><a href="#two-phase-commit-2pc-">Two-Phase Commit (2PC)</a></li>
+                                <li><a href="#three-phase-commit-3pc-">Three-Phase Commit (3PC)</a></li>
+                                <li><a href="#distributed-consensus-protocols-paxos-raft-">Distributed Consensus Protocols (Paxos, Raft)</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#fault-tolerance-recovery">Fault Tolerance &amp; Recovery</a>
+                            <ol>
+                                <li><a href="#failures-in-distributed-systems">Failures in Distributed Systems</a></li>
+                                <li><a href="#strategies-for-fault-tolerance">Strategies for Fault Tolerance</a></li>
+                                <li><a href="#logging-checkpointing">Logging &amp; Checkpointing</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#the-cap-theorem">The CAP Theorem</a>
+                            <ol>
+                                <li><a href="#statement">Statement</a></li>
+                                <li><a href="#implications">Implications</a></li>
+                                <li><a href="#brewer-s-cap-vs-pacelc">Brewer’s CAP vs. PACELC</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#types-of-distributed-databases">Types of Distributed Databases</a>
+                            <ol>
+                                <li><a href="#homogeneous-vs-heterogeneous">Homogeneous vs. Heterogeneous</a></li>
+                                <li><a href="#relational-vs-nosql-vs-newsql">Relational vs. NoSQL vs. NewSQL</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#practical-design-considerations">Practical Design Considerations</a>
+                            <ol>
+                                <li><a href="#query-processing-optimization">Query Processing &amp; Optimization</a></li>
+                                <li><a href="#caching-strategies">Caching Strategies</a></li>
+                                <li><a href="#security">Security</a></li>
+                                <li><a href="#monitoring-observability">Monitoring &amp; Observability</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#summary-of-tradeoffs-and-principles">Summary of Tradeoffs and Principles</a></li>
+                    </ol>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Introduction to Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/01_databases_intro.html">Databases Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/02_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/03_database_management_systems_dbms_.html">Database Management Systems Dbms</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/04_data_models.html">Data Models</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/01_introduction_to_databases/05_glossary.html">Glossary</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/01_requirements_analysis.html">Requirements Analysis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/02_normalization.html">Normalization</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/03_denormalization.html">Denormalization</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/04_indexing_strategies.html">Indexing Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/02_database_design/05_data_integrity.html">Data Integrity</a></li>
+                        </ol>
+                    </li>
+                    <li>Sql<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/01_intro_to_sql.html">Intro to Sql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/02_data_definition_language_ddl.html">Data Definition Language Ddl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/03_data_manipulation_language_dml.html">Data Manipulation Language Dml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/04_data_control_language_dcl.html">Data Control Language Dcl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/05_transaction_control_language_tcl.html">Transaction Control Language Tcl</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/06_joins_subqueries_and_views.html">Joins Subqueries and Views</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/07_stored_procedures_and_functions.html">Stored Procedures and Functions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/08_triggers.html">Triggers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/09_hierarchical_data.html">Hierarchical Data</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/10_aggregate_functions.html">Aggregate Functions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/03_sql/11_window_functions.html">Window Functions</a></li>
+                        </ol>
+                    </li>
+                    <li>Acid Properties and Transactions<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/01_transactions_intro.html">Transactions Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/02_atomicity.html">Atomicity</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/03_consistency.html">Consistency</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/04_isolation.html">Isolation</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/04_acid_properties_and_transactions/05_durability.html">Durability</a></li>
+                        </ol>
+                    </li>
+                    <li>Storage and Indexing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/01_how_tables_and_indexes_are_stored_on_disk.html">How Tables and Indexes Are Stored on Disk</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/02_row_based_vs_column_based_databases.html">Row Based vs Column Based Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/03_primary_key_vs_secondary_key.html">Primary Key vs Secondary Key</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/04_database_pages.html">Database Pages</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/05_storage_and_indexing/05_indexing.html">Indexing</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/01_distributed_database_systems.html">Distributed Database Systems</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/02_partitioning.html">Partitioning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/03_sharding.html">Sharding</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/04_partitioning_vs_sharding.html">Partitioning vs Sharding</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/05_consistent_hashing.html">Consistent Hashing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/06_cap_theorem.html">Cap Theorem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/07_eventual_consistency.html">Eventual Consistency</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/06_distributed_databases/08_distributed_database_systems.html">Distributed Database Systems</a></li>
+                        </ol>
+                    </li>
+                    <li>Concurrency Control<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/01_shared_vs_exclusive_locks.html">Shared vs Exclusive Locks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/02_deadlocks.html">Deadlocks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/03_two_phase_locking.html">Two Phase Locking</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/04_double_booking_problem.html">Double Booking Problem</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/07_concurrency_control/05_serializable_vs_repeatable_read.html">Serializable vs Repeatable Read</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Performance<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/01_query_optimization_techniques.html">Query Optimization Techniques</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/02_indexing_strategies.html">Indexing Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/03_database_caching.html">Database Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/04_materialized_views.html">Materialized Views</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/05_accessing_database_in_code.html">Accessing Database in Code</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/08_database_performance/06_working_with_billion_row_table.html">Working with Billion Row Table</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Replication<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/01_intro_to_replication.html">Intro to Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/02_master_standby_replication.html">Master Standby Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/03_multi_master_replication.html">Multi Master Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/09_database_replication/04_synchronous_vs_asynchronous_replication.html">Synchronous vs Asynchronous Replication</a></li>
+                        </ol>
+                    </li>
+                    <li>Nosql Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/01_nosql_databases_intro.html">Nosql Databases Intro</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/02_types_of_nosql_databases.html">Types of Nosql Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/03_querying_nosql_databases.html">Querying Nosql Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html">Crud in Sql vs Nosql</a></li>
+                        </ol>
+                    </li>
+                    <li>Security Best Practices<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/01_backup_and_recovery_strategies.html">Backup and Recovery Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/02_database_security.html">Database Security</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/03_capacity_planning.html">Capacity Planning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/04_database_migration.html">Database Migration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/05_performance_monitoring_and_tuning.html">Performance Monitoring and Tuning</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/06_sql_injection.html">Sql Injection</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/11_security_best_practices/07_crash_recovery_in_databases.html">Crash Recovery in Databases</a></li>
+                        </ol>
+                    </li>
+                    <li>Database Engines<ol>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/01_sqlite.html">Sqlite</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/02_mysql.html">Mysql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/03_postgresql.html">Postgresql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/04_mongodb.html">Mongodb</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/05_neo4j.html">Neo4J</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/06_aws_services.html">Aws Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/databases_notes/12_database_engines/07_choosing_database.html">Choosing Database</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="distributed-database-system">Distributed Database System</h2>
+            <p>A <strong>distributed database system (DDS)</strong> is a collection of logically interrelated databases distributed across multiple physical locations, connected by a network. The data in these systems might be replicated and/or partitioned among different sites, but the system should ideally appear to the user as a single integrated database.</p>
+            <div>
+                <pre><code class="language-shell">Internet/Clients
+             |
+             v
+      +---------------+
+      | Load Balancer |
+      +-------^-------+
+              |
+       +-------+---------+-----------------+
+       |                 |                 |
+       v                 v                 v
++-------------+   +-------------+   +-------------+
+|   Node 1    |   |   Node 2    |   |   Node 3    |
+|  (Shard/Rep)|   | (Shard/Rep) |   | (Shard/Rep) |
++------^------+   +------^------+   +------^------+
+       |                |                 |
+       +----------Network-----------------+</code></pre>
+            </div>
+            <ul>
+                <li>A load balancer distributes client requests among different nodes.</li>
+                <li>Each node may hold a shard (partition) or a replica.</li>
+            </ul>
+            <h3 id="motivation">Motivation</h3>
+            <ul>
+                <li>The design supports expanding data volumes by incorporating additional nodes, with <em>Scalability</em> being a key attribute that enables the system to grow with demand.</li>
+                <li>By strategically locating data closer to users and balancing loads, the architecture improves query speeds through targeted <em>Performance</em> enhancements.</li>
+                <li>Redundant copies are implemented so that even when a node or site encounters issues, the service remains active, showcasing the system’s inherent <em>Reliability</em>.</li>
+                <li>The network is organized to allow data access and storage in multiple regions, a setup that embraces <em>Geographical Distribution</em> to help reduce latency.</li>
+            </ul>
+            <h3 id="challenges">Challenges</h3>
+            <ul>
+                <li>Effective management of data replication across sites presents a challenge in achieving optimal <em>Data distribution</em> throughout the network.</li>
+                <li>Handling simultaneous transactions across different nodes requires mechanisms that address <em>Concurrency control</em> to preserve data consistency.</li>
+                <li>Coordinating updates across nodes to maintain ACID properties is complex, highlighting issues related to <em>Distributed transactions</em>.</li>
+                <li>Robust recovery strategies are needed to manage potential node or network failures, which emphasizes the importance of <em>Fault tolerance</em> in system design.</li>
+                <li>Integrating a variety of hardware, operating systems, and DBMS software into one environment necessitates resolving challenges associated with <em>Heterogeneity</em>.</li>
+            </ul>
+            <h3 id="distributed-database-architectures">Distributed Database Architectures</h3>
+            <h4 id="shared-nothing-shared-disk-and-shared-memory">Shared-Nothing, Shared-Disk, and Shared-Memory</h4>
+            <p>I. <strong>Shared-Nothing Architecture</strong> </p>
+            <ul>
+                <li>Each node has its own memory and disk storage. </li>
+                <li>Nodes communicate via a network. </li>
+                <li>Scales out by adding more nodes with local CPU, memory, and disk. </li>
+                <li>Widely used in large-scale systems (e.g., Google’s Bigtable, Cassandra, MongoDB clusters).</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">+---------+         +---------+         +---------+
+    | Node 1  |         | Node 2  |         | Node 3  |
+    | CPU/Mem |         | CPU/Mem |         | CPU/Mem |
+    | Disk    |         | Disk    |         | Disk    |
+    +----^----+         +----^----+         +----^----+
+         |                    |                   |
+         |                    |                   |
+         +--------- Network---+-------------------+</code></pre>
+            </div>
+            <p>II. <strong>Shared-Disk Architecture</strong> </p>
+            <ul>
+                <li>Each node has its own CPU and memory, but all share a common disk subsystem. </li>
+                <li>Often carried out via Storage Area Networks (SAN). </li>
+                <li>Coordination mechanisms (like distributed locking) are needed to avoid conflicts on the shared disk.</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">+---------+   +---------+   +---------+
+    | Node 1  |   | Node 2  |   | Node 3  |
+    | CPU/Mem |   | CPU/Mem |   | CPU/Mem |
+    +----^----+   +----^----+   +----^----+
+         |           |            |
+         +----+------+------+-----+
+              |      |      |
+              |    Shared   |
+              |     Disk    |
+              +-------------+</code></pre>
+            </div>
+            <p>III. <strong>Shared-Memory Architecture</strong> </p>
+            <ul>
+                <li>All nodes share the same memory and possibly the same disk. </li>
+                <li>Rarely used for large-scale, highly distributed systems due to scalability and contention.</li>
+            </ul>
+            <div>
+                <pre><code class="language-+------------------------+">|      Shared RAM       |
+      +---------+------+------+ 
+                |      |
+  +-------------v------v-------------+
+  |   CPU 1   |   CPU 2   |  CPU 3   |
+  | (Node 1)  | (Node 2)  | (Node 3) |
+  +----------------------------------+
+  |                                  |
+  +----------- Shared Disk ----------+</code></pre>
+            </div>
+            <h4 id="centralized-vs-decentralized-coordination">Centralized vs. Decentralized Coordination</h4>
+            <p><strong>Centralized Coordinator</strong></p>
+            <ul>
+                <li>One node acts as the coordinator for metadata (e.g., who owns which partition) and handles global tasks (e.g., transaction routing). </li>
+                <li>Simplifies coordination at the cost of potential bottlenecks and single-point-of-failure issues.</li>
+            </ul>
+            <p><strong>Decentralized / Peer-to-Peer</strong> </p>
+            <ul>
+                <li>All nodes are peers, and they coordinate using distributed consensus or other mechanisms (e.g., gossip protocols). </li>
+                <li>Improves fault tolerance and eliminates single points of failure but is more complicated to carry out.</li>
+            </ul>
+            <h3 id="data-distribution-strategies">Data Distribution Strategies</h3>
+            <h4 id="replication">Replication</h4>
+            <p>Replicating data means storing identical copies of data on different nodes. This can improve read performance and fault tolerance but complicates writes (since updates must be propagated).</p>
+            <p>I. <strong>Synchronous Replication</strong> </p>
+            <ul>
+                <li>All replicas must be updated (or acknowledged) before a transaction is considered committed. </li>
+                <li>Makes sure strong consistency but may increase latency and reduce availability under network partitions.</li>
+            </ul>
+            <p>II. <strong>Asynchronous Replication</strong> </p>
+            <ul>
+                <li>The primary node commits a transaction first, and replicas are updated later. </li>
+                <li>Faster commit times, higher availability, but risk of “stale reads” (eventual consistency).</li>
+            </ul>
+            <p>III. <strong>Quorum-Based Replication</strong> </p>
+            <ul>
+                <li>A transaction commits if it reaches a certain subset of replicas (write quorum), and read operations read from a certain subset (read quorum). </li>
+                <li>Ties in with the CAP theorem and helps strike a balance among consistency, availability, and partition tolerance.</li>
+            </ul>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-+----------------+">| Master (Node1) |
+          +--------^-------+
+                   |
+           Synchronous/Async
+                   |
+        +----------v----------+
+        |   Replica (Node2)   |
+        +----------^----------+
+                   |
+           Synchronous/Async
+                   |
+        +----------v----------+
+        |   Replica (Node3)   |
+        +---------------------+</code></pre>
+            </div>
+            <ul>
+                <li><strong>Master-Replica</strong> setup: Node1 is the primary for writes, Node2 and Node3 receive replicated data.</li>
+                <li>Could be synchronous (strong consistency) or asynchronous (eventual consistency).</li>
+            </ul>
+            <h4 id="partitioning-sharding">Partitioning / Sharding</h4>
+            <p>Partitioning distributes subsets (partitions or shards) of the data across multiple nodes.</p>
+            <p>I. <strong>Horizontal Partitioning</strong> </p>
+            <ul>
+                <li>Rows of a table are split among nodes (by key range, hashing, or list partitioning). </li>
+                <li>Common in large-scale transactional systems.</li>
+            </ul>
+            <p>II. <strong>Vertical Partitioning</strong> </p>
+            <ul>
+                <li>Columns of a table are distributed among nodes. </li>
+                <li>Can be used to separate frequently accessed columns for performance.</li>
+            </ul>
+            <p>III. <strong>Functional / Entity-Based Partitioning</strong> </p>
+            <ul>
+                <li>Different tables or entities are distributed according to their usage patterns or business logic. </li>
+                <li>For example, user profiles on one node, transaction history on another.</li>
+            </ul>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-shell">Table: USERS
+ -----------------------------------------------------
+ | user_id | name     | email             | ...
+ -----------------------------------------------------
+
+  Partition by user_id range:
+     Shard A    Shard B    Shard C
+
+  Shard A (Node 1): user_id &lt; 10000
+  Shard B (Node 2): 10000 &lt;= user_id &lt; 20000
+  Shard C (Node 3): user_id &gt;= 20000
+
+ +----------+     +----------+     +----------+
+ | Shard A  |     | Shard B  |     | Shard C  |
+ | (Node 1) |     | (Node 2) |     | (Node 3) |
+ +----^-----+     +----^-----+     +----^-----+
+      |                |                |
+      +--------- Network---------------&gt;+</code></pre>
+            </div>
+            <ul>
+                <li>Rows (by user_id range in this example) are placed on different nodes. </li>
+                <li>Each node stores only a portion of the table.</li>
+            </ul>
+            <h3 id="distributed-concurrency-control">Distributed Concurrency Control</h3>
+            <p>Concurrency control makes sure correct, consistent results when multiple transactions execute simultaneously on different nodes.</p>
+            <h4 id="two-phase-locking-2pl-">Two-Phase Locking (2PL)</h4>
+            <ul>
+                <li><strong>Phase 1 (Growing Phase)</strong>: Transaction acquires the locks it needs (read or write locks). </li>
+                <li><strong>Phase 2 (Shrinking Phase)</strong>: Once the first lock is released, no new locks can be acquired. </li>
+                <li>In a distributed context, each node manages its own lock manager. Deadlock detection or avoidance is more complicated because deadlocks can involve multiple nodes.</li>
+            </ul>
+            <h4 id="timestamp-ordering">Timestamp Ordering</h4>
+            <ul>
+                <li>Each transaction is given a global timestamp. </li>
+                <li>Operations are ordered based on timestamps. </li>
+                <li>Makes sure serializability by comparing the timestamps of transactions against the read/write timestamps of objects.</li>
+            </ul>
+            <h4 id="optimistic-concurrency-control-occ-">Optimistic Concurrency Control (OCC)</h4>
+            <ul>
+                <li>Transactions execute without acquiring locks. </li>
+                <li>During <strong>validation phase</strong>, the system checks if conflicts exist. </li>
+                <li>If a conflict is detected, the transaction is aborted and re-executed. </li>
+                <li>Reduces locking overhead but can lead to high abort rates under contention.</li>
+            </ul>
+            <h3 id="distributed-transaction-management">Distributed Transaction Management</h3>
+            <h4 id="acid-properties">ACID Properties</h4>
+            <ul>
+                <li>The property of <em>Atomicity</em> ensures that each transaction is executed completely or not at all.</li>
+                <li>Transactions adhere to <em>Consistency</em> by transitioning data between valid states without error.</li>
+                <li>Concurrency is managed through <em>Isolation</em>, which prevents overlapping transactions from causing discrepancies.</li>
+                <li>The feature of <em>Durability</em> guarantees that once transactions commit, their changes remain permanent even after system failures.</li>
+            </ul>
+            <h4 id="two-phase-commit-2pc-">Two-Phase Commit (2PC)</h4>
+            <ul>
+                <li>In the initial stage known as the <em>Prepare Phase</em>, the coordinator asks all nodes to get ready for a commit, with each node writing to stable storage and replying with a ready or no decision.</li>
+                <li>During the subsequent stage called the <em>Commit Phase</em>, the coordinator issues a commit message if every participant is prepared, or initiates a rollback if any participant is not.</li>
+                <li>Although this protocol is straightforward, it can lead to indefinite waiting if the coordinator fails, which calls for additional failure handling protocols.</li>
+            </ul>
+            <div>
+                <pre><code class="language-+------------------+">|  Coordinator     |
+           +------------------+
+                  |     ^
+Phase 1 (Prepare) |     | Phase 2 (Commit / Abort)
+                  v     |
+        +---------------------+
+        | Participant (NodeA) |
+        +---------------------+
+                 |     ^
+                 |     |
+        +---------------------+
+        | Participant (NodeB)|
+        +---------------------+</code></pre>
+            </div>
+            <p>I. <strong>Phase 1 (Prepare)</strong>: </p>
+            <ul>
+                <li>Coordinator asks each participant if it can commit. </li>
+                <li>Participants reply “ready” or “no.”</li>
+            </ul>
+            <p>II. <strong>Phase 2 (Commit/Abort)</strong>: </p>
+            <ul>
+                <li>If <em>all</em> participants are ready, coordinator sends “commit.” </li>
+                <li>Otherwise, coordinator sends “abort.”</li>
+            </ul>
+            <h4 id="three-phase-commit-3pc-">Three-Phase Commit (3PC)</h4>
+            <ul>
+                <li>This protocol introduces an extra stage, referred to as <em>3PC</em>, which helps to mitigate the blocking issues that can occur in the two-phase commit process.</li>
+                <li>While it is more complex than the two-phase method, the approach incorporates additional logs and timeout mechanisms to offer non-blocking guarantees under certain failure scenarios.</li>
+            </ul>
+            <h4 id="distributed-consensus-protocols-paxos-raft-">Distributed Consensus Protocols (Paxos, Raft)</h4>
+            <ul>
+                <li>The protocol known as <em>Paxos</em> provides a method for achieving distributed consensus and is typically used in systems that operate replicated state machines.</li>
+                <li>A more accessible alternative, <em>Raft</em>, separates the tasks of leader election from log replication, and it is frequently used in systems that require strong consistency guarantees.</li>
+            </ul>
+            <h3 id="fault-tolerance-recovery">Fault Tolerance &amp; Recovery</h3>
+            <h4 id="failures-in-distributed-systems">Failures in Distributed Systems</h4>
+            <ul>
+                <li>Distributed systems may experience a <em>Site Failure</em> when a node crashes or becomes unreachable, impacting overall operations.</li>
+                <li>Network issues can lead to a <em>Network Failure</em> that results in partitions or partial message loss across the system.</li>
+                <li>Communication disruptions may occur due to <em>Communication Failures</em> where messages are delayed or corrupted during transmission.</li>
+            </ul>
+            <h4 id="strategies-for-fault-tolerance">Strategies for Fault Tolerance</h4>
+            <ul>
+                <li>The system incorporates <em>Replication</em> by maintaining multiple data copies so that the failure of one node does not cause data loss.</li>
+                <li>Extra hardware or software components are deployed to provide <em>Redundancy</em>, enabling a smooth takeover if one component fails.</li>
+                <li>Heartbeat mechanisms are used for <em>Failure Detection</em> to promptly identify nodes that have crashed or become partitioned.</li>
+                <li>Upon detecting faults, the system initiates <em>Reconfiguration</em> by electing new leaders, redirecting queries, or re-syncing data to restore normal operations.</li>
+            </ul>
+            <h4 id="logging-checkpointing">Logging &amp; Checkpointing</h4>
+            <ul>
+                <li>A write-ahead log is maintained for <em>Log-based Recovery</em>, allowing the system to roll back or re-apply partial transactions if needed.</li>
+                <li>The practice of <em>Checkpointing</em> involves periodically saving the database state to stable storage, which helps reduce recovery time.</li>
+            </ul>
+            <h3 id="the-cap-theorem">The CAP Theorem</h3>
+            <h4 id="statement">Statement</h4>
+            <p>In a distributed system, it is impossible to simultaneously guarantee:</p>
+            <ul>
+                <li>Every node displays identical data concurrently, a guarantee achieved through the principle of <em>Consistency</em> in the system. </li>
+                <li>The design ensures that every request gets a response, reflecting a commitment to <em>Availability</em> even when the data may not be the absolute latest. </li>
+                <li>Despite disruptions from network failures, the system continues to function smoothly due to its inherent <em>Partition tolerance</em>, which keeps operations running amid isolated segments.</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">Consistency (C)
+               /\
+              /  \
+             /    \
+            /      \
+Partition /         \ Availability
+  Tolerance (P)       (A)</code></pre>
+            </div>
+            <h4 id="implications">Implications</h4>
+            <ul>
+                <li>Distributed systems must sacrifice one of Consistency or Availability in the presence of network partitions (which are inevitable). </li>
+                <li>This tradeoff leads to different design philosophies (e.g., CP systems emphasize consistency over availability; AP systems emphasize availability over consistency).</li>
+            </ul>
+            <h4 id="brewer-s-cap-vs-pacelc">Brewer’s CAP vs. PACELC</h4>
+            <ul>
+                <li><strong>PACELC</strong> extends CAP by adding that “Else Latency or Consistency,” highlighting tradeoffs even when no partition exists. </li>
+                <li>It clarifies that systems choose how to balance latency and consistency during normal operation.</li>
+            </ul>
+            <h3 id="types-of-distributed-databases">Types of Distributed Databases</h3>
+            <h4 id="homogeneous-vs-heterogeneous">Homogeneous vs. Heterogeneous</h4>
+            <p>I. <strong>Homogeneous Distributed Database</strong> </p>
+            <ul>
+                <li>All nodes run the same DBMS software and schema. </li>
+                <li>Simpler to manage, but less flexible for integrating diverse systems.</li>
+            </ul>
+            <p>II. <strong>Heterogeneous Distributed Database</strong> </p>
+            <ul>
+                <li>Different nodes may run different DBMS software, possibly with different schemas or data models. </li>
+                <li>Integration requires data transformation or middleware layers.</li>
+            </ul>
+            <h4 id="relational-vs-nosql-vs-newsql">Relational vs. NoSQL vs. NewSQL</h4>
+            <p>I. <strong>Relational Distributed Databases</strong> </p>
+            <ul>
+                <li>Traditional SQL-based systems extended for distributed operation (e.g., VoltDB, CockroachDB). </li>
+                <li>Typically aim for ACID compliance and can use 2PC or consensus protocols.</li>
+            </ul>
+            <p>II. <strong>NoSQL (Key-Value, Document, Column-Family, Graph)</strong> </p>
+            <ul>
+                <li>Focus on scalability and availability with relaxed consistency. </li>
+                <li>Examples: Cassandra (AP-oriented), MongoDB (eventual/strong consistency modes), HBase/Bigtable (column-store), Neo4j (graph).</li>
+            </ul>
+            <p>III. <strong>NewSQL</strong> </p>
+            <ul>
+                <li>Combines the scalability of NoSQL with the ACID guarantees of relational systems. </li>
+                <li>Examples: Spanner (global transactions, strong consistency), CockroachDB (ACID over a distributed cluster).</li>
+            </ul>
+            <h3 id="practical-design-considerations">Practical Design Considerations</h3>
+            <h4 id="query-processing-optimization">Query Processing &amp; Optimization</h4>
+            <ul>
+                <li>The system uses <em>cost-based distributed query optimizers</em> that evaluate the expense of transferring data among nodes to choose an efficient execution plan.</li>
+                <li>Computation is shifted closer to where data resides through the technique of <em>data localization</em>, which minimizes the need for extensive data movement.</li>
+                <li>Various join methods, such as broadcast join, shuffle join, or partitioned join, are employed based on the underlying patterns of <em>data distribution</em>.</li>
+            </ul>
+            <h4 id="caching-strategies">Caching Strategies</h4>
+            <ul>
+                <li>Frequently accessed information is stored via <em>client-side caching</em>, which helps reduce network overhead while requiring proper invalidation or expiration policies.</li>
+                <li>Servers maintain a local store of popular data using <em>server-side caching</em>, which can improve response times and lower the load on the system.</li>
+                <li>A coordinated approach is adopted in <em>global caching</em>, where distributed cache layers like Redis clusters ensure consistency across different nodes.</li>
+            </ul>
+            <h4 id="security">Security</h4>
+            <ul>
+                <li>The system ensures that only trusted sources issue distributed queries through robust <em>authentication and authorization</em> processes.</li>
+                <li>Secure communication is maintained by using industry-standard protocols for <em>encryption</em>, protecting both data in transit and data at rest.</li>
+                <li>Privacy compliance is supported by applying <em>data masking</em> techniques or tokenization to protect sensitive information in distributed environments.</li>
+            </ul>
+            <h4 id="monitoring-observability">Monitoring &amp; Observability</h4>
+            <ul>
+                <li>Tracking queries across multiple nodes is made possible with <em>distributed tracing</em> tools, such as OpenTracing or OpenTelemetry, which help reveal performance bottlenecks.</li>
+                <li>System health is continuously assessed by collecting a variety of metrics through <em>metrics and logging</em>, which monitor resources like CPU, memory, throughput, latency, and error rates.</li>
+            </ul>
+            <h3 id="summary-of-tradeoffs-and-principles">Summary of Tradeoffs and Principles</h3>
+            <ul>
+                <li>Distributed systems must balance the trade-off between <em>Consistency</em>—where all nodes display identical data simultaneously—and high availability, which may sometimes compromise the immediacy of data updates.</li>
+                <li>In replication strategies, the system's design is influenced by <em>Latency</em>, as favoring faster responses can lead to less immediate durability compared to approaches that emphasize strict synchronization.</li>
+                <li>Architects often evaluate <em>Simplicity</em> against scalability, choosing between a centralized system that is easier to manage and a decentralized approach that supports growth.</li>
+                <li>Certain applications demand <em>Strong Consistency</em> to ensure precise data correctness, even if this choice may impact read and write performance compared to eventual consistency models.</li>
+                <li>When designing the overall architecture, the decision to implement a <em>Homogeneous</em> environment is weighed against integrating diverse systems, with each option offering distinct operational benefits.</li>
+            </ul>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

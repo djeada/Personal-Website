@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Indexing</title>
+    <meta content="Indexing is one of the most effective ways to optimize database queries." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/03_indexes" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Indexing",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/03_indexes"
+            },
+            "url": "https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/03_indexes",
+            "description": "Indexing is one of the most effective ways to optimize database queries.",
+            "dateModified": "2026-01-24"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol><a href="#indexing">Indexing</a>
+                    <ol>
+                        <li><a href="#concepts-and-purpose">Concepts and Purpose</a>
+                            <ol>
+                                <li><a href="#why-indexes-exist">Why Indexes Exist</a></li>
+                                <li><a href="#how-indexes-are-organized">How Indexes Are Organized</a></li>
+                                <li><a href="#trade-offs">Trade-offs</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#types-of-indexes">Types of Indexes</a>
+                            <ol>
+                                <li><a href="#b-tree-indexes">B-Tree Indexes</a></li>
+                                <li><a href="#hash-indexes">Hash Indexes</a></li>
+                                <li><a href="#bitmap-indexes">Bitmap Indexes</a></li>
+                                <li><a href="#full-text-and-specialized-indexes">Full-Text and Specialized Indexes</a></li>
+                                <li><a href="#composite-multi-column-indexes">Composite/Multi-Column Indexes</a></li>
+                                <li><a href="#covering-indexes">Covering Indexes</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#creating-and-managing-indexes">Creating and Managing Indexes</a>
+                            <ol>
+                                <li><a href="#syntax-examples">Syntax Examples</a></li>
+                                <li><a href="#creating-indexes-on-large-tables">Creating Indexes on Large Tables</a></li>
+                                <li><a href="#unique-indexes">Unique Indexes</a></li>
+                                <li><a href="#primary-key-and-clustered-indexes">Primary Key and Clustered Indexes</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#performance-considerations">Performance Considerations</a>
+                            <ol>
+                                <li><a href="#insert-update-overhead">Insert/Update Overhead</a></li>
+                                <li><a href="#selectivity-and-cardinality">Selectivity and Cardinality</a></li>
+                                <li><a href="#index-statistics">Index Statistics</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#advanced-features">Advanced Features</a>
+                            <ol>
+                                <li><a href="#partial-filtered-indexes">Partial (Filtered) Indexes</a></li>
+                                <li><a href="#covering-indexes-mysql-sql-server-">Covering Indexes (MySQL, SQL Server)</a></li>
+                                <li><a href="#function-expression-indexes">Function/Expression Indexes</a></li>
+                                <li><a href="#brin-indexes-postgresql-">Brin Indexes (PostgreSQL)</a></li>
+                                <li><a href="#reindexing">Reindexing</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#monitoring-and-tuning">Monitoring and Tuning</a></li>
+                        <li><a href="#concrete-examples-and-commands">Concrete Examples and Commands</a>
+                            <ol>
+                                <li><a href="#mysql-creating-a-composite-index-checking-use">MySQL: Creating a Composite Index, Checking Use</a></li>
+                                <li><a href="#postgresql-function-index-and-partial-index-example">PostgreSQL: Function Index and Partial Index Example</a></li>
+                                <li><a href="#sql-server-clustered-vs-non-clustered-index">SQL Server: Clustered vs. Non-Clustered Index</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#best-practices">Best Practices</a></li>
+                    </ol>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Api Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/01_api_communication_protocols.html">Api Communication Protocols</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/02_rest.html">Rest</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/03_graphql.html">Graphql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/04_grpc.html">Grpc</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/05_state_management.html">State Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/06_data_transmission.html">Data Transmission</a></li>
+                        </ol>
+                    </li>
+                    <li>Network Communications<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/01_network_communications.html">Network Communications</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/02_tcp_and_udp.html">Tcp and Udp</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/03_http_protocol.html">Http Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/04_web_sockets.html">Web Sockets</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/05_metrics_and_analysis.html">Metrics and Analysis</a></li>
+                        </ol>
+                    </li>
+                    <li>Server Technologies<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/01_web_server_overview.html">Web Server Overview</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/02_static_dynamic_content.html">Static Dynamic Content</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/03_tomcat.html">Tomcat</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/04_apache.html">Apache</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/05_nginx.html">Nginx</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/06_forward_proxies.html">Forward Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/07_reverse_proxies.html">Reverse Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/08_load_balancing.html">Load Balancing</a></li>
+                        </ol>
+                    </li>
+                    <li>Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/01_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/02_transactions.html">Transactions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/03_indexes.html">Indexes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/04_isolation_levels.html">Isolation Levels</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/05_data_warehousing.html">Data Warehousing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/06_replication.html">Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/07_halloween_problem.html">Halloween Problem</a></li>
+                        </ol>
+                    </li>
+                    <li>Caching<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/01_caching_strategies.html">Caching Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/02_redis.html">Redis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/03_content_delivery_networks.html">Content Delivery Networks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/04_database_caching.html">Database Caching</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Processing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/01_pub_sub_vs_queue.html">Pub Sub vs Queue</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/02_messaging_system_integration.html">Messaging System Integration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/03_batch_processing.html">Batch Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing.html">Stream Processing</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Formats<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/01_protocol_buffers.html">Protocol Buffers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/02_xml.html">Xml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/03_json.html">Json</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/04_yaml.html">Yaml</a></li>
+                        </ol>
+                    </li>
+                    <li>Security<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/01_auth.html">Auth</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/02_tls.html">Tls</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/03_security_vulnerabilities.html">Security Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/04_security_best_practices_and_measures.html">Security Best Practices and Measures</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/05_third_party_cookies_vulnerabilities.html">Third Party Cookies Vulnerabilities</a></li>
+                        </ol>
+                    </li>
+                    <li>Deployment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/01_centos_digital_ocean.html">Centos Digital Ocean</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/02_static_python_website_netlify.html">Static Python Website Netlify</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Systems<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/01_coordination_services.html">Coordination Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/02_gossip_protocol.html">Gossip Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/03_linearizability.html">Linearizability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/04_concurrent_writes.html">Concurrent Writes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/05_operational_transform.html">Operational Transform</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/06_algorithms_summary.html">Algorithms Summary</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/07_optimistic_vs_pessimistic_locking.html">Optimistic vs Pessimistic Locking</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="indexing">Indexing</h2>
+            <p>Indexing is one of the most effective ways to optimize database queries. By maintaining auxiliary data structures that map certain key values to their physical or logical locations, indexes allow a database to rapidly locate rows that match a search condition. This reduces the number of full-table scans required, significantly speeding up SELECT operations as well as certain UPDATE and DELETE statements that rely on indexed columns. In many relational databases, proper indexing is key to high performance. This document outlines the core concepts, different types of indexes, how to create and manage them in common database systems, and best practices to avoid pitfalls.</p>
+            <h3 id="concepts-and-purpose">Concepts and Purpose</h3>
+            <h4 id="why-indexes-exist">Why Indexes Exist</h4>
+            <p>Without indexes, a database engine must scan every row in a table to find matches for a given condition (e.g., <code>WHERE name = 'Alice'</code>). This approach can be expensive if the table has millions of rows, leading to slow queries. An index stores enough information for the database to skip large portions of data that do not match the query.</p>
+            <h4 id="how-indexes-are-organized">How Indexes Are Organized</h4>
+            <p>Indexes typically use data structures like B-trees, hash tables, or specialized index structures (e.g., GIN in PostgreSQL, or an LSM tree in some NoSQL systems). Regardless of implementation details, the essential principle is that the index is smaller (or more efficiently traversed) than the full table, making lookups faster.</p>
+            <h4 id="trade-offs">Trade-offs</h4>
+            <ol>
+                <li><strong>Improved Read Performance</strong>: Queries filtering or sorting by indexed columns can run significantly faster. </li>
+                <li><strong>Decreased Write Performance</strong>: INSERTs, UPDATEs, and DELETEs must also update the index, adding overhead. </li>
+                <li><strong>Space Overhead</strong>: Indexes require additional storage on disk and memory usage.</li>
+            </ol>
+            <h3 id="types-of-indexes">Types of Indexes</h3>
+            <h4 id="b-tree-indexes">B-Tree Indexes</h4>
+            <p>Most relational databases default to B-tree (or a variation like B+ tree). B-tree indexes suit common lookups on columns that are used in equality or range comparisons.</p>
+            <ol>
+                <li><strong>Equality</strong>: <code>WHERE column = 42</code> </li>
+                <li><strong>Range</strong>: <code>WHERE column BETWEEN 10 AND 20</code> </li>
+                <li><strong>Sorting</strong>: Queries with <code>ORDER BY column ASC</code> can utilize B-tree indexes if the sort matches the index order.</li>
+            </ol>
+            <p><strong>ASCII Diagram of a Simplified B-Tree</strong> </p>
+            <p>CODE_BLOCK_PLACEHOLDER
+                In actual databases, the B-tree might have multiple levels and nodes that contain many keys.</p>
+            <h4 id="hash-indexes">Hash Indexes</h4>
+            <p>Hash-based indexes store a hash of the indexed column. They offer O(1) equality lookups (<code>=</code>) if the hash function is well-distributed, but are typically limited in their support for range queries or ordering. Some DBs (like PostgreSQL) provide hash indexes, but they are often overshadowed by B-tree flexibility.</p>
+            <h4 id="bitmap-indexes">Bitmap Indexes</h4>
+            <p>Bitmap indexes encode row IDs for each distinct column value as a bitmap. They can be very space-efficient for low-cardinality columns (i.e., columns with few distinct values, such as a “status” field). They allow bitwise operations to combine multiple conditions quickly.</p>
+            <p><strong>Example</strong>:<br />
+                - Column “status” has possible values [‘open’, ‘closed’, ‘pending’].<br />
+                - The database stores a bitmap for each status, marking which row IDs have that status.</p>
+            <h4 id="full-text-and-specialized-indexes">Full-Text and Specialized Indexes</h4>
+            <ul>
+                <li><strong>Full-Text Index</strong>: Helps searching text fields for keyword occurrences, often employing an inverted index. </li>
+                <li><strong>Spatial Index</strong>: Manages geometry data for proximity and region queries (e.g., find points near a location). </li>
+                <li><strong>GIN/GIST Index</strong> (PostgreSQL): Generalized Inverted Index or Generalized Search Tree for complex data types (JSON fields, arrays, hstore, geometric data).</li>
+            </ul>
+            <h4 id="composite-multi-column-indexes">Composite/Multi-Column Indexes</h4>
+            <p>An index can cover multiple columns, typically in a specified order. For example, <code>(country, city)</code> might speed queries that filter by both. However, only queries that match the leading columns of the index can effectively use it. If the query only filters by <code>city</code> and not by <code>country</code>, the composite index might not help (depending on the DB engine’s optimizations).</p>
+            <div>
+                <pre><code class="language-shell">(Root)
+             /    \
+            /      \
+        [10,20]   [30,40]
+         /  \        /  \
+     leaves ...   leaves ...</code></pre>
+            </div>
+            <h4 id="covering-indexes">Covering Indexes</h4>
+            <p>Some systems (like MySQL’s InnoDB) offer “covering indexes,” where all columns requested by a SELECT statement are part of the index, so the engine can answer the query from the index alone without reading full table rows. This optimization can drastically improve performance for read-heavy workloads.</p>
+            <h3 id="creating-and-managing-indexes">Creating and Managing Indexes</h3>
+            <h4 id="syntax-examples">Syntax Examples</h4>
+            <h5>PostgreSQL</h5>
+            <div>
+                <pre><code class="language-sql">-- Example creation of a composite index in PostgreSQL or MySQL
+CREATE INDEX idx_country_city ON addresses(country, city);</code></pre>
+            </div>
+            <h5>MySQL / MariaDB</h5>
+            <div>
+                <pre><code class="language-sql">-- Create a B-tree index on the "username" column
+CREATE INDEX idx_username ON users (username);
+
+-- Create a composite index on "country" and "city"
+CREATE INDEX idx_location ON addresses (country, city);
+
+-- Create a unique index
+CREATE UNIQUE INDEX idx_unique_email ON users (email);</code></pre>
+            </div>
+            <h5>SQL Server (T-SQL)</h5>
+            <div>
+                <pre><code class="language-sql">-- Create an index on "last_name"
+CREATE INDEX idx_last_name ON employees (last_name);
+
+-- Create a composite index
+CREATE INDEX idx_full_name ON employees (last_name, first_name);
+
+-- Dropping an index
+DROP INDEX idx_last_name ON employees;</code></pre>
+            </div>
+            <h4 id="creating-indexes-on-large-tables">Creating Indexes on Large Tables</h4>
+            <p>For big tables, creating an index can lock the table for the duration of the build. Some engines allow “online” or “concurrent” index builds to minimize blocking.</p>
+            <p><strong>PostgreSQL</strong> (Concurrent build):</p>
+            <p>CODE_BLOCK_PLACEHOLDER
+                <strong>MySQL</strong> (Online DDL in InnoDB):
+            </p>
+            <div>
+                <pre><code class="language-sql">CREATE INDEX idx_customer_city ON Customers (City);
+
+-- Clustered index (SQL Server concept: determines physical storage order)
+CREATE CLUSTERED INDEX idx_custid ON Customers(CustomerID);
+
+-- Dropping an index
+DROP INDEX idx_customer_city ON Customers;</code></pre>
+            </div>
+            <p>These options reduce downtime but can be slower or require extra resources.</p>
+            <h4 id="unique-indexes">Unique Indexes</h4>
+            <p>A unique index enforces that no two rows have the same indexed value. If you attempt an insert or update that duplicates the indexed field, the DB will throw an error. Typically used for fields like email addresses or user IDs.</p>
+            <h4 id="primary-key-and-clustered-indexes">Primary Key and Clustered Indexes</h4>
+            <p>Some database systems, such as SQL Server, treat the primary key as the default clustered index (i.e., it dictates the on-disk storage order). Others (PostgreSQL, MySQL InnoDB) also have concepts of clustering or rely on the primary key index for row retrieval.</p>
+            <h3 id="performance-considerations">Performance Considerations</h3>
+            <h4 id="insert-update-overhead">Insert/Update Overhead</h4>
+            <p>Every row insertion or modification requires updating the associated indexes. The more indexes a table has, the more overhead. This can slow down high write loads if a table has an excessive number of indexes.</p>
+            <h4 id="selectivity-and-cardinality">Selectivity and Cardinality</h4>
+            <p>An index is most useful if it significantly narrows down the rows the database must read. Columns with high cardinality (many distinct values) often benefit from indexing. Columns with very low cardinality (e.g., boolean or two possible statuses) might not help much unless used in combination with other columns (like a composite index).</p>
+            <h4 id="index-statistics">Index Statistics</h4>
+            <p>Databases maintain internal statistics about distribution of column values. The query planner uses these stats to decide whether to use an index or do a sequential scan. If stats become stale, queries might degrade in performance. Periodic analyze/re-index operations keep stats accurate.</p>
+            <p><strong>ASCII Diagram</strong> – In a simplified sense, the DB chooses either a sequential scan or an index scan:</p>
+            <div>
+                <pre><code class="language-sql">CREATE INDEX CONCURRENTLY idx_bigtable_col1 ON bigtable (col1);</code></pre>
+            </div>
+            <h3 id="advanced-features">Advanced Features</h3>
+            <h4 id="partial-filtered-indexes">Partial (Filtered) Indexes</h4>
+            <p>Some databases (notably PostgreSQL) allow partial indexes restricted to rows meeting certain conditions. For example, only indexing “active” rows can reduce index size and overhead:</p>
+            <p>CODE_BLOCK_PLACEHOLDER
+                Queries that filter <code>WHERE active = true</code> can utilize this partial index.</p>
+            <h4 id="covering-indexes-mysql-sql-server-">Covering Indexes (MySQL, SQL Server)</h4>
+            <p>An index that contains all queried columns is called a “covering index.” The DB can answer a query directly from the index structure. For example, if you SELECT only <code>first_name</code> and <code>last_name</code> from a table that has an index on <code>(first_name, last_name)</code>, the engine doesn’t need to touch the data pages.</p>
+            <h4 id="function-expression-indexes">Function/Expression Indexes</h4>
+            <p>Some DBs allow indexing the result of a function or expression. This helps if queries often filter on a computed value.</p>
+            <p><strong>PostgreSQL</strong> Example:</p>
+            <p>CODE_BLOCK_PLACEHOLDER
+                Then queries like <code>SELECT * FROM users WHERE lower(email) = 'alice@example.com';</code> can use the index.</p>
+            <h4 id="brin-indexes-postgresql-">Brin Indexes (PostgreSQL)</h4>
+            <p>Block Range Indexes (BRIN) store metadata about ranges of blocks in a table. They are space-efficient and can be beneficial for massive tables where data is naturally sorted (e.g., by time) but do not guarantee single-row precision.</p>
+            <h4 id="reindexing">Reindexing</h4>
+            <p>Over time, indexes can become fragmented or bloated, especially after many updates or deletes. Periodic reindexing compacts the index structure, improving lookup performance.</p>
+            <p><strong>PostgreSQL</strong>:</p>
+            <div>
+                <pre><code class="language-sql">ALTER TABLE bigtable ADD INDEX idx_col1(col1), ALGORITHM=INPLACE, LOCK=NONE;</code></pre>
+            </div>
+            <p><strong>MySQL</strong>:</p>
+            <div>
+                <pre><code class="language-shell">Query arrives
+                       |
+    +--------(Check stats &amp; cost)--------+
+    |                                    |
+    v                                    v
+Sequantial Scan                Index Scan (Locate matching rows quickly)
+    |                                    |
+    v                                    v
+Scan entire table        Use index to find row offsets, 
+( Potentially slow )      fetch rows from table</code></pre>
+            </div>
+            <h3 id="monitoring-and-tuning">Monitoring and Tuning</h3>
+            <ol>
+                <li><strong>EXPLAIN Plans</strong>: Evaluate how queries execute, check if indexes are used. </li>
+            </ol>
+            <p>CODE_BLOCK_PLACEHOLDER
+                The plan might show “Index Scan” or “Index Cond” if an index is utilized. </p>
+            <ol>
+                <li>
+                    <p><strong>Slow Query Logs</strong>: Database servers can log queries that exceed a certain time threshold. Analyzing these logs highlights queries that might benefit from new or revised indexes. </p>
+                </li>
+                <li>
+                    <p><strong>Index Usage Statistics</strong>: Some DB engines store usage counters for each index. If an index is rarely or never used, it can be dropped to improve write performance. </p>
+                </li>
+                <li>
+                    <p><strong>Maintenance Windows</strong>: Large reorganizations or index builds might lock tables or hamper performance. Scheduling them off-peak can reduce user impact.</p>
+                </li>
+            </ol>
+            <h3 id="concrete-examples-and-commands">Concrete Examples and Commands</h3>
+            <h4 id="mysql-creating-a-composite-index-checking-use">MySQL: Creating a Composite Index, Checking Use</h4>
+            <p><strong>Create a table and indexes</strong>:</p>
+            <div>
+                <pre><code class="language-sql">CREATE INDEX idx_active_users
+ON users (last_login)
+WHERE active = true;</code></pre>
+            </div>
+            <p><strong>Running EXPLAIN</strong>:</p>
+            <p>CODE_BLOCK_PLACEHOLDER
+                Expected plan to show it uses <code>idx_customer_date</code>.</p>
+            <p><strong>Dropping an index</strong>:</p>
+            <p>CODE_BLOCK_PLACEHOLDER
+                If we find we rarely filter by <code>status</code>, dropping this index can save overhead.</p>
+            <h4 id="postgresql-function-index-and-partial-index-example">PostgreSQL: Function Index and Partial Index Example</h4>
+            <div>
+                <pre><code class="language-sql">CREATE INDEX idx_lower_email ON users ((lower(email)));</code></pre>
+            </div>
+            <p><strong>Query</strong>:</p>
+            <p>CODE_BLOCK_PLACEHOLDER
+                We expect the partial function index <code>idx_active_users_lower</code> to be used.</p>
+            <h4 id="sql-server-clustered-vs-non-clustered-index">SQL Server: Clustered vs. Non-Clustered Index</h4>
+            <div>
+                <pre><code class="language-sql">REINDEX INDEX idx_username;
+REINDEX TABLE users;</code></pre>
+            </div>
+            <p><strong>Clustered Index</strong>: Physically orders the table by <code>SalesID</code>.<br />
+                <strong>Non-Clustered Index</strong>: A separate structure referencing the row pointers.
+            </p>
+            <h3 id="best-practices">Best Practices</h3>
+            <ol>
+                <li><strong>Index Common Filter/Join Columns</strong>: Create indexes on columns frequently used in <code>WHERE</code>, <code>JOIN</code>, or <code>ORDER BY</code> clauses. </li>
+                <li><strong>Avoid Over-Indexing</strong>: More indexes = more overhead on writes and extra storage. Evaluate if an index is truly beneficial. </li>
+                <li><strong>Consider Composite Indexes</strong>: Group columns often used together in queries, typically in the order they appear in the WHERE clause. </li>
+                <li><strong>Use Partial or Filtered Indexes</strong>: If only a subset of rows matter for a frequent query, partial indexes reduce size. </li>
+                <li><strong>Maintain Stats</strong>: Keep table and index statistics fresh so the query optimizer chooses the right plan. </li>
+                <li><strong>Test with Real Queries</strong>: Don’t guess which indexes are best—use <code>EXPLAIN</code> or query analysis to confirm. </li>
+            </ol>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>
