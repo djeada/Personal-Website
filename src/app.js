@@ -88,7 +88,9 @@ const GITHUB_BASE_REPOS = {
     "kurs_podstaw_pythona": "https://github.com/djeada/Kurs-Podstaw-Pythona",
     "od_c_do_cpp": "https://github.com/djeada/Od-C-do-Cpp",
     "stanford_machine_learning": "https://github.com/djeada/Stanford-Machine-Learning",
-    "vtk_examples": "https://github.com/djeada/Vtk-Examples"
+    "vtk_examples": "https://github.com/djeada/Vtk-Examples",
+    "backend_engineers_guide": "https://github.com/djeada/Backend-Engineers-Guide",
+    "standard_of_iron": "https://github.com/djeada/Standard-of-Iron"
 };
 
 
@@ -106,6 +108,8 @@ const PATH_PREPENDS = {
     "kurs_podstaw_pythona": "notatki",
     "od_c_do_cpp": "notatki",
     "stanford_machine_learning": "slides",
+    "backend_engineers_guide": "notes",
+    "standard_of_iron": "docs",
 
 };
 
@@ -124,6 +128,8 @@ const MAIN_BRANCH = {
     "od_c_do_cpp": "master",
     "stanford_machine_learning": "main",
     "vtk_examples": "main",
+    "backend_engineers_guide": "main",
+    "standard_of_iron": "main",
 };
 
 
