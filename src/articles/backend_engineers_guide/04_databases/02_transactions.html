@@ -12,6 +12,7 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
     <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
     <link href="../../../resources/style.css" rel="stylesheet" />
@@ -33,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/02_transactions",
             "description": "Database transactions are a cornerstone of reliable data management.",
-            "dateModified": "2026-01-24"
+            "dateModified": "2026-03-19"
         }
     </script>
 </head>
@@ -193,7 +194,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: March 19, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="database-transactions">Database Transactions</h2>
             <p>Database transactions are a cornerstone of reliable data management. They let an application bundle <strong>multiple low-level reads and writes into a single, all-or-nothing unit</strong> so the database moves cleanly from one consistent state to another—even when dozens of users race to change the same rows or hardware glitches interrupt the process. Transactions offer the developer a simple success/ failure switch while the engine handles <em>locking, logging, versioning,</em> and <em>recovery</em> behind the scenes.</p>
@@ -218,24 +219,24 @@
             <h3 id="dealing-with-single-object-writes">Dealing with Single-Object Writes</h3>
             <div>
                 <pre><code class="language-shell">Single-Object Write Flow
-   +-------------------------+
-   |        BEGIN            |
-   +-------------+-----------+
-                 |
-                 v
-   +-------------------------+
-   |  Lock / Version Check   |
-   +-------------+-----------+
-                 |
-                 v
-   +-------------------------+
-   |     Apply the Write     |
-   +-------------+-----------+
-                 |
-                 v
-   +-------------------------+
-   |   COMMIT or ROLLBACK    |
-   +-------------------------+</code></pre>
++-------------------------+
+|        BEGIN            |
++-------------+-----------+
+              |
+              v
++-------------------------+
+|  Lock / Version Check   |
++-------------+-----------+
+              |
+              v
++-------------------------+
+|     Apply the Write     |
++-------------+-----------+
+              |
+              v
++-------------------------+
+|   COMMIT or ROLLBACK    |
++-------------------------+</code></pre>
             </div>
             <ul>
                 <li><strong>Write-Ahead Log (WAL)</strong> – The engine first records an <em>“intent”</em> entry to durable storage; only after the log is safe does it touch the actual data page, guaranteeing atomicity and crash recovery.</li>
@@ -247,17 +248,26 @@
             <p>Complex workloads touch many independent resources—multiple tables, shards, or even distinct databases—so additional coordination layers are required.</p>
             <h4 id="two-phase-commit-2pc-">Two-Phase Commit (2PC)</h4>
             <div>
-                <pre><code class="language-shell">Coordinator                         Participant(s)
-   +-------------------------+      +------------------------------+
-   |  1. PREPARE (ask to vote) ──►  |  PRE-COMMIT / VALIDATE       |
-   |                             |  |  ─────────────────────────►  |
-   |  ◄── 2. VOTES (YES / NO)   |  |            (Vote)            |
-   +-------------------------+  |  +------------------------------+
-               | All YES?        |
-               v                 |
-   +-------------------------+   |
-   | 3. COMMIT else ROLLBACK |   |
-   +-------------------------+   |</code></pre>
+                <pre><code class="language-shell">Coordinator                                   Participant(s)
+┌───────────────────────────────┐        ┌────────────────────────────────┐
+│ 1. PREPARE                    │        │ Receive PREPARE                │
+│    (Ask participants to vote) │ ────►  │ Validate / Pre-commit          │
+└───────────────────────────────┘        │                                │
+            ▲                            │ Send VOTE (YES / NO)           │
+            │                            └───────────────┬────────────────┘
+            │                                            │
+            └─────────────── 2. VOTES ◄──────────────────┘
+
+                       Decision Phase
+                           │
+                           ▼
+
+               ┌─────────────────────────┐
+               │ 3. DECISION             │
+               │                         │
+               │ All YES  → COMMIT       │
+               │ Any NO   → ROLLBACK     │
+               └─────────────────────────┘</code></pre>
             </div>
             <ul>
                 <li><em>Phase 1</em> – The <strong>coordinator</strong> writes its own <em>prepare</em> record and instructs every <strong>participant</strong> to do the same; each votes <em>commit</em> only if it can guarantee durability locally.</li>

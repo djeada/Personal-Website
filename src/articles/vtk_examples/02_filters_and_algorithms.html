@@ -12,6 +12,7 @@
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
     <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
     <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
     <link href="../../resources/style.css" rel="stylesheet" />
@@ -33,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/vtk_examples/02_filters_and_algorithms",
             "description": "VTK\u2019s filters and algorithms allow you to convert your data from \u201ca static dataset\u201d to a dynamic pipeline: you generate something, clean it up, extract meaning, and reshape it into a form that\u2019s easier to analyze or visualize.",
-            "dateModified": "2026-01-23"
+            "dateModified": "2026-03-19"
         }
     </script>
 </head>
@@ -88,8 +89,8 @@
                         <li><a href="#topological-filters">Topological filters</a></li>
                         <li><a href="#scalars-and-attribute-filters-in-vtk">Scalars and attribute filters in VTK</a></li>
                         <li><a href="#temporal-filters-in-vtk">Temporal filters in VTK</a></li>
-                        <li><a href="#why-some-meshes-detach-and-others-stay-connected-">Why some meshes detach and others stay connected?</a></li>
-                        <li><a href="#example-creating-a-sphere-source-and-applying-a-shrink-filter">Example: Creating a Sphere Source and Applying a Shrink Filter</a></li>
+                        <li><a href="#example-custom-distance-scalar-filter">Example: Custom Distance Scalar Filter</a></li>
+                        <li><a href="#why-shrink-can-break-a-mesh">Why “Shrink” Can Break a Mesh</a></li>
                         <li><a href="#a-practical-connected-shrink-alternative-c-">A practical “connected shrink” alternative (C++)</a></li>
                         <li><a href="#summary">Summary</a></li>
                     </ol>
@@ -125,12 +126,20 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 23, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: March 19, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="filters-and-algorithms">Filters and Algorithms</h2>
             <p>VTK’s filters and algorithms allow you to convert your data from “a static dataset” to a dynamic pipeline: you generate something, clean it up, extract meaning, and reshape it into a form that’s easier to analyze or visualize. Think of it like a workshop line: raw material comes in, tools operate on it, and what comes out is clearer, lighter, or more informative.</p>
             <p>In real VTK projects you rarely render raw input directly. You almost always process it first: remove noise, compute derived quantities, simplify meshes, extract surfaces, reorganize time steps, or convert data into a representation that downstream steps can handle. Filters are the verbs of VTK. They’re how you <em>do things</em> to data.</p>
             <p>One of the major components of VTK is its extensive range of filters and algorithms, designed to process, manipulate, and generate data objects. The important part is not memorizing names, but recognizing what kind of change a filter is making and what assumptions it relies on.</p>
+            <p>An algorithm is basically <em>anything that runs in the pipeline and does work when you call Update()</em>. A filter is just a very specific kind of algorithm: one that takes data in, changes it, and hands data back out. So <code>vtkSphereSource</code> is an algorithm but not a filter because it doesn’t transform anything, there’s no input, it just generates geometry from scratch. <code>vtkPolyDataMapper</code> is also an algorithm but not a filter because it consumes data and turns it into rendering instructions instead of producing new data for the pipeline. We will demonstrate below a custom <code>DistanceToPointFilter</code>, which on the other hand, is a filter because it sits in the middle, takes polydata, computes something new (distances), and outputs modified polydata. The useful gut check is: if you can logically put it between two other pipeline stages and say “this step modifies the data,” it’s a filter; if it creates data or consumes it for rendering, it’s an algorithm but not a filter.</p>
+            <p><strong>Everything in the pipeline ultimately derives from <code>vtkAlgorithm</code>.</strong> That’s the common base class. If something has <code>SetInputConnection</code>, <code>GetOutputPort</code>, participates in <code>Update()</code>, and runs <code>RequestData</code>, it’s coming from <code>vtkAlgorithm</code>.</p>
+            <p>There is <strong>no single class called “vtkFilter”</strong> in the sense people often expect. Instead, filters are defined <em>by behavior</em>, not by one named base class. In practice, most filters inherit from a <em>more specific</em> algorithm subclass that matches the data they operate on:</p>
+            <ul>
+                <li><code>vtkPolyDataAlgorithm</code> → filters that take and produce <code>vtkPolyData</code></li>
+                <li><code>vtkImageAlgorithm</code> → image/volume filters</li>
+                <li><code>vtkUnstructuredGridAlgorithm</code>, etc.</li>
+            </ul>
             <h3 id="purpose-and-functionality">Purpose and functionality</h3>
             <p>Filters and algorithms are primarily used for:</p>
             <ul>
@@ -159,7 +168,7 @@
             </ul>
             <h3 id="understanding-connectivity">Understanding connectivity</h3>
             <p>Connectivity is one of those ideas that seems obvious right until it bites you. If you’ve ever smoothed a mesh and wondered why sharp features disappeared, triangulated polygons and got unexpected results, or extracted a region and got too many pieces, you’ve already seen connectivity in action.</p>
-            <p>In <code>vtkPolyData</code>, this is especially important because cells (polygons/triangles/lines) don’t store coordinates directly. They store <strong>point ids</strong> into a shared <code>Points</code> array. That means there’s a crucial difference between:</p>
+            <p>In <code>vtkPolyData</code>, this is especially important because cells (polygons/triangles/lines) don’t store coordinates directly. They store <strong>point ids</strong> into a shared <code>Points</code> array. That means there’s a difference between:</p>
             <ul>
                 <li><strong>Sharing coordinates</strong> (two points happen to be in the same place)</li>
                 <li><strong>Sharing point ids</strong> (two cells literally reference the same point in the points array)</li>
@@ -244,7 +253,7 @@
                 <li><code>vtkShrinkFilter</code> (shrinks cells inward)</li>
                 <li><code>vtkSmoothPolyDataFilter</code> (adjusts point positions to smooth a surface)</li>
                 <li><code>vtkTransformPolyDataFilter</code> (applies a general transform)</li>
-                <li><code>vtkDecimatePro</code> (often treated as simplification; it reduces triangles and therefore can affect topology too—this one sits on the boundary between “geometric” and “topological” in effect)</li>
+                <li><code>vtkDecimatePro</code> (often treated as simplification; it reduces triangles and therefore can affect topology too, this one sits on the boundary between “geometric” and “topological” in effect)</li>
             </ul>
             <p>Even when connectivity is preserved, geometry changes still affect derived quantities such as normals, curvature, and measurements. That’s why geometric filters aren’t merely cosmetic.</p>
             <h3 id="topological-filters">Topological filters</h3>
@@ -279,53 +288,53 @@
                 <li><code>vtkTemporalShiftScale</code> (shifts and scales time values)</li>
                 <li><code>vtkTemporalStatistics</code> (computes statistics over time, producing new attributes)</li>
             </ul>
-            <h3 id="why-some-meshes-detach-and-others-stay-connected-">Why some meshes detach and others stay connected?</h3>
-            <p>Shrink filters are a perfect example of why connectivity matters.</p>
-            <p><code>vtkShrinkPolyData</code> / <code>vtkShrinkFilter</code> conceptually shrink each cell toward its own center. If the input mesh is welded (adjacent faces share point ids), the output often still looks like a connected surface—because shared points enforce shared motion at boundaries.</p>
-            <p>If each polygon has its own unique points (duplicated vertices per face), then each polygon shrinks independently and gaps appear immediately. This is usually the explanation when people see “detached polygons” and wonder why a demo example stays connected.</p>
-            <p>That leads to three practical approaches depending on intent:</p>
-            <ol>
-                <li>
-                    <p><strong>If the mesh should be a single surface:</strong> merge coincident points first
-                        A cleaning step (commonly <code>vtkCleanPolyData</code>) can weld duplicated points (within a tolerance), restoring connectivity.</p>
-                </li>
-                <li>
-                    <p><strong>If you want to shrink the entire object uniformly:</strong> don’t use per-cell shrink
-                        Compute a centroid and scale the entire mesh about that centroid (e.g., <code>vtkTransform</code> + <code>vtkTransformPolyDataFilter</code>). This preserves connectivity because you move shared points once, not cell-by-cell.</p>
-                </li>
-                <li>
-                    <p><strong>If you truly want an “exploded” look:</strong> per-cell shrink is doing exactly that
-                        In that case detaching is not a bug; it’s the visual effect of independent cells.</p>
-                </li>
-            </ol>
-            <p>A good mental shortcut: if the shrink filter reveals gaps, it’s usually exposing that your mesh wasn’t welded in the first place.</p>
-            <h3 id="example-creating-a-sphere-source-and-applying-a-shrink-filter">Example: Creating a Sphere Source and Applying a Shrink Filter</h3>
-            <p>Examples like this are useful because they show the pipeline idea in miniature: a source generates data with connectivity, then a filter modifies geometry while keeping connectivity intact. Once you internalize that pattern, most VTK workflows become variations on the same theme.</p>
-            <p>In this example, we create a sphere and apply a shrink filter:</p>
+            <h3 id="example-custom-distance-scalar-filter">Example: Custom Distance Scalar Filter</h3>
+            <p>This example matches the repo’s <code>example.py</code> and shows a full pipeline with a <strong>custom attribute filter</strong>. A sphere source feeds a Python-defined filter that computes a per-point distance to a target point and stores it as a scalar array. Those scalars then drive coloring in the mapper.</p>
+            <p>In Python, the safest base class for a custom VTK filter is <code>VTKPythonAlgorithmBase</code>. It ensures <code>RequestData</code> is actually called, and it exposes a consistent API for input/output ports.</p>
             <div>
-                <pre><code class="language-python">import vtk
+                <pre><code class="language-python">from vtkmodules.util.vtkAlgorithm import VTKPythonAlgorithmBase
 
-# Create a sphere source
-sphere_source = vtk.vtkSphereSource()
-sphere_source.SetRadius(1.0)
+class DistanceToPointFilter(VTKPythonAlgorithmBase):
+    def __init__(self):
+        super().__init__(
+            nInputPorts=1,
+            nOutputPorts=1,
+            inputType="vtkPolyData",
+            outputType="vtkPolyData",
+        )
+        self.TargetPoint = (0.0, 0.0, 0.0)
 
-# The sphere source generates points that are connected to form triangles,
-# creating a spherical surface.
+    def RequestData(self, request, inInfo, outInfo):
+        input_data = vtk.vtkPolyData.GetData(inInfo[0])
+        output_data = vtk.vtkPolyData.GetData(outInfo, 0)
+        output_data.ShallowCopy(input_data)
 
-# Create a shrink filter
-shrink_filter = vtk.vtkShrinkFilter()
-shrink_filter.SetInputConnection(sphere_source.GetOutputPort())
-shrink_filter.SetShrinkFactor(0.8)
+        distances = vtk.vtkFloatArray()
+        distances.SetName("DistanceToTarget")
+        distances.SetNumberOfComponents(1)
+        distances.SetNumberOfTuples(input_data.GetNumberOfPoints())
 
-# The shrink filter changes the positions of the points, making the sphere smaller,
-# but the connectivity (how the points are connected to form triangles) remains the same.
+        tx, ty, tz = self.TargetPoint
+        for i in range(input_data.GetNumberOfPoints()):
+            x, y, z = input_data.GetPoint(i)
+            distances.SetValue(i, ((x - tx)**2 + (y - ty)**2 + (z - tz)**2) ** 0.5)
 
-# Update the filter to generate the output
-shrink_filter.Update()</code></pre>
+        point_data = output_data.GetPointData()
+        point_data.AddArray(distances)
+        point_data.SetActiveScalars("DistanceToTarget")
+        return 1</code></pre>
             </div>
-            <p>We start by creating a <code>vtkSphereSource</code> object to generate a sphere with a radius of 1.0 units, which produces points connected to form a spherical surface. Then we apply a <code>vtkShrinkFilter</code>, connected to the sphere source’s output, and set a shrink factor of 0.8. Finally, we call <code>Update()</code> to force execution and obtain the shrunken output.</p>
-            <p>Below is a visual representation of the shrunken sphere:</p>
-            <p><img alt="sphere_shrink" src="https://github.com/djeada/Vtk-Examples/assets/37275728/aa343642-994f-46d9-ae84-11474860df6b" /></p>
+            <ul>
+                <li><strong>Attributes</strong> are attached to point data (<code>AddArray</code>) and marked active (<code>SetActiveScalars</code>) so the mapper can color by them.</li>
+                <li>In Python, fetch the filter output with <code>GetOutputDataObject(0)</code> when you need the scalar range.</li>
+                <li>The rendered scene uses <strong>two independent viewports</strong>: the original sphere on the left and the distance-colored sphere on the right, each with its own label. This makes comparison immediate without altering the underlying geometry.</li>
+            </ul>
+            <p><img alt="output2-ezgif com-video-to-gif-converter" src="https://github.com/user-attachments/assets/36fab8b5-e5dd-4b99-8584-669da9ad0c37" /></p>
+            <h3 id="why-shrink-can-break-a-mesh">Why “Shrink” Can Break a Mesh</h3>
+            <p>If you want to apply "shrink" filter on your mesh, you probably expect the whole object to scale inward smoothly, like a rubber model getting smaller. In VTK there’s a filter called vtkShrinkPolyData that sounds like it should do exactly that, but it behaves differently: it shrinks each polygon (cell) independently. This is great for inspecting cell structure, but it’s not a global scale.</p>
+            <p>What the filter actually does is take every cell in the mesh and move that cell’s corner points toward that cell’s own center. The result is a set of smaller, detached copies of the original faces. Because each face is handled independently, shared edges and points are no longer shared in position, so the surface opens up and gaps appear between neighboring faces. The mesh looks “broken,” even though the data is still valid.</p>
+            <p><img alt="image" height="677" src="https://github.com/user-attachments/assets/a04c2a82-aee5-49da-9b65-10ff886ecf24" width="1313" /></p>
+            <p>This pitfall is common because per‑cell operations are easy to implement and useful for debugging or visualizing topology. But if the goal is a “connected shrink” effect, where the object stays intact, you need a single global transform applied to the shared points, not per‑cell shrinking. That’s why global scaling about a chosen center (centroid or bounds center) is the go‑to solution for shrinking a mesh without visible cracks.</p>
             <h3 id="a-practical-connected-shrink-alternative-c-">A practical “connected shrink” alternative (C++)</h3>
             <p>If your goal is “make the whole mesh smaller toward its center” <em>without</em> breaking it into detached faces, a global transform is usually the cleanest solution. Unlike <code>vtkShrinkPolyData</code> / <code>vtkShrinkFilter</code> (which act per-cell), a transform acts on <strong>points</strong>. If your mesh is connected (adjacent cells share point ids), moving points with a single global transform keeps the surface connected automatically.</p>
             <p>The idea is simple:</p>
@@ -380,7 +389,7 @@ vtkSmartPointer&lt;vtkPolyData&gt; ScalePolyDataAboutCentroid(vtkPolyData* input
             <p><strong>What this does</strong></p>
             <ul>
                 <li>Every point in the mesh is scaled relative to the same center.</li>
-                <li>Connectivity is preserved because cells still reference the same point ids—only point coordinates change.</li>
+                <li>Connectivity is preserved because cells still reference the same point ids, only point coordinates change.</li>
                 <li>You get a “connected shrink” effect even when per-cell shrink would create gaps.</li>
             </ul>
             <p><strong>When centroid is a good choice</strong></p>
@@ -388,6 +397,7 @@ vtkSmartPointer&lt;vtkPolyData&gt; ScalePolyDataAboutCentroid(vtkPolyData* input
                 <li>organic or irregular shapes</li>
                 <li>meshes where “visual center” should track the distribution of points</li>
             </ul>
+            <p><img alt="image" height="647" src="https://github.com/user-attachments/assets/f8c23d36-a92e-44c7-bee0-ce85f6fc7afe" width="1312" /></p>
             <p><em>Option B: Scale about the bounding-box center (fast, predictable)</em></p>
             <p>Sometimes you want the center of the mesh’s bounds (midpoint of min/max in x/y/z). This is simpler and doesn’t require computing a centroid, and it matches what many people expect as a “visual center” for symmetric objects.</p>
             <div>
@@ -428,6 +438,7 @@ vtkSmartPointer&lt;vtkPolyData&gt; ScalePolyDataAboutBoundsCenter(vtkPolyData* i
                 <li>symmetric objects (CAD-like)</li>
                 <li>when you want behavior that’s stable even if point distribution is uneven</li>
             </ul>
+            <p><img alt="image" height="589" src="https://github.com/user-attachments/assets/4296bd8c-8f3f-4251-b172-508caa39c8d8" width="1349" /></p>
             <p>Why this preserves connectivity (and shrink filters may not)?</p>
             <p>A <code>vtkPolyData</code> surface stays connected when adjacent polygons share <strong>the same point ids</strong>. A global transform modifies point coordinates in the <code>Points</code> array, but it does not change which points each cell references. So adjacency remains intact.</p>
             <p>By contrast, cell-based shrink filters conceptually pull each cell toward its own center. If your mesh isn’t welded (each polygon has its own duplicate vertices), cells don’t share points, so they shrink independently and gaps appear.</p>
@@ -440,11 +451,11 @@ vtkSmartPointer&lt;vtkPolyData&gt; ScalePolyDataAboutBoundsCenter(vtkPolyData* i
             <h3 id="summary">Summary</h3>
             <p>This is a quick reference, but the more important takeaway is what each category <em>means</em>:</p>
             <ul>
-                <li>sources start the data story</li>
-                <li>geometric filters reshape existing geometry</li>
-                <li>topological filters rewrite structure</li>
-                <li>attribute filters add computed meaning</li>
-                <li>temporal filters operate across timesteps</li>
+                <li>Sources ingest and initialize datasets from external inputs or generators.</li>
+                <li>Geometric filters perform transformations on spatial representations, modifying coordinate positions or shapes while preserving connectivity.</li>
+                <li>Topological filters alter the connectivity or structural relationships between elements, rewriting the underlying graph or mesh structure.</li>
+                <li>Attribute filters compute, derive, or transform metadata fields, enriching elements with additional semantic or quantitative properties.</li>
+                <li>Temporal filters process data across multiple timesteps, enabling time-based aggregation, interpolation, or evolution analysis.</li>
             </ul>
             <p>
             <table>
