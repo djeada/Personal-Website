@@ -413,8 +413,12 @@ def read_urls() -> List[UrlData]:
 
 
 def process_url(url_data):
+    response = requests.get(url_data.url, timeout=30)
+    response.raise_for_status()
+    website_text = response.text
 
-    website_text = requests.get(url_data.url).text
+    if website_text.strip() == "404: Not Found":
+        raise ValueError(f"Unexpected 404 body returned for {url_data.url}")
 
     code_blocks = MarkdownProcessor.extract_code_blocks(website_text)
 
