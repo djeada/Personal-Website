@@ -1634,10 +1634,10 @@ document.addEventListener("DOMContentLoaded", function() {
             const newWords = editorText.value.split(/\s+/);
             let wordChanges = 0;
             const maxLen = Math.max(origWords.length, newWords.length);
-            for (let j = 0; j < maxLen; j++) {
-                const ow = j < origWords.length ? origWords[j] : '';
-                const nw = j < newWords.length ? newWords[j] : '';
-                if (ow !== nw) wordChanges++;
+            for (let wordIndex = 0; wordIndex < maxLen; wordIndex++) {
+                const originalWord = wordIndex < origWords.length ? origWords[wordIndex] : '';
+                const newWord = wordIndex < newWords.length ? newWords[wordIndex] : '';
+                if (originalWord !== newWord) wordChanges++;
             }
             trackChange("vocabulary simplifications applied", Math.max(wordChanges, 1));
         }
