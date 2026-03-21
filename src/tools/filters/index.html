@@ -101,6 +101,16 @@
                 <span class="stat-value" id="filter-display">None</span>
                 <span class="stat-label">Filter</span>
             </div>
+            <div class="stat-item">
+                <span class="stat-icon">📐</span>
+                <span class="stat-value" id="cutoff-display">—</span>
+                <span class="stat-label">Cutoff / Center</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">🔍</span>
+                <span class="stat-value" id="q-display">—</span>
+                <span class="stat-label">Q Factor</span>
+            </div>
         </div>
         <section class="tool-content">
             <!-- Sidebar Options -->
@@ -115,14 +125,20 @@
                 <div class="option-card preset-card">
                     <h3><span class="card-icon">⚡</span> Quick Presets</h3>
                     <div class="preset-buttons">
-                        <button class="preset-option active" data-preset="sine" title="Simple sine wave">
+                        <button class="preset-option active" data-preset="sine" title="Clean sine wave — no filter">
                             Sine
                         </button>
-                        <button class="preset-option" data-preset="square" title="Square wave with low-pass filter">
-                            Square
+                        <button class="preset-option" data-preset="lowpass_demo" title="Square wave smoothed by low-pass filter">
+                            Low-Pass
                         </button>
-                        <button class="preset-option" data-preset="complex" title="Complex filtered signal">
-                            Complex
+                        <button class="preset-option" data-preset="highpass_demo" title="Sawtooth with high-pass filter">
+                            High-Pass
+                        </button>
+                        <button class="preset-option" data-preset="bandpass_demo" title="Sawtooth through band-pass filter">
+                            Band-Pass
+                        </button>
+                        <button class="preset-option" data-preset="pulse_pwm" title="Pulse wave with adjustable duty cycle">
+                            Pulse PWM
                         </button>
                     </div>
                 </div>
@@ -170,6 +186,13 @@
                                 <span class="slider-value" id="velocityValue">1.00</span>
                             </div>
                             <input class="styled-slider" id="velocity" max="5" min="0.1" step="0.1" type="range" value="1" />
+                        </div>
+                        <div class="slider-item" id="dutyCycleControl">
+                            <div class="slider-header">
+                                <label for="dutyCycle">Duty Cycle</label>
+                                <span class="slider-value" id="dutyCycleValue">50%</span>
+                            </div>
+                            <input class="styled-slider" id="dutyCycle" max="0.95" min="0.05" step="0.05" type="range" value="0.5" />
                         </div>
                     </div>
                 </div>
@@ -234,14 +257,28 @@
                             <span class="canvas-title">📊 Input Signal</span>
                             <span class="canvas-legend input-legend">●</span>
                         </div>
-                        <canvas height="200" id="inputCanvas" width="800"></canvas>
+                        <canvas id="inputCanvas"></canvas>
                     </div>
                     <div class="canvas-wrapper">
                         <div class="canvas-header">
                             <span class="canvas-title">🎛️ Filtered Output</span>
                             <span class="canvas-legend output-legend">●</span>
                         </div>
-                        <canvas height="200" id="filteredCanvas" width="800"></canvas>
+                        <canvas id="filteredCanvas"></canvas>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <div class="canvas-header">
+                            <span class="canvas-title">📈 Frequency Spectrum</span>
+                            <span class="canvas-legend"><span class="input-legend">●</span> Input <span class="output-legend">●</span> Filtered</span>
+                        </div>
+                        <canvas id="spectrumCanvas"></canvas>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <div class="canvas-header">
+                            <span class="canvas-title">📐 Filter Response</span>
+                            <span class="canvas-legend" style="color: var(--response-color, #8b5cf6);">●</span>
+                        </div>
+                        <canvas id="responseCanvas"></canvas>
                     </div>
                 </div>
                 <!-- Action Buttons -->
@@ -280,9 +317,12 @@
         <!-- Signal Processing Background Section -->
         <section class="explanation-section">
             <div class="section-header">
-                <h2>📚 Signal Processing Background</h2>
+                <button aria-expanded="false" class="learn-toggle" id="learn-toggle">
+                    <h2>📚 Signal Processing Background</h2>
+                    <span class="toggle-icon">▼</span>
+                </button>
             </div>
-            <div class="explanation-content">
+            <div class="explanation-content collapsed" id="explanation-content">
                 <div class="explanation-card">
                     <h3>📡 What is Signal Processing?</h3>
                     <p>
@@ -618,7 +658,7 @@
                     <div class="comparison-table">
                         <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
                             <thead>
-                                <tr style="background: var(--card-background); border-bottom: 2px solid var(--border-color);">
+                                <tr style="background: var(--surface-elevated); border-bottom: 2px solid var(--border-color);">
                                     <th style="padding: 0.75rem; text-align: left;">Filter Type</th>
                                     <th style="padding: 0.75rem; text-align: center;">Passes</th>
                                     <th style="padding: 0.75rem; text-align: center;">Blocks</th>
