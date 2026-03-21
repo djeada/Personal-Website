@@ -46,6 +46,7 @@ document.addEventListener("DOMContentLoaded", function() {
     let historyIndex = -1;
     let isUndoRedo = false;
     const MAX_HISTORY = 50;
+    let preProcessText = null;
 
 
     function showToast(message, type = "info") {
@@ -84,6 +85,76 @@ document.addEventListener("DOMContentLoaded", function() {
         wordCount.textContent = words.toLocaleString();
         lineCount.textContent = lines.toLocaleString();
         readTime.textContent = `${minutes} min`;
+    }
+
+
+    // Change tracking
+    let changeReport = {};
+
+    function resetChangeReport() {
+        changeReport = {};
+    }
+
+    function trackChange(category, count) {
+        if (count <= 0) return;
+        if (!changeReport[category]) changeReport[category] = 0;
+        changeReport[category] += count;
+    }
+
+    function showChangeReport() {
+        const reportEl = document.getElementById("change-report");
+        const contentEl = document.getElementById("report-content");
+
+        const entries = Object.entries(changeReport);
+        if (entries.length === 0) {
+            reportEl.style.display = "none";
+            return;
+        }
+
+        let html = '<ul class="report-list">';
+        entries.forEach(([category, count]) => {
+            html += `<li><span class="report-count">${count}</span> ${category}</li>`;
+        });
+        html += '</ul>';
+        contentEl.innerHTML = html;
+        reportEl.style.display = "block";
+    }
+
+    function computeSimpleDiff(original, modified) {
+        const origLines = original.split('\n');
+        const modLines = modified.split('\n');
+        let html = '';
+        const maxLen = Math.max(origLines.length, modLines.length);
+
+        for (let i = 0; i < maxLen; i++) {
+            const origLine = i < origLines.length ? origLines[i] : undefined;
+            const modLine = i < modLines.length ? modLines[i] : undefined;
+
+            if (origLine === modLine) {
+                html += `<div class="diff-line diff-same"><span class="diff-prefix">&nbsp;</span><span class="diff-text">${escapeHtml(origLine)}</span></div>`;
+            } else {
+                if (origLine !== undefined) {
+                    html += `<div class="diff-line diff-removed"><span class="diff-prefix">−</span><span class="diff-text">${escapeHtml(origLine)}</span></div>`;
+                }
+                if (modLine !== undefined) {
+                    html += `<div class="diff-line diff-added"><span class="diff-prefix">+</span><span class="diff-text">${escapeHtml(modLine)}</span></div>`;
+                }
+            }
+        }
+        return html;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function showDiffPreview(original, modified) {
+        const diffEl = document.getElementById("diff-preview");
+        const contentEl = document.getElementById("diff-content");
+        contentEl.innerHTML = computeSimpleDiff(original, modified);
+        diffEl.style.display = "block";
     }
 
 
@@ -201,11 +272,11 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
     const presets = {
-        minimal: {
+        safe: {
             removeAllStars: true,
             confirmStep: false,
             removeBetween: false,
-            lineCorrection: false,
+            lineCorrection: true,
             listCorrection: false,
             romanListConversion: false,
             tabCorrection: false,
@@ -213,16 +284,28 @@ document.addEventListener("DOMContentLoaded", function() {
             simplifyText: false,
             trimListsBeforeColon: false
         },
-        standard: {
+        markdown: {
             removeAllStars: true,
             confirmStep: false,
             removeBetween: false,
             lineCorrection: true,
             listCorrection: true,
-            romanListConversion: true,
+            romanListConversion: false,
             tabCorrection: false,
             latexCorrection: true,
-            simplifyText: true,
+            simplifyText: false,
+            trimListsBeforeColon: false
+        },
+        polish: {
+            removeAllStars: true,
+            confirmStep: false,
+            removeBetween: false,
+            lineCorrection: true,
+            listCorrection: true,
+            romanListConversion: false,
+            tabCorrection: false,
+            latexCorrection: true,
+            simplifyText: false,
             trimListsBeforeColon: true
         },
         aggressive: {
@@ -271,7 +354,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
     resetDefaults.addEventListener("click", () => {
-        applyPreset("standard");
+        applyPreset("safe");
     });
 
 
@@ -384,6 +467,7 @@ document.addEventListener("DOMContentLoaded", function() {
         let lines = editorText.value.split("\n");
         let newLines = [];
         let inList = false;
+        let removedBlankLines = 0;
 
         lines.forEach((line) => {
             const isListItem = /^\s*[-*]\s|^\s*\d+\.\s/.test(line);
@@ -395,7 +479,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 newLines.push(line);
             } else {
                 if (inList && line.trim() === "") {
-
+                    removedBlankLines++;
                     return;
                 } else {
                     inList = false;
@@ -405,6 +489,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
 
         editorText.value = newLines.join("\n");
+        trackChange("blank lines removed from lists", removedBlankLines);
     }
 
     function replaceNumericalListsWithRoman() {
@@ -414,24 +499,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
         let lines = editorText.value.split("\n");
         let newLines = [];
-        let inList = false;
-        let listIndex = 1;
+        let convertedCount = 0;
 
         function toRoman(num) {
             const romanNumerals = [
-                ["M", 1000],
-                ["CM", 900],
-                ["D", 500],
-                ["CD", 400],
-                ["C", 100],
-                ["XC", 90],
-                ["L", 50],
-                ["XL", 40],
-                ["X", 10],
-                ["IX", 9],
-                ["V", 5],
-                ["IV", 4],
-                ["I", 1]
+                ["M", 1000], ["CM", 900], ["D", 500], ["CD", 400],
+                ["C", 100], ["XC", 90], ["L", 50], ["XL", 40],
+                ["X", 10], ["IX", 9], ["V", 5], ["IV", 4], ["I", 1]
             ];
             let result = "";
             romanNumerals.forEach(([roman, value]) => {
@@ -450,12 +524,14 @@ document.addEventListener("DOMContentLoaded", function() {
                 const romanIndex = toRoman(parseInt(numericalListItem[1]));
                 const romanListItem = line.replace(numericalListItem[0], `${romanIndex}. `);
                 newLines.push(romanListItem);
+                convertedCount++;
             } else {
                 newLines.push(line);
             }
         });
 
         editorText.value = newLines.join("\n");
+        trackChange("list items converted to Roman numerals", convertedCount);
     }
 
 
@@ -463,6 +539,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         if (!lineCorrectionCheckbox.checked) return;
         saveState();
+        const beforeText = editorText.value;
 
 
         let lines = editorText.value.split("\n");
@@ -675,32 +752,34 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
         editorText.value = pass3.join("\n");
+        const afterLineCount = editorText.value.split('\n').length;
+        const beforeLineCount = beforeText.split('\n').length;
+        const diff = beforeLineCount - afterLineCount;
+        if (diff > 0) trackChange("blank lines normalized", diff);
+        if (diff < 0) trackChange("structural blank lines added", Math.abs(diff));
     }
 
-
-
     function removeTabIndent() {
-
         if (!tabCorrectionCheckbox.checked) return;
 
         saveState();
 
         let lines = editorText.value.split("\n");
         let newLines = [];
+        let removedCount = 0;
 
         lines.forEach(line => {
-
             const match = line.match(/^(\t| {1,4})/);
-
             if (match) {
                 newLines.push(line.substring(match[0].length));
+                removedCount++;
             } else {
                 newLines.push(line);
             }
         });
 
-
         editorText.value = newLines.join("\n");
+        trackChange("tab indents removed", removedCount);
     }
 
 
@@ -708,6 +787,7 @@ document.addEventListener("DOMContentLoaded", function() {
     function correctLatex() {
         if (!latexCorrectionCheckbox.checked) return;
         saveState();
+        const beforeText = editorText.value;
 
         const text = editorText.value;
         let result = '';
@@ -833,40 +913,39 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
         editorText.value = result;
+        if (editorText.value !== beforeText) {
+            const changes = (beforeText.match(/\\\[|\\\(|\\;|\\,|\\\./g) || []).length;
+            trackChange("LaTeX delimiters/formatting fixed", Math.max(changes, 1));
+        }
     }
 
 
     function trimListItemsBeforeColon() {
-
         if (!trimListsCheckbox.checked) return;
 
         saveState();
 
         let lines = editorText.value.split("\n");
         let newLines = [];
+        let trimmedCount = 0;
 
         lines.forEach(line => {
             let trimmedLine = line.trim();
-
-
             let listStartRegex = /^(\d+\.|\*|-)/;
 
             if (listStartRegex.test(trimmedLine) && trimmedLine.includes(":")) {
-
                 let colonIndex = trimmedLine.indexOf(":");
-
-
                 let listSymbolMatch = trimmedLine.match(listStartRegex)[0];
                 let newText = listSymbolMatch + " " + trimmedLine.slice(colonIndex + 1).trim();
-
                 newLines.push(newText);
+                trimmedCount++;
             } else {
-
                 newLines.push(line);
             }
         });
 
         editorText.value = newLines.join("\n");
+        trackChange("list prefixes trimmed", trimmedCount);
     }
 
 
@@ -950,12 +1029,16 @@ document.addEventListener("DOMContentLoaded", function() {
         let text = editorText.value;
 
         if (removeAllStars.checked) {
+            const boldCountBefore = (text.match(/\*\*/g) || []).length / 2;
             if (removeBetween.checked) {
-
+                const removedCount = (text.match(/\*\*[^*]*\*\*[^ ]*\s*/g) || []).length;
                 text = text.replace(/\*\*[^*]*\*\*[^ ]*\s*/g, '');
+                trackChange("bold sections removed (with content)", removedCount);
             }
 
+            const remainingBold = (text.match(/\*\*/g) || []).length / 2;
             text = text.replace(/\*\*/g, '');
+            if (remainingBold > 0) trackChange("bold markers removed", Math.floor(remainingBold));
         } else if (confirmStep.checked) {
             let matches = [];
             let regex = /\*\*(.*?)\*\*/gs;
@@ -970,34 +1053,32 @@ document.addEventListener("DOMContentLoaded", function() {
             }
 
             let offset = 0;
+            let confirmedCount = 0;
             for (let i = 0; i < matches.length; i++) {
                 let m = matches[i];
-
 
                 let lineStart = text.lastIndexOf('\n', m.index) + 1;
                 let lineEnd = text.indexOf('\n', m.index);
                 if (lineEnd === -1) lineEnd = text.length;
                 let fullLine = text.slice(lineStart, lineEnd);
 
-
                 let displayLine = fullLine.replace(m.match, toBoldUTF8(m.content));
-
 
                 let userConfirmed = confirm(`Do you want to remove this text?\n"${displayLine}"`);
                 if (userConfirmed) {
-
                     text = text.slice(0, m.index - offset) + text.slice(m.index - offset + m.match.length);
                     offset += m.match.length;
+                    confirmedCount++;
                 } else {
-
                     break;
                 }
             }
+            if (confirmedCount > 0) trackChange("bold sections confirmed and removed", confirmedCount);
         } else if (removeBetween.checked) {
-
+            const removedCount = (text.match(/\*\*[^*]*\*\*[^ ]*\s*/g) || []).length;
             text = text.replace(/\*\*[^*]*\*\*[^ ]*\s*/g, '');
+            trackChange("bold sections removed (with content)", removedCount);
         }
-
 
         editorText.value = text;
     }
@@ -1007,6 +1088,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (!simplifyTextCheckbox.checked) return;
 
         saveState();
+        const beforeText = editorText.value;
 
         let text = editorText.value;
         let result = '';
@@ -1547,6 +1629,18 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
         editorText.value = result;
+        if (editorText.value !== beforeText) {
+            const origWords = beforeText.split(/\s+/);
+            const newWords = editorText.value.split(/\s+/);
+            let wordChanges = 0;
+            const maxLen = Math.max(origWords.length, newWords.length);
+            for (let j = 0; j < maxLen; j++) {
+                const ow = j < origWords.length ? origWords[j] : '';
+                const nw = j < newWords.length ? newWords[j] : '';
+                if (ow !== nw) wordChanges++;
+            }
+            trackChange("vocabulary simplifications applied", Math.max(wordChanges, 1));
+        }
     }
 
     function replaceTextFunction() {
@@ -1574,6 +1668,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
     processButton.addEventListener("click", () => {
         const originalText = editorText.value;
+        preProcessText = originalText;
+        resetChangeReport();
 
         processText();
         replaceNumericalListsWithRoman();
@@ -1588,6 +1684,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
         if (editorText.value !== originalText) {
             showToast("Text processed successfully! ✨", "success");
+            showChangeReport();
+            showDiffPreview(originalText, editorText.value);
         } else {
             showToast("No changes were made", "info");
         }
@@ -1635,5 +1733,26 @@ document.addEventListener("DOMContentLoaded", function() {
         link.download = "processed_text.txt";
         link.click();
         showToast("File downloaded! 💾", "success");
+    });
+
+    // Change report and diff preview controls
+    document.getElementById("close-report").addEventListener("click", () => {
+        document.getElementById("change-report").style.display = "none";
+    });
+
+    document.getElementById("close-diff").addEventListener("click", () => {
+        document.getElementById("diff-preview").style.display = "none";
+    });
+
+    document.getElementById("revert-all").addEventListener("click", () => {
+        if (preProcessText !== null) {
+            saveState();
+            editorText.value = preProcessText;
+            preProcessText = null;
+            updateStats();
+            document.getElementById("change-report").style.display = "none";
+            document.getElementById("diff-preview").style.display = "none";
+            showToast("All changes reverted", "success");
+        }
     });
 });
