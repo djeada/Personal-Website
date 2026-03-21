@@ -431,6 +431,11 @@ document.addEventListener("DOMContentLoaded", function() {
         };
     }
 
+    function formatDbLabel(value) {
+        var normalized = Math.abs(value) < 0.05 ? 0 : value;
+        return normalized.toFixed(1) + ' dB';
+    }
+
     function drawAxes(ctx, canvas) {
         var metrics = getChartMetrics(canvas, { left: 52, right: 18, top: 18, bottom: 28 });
         var axisColor = getColorForMode('#e2e8f0', '#475569');
@@ -585,7 +590,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function drawFilterResponse(ctx, canvas) {
-        var metrics = getChartMetrics(canvas, { left: 58, right: 18, top: 18, bottom: 34 });
+        var metrics = getChartMetrics(canvas, { left: 76, right: 18, top: 28, bottom: 36 });
         var fonts = getChartFontSizes(metrics.width);
         var fs = 1 / timeScale;
         var maxFreq = 6;
@@ -612,16 +617,12 @@ document.addEventListener("DOMContentLoaded", function() {
         /* labels */
         ctx.fillStyle = labelColor;
         ctx.font = fonts.axis + 'px system-ui, -apple-system, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Gain (dB)', metrics.left, 14);
         ctx.textAlign = 'right';
         ctx.textBaseline = 'alphabetic';
         ctx.fillText('Frequency', metrics.right, metrics.height - 8);
-        ctx.save();
-        ctx.translate(18, metrics.top + metrics.plotHeight / 2);
-        ctx.rotate(-Math.PI / 2);
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('Gain (dB)', 0, 0);
-        ctx.restore();
 
         /* frequency tick labels */
         ctx.font = fonts.tick + 'px system-ui, -apple-system, sans-serif';
@@ -646,9 +647,9 @@ document.addEventListener("DOMContentLoaded", function() {
             ctx.moveTo(metrics.left, gy);
             ctx.lineTo(metrics.right, gy);
             ctx.stroke();
-            ctx.textAlign = 'left';
+            ctx.textAlign = 'right';
             ctx.textBaseline = 'middle';
-            ctx.fillText(db + ' dB', 4, gy);
+            ctx.fillText(db + ' dB', metrics.left - 8, gy);
         }
 
         /* response curve */
@@ -689,12 +690,30 @@ document.addEventListener("DOMContentLoaded", function() {
 
             ctx.fillStyle = labelColor;
             ctx.font = 'bold ' + fonts.marker + 'px system-ui, -apple-system, sans-serif';
+            var labelLine1 = 'fc=' + markerFreq.toFixed(1) + ' Hz';
+            var labelLine2 = formatDbLabel(markerDb);
+            var lineGap = 14;
+            var labelWidth = Math.max(ctx.measureText(labelLine1).width, ctx.measureText(labelLine2).width);
+            var labelPaddingX = 6;
+            var labelPaddingY = 5;
+            var labelBoxWidth = labelWidth + labelPaddingX * 2;
+            var labelBoxHeight = lineGap * 2 + labelPaddingY * 2 - 2;
+            var preferRight = mx < metrics.left + metrics.plotWidth * 0.62;
+            var markerLabelX = preferRight ? mx + 10 : mx - 10 - labelBoxWidth;
+            markerLabelX = clamp(markerLabelX, metrics.left + 6, metrics.right - labelBoxWidth - 4);
+            var markerLabelY = clamp(my - labelBoxHeight - 8, metrics.top + 6, metrics.bottom - labelBoxHeight - 4);
+
+            ctx.fillStyle = getColorForMode('rgba(248, 250, 252, 0.92)', 'rgba(30, 41, 59, 0.92)');
+            ctx.fillRect(markerLabelX, markerLabelY, labelBoxWidth, labelBoxHeight);
+            ctx.strokeStyle = getColorForMode('rgba(148, 163, 184, 0.35)', 'rgba(148, 163, 184, 0.45)');
+            ctx.lineWidth = 1;
+            ctx.strokeRect(markerLabelX, markerLabelY, labelBoxWidth, labelBoxHeight);
+
+            ctx.fillStyle = labelColor;
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
-            var markerLabelX = clamp(mx + 10, metrics.left + 6, metrics.right - 78);
-            var markerLabelY = clamp(my - 8, metrics.top + 14, metrics.bottom - 18);
-            ctx.fillText('fc=' + markerFreq.toFixed(1) + ' Hz', markerLabelX, markerLabelY);
-            ctx.fillText(markerDb.toFixed(1) + ' dB', markerLabelX, markerLabelY + 14);
+            ctx.fillText(labelLine1, markerLabelX + labelPaddingX, markerLabelY + labelPaddingY + 5);
+            ctx.fillText(labelLine2, markerLabelX + labelPaddingX, markerLabelY + labelPaddingY + 5 + lineGap);
         } else {
             /* flat line at 0 dB */
             var py0 = metrics.top + (1 - (0 - dbMin) / dbRange) * metrics.plotHeight;
