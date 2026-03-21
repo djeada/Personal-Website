@@ -372,20 +372,24 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function computeMagnitudeSpectrum(buf) {
+        if (buf.length < 2) return new Float64Array(1);
         /* zero-pad to next power of 2 */
         var n = 1;
         while (n < buf.length) n <<= 1;
         var re = new Float64Array(n);
         var im = new Float64Array(n);
         /* apply Hann window */
+        var denom = buf.length - 1;
         for (var i = 0; i < buf.length; i++) {
-            var w = 0.5 * (1 - Math.cos(2 * Math.PI * i / (buf.length - 1)));
+            var w = 0.5 * (1 - Math.cos(2 * Math.PI * i / denom));
             re[i] = buf[i] * w;
         }
         fft(re, im);
-        var mag = new Float64Array(n / 2);
-        for (var i = 0; i < n / 2; i++) {
-            mag[i] = Math.sqrt(re[i] * re[i] + im[i] * im[i]) / (buf.length / 2);
+        var half = n / 2;
+        var scale = buf.length / 2;
+        var mag = new Float64Array(half);
+        for (var i = 0; i < half; i++) {
+            mag[i] = Math.sqrt(re[i] * re[i] + im[i] * im[i]) / scale;
         }
         return mag;
     }
@@ -481,6 +485,7 @@ document.addEventListener("DOMContentLoaded", function() {
         var height = cssHeight(canvas);
         var fs = 1 / timeScale;
         var n = inputMag.length;
+        if (n < 2) return;
         var maxFreqBin = Math.min(n, Math.ceil(6 / (fs / (2 * n)) )); /* up to ~6 Hz */
         if (maxFreqBin < 2) maxFreqBin = n;
 
@@ -798,6 +803,10 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     };
 
+    function formatPresetName(name) {
+        return name.replace(/_/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); });
+    }
+
     function applyPreset(presetName) {
         var preset = presets[presetName];
         if (!preset) return;
@@ -830,7 +839,7 @@ document.addEventListener("DOMContentLoaded", function() {
             btn.classList.toggle('active', btn.dataset.preset === presetName);
         });
 
-        showToast(presetName.replace(/_/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); }) + ' preset applied', 'success');
+        showToast(formatPresetName(presetName) + ' preset applied', 'success');
     }
 
     /* ── Event listeners ─────────────────────────────────── */
@@ -932,7 +941,7 @@ document.addEventListener("DOMContentLoaded", function() {
             learnToggle.setAttribute('aria-expanded', !expanded);
             var content = document.getElementById('explanation-content');
             if (content) {
-                content.style.display = expanded ? 'none' : '';
+                content.classList.toggle('collapsed', expanded);
             }
         });
     }
