@@ -402,53 +402,98 @@ document.addEventListener("DOMContentLoaded", function() {
         return canvas.getBoundingClientRect().height;
     }
 
-    function drawAxes(ctx, width, height) {
+    function getChartMetrics(canvas, padding) {
+        var width = cssWidth(canvas);
+        var height = cssHeight(canvas);
+        var metrics = {
+            width: width,
+            height: height,
+            left: padding.left,
+            right: width - padding.right,
+            top: padding.top,
+            bottom: height - padding.bottom
+        };
+        metrics.plotWidth = Math.max(1, metrics.right - metrics.left);
+        metrics.plotHeight = Math.max(1, metrics.bottom - metrics.top);
+        metrics.midY = metrics.top + metrics.plotHeight / 2;
+        return metrics;
+    }
+
+    function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+    }
+
+    function getChartFontSizes(width) {
+        return {
+            axis: Math.max(13, Math.min(15, width / 36)),
+            tick: Math.max(11, Math.min(13, width / 44)),
+            marker: Math.max(11, Math.min(13, width / 42))
+        };
+    }
+
+    function drawAxes(ctx, canvas) {
+        var metrics = getChartMetrics(canvas, { left: 52, right: 18, top: 18, bottom: 28 });
         var axisColor = getColorForMode('#e2e8f0', '#475569');
         var labelColor = getColorForMode('#64748b', '#94a3b8');
+        var fonts = getChartFontSizes(metrics.width);
 
+        ctx.save();
         ctx.strokeStyle = axisColor;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(0, height / 2);
-        ctx.lineTo(width, height / 2);
+        ctx.moveTo(metrics.left, metrics.midY);
+        ctx.lineTo(metrics.right, metrics.midY);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(0, height);
+        ctx.moveTo(metrics.left, metrics.top);
+        ctx.lineTo(metrics.left, metrics.bottom);
         ctx.stroke();
 
         ctx.fillStyle = labelColor;
-        ctx.font = '12px system-ui, -apple-system, sans-serif';
-        ctx.fillText('Time', width - 35, height / 2 + 15);
+        ctx.font = fonts.axis + 'px system-ui, -apple-system, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText('Time', metrics.right, metrics.height - 8);
         ctx.save();
-        ctx.translate(15, height / 2 + 30);
+        ctx.translate(18, metrics.top + metrics.plotHeight / 2);
         ctx.rotate(-Math.PI / 2);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         ctx.fillText('Amplitude', 0, 0);
+        ctx.restore();
         ctx.restore();
     }
 
-    function drawSpectrumAxes(ctx, width, height) {
+    function drawSpectrumAxes(ctx, canvas) {
+        var metrics = getChartMetrics(canvas, { left: 52, right: 18, top: 18, bottom: 34 });
         var axisColor = getColorForMode('#e2e8f0', '#475569');
         var labelColor = getColorForMode('#64748b', '#94a3b8');
+        var fonts = getChartFontSizes(metrics.width);
 
+        ctx.save();
         ctx.strokeStyle = axisColor;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(0, height);
-        ctx.lineTo(width, height);
+        ctx.moveTo(metrics.left, metrics.bottom);
+        ctx.lineTo(metrics.right, metrics.bottom);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(0, height);
+        ctx.moveTo(metrics.left, metrics.top);
+        ctx.lineTo(metrics.left, metrics.bottom);
         ctx.stroke();
 
         ctx.fillStyle = labelColor;
-        ctx.font = '12px system-ui, -apple-system, sans-serif';
-        ctx.fillText('Frequency', width - 65, height - 5);
+        ctx.font = fonts.axis + 'px system-ui, -apple-system, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText('Frequency', metrics.right, metrics.height - 8);
         ctx.save();
-        ctx.translate(15, 40);
+        ctx.translate(18, metrics.top + metrics.plotHeight / 2);
         ctx.rotate(-Math.PI / 2);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         ctx.fillText('Magnitude', 0, 0);
+        ctx.restore();
         ctx.restore();
     }
 
@@ -463,14 +508,14 @@ document.addEventListener("DOMContentLoaded", function() {
 
     /* ── Rendering ───────────────────────────────────────── */
     function drawTimeDomain(ctx, canvas, buf, color) {
-        var width = cssWidth(canvas);
-        var height = cssHeight(canvas);
-        var midY = height / 2;
-        var yScale = (height / 2 - 20) / amplitudeMax();
+        var metrics = getChartMetrics(canvas, { left: 52, right: 18, top: 18, bottom: 28 });
+        var midY = metrics.midY;
+        var yScale = Math.max(1, metrics.plotHeight / 2 - 12) / amplitudeMax();
 
+        ctx.save();
         ctx.beginPath();
         for (var x = 0; x < buf.length; x++) {
-            var px = (x / buf.length) * width;
+            var px = metrics.left + (x / Math.max(1, buf.length - 1)) * metrics.plotWidth;
             var py = midY - buf[x] * yScale;
             if (x === 0) ctx.moveTo(px, py);
             else ctx.lineTo(px, py);
@@ -478,11 +523,12 @@ document.addEventListener("DOMContentLoaded", function() {
         ctx.strokeStyle = color;
         ctx.lineWidth = 2.5;
         ctx.stroke();
+        ctx.restore();
     }
 
     function drawSpectrum(ctx, canvas, inputMag, filteredMag) {
-        var width = cssWidth(canvas);
-        var height = cssHeight(canvas);
+        var metrics = getChartMetrics(canvas, { left: 52, right: 18, top: 18, bottom: 34 });
+        var fonts = getChartFontSizes(metrics.width);
         var fs = 1 / timeScale;
         var n = inputMag.length;
         if (n < 2) return;
@@ -498,79 +544,92 @@ document.addEventListener("DOMContentLoaded", function() {
 
         var inputColor = getColorForMode('#10b981', '#4ade80');
         var filteredColor = getColorForMode('#ea8400', '#fbbf24');
-        var barWidth = Math.max(1, (width / maxFreqBin) * 0.35);
+        var groupWidth = metrics.plotWidth / maxFreqBin;
+        var barWidth = Math.max(2, groupWidth * 0.32);
 
+        ctx.save();
         /* input bars */
         ctx.fillStyle = inputColor;
         ctx.globalAlpha = 0.6;
         for (var i = 1; i < maxFreqBin; i++) {
-            var px = (i / maxFreqBin) * width;
-            var barH = (inputMag[i] / maxMag) * (height - 20);
-            ctx.fillRect(px - barWidth, height - barH, barWidth, barH);
+            var px = metrics.left + (i / maxFreqBin) * metrics.plotWidth;
+            var barH = (inputMag[i] / maxMag) * metrics.plotHeight;
+            ctx.fillRect(px - barWidth - 1, metrics.bottom - barH, barWidth, barH);
         }
 
         /* filtered bars */
         ctx.fillStyle = filteredColor;
         ctx.globalAlpha = 0.6;
         for (var i = 1; i < maxFreqBin; i++) {
-            var px = (i / maxFreqBin) * width;
-            var barH = (filteredMag[i] / maxMag) * (height - 20);
-            ctx.fillRect(px, height - barH, barWidth, barH);
+            var px = metrics.left + (i / maxFreqBin) * metrics.plotWidth;
+            var barH = (filteredMag[i] / maxMag) * metrics.plotHeight;
+            ctx.fillRect(px + 1, metrics.bottom - barH, barWidth, barH);
         }
         ctx.globalAlpha = 1.0;
 
         /* frequency labels */
         var labelColor = getColorForMode('#64748b', '#94a3b8');
         ctx.fillStyle = labelColor;
-        ctx.font = '11px system-ui, -apple-system, sans-serif';
+        ctx.font = fonts.tick + 'px system-ui, -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         var binHz = fs / (2 * n);
         for (var f = 1; f <= 5; f++) {
             var bin = Math.round(f / binHz);
             if (bin < maxFreqBin) {
-                var lx = (bin / maxFreqBin) * width;
-                ctx.fillText(f + ' Hz', lx - 10, height - 2);
+                var lx = metrics.left + (bin / maxFreqBin) * metrics.plotWidth;
+                ctx.fillText(f + ' Hz', lx, metrics.bottom + 14);
             }
         }
+        ctx.restore();
     }
 
     function drawFilterResponse(ctx, canvas) {
-        var width = cssWidth(canvas);
-        var height = cssHeight(canvas);
+        var metrics = getChartMetrics(canvas, { left: 58, right: 18, top: 18, bottom: 34 });
+        var fonts = getChartFontSizes(metrics.width);
         var fs = 1 / timeScale;
         var maxFreq = 6;
-        var numPoints = Math.round(width);
+        var numPoints = Math.round(metrics.plotWidth);
 
         var responseColor = getColorForMode('#8b5cf6', '#a78bfa');
         var markerColor = getColorForMode('#ea8400', '#fbbf24');
         var axisColor = getColorForMode('#e2e8f0', '#475569');
         var labelColor = getColorForMode('#64748b', '#94a3b8');
 
+        ctx.save();
         /* axes */
         ctx.strokeStyle = axisColor;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(0, height);
-        ctx.lineTo(width, height);
+        ctx.moveTo(metrics.left, metrics.bottom);
+        ctx.lineTo(metrics.right, metrics.bottom);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(0, height);
+        ctx.moveTo(metrics.left, metrics.top);
+        ctx.lineTo(metrics.left, metrics.bottom);
         ctx.stroke();
 
         /* labels */
         ctx.fillStyle = labelColor;
-        ctx.font = '11px system-ui, -apple-system, sans-serif';
-        ctx.fillText('Frequency', width - 65, height - 5);
+        ctx.font = fonts.axis + 'px system-ui, -apple-system, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText('Frequency', metrics.right, metrics.height - 8);
         ctx.save();
-        ctx.translate(15, 40);
+        ctx.translate(18, metrics.top + metrics.plotHeight / 2);
         ctx.rotate(-Math.PI / 2);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         ctx.fillText('Gain (dB)', 0, 0);
         ctx.restore();
 
         /* frequency tick labels */
+        ctx.font = fonts.tick + 'px system-ui, -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         for (var f = 1; f <= 5; f++) {
-            var lx = (f / maxFreq) * width;
-            ctx.fillText(f + ' Hz', lx - 10, height - 2);
+            var lx = metrics.left + (f / maxFreq) * metrics.plotWidth;
+            ctx.fillText(f + ' Hz', lx, metrics.bottom + 14);
         }
 
         /* dB range: 0 dB at top, -40 dB at bottom */
@@ -582,12 +641,14 @@ document.addEventListener("DOMContentLoaded", function() {
         ctx.strokeStyle = axisColor;
         ctx.lineWidth = 0.5;
         for (var db = 0; db >= dbMin; db -= 10) {
-            var gy = (1 - (db - dbMin) / dbRange) * (height - 15);
+            var gy = metrics.top + (1 - (db - dbMin) / dbRange) * metrics.plotHeight;
             ctx.beginPath();
-            ctx.moveTo(0, gy);
-            ctx.lineTo(width, gy);
+            ctx.moveTo(metrics.left, gy);
+            ctx.lineTo(metrics.right, gy);
             ctx.stroke();
-            ctx.fillText(db + ' dB', 2, gy - 3);
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(db + ' dB', 4, gy);
         }
 
         /* response curve */
@@ -597,9 +658,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 var f = (i / numPoints) * maxFreq + 0.001;
                 var mag = filter.magnitudeAt(f, fs);
                 var db = 20 * Math.log10(Math.max(mag, 1e-10));
-                var py = (1 - (db - dbMin) / dbRange) * (height - 15);
-                if (i === 0) ctx.moveTo(i, py);
-                else ctx.lineTo(i, py);
+                var px = metrics.left + (i / Math.max(1, numPoints - 1)) * metrics.plotWidth;
+                var py = metrics.top + (1 - (db - dbMin) / dbRange) * metrics.plotHeight;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
             }
             ctx.strokeStyle = responseColor;
             ctx.lineWidth = 2.5;
@@ -609,8 +671,8 @@ document.addEventListener("DOMContentLoaded", function() {
             var markerFreq = filter.cutoffFrequency;
             var markerMag = filter.magnitudeAt(markerFreq, fs);
             var markerDb = 20 * Math.log10(Math.max(markerMag, 1e-10));
-            var mx = (markerFreq / maxFreq) * width;
-            var my = (1 - (markerDb - dbMin) / dbRange) * (height - 15);
+            var mx = metrics.left + (markerFreq / maxFreq) * metrics.plotWidth;
+            var my = metrics.top + (1 - (markerDb - dbMin) / dbRange) * metrics.plotHeight;
 
             ctx.beginPath();
             ctx.arc(mx, my, 5, 0, 2 * Math.PI);
@@ -620,29 +682,36 @@ document.addEventListener("DOMContentLoaded", function() {
             ctx.lineWidth = 1;
             ctx.setLineDash([4, 4]);
             ctx.beginPath();
-            ctx.moveTo(mx, 0);
-            ctx.lineTo(mx, height);
+            ctx.moveTo(mx, metrics.top);
+            ctx.lineTo(mx, metrics.bottom);
             ctx.stroke();
             ctx.setLineDash([]);
 
             ctx.fillStyle = labelColor;
-            ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
-            ctx.fillText('fc=' + markerFreq.toFixed(1) + ' Hz', mx + 8, my - 6);
-            ctx.fillText(markerDb.toFixed(1) + ' dB', mx + 8, my + 10);
+            ctx.font = 'bold ' + fonts.marker + 'px system-ui, -apple-system, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            var markerLabelX = clamp(mx + 10, metrics.left + 6, metrics.right - 78);
+            var markerLabelY = clamp(my - 8, metrics.top + 14, metrics.bottom - 18);
+            ctx.fillText('fc=' + markerFreq.toFixed(1) + ' Hz', markerLabelX, markerLabelY);
+            ctx.fillText(markerDb.toFixed(1) + ' dB', markerLabelX, markerLabelY + 14);
         } else {
             /* flat line at 0 dB */
-            var py0 = (1 - (0 - dbMin) / dbRange) * (height - 15);
+            var py0 = metrics.top + (1 - (0 - dbMin) / dbRange) * metrics.plotHeight;
             ctx.beginPath();
-            ctx.moveTo(0, py0);
-            ctx.lineTo(width, py0);
+            ctx.moveTo(metrics.left, py0);
+            ctx.lineTo(metrics.right, py0);
             ctx.strokeStyle = responseColor;
             ctx.lineWidth = 2.5;
             ctx.stroke();
 
             ctx.fillStyle = labelColor;
-            ctx.font = '12px system-ui, -apple-system, sans-serif';
-            ctx.fillText('No filter active (flat 0 dB)', width / 2 - 80, py0 - 10);
+            ctx.font = fonts.tick + 'px system-ui, -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('No filter active (flat 0 dB)', metrics.left + metrics.plotWidth / 2, py0 - 12);
         }
+        ctx.restore();
     }
 
     /* ── Animation loop ──────────────────────────────────── */
@@ -670,17 +739,14 @@ document.addEventListener("DOMContentLoaded", function() {
         var bufs = buildBuffers(numPoints);
 
         /* time-domain plots */
-        var iW = cssWidth(inputCanvas), iH = cssHeight(inputCanvas);
-        drawAxes(inputCtx, iW, iH);
+        drawAxes(inputCtx, inputCanvas);
         drawTimeDomain(inputCtx, inputCanvas, bufs.input, getColorForMode('#10b981', '#4ade80'));
 
-        var fW = cssWidth(filteredCanvas), fH = cssHeight(filteredCanvas);
-        drawAxes(filteredCtx, fW, fH);
+        drawAxes(filteredCtx, filteredCanvas);
         drawTimeDomain(filteredCtx, filteredCanvas, bufs.filtered, getColorForMode('#ea8400', '#fbbf24'));
 
         /* spectrum plot */
-        var sW = cssWidth(spectrumCanvas), sH = cssHeight(spectrumCanvas);
-        drawSpectrumAxes(spectrumCtx, sW, sH);
+        drawSpectrumAxes(spectrumCtx, spectrumCanvas);
         var inputSpec = computeMagnitudeSpectrum(bufs.input);
         var filteredSpec = computeMagnitudeSpectrum(bufs.filtered);
         drawSpectrum(spectrumCtx, spectrumCanvas, inputSpec, filteredSpec);
