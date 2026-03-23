@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/01_caching_strategies",
             "description": "Caching is a technique used to speed up data retrieval by placing frequently accessed or computationally heavy information closer to the application or the end user.",
-            "dateModified": "2026-01-24"
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -80,8 +80,12 @@
                 <ol><a href="#caching">Caching</a>
                     <ol>
                         <li><a href="#types-of-cache">Types of Cache</a></li>
+                        <li><a href="#cache-aside-lazy-loading-pattern">Cache-Aside (Lazy Loading) Pattern</a></li>
                         <li><a href="#cache-write-policies">Cache Write Policies</a></li>
                         <li><a href="#cache-eviction-policies">Cache Eviction Policies</a></li>
+                        <li><a href="#cache-stampede-and-thundering-herd">Cache Stampede and Thundering Herd</a></li>
+                        <li><a href="#cache-warming">Cache Warming</a></li>
+                        <li><a href="#distributed-cache-considerations">Distributed Cache Considerations</a></li>
                         <li><a href="#cache-invalidation-and-consistency">Cache Invalidation and Consistency</a></li>
                         <li><a href="#multi-layer-caching">Multi-Layer Caching</a></li>
                         <li><a href="#monitoring-and-metrics">Monitoring and Metrics</a></li>
@@ -191,107 +195,291 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="caching">Caching</h2>
-            <p>Caching is a technique used to speed up data retrieval by placing frequently accessed or computationally heavy information closer to the application or the end user. Below is an expanded set of notes on caching, presented with a simple ASCII diagram and bullet points that emphasize key considerations. Each bullet point is a complete sentence containing a single <strong>bold</strong> word in the middle.</p>
+            <p>Caching is a technique used to speed up data retrieval by placing frequently accessed or computationally heavy information closer to the application or the end user. Below is an expanded set of notes on caching, presented with ASCII diagrams and bullet points that emphasize key considerations. Each bullet point is a complete sentence containing a single <strong>bold</strong> word in the middle.</p>
             <div>
-                <pre><code class="language-shell">+-------------+           +-------------+
-  |   Client    |           |   Server    |
-  |             |           |             |
-  |             |  Request  |             |
-  |             +----------&gt;+             |
-  |             |           |             |
-  |             |&lt;----------+             |
-  +------+------|           +------+------+
-         |Cache |           |  Data  |
-         |Miss  |           | Storage|
-         |      |           |        |
-         |      |           |        |
-  +------v------+           +--------v-----+
-  |   Cache     |           |              |
-  |(Fast Access)|&lt;----------+              |
-  +-------------+  Cached   |              |
-                            |              |
-                            +--------------+</code></pre>
+                <pre><code class="language-shell">Request Flow (Cache Hit vs. Cache Miss)
+
+  +-----------+                  +------------------+                +------------------+
+  |           |  1. Request      |                  |                |                  |
+  |  Client   +-----------------&gt;+      Cache       |                |   Data Store     |
+  |           |                  |   (Fast Access)  |                |   (Disk / DB)    |
+  |           |  2a. Cache Hit   |                  |                |                  |
+  |           |&lt;-----------------+  +-----------+   |  3. Fetch      |  +------------+  |
+  |           |                  |  | Key: Val  |   |  on Miss       |  | Tables     |  |
+  +-----------+                  |  | Key: Val  |   +---------------&gt;+  | Rows       |  |
+                                 |  +-----------+   |  4. Return     |  | Docs       |  |
+                                 |                  |&lt;---------------+  +------------+  |
+                                 |  5. Store result |                |                  |
+                                 +------------------+                +------------------+</code></pre>
             </div>
             <ul>
-                <li>A caching strategy can be <strong>beneficial</strong> for reducing round-trip times between clients and the primary data store. </li>
-                <li>Caching can be <strong>vulnerable</strong> to data staleness when updates in the main data store are not immediately reflected in the cache. </li>
-                <li>Cache hits can be <strong>tracked</strong> to measure how often requested items are served from the cache versus the underlying system. </li>
-                <li>Cache misses can be <strong>costly</strong> because they require fetching data from slower storage and populating the cache. </li>
+                <li>A caching strategy can be <strong>beneficial</strong> for reducing round-trip times between clients and the primary data store.</li>
+                <li>Caching can be <strong>vulnerable</strong> to data staleness when updates in the main data store are not immediately reflected in the cache.</li>
+                <li>Cache hits can be <strong>tracked</strong> to measure how often requested items are served from the cache versus the underlying system.</li>
+                <li>Cache misses can be <strong>costly</strong> because they require fetching data from slower storage and then populating the cache.</li>
                 <li>The overall memory footprint can be <strong>optimized</strong> by selecting cache eviction policies that remove unneeded or rarely used data.</li>
+                <li>Latency improvements from caching are <strong>measurable</strong> by comparing response times for cache hits against the full retrieval path.</li>
             </ul>
             <h3 id="types-of-cache">Types of Cache</h3>
             <p>Modern computing stacks use multiple caches at different layers, each addressing a specific scope and performance requirement.</p>
             <ul>
-                <li>Hardware caches are <strong>essential</strong> at the CPU level (L1, L2, L3) or between main memory and disk, reducing memory access times. </li>
-                <li>An application server cache is <strong>helpful</strong> when frequently accessed items are kept in memory, decreasing database load. </li>
-                <li>A distributed cache can be <strong>useful</strong> for sharing cached data across multiple server instances in a cluster. </li>
-                <li>A Content Delivery Network (CDN) can be <strong>advantageous</strong> for caching static assets close to users, minimizing latency. </li>
+                <li>Hardware caches are <strong>essential</strong> at the CPU level (L1, L2, L3) or between main memory and disk, reducing memory access times.</li>
+                <li>An application server cache is <strong>helpful</strong> when frequently accessed items are kept in memory, decreasing database load.</li>
+                <li>A distributed cache can be <strong>useful</strong> for sharing cached data across multiple server instances in a cluster.</li>
+                <li>A Content Delivery Network (CDN) can be <strong>advantageous</strong> for caching static assets close to users, minimizing latency.</li>
                 <li>Edge caching can be <strong>adopted</strong> at the network boundary to deliver region-specific or frequently used data faster.</li>
+                <li>Local in-process caches are <strong>lightweight</strong> because they avoid network hops, though they cannot share state across multiple nodes.</li>
+            </ul>
+            <h3 id="cache-aside-lazy-loading-pattern">Cache-Aside (Lazy Loading) Pattern</h3>
+            <p>The cache-aside pattern is one of the most widely used strategies, where the application code manages reads and writes to the cache explicitly.</p>
+            <div>
+                <pre><code class="language-shell">Cache-Aside Read Flow
+
+  +-------------+        +--------------+        +----------------+
+  |             | 1. Get |              |        |                |
+  | Application +-------&gt;+    Cache     |        |   Data Store   |
+  |   Code      |        |              |        |                |
+  |             |  HIT?  |              |        |                |
+  |             |&lt;-------+              |        |                |
+  |             |                       |        +-------+--------+
+  |             | Yes: return value     |                ^  |
+  |             |                       |                |  |
+  |             | No:                   |                |  |
+  |             +-- 2. Query DB -----------------------&gt;+  |
+  |             |&lt;--- 3. Return result -----------------+  |
+  |             +-- 4. Store in cache --&gt;+              |   |
+  +-------------+                       +--------------+</code></pre>
+            </div>
+            <ul>
+                <li>The application first <strong>checks</strong> the cache and only queries the database when the requested item is not present.</li>
+                <li>Stale data is <strong>avoided</strong> by setting a TTL on each entry or by explicitly invalidating keys when writes occur.</li>
+                <li>Cache-aside is <strong>flexible</strong> because it gives the application full control over what gets cached and for how long.</li>
+                <li>A downside of this pattern is <strong>latency</strong> on the first request for each key, since the cache starts empty and must be populated.</li>
+                <li>Combining cache-aside with write-through can be <strong>effective</strong> for workloads that need both fast reads and consistent writes.</li>
             </ul>
             <h3 id="cache-write-policies">Cache Write Policies</h3>
             <p>Different write policies determine how the cache interacts with the underlying data store during write operations.</p>
+            <div>
+                <pre><code class="language-shell">Write-Through              Write-Around               Write-Back (Write-Behind)
+
+  App                        App                         App
+   |                          |                           |
+   | 1. Write                 | 1. Write                  | 1. Write
+   v                          v                           v
+  Cache ---- 2. Write ---&gt; DB |                          Cache
+   |         (synchronous)    +--- 2. Write ---&gt; DB       |
+   |                          |    (bypass cache)         | 2. Ack to app
+   | 3. Ack                   | 3. Ack                    |    (immediate)
+   v                          v                           |
+  App                        App                          +--- 3. Async flush ---&gt; DB
+                                                          |    (batched / delayed)
+   * Consistent               * Avoids cache pollution    |
+   * Higher write latency     * Cache miss on next read   * Fastest writes
+                                                          * Risk of data loss</code></pre>
+            </div>
             <ul>
-                <li>A write-through approach can be <strong>reliable</strong> because all writes are immediately persisted to both cache and storage, albeit with higher latency. </li>
-                <li>A write-around method is <strong>practical</strong> for workloads that do not require recently written items to appear in the cache right away. </li>
-                <li>A write-back (write-behind) policy is <strong>faster</strong> for writes because the cache is updated immediately and the main storage is updated asynchronously. </li>
-                <li>The choice of write policy can be <strong>influential</strong> in balancing consistency, throughput, and risk of data loss. </li>
+                <li>A write-through approach can be <strong>reliable</strong> because all writes are immediately persisted to both cache and storage, albeit with higher latency.</li>
+                <li>A write-around method is <strong>practical</strong> for workloads that do not require recently written items to appear in the cache right away.</li>
+                <li>A write-back (write-behind) policy is <strong>faster</strong> for writes because the cache is updated immediately and the main storage is updated asynchronously.</li>
+                <li>The choice of write policy can be <strong>influential</strong> in balancing consistency, throughput, and risk of data loss.</li>
                 <li>Monitoring asynchronous queues is <strong>needed</strong> in write-back systems to ensure updates eventually reach the primary storage.</li>
+                <li>Write-through paired with cache-aside reads is <strong>common</strong> in production systems that prioritize strong consistency without sacrificing read speed.</li>
             </ul>
+            <p>
+            <table>
+                <tr>
+                    <td>Policy</td>
+                    <td>Write Latency</td>
+                    <td>Read After Write</td>
+                    <td>Consistency</td>
+                    <td>Data Loss Risk</td>
+                </tr>
+                <tr>
+                    <td>Write-Through</td>
+                    <td>Higher (two writes)</td>
+                    <td>Always a cache hit</td>
+                    <td>Strong</td>
+                    <td>Very low</td>
+                </tr>
+                <tr>
+                    <td>Write-Around</td>
+                    <td>Lower (one write)</td>
+                    <td>Cache miss until next read</td>
+                    <td>Eventual</td>
+                    <td>Very low</td>
+                </tr>
+                <tr>
+                    <td>Write-Back</td>
+                    <td>Lowest (cache only)</td>
+                    <td>Always a cache hit</td>
+                    <td>Eventual</td>
+                    <td>Higher if cache crashes</td>
+                </tr>
+            </table>
+            </p>
             <h3 id="cache-eviction-policies">Cache Eviction Policies</h3>
             <p>When the cache is full, an eviction policy determines which items to discard so that new items can be stored.</p>
+            <div>
+                <pre><code class="language-shell">Eviction Policy Comparison
+
+  FIFO (First In, First Out)           LRU (Least Recently Used)
+  +---+---+---+---+---+               +---+---+---+---+---+
+  | A | B | C | D | E |  &lt;- Full      | A | B | C | D | E |  &lt;- Full
+  +---+---+---+---+---+               +---+---+---+---+---+
+    ^                                    ^
+    |  Evict A (oldest arrival)          |  Evict A (longest since
+    |  regardless of access              |  last access)
+    +-- Insert F here                    +-- Insert F here
+
+  LFU (Least Frequently Used)          Random Replacement
+  +---+---+---+---+---+               +---+---+---+---+---+
+  | A | B | C | D | E |  &lt;- Full      | A | B | C | D | E |  &lt;- Full
+  +---+---+---+---+---+               +---+---+---+---+---+
+        ^                                       ^
+        |  Evict B (fewest total                |  Evict C (chosen
+        |  accesses over lifetime)              |  at random)
+        +-- Insert F here                       +-- Insert F here</code></pre>
+            </div>
             <ul>
-                <li>FIFO removes the oldest entries first and can be <strong>straightforward</strong> when items have similar usage patterns. </li>
-                <li>LIFO removes the newest entries first, which can be <strong>uncommon</strong> in modern caching but may be used in specialized scenarios. </li>
-                <li>LRU discards items that have not been accessed for the longest period and is <strong>popular</strong> due to its effectiveness in many real-world usage patterns. </li>
-                <li>LFU targets items with the fewest accesses and is <strong>suitable</strong> when certain objects exhibit much higher popularity than others. </li>
+                <li>FIFO removes the oldest entries first and can be <strong>straightforward</strong> when items have similar usage patterns.</li>
+                <li>LIFO removes the newest entries first, which can be <strong>uncommon</strong> in modern caching but may be used in specialized scenarios.</li>
+                <li>LRU discards items that have not been accessed for the longest period and is <strong>popular</strong> due to its effectiveness in many real-world usage patterns.</li>
+                <li>LFU targets items with the fewest accesses and is <strong>suitable</strong> when certain objects exhibit much higher popularity than others.</li>
                 <li>Random replacement can be <strong>unpredictable</strong>, but it avoids overhead from tracking usage frequency or order.</li>
+                <li>Adaptive policies like ARC (Adaptive Replacement Cache) are <strong>sophisticated</strong> because they dynamically balance recency and frequency.</li>
+            </ul>
+            <p>
+            <table>
+                <tr>
+                    <td>Policy</td>
+                    <td>Tracking Overhead</td>
+                    <td>Best For</td>
+                    <td>Weakness</td>
+                </tr>
+                <tr>
+                    <td>FIFO</td>
+                    <td>Minimal (insertion order)</td>
+                    <td>Uniform access patterns</td>
+                    <td>Ignores access frequency</td>
+                </tr>
+                <tr>
+                    <td>LRU</td>
+                    <td>Moderate (last access time)</td>
+                    <td>Temporally clustered reads</td>
+                    <td>Scan pollution from one-time reads</td>
+                </tr>
+                <tr>
+                    <td>LFU</td>
+                    <td>Higher (access counters)</td>
+                    <td>Skewed popularity distributions</td>
+                    <td>Stale popular items linger</td>
+                </tr>
+                <tr>
+                    <td>Random</td>
+                    <td>None</td>
+                    <td>Simple implementations</td>
+                    <td>No adaptation to workload</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="cache-stampede-and-thundering-herd">Cache Stampede and Thundering Herd</h3>
+            <p>A cache stampede occurs when a frequently accessed cache entry expires and many concurrent requests simultaneously attempt to regenerate it, overwhelming the data store.</p>
+            <div>
+                <pre><code class="language-shell">Cache Stampede Scenario                     Mitigation: Locking / Lease
+
+                  TTL expires
+  Request 1 --+       |                      Req 1 --&gt; MISS --&gt; Acquire lock --&gt; Query DB
+  Request 2 --+       v                                                          |
+  Request 3 --+  +---------+  +----------+  Req 2 --&gt; MISS --&gt; Lock held, wait   |
+  Request 4 --+-&gt;|  Cache  +-&gt;|Data Store|  Req 3 --&gt; MISS --&gt; Lock held, wait   |
+  ...            |  MISS!  +-&gt;|          |                                       v
+  Request N --+  +---------+-&gt;|Overloaded|  Cache now populated &lt;----------------+
+                              +----------+  Req 2 --&gt; HIT (served from cache)
+                                            Req 3 --&gt; HIT (served from cache)</code></pre>
+            </div>
+            <ul>
+                <li>A cache stampede can be <strong>devastating</strong> for backend systems because hundreds of threads may simultaneously query the database for the same key.</li>
+                <li>Distributed locks or leases are <strong>employed</strong> so that only one request regenerates the cache entry while others wait for the result.</li>
+                <li>Probabilistic early expiration is <strong>useful</strong> because it randomly refreshes entries slightly before TTL, spreading regeneration load over time.</li>
+                <li>Serving slightly stale data during regeneration is <strong>acceptable</strong> in many applications and prevents cascading failures under heavy load.</li>
+                <li>Request coalescing can be <strong>implemented</strong> at the cache layer to merge duplicate in-flight requests into a single backend query.</li>
+            </ul>
+            <h3 id="cache-warming">Cache Warming</h3>
+            <p>Cache warming is the practice of pre-populating the cache before it begins serving live traffic, preventing a flood of cold misses on startup.</p>
+            <ul>
+                <li>Loading frequently accessed keys at startup is <strong>important</strong> for applications that cannot tolerate high latency during the initial ramp-up period.</li>
+                <li>Historical access logs can be <strong>analyzed</strong> to determine which keys should be preloaded into the cache based on past traffic patterns.</li>
+                <li>Warming scripts are <strong>scheduled</strong> to run during deployment windows so the cache is fully populated before traffic is routed to the new instance.</li>
+                <li>Gradual traffic shifting can be <strong>combined</strong> with cache warming, routing a small percentage of requests to a new node until its cache is hot.</li>
+            </ul>
+            <h3 id="distributed-cache-considerations">Distributed Cache Considerations</h3>
+            <p>When caches span multiple nodes, additional challenges arise around partitioning, replication, and network overhead.</p>
+            <ul>
+                <li>Consistent hashing is <strong>preferred</strong> for distributing keys across cache nodes because adding or removing a node only remaps a small fraction of keys.</li>
+                <li>Replication across cache nodes can be <strong>configured</strong> to improve availability, though it increases memory usage and write amplification.</li>
+                <li>Network partitions can be <strong>problematic</strong> in distributed caches, leading to split-brain scenarios where different nodes hold conflicting data.</li>
+                <li>Serialization format choices are <strong>relevant</strong> because compact binary formats reduce the bandwidth consumed by cache reads and writes across the network.</li>
+                <li>Cluster topology changes are <strong>managed</strong> through health checks and automatic rebalancing to keep the key space evenly distributed.</li>
             </ul>
             <h3 id="cache-invalidation-and-consistency">Cache Invalidation and Consistency</h3>
             <p>Ensuring that the cache reflects changes in the underlying data store can be one of the most <strong>difficult</strong> aspects of caching.</p>
             <ul>
-                <li>Time-to-live (TTL) can be <strong>assigned</strong> to each cache entry so it expires automatically after a set duration. </li>
-                <li>Explicit invalidation calls can be <strong>triggered</strong> whenever an update is made to the primary data, removing or refreshing outdated cache entries. </li>
-                <li>Versioning or checksums are <strong>helpful</strong> for identifying outdated data in distributed caches. </li>
-                <li>Stale reads might be <strong>tolerable</strong> in some applications (eventually consistent scenarios) but unacceptable in strictly consistent systems. </li>
+                <li>Time-to-live (TTL) can be <strong>assigned</strong> to each cache entry so it expires automatically after a set duration.</li>
+                <li>Explicit invalidation calls can be <strong>triggered</strong> whenever an update is made to the primary data, removing or refreshing outdated cache entries.</li>
+                <li>Versioning or checksums are <strong>helpful</strong> for identifying outdated data in distributed caches.</li>
+                <li>Stale reads might be <strong>tolerable</strong> in some applications (eventually consistent scenarios) but unacceptable in strictly consistent systems.</li>
                 <li>Consistency requirements can be <strong>varied</strong>, ranging from strong consistency to eventual or read-your-own-write guarantees.</li>
+                <li>Event-driven invalidation through message queues is <strong>scalable</strong> because cache nodes subscribe to change events and invalidate affected keys.</li>
             </ul>
             <h3 id="multi-layer-caching">Multi-Layer Caching</h3>
             <p>Some architectures employ multiple cache layers, each targeting different bottlenecks or data usage patterns.</p>
             <div>
-                <pre><code class="language-client">|
-  | (Browser Cache)
-  |
-  v
-Reverse Proxy / CDN
-  |
-  | (Edge Cache)
-  |
-  v
-Application Server
-  |
-  | (In-Memory Cache)
-  |
-  v
-Database or Persistent Store</code></pre>
+                <pre><code class="language-+-------------------+">|      Client       |
+  |  (Browser Cache)  |
+  +--------+----------+
+           |
+           v
+  +-------------------+          Serves static assets
+  |  Reverse Proxy /  +--------&gt;  from edge locations
+  |       CDN         |
+  +--------+----------+
+           |
+           v
+  +-------------------+          Local in-process cache
+  | Application Server+--------&gt;  (HashMap, Guava, etc.)
+  +--------+----------+
+           |
+           v
+  +-------------------+          Redis / Memcached
+  | Distributed Cache +--------&gt;  shared cluster
+  +--------+----------+
+           |
+           v
+  +-------------------+
+  |  Database or      |
+  |  Persistent Store |
+  +-------------------+</code></pre>
             </div>
             <ul>
-                <li>A multi-layer approach can be <strong>helpful</strong> for capturing opportunities to cache at every step in the data retrieval process. </li>
-                <li>Browser caches can be <strong>encouraged</strong> by sending appropriate HTTP headers (e.g., Cache-Control, ETag). </li>
-                <li>In-memory caches on the server side can be <strong>valuable</strong> for storing session data, configurations, or frequently accessed queries. </li>
-                <li>CDNs and reverse proxies can be <strong>effective</strong> for reducing load on the origin server by delivering cached static and semi-static content. </li>
+                <li>A multi-layer approach can be <strong>helpful</strong> for capturing opportunities to cache at every step in the data retrieval process.</li>
+                <li>Browser caches can be <strong>encouraged</strong> by sending appropriate HTTP headers (e.g., Cache-Control, ETag).</li>
+                <li>In-memory caches on the server side can be <strong>valuable</strong> for storing session data, configurations, or frequently accessed queries.</li>
+                <li>CDNs and reverse proxies can be <strong>effective</strong> for reducing load on the origin server by delivering cached static and semi-static content.</li>
                 <li>Each layer introduces <strong>complexity</strong> in invalidation and monitoring, requiring careful coordination.</li>
+                <li>Layered TTLs should be <strong>staggered</strong> so that inner caches expire before outer caches, preventing simultaneous expiration storms across all tiers.</li>
             </ul>
             <h3 id="monitoring-and-metrics">Monitoring and Metrics</h3>
             <p>Effective caching strategies rely on continuous monitoring and tuning based on real-world usage patterns.</p>
             <ul>
-                <li>A cache hit rate is <strong>crucial</strong> for estimating how effectively the cache serves incoming requests. </li>
-                <li>A cache miss penalty is <strong>significant</strong> for quantifying the extra time spent fetching data from slower storage. </li>
-                <li>Request latency distributions are <strong>observed</strong> to determine if caching is addressing performance hotspots. </li>
-                <li>Memory usage trends are <strong>reviewed</strong> to prevent over-allocation or under-utilization of the cache. </li>
+                <li>A cache hit rate is <strong>crucial</strong> for estimating how effectively the cache serves incoming requests.</li>
+                <li>A cache miss penalty is <strong>significant</strong> for quantifying the extra time spent fetching data from slower storage.</li>
+                <li>Request latency distributions are <strong>observed</strong> to determine if caching is addressing performance hotspots.</li>
+                <li>Memory usage trends are <strong>reviewed</strong> to prevent over-allocation or under-utilization of the cache.</li>
                 <li>Profiling tools can be <strong>utilized</strong> to detect which data is most frequently accessed or frequently invalidated.</li>
+                <li>Eviction rate spikes can be <strong>indicative</strong> of an undersized cache or a sudden shift in access patterns that warrants capacity adjustment.</li>
             </ul>
         </article-section>
     </div>

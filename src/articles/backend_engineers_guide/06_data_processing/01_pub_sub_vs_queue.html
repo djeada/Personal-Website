@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/01_pub_sub_vs_queue",
             "description": "Message queues enable asynchronous, decoupled communication in distributed systems by allowing publishers to send messages to a queue that consumers process independently, typically in first-in, first-out order.",
-            "dateModified": "2026-01-24"
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -83,6 +83,11 @@
                         <li><a href="#publish-subscribe-pattern-pub-sub-">Publish-Subscribe Pattern (Pub-Sub)</a></li>
                         <li><a href="#concepts-in-message-queues-and-pub-sub">Concepts in Message Queues and Pub-Sub</a></li>
                         <li><a href="#best-practices">Best Practices</a></li>
+                        <li><a href="#queue-vs-pub-sub-comparison">Queue vs Pub-Sub Comparison</a></li>
+                        <li><a href="#delivery-semantics">Delivery Semantics</a></li>
+                        <li><a href="#consumer-groups">Consumer Groups</a></li>
+                        <li><a href="#dead-letter-queues">Dead-Letter Queues</a></li>
+                        <li><a href="#real-world-systems">Real-World Systems</a></li>
                     </ol>
                 </ol>
             </div>
@@ -189,7 +194,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="message-queues-and-publish-subscribe-patterns">Message Queues and Publish-Subscribe Patterns</h2>
             <p>Message queues enable asynchronous, decoupled communication in distributed systems by allowing publishers to send messages to a queue that consumers process independently, typically in first-in, first-out order. This approach reduces direct dependencies between services, enhances reliability and scalability, and supports multiple publishers and consumers. Additionally, the publish-subscribe pattern uses message brokers to distribute messages to interested subscribers without requiring publishers to manage subscriptions. The following notes include diagrams and best practices for effectively implementing message queues and pub-sub systems.</p>
@@ -198,16 +203,20 @@
             <div>
                 <pre><code class="language-shell">Basic Message Queue
 
-       +----------+             +-----------+
-       | Publisher|             |  Consumer |
-       +----+-----+             +-----+-----+
-            |                         ^
-            |  (Send Message)         |
-            v                         |
-     +------+-------------------------+------+
-     |            Message Queue              |
-     +---------------------------------------+
-                  (FIFO Retrieval)</code></pre>
+       +----------------+                         +----------------+
+       |                |                         |                |
+       |   Publisher    |                         |   Consumer     |
+       |                |                         |                |
+       +-------+--------+                         +--------+-------+
+               |                                           ^
+               |         (Send Message)                    |
+               v                                           |
+       +-------+-------------------------------------------+-------+
+       |                                                           |
+       |                     Message Queue                         |
+       |                                                           |
+       +-----------------------------------------------------------+
+                           (FIFO Retrieval)</code></pre>
             </div>
             <ul>
                 <li>A message queue can be <strong>essential</strong> for removing direct dependencies between services that produce data and those that process it. </li>
@@ -218,20 +227,26 @@
             <div>
                 <pre><code class="language-shell">Multiple Publishers and Consumers
 
-   +-----------+     +------------+
-   |Publisher A|     |Publisher B |
-   +-----+-----+     +-----+------+
-         |                 |
-         |   (Push Msg)    |  (Push Msg)
-         v                 v
-   +-----+-----------------+------+
-   |        Message Queue         |
-   +------------------------------+
-       ^         ^          ^
-       |         |          |
- +-----+----+  +--+-----+  +--+-----+
- |Consumer1 |  |Consumer2|  |Consumer3|
- +----------+  +---------+  +---------+</code></pre>
+   +----------------+                 +----------------+
+   |                |                 |                |
+   |  Publisher A   |                 |  Publisher B   |
+   |                |                 |                |
+   +-------+--------+                 +--------+-------+
+           |                                   |
+           |          (Push Msg)               |  (Push Msg)
+           v                                   v
+   +-------+-----------------------------------+-------+
+   |                                                   |
+   |                  Message Queue                    |
+   |                                                   |
+   +--------+------------------+--------------+--------+
+            ^                  ^              ^
+            |                  |              |
+   +--------+-------+  +------+-------+  +---+------------+
+   |                |  |              |  |                |
+   |   Consumer 1   |  |  Consumer 2  |  |   Consumer 3   |
+   |                |  |              |  |                |
+   +----------------+  +--------------+  +----------------+</code></pre>
             </div>
             <ul>
                 <li>Having multiple publishers is common when events or data originate from various system components. </li>
@@ -244,23 +259,28 @@
             <div>
                 <pre><code class="language-shell">ASCII DIAGRAM: Basic Pub-Sub
 
-       +--------------+
-       |  Publisher   |
-       +------+-------+
-              |
-      (Publish to Topic)
-              v
-        +-----+------+
-        |  Message   |
-        |   Broker   |
-        +-----+------+
-              |
-   +----------+----------+
-   |                     |
-   v                     v
-+-----+-----+       +----+------+
-|Subscriber1|       |Subscriber2|
-+-----------+       +-----------+</code></pre>
+              +------------------+
+              |                  |
+              |    Publisher     |
+              |                  |
+              +--------+---------+
+                       |
+               (Publish to Topic)
+                       v
+              +--------+---------+
+              |                  |
+              |  Message Broker  |
+              |                  |
+              +--------+---------+
+                       |
+          +------------+------------+
+          |                         |
+          v                         v
+  +-------+--------+       +-------+--------+
+  |                |       |                |
+  |  Subscriber 1  |       |  Subscriber 2  |
+  |                |       |                |
+  +----------------+       +----------------+</code></pre>
             </div>
             <ul>
                 <li>A publish-subscribe broker is important for decoupling producers from consumers, letting them evolve independently. </li>
@@ -271,23 +291,29 @@
             <div>
                 <pre><code class="language-shell">Multiple Topics &amp; Subscribers
 
-     +-----------+
-     | Publisher |
-     +-----+-----+
-           |
-    (Publish: TopicA, TopicB)
-           v
-    +------+---------+
-    |  Pub-Sub       |
-    |   Broker       |
-    +-----+----------+
-         /        \
-       /            \
-      v              v
-+-------------+   +-------------+
-| Topic A     |   | Topic B     |
-| Subscribers |   | Subscribers |
-+-----+-------+   +-----+-------+</code></pre>
+              +------------------+
+              |                  |
+              |    Publisher     |
+              |                  |
+              +--------+---------+
+                       |
+            (Publish: TopicA, TopicB)
+                       v
+              +--------+---------+
+              |                  |
+              |   Pub-Sub        |
+              |    Broker        |
+              |                  |
+              +----+--------+----+
+                  /          \
+                /              \
+              v                  v
+    +---------+--------+   +----+--------------+
+    |                  |   |                   |
+    |    Topic A       |   |     Topic B       |
+    |   Subscribers    |   |    Subscribers    |
+    |                  |   |                   |
+    +------------------+   +-------------------+</code></pre>
             </div>
             <ul>
                 <li>Different topics can be targeted for different categories of events or messages. </li>
@@ -310,6 +336,211 @@
                 <li>Scalability is maintained by partitioning queues or adding more broker nodes when load increases.</li>
                 <li>Securing the pipeline includes using authentication and encryption to protect messages, especially in multi-tenant or external environments.</li>
             </ul>
+            <h3 id="queue-vs-pub-sub-comparison">Queue vs Pub-Sub Comparison</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Aspect</td>
+                    <td>Message Queue</td>
+                    <td>Pub-Sub</td>
+                </tr>
+                <tr>
+                    <td><strong>Delivery</strong></td>
+                    <td>Each message consumed by one consumer</td>
+                    <td>Each message delivered to all subscribers</td>
+                </tr>
+                <tr>
+                    <td><strong>Coupling</strong></td>
+                    <td>Producer aware of queue; consumer pulls</td>
+                    <td>Publisher unaware of subscribers; broker fans out</td>
+                </tr>
+                <tr>
+                    <td><strong>Ordering</strong></td>
+                    <td>Typically FIFO within a single queue</td>
+                    <td>Ordering per-topic or per-partition, varies by broker</td>
+                </tr>
+                <tr>
+                    <td><strong>Scaling</strong></td>
+                    <td>Add consumers to share the workload</td>
+                    <td>Add subscribers without affecting others</td>
+                </tr>
+                <tr>
+                    <td><strong>Use case</strong></td>
+                    <td>Task distribution, job processing</td>
+                    <td>Event notification, broadcasting</td>
+                </tr>
+                <tr>
+                    <td><strong>Backpressure</strong></td>
+                    <td>Queue depth grows; consumers throttle naturally</td>
+                    <td>Slow subscribers may miss messages or need buffering</td>
+                </tr>
+                <tr>
+                    <td><strong>Persistence</strong></td>
+                    <td>Messages removed after consumption</td>
+                    <td>Messages can be retained for replay (e.g., Kafka)</td>
+                </tr>
+            </table>
+            </p>
+            <ul>
+                <li>Queues are best suited for <strong>workload</strong> distribution where each task should be processed exactly once by a single worker.</li>
+                <li>Pub-Sub shines in <strong>event-driven</strong> architectures where many independent services must react to the same signal.</li>
+                <li>Some systems like Kafka blur the <strong>boundary</strong> between the two by combining topic-based pub-sub with consumer-group queue semantics.</li>
+            </ul>
+            <h3 id="delivery-semantics">Delivery Semantics</h3>
+            <p>Delivery guarantees define how many times a message is <strong>processed</strong> by a consumer and are critical for designing reliable distributed systems.</p>
+            <ul>
+                <li><strong>At-most-once</strong> – the message is delivered zero or one time; the producer fires and forgets without waiting for an acknowledgment, so messages may be lost but are never duplicated.</li>
+                <li><strong>At-least-once</strong> – the broker retries until it receives an acknowledgment, guaranteeing the message <strong>arrives</strong> but potentially delivering it more than once; consumers must be idempotent.</li>
+                <li><strong>Exactly-once</strong> – the hardest guarantee to achieve, requiring <strong>coordination</strong> between producer, broker, and consumer through techniques like idempotency keys, transactional outbox, or Kafka's transactional API.</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">Delivery Semantics Overview
+
+  Producer                   Broker                   Consumer
+     |                         |                         |
+     |--- send (fire&amp;forget) -&gt;|                         |
+     |   (at-most-once)        |--- deliver once -------&gt;|
+     |                         |       (may be lost)     |
+     |                         |                         |
+     |--- send + wait ack ----&gt;|                         |
+     |   (at-least-once)       |--- deliver + retry ----&gt;|
+     |&lt;------ ack -------------|&lt;------ ack -------------|
+     |                         |   (may duplicate)       |
+     |                         |                         |
+     |--- send transactional -&gt;|                         |
+     |   (exactly-once)        |--- deliver + dedup ----&gt;|
+     |&lt;------ ack -------------|&lt;------ ack -------------|
+     |                         |   (no loss, no dups)    |</code></pre>
+            </div>
+            <ul>
+                <li>At-most-once is common in <strong>telemetry</strong> or logging pipelines where occasional data loss is acceptable.</li>
+                <li>At-least-once is the <strong>default</strong> in most production systems because it trades potential duplicates for guaranteed delivery.</li>
+                <li>Exactly-once requires careful <strong>design</strong> across the entire pipeline and often relies on idempotent writes or deduplication at the consumer.</li>
+            </ul>
+            <h3 id="consumer-groups">Consumer Groups</h3>
+            <p>A consumer group allows multiple consumers to <strong>cooperate</strong> on processing messages from the same topic or queue, with each partition or message assigned to exactly one member of the group.</p>
+            <div>
+                <pre><code class="language-shell">Consumer Group with Partitioned Topic
+
+  +------------------+
+  |    Producer      |
+  +--------+---------+
+           |
+   (Publish to Topic)
+           v
+  +--------+---------+---------+---------+
+  |  Partition 0  |  Partition 1  |  Partition 2  |
+  +-------+-------+-------+-------+-------+-------+
+          |               |               |
+          v               v               v
+  +-------+------+ +------+-------+ +-----+--------+
+  |  Consumer A  | |  Consumer B  | |  Consumer C  |
+  |  (Group X)   | |  (Group X)   | |  (Group X)   |
+  +--------------+ +--------------+ +--------------+</code></pre>
+            </div>
+            <ul>
+                <li>Each partition is owned by <strong>one</strong> consumer within a group, preventing duplicate processing across group members.</li>
+                <li>When a consumer joins or leaves, a <strong>rebalance</strong> redistributes partition ownership among the remaining members.</li>
+                <li>Multiple consumer groups can read the same topic <strong>independently</strong>, each maintaining its own offset and processing at its own pace.</li>
+                <li>Consumer groups effectively turn a pub-sub topic into a <strong>competing-consumers</strong> queue within each group while preserving fan-out across groups.</li>
+            </ul>
+            <h3 id="dead-letter-queues">Dead-Letter Queues</h3>
+            <p>A dead-letter queue (DLQ) captures messages that <strong>fail</strong> processing after a configured number of retry attempts, preventing poison messages from blocking the main queue.</p>
+            <div>
+                <pre><code class="language-shell">Dead-Letter Queue Flow
+
+  +----------------+         +-------------------+         +----------------+
+  |                |         |                   |         |                |
+  |   Producer     +--------&gt;|   Main Queue      +--------&gt;|   Consumer     |
+  |                |         |                   |         |                |
+  +----------------+         +--------+----------+         +-------+--------+
+                                      |                            |
+                              (Max retries                  (Processing
+                               exceeded)                     fails)
+                                      |                            |
+                                      v                            |
+                             +--------+----------+                 |
+                             |                   |&lt;----------------+
+                             | Dead-Letter Queue |    (Nack / Reject)
+                             |                   |
+                             +--------+----------+
+                                      |
+                                      v
+                             +--------+----------+
+                             |                   |
+                             |  Alert / Manual   |
+                             |   Investigation   |
+                             |                   |
+                             +-------------------+</code></pre>
+            </div>
+            <ul>
+                <li>Messages landing in a DLQ usually indicate a <strong>bug</strong> in the consumer logic, a schema mismatch, or corrupt payload data.</li>
+                <li>Monitoring the DLQ depth is a key <strong>operational</strong> metric that should trigger alerts when it grows beyond a threshold.</li>
+                <li>Engineers should build tooling to <strong>replay</strong> DLQ messages back into the main queue after fixing the underlying issue.</li>
+                <li>Some brokers support automatic DLQ routing with configurable <strong>retry</strong> counts and backoff intervals.</li>
+            </ul>
+            <h3 id="real-world-systems">Real-World Systems</h3>
+            <ul>
+                <li>Apache Kafka uses an append-only <strong>log</strong> as its storage model, providing high throughput, durable retention, and replay capability across partitioned topics with consumer groups.</li>
+                <li>RabbitMQ implements the AMQP protocol with flexible <strong>routing</strong> through exchanges (direct, fanout, topic, headers), making it well suited for complex message-routing patterns and RPC-style workflows.</li>
+                <li>Amazon SQS is a fully managed queue service offering <strong>standard</strong> queues with at-least-once delivery and best-effort ordering, plus FIFO queues with exactly-once processing and strict ordering guarantees.</li>
+                <li>Google Cloud Pub/Sub provides a serverless <strong>global</strong> messaging service with automatic scaling, at-least-once delivery, and ordering keys for per-key message ordering.</li>
+                <li>Apache Pulsar combines pub-sub and queue semantics in a single <strong>unified</strong> model, offering multi-tenancy, geo-replication, and tiered storage out of the box.</li>
+                <li>Redis Streams offers a lightweight <strong>in-memory</strong> message broker with consumer groups, ideal for low-latency workloads where persistence requirements are moderate.</li>
+            </ul>
+            <p>
+            <table>
+                <tr>
+                    <td>System</td>
+                    <td>Model</td>
+                    <td>Delivery Guarantee</td>
+                    <td>Ordering</td>
+                    <td>Best For</td>
+                </tr>
+                <tr>
+                    <td><strong>Kafka</strong></td>
+                    <td>Log-based</td>
+                    <td>At-least-once / Exactly-once</td>
+                    <td>Per-partition</td>
+                    <td>High-throughput event streaming</td>
+                </tr>
+                <tr>
+                    <td><strong>RabbitMQ</strong></td>
+                    <td>Broker-based</td>
+                    <td>At-least-once</td>
+                    <td>Per-queue FIFO</td>
+                    <td>Complex routing, RPC patterns</td>
+                </tr>
+                <tr>
+                    <td><strong>Amazon SQS</strong></td>
+                    <td>Managed queue</td>
+                    <td>At-least-once / Exactly-once (FIFO)</td>
+                    <td>Best-effort / FIFO</td>
+                    <td>Serverless task processing</td>
+                </tr>
+                <tr>
+                    <td><strong>Google Pub/Sub</strong></td>
+                    <td>Managed pub-sub</td>
+                    <td>At-least-once</td>
+                    <td>Per-ordering-key</td>
+                    <td>Global event distribution</td>
+                </tr>
+                <tr>
+                    <td><strong>Apache Pulsar</strong></td>
+                    <td>Unified</td>
+                    <td>At-least-once / Exactly-once</td>
+                    <td>Per-partition</td>
+                    <td>Multi-tenant, geo-replicated messaging</td>
+                </tr>
+                <tr>
+                    <td><strong>Redis Streams</strong></td>
+                    <td>In-memory log</td>
+                    <td>At-least-once</td>
+                    <td>Per-stream</td>
+                    <td>Low-latency lightweight messaging</td>
+                </tr>
+            </table>
+            </p>
         </article-section>
     </div>
     <footer>

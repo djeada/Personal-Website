@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/cron_jobs",
             "description": "Cron is a powerful utility in Unix-like operating systems that automates the execution of scripts or commands at specified times, dates, or intervals.",
-            "dateModified": "2026-03-19"
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -225,7 +225,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: March 19, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="cron">Cron</h2>
             <p>Cron is a powerful utility in Unix-like operating systems that automates the execution of scripts or commands at specified times, dates, or intervals. It is used for tasks such as system maintenance, backups, updates, and more.</p>
@@ -521,6 +521,7 @@
             </table>
             </p>
             <h4 id="execution-timestamps-are-typically-stored-in-var-spool-anacron-">Execution timestamps are typically stored in: /var/spool/anacron/</h4>
+            <p>Anacron creates timestamp files in <code>/var/spool/anacron/</code> so it can remember when each job last ran. On the next boot, it compares the current date with those stored timestamps to decide whether a daily, weekly, or monthly task is due. This is what allows Anacron to catch up on missed jobs instead of silently skipping them.</p>
             <h3 id="cron-vs-anacron-key-differences">Cron vs. Anacron: Key Differences</h3>
             <p>
             <table>
@@ -565,10 +566,14 @@
 
 /etc/cron.monthly/</code></pre>
             </div>
+            <p>If the machine was powered off when one of these jobs was supposed to run, Anacron will usually launch it after the next startup, respecting the delay configured in <code>/etc/anacrontab</code>.</p>
             <h3 id="running-anacron-manually">Running Anacron Manually</h3>
-            <p>You can manually trigger Anacron using:
-                CODE_BLOCK_PLACEHOLDER</p>
-            <p>These directories are often triggered through Anacron to ensure tasks run even if the system was offline at the scheduled time.</p>
+            <p>You can manually trigger Anacron using <code>sudo anacron -n</code>. The <code>-n</code> flag tells it to ignore the configured startup delays and run any due jobs immediately, which is useful when you want to test a configuration change without rebooting.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-bash">sudo anacron -n -f</code></pre>
+            </div>
+            <p>In this case, <code>-f</code> forces execution even if the timestamp suggests the job has already run today. This combination is handy for validating backup scripts, log rotation hooks, or other maintenance tasks managed through Anacron.</p>
             <h3 id="useful-anacron-options">Useful Anacron Options</h3>
             <p>
             <table>
@@ -600,53 +605,57 @@
             </p>
             <h3 id="best-practices">Best Practices</h3>
             <p>Use for Maintenance: Ideal for backups, log rotations, and system updates.</p>
-            <p>Check Permissions: Ensure scripts have execute permissions:
-                CODE_BLOCK_PLACEHOLDER</p>
-            <p>Sequential Execution: Use the
-                CODE_BLOCK_PLACEHOLDER flag if running multiple heavy scripts to avoid overloading the system on boot.</p>
+            <p>Check Permissions: Ensure scripts have execute permissions: <code>chmod +x script.sh</code>.</p>
+            <p>Sequential Execution: Use the <code>-s</code> flag if running multiple heavy scripts to avoid overloading the system on boot.</p>
             <h3 id="practical-examples-of-anacron">Practical Examples of Anacron</h3>
             <p>Below are common scenarios where Anacron is used to ensure vital tasks are not skipped on systems with irregular uptime.</p>
             <h4 id="1-daily-database-backup">1. Daily Database Backup</h4>
             <p>Ensure a local database backup is performed every day. If the laptop is closed at midnight, the backup will trigger 15 minutes after the user logs in the next morning.</p>
-            <p>``<code> sudo anacron -n </code>`<code></code></p>
-            <h4 id="2-weekly-system-cleanup">2. Weekly System Cleanup</h4>
-            <p>Clear out temporary files or old logs once a week. The 30-minute delay ensures the system has finished its boot-up processes before starting the cleanup.</p>
-            <p>`<code> chmod +x script.sh. </code>`<code></code></p>
-            <h3 id="creating-custom-schedules-with-crontab">Creating Custom Schedules with Crontab</h3>
-            <p>To schedule tasks at specific times, you can create custom crontab entries.</p>
-            <h4 id="editing-the-crontab-file">Editing the Crontab File</h4>
-            <p>Open the crontab editor:</p>
-            <p>`<code> -s </code>``</p>
-            <p>Add your scheduled tasks using the crontab syntax.</p>
-            <h4 id="example-append-a-message-every-15-minutes">Example: Append a Message Every 15 Minutes</h4>
-            <p>To add "15 minutes have elapsed" to a log file every 15 minutes:</p>
             <div>
                 <pre><code class="language-shell">period    delay    job-id       command
 1          15     db_backup   /usr/local/bin/backup_script.sh</code></pre>
             </div>
-            <h4 id="using-environment-variables">Using Environment Variables</h4>
-            <p>You can set environment variables in your crontab:</p>
+            <h4 id="2-weekly-system-cleanup">2. Weekly System Cleanup</h4>
+            <p>Clear out temporary files or old logs once a week. The 30-minute delay ensures the system has finished its boot-up processes before starting the cleanup.</p>
             <div>
                 <pre><code class="language-shell">period  delay  job-id          command
 7         30     weekly_clean   rm -rf /tmp/old_project_files/*</code></pre>
+            </div>
+            <h3 id="creating-custom-schedules-with-crontab">Creating Custom Schedules with Crontab</h3>
+            <p>To schedule tasks at specific times, you can create custom crontab entries.</p>
+            <h4 id="editing-the-crontab-file">Editing the Crontab File</h4>
+            <p>Open the crontab editor:</p>
+            <div>
+                <pre><code class="language-shell">crontab -e</code></pre>
+            </div>
+            <p>Add your scheduled tasks using the crontab syntax.</p>
+            <h4 id="example-append-a-message-every-15-minutes">Example: Append a Message Every 15 Minutes</h4>
+            <p>To add "15 minutes have elapsed" to a log file every 15 minutes:</p>
+            <div>
+                <pre><code class="language-crontab">*/15 * * * * echo "15 minutes have elapsed" &gt;&gt; /path/to/your/timer.log</code></pre>
+            </div>
+            <h4 id="using-environment-variables">Using Environment Variables</h4>
+            <p>You can set environment variables in your crontab:</p>
+            <div>
+                <pre><code class="language-crontab">PATH=/usr/local/bin:/usr/bin:/bin</code></pre>
             </div>
             <h3 id="advanced-scheduling-techniques">Advanced Scheduling Techniques</h3>
             <h4 id="using-step-values">Using Step Values</h4>
             <p>Use <code>*/N</code> to run a task every N units of time.</p>
             <p>Run a script every 3 hours:</p>
             <div>
-                <pre><code class="language-shell">crontab -e</code></pre>
+                <pre><code class="language-shell">0 */3 * * * /path/to/script.sh</code></pre>
             </div>
             <h4 id="specific-days-and-times">Specific Days and Times</h4>
             <p>I. Use commas to separate days.</p>
             <p>Run a task on Mondays, Wednesdays, and Fridays:</p>
             <div>
-                <pre><code class="language-crontab">*/15 * * * * echo "15 minutes have elapsed" &gt;&gt; /path/to/your/timer.log</code></pre>
+                <pre><code class="language-shell">0 9 * * 1,3,5 /path/to/task.sh</code></pre>
             </div>
             <p>II. Combine ranges and steps.</p>
             <p>Run a command every 2 hours between 8 AM and 4 PM:</p>
             <div>
-                <pre><code class="language-crontab">PATH=/usr/local/bin:/usr/bin:/bin</code></pre>
+                <pre><code class="language-shell">0 8-16/2 * * * /path/to/command</code></pre>
             </div>
             <h4 id="special-strings">Special Strings</h4>
             <p>Cron allows the use of special strings instead of the five time fields:</p>
@@ -684,7 +693,7 @@
             </p>
             <p>For example, to schedule the script <code>weekly_task.sh</code> to run every week, use the cron job entry:</p>
             <div>
-                <pre><code class="language-shell">0 */3 * * * /path/to/script.sh</code></pre>
+                <pre><code class="language-crontab">@weekly /path/to/weekly_task.sh</code></pre>
             </div>
             <h4 id="managing-cron-allow-and-deny">Managing Cron Allow and Deny</h4>
             <ul>
@@ -699,30 +708,30 @@
             </ul>
             <p>For example, to run the <code>system_backup.sh</code> script as the root user every day at 2:30 AM, use the cron job entry:</p>
             <div>
-                <pre><code class="language-shell">0 9 * * 1,3,5 /path/to/task.sh</code></pre>
+                <pre><code class="language-crontab"># m h dom mon dow user  command
+30 2 * * * root /usr/local/bin/system_backup.sh</code></pre>
             </div>
             <h3 id="example-scenarios">Example Scenarios</h3>
             <h4 id="scenario-1-database-backup">Scenario 1: Database Backup</h4>
             <p>Backup a database every night at 11:30 PM.</p>
             <div>
-                <pre><code class="language-shell">0 8-16/2 * * * /path/to/command</code></pre>
+                <pre><code class="language-crontab">30 23 * * * /usr/local/bin/backup_database.sh &gt;&gt; /var/log/db_backup.log 2&gt;&amp;1</code></pre>
             </div>
             <h4 id="scenario-2-clear-cache-weekly">Scenario 2: Clear Cache Weekly</h4>
             <p>Clear application cache every Sunday at 3:00 AM.</p>
             <div>
-                <pre><code class="language-crontab">@weekly /path/to/weekly_task.sh</code></pre>
+                <pre><code class="language-crontab">0 3 * * 0 /usr/bin/php /var/www/html/app/clear_cache.php</code></pre>
             </div>
             <h4 id="scenario-3-system-update">Scenario 3: System Update</h4>
             <p>Run system updates on the 1st and 15th of every month at 4:00 AM.</p>
             <div>
-                <pre><code class="language-crontab"># m h dom mon dow user  command
-30 2 * * * root /usr/local/bin/system_backup.sh</code></pre>
+                <pre><code class="language-crontab">0 4 1,15 * * /usr/bin/apt update &amp;&amp; /usr/bin/apt upgrade -y</code></pre>
             </div>
             <h3 id="best-practices">Best Practices</h3>
             <h4 id="use-absolute-paths">Use Absolute Paths</h4>
             <p>Always specify the full path to commands and scripts.</p>
             <div>
-                <pre><code class="language-crontab">30 23 * * * /usr/local/bin/backup_database.sh &gt;&gt; /var/log/db_backup.log 2&gt;&amp;1</code></pre>
+                <pre><code class="language-crontab">0 2 * * * /usr/bin/python3 /home/user/scripts/backup.py</code></pre>
             </div>
             <h4 id="redirect-output">Redirect Output</h4>
             <ul>
@@ -731,13 +740,16 @@
             </ul>
             <p>For example, to execute <code>/path/to/command</code> every day at 2:00 AM and direct both standard output and error output to a log file, use the cron job entry:</p>
             <div>
-                <pre><code class="language-crontab">0 3 * * 0 /usr/bin/php /var/www/html/app/clear_cache.php</code></pre>
+                <pre><code class="language-crontab">0 2 * * * /path/to/command &gt;&gt; /var/log/command.log 2&gt;&amp;1</code></pre>
             </div>
             <h4 id="environment-variables">Environment Variables</h4>
             <p>Cron runs with a minimal environment. If your command depends on certain variables, define them in the crontab or within your script.</p>
             <p>For example, to run <code>script.sh</code> every day at 5:00 AM using the Bash shell and specifying the PATH environment, set the cron job as follows:</p>
             <div>
-                <pre><code class="language-crontab">0 4 1,15 * * /usr/bin/apt update &amp;&amp; /usr/bin/apt upgrade -y</code></pre>
+                <pre><code class="language-crontab">SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+
+0 5 * * * /path/to/script.sh</code></pre>
             </div>
             <h4 id="test-your-commands">Test Your Commands</h4>
             <p>Before adding them to the crontab, test your commands in the terminal to ensure they work as expected.</p>
@@ -750,7 +762,11 @@
             <p>For tasks that may take longer than the scheduling interval, prevent overlapping executions.</p>
             <p>This script example ensures that only one instance of the script can run at a time by using a file lock. Here’s how it works:</p>
             <div>
-                <pre><code class="language-crontab">0 2 * * * /usr/bin/python3 /home/user/scripts/backup.py</code></pre>
+                <pre><code class="language-bash">#!/bin/bash
+(
+  flock -n 9 || exit 1
+  # Your script commands go here
+) 9&gt;/var/lock/.myscript.exclusive</code></pre>
             </div>
             <ul>
                 <li><code>flock -n 9</code> attempts to acquire an exclusive, non-blocking lock on file descriptor 9. If the lock cannot be acquired because another instance is running, it immediately exits with <code>exit 1</code>.</li>

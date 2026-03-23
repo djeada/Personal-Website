@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/running_executables",
             "description": "We'll explore the inner workings of the Linux kernel, focusing on how it loads and executes binaries.",
-            "dateModified": "2025-12-03"
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -132,6 +132,15 @@
                             </ol>
                         </li>
                         <li><a href="#resuming-execution">Resuming Execution</a></li>
+                        <li><a href="#shared-libraries-and-dynamic-linking">Shared Libraries and Dynamic Linking</a>
+                            <ol>
+                                <li><a href="#how-dynamic-linking-works">How Dynamic Linking Works</a></li>
+                                <li><a href="#inspecting-library-dependencies-with-ldd">Inspecting Library Dependencies with ldd</a></li>
+                                <li><a href="#managing-library-paths-with-ldconfig">Managing Library Paths with ldconfig</a></li>
+                                <li><a href="#using-ld_library_path">Using LD_LIBRARY_PATH</a></li>
+                                <li><a href="#static-vs-dynamic-linking">Static vs. Dynamic Linking</a></li>
+                            </ol>
+                        </li>
                         <li><a href="#challenges">Challenges</a></li>
                     </ol>
                 </ol>
@@ -199,7 +208,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: December 03, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="how-the-linux-kernel-executes-programs">How the Linux Kernel Executes Programs</h2>
             <p>We'll explore the inner workings of the Linux kernel, focusing on how it loads and executes binaries. We'll dive into the <code>execve</code> system call, build a custom kernel, and use debugging tools to see the execution process in action. Whether you're a seasoned developer or just curious about operating systems, this walkthrough aims to shed light on the fascinating journey from a command to a running program.</p>
@@ -258,7 +267,7 @@
             <ul>
                 <li>Enable <strong>Compile the kernel with debug info</strong>.</li>
                 <li>Enable <strong>Provide GDB scripts for kernel debugging</strong>.</li>
-                <li>kernel debugger**.</li>
+                <li>Enable <strong>KDB (kernel debugger)</strong>.</li>
             </ul>
             <p>After making these changes, save your configuration and exit the menu.</p>
             <h4 id="compiling-the-kernel">Compiling the Kernel</h4>
@@ -469,6 +478,104 @@ cd ..</code></pre>
                 <pre><code class="language-shell">Hello from the custom kernel!</code></pre>
             </div>
             <p>This indicates that the kernel successfully executed our program.</p>
+            <h3 id="shared-libraries-and-dynamic-linking">Shared Libraries and Dynamic Linking</h3>
+            <p>Most programs on a Linux system are dynamically linked, meaning they rely on shared libraries (<code>.so</code> files) at runtime rather than containing all the code they need. Understanding how the system locates and loads these libraries is essential for troubleshooting and deploying applications.</p>
+            <h4 id="how-dynamic-linking-works">How Dynamic Linking Works</h4>
+            <p>When you run a dynamically linked executable, the kernel hands off control to the dynamic linker (<code>ld-linux-x86-64.so.2</code>), which resolves shared library dependencies before the program's <code>main</code> function executes.</p>
+            <div>
+                <pre><code class="language-shell">+-------------------+       +-------------------+       +-------------------+
+|    Executable     | ----&gt; |  Dynamic Linker   | ----&gt; |  Shared Libraries |
+|   (e.g., hello)   |       | (ld-linux-x86-64  |       | (libc.so.6, etc.) |
+|                   |       |   .so.2)          |       |                   |
++-------------------+       +-------------------+       +-------------------+</code></pre>
+            </div>
+            <p>The dynamic linker searches for libraries in several locations:</p>
+            <ul>
+                <li>Paths embedded in the executable (the <code>RPATH</code> or <code>RUNPATH</code> fields).</li>
+                <li>Directories listed in the <code>LD_LIBRARY_PATH</code> environment variable.</li>
+                <li>Entries in the <code>/etc/ld.so.cache</code> file, which is a compiled index of known library paths.</li>
+                <li>Default system directories such as <code>/lib</code>, <code>/usr/lib</code>, <code>/lib64</code>, and <code>/usr/lib64</code>.</li>
+            </ul>
+            <h4 id="inspecting-library-dependencies-with-ldd">Inspecting Library Dependencies with <code>ldd</code></h4>
+            <p>The <code>ldd</code> command displays the shared library dependencies of a binary:</p>
+            <div>
+                <pre><code class="language-bash">ldd /usr/bin/ls</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-shell">linux-vdso.so.1 (0x00007ffc12345000)
+libselinux.so.1 =&gt; /lib/x86_64-linux-gnu/libselinux.so.1 (0x00007f1234560000)
+libc.so.6 =&gt; /lib/x86_64-linux-gnu/libc.so.6 (0x00007f1234100000)
+/lib64/ld-linux-x86-64.so.2 (0x00007f1234800000)</code></pre>
+            </div>
+            <p>Each line shows a required library and where it was found on the system. If a library is missing, <code>ldd</code> will show <code>not found</code>, indicating that the program will fail to start.</p>
+            <h4 id="managing-library-paths-with-ldconfig">Managing Library Paths with <code>ldconfig</code></h4>
+            <p>The <code>ldconfig</code> command updates the shared library cache (<code>/etc/ld.so.cache</code>), which the dynamic linker uses for fast library lookups. After installing new libraries, run:</p>
+            <div>
+                <pre><code class="language-bash">sudo ldconfig</code></pre>
+            </div>
+            <p>To add a custom library directory, create a configuration file in <code>/etc/ld.so.conf.d/</code>:</p>
+            <div>
+                <pre><code class="language-bash">echo "/opt/myapp/lib" | sudo tee /etc/ld.so.conf.d/myapp.conf
+sudo ldconfig</code></pre>
+            </div>
+            <p>Verify that the library is now indexed:</p>
+            <div>
+                <pre><code class="language-bash">ldconfig -p | grep mylib</code></pre>
+            </div>
+            <h4 id="using-ld_library_path">Using <code>LD_LIBRARY_PATH</code></h4>
+            <p>The <code>LD_LIBRARY_PATH</code> environment variable allows you to specify additional directories for the dynamic linker to search at runtime, without modifying system-wide configuration:</p>
+            <div>
+                <pre><code class="language-bash">export LD_LIBRARY_PATH=/opt/myapp/lib:$LD_LIBRARY_PATH
+./myapp</code></pre>
+            </div>
+            <p>This is useful during development and testing but is generally not recommended for production systems because it affects all dynamically linked programs in the session and can lead to unexpected library version conflicts.</p>
+            <h4 id="static-vs-dynamic-linking">Static vs. Dynamic Linking</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Feature</td>
+                    <td>Static Linking</td>
+                    <td>Dynamic Linking</td>
+                </tr>
+                <tr>
+                    <td><strong>Library inclusion</strong></td>
+                    <td>All library code is copied into the executable.</td>
+                    <td>The executable references shared <code>.so</code> files.</td>
+                </tr>
+                <tr>
+                    <td><strong>File size</strong></td>
+                    <td>Larger, since libraries are embedded.</td>
+                    <td>Smaller, since libraries are shared on disk.</td>
+                </tr>
+                <tr>
+                    <td><strong>Portability</strong></td>
+                    <td>Runs without needing external libraries.</td>
+                    <td>Requires the correct library versions at runtime.</td>
+                </tr>
+                <tr>
+                    <td><strong>Memory usage</strong></td>
+                    <td>Each process loads its own copy of library code.</td>
+                    <td>Multiple processes share one copy in memory.</td>
+                </tr>
+                <tr>
+                    <td><strong>Updates</strong></td>
+                    <td>Requires recompilation to pick up library fixes.</td>
+                    <td>Programs automatically benefit from library updates.</td>
+                </tr>
+            </table>
+            </p>
+            <p>To compile a program statically:</p>
+            <div>
+                <pre><code class="language-bash">gcc -static -o myapp myapp.c</code></pre>
+            </div>
+            <p>To verify that a binary is statically linked:</p>
+            <div>
+                <pre><code class="language-bash">file myapp
+# Expected output includes "statically linked"
+ldd myapp
+# Expected output: "not a dynamic executable"</code></pre>
+            </div>
             <h3 id="challenges">Challenges</h3>
             <ol>
                 <li>Write a simple C program called <code>exec_test.c</code> that calls <code>execve</code> to run <code>/bin/echo</code> with arguments <code>echo HelloWorld</code>. Compile it and run it. Then, modify it to print a message before and after the <code>execve</code> call. Observe and explain why the “after” message never appears. Reflect on how <code>execve</code> replaces the current process image.</li>

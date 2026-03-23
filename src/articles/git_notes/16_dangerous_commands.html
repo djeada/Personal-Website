@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/git_notes/16_dangerous_commands",
             "description": "Some git commands are powerful but risky because they can rewrite history, move branch tips, or discard work.",
-            "dateModified": "2018-05-26"
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -114,6 +114,8 @@
                                 <li><a href="#when-to-use">When to Use</a></li>
                             </ol>
                         </li>
+                        <li><a href="#recovery-cheat-sheet">Recovery Cheat Sheet</a></li>
+                        <li><a href="#pre-push-safety-checklist">Pre-Push Safety Checklist</a></li>
                     </ol>
                 </ol>
             </div>
@@ -155,7 +157,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: May 26, 2018</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="dangerous-commands">Dangerous Commands</h2>
             <p>Some git commands are powerful but risky because they can rewrite history, move branch tips, or discard work. Used carelessly, they break open reviews, hide teammates’ changes, and make it hard to trace what actually shipped. Treat history edits as exceptional: prefer additive fixes for shared code, keep risky changes local until you’re sure, and coordinate before publishing them. Always back up your branch, read prompts carefully, and verify the target you’re changing. In short, these tools are essential for cleanup—just use them sparingly, with safeguards and team alignment.</p>
@@ -334,6 +336,71 @@ A──B'  (HEAD)   (B replaced with B')</code></pre>
                 <li>Minor corrections to your own branch (with coordinated force push).</li>
                 <li>Avoid on shared/protected branches; add a new commit instead.</li>
             </ul>
+            <h3 id="recovery-cheat-sheet">Recovery Cheat Sheet</h3>
+            <p>When things go wrong, these commands can help you recover:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Situation</td>
+                    <td>Recovery Command</td>
+                </tr>
+                <tr>
+                    <td>Accidentally reset commits</td>
+                    <td><code>git reflog</code> → find the commit → <code>git reset --hard &lt;hash&gt;</code></td>
+                </tr>
+                <tr>
+                    <td>Lost commits from detached HEAD</td>
+                    <td><code>git reflog</code> → <code>git branch recovery &lt;hash&gt;</code></td>
+                </tr>
+                <tr>
+                    <td>Bad merge you want to undo</td>
+                    <td><code>git reset --hard ORIG_HEAD</code> (immediately after merge)</td>
+                </tr>
+                <tr>
+                    <td>Need to undo a rebase</td>
+                    <td><code>git reflog</code> → <code>git reset --hard &lt;pre-rebase-hash&gt;</code></td>
+                </tr>
+                <tr>
+                    <td>Accidentally deleted a branch</td>
+                    <td><code>git reflog</code> → <code>git branch &lt;name&gt; &lt;hash&gt;</code></td>
+                </tr>
+                <tr>
+                    <td>Force pushed and lost remote work</td>
+                    <td>Ask teammates for their local copy, or check <code>git reflog</code> on the server</td>
+                </tr>
+            </table>
+            </p>
+            <div>
+                <pre><code class="language-bash"># The reflog is your safety net — always check it first
+git reflog
+
+# Example: recover from a bad reset
+git reflog
+# output:
+# a1b2c3d HEAD@{0}: reset: moving to HEAD~3
+# e4f5a6b HEAD@{1}: commit: Important feature
+# ...
+
+# Restore to before the reset
+git reset --hard e4f5a6b</code></pre>
+            </div>
+            <h3 id="pre-push-safety-checklist">Pre-Push Safety Checklist</h3>
+            <p>Before running any dangerous command on a shared branch, walk through this checklist:</p>
+            <ol>
+                <li><strong>Back up your branch first:</strong> <code>git branch backup-$(date +%Y%m%d) HEAD</code></li>
+                <li><strong>Check what you’re about to change:</strong> <code>git log --oneline HEAD~5..HEAD</code></li>
+                <li><strong>Verify no one else is working on the branch:</strong> check with your team</li>
+                <li><strong>Use <code>--force-with-lease</code> instead of <code>--force</code>:</strong> it refuses to push if the remote has unseen changes</li>
+                <li><strong>After the operation:</strong> run <code>git log</code> and <code>git diff</code> to verify the result is what you expected</li>
+                <li><strong>Communicate:</strong> let your team know if you rewrote shared history</li>
+            </ol>
+            <div>
+                <pre><code class="language-bash"># Safe force push workflow
+git branch backup-$(date +%Y%m%d)    # step 1: backup
+git log --oneline -10                 # step 2: review
+git push --force-with-lease           # step 4: safe push
+git log --oneline -10                 # step 5: verify</code></pre>
+            </div>
         </article-section>
     </div>
     <footer>

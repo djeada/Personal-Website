@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Concurrent Writes</title>
-    <meta content="Concurrent writes happen when two clients write to a database at the same time, unaware of each other's write." name="description" />
+    <meta content="Concurrent writes happen when two or more clients write to the same key in a database at the same time, each unaware of the other's write." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/04_concurrent_writes"
             },
             "url": "https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/04_concurrent_writes",
-            "description": "Concurrent writes happen when two clients write to a database at the same time, unaware of each other's write.",
-            "dateModified": "2026-01-24"
+            "description": "Concurrent writes happen when two or more clients write to the same key in a database at the same time, each unaware of the other's write.",
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -84,6 +84,7 @@
                     <li><a href="#immutable-keys">Immutable Keys</a></li>
                     <li><a href="#version-numbers">Version Numbers</a></li>
                     <li><a href="#version-vectors">Version Vectors</a></li>
+                    <li><a href="#conflict-resolution-strategies-compared">Conflict Resolution Strategies Compared</a></li>
                 </ol>
             </div>
             <div id="related-articles">
@@ -189,51 +190,243 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="concurrent-writes">Concurrent Writes</h2>
-            <p>Concurrent writes happen when two clients write to a database at the same time, unaware of each other's write. This can cause inconsistencies in the replicas.</p>
+            <p>Concurrent writes happen when two or more clients write to the same key in a database at the same time, each <strong>unaware</strong> of the other's write. In replicated systems, these writes may arrive at different replicas in different orders, causing the replicas to <strong>diverge</strong> and hold conflicting values. Without a strategy to detect and resolve these conflicts, the system risks permanent <strong>inconsistency</strong> across its nodes.</p>
             <div>
-                <pre><code class="language-shell">[Write 1]   [Write 2]   [Write 3]
-   \            |            /
-    \           |           /
-     \          |          /
-      \         |         /
-       \        |        /
-       +------------------+
-       |     Database     |
-       +------------------+</code></pre>
+                <pre><code class="language-shell">Client A writes X=1              Client B writes X=2
+  at time T                        at time T
+        |                                |
+        v                                v
+  +------------+                   +------------+
+  |  Replica 1 |                   |  Replica 2 |
+  |   X = 1    |                   |   X = 2    |
+  +------+-----+                   +------+-----+
+         |                                |
+         |      (replication lag)         |
+         v                                v
+  +------------+                   +------------+
+  |  Replica 1 |                   |  Replica 2 |
+  |  X = 1? 2? |                   |  X = 2? 1? |
+  +------------+                   +------------+
+
+  Both replicas received both writes but in
+  different orders — which value is correct?</code></pre>
             </div>
+            <ul>
+                <li>The core <strong>problem</strong> is that there is no single source of truth when multiple writers operate independently.</li>
+                <li>Replicated databases face this challenge because network <strong>latency</strong> means writes propagate to other nodes at different speeds.</li>
+                <li>Without conflict resolution, two replicas can settle on <strong>different</strong> final values for the same key, violating eventual consistency guarantees.</li>
+            </ul>
             <h2 id="detecting-concurrent-writes">Detecting Concurrent Writes</h2>
             <ul>
-                <li>Both multi-leader and leaderless replication systems must detect and resolve concurrent writes.</li>
-                <li>Events may arrive in different orders at different nodes; it's important for nodes to reach a consistent state eventually.</li>
+                <li>Both multi-leader and leaderless replication systems must <strong>detect</strong> concurrent writes before they can resolve them.</li>
+                <li>Events may arrive in different <strong>orders</strong> at different nodes, so the system cannot rely on arrival sequence to determine which write came first.</li>
+                <li>Two writes are considered <strong>concurrent</strong> if neither causally depends on the other — that is, neither writer knew about the other's write when it was issued.</li>
+                <li>A write A <strong>happens-before</strong> write B if B was made with knowledge of A's result; in that case the writes are sequential and B simply overwrites A.</li>
+                <li>Determining causality requires the system to track <strong>metadata</strong> about which prior state each write was based on.</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">Timeline at Node 1                Timeline at Node 2
+
+  t1: Receive Write A               t1: Receive Write B
+      (X = "apple")                     (X = "banana")
+        |                                 |
+  t2: Receive Write B               t2: Receive Write A
+      (X = "banana")                     (X = "apple")
+        |                                 |
+        v                                 v
+  Final state: X = "banana"         Final state: X = "apple"
+                 ↑                                  ↑
+                 |                                  |
+              INCONSISTENT — replicas disagree!</code></pre>
+            </div>
+            <ul>
+                <li>If nodes simply apply writes in the <strong>order</strong> they arrive, two nodes can end up with permanently different final values.</li>
+                <li>The system must use a deterministic <strong>strategy</strong> to ensure all replicas converge to the same value regardless of arrival order.</li>
             </ul>
             <h2 id="last-write-wins">Last Write Wins</h2>
             <ul>
-                <li>A common approach for concurrent writes is the "last write wins" strategy.</li>
-                <li>Writes are given an arbitrary order, and the last write is chosen as the correct one.</li>
-                <li>Easy to implement, but not durable; some writes are discarded.</li>
-                <li>Timestamps for ordering writes can be problematic due to clock skew.</li>
+                <li>The simplest conflict resolution approach is the <strong>LWW</strong> (last write wins) strategy, where each write is assigned a timestamp and the write with the highest timestamp is kept.</li>
+                <li>All conflicting writes are given an <strong>arbitrary</strong> ordering based on their timestamps, and only the "latest" write survives.</li>
+                <li>LWW is easy to <strong>implement</strong> because every node can independently pick the same winner by comparing timestamps.</li>
+                <li>The major downside is <strong>durability</strong> — writes that arrived "earlier" according to the timestamp are silently discarded, even if they contained important data.</li>
+                <li>Timestamps across distributed nodes are subject to <strong>clock-skew</strong>, meaning a write that actually happened first could receive a later timestamp and incorrectly win.</li>
+                <li>Cassandra and DynamoDB use LWW as their <strong>default</strong> conflict resolution strategy because it trades correctness for simplicity and availability.</li>
+                <li>LWW is safe only when keys are written <strong>once</strong> and never updated, or when losing some writes is acceptable for the application.</li>
             </ul>
+            <div>
+                <pre><code class="language-shell">Client A: SET X = "apple"  (timestamp: 100)
+  Client B: SET X = "banana" (timestamp: 105)
+
+  +---------------------+          +---------------------+
+  |     Replica 1       |          |     Replica 2       |
+  |                     |          |                     |
+  |  Receives:          |          |  Receives:          |
+  |   A (ts=100) first  |          |   B (ts=105) first  |
+  |   B (ts=105) second |          |   A (ts=100) second |
+  |                     |          |                     |
+  |  Keeps: B (ts=105)  |          |  Keeps: B (ts=105)  |
+  |  X = "banana"  ✔    |          |  X = "banana"  ✔    |
+  +---------------------+          +---------------------+
+
+  Both replicas converge on the same value,
+  but Client A's write is lost forever.</code></pre>
+            </div>
             <h2 id="immutable-keys">Immutable Keys</h2>
             <ul>
-                <li>An alternative is to allow each key to be written only once, making it immutable.</li>
-                <li>No writes are lost, but may not suit all use cases.</li>
+                <li>An alternative approach is to make each key <strong>immutable</strong> — once a value is written, it can never be overwritten.</li>
+                <li>Every write creates a new <strong>unique</strong> key (for example by appending a UUID), so concurrent writes never conflict because they target different keys.</li>
+                <li>This strategy guarantees that no data is <strong>lost</strong>, since every write is preserved under its own identifier.</li>
+                <li>Immutable keys work well for <strong>append-only</strong> workloads such as event logs, audit trails, and time-series data.</li>
+                <li>The trade-off is that applications must handle <strong>multiple</strong> versions of conceptually related data, often requiring a separate read-time merge step.</li>
+                <li>This approach may not suit use cases that require <strong>mutable</strong> state, such as a user profile that needs to be updated in place.</li>
             </ul>
             <h2 id="version-numbers">Version Numbers</h2>
             <ul>
-                <li>Use version numbers to track a key's state.</li>
-                <li>Clients pass the last version number they've seen to the server, which assigns a new version number and returns it.</li>
-                <li>The server determines which data the client had access to at the time of writing.</li>
-                <li>If the client writes without relying on existing data, the server can return both versions of the data on subsequent reads.</li>
-                <li>The application can handle these two values, either merging them automatically or prompting the user to do so.</li>
+                <li>Version numbers provide a way to <strong>track</strong> the causal history of a key's value, enabling the system to detect concurrent writes precisely.</li>
+                <li>The server maintains a <strong>counter</strong> for each key that is incremented every time the key is written.</li>
+                <li>When a client reads a key, the server returns the current value along with its <strong>version</strong> number.</li>
+                <li>When a client writes, it sends the version number it last <strong>observed</strong> — this tells the server which state the client's write was based on.</li>
+                <li>If the client's version matches the server's current version, the write is a simple <strong>sequential</strong> update and the server increments the version.</li>
+                <li>If the client sends a version that is <strong>older</strong> than the current version, the server knows a concurrent write has occurred.</li>
+                <li>When a concurrent write is detected, the server keeps <strong>both</strong> values (called siblings) and returns them on the next read, letting the application decide how to merge.</li>
+                <li>If the client writes without any prior version (version <strong>null</strong>), the server treats the write as concurrent with all existing values.</li>
+                <li>The application is responsible for <strong>merging</strong> sibling values — it can do so automatically (for example, taking the union of items in a shopping cart) or by prompting the user to choose.</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">Server (key: "cart")                Client A                  Client B
+  ========================            ========                  ========
+
+  v1: cart = {milk}
+        |
+        +--- read ----------------------&gt; gets v1, {milk}
+        |
+        +--- read ----------------------------------------------------&gt; gets v1, {milk}
+        |
+        +&lt;-- write(v1, {milk, eggs}) ---- Client A adds eggs
+        |
+  v2: cart = {milk, eggs}
+        |
+        +&lt;-- write(v1, {milk, bread}) --------------------------------- Client B adds bread
+        |                                                                (based on stale v1!)
+  v3: cart = [{milk, eggs},
+              {milk, bread}]          &lt;-- server keeps BOTH as siblings
+        |
+        +--- read ----------------------&gt; gets v3, [{milk, eggs}, {milk, bread}]
+        |
+        +&lt;-- write(v3, {milk, eggs, bread})  Client A merges siblings
+        |
+  v4: cart = {milk, eggs, bread}      &lt;-- conflict resolved, no data lost</code></pre>
+            </div>
+            <ul>
+                <li>This approach ensures <strong>no</strong> writes are silently discarded, unlike last-write-wins.</li>
+                <li>The cost is additional <strong>complexity</strong> in the application layer, which must implement merge logic for sibling values.</li>
             </ul>
             <h2 id="version-vectors">Version Vectors</h2>
             <ul>
-                <li>Version vectors track the state of data for multiple replicas.</li>
-                <li>A version vector includes a version number for each replica and key.</li>
-                <li>Each replica keeps track of its own version number and those of other replicas to decide which values to use.</li>
+                <li>When data is replicated across <strong>multiple</strong> nodes, a single version number is not enough — each replica may accept writes independently.</li>
+                <li>A version vector extends the version number concept by maintaining a <strong>separate</strong> counter for every replica.</li>
+                <li>The version vector for a key is a collection of <code>(replica, version)</code> <strong>pairs</strong> — for example <code>{A:3, B:2, C:5}</code> means replica A has seen 3 writes, B has seen 2, and C has seen 5.</li>
+                <li>When a client reads from a replica, it receives the key's current version <strong>vector</strong> along with the value.</li>
+                <li>When a client writes, it sends back the version vector it observed, allowing the receiving replica to <strong>compare</strong> vectors and detect concurrency.</li>
+                <li>Vector A <strong>dominates</strong> vector B if every component in A is greater than or equal to the corresponding component in B — this means A causally follows B.</li>
+                <li>If neither vector dominates the other, the writes are <strong>concurrent</strong> and the system must keep both values as siblings.</li>
+                <li>Riak used version vectors (which it called <strong>dotted</strong> version vectors) to track causality across its distributed vnodes.</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">Replica A                    Replica B                    Replica C
+  =========                    =========                    =========
+
+  Write X = 1
+  VA = {A:1}
+       |
+       +--- replicate -------&gt; VB = {A:1}
+       |                            |
+       |                       Write X = 2
+       |                       VB = {A:1, B:1}
+       |                            |
+       |                            +--- replicate -------&gt; VC = {A:1, B:1}
+       |                                                         |
+  Write X = 3                                               Write X = 4
+  VA = {A:2}                                                VC = {A:1, B:1, C:1}
+       |                                                         |
+       +--- compare with C's vector ---------------------------&gt;|
+       |                                                         |
+  {A:2} vs {A:1, B:1, C:1}                                      |
+  Neither dominates the other → writes are CONCURRENT            |
+  System keeps both values as siblings                           |</code></pre>
+            </div>
+            <ul>
+                <li>Version vectors allow the system to precisely <strong>distinguish</strong> between sequential writes (which can be safely overwritten) and concurrent writes (which must be preserved as siblings).</li>
+                <li>The size of the vector grows with the number of <strong>replicas</strong>, not the number of writes, so it remains compact in typical deployments.</li>
+            </ul>
+            <h2 id="conflict-resolution-strategies-compared">Conflict Resolution Strategies Compared</h2>
+            <p>
+            <table>
+                <tr>
+                    <td>Aspect</td>
+                    <td>Last Write Wins</td>
+                    <td>Immutable Keys</td>
+                    <td>Version Numbers</td>
+                    <td>Version Vectors</td>
+                </tr>
+                <tr>
+                    <td><strong>Data loss</strong></td>
+                    <td>Yes — silent overwrites</td>
+                    <td>None</td>
+                    <td>None (siblings kept)</td>
+                    <td>None (siblings kept)</td>
+                </tr>
+                <tr>
+                    <td><strong>Complexity</strong></td>
+                    <td>Very low</td>
+                    <td>Low</td>
+                    <td>Moderate</td>
+                    <td>High</td>
+                </tr>
+                <tr>
+                    <td><strong>Clock dependency</strong></td>
+                    <td>Yes — needs timestamps</td>
+                    <td>No</td>
+                    <td>No</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td><strong>Multi-replica support</strong></td>
+                    <td>Yes</td>
+                    <td>Yes</td>
+                    <td>Single replica only</td>
+                    <td>Yes — designed for it</td>
+                </tr>
+                <tr>
+                    <td><strong>Merge responsibility</strong></td>
+                    <td>System (automatic)</td>
+                    <td>Application (at read)</td>
+                    <td>Application (at read)</td>
+                    <td>Application (at read)</td>
+                </tr>
+                <tr>
+                    <td><strong>Best suited for</strong></td>
+                    <td>Write-once data, caches</td>
+                    <td>Event logs, audit trails</td>
+                    <td>Single-leader with conflicts</td>
+                    <td>Multi-leader / leaderless</td>
+                </tr>
+                <tr>
+                    <td><strong>Real-world usage</strong></td>
+                    <td>Cassandra, DynamoDB</td>
+                    <td>Event sourcing systems</td>
+                    <td>Single-node key stores</td>
+                    <td>Riak, Dynamo-style DBs</td>
+                </tr>
+            </table>
+            </p>
+            <ul>
+                <li>Choosing the right strategy depends on whether the application can <strong>tolerate</strong> lost writes and how much complexity it can absorb in the merge layer.</li>
+                <li>Systems that prioritize <strong>availability</strong> (AP in the CAP theorem) often use LWW for simplicity, while systems that require strong consistency use version vectors.</li>
+                <li>Many production systems <strong>combine</strong> strategies — for example, using LWW for non-critical metadata and version vectors for business-critical data.</li>
             </ul>
         </article-section>
     </div>

@@ -5,8 +5,8 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>Basics of YAML</title>
-    <meta content="YAML, or &quot;YAML Ain't Markup Language,&quot; is a human-readable data serialization format." name="description" />
+    <title>YAML Document Structure</title>
+    <meta content="YAML, which stands for &quot;YAML Ain't Markup Language,&quot; is a human-readable data serialization format designed for configuration files and data exchange between systems." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -23,7 +23,7 @@
         {
             "@context": "https://schema.org",
             "@type": "Article",
-            "headline": "Basics of YAML",
+            "headline": "YAML Document Structure",
             "author": {
                 "@type": "Person",
                 "name": "Adam Djellouli"
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/04_yaml"
             },
             "url": "https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/04_yaml",
-            "description": "YAML, or \"YAML Ain't Markup Language,\" is a human-readable data serialization format.",
-            "dateModified": "2026-01-24"
+            "description": "YAML, which stands for \"YAML Ain't Markup Language,\" is a human-readable data serialization format designed for configuration files and data exchange between systems.",
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -78,12 +78,29 @@
             <div id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
+                    <li><a href="#yaml-document-structure">YAML Document Structure</a></li>
                     <li><a href="#basics-of-yaml">Basics of YAML</a></li>
                     <li><a href="#yaml-syntax-rules">YAML Syntax Rules</a></li>
                     <li><a href="#example">Example</a></li>
+                    <li><a href="#advanced-yaml-features">Advanced YAML Features</a>
+                        <ol>
+                            <li><a href="#anchors-and-aliases">Anchors and Aliases</a></li>
+                            <li><a href="#multi-document-streams">Multi-Document Streams</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#yaml-parsing-flow">YAML Parsing Flow</a></li>
+                    <li><a href="#yaml-in-devops">YAML in DevOps</a>
+                        <ol>
+                            <li><a href="#kubernetes">Kubernetes</a></li>
+                            <li><a href="#docker-compose">Docker Compose</a></li>
+                            <li><a href="#ci-cd-pipelines">CI/CD Pipelines</a></li>
+                        </ol>
+                    </li>
                     <li><a href="#benefits-of-yaml">Benefits of YAML</a></li>
                     <li><a href="#common-uses-of-yaml">Common Uses of YAML</a></li>
                     <li><a href="#yaml-vs-json">YAML vs JSON</a></li>
+                    <li><a href="#common-pitfalls">Common Pitfalls</a></li>
+                    <li><a href="#security-considerations">Security Considerations</a></li>
                     <li><a href="#best-practices-for-yaml">Best Practices for YAML</a></li>
                 </ol>
             </div>
@@ -190,29 +207,51 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <header>YAML</header>
-            <p>YAML, or "YAML Ain't Markup Language," is a human-readable data serialization format. It is commonly used for configuration files and data exchange between languages with different data structures. YAML is designed to be readable and concise, with a focus on data readability over markup verbosity.</p>
+            <p>YAML, which stands for "YAML Ain't Markup Language," is a <strong>human-readable</strong> data serialization format designed for configuration files and data exchange between systems. Unlike XML or JSON, YAML relies on whitespace and indentation rather than brackets or tags, making it feel closer to natural <strong>prose</strong> than to code. Its design emphasizes readability and conciseness, which is why it has become the dominant format for <strong>infrastructure-as-code</strong> tooling across the DevOps ecosystem.</p>
+            <h2 id="yaml-document-structure">YAML Document Structure</h2>
+            <p>A YAML stream can contain one or more documents, each separated by <strong>directive</strong> markers. The <code>---</code> marker begins a new document, while <code>...</code> optionally ends one. A single file with no markers is treated as one <strong>implicit</strong> document.</p>
+            <div>
+                <pre><code class="language-+--------------------------------------------------+">|                  YAML Stream                      |
+|                                                   |
+|  +--------------------------------------------+  |
+|  | --- (document start)                       |  |
+|  |                                             |  |
+|  |  key: value          # mapping              |  |
+|  |  list:               # sequence             |  |
+|  |    - item1                                  |  |
+|  |    - item2                                  |  |
+|  |                                             |  |
+|  | ... (document end, optional)                |  |
+|  +--------------------------------------------+  |
+|                                                   |
+|  +--------------------------------------------+  |
+|  | --- (second document)                       |  |
+|  |                                             |  |
+|  |  another_key: another_value                 |  |
+|  |                                             |  |
+|  +--------------------------------------------+  |
++--------------------------------------------------+</code></pre>
+            </div>
             <h2 id="basics-of-yaml">Basics of YAML</h2>
-            <ol>
-                <li>
-                    <p><strong>Data Types</strong>: YAML supports scalar types (such as strings, integers, and floats), complex mappings (associative arrays or objects), and sequences (lists or arrays).</p>
-                </li>
-                <li>
-                    <p><strong>Syntax</strong>: YAML syntax is designed to be easily readable and writable by humans. It uses indentation to denote structure, allowing for a more natural representation of nested data structures.</p>
-                </li>
-            </ol>
+            <ul>
+                <li>YAML supports <strong>scalar</strong> types such as strings, integers, floats, booleans, null, and timestamps out of the box.</li>
+                <li>Complex data is represented through <strong>mappings</strong> (key-value pairs, similar to dictionaries) and <strong>sequences</strong> (ordered lists of items).</li>
+                <li>The syntax uses <strong>indentation</strong> instead of braces or brackets, producing a visual hierarchy that mirrors the data structure itself.</li>
+                <li>YAML is a <strong>superset</strong> of JSON, meaning any valid JSON document is also valid YAML.</li>
+            </ul>
             <h2 id="yaml-syntax-rules">YAML Syntax Rules</h2>
-            <ol>
-                <li><strong>Indentation-based Hierarchy</strong>: Indentation is used to represent the hierarchy and structure of data. The amount of indentation affects the interpretation of the data.</li>
-                <li><strong>Scalars</strong>: Scalars are simple, single-value data types, including integers, floats, and strings.</li>
-                <li><strong>Mappings</strong>: Mappings (similar to dictionaries or objects in other languages) are represented using a colon and space <code>:</code> to denote key-value pairs.</li>
-                <li><strong>Lists</strong>: Lists (or sequences) are denoted by a hyphen <code>-</code> at the start of the item in the list.</li>
-                <li><strong>Support for Comments</strong>: YAML supports comments using the <code>#</code> symbol.</li>
-            </ol>
+            <ul>
+                <li><strong>Indentation</strong> controls the hierarchy; only spaces are allowed (tabs will cause a parse error), and the amount of indentation determines nesting depth.</li>
+                <li><strong>Scalars</strong> are single values such as <code>42</code>, <code>3.14</code>, <code>true</code>, <code>null</code>, or <code>"hello world"</code> and can be unquoted, single-quoted, or double-quoted.</li>
+                <li><strong>Mappings</strong> use a colon followed by a space (<code>:</code>) to separate keys from their values, forming associative pairs.</li>
+                <li><strong>Sequences</strong> begin each item with a hyphen and a space (<code>-</code>), creating ordered lists that a parser converts into arrays.</li>
+                <li>Lines starting with the <code>#</code> symbol are treated as <strong>comments</strong> and ignored by the parser entirely.</li>
+                <li>Multi-line strings use the <code>|</code> (literal block) character to preserve <strong>newlines</strong> or <code>&gt;</code> (folded block) to collapse them into spaces.</li>
+            </ul>
             <h2 id="example">Example</h2>
-            <p>Here's a simple example:</p>
             <div>
                 <pre><code class="language-yaml">employee:
   name: John Doe
@@ -222,93 +261,186 @@
     street: 1234 Main St
     city: Anytown
     state: CA
-    zipCode: 12345
+    zipCode: "12345"          # quoted to prevent octal interpretation
   skills:
     - Java
     - C#
-    - Python</code></pre>
+    - Python
+  bio: |
+    John is a senior engineer
+    with 10 years of experience
+    in distributed systems.</code></pre>
             </div>
+            <h2 id="advanced-yaml-features">Advanced YAML Features</h2>
+            <h3 id="anchors-and-aliases">Anchors and Aliases</h3>
+            <p>Anchors (<code>&amp;</code>) let you mark a node so it can be <strong>reused</strong> elsewhere with an alias (<code>*</code>), eliminating duplication. The merge key (<code>&lt;&lt;</code>) combines an alias into a mapping, which is especially useful for sharing <strong>defaults</strong> across multiple blocks.</p>
+            <div>
+                <pre><code class="language-yaml">defaults: &amp;default_settings
+  timeout: 30
+  retries: 3
+  log_level: info
+
+production:
+  &lt;&lt;: *default_settings        # merges all default keys
+  log_level: warn              # overrides one value
+
+staging:
+  &lt;&lt;: *default_settings
+  timeout: 60</code></pre>
+            </div>
+            <h3 id="multi-document-streams">Multi-Document Streams</h3>
+            <p>A single YAML file can hold several <strong>independent</strong> documents separated by <code>---</code>, which is useful for bundling related resources. Tools like <code>kubectl apply -f</code> natively handle multi-document files, deploying every <strong>resource</strong> in sequence.</p>
+            <div>
+                <pre><code class="language-yaml">---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: app
+data:
+  LOG_LEVEL: "info"</code></pre>
+            </div>
+            <h2 id="yaml-parsing-flow">YAML Parsing Flow</h2>
+            <div>
+                <pre><code class="language-shell">+------------------+     +------------------+     +------------------+
+  |  Raw YAML Text   | --&gt; |    Scanner /     | --&gt; |    Parser /      |
+  |  (UTF-8 stream)  |     |    Tokenizer     |     |    Event Stream  |
+  +------------------+     +------------------+     +------------------+
+                                                            |
+                                                            v
+                                                    +------------------+
+                                                    |   Composer /     |
+                                                    |   Node Graph     |
+                                                    +------------------+
+                                                            |
+                                                            v
+                                                    +------------------+
+                                                    |   Constructor /  |
+                                                    |   Native Objects |
+                                                    |   (dict, list)   |
+                                                    +------------------+</code></pre>
+            </div>
+            <p>The scanner breaks raw text into <strong>tokens</strong> (indentation, scalars, indicators). The parser turns tokens into an <strong>event</strong> stream (MappingStart, Scalar, SequenceEnd, etc.). The composer assembles events into a node graph, and the constructor maps nodes to <strong>native</strong> language objects like dicts and lists.</p>
+            <h2 id="yaml-in-devops">YAML in DevOps</h2>
+            <h3 id="kubernetes">Kubernetes</h3>
+            <p>Nearly every Kubernetes resource is declared in YAML, from <strong>Deployments</strong> and Services to ConfigMaps and Ingress rules. Operators write manifests that the API server parses, validates, and reconciles against the <strong>desired</strong> cluster state.</p>
+            <h3 id="docker-compose">Docker Compose</h3>
+            <p>Docker Compose uses a <code>docker-compose.yml</code> file to define multi-container <strong>applications</strong>, describing services, networks, and volumes in one place. The declarative format lets teams spin up identical <strong>environments</strong> locally and in CI with a single command.</p>
+            <h3 id="ci-cd-pipelines">CI/CD Pipelines</h3>
+            <p>Platforms such as GitHub Actions, GitLab CI, and CircleCI all use YAML to describe <strong>pipeline</strong> stages, jobs, and steps. Defining CI/CD as YAML files stored alongside source code gives teams <strong>version-controlled</strong> build and deploy workflows.</p>
             <h2 id="benefits-of-yaml">Benefits of YAML</h2>
-            <ol>
-                <li><strong>Human-Friendly</strong>: YAML is designed with human readability in mind, making it easy to write and understand.</li>
-                <li><strong>Flexible</strong>: Capable of representing complex data structures in a clear manner.</li>
-                <li><strong>Widespread Usage</strong>: Commonly used in configuration files and development tools.</li>
-            </ol>
+            <ul>
+                <li>YAML's indentation-based syntax makes files immediately <strong>readable</strong> without prior knowledge of the format.</li>
+                <li>The format can represent deeply nested and <strong>complex</strong> data structures without excessive punctuation.</li>
+                <li>Virtually every modern DevOps tool provides first-class <strong>support</strong> for YAML configuration.</li>
+                <li>Because YAML is a superset of JSON, existing JSON data can be used <strong>directly</strong> without conversion.</li>
+            </ul>
             <h2 id="common-uses-of-yaml">Common Uses of YAML</h2>
             <ul>
-                <li><strong>Configuration Management</strong>: Widely used in software configuration, particularly in DevOps tools.</li>
-                <li><strong>Data Serialization</strong>: Used for storing and transmitting data in a readable format.</li>
-                <li><strong>Development Tools</strong>: Often used for writing configuration files for development and deployment environments.</li>
+                <li>Infrastructure-as-code tools like Ansible, Kubernetes, and Terraform (via HCL-to-YAML bridges) rely on YAML for <strong>configuration</strong> management.</li>
+                <li>Application settings and feature flags are often stored in YAML for easy <strong>serialization</strong> and human editing.</li>
+                <li>CI/CD systems use YAML to define build <strong>pipelines</strong>, deployment steps, and environment matrices.</li>
             </ul>
             <h2 id="yaml-vs-json">YAML vs JSON</h2>
-            <p>While both YAML and JSON are used for data serialization, YAML is more human-readable, which makes it preferred for configuration files. JSON, being more compact and parsed natively by JavaScript, is often used for web APIs and data interchange.</p>
+            <p>Both YAML and JSON serialize structured data, yet they target different <strong>audiences</strong>. YAML favors human authors who edit files by hand, while JSON favors machines that produce and consume data at <strong>scale</strong> over APIs.</p>
             <p>
             <table>
                 <tr>
                     <td><strong>Feature</strong></td>
-                    <td><strong>YAML (YAML Ain't Markup Language)</strong></td>
-                    <td><strong>JSON (JavaScript Object Notation)</strong></td>
-                </tr>
-                <tr>
-                    <td><strong>Format</strong></td>
-                    <td>Human-readable, text-based format.</td>
-                    <td>Lightweight, text-based format.</td>
+                    <td><strong>YAML</strong></td>
+                    <td><strong>JSON</strong></td>
                 </tr>
                 <tr>
                     <td><strong>Readability</strong></td>
-                    <td>Highly readable due to its minimalistic design and use of indentation.</td>
-                    <td>Readable, though less human-friendly than YAML due to bracket usage.</td>
-                </tr>
-                <tr>
-                    <td><strong>Data Types</strong></td>
-                    <td>Supports complex data types and structures.</td>
-                    <td>Supports basic data types like string, number, array, boolean, and null.</td>
+                    <td>Highly readable; indentation mirrors data hierarchy.</td>
+                    <td>Readable, but bracket-heavy for deeply nested structures.</td>
                 </tr>
                 <tr>
                     <td><strong>Comments</strong></td>
-                    <td>Allows comments.</td>
-                    <td>Does not support comments.</td>
+                    <td>Supports <code>#</code> inline comments.</td>
+                    <td>No comment support in the specification.</td>
                 </tr>
                 <tr>
-                    <td><strong>Hierarchical Structure</strong></td>
-                    <td>Uses indentation to denote structure, which can be more intuitive.</td>
-                    <td>Uses braces <code>{ }</code> and brackets <code>[ ]</code> to denote objects and arrays.</td>
+                    <td><strong>Data Types</strong></td>
+                    <td>Rich types: dates, timestamps, binary, sets, and custom tags.</td>
+                    <td>Limited to string, number, boolean, null, array, and object.</td>
                 </tr>
                 <tr>
-                    <td><strong>Parsing</strong></td>
-                    <td>Requires a YAML parser.</td>
-                    <td>Easily parsed with standard JavaScript functions.</td>
+                    <td><strong>Multi-line Strings</strong></td>
+                    <td>Native literal (<code>\|</code>) and folded (<code>&gt;</code>) block scalars.</td>
+                    <td>Requires <code>\n</code> escape sequences inside a single string.</td>
                 </tr>
                 <tr>
-                    <td><strong>File Extension</strong></td>
+                    <td><strong>Anchors / Aliases</strong></td>
+                    <td>Supports <code>&amp;</code> / <code>*</code> for node reuse.</td>
+                    <td>No equivalent; data must be duplicated.</td>
+                </tr>
+                <tr>
+                    <td><strong>Multi-Document</strong></td>
+                    <td>One file can hold multiple <code>---</code>-separated documents.</td>
+                    <td>One value per file.</td>
+                </tr>
+                <tr>
+                    <td><strong>Parsing Complexity</strong></td>
+                    <td>Full spec is complex; multiple parser implementations vary.</td>
+                    <td>Simple grammar; parsers are fast and consistent.</td>
+                </tr>
+                <tr>
+                    <td><strong>Native Browser Support</strong></td>
+                    <td>Requires a library.</td>
+                    <td>Built-in <code>JSON.parse()</code> / <code>JSON.stringify()</code>.</td>
+                </tr>
+                <tr>
+                    <td><strong>File Extensions</strong></td>
                     <td><code>.yaml</code> or <code>.yml</code></td>
                     <td><code>.json</code></td>
                 </tr>
                 <tr>
-                    <td><strong>Verbose</strong></td>
-                    <td>Less verbose than JSON in many cases due to the lack of brackets.</td>
-                    <td>More verbose due to use of brackets and commas.</td>
+                    <td><strong>Trailing Commas</strong></td>
+                    <td>Not applicable (no commas).</td>
+                    <td>Not allowed; causes parse errors.</td>
                 </tr>
                 <tr>
-                    <td><strong>Security</strong></td>
-                    <td>Requires careful parsing due to potential security issues.</td>
-                    <td>Generally secure, but also requires secure parsing practices.</td>
+                    <td><strong>Security Surface</strong></td>
+                    <td>Larger attack surface due to tags and object instantiation.</td>
+                    <td>Minimal surface; data-only by design.</td>
                 </tr>
                 <tr>
-                    <td><strong>Use Cases</strong></td>
-                    <td>Often used for configuration files, data serialization, and in applications where human readability is a priority.</td>
-                    <td>Commonly used in web services, APIs, and settings where a lightweight and easily parsable format is desired.</td>
+                    <td><strong>Primary Use Cases</strong></td>
+                    <td>Configuration files, infrastructure-as-code, CI/CD definitions.</td>
+                    <td>Web APIs, data interchange, client-server communication.</td>
                 </tr>
             </table>
             </p>
+            <h2 id="common-pitfalls">Common Pitfalls</h2>
+            <ul>
+                <li>The infamous <strong>Norway</strong> problem: the unquoted value <code>NO</code> is parsed as boolean <code>false</code> by YAML 1.1 parsers because <code>NO</code>, <code>Yes</code>, <code>on</code>, and <code>off</code> are all implicit booleans—country codes and abbreviations must be quoted.</li>
+                <li>Implicit <strong>type</strong> coercion silently converts values like <code>1.0</code> to a float and <code>010</code> to an octal integer, producing unexpected results when strings were intended.</li>
+                <li>Inconsistent <strong>indentation</strong> (mixing two-space and four-space levels, or accidentally using tabs) causes cryptic parse errors that are hard to trace in large files.</li>
+                <li>Unquoted strings containing colons or special characters can cause the parser to misinterpret <strong>structure</strong>, splitting one value into a key-value pair.</li>
+            </ul>
+            <h2 id="security-considerations">Security Considerations</h2>
+            <ul>
+                <li>Many YAML libraries support <strong>deserialization</strong> of arbitrary objects via custom tags (e.g., <code>!!python/object</code>), which can lead to remote code execution if untrusted input is parsed.</li>
+                <li>Always use a <strong>safe</strong> loader (e.g., <code>yaml.safe_load()</code> in Python or <code>YAML.safe_load</code> in Ruby) that restricts construction to basic data types only.</li>
+                <li>Billion-laughs-style attacks exploit <strong>anchors</strong> and aliases to create exponential data expansion, consuming memory and CPU during parsing.</li>
+                <li>Treat YAML configuration files with the same <strong>rigor</strong> as executable code: validate schemas, limit file sizes, and review changes in pull requests.</li>
+            </ul>
             <h2 id="best-practices-for-yaml">Best Practices for YAML</h2>
-            <ol>
-                <li><strong>Consistent Indentation</strong>: Maintain consistent indentation for readability and to avoid errors.</li>
-                <li><strong>Use Comments Wisely</strong>: Use comments to explain complex parts of the YAML file.</li>
-                <li><strong>Avoid Excessive Nesting</strong>: Over-nesting can make YAML files complex and hard to read.</li>
-                <li><strong>Validate Your YAML</strong>: Use a YAML validator to ensure your syntax is correct.</li>
-                <li><strong>Be Aware of Data Types</strong>: YAML is sensitive to data types; be mindful of strings vs. integers and other data type distinctions.</li>
-            </ol>
+            <ul>
+                <li>Pick either two or four spaces and enforce <strong>consistent</strong> indentation across the project with a linter such as <code>yamllint</code>.</li>
+                <li>Always <strong>quote</strong> strings that could be misread as booleans, nulls, or numbers (e.g., <code>"yes"</code>, <code>"null"</code>, <code>"3.0"</code>).</li>
+                <li>Use comments sparingly to explain <strong>intent</strong> rather than restating what the data already shows.</li>
+                <li>Keep nesting to three or four levels at most; excessive <strong>depth</strong> makes files hard to read and diff.</li>
+                <li>Run a YAML <strong>validator</strong> in CI to catch syntax errors before they reach production.</li>
+                <li>Prefer <code>yaml.safe_load</code> or equivalent <strong>safe</strong> parsers to eliminate deserialization attack vectors.</li>
+                <li>Store YAML files in version control and treat configuration changes as <strong>code</strong> that requires review.</li>
+            </ul>
         </article-section>
     </div>
     <footer>

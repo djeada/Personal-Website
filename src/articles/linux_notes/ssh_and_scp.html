@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/ssh_and_scp",
             "description": "SSH, SFTP, and SCP are network protocols that provide secure data communication and file transfer over insecure networks.",
-            "dateModified": "2020-11-18"
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -103,7 +103,13 @@
                                 <li><a href="#basic-sftp-commands">Basic SFTP Commands</a></li>
                             </ol>
                         </li>
-                        <li><a href="#other-protocols-for-file-transfers">Other Protocols for File Transfers</a></li>
+                        <li><a href="#other-protocols-for-file-transfers">Other Protocols for File Transfers</a>
+                            <ol>
+                                <li><a href="#rsync-for-repeated-transfers">Rsync for Repeated Transfers</a></li>
+                                <li><a href="#smb-for-shared-network-folders">SMB for Shared Network Folders</a></li>
+                                <li><a href="#ftp-and-ftps-in-legacy-environments">FTP and FTPS in Legacy Environments</a></li>
+                            </ol>
+                        </li>
                         <li><a href="#challenges">Challenges</a></li>
                     </ol>
                 </ol>
@@ -171,7 +177,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: November 18, 2020</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="secure-server-access">Secure Server Access</h2>
             <p>SSH, SFTP, and SCP are network protocols that provide secure data communication and file transfer over insecure networks. Here's a brief overview of each:</p>
@@ -350,10 +356,38 @@ sftp&gt; exit</code></pre>
             <h3 id="other-protocols-for-file-transfers">Other Protocols for File Transfers</h3>
             <p>Aside from SCP and SFTP, numerous other protocols and tools can be utilized for transferring files, each with their own characteristics:</p>
             <ul>
-                <li><strong>FTP</strong> is a traditional protocol used for file transfers, but it lacks modern security features, making it generally unsuitable for sensitive data transfers.</li>
+                <li><strong>FTP</strong> is a traditional protocol used for file transfers, but it lacks modern security features, making it generally unsuitable for sensitive data transfers. If you must use it, prefer <strong>FTPS</strong>, which adds TLS encryption on top of FTP for better confidentiality.</li>
                 <li><strong>Rsync</strong> is a fast and efficient tool designed for synchronizing large sets of files across systems, providing options for incremental transfers to optimize the process.</li>
                 <li><strong>SMB</strong> is a protocol commonly utilized by Windows systems for sharing files over local networks. It supports various authentication mechanisms to secure data access and protect shared resources.</li>
             </ul>
+            <h4 id="rsync-for-repeated-transfers">Rsync for Repeated Transfers</h4>
+            <p><code>rsync</code> is often a better fit than <code>scp</code> when you need to copy the same directory more than once. Instead of retransmitting every file, it compares the source and destination and sends only the differences.</p>
+            <div>
+                <pre><code class="language-bash">rsync -avz ./project/ username@serverhost:/srv/project/</code></pre>
+            </div>
+            <ul>
+                <li><code>-a</code> preserves permissions, timestamps, symbolic links, and directory structure.</li>
+                <li><code>-v</code> shows what is being copied.</li>
+                <li><code>-z</code> compresses the data stream, which can help over slower links.</li>
+            </ul>
+            <p>If SSH is listening on a non-standard port, you can still use <code>rsync</code> securely:</p>
+            <div>
+                <pre><code class="language-bash">rsync -avz -e "ssh -p 2222" ./project/ username@serverhost:/srv/project/</code></pre>
+            </div>
+            <p>This makes <code>rsync</code> a common choice for backups, website deployments, and synchronizing configuration files between hosts.</p>
+            <h4 id="smb-for-shared-network-folders">SMB for Shared Network Folders</h4>
+            <p>SMB is widely used for file sharing in mixed Windows/Linux environments. On Linux, an SMB share can be mounted into the local file system so it behaves like a regular directory:</p>
+            <div>
+                <pre><code class="language-bash">sudo mount -t cifs //fileserver/shared /mnt/shared -o username=alice,vers=3.0</code></pre>
+            </div>
+            <p>This approach is useful when several users need ongoing access to the same files over a local network. Compared with <code>scp</code>, SMB is less about one-time secure copies and more about keeping a shared workspace available to many clients.</p>
+            <h4 id="ftp-and-ftps-in-legacy-environments">FTP and FTPS in Legacy Environments</h4>
+            <p>Plain FTP is still encountered on older appliances, hosting providers, and internal networks, but it sends credentials and data without encryption. That is why it should be avoided on untrusted networks.</p>
+            <p>When compatibility requirements force you to use the FTP ecosystem, FTPS is the safer option because it adds TLS:</p>
+            <div>
+                <pre><code class="language-bash">lftp -u username ftps://ftp.example.com</code></pre>
+            </div>
+            <p>In short, prefer <code>scp</code> or <code>sftp</code> for secure one-off transfers, use <code>rsync</code> for efficient synchronization, and reserve SMB or FTPS for environments where file sharing or legacy compatibility matters more than a pure SSH workflow.</p>
             <h3 id="challenges">Challenges</h3>
             <ol>
                 <li>Set up a Linux server on a cloud provider or a local virtual machine and configure it for SSH access. Secure the server by disabling root login and ensuring only SSH key-based authentication is permitted. Discuss the benefits of using SSH over traditional telnet for secure server access.</li>

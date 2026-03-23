@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Deploying CentOS VM on Digital Ocean</title>
-    <meta content="Thanks for stopping by." name="description" />
+    <meta content="Digital Ocean provides cloud-based virtual machines called Droplets that let you deploy and manage CentOS servers." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/01_centos_digital_ocean"
             },
             "url": "https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/01_centos_digital_ocean",
-            "description": "Thanks for stopping by.",
-            "dateModified": "2026-01-24"
+            "description": "Digital Ocean provides cloud-based virtual machines called Droplets that let you deploy and manage CentOS servers.",
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -80,14 +80,20 @@
                 <ol><a href="#deploying-centos-vm-on-digital-ocean">Deploying CentOS VM on Digital Ocean</a>
                     <ol>
                         <li><a href="#step-1-sign-up-and-log-in">Step 1: Sign Up and Log In</a></li>
-                        <li><a href="#step-2-create-a-new-droplet">Step 2: Create a New Droplet</a></li>
-                        <li><a href="#step-3-select-droplet-size">Step 3: Select Droplet Size</a></li>
-                        <li><a href="#step-4-choose-datacenter-region">Step 4: Choose Datacenter Region</a></li>
-                        <li><a href="#step-5-set-up-ssh-key">Step 5: Set Up SSH Key</a></li>
-                        <li><a href="#step-6-configure-droplet-options">Step 6: Configure Droplet Options</a></li>
-                        <li><a href="#step-7-finalize-and-create">Step 7: Finalize and Create</a></li>
-                        <li><a href="#step-8-access-centos-vm">Step 8: Access CentOS VM</a></li>
-                        <li><a href="#step-9-set-up-and-configure-centos">Step 9: Set Up and Configure CentOS</a></li>
+                        <li><a href="#step-2-generate-an-ssh-key">Step 2: Generate an SSH Key</a></li>
+                        <li><a href="#step-3-create-a-new-droplet">Step 3: Create a New Droplet</a></li>
+                        <li><a href="#step-4-initial-server-access">Step 4: Initial Server Access</a></li>
+                        <li><a href="#step-5-create-a-non-root-user">Step 5: Create a Non-Root User</a></li>
+                        <li><a href="#step-6-update-packages-and-configure-firewall">Step 6: Update Packages and Configure Firewall</a></li>
+                        <li><a href="#step-7-install-and-configure-services">Step 7: Install and Configure Services</a></li>
+                        <li><a href="#step-8-secure-ssh-access">Step 8: Secure SSH Access</a></li>
+                        <li><a href="#post-deployment">Post-Deployment</a>
+                            <ol>
+                                <li><a href="#monitoring">Monitoring</a></li>
+                                <li><a href="#backups">Backups</a></li>
+                                <li><a href="#security-hardening">Security Hardening</a></li>
+                            </ol>
+                        </li>
                     </ol>
                 </ol>
             </div>
@@ -194,55 +200,191 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="deploying-centos-vm-on-digital-ocean">Deploying CentOS VM on Digital Ocean</h2>
+            <p>Digital Ocean provides cloud-based virtual machines called Droplets that let you deploy and manage CentOS servers. The overall flow looks like this:</p>
+            <div>
+                <pre><code class="language-shell">+-------------+         SSH (port 22)         +----------------------+
+ |             | ----------------------------&gt;  |                      |
+ | Local       |                                |  Digital Ocean       |
+ | Machine     |                                |  Droplet (CentOS)   |
+ |             | &lt;----------------------------  |                      |
+ +-------------+        Response               +----------------------+
+                                                    |    |    |
+                                                    |    |    |
+                                                +---+  +---+  +---+
+                                                |Web|  |DB |  |App|
+                                                +---+  +---+  +---+
+                                               :80/443  :5432  :8080</code></pre>
+            </div>
+            <ul>
+                <li><strong>Local</strong> is your development machine where you write code and manage deployments.</li>
+                <li><strong>Droplet</strong> is the CentOS virtual machine running in a Digital Ocean datacenter.</li>
+                <li><strong>Services</strong> such as a web server, database, and application run inside the droplet.</li>
+            </ul>
             <h3 id="step-1-sign-up-and-log-in">Step 1: Sign Up and Log In</h3>
             <ul>
-                <li>Sign up for a Digital Ocean account.</li>
-                <li>Log in to your account.</li>
+                <li><strong>Navigate</strong> to <a href="https://www.digitalocean.com/">digitalocean.com</a> and create an account.</li>
+                <li><strong>Verify</strong> your email address and add a payment method.</li>
+                <li><strong>Log</strong> in to the Digital Ocean dashboard.</li>
             </ul>
-            <h3 id="step-2-create-a-new-droplet">Step 2: Create a New Droplet</h3>
+            <h3 id="step-2-generate-an-ssh-key">Step 2: Generate an SSH Key</h3>
             <ul>
-                <li>Click "Create" and select "Droplets."</li>
-                <li>Choose CentOS as your distribution.</li>
-                <li>Select the desired version of CentOS.</li>
+                <li><strong>Open</strong> a terminal on your local machine and generate a key pair:</li>
             </ul>
-            <h3 id="step-3-select-droplet-size">Step 3: Select Droplet Size</h3>
+            <div>
+                <pre><code class="language-bash">ssh-keygen -t ed25519 -C "your_email@example.com"</code></pre>
+            </div>
             <ul>
-                <li>Choose the size of the droplet based on your requirements (CPU, RAM, and storage).</li>
-                <li>Consider selecting the right size for your budget.</li>
+                <li><strong>Accept</strong> the default file location (<code>~/.ssh/id_ed25519</code>) or specify a custom path.</li>
+                <li><strong>Copy</strong> the public key so it can be added to Digital Ocean:</li>
             </ul>
-            <h3 id="step-4-choose-datacenter-region">Step 4: Choose Datacenter Region</h3>
+            <div>
+                <pre><code class="language-bash">cat ~/.ssh/id_ed25519.pub</code></pre>
+            </div>
             <ul>
-                <li>Select a datacenter region closest to your target audience.</li>
-                <li>Consider factors like latency and data privacy regulations.</li>
+                <li><strong>Paste</strong> the public key into the Digital Ocean dashboard under <strong>Settings → Security → SSH Keys</strong>.</li>
             </ul>
-            <h3 id="step-5-set-up-ssh-key">Step 5: Set Up SSH Key</h3>
+            <h3 id="step-3-create-a-new-droplet">Step 3: Create a New Droplet</h3>
             <ul>
-                <li>Create an SSH key for secure access to your CentOS VM.</li>
-                <li>Add your public SSH key to the Digital Ocean account.</li>
+                <li><strong>Click</strong> "Create" and select "Droplets" from the dropdown.</li>
+                <li><strong>Choose</strong> CentOS as the distribution and pick the desired version (e.g., CentOS Stream 9).</li>
+                <li><strong>Select</strong> a droplet size based on your workload (CPU, RAM, and storage).</li>
+                <li><strong>Pick</strong> a datacenter region closest to your target audience to minimize latency.</li>
+                <li><strong>Enable</strong> options like monitoring, automatic backups, and private networking as needed.</li>
+                <li><strong>Assign</strong> a meaningful hostname (e.g., <code>prod-api-01</code>) and click "Create Droplet."</li>
             </ul>
-            <h3 id="step-6-configure-droplet-options">Step 6: Configure Droplet Options</h3>
+            <h3 id="step-4-initial-server-access">Step 4: Initial Server Access</h3>
             <ul>
-                <li>Choose additional options like monitoring, backups, and private networking.</li>
-                <li>Select the number of droplets you want to create.</li>
+                <li><strong>Note</strong> the public IP address shown in the dashboard after the droplet is provisioned.</li>
+                <li><strong>Connect</strong> to the droplet over SSH:</li>
             </ul>
-            <h3 id="step-7-finalize-and-create">Step 7: Finalize and Create</h3>
+            <div>
+                <pre><code class="language-bash">ssh root@YOUR_DROPLET_IP</code></pre>
+            </div>
             <ul>
-                <li>Give your droplet a hostname.</li>
-                <li>Click "Create Droplet."</li>
+                <li><strong>Confirm</strong> the fingerprint on the first connection and you will land in a root shell.</li>
             </ul>
-            <h3 id="step-8-access-centos-vm">Step 8: Access CentOS VM</h3>
+            <h3 id="step-5-create-a-non-root-user">Step 5: Create a Non-Root User</h3>
             <ul>
-                <li>After the droplet is created, you'll receive an IP address.</li>
-                <li>Use the IP address and your SSH key to access the CentOS VM through an SSH client.</li>
+                <li><strong>Add</strong> a new user and grant it sudo privileges:</li>
             </ul>
-            <h3 id="step-9-set-up-and-configure-centos">Step 9: Set Up and Configure CentOS</h3>
+            <div>
+                <pre><code class="language-bash">adduser deploy
+passwd deploy
+usermod -aG wheel deploy</code></pre>
+            </div>
             <ul>
-                <li>Update the system with the latest packages and security patches.</li>
-                <li>Install necessary software and tools.</li>
-                <li>Configure your applications and services.</li>
+                <li><strong>Copy</strong> your SSH key to the new user so you can log in without a password:</li>
+            </ul>
+            <div>
+                <pre><code class="language-bash">rsync --archive --chown=deploy:deploy ~/.ssh /home/deploy</code></pre>
+            </div>
+            <ul>
+                <li><strong>Test</strong> the new user by opening a separate terminal and running <code>ssh deploy@YOUR_DROPLET_IP</code>.</li>
+            </ul>
+            <h3 id="step-6-update-packages-and-configure-firewall">Step 6: Update Packages and Configure Firewall</h3>
+            <ul>
+                <li><strong>Update</strong> all installed packages to their latest versions:</li>
+            </ul>
+            <div>
+                <pre><code class="language-bash">sudo dnf update -y</code></pre>
+            </div>
+            <ul>
+                <li><strong>Install</strong> common tools you will need:</li>
+            </ul>
+            <div>
+                <pre><code class="language-bash">sudo dnf install -y vim git curl wget</code></pre>
+            </div>
+            <ul>
+                <li><strong>Enable</strong> the firewall and allow only the ports your services require:</li>
+            </ul>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --permanent --add-service=ssh
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --permanent --add-service=https
+sudo firewall-cmd --reload
+sudo firewall-cmd --list-all</code></pre>
+            </div>
+            <h3 id="step-7-install-and-configure-services">Step 7: Install and Configure Services</h3>
+            <ul>
+                <li><strong>Install</strong> a web server such as Nginx:</li>
+            </ul>
+            <div>
+                <pre><code class="language-bash">sudo dnf install -y nginx
+sudo systemctl enable nginx
+sudo systemctl start nginx</code></pre>
+            </div>
+            <ul>
+                <li><strong>Verify</strong> the server is running by visiting <code>http://YOUR_DROPLET_IP</code> in a browser.</li>
+                <li><strong>Deploy</strong> your application code by cloning a repository or using <code>scp</code>:</li>
+            </ul>
+            <div>
+                <pre><code class="language-bash">git clone https://github.com/your-org/your-app.git /var/www/your-app</code></pre>
+            </div>
+            <ul>
+                <li><strong>Configure</strong> Nginx to reverse-proxy traffic to your application on its internal port.</li>
+            </ul>
+            <h3 id="step-8-secure-ssh-access">Step 8: Secure SSH Access</h3>
+            <ul>
+                <li><strong>Disable</strong> root login and password authentication by editing <code>/etc/ssh/sshd_config</code>:</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">PermitRootLogin no
+PasswordAuthentication no</code></pre>
+            </div>
+            <ul>
+                <li><strong>Restart</strong> the SSH daemon to apply changes:</li>
+            </ul>
+            <div>
+                <pre><code class="language-bash">sudo systemctl restart sshd</code></pre>
+            </div>
+            <ul>
+                <li><strong>Confirm</strong> that you can still log in with your non-root user before closing the root session.</li>
+            </ul>
+            <h3 id="post-deployment">Post-Deployment</h3>
+            <h4 id="monitoring">Monitoring</h4>
+            <ul>
+                <li><strong>Enable</strong> the Digital Ocean monitoring agent during droplet creation or install it manually:</li>
+            </ul>
+            <div>
+                <pre><code class="language-bash">curl -sSL https://repos.insights.digitalocean.com/install.sh | sudo bash</code></pre>
+            </div>
+            <ul>
+                <li><strong>Set</strong> up alerts in the dashboard for CPU, memory, and disk usage thresholds.</li>
+                <li><strong>Consider</strong> tools like <code>htop</code>, <code>journalctl</code>, or Prometheus for deeper insight into resource usage.</li>
+            </ul>
+            <h4 id="backups">Backups</h4>
+            <ul>
+                <li><strong>Turn</strong> on weekly backups in the Digital Ocean dashboard (adds 20% to the droplet cost).</li>
+                <li><strong>Schedule</strong> application-level backups for databases and uploaded files:</li>
+            </ul>
+            <div>
+                <pre><code class="language-bash">pg_dump mydb &gt; /backups/mydb_$(date +%F).sql</code></pre>
+            </div>
+            <ul>
+                <li><strong>Store</strong> critical backups off-site using Digital Ocean Spaces or another object storage provider.</li>
+            </ul>
+            <h4 id="security-hardening">Security Hardening</h4>
+            <ul>
+                <li><strong>Install</strong> and enable automatic security updates:</li>
+            </ul>
+            <div>
+                <pre><code class="language-bash">sudo dnf install -y dnf-automatic
+sudo systemctl enable --now dnf-automatic-install.timer</code></pre>
+            </div>
+            <ul>
+                <li><strong>Run</strong> <code>sudo dnf needs-restarting -r</code> periodically to check if a reboot is required after updates.</li>
+                <li><strong>Use</strong> Fail2Ban to protect against brute-force SSH attempts:</li>
+            </ul>
+            <div>
+                <pre><code class="language-bash">sudo dnf install -y epel-release
+sudo dnf install -y fail2ban
+sudo systemctl enable --now fail2ban</code></pre>
+            </div>
+            <ul>
+                <li><strong>Review</strong> open ports regularly with <code>sudo firewall-cmd --list-all</code> and remove any that are no longer needed.</li>
             </ul>
         </article-section>
     </div>

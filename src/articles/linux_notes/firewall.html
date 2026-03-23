@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/firewall",
             "description": "A firewall is like a guard for your computer.",
-            "dateModified": "2016-10-13"
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -83,6 +83,7 @@
                     <li><a href="#ufw">UFW</a></li>
                     <li><a href="#firewalld">Firewalld</a>
                         <ol>
+                            <li><a href="#choosing-between-iptables-ufw-and-firewalld">Choosing Between iptables, ufw, and firewalld</a></li>
                             <li><a href="#challenges">Challenges</a></li>
                         </ol>
                     </li>
@@ -151,7 +152,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: October 13, 2016</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="firewalls">Firewalls</h2>
             <p>A firewall is like a guard for your computer. It keeps your computer safe from others who shouldn't use it. It checks the information going in and out and follows safety rules. In Linux, there are several utilities to manage your firewall, including <code>iptables</code>, <code>ufw</code>, and <code>firewalld</code>.</p>
@@ -269,8 +270,8 @@ ufw default allow outgoing
 ufw enable</code></pre>
             </div>
             <h2 id="firewalld">Firewalld</h2>
-            <p>Firewalld is a more advanced firewall used by Fedora and other Linux distributions. It lets you configure firewalls using zones, which are collections of rules that apply to specific types of network interfaces.</p>
-            <p>To view the currently configured rules, use the <code>--list-all flag</code>:</p>
+            <p>Firewalld is a more advanced firewall used by Fedora and other Linux distributions. It lets you configure firewalls using zones, which are collections of rules that apply to specific types of network interfaces. One helpful detail to remember is that <code>firewalld</code> keeps separate runtime and permanent configurations. Commands without <code>--permanent</code> affect the current session only, while permanent rules are written to disk and take effect after a reload or reboot.</p>
+            <p>To view the currently configured rules, use the <code>--list-all</code> flag:</p>
             <div>
                 <pre><code class="language-bash">firewall-cmd --list-all</code></pre>
             </div>
@@ -302,17 +303,48 @@ ufw enable</code></pre>
                 <li><strong>Protocols, Masquerade, Forward-ports, Source-ports, Icmp-blocks</strong>: Other network settings and rules.</li>
                 <li><strong>Rich Rules</strong>: More complex rules defined, like allowing specific IP ranges on certain ports. For example, the rule allowing all traffic from the <code>192.168.0.0/24</code> subnet, and allowing TCP traffic on port <code>443</code> from the <code>10.0.0.0/8</code> subnet.</li>
             </ul>
+            <p>You can also inspect which zones exist and which one is currently the default:</p>
+            <div>
+                <pre><code class="language-bash">firewall-cmd --get-zones
+firewall-cmd --get-default-zone
+firewall-cmd --get-active-zones</code></pre>
+            </div>
+            <p>This is useful on multi-homed hosts. For example, you might place a public-facing interface in the <code>public</code> zone and an internal interface in the <code>internal</code> zone.</p>
             <p>I. Adding Rules</p>
             <p>To add a new rule, use the <code>--add-service</code> flag followed by the service name. For example, to allow incoming <code>SSH</code> connections, use:</p>
             <div>
                 <pre><code class="language-bash">firewall-cmd --permanent --add-service=ssh</code></pre>
+            </div>
+            <p>To allow a custom port instead of a predefined service, use <code>--add-port</code>:</p>
+            <div>
+                <pre><code class="language-bash">firewall-cmd --permanent --add-port=8443/tcp</code></pre>
             </div>
             <p>II. Removing Rules</p>
             <p>To remove a rule, use the <code>--remove-service</code> flag followed by the service name. For example, to block incoming <code>HTTP</code> connections, use:</p>
             <div>
                 <pre><code class="language-bash">firewall-cmd --permanent --remove-service=http</code></pre>
             </div>
-            <p>III. Applying Changes</p>
+            <p>III. Assigning Interfaces and Using Zones</p>
+            <p>Zones become especially useful when the same machine serves different networks. The commands below move an interface into the <code>internal</code> zone and then confirm the result:</p>
+            <div>
+                <pre><code class="language-bash">firewall-cmd --permanent --zone=internal --change-interface=eth1
+firewall-cmd --reload
+firewall-cmd --zone=internal --list-all</code></pre>
+            </div>
+            <p>If the built-in zones do not match your environment, you can create a new one:</p>
+            <div>
+                <pre><code class="language-bash">firewall-cmd --permanent --new-zone=web-admin
+firewall-cmd --permanent --zone=web-admin --add-service=https
+firewall-cmd --permanent --zone=web-admin --add-source=192.168.50.0/24
+firewall-cmd --reload</code></pre>
+            </div>
+            <p>This configuration creates a dedicated zone for administrative HTTPS access from a trusted subnet.</p>
+            <p>IV. Rich Rules</p>
+            <p>For more precise filtering, <code>firewalld</code> supports rich rules. For example, the following rule allows HTTPS only from the <code>10.0.0.0/8</code> network:</p>
+            <div>
+                <pre><code class="language-bash">firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="10.0.0.0/8" service name="https" accept'</code></pre>
+            </div>
+            <p>V. Applying Changes</p>
             <p>To apply the changes and reload the firewall, use the <code>--reload</code> flag:</p>
             <div>
                 <pre><code class="language-shell">firewall-cmd --reload</code></pre>
@@ -321,6 +353,37 @@ ufw enable</code></pre>
             <div>
                 <pre><code class="language-shell">systemctl restart firewalld.service</code></pre>
             </div>
+            <h3 id="choosing-between-iptables-ufw-and-firewalld">Choosing Between <code>iptables</code>, <code>ufw</code>, and <code>firewalld</code></h3>
+            <p>Each firewall tool can solve the same basic problem, but they target different workflows:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Tool</td>
+                    <td>Best For</td>
+                    <td>Strengths</td>
+                    <td>Trade-Offs</td>
+                </tr>
+                <tr>
+                    <td><code>iptables</code></td>
+                    <td>Low-level packet filtering and legacy environments</td>
+                    <td>Very flexible, widely documented, exposes the full rule chain model</td>
+                    <td>Verbose syntax, easier to misconfigure, harder for beginners</td>
+                </tr>
+                <tr>
+                    <td><code>ufw</code></td>
+                    <td>Small servers and desktop systems</td>
+                    <td>Simple commands such as <code>allow</code>, <code>deny</code>, and <code>status</code>, quick to learn</td>
+                    <td>Less expressive for advanced routing and zone-based designs</td>
+                </tr>
+                <tr>
+                    <td><code>firewalld</code></td>
+                    <td>Systems with changing interfaces, multiple trust zones, and enterprise distros</td>
+                    <td>Supports runtime vs permanent rules, zones, rich rules, and D-Bus integration</td>
+                    <td>More concepts to learn than <code>ufw</code>, less direct than raw <code>iptables</code></td>
+                </tr>
+            </table>
+            </p>
+            <p>As a rule of thumb, choose <code>ufw</code> when you want a simple host firewall, choose <code>firewalld</code> when you need zone-aware administration, and fall back to <code>iptables</code> when you need direct low-level control or you are maintaining an older system.</p>
             <h3 id="challenges">Challenges</h3>
             <ol>
                 <li>Block all incoming traffic on port 80 (HTTP) while allowing all incoming traffic on port 22 (SSH). Test the configuration by attempting to access the system on both ports and verify that HTTP is blocked while SSH remains accessible. Discuss the importance of selectively blocking and allowing specific ports for securing a system.</li>

@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/git_notes/01_introduction_to_version_control",
             "description": "Git is a powerful and widely used version control system that helps you manage code changes, work with others, and keep projects safe.",
-            "dateModified": "2017-06-19"
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -81,7 +81,12 @@
                     <li><a href="#why-learn-git-">Why Learn Git?</a>
                         <ol>
                             <li><a href="#who-is-using-git-">Who is Using Git?</a></li>
-                            <li><a href="#git-configuration">Git Configuration</a></li>
+                            <li><a href="#git-configuration">Git Configuration</a>
+                                <ol>
+                                    <li><a href="#configuration-scopes">Configuration Scopes</a></li>
+                                    <li><a href="#useful-configuration-options">Useful Configuration Options</a></li>
+                                </ol>
+                            </li>
                             <li><a href="#setting-up-ssh">Setting Up SSH</a></li>
                         </ol>
                     </li>
@@ -134,17 +139,17 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: June 19, 2017</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="why-learn-git-">Why Learn Git?</h2>
             <p>Git is a powerful and widely used version control system that helps you manage code changes, work with others, and keep projects safe. Think of it as a digital timeline you can jump back to whenever something goes wrong. Here are some straightforward reasons to learn Git:</p>
             <ul>
                 <li>Most software teams rely on Git. It’s a skill that employers actively look for.</li>
-                <li>By pushing to an external server (like GitHub), you’ll have a safe backup of your function.</li>
+                <li>By pushing to an external server (like GitHub), you’ll have a safe backup of your codebase.</li>
                 <li>Every version of your project is saved. You can always rewind to a point where your code functioned correctly.</li>
                 <li>If you break something, you can revert to a stable commit and troubleshoot from there.</li>
                 <li>For those using multiple machines or virtual environments, Git keeps everything in sync.</li>
-                <li>Git lets multiple people function on the same codebase, handling merge conflicts and version tracking.</li>
+                <li>Git lets multiple people work on the same codebase, handling merge conflicts and version tracking.</li>
                 <li>GitHub is a great place to show off your projects to potential employers or collaborators.</li>
             </ul>
             <div>
@@ -224,6 +229,33 @@ core.editor=vim
             </div>
             <p>You’ll see Git settings like <code>user.name</code> and <code>user.email</code>. If they match what you entered, you’re good to go.</p>
             <p>If you need different credentials for a single project, omit <code>--global</code> to apply the settings only to that repository.</p>
+            <h4 id="configuration-scopes">Configuration Scopes</h4>
+            <p>Git stores configuration at three levels, from lowest to highest precedence:</p>
+            <ol>
+                <li><strong>System</strong> (<code>--system</code>): Applies to every user on the machine. Stored in <code>/etc/gitconfig</code>.</li>
+                <li><strong>Global</strong> (<code>--global</code>): Applies to your user account. Stored in <code>~/.gitconfig</code>.</li>
+                <li><strong>Local</strong> (<code>--local</code>): Applies only to a single repository. Stored in <code>.git/config</code>.</li>
+            </ol>
+            <p>A local setting always wins over global, which wins over system. To inspect each level:</p>
+            <div>
+                <pre><code class="language-bash">git config --system --list    # system-wide settings
+git config --global --list    # your user settings
+git config --local --list     # this repo only</code></pre>
+            </div>
+            <h4 id="useful-configuration-options">Useful Configuration Options</h4>
+            <div>
+                <pre><code class="language-bash"># Set your default branch name for new repos (modern standard)
+git config --global init.defaultBranch main
+
+# Enable colored output
+git config --global color.ui auto
+
+# Set your preferred editor (e.g., vim, nano, code --wait)
+git config --global core.editor "vim"
+
+# Store credentials so you don't retype passwords
+git config --global credential.helper cache</code></pre>
+            </div>
             <h3 id="setting-up-ssh">Setting Up SSH</h3>
             <p>Using SSH with Git is more secure and saves you from typing your credentials every time you push or pull. Below is a step-by-step guide:</p>
             <p>I. Check if you already have an SSH key:</p>
@@ -232,8 +264,8 @@ core.editor=vim
             </div>
             <p>Expected output (example):</p>
             <div>
-                <pre><code class="language-shell">- 32 id_rsa
-- 32 id_rsa.pub</code></pre>
+                <pre><code class="language-shell">-rw------- 1 user user 1679 Jan  1 00:00 id_rsa
+-rw-r--r-- 1 user user  400 Jan  1 00:00 id_rsa.pub</code></pre>
             </div>
             <ul>
                 <li><code>id_rsa</code> is your private key. </li>
@@ -250,7 +282,18 @@ core.editor=vim
 Enter passphrase (empty for no passphrase):
 Enter same passphrase again:</code></pre>
             </div>
-            <p>Press Enter to accept the default file location, and optionally type a passphrase for extra security. When complete, you’ll have <code>id_rsa</code> (private) and <code>id_rsa.pub</code> (public) in <code>~/.ssh</code>.</p>
+            <p>Press Enter to accept the default file location, and optionally type a passphrase for extra security. When complete, you'll have <code>id_rsa</code> (private) and <code>id_rsa.pub</code> (public) in <code>~/.ssh</code>.</p>
+            <p><strong>Modern recommendation:</strong> ED25519 keys are shorter, faster, and more secure than RSA. If your systems support it (most do since OpenSSH 6.5+), prefer:</p>
+            <div>
+                <pre><code class="language-bash">ssh-keygen -t ed25519 -C "you@example.com"</code></pre>
+            </div>
+            <p>This creates <code>id_ed25519</code> and <code>id_ed25519.pub</code> in <code>~/.ssh</code>.</p>
+            <p><strong>Using SSH Agent (avoid retyping passphrases):</strong></p>
+            <p>If you protected your key with a passphrase (recommended), add it to <code>ssh-agent</code> so you type it once per session:</p>
+            <div>
+                <pre><code class="language-bash">eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519</code></pre>
+            </div>
             <p>III. View your public key:</p>
             <div>
                 <pre><code class="language-bash">cat ~/.ssh/id_rsa.pub</code></pre>

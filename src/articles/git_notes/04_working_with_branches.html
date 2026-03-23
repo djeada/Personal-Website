@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/git_notes/04_working_with_branches",
             "description": "Git branches are lightweight names that point to commits.",
-            "dateModified": "2019-02-06"
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -91,8 +91,16 @@
                         </li>
                         <li><a href="#listing-branches">Listing branches</a></li>
                         <li><a href="#creating-branches">Creating branches</a></li>
-                        <li><a href="#switching-branches">Switching branches</a></li>
-                        <li><a href="#merging-branches">Merging branches</a></li>
+                        <li><a href="#switching-branches">Switching branches</a>
+                            <ol>
+                                <li><a href="#tracking-remote-branches">Tracking Remote Branches</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#merging-branches">Merging branches</a>
+                            <ol>
+                                <li><a href="#understanding-fast-forward-vs-three-way-merges">Understanding Fast-Forward vs. Three-Way Merges</a></li>
+                            </ol>
+                        </li>
                         <li><a href="#deleting-branches">Deleting branches</a></li>
                         <li><a href="#best-practices">Best practices</a></li>
                     </ol>
@@ -136,7 +144,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: February 06, 2019</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="git-branching">Git branching</h2>
             <p>Git branches are lightweight names that point to commits. Think of them as parallel timelines: you can try ideas on a branch without touching <code>main</code>, then merge back when you’re happy.</p>
@@ -234,12 +242,32 @@
                 <pre><code class="language-bash">git checkout -b new_branch</code></pre>
             </div>
             <p>That command says, “Make a new branch called <code>new_branch</code> and check it out right away.”</p>
+            <p><strong>Modern alternative (Git 2.23+):</strong> The <code>git switch</code> command was introduced for clarity:</p>
+            <div>
+                <pre><code class="language-bash"># Create and switch in one step
+git switch -c new_branch
+
+# Equivalent to: git checkout -b new_branch</code></pre>
+            </div>
             <h3 id="switching-branches">Switching branches</h3>
             <p>Once a branch exists, you switch to it with:</p>
             <div>
-                <pre><code class="language-bash">git checkout branch1</code></pre>
+                <pre><code class="language-bash">git checkout branch1
+# or (modern):
+git switch branch1</code></pre>
             </div>
-            <p>Any commits you make now will belong to <code>branch1</code>. If you switch back to <code>master</code> (<code>git checkout master</code>), you’ll return to the previous state of the code in that branch.</p>
+            <p>Any commits you make now will belong to <code>branch1</code>. If you switch back to <code>master</code> (<code>git checkout master</code> or <code>git switch master</code>), you’ll return to the previous state of the code in that branch.</p>
+            <h4 id="tracking-remote-branches">Tracking Remote Branches</h4>
+            <p>When you create a local branch from a remote one, set up tracking so <code>git pull</code> and <code>git push</code> work without extra arguments:</p>
+            <div>
+                <pre><code class="language-bash"># Check out a remote branch and track it automatically
+git checkout --track origin/feature
+# or: git switch feature  (auto-tracks if remote branch exists)
+
+# Set upstream tracking on an existing branch
+git branch -u origin/main
+# or: git branch --set-upstream-to=origin/main</code></pre>
+            </div>
             <h3 id="merging-branches">Merging branches</h3>
             <p>When your work in a branch is ready to join another branch (often <code>master</code>), you’ll merge. <strong>First</strong>, switch to the branch you want to merge <strong>into</strong>:</p>
             <div>
@@ -263,6 +291,26 @@ Fast-forward
  2 files changed, 3 insertions(+), 1 deletion(-)</code></pre>
             </div>
             <p>In the output above, Git performed a <strong>fast-forward</strong> merge, which just moves the branch pointer forward because <code>master</code> was directly behind <code>new_branch</code>.</p>
+            <h4 id="understanding-fast-forward-vs-three-way-merges">Understanding Fast-Forward vs. Three-Way Merges</h4>
+            <p>A <strong>fast-forward</strong> merge happens when the target branch has no new commits since you branched:</p>
+            <div>
+                <pre><code class="language-shell">Before: main ──A──B──C   feature ──D──E
+After:  main ──A──B──C──D──E
+        (pointer moved forward; no merge commit)</code></pre>
+            </div>
+            <p>A <strong>three-way merge</strong> happens when both branches have diverged:</p>
+            <div>
+                <pre><code class="language-shell">Before: main ──A──B──C──F   feature ──D──E
+After:  main ──A──B──C──F──M
+                         \      /
+                          D──E
+        (M is a merge commit with two parents)</code></pre>
+            </div>
+            <p>To <strong>always</strong> create a merge commit (even when fast-forward is possible), use:</p>
+            <div>
+                <pre><code class="language-bash">git merge --no-ff branch_name</code></pre>
+            </div>
+            <p>Many teams prefer <code>--no-ff</code> because the merge commit documents when and why branches were combined.</p>
             <h3 id="deleting-branches">Deleting branches</h3>
             <p>Once you’ve merged a branch (or if you decide it’s no longer needed), you can delete it:</p>
             <div>

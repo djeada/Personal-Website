@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/files_and_dirs",
             "description": "One of the fundamental skills is to navigate and manage files and directories effectively.",
-            "dateModified": "2021-02-13"
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -85,9 +85,9 @@
                                 <li><a href="#relative-path">Relative Path</a></li>
                             </ol>
                         </li>
-                        <li><a href="#navigation-and-file-manipulation">Navigation and File Manipulation</a></li>
-                        <li><a href="#print-working-directory-pwd-">Print Working Directory (pwd)</a>
+                        <li><a href="#navigation-and-file-manipulation">Navigation and File Manipulation</a>
                             <ol>
+                                <li><a href="#print-working-directory-pwd-">Print Working Directory (pwd)</a></li>
                                 <li><a href="#change-directory-cd-">Change Directory (cd)</a></li>
                                 <li><a href="#list-directory-contents-ls-">List Directory Contents (ls)</a></li>
                             </ol>
@@ -98,6 +98,7 @@
                                 <li><a href="#copying-files-and-directories">Copying Files and Directories</a></li>
                                 <li><a href="#moving-and-renaming-files-and-directories">Moving and Renaming Files and Directories</a></li>
                                 <li><a href="#removing-files-and-directories">Removing Files and Directories</a></li>
+                                <li><a href="#synchronizing-files-and-directories-with-rsync">Synchronizing Files and Directories with rsync</a></li>
                             </ol>
                         </li>
                         <li><a href="#viewing-and-inspecting-file-contents">Viewing and Inspecting File Contents</a>
@@ -180,12 +181,10 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: February 13, 2021</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="understanding-files-and-directories">Understanding Files and Directories</h2>
             <p>One of the fundamental skills is to navigate and manage files and directories effectively. Here, we focus on the crucial concepts that will facilitate your work within the file system.</p>
-            <p>TODO:
-                - rsync</p>
             <h3 id="types-of-file-paths">Types of File Paths</h3>
             <p>The two main types of paths are <strong>Absolute Path</strong> and <strong>Relative Path</strong>. </p>
             <h4 id="absolute-path">Absolute Path</h4>
@@ -209,7 +208,8 @@
             </ul>
             <h3 id="navigation-and-file-manipulation">Navigation and File Manipulation</h3>
             <p>Linux provides several commands to navigate through the file system and manipulate files and directories. Here are a few fundamental commands:</p>
-            <h3 id="print-working-directory-pwd-">Print Working Directory (<code>pwd</code>)</h3>
+            <p>Before modifying files, it helps to confirm where you are, move into the correct directory, and inspect its contents. A common workflow is <code>pwd</code> to verify your location, <code>cd</code> to move elsewhere, and <code>ls</code> to confirm that the expected files are present before you start copying, editing, or deleting anything.</p>
+            <h4 id="print-working-directory-pwd-">Print Working Directory (<code>pwd</code>)</h4>
             <p>The <code>pwd</code> command displays the absolute path of the current directory.</p>
             <div>
                 <pre><code class="language-bash">pwd</code></pre>
@@ -282,6 +282,77 @@
                 <pre><code class="language-bash">rm -r directory_name</code></pre>
             </div>
             <p>Warning: The rm command is powerful and potentially destructive, especially when used with the -r (recursive) and -f (force) options. Use it with caution.</p>
+            <h4 id="synchronizing-files-and-directories-with-rsync">Synchronizing Files and Directories with <code>rsync</code></h4>
+            <p>The <code>rsync</code> utility efficiently copies and synchronizes files between local paths or between a local and remote host. Unlike <code>cp</code>, it only transfers the differences between the source and destination, making it ideal for backups and large-scale file transfers.</p>
+            <p>Basic syntax:</p>
+            <div>
+                <pre><code class="language-bash">rsync [options] source destination</code></pre>
+            </div>
+            <p>To synchronize a local directory to another local path:</p>
+            <div>
+                <pre><code class="language-bash">rsync -av /home/user/documents/ /mnt/backup/documents/</code></pre>
+            </div>
+            <ul>
+                <li>The <code>-a</code> (archive) flag preserves permissions, timestamps, symbolic links, and recursion.</li>
+                <li>The <code>-v</code> (verbose) flag prints each file as it is transferred.</li>
+                <li>A trailing <code>/</code> on the source copies the directory contents without creating an extra nested folder.</li>
+            </ul>
+            <p>To synchronize files to a remote host over SSH:</p>
+            <div>
+                <pre><code class="language-bash">rsync -avz /home/user/documents/ user@remote:/backup/documents/</code></pre>
+            </div>
+            <ul>
+                <li>The <code>-z</code> flag compresses data during transfer, reducing bandwidth usage.</li>
+            </ul>
+            <p>To perform a dry run and preview what would be transferred without making changes:</p>
+            <div>
+                <pre><code class="language-bash">rsync -avz --dry-run /home/user/documents/ /mnt/backup/documents/</code></pre>
+            </div>
+            <p>To delete files in the destination that no longer exist in the source (mirroring):</p>
+            <div>
+                <pre><code class="language-bash">rsync -av --delete /home/user/documents/ /mnt/backup/documents/</code></pre>
+            </div>
+            <p>To exclude certain files or directories from the transfer:</p>
+            <div>
+                <pre><code class="language-bash">rsync -av --exclude='*.log' --exclude='.cache' /home/user/ /mnt/backup/user/</code></pre>
+            </div>
+            <p>Common <code>rsync</code> options:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Option</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td><code>-a</code></td>
+                    <td>Archive mode; preserves permissions, timestamps, symlinks, and recurses into directories.</td>
+                </tr>
+                <tr>
+                    <td><code>-v</code></td>
+                    <td>Verbose output; lists each file transferred.</td>
+                </tr>
+                <tr>
+                    <td><code>-z</code></td>
+                    <td>Compress data during transfer.</td>
+                </tr>
+                <tr>
+                    <td><code>-P</code></td>
+                    <td>Show progress per file and keep partially transferred files.</td>
+                </tr>
+                <tr>
+                    <td><code>--delete</code></td>
+                    <td>Remove files from the destination that no longer exist in the source.</td>
+                </tr>
+                <tr>
+                    <td><code>--dry-run</code></td>
+                    <td>Simulate the transfer without making changes.</td>
+                </tr>
+                <tr>
+                    <td><code>--exclude</code></td>
+                    <td>Skip files matching the given pattern.</td>
+                </tr>
+            </table>
+            </p>
             <h3 id="viewing-and-inspecting-file-contents">Viewing and Inspecting File Contents</h3>
             <p>There are various ways to view and inspect the contents of files in Unix-like operating systems. We can use the <code>cat</code>, <code>more</code>, <code>less</code>, <code>head</code>, and <code>tail</code> commands to achieve this. </p>
             <h4 id="displaying-file-content-with-cat">Displaying File Content with <code>cat</code></h4>

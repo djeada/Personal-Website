@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/git_notes/10_squashing_commits",
             "description": "In Git, you might accumulate multiple small commits over the course of developing a new feature, fixing small bugs, or refactoring code.",
-            "dateModified": "2020-08-04"
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -137,7 +137,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: August 04, 2020</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="squashing">Squashing</h2>
             <p>In Git, you might accumulate multiple small commits over the course of developing a new feature, fixing small bugs, or refactoring code. While these incremental commits are crucial during active development, they can clutter the project history in the long term. This clutter becomes especially evident when you merge your work into a primary branch like <code>main</code> or <code>master</code>.</p>
@@ -222,13 +222,21 @@ pick m3n4o5p6 Fourth commit message</code></pre>
             <ul>
                 <li>Change <code>pick</code> to <code>squash</code> (or <code>s</code> for short) for the commits you want to squash <strong>into</strong> the commit above it.</li>
                 <li>If you want to end up with just <strong>one</strong> commit, you typically mark the first commit as <code>pick</code> and the rest as <code>squash</code>.</li>
+                <li>Use <code>fixup</code> (or <code>f</code>) instead of <code>squash</code> to discard a commit’s message and keep only the first commit’s message—saves you from editing the combined message.</li>
             </ul>
-            <p><strong>Example</strong>:</p>
+            <p><strong>Example (squash – combine messages):</strong></p>
             <div>
                 <pre><code class="language-shell">pick a1b2c3d4 First commit message
-squash e5f6g7h8 Second commit message
-squash i9j0k1l2 Third commit message
-squash m3n4o5p6 Fourth commit message</code></pre>
+squash e5f6a7b8 Second commit message
+squash c9d0e1f2 Third commit message
+squash a3b4c5d6 Fourth commit message</code></pre>
+            </div>
+            <p><strong>Example (fixup – keep only first message):</strong></p>
+            <div>
+                <pre><code class="language-shell">pick a1b2c3d4 Add user authentication
+fixup e5f6a7b8 Fix typo in auth module
+fixup c9d0e1f2 Add missing test
+fixup a3b4c5d6 Update error message</code></pre>
             </div>
             <p>IV. <strong>Save and Close the Editor</strong>:</p>
             <p>After you close the editor, Git will apply your rebase instructions. It will then open another editor window to let you customize the final combined commit message. </p>
@@ -259,9 +267,9 @@ squash m3n4o5p6 Fourth commit message</code></pre>
             <h3 id="dealing-with-remote-repositories">Dealing with Remote Repositories</h3>
             <p>If the commits you have squashed were already <strong>pushed</strong> to a remote repository, you will need to <strong>force push</strong> your rewritten history:</p>
             <div>
-                <pre><code class="language-bash">git push origin your-branch --force</code></pre>
+                <pre><code class="language-bash">git push origin your-branch --force-with-lease</code></pre>
             </div>
-            <p>Force pushing effectively replaces the remote branch with your local branch’s new commit structure. This can cause major confusion for anyone who has already pulled those original commits. They may encounter merge conflicts or will need to rebase their work.</p>
+            <p>The <code>--force-with-lease</code> flag is safer than <code>--force</code> because it refuses to overwrite the remote branch if someone else has pushed changes you haven’t fetched yet. Force pushing effectively replaces the remote branch with your local branch’s new commit structure. This can cause major confusion for anyone who has already pulled those original commits. They may encounter merge conflicts or will need to rebase their work.</p>
             <p><strong>Therefore</strong>, always coordinate with your team or ensure that no one else depends on the commit history you are about to rewrite. It might be safer to create a new branch that contains your squashed commit, then open a pull request from that branch, so you don’t disrupt existing references on the remote repository.</p>
             <h3 id="best-practices-and-warnings">Best Practices and Warnings</h3>
             <p>I. <strong>Avoid Squashing on Shared or Public Branches</strong> </p>
@@ -272,7 +280,20 @@ squash m3n4o5p6 Fourth commit message</code></pre>
             <p>Many code hosting platforms like GitHub, GitLab, and Bitbucket offer a “Squash and Merge” button. This automatically squashes all commits from a pull/merge request into one commit, preserving the clean main-branch history without manual rebase steps.</p>
             <p>IV. <strong>Check Local Testing Before Force Pushing</strong> </p>
             <p>After squashing, ensure your project still builds and all tests pass locally. The squashing itself shouldn’t break code, but always confirm to avoid introducing subtle errors or regressions.</p>
-            <p>V. <strong>Communicate with Your Team</strong> </p>
+            <p>V. <strong>Use <code>--autosquash</code> for Faster Cleanup</strong></p>
+            <p>If you name your commits with <code>fixup!</code> or <code>squash!</code> prefixes during development, Git can automatically reorder them during interactive rebase:</p>
+            <div>
+                <pre><code class="language-bash"># During development, mark fixup commits
+git commit -m "fixup! Add user authentication"
+
+# Later, rebase with autosquash
+git rebase -i --autosquash HEAD~5</code></pre>
+            </div>
+            <p>Git will automatically place <code>fixup!</code> commits after their target and mark them as <code>fixup</code>. To enable this by default:</p>
+            <div>
+                <pre><code class="language-bash">git config --global rebase.autoSquash true</code></pre>
+            </div>
+            <p>VI. <strong>Communicate with Your Team</strong> </p>
             <p>If you do need to force push, post a heads-up in your team’s communication channel, or coordinate a short time window for rewriting history so that no one else is pushing or pulling on that branch.</p>
         </article-section>
     </div>

@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/02_static_python_website_netlify",
             "description": "Netlify allows you to easily deploy and manage static websites.",
-            "dateModified": "2026-01-24"
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -80,6 +80,11 @@
                 <ol><a href="#deploying-static-python-website-on-netlify">Deploying Static Python Website on Netlify</a>
                     <ol>
                         <li><a href="#steps-to-deploy">Steps to Deploy</a></li>
+                        <li><a href="#continuous-deployment">Continuous Deployment</a></li>
+                        <li><a href="#preview-deploys">Preview Deploys</a></li>
+                        <li><a href="#environment-variables">Environment Variables</a></li>
+                        <li><a href="#rollback">Rollback</a></li>
+                        <li><a href="#monitoring-and-troubleshooting">Monitoring and Troubleshooting</a></li>
                     </ol>
                 </ol>
             </div>
@@ -186,66 +191,155 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="deploying-static-python-website-on-netlify">Deploying Static Python Website on Netlify</h2>
-            <p>Netlify allows you to easily deploy and manage static websites.</p>
+            <p>Netlify allows you to easily deploy and manage static websites. A Python-based static site generator like Pelican, MkDocs, or Frozen-Flask produces HTML files that Netlify serves through its global CDN.</p>
+            <div>
+                <pre><code class="language-shell">+-----------+      push       +------------+     build      +----------+
+ |           | -------------&gt; |            | ------------&gt; |          |
+ | Git Repo  |                | Netlify    |               | CDN Edge |
+ | (GitHub,  |                | Build Env  |               | Nodes    |
+ |  GitLab)  |                | (Python +  |               | (Global) |
+ |           | &lt;------------- | pip)       | &lt;------------ |          |
+ +-----------+   webhook      +------------+   deploy       +----------+
+                                                                |
+                                                                |
+                                                          +-----+-----+
+                                                          |  End Users |
+                                                          +-----------+</code></pre>
+            </div>
+            <ul>
+                <li><strong>Repo</strong> holds your source files, templates, and configuration.</li>
+                <li><strong>Build</strong> is the step where Netlify runs your Python generator to produce static HTML.</li>
+                <li><strong>CDN</strong> distributes the output globally so users hit the closest edge node.</li>
+            </ul>
             <h3 id="steps-to-deploy">Steps to Deploy</h3>
             <ol>
-                <li>
-                    <p><strong>Create a repository</strong>: Create a Git repository containing your static Python website code.</p>
-                </li>
-                <li>
-                    <p><strong>Sign up for Netlify</strong>: If you don't have an account, sign up at <a href="https://www.netlify.com/">netlify.com</a>.</p>
-                </li>
-                <li>
-                    <p><strong>Connect your repository</strong>: Link your Git repository to Netlify.</p>
-                </li>
-                <li>
-                    <p>In the Netlify dashboard, click on "New site from Git".</p>
-                </li>
-                <li>Choose your Git provider (GitHub, GitLab, or Bitbucket).</li>
-                <li>
-                    <p>Select the repository with your static Python website code.</p>
-                </li>
-                <li>
-                    <p><strong>Configure build settings</strong>: Set up build settings for your website.</p>
-                </li>
-                <li>
-                    <p>Specify the build command for your project, if required.</p>
-                </li>
-                <li>Set the publish directory (usually <code>dist</code> or <code>public</code>).</li>
-                <li>
-                    <p>Click "Deploy site" to start the deployment process.</p>
-                </li>
-                <li>
-                    <p><strong>Domain settings</strong>: Configure your custom domain or use the auto-generated one provided by Netlify.</p>
-                </li>
-                <li>
-                    <p>Go to the "Domain settings" section of your site dashboard.</p>
-                </li>
-                <li>Set up a custom domain or use the default Netlify subdomain.</li>
-                <li>
-                    <p>If using a custom domain, configure DNS settings with your domain registrar.</p>
-                </li>
-                <li>
-                    <p><strong>SSL/TLS</strong>: Secure your site with HTTPS using Let's Encrypt.</p>
-                </li>
-                <li>
-                    <p>Netlify provides free SSL/TLS certificates through Let's Encrypt.</p>
-                </li>
-                <li>
-                    <p>In the "Domain settings" section, click "SSL/TLS certificate" to set it up.</p>
-                </li>
-                <li>
-                    <p><strong>Monitor deployment</strong>: Check the status of your deployment.</p>
-                </li>
-                <li>
-                    <p>In the site dashboard, monitor the progress and status of your deployment.</p>
-                </li>
-                <li>Once the deployment is complete, your website is live and accessible via the specified domain.</li>
+                <li><strong>Create</strong> a Git repository containing your static Python website code and a <code>requirements.txt</code>:</li>
             </ol>
-            <p>With these steps, you can easily deploy and manage your static Python website on Netlify.</p>
+            <div>
+                <pre><code class="language-shell"># requirements.txt
+pelican==4.9.1
+markdown==3.6</code></pre>
+            </div>
+            <ol>
+                <li>
+                    <p><strong>Sign</strong> up at <a href="https://www.netlify.com/">netlify.com</a> if you don't have an account.</p>
+                </li>
+                <li>
+                    <p><strong>Connect</strong> your repository by clicking "New site from Git" in the Netlify dashboard, choosing your Git provider, and selecting the repository.</p>
+                </li>
+                <li>
+                    <p><strong>Configure</strong> build settings in the dashboard or, preferably, through a <code>netlify.toml</code> file at the root of your repo:</p>
+                </li>
+            </ol>
+            <div>
+                <pre><code class="language-toml">[build]
+  command = "pip install -r requirements.txt &amp;&amp; pelican content -s publishconf.py"
+  publish = "output"
+
+[build.environment]
+  PYTHON_VERSION = "3.11"</code></pre>
+            </div>
+            <ul>
+                <li><strong>command</strong> tells Netlify how to install dependencies and generate the site.</li>
+                <li>
+                    <p><strong>publish</strong> points to the directory that contains the generated HTML files.</p>
+                </li>
+                <li>
+                    <p><strong>Deploy</strong> by clicking "Deploy site" or simply pushing a commit to the linked branch.</p>
+                </li>
+                <li>
+                    <p><strong>Domain</strong> settings let you use a custom domain or the auto-generated <code>*.netlify.app</code> subdomain:</p>
+                </li>
+                <li>
+                    <p><strong>Navigate</strong> to "Domain settings" in the site dashboard.</p>
+                </li>
+                <li><strong>Add</strong> a custom domain and update DNS records with your registrar (CNAME or Netlify DNS).</li>
+                <li>
+                    <p><strong>Wait</strong> for DNS propagation, which can take a few minutes to 48 hours.</p>
+                </li>
+                <li>
+                    <p><strong>SSL/TLS</strong> is provisioned automatically through Let's Encrypt once DNS is verified:</p>
+                </li>
+                <li>
+                    <p><strong>Check</strong> the "SSL/TLS certificate" section in domain settings.</p>
+                </li>
+                <li><strong>Force</strong> HTTPS by enabling the option so all HTTP traffic is redirected.</li>
+            </ul>
+            <h3 id="continuous-deployment">Continuous Deployment</h3>
+            <ul>
+                <li><strong>Trigger</strong> builds automatically whenever you push to the production branch (usually <code>main</code>).</li>
+                <li><strong>Configure</strong> the branch in <code>netlify.toml</code> or in the dashboard under "Build &amp; deploy → Branches":</li>
+            </ul>
+            <div>
+                <pre><code class="language-toml">[context.production]
+  command = "pelican content -s publishconf.py"
+
+[context.branch-deploy]
+  command = "pelican content -s pelicanconf.py"</code></pre>
+            </div>
+            <ul>
+                <li><strong>Limit</strong> which branches trigger deploys to avoid unnecessary builds for feature branches.</li>
+            </ul>
+            <h3 id="preview-deploys">Preview Deploys</h3>
+            <ul>
+                <li><strong>Open</strong> a pull request against the production branch and Netlify creates a unique preview URL.</li>
+                <li><strong>Share</strong> the preview link with reviewers so they can see the exact changes before merging.</li>
+                <li><strong>Review</strong> the deploy log in the Netlify dashboard if the preview build fails.</li>
+                <li><strong>Merge</strong> the pull request once the preview looks correct, and the production site updates automatically.</li>
+            </ul>
+            <h3 id="environment-variables">Environment Variables</h3>
+            <ul>
+                <li><strong>Set</strong> variables in the Netlify dashboard under <strong>Site settings → Environment variables</strong>:</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">PELICAN_SITEURL    = https://example.com
+ANALYTICS_ID       = UA-XXXXXXXX-X</code></pre>
+            </div>
+            <ul>
+                <li><strong>Reference</strong> them in your build command or Python config:</li>
+            </ul>
+            <div>
+                <pre><code class="language-python">import os
+SITEURL = os.environ.get("PELICAN_SITEURL", "http://localhost:8000")</code></pre>
+            </div>
+            <ul>
+                <li><strong>Scope</strong> variables to specific deploy contexts (production, branch-deploy, deploy-preview) in <code>netlify.toml</code>:</li>
+            </ul>
+            <div>
+                <pre><code class="language-toml">[context.production.environment]
+  PELICAN_SITEURL = "https://example.com"
+
+[context.deploy-preview.environment]
+  PELICAN_SITEURL = "https://preview.example.com"</code></pre>
+            </div>
+            <h3 id="rollback">Rollback</h3>
+            <ul>
+                <li><strong>Open</strong> the "Deploys" tab in the Netlify dashboard to see a list of every previous deploy.</li>
+                <li><strong>Click</strong> on any successful deploy and select "Publish deploy" to instantly revert the live site.</li>
+                <li><strong>Understand</strong> that rollbacks are instant because Netlify keeps the built output of every deploy.</li>
+                <li><strong>Automate</strong> rollback by pinning a known-good commit with a deploy lock through the Netlify CLI:</li>
+            </ul>
+            <div>
+                <pre><code class="language-bash">npm install -g netlify-cli
+netlify deploy --prod --dir=output</code></pre>
+            </div>
+            <h3 id="monitoring-and-troubleshooting">Monitoring and Troubleshooting</h3>
+            <ul>
+                <li><strong>Check</strong> build logs in the Netlify dashboard whenever a deploy fails.</li>
+                <li><strong>Enable</strong> Netlify Analytics (paid) or integrate a lightweight tool like Plausible for traffic insights.</li>
+                <li><strong>Inspect</strong> HTTP headers and redirect rules using <code>curl -I https://your-site.netlify.app</code>.</li>
+                <li><strong>Add</strong> a <code>_redirects</code> file or redirect rules in <code>netlify.toml</code> for custom routing:</li>
+            </ul>
+            <div>
+                <pre><code class="language-toml">[[redirects]]
+  from = "/old-path"
+  to = "/new-path"
+  status = 301</code></pre>
+            </div>
+            <p>With these steps and configurations, you can deploy, preview, and manage a static Python website on Netlify with full continuous deployment support.</p>
         </article-section>
     </div>
     <footer>

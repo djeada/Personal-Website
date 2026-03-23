@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/disk_usage",
             "description": "Managing and monitoring disk usage is necessary for server maintenance, allowing administrators to identify disk space shortages caused by large log files, such as Apache or system logs, and malfunctioning applications that generate excessive data.",
-            "dateModified": "2021-09-06"
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -83,9 +83,26 @@
                         <li><a href="#exploring-the-du-command">Exploring the du Command</a></li>
                         <li><a href="#the-ncdu-command">The ncdu Command</a></li>
                         <li><a href="#cleaning-up-disk-space">Cleaning Up Disk Space</a></li>
+                        <li><a href="#managing-disk-quotas">Managing Disk Quotas</a>
+                            <ol>
+                                <li><a href="#enabling-quotas-on-a-filesystem">Enabling Quotas on a Filesystem</a></li>
+                                <li><a href="#setting-quotas-for-a-user">Setting Quotas for a User</a></li>
+                                <li><a href="#checking-quota-usage">Checking Quota Usage</a></li>
+                                <li><a href="#setting-group-quotas">Setting Group Quotas</a></li>
+                                <li><a href="#configuring-the-grace-period">Configuring the Grace Period</a></li>
+                            </ol>
+                        </li>
                         <li><a href="#automating-disk-usage-checks">Automating Disk Usage Checks</a>
                             <ol>
                                 <li><a href="#bash-script-example-for-disk-usage-monitoring">Bash Script Example for Disk Usage Monitoring</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#monitoring-disk-usage-with-grafana">Monitoring Disk Usage with Grafana</a>
+                            <ol>
+                                <li><a href="#installing-node-exporter">Installing Node Exporter</a></li>
+                                <li><a href="#configuring-prometheus-to-scrape-metrics">Configuring Prometheus to Scrape Metrics</a></li>
+                                <li><a href="#setting-up-grafana-dashboards">Setting Up Grafana Dashboards</a></li>
+                                <li><a href="#overview-of-the-monitoring-stack">Overview of the Monitoring Stack</a></li>
                             </ol>
                         </li>
                         <li><a href="#challenges">Challenges</a></li>
@@ -155,14 +172,10 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: September 06, 2021</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="disk-usage-management">Disk Usage Management</h2>
             <p>Managing and monitoring disk usage is necessary for server maintenance, allowing administrators to identify disk space shortages caused by large log files, such as Apache or system logs, and malfunctioning applications that generate excessive data. Tools like <code>df</code> provide quick overviews of available disk space, while <code>du</code> helps analyze directory sizes to locate space hogs. For planning future storage needs, tracking data growth with monitoring software like Nagios or Grafana enables accurate forecasting and timely upgrades of storage hardware or cloud solutions. Regularly cleaning up unused files involves deleting obsolete backups, removing temporary files from <code>/tmp</code>, archiving old user data, and eliminating redundant application caches using automated scripts or cleanup utilities like BleachBit.</p>
-            <p>TODO:</p>
-            <ul>
-                <li>grafana</li>
-            </ul>
             <h3 id="understanding-the-df-command">Understanding the df command</h3>
             <p>The <code>df</code> (disk filesystem) command provides information about the filesystems on your machine. It shows details such as total size, used space, available space, and the percentage of space used. To display these statistics in a human-readable format, using units like KB, MB, or GB, you can use the <code>-h</code> (human-readable) option.</p>
             <p>For example, executing <code>df -h</code> might produce an output like the following:</p>
@@ -290,6 +303,72 @@
                 <li>Using a disk cleanup utility can automate the process of deleting various unnecessary files. Tools like <code>bleachbit</code> can efficiently remove temporary files, cache, cookies, internet history, and log files, helping to free up space.</li>
                 <li>Archiving and compressing less frequently used data can also save space. Files and directories that are rarely accessed can be compressed using tools like <code>tar</code>, <code>gzip</code>, or <code>bzip2</code>, reducing their size and freeing up more disk space.</li>
             </ul>
+            <h3 id="managing-disk-quotas">Managing Disk Quotas</h3>
+            <p>Disk quotas allow administrators to limit the amount of disk space or the number of files (inodes) that individual users or groups can consume on a filesystem. This prevents any single user from exhausting shared storage and helps maintain fair resource allocation on multi-user systems.</p>
+            <h4 id="enabling-quotas-on-a-filesystem">Enabling Quotas on a Filesystem</h4>
+            <p>To use quotas, the filesystem must be mounted with quota options. Edit <code>/etc/fstab</code> to add <code>usrquota</code> and <code>grpquota</code> to the desired filesystem:</p>
+            <div>
+                <pre><code class="language-shell">/dev/sda1  /home  ext4  defaults,usrquota,grpquota  0  2</code></pre>
+            </div>
+            <p>After modifying <code>/etc/fstab</code>, remount the filesystem and initialize the quota database:</p>
+            <div>
+                <pre><code class="language-bash">mount -o remount /home
+quotacheck -cug /home
+quotaon /home</code></pre>
+            </div>
+            <ul>
+                <li><code>quotacheck -cug</code> creates the <code>aquota.user</code> and <code>aquota.group</code> files that store quota information.</li>
+                <li><code>quotaon</code> activates quota enforcement on the specified filesystem.</li>
+            </ul>
+            <h4 id="setting-quotas-for-a-user">Setting Quotas for a User</h4>
+            <p>Use the <code>edquota</code> command to set soft and hard limits for a specific user:</p>
+            <div>
+                <pre><code class="language-bash">edquota -u username</code></pre>
+            </div>
+            <p>This opens an editor displaying the current quota settings:</p>
+            <div>
+                <pre><code class="language-shell">Disk quotas for user username (uid 1001):
+  Filesystem   blocks   soft     hard   inodes   soft   hard
+  /dev/sda1    51200    204800   256000   100      0      0</code></pre>
+            </div>
+            <ul>
+                <li><strong>Soft limit</strong> is a threshold that the user can temporarily exceed for a grace period before the system enforces restrictions.</li>
+                <li><strong>Hard limit</strong> is the absolute maximum that cannot be exceeded under any circumstances.</li>
+                <li><strong>blocks</strong> represent the amount of disk space in kilobytes, while <strong>inodes</strong> represent the number of files.</li>
+            </ul>
+            <h4 id="checking-quota-usage">Checking Quota Usage</h4>
+            <p>To display the current quota status for a specific user, run:</p>
+            <div>
+                <pre><code class="language-bash">quota -u username</code></pre>
+            </div>
+            <p>For a summary of all users' quota usage on a filesystem, use:</p>
+            <div>
+                <pre><code class="language-bash">repquota /home</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-shell">*** Report for user quotas on device /dev/sda1
+Block grace time: 7days; Inode grace time: 7days
+                        Block limits                File limits
+User            used    soft    hard  grace    used  soft  hard  grace
+----------------------------------------------------------------------
+root      --   10240       0       0              5     0     0
+alice     --   51200  204800  256000            100     0     0
+bob       +-  230400  204800  256000  5days     320     0     0</code></pre>
+            </div>
+            <p>The <code>+-</code> indicator next to <code>bob</code> shows that the user has exceeded the soft limit and is within the grace period.</p>
+            <h4 id="setting-group-quotas">Setting Group Quotas</h4>
+            <p>Group quotas work similarly to user quotas. Use the <code>-g</code> flag to manage them:</p>
+            <div>
+                <pre><code class="language-bash">edquota -g groupname
+repquota -g /home</code></pre>
+            </div>
+            <h4 id="configuring-the-grace-period">Configuring the Grace Period</h4>
+            <p>The grace period determines how long a user can remain above the soft limit before it is enforced as a hard limit. To adjust it:</p>
+            <div>
+                <pre><code class="language-bash">edquota -t</code></pre>
+            </div>
+            <p>This opens an editor where you can set the grace period for both block and inode limits across the filesystem.</p>
             <h3 id="automating-disk-usage-checks">Automating Disk Usage Checks</h3>
             <p>For ongoing disk usage monitoring, consider setting up automated tasks. For instance, you can schedule a cron job that runs <code>df</code> and <code>du</code> at regular intervals and sends reports via email or logs them for later review.</p>
             <p>Monitoring disk usage proactively can prevent potential issues related to low disk space, such as application errors, slow performance, or system crashes.</p>
@@ -323,6 +402,52 @@ du -x / | sort -nr | head -10 &gt;&gt; "$LOG_FILE"
             </ul>
             <div>
                 <pre><code class="language-bash">sudo chmod +x /path/to/disk_usage_monitor.sh &amp;&amp; sudo mv /path/to/disk_usage_monitor.sh /etc/cron.daily/</code></pre>
+            </div>
+            <h3 id="monitoring-disk-usage-with-grafana">Monitoring Disk Usage with Grafana</h3>
+            <p>For long-term disk usage monitoring and visualization, Grafana provides powerful dashboarding capabilities when paired with a data collection agent like Prometheus and its Node Exporter.</p>
+            <h4 id="installing-node-exporter">Installing Node Exporter</h4>
+            <p>Node Exporter collects hardware and OS metrics, including disk usage, and exposes them for Prometheus to scrape.</p>
+            <div>
+                <pre><code class="language-bash">sudo apt install prometheus-node-exporter
+sudo systemctl enable --now prometheus-node-exporter</code></pre>
+            </div>
+            <p>By default, Node Exporter listens on port <code>9100</code>. Verify it is running:</p>
+            <div>
+                <pre><code class="language-bash">curl -s http://localhost:9100/metrics | grep node_filesystem_avail_bytes</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-shell">node_filesystem_avail_bytes{device="/dev/sda1",fstype="ext4",mountpoint="/"} 1.073741824e+10</code></pre>
+            </div>
+            <p>The value is in bytes; <code>1.073741824e+10</code> equals roughly 10 GB of available space.</p>
+            <h4 id="configuring-prometheus-to-scrape-metrics">Configuring Prometheus to Scrape Metrics</h4>
+            <p>Add the Node Exporter target to the Prometheus configuration file (<code>/etc/prometheus/prometheus.yml</code>):</p>
+            <div>
+                <pre><code class="language-yaml">scrape_configs:
+  - job_name: 'node'
+    static_configs:
+      - targets: ['localhost:9100']</code></pre>
+            </div>
+            <p>Restart Prometheus to apply the change:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl restart prometheus</code></pre>
+            </div>
+            <h4 id="setting-up-grafana-dashboards">Setting Up Grafana Dashboards</h4>
+            <p>After installing Grafana and logging in (default at <code>http://localhost:3000</code>), add Prometheus as a data source, then import a community dashboard for disk metrics.</p>
+            <p>I. Add Prometheus as a data source under <strong>Configuration → Data Sources → Add data source</strong>, and set the URL to <code>http://localhost:9090</code>.</p>
+            <p>II. Import the <strong>Node Exporter Full</strong> dashboard (ID <code>1860</code>) via <strong>Dashboards → Import</strong>, which includes pre-built panels for disk space, inode usage, and I/O rates.</p>
+            <p>III. Create custom alerts under <strong>Alerting → Alert Rules</strong> to trigger notifications when available disk space drops below a threshold:</p>
+            <div>
+                <pre><code class="language-shell">node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} &lt; 0.1</code></pre>
+            </div>
+            <p>This PromQL expression fires when the root filesystem has less than 10% free space.</p>
+            <h4 id="overview-of-the-monitoring-stack">Overview of the Monitoring Stack</h4>
+            <div>
+                <pre><code class="language-shell">+------------------+         +--------------+         +-----------+
+|  Node Exporter   |--------&gt;|  Prometheus  |--------&gt;|  Grafana  |
+|  (collects disk  |  scrape |  (stores     |  query  |  (visual  |
+|   metrics)       |         |   time-series|         |   dashbrd)|
++------------------+         +--------------+         +-----------+</code></pre>
             </div>
             <h3 id="challenges">Challenges</h3>
             <ol>

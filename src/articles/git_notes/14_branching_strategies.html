@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/git_notes/14_branching_strategies",
             "description": "Before choosing a branching strategy, it helps to decide what you\u2019re optimizing for: speed, safety, or simplicity.",
-            "dateModified": "2017-10-01"
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -101,6 +101,7 @@
                                 <li><a href="#advantages">Advantages</a></li>
                                 <li><a href="#disadvantages">Disadvantages</a></li>
                                 <li><a href="#when-to-use">When to Use</a></li>
+                                <li><a href="#preventing-integration-drift">Preventing Integration Drift</a></li>
                                 <li><a href="#critique">Critique</a></li>
                             </ol>
                         </li>
@@ -118,6 +119,7 @@
                                 <li><a href="#disadvantages">Disadvantages</a></li>
                                 <li><a href="#when-to-use">When to Use</a></li>
                                 <li><a href="#critique">Critique</a></li>
+                                <li><a href="#choosing-the-right-strategy">Choosing the Right Strategy</a></li>
                             </ol>
                         </li>
                         <li><a href="#environment-branching">Environment Branching</a>
@@ -169,7 +171,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: October 01, 2017</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="strategies-for-branching">Strategies for Branching</h2>
             <p>Before choosing a branching strategy, it helps to decide what you’re optimizing for: speed, safety, or simplicity. Different teams and projects lean different ways—startups with small codebases won’t work the same as larger, multi-repo setups. This overview lays out the options and how to adapt them to your workflow.</p>
@@ -233,7 +235,7 @@
             <ul>
                 <li><code>main</code> (or <code>master</code>) – holds production-ready code and immutable version tags (e.g., <code>v2.3.0</code>).</li>
                 <li><code>develop</code> – the integration branch for day-to-day feature work.</li>
-                <li><em>Release branch</em> – cut from <code>develop</code> when you declare the next version feature-complete; only bug fixes, documentation tweaks, and release housekeeping (version bumps, build scripts, localisation strings, etc.) are allowed.</li>
+                <li><em>Release branch</em> – cut from <code>develop</code> when you declare the next version feature-complete; only bug fixes, documentation tweaks, and release housekeeping (version bumps, build scripts, localization strings, etc.) are allowed.</li>
                 <li><em>Hotfix branch</em> – cut directly from <code>main</code> to address critical production issues; merge back into both <code>main</code> <em>and</em> <code>develop</code> (or the active release branch) to prevent regressions.</li>
             </ul>
             <div>
@@ -332,6 +334,22 @@ Production deployment</code></pre>
                 <li>Organisations not yet ready for <em>trunk-based development</em> can reduce risk with scoped branches; teams already practising trunk-based merges may not need them.</li>
             </ul>
             <p>Avoid very long-running feature branches. If a change is large, break it into incremental slices or use <em>branch-by-abstraction</em> so you can merge to trunk early and often.</p>
+            <h4 id="preventing-integration-drift">Preventing Integration Drift</h4>
+            <p>If your branch lasts more than a few days, integrate frequently to avoid massive conflicts at merge time. Make it part of your routine (e.g., first thing each morning or before each coding session):</p>
+            <div>
+                <pre><code class="language-bash"># Rebase onto the latest integration branch
+git fetch origin develop
+git rebase origin/develop
+
+# This keeps your branch close to the main line
+# Conflicts stay small and manageable</code></pre>
+            </div>
+            <p><strong>Or use merge commits</strong> if your team prefers preserving branch topology:</p>
+            <div>
+                <pre><code class="language-bash">git fetch origin develop
+git merge origin/develop</code></pre>
+            </div>
+            <p><strong>Anti-pattern to avoid:</strong> Working for weeks in isolation, then facing a massive merge with dozens of conflicts at the end.</p>
             <h4 id="critique">Critique</h4>
             <ul>
                 <li><strong>Delay and drift:</strong> When branches stay open for weeks, they fall behind the main codebase and merge conflicts pile up.</li>
@@ -452,6 +470,54 @@ develop│◀───────────── merge release/*┘
                 <li>Teams often experience <em>slower feedback</em> and <em>slower releases</em> compared to trunk-based or short-lived feature branch workflows.</li>
                 <li>Histories can become cluttered with coordination merges, making it harder to read and understand the commit log.</li>
             </ul>
+            <h4 id="choosing-the-right-strategy">Choosing the Right Strategy</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Factor</td>
+                    <td>Trunk-Based</td>
+                    <td>Feature Branches</td>
+                    <td>Git Flow</td>
+                    <td>Forking</td>
+                </tr>
+                <tr>
+                    <td>Team size</td>
+                    <td>Small–medium</td>
+                    <td>Any</td>
+                    <td>Medium–large</td>
+                    <td>Any (esp. open source)</td>
+                </tr>
+                <tr>
+                    <td>Release cadence</td>
+                    <td>Continuous</td>
+                    <td>Days–weeks</td>
+                    <td>Scheduled (monthly+)</td>
+                    <td>Varies</td>
+                </tr>
+                <tr>
+                    <td>CI/CD maturity</td>
+                    <td>High</td>
+                    <td>Medium</td>
+                    <td>Low–medium</td>
+                    <td>Varies</td>
+                </tr>
+                <tr>
+                    <td>Multiple versions</td>
+                    <td>No</td>
+                    <td>No</td>
+                    <td>Yes</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td>External contributors</td>
+                    <td>Rare</td>
+                    <td>Rare</td>
+                    <td>Rare</td>
+                    <td>Common</td>
+                </tr>
+            </table>
+            </p>
+            <p><strong>Hybrid approaches are common:</strong> many teams use feature branches with trunk-based merge frequency, or Git Flow concepts without the full ceremony. Choose what fits your team’s reality and evolve the strategy as your needs change.</p>
             <h3 id="environment-branching">Environment Branching</h3>
             <p>In an <strong>environment-branching</strong> workflow, each <em>runtime environment</em>—development, QA, staging, production—has its own long-lived branch. Code moves “up the ladder” by merging (or cherry-picking) from one environment branch to the next, mirroring how build artefacts and database changes are promoted.</p>
             <p>Typical branch mapping:</p>

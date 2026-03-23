@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Content Delivery Network</title>
-    <meta content="A Content Delivery Network (CDN) is a geographically distributed system of servers that deliver web assets such as images, videos, and other media to users based on their proximity to the servers." name="description" />
+    <meta content="A Content Delivery Network (CDN) is a geographically distributed system of servers that deliver web assets such as images, videos, stylesheets, and scripts to users based on their proximity to the nearest server." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/03_content_delivery_networks"
             },
             "url": "https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/03_content_delivery_networks",
-            "description": "A Content Delivery Network (CDN) is a geographically distributed system of servers that deliver web assets such as images, videos, and other media to users based on their proximity to the servers.",
-            "dateModified": "2026-03-19"
+            "description": "A Content Delivery Network (CDN) is a geographically distributed system of servers that deliver web assets such as images, videos, stylesheets, and scripts to users based on their proximity to the nearest server.",
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -82,8 +82,11 @@
                         <li><a href="#how-cdns-work">How CDNs Work</a></li>
                         <li><a href="#components">Components</a></li>
                         <li><a href="#types-of-content-delivered">Types of Content Delivered</a></li>
+                        <li><a href="#ttl-and-cache-headers">TTL and Cache Headers</a></li>
+                        <li><a href="#cache-invalidation-strategies">Cache Invalidation Strategies</a></li>
                         <li><a href="#benefits-of-cdns">Benefits of CDNs</a></li>
                         <li><a href="#cdn-features">CDN Features</a></li>
+                        <li><a href="#performance-metrics">Performance Metrics</a></li>
                         <li><a href="#common-cdn-providers">Common CDN Providers</a></li>
                         <li><a href="#use-cases">Use Cases</a></li>
                         <li><a href="#cdn-challenges">CDN Challenges</a></li>
@@ -194,96 +197,188 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: March 19, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="content-delivery-network">Content Delivery Network</h2>
-            <p>A Content Delivery Network (CDN) is a geographically distributed system of servers that deliver web assets such as images, videos, and other media to users based on their proximity to the servers. This design is <em>helpful</em> for reducing latency and improving the performance of websites or applications that serve a global audience. CDNs typically operate through specialized data centers known as Points of Presence (PoPs), where content is cached and quickly served to end-users.</p>
+            <p>A Content Delivery Network (CDN) is a geographically distributed system of servers that deliver web assets such as images, videos, stylesheets, and scripts to users based on their proximity to the nearest server. By placing cached copies of content at strategic locations around the world, CDNs drastically reduce the round-trip time between a user's browser and the hosting infrastructure. CDNs operate through specialized data centers known as Points of Presence (PoPs), each containing clusters of edge servers that cache and serve content to nearby end-users. Modern CDNs go well beyond static file hosting — they also accelerate dynamic content, terminate TLS connections closer to the user, and provide DDoS mitigation at the network edge.</p>
             <div>
-                <pre><code class="language-+--------------+">|   End User   |
-+------+-------+
-       |
-(Request Content)
-       |
-+---------v---------+
-|   CDN Edge Server |
-+---------+---------+
-       |  (If cache miss)
-       |
-+---------v---------+
-|   Origin Server   |
-+-------------------+</code></pre>
+                <pre><code class="language-shell">CDN Architecture with PoPs
+
+         +----------+    +----------+    +----------+    +----------+
+         |  User A  |    |  User B  |    |  User C  |    |  User D  |
+         | (Tokyo)  |    | (Berlin) |    | (NYC)    |    | (Sydney) |
+         +----+-----+    +----+-----+    +----+-----+    +----+-----+
+              |               |               |               |
+              v               v               v               v
+        +-----------+   +-----------+   +-----------+   +-----------+
+        | PoP Tokyo |   | PoP Frank |   | PoP NYC   |   | PoP Syd   |
+        |  (Edge)   |   |  (Edge)   |   |  (Edge)   |   |  (Edge)   |
+        +-----+-----+   +-----+-----+   +-----+-----+   +-----+-----+
+              |               |               |               |
+              +-------+-------+-------+-------+               |
+                      |               |                        |
+                      v               v                        v
+               +-------------+  +-------------+        +-------------+
+               | Origin US   |  | Origin EU   |        | Origin APAC |
+               +-------------+  +-------------+        +-------------+</code></pre>
             </div>
             <h3 id="how-cdns-work">How CDNs Work</h3>
             <ul>
-                <li>A distributed infrastructure is <strong>helpful</strong> for placing servers in multiple geographic locations. </li>
-                <li>A caching mechanism can be <strong>useful</strong> for storing frequently requested content close to end-users. </li>
-                <li>A load-balancing strategy is <strong>beneficial</strong> for preventing any single server from becoming overloaded. </li>
-                <li>A request-routing system is <strong>effective</strong> for directing users to the nearest or fastest edge server. </li>
-                <li>An anycast network can be <strong>advantageous</strong> for simplifying traffic routing across multiple CDN nodes. </li>
+                <li>A distributed infrastructure <strong>spans</strong> dozens or hundreds of PoPs, placing servers in data centers across every major continent. </li>
+                <li>Caching layers <strong>store</strong> copies of frequently requested content on edge servers so repeat requests never reach the origin. </li>
+                <li>Load-balancing algorithms <strong>distribute</strong> incoming traffic across multiple edge nodes, preventing any single server from becoming a bottleneck. </li>
+                <li>Request-routing logic <strong>evaluates</strong> factors like latency, server health, and geographic proximity to pick the optimal edge server for each request. </li>
+                <li>Anycast networking <strong>advertises</strong> the same IP address from multiple PoPs, letting BGP routing direct packets to the topologically nearest one. </li>
+                <li>DNS-based routing <strong>resolves</strong> CDN hostnames to different IP addresses depending on the resolver's location, steering users toward a nearby edge. </li>
             </ul>
+            <div>
+                <pre><code class="language-shell">CDN Routing: DNS vs Anycast
+
+    DNS-Based Routing                          Anycast Routing
+    -----------------                          ---------------
+    User -&gt; DNS Resolver                       User -&gt; Packet (dst: 203.0.113.1)
+              |                                          |
+              v                                     BGP selects
+         CDN Auth DNS                            shortest AS path
+         (checks geo)                                    |
+              |                                    +-----+------+
+         returns IP of                             |            |
+         nearest PoP                            PoP A        PoP B
+              |                               (2 hops)     (5 hops)
+              v                                  ^
+         User -&gt; PoP                             |
+                                           packet arrives
+                                           at PoP A</code></pre>
+            </div>
             <h3 id="components">Components</h3>
             <ul>
-                <li>Edge servers are <strong>important</strong> for caching and delivering content from PoPs to nearby users. </li>
-                <li>Origin servers serve as <strong>primary</strong> content sources when edge servers do not have the requested assets. </li>
-                <li>PoPs (Points of Presence) are <strong>essential</strong> for housing edge servers and processing local traffic. </li>
-                <li>Monitoring and analytics tools are <strong>helpful</strong> for tracking CDN performance, cache hit ratios, and latency metrics. </li>
-                <li>Control planes are <strong>useful</strong> for managing CDN configurations, purging caches, and provisioning new edge locations. </li>
+                <li>Edge servers act as the <strong>frontline</strong> cache layer, storing and serving content from PoPs to users within the surrounding region. </li>
+                <li>Origin servers remain the <strong>authoritative</strong> source of truth, fulfilling requests whenever an edge server encounters a cache miss. </li>
+                <li>PoPs (Points of Presence) provide the <strong>physical</strong> infrastructure — co-location facilities that house edge servers, routers, and switching equipment. </li>
+                <li>Monitoring and analytics platforms offer <strong>granular</strong> visibility into cache hit ratios, per-PoP latency, error rates, and bandwidth consumption. </li>
+                <li>Control planes expose <strong>programmable</strong> interfaces for managing CDN configurations, issuing cache purges, and provisioning new edge locations. </li>
+                <li>Shield or mid-tier caches sit <strong>between</strong> the edge and origin, absorbing cache misses from multiple PoPs so the origin handles fewer requests. </li>
             </ul>
             <h3 id="types-of-content-delivered">Types of Content Delivered</h3>
             <ul>
-                <li>Static content is <strong>common</strong> for items like images, CSS, JavaScript, and downloadable files. </li>
-                <li>Dynamic content can be <strong>served</strong> through CDNs for personalized web pages and real-time updates. </li>
-                <li>Streaming media is <strong>practical</strong> for delivering live or on-demand video, audio, and other large media files. </li>
-                <li>Software updates and patches are <strong>distributed</strong> efficiently to reduce bottlenecks during high-demand periods. </li>
-                <li>API responses can be <strong>cached</strong> for short durations to reduce repeated requests to the origin servers. </li>
+                <li>Static assets like images, CSS, JavaScript bundles, and fonts are the most <strong>straightforward</strong> content to cache and serve from the edge. </li>
+                <li>Dynamic content such as personalized pages and API responses can be <strong>accelerated</strong> by keeping persistent connections between edge and origin. </li>
+                <li>Streaming media for live broadcasts or on-demand video is <strong>chunked</strong> into small segments that edge servers cache independently for adaptive bitrate delivery. </li>
+                <li>Software updates and large binaries are <strong>distributed</strong> across PoPs to prevent download bottlenecks during high-demand release windows. </li>
+                <li>API responses with short TTLs can be <strong>cached</strong> at the edge for brief periods to absorb repeated identical queries without hitting the origin. </li>
             </ul>
+            <h3 id="ttl-and-cache-headers">TTL and Cache Headers</h3>
+            <ul>
+                <li>The <code>Cache-Control</code> header is the <strong>primary</strong> mechanism for telling CDN edge servers how long to store a response before revalidating. </li>
+                <li>A <code>max-age</code> directive <strong>specifies</strong> the TTL in seconds, after which the cached copy is considered stale and must be refreshed. </li>
+                <li>The <code>s-maxage</code> directive <strong>overrides</strong> <code>max-age</code> specifically for shared caches like CDNs, letting you set different TTLs for browsers and edges. </li>
+                <li><code>ETag</code> and <code>Last-Modified</code> headers enable <strong>conditional</strong> revalidation, where the edge asks the origin if the content changed before fetching a full copy. </li>
+                <li><code>Vary</code> headers <strong>instruct</strong> the CDN to maintain separate cached versions for different request attributes like <code>Accept-Encoding</code> or <code>Accept-Language</code>. </li>
+                <li>Setting <code>Cache-Control: no-store</code> <strong>prevents</strong> the CDN from caching a response at all, which is necessary for sensitive or highly personalized data. </li>
+            </ul>
+            <h3 id="cache-invalidation-strategies">Cache Invalidation Strategies</h3>
+            <ul>
+                <li>Purge by URL removes a <strong>specific</strong> cached object across all PoPs, typically used when a single page or asset is updated. </li>
+                <li>Purge by tag or surrogate key allows <strong>batch</strong> invalidation of all objects sharing a logical grouping, such as all assets for a given product page. </li>
+                <li>Purge all is a <strong>sweeping</strong> operation that clears every cached item in the CDN, generally reserved for major deployments or emergencies. </li>
+                <li>Stale-while-revalidate <strong>serves</strong> the expired cached copy to the user immediately while fetching a fresh version from the origin in the background. </li>
+                <li>Versioned URLs embed a hash or build number in the filename, making invalidation <strong>unnecessary</strong> because each new deploy produces a distinct URL. </li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">Cache Hit vs Cache Miss Flow
+
+       +--------+        +-------------+
+       |  User  +-------&gt;|  Edge Server|
+       +--------+        +------+------+
+                                |
+                       +--------+--------+
+                       |                 |
+                  Cache Hit         Cache Miss
+                       |                 |
+                       v                 v
+                 +-----------+    +-------------+
+                 | Serve     |    | Shield /    |
+                 | cached    |    | Mid-tier    |
+                 | response  |    +------+------+
+                 +-----------+           |
+                                +--------+--------+
+                                |                 |
+                           Cache Hit         Cache Miss
+                                |                 |
+                                v                 v
+                          +-----------+    +-----------+
+                          | Serve     |    | Fetch from|
+                          | cached    |    | Origin    |
+                          | response  |    +-----+-----+
+                          +-----------+          |
+                                                 v
+                                          +-----------+
+                                          | Cache +   |
+                                          | Serve     |
+                                          +-----------+</code></pre>
+            </div>
             <h3 id="benefits-of-cdns">Benefits of CDNs</h3>
             <ul>
-                <li>Reduced latency is <strong>helpful</strong> because content is served from a location geographically close to the user. </li>
-                <li>Improved load times can be <strong>beneficial</strong> for enhancing user experience and reducing bounce rates. </li>
-                <li>Scalability allows <strong>efficient</strong> handling of sudden spikes in traffic without overwhelming origin servers. </li>
-                <li>Reliability improves <strong>uptime</strong> by distributing requests across multiple servers, lessening single-point failures. </li>
-                <li>Security features are <strong>valuable</strong> for mitigating DDoS attacks and supporting encrypted connections. </li>
+                <li>Reduced latency is the most <strong>tangible</strong> benefit, since content travels a shorter physical distance from the nearest PoP to the user. </li>
+                <li>Improved page load times <strong>correlate</strong> directly with better user engagement, lower bounce rates, and higher conversion rates. </li>
+                <li>Scalability under traffic spikes becomes <strong>manageable</strong> because thousands of edge servers absorb the load instead of a single origin cluster. </li>
+                <li>Reliability increases through <strong>redundant</strong> PoPs — if one data center goes offline, traffic is automatically rerouted to the next closest node. </li>
+                <li>Security posture is <strong>strengthened</strong> by edge-level DDoS scrubbing, Web Application Firewalls (WAF), and TLS termination at the PoP. </li>
+                <li>Origin offload <strong>reduces</strong> bandwidth costs and compute requirements because the majority of requests are served from cache. </li>
             </ul>
             <h3 id="cdn-features">CDN Features</h3>
             <ul>
-                <li>Caching ensures <strong>faster</strong> delivery by storing files on edge servers located near end-users. </li>
-                <li>Content purging is <strong>crucial</strong> for updating or removing cached items when new versions are available. </li>
-                <li>Geo-targeting is <strong>helpful</strong> for serving localized content or complying with regional regulations. </li>
-                <li>Compression techniques are <strong>effective</strong> for reducing file sizes and transmission times. </li>
-                <li>SSL/TLS encryption is <strong>important</strong> for securing data in transit and protecting user privacy. </li>
+                <li>Tiered caching <strong>minimizes</strong> origin load by funneling cache misses from many edge nodes through a smaller set of regional shield servers. </li>
+                <li>Content purging APIs allow <strong>immediate</strong> removal or refresh of cached items when new versions are deployed. </li>
+                <li>Geo-targeting capabilities let you <strong>customize</strong> responses based on the user's country or region, supporting localization and regulatory compliance. </li>
+                <li>On-the-fly compression with Brotli or gzip <strong>shrinks</strong> payload sizes during transfer, improving time-to-first-byte for text-based assets. </li>
+                <li>SSL/TLS termination at the edge <strong>offloads</strong> cryptographic work from origin servers and reduces the TLS handshake latency for end-users. </li>
+                <li>Edge computing platforms like Cloudflare Workers or Lambda@Edge allow <strong>executing</strong> custom logic directly at the PoP before the request reaches the origin. </li>
+            </ul>
+            <h3 id="performance-metrics">Performance Metrics</h3>
+            <ul>
+                <li>Cache hit ratio measures the <strong>percentage</strong> of requests served from cache versus those forwarded to the origin — higher is better. </li>
+                <li>Time to first byte (TTFB) captures the <strong>duration</strong> between a user's request and the arrival of the first response byte from the edge. </li>
+                <li>Origin offload rate quantifies how <strong>effectively</strong> the CDN absorbs traffic, typically expressed as a percentage of total bandwidth served from cache. </li>
+                <li>Error rate at the edge tracks the <strong>frequency</strong> of 4xx and 5xx responses, helping identify misconfigurations or origin health issues. </li>
+                <li>Bandwidth consumption per PoP provides <strong>regional</strong> insight into traffic distribution and can inform decisions about adding or removing edge locations. </li>
+                <li>P95 and P99 latency percentiles reveal <strong>tail</strong> performance, catching slow responses that averages would hide. </li>
             </ul>
             <h3 id="common-cdn-providers">Common CDN Providers</h3>
             <ul>
-                <li>Akamai is <strong>well-known</strong> for having one of the largest and oldest CDN networks worldwide. </li>
-                <li>Cloudflare provides <strong>robust</strong> security capabilities along with standard CDN services. </li>
-                <li>Amazon CloudFront is <strong>integrated</strong> tightly with AWS, offering seamless deployment for cloud-based apps. </li>
-                <li>Google Cloud CDN is <strong>useful</strong> for projects hosted on Google Cloud Platform, simplifying setup. </li>
-                <li>Fastly offers <strong>real-time</strong> CDN configurations and edge computing capabilities. </li>
+                <li>Akamai operates one of the <strong>largest</strong> CDN networks globally, with over 300,000 servers across more than 130 countries. </li>
+                <li>Cloudflare pairs its CDN with <strong>integrated</strong> security services including DDoS protection, WAF, and zero-trust access controls. </li>
+                <li>Amazon CloudFront is <strong>tightly</strong> coupled with the AWS ecosystem, enabling one-click distribution for S3, EC2, and Lambda origins. </li>
+                <li>Google Cloud CDN leverages Google's <strong>private</strong> backbone network, providing low-latency delivery for workloads hosted on GCP. </li>
+                <li>Fastly differentiates through <strong>instant</strong> cache purging (typically under 150ms globally) and its edge computing platform powered by Wasm. </li>
+                <li>Bunny.net offers a <strong>cost-effective</strong> alternative with competitive per-GB pricing and a straightforward configuration interface. </li>
             </ul>
             <h3 id="use-cases">Use Cases</h3>
             <ul>
-                <li>E-commerce sites are <strong>enhanced</strong> by faster page loads, boosting customer satisfaction and conversions. </li>
-                <li>Media streaming can be <strong>optimized</strong> with CDNs delivering high-quality audio and video at scale. </li>
-                <li>Software distribution is <strong>streamlined</strong> when updates and downloads are hosted on edge servers. </li>
-                <li>Websites and blogs see <strong>improvements</strong> in user engagement and SEO rankings due to reduced load times. </li>
-                <li>Mobile applications can be <strong>benefited</strong> by minimizing latency for users on various networks and devices. </li>
+                <li>E-commerce platforms rely on CDNs to <strong>accelerate</strong> product images, scripts, and checkout flows, where every 100ms of latency affects revenue. </li>
+                <li>Media and entertainment companies use CDNs to <strong>stream</strong> live events and on-demand catalogs to millions of concurrent viewers without buffering. </li>
+                <li>Software distribution pipelines push binaries and updates through CDN edges, <strong>eliminating</strong> download bottlenecks during coordinated release windows. </li>
+                <li>News and publishing sites handle <strong>unpredictable</strong> traffic surges from breaking stories by letting PoPs absorb the spike before it reaches the origin. </li>
+                <li>Mobile applications benefit from CDN edge proximity, <strong>lowering</strong> round-trip times for users on high-latency cellular connections. </li>
+                <li>SaaS platforms cache shared tenant assets at the edge, <strong>reserving</strong> origin capacity for dynamic, per-tenant API calls. </li>
             </ul>
             <h3 id="cdn-challenges">CDN Challenges</h3>
             <ul>
-                <li>Cost considerations are <strong>important</strong> when serving large traffic volumes or hosting heavy content. </li>
-                <li>Complexity arises <strong>often</strong> in configuring and maintaining multi-layer caching rules. </li>
-                <li>Cache invalidation can be <strong>tricky</strong> if content changes frequently, requiring precise updates. </li>
-                <li>Geographic coverage might be <strong>limited</strong> in certain regions, affecting performance for users there. </li>
-                <li>Vendor lock-in could be <strong>possible</strong> if proprietary features prevent easy migration to another CDN. </li>
+                <li>Cost management requires <strong>careful</strong> planning, as egress fees and request charges can escalate quickly at high traffic volumes. </li>
+                <li>Multi-layer caching rules introduce <strong>complexity</strong> that makes debugging cache behavior across edge, shield, and browser layers difficult. </li>
+                <li>Cache invalidation remains <strong>notoriously</strong> hard to get right, especially when content changes frequently and stale data causes user-facing bugs. </li>
+                <li>Geographic coverage gaps in certain regions can leave some users with <strong>suboptimal</strong> latency if no nearby PoP exists. </li>
+                <li>Vendor lock-in becomes a <strong>concern</strong> when proprietary edge computing features or API contracts make migration to another CDN expensive. </li>
+                <li>Debugging production issues is <strong>harder</strong> because requests pass through multiple intermediate layers before reaching the origin. </li>
             </ul>
             <h3 id="best-practices">Best Practices</h3>
             <ul>
-                <li>Content optimization is <strong>helpful</strong> for ensuring the CDN can effectively cache files, including compressing images and minifying scripts. </li>
-                <li>Performance monitoring is <strong>useful</strong> for tracking metrics such as latency, throughput, and cache hit rates. </li>
-                <li>Access control with SSL/TLS is <strong>beneficial</strong> for protecting data and verifying authenticity during delivery. </li>
-                <li>Cache purging strategies need <strong>thought</strong> to guarantee users see up-to-date information when content changes. </li>
-                <li>Testing configurations is <strong>advisable</strong> for simulating real-world traffic patterns before going live.</li>
+                <li>Set explicit <code>Cache-Control</code> headers on every response so the CDN makes <strong>predictable</strong> caching decisions instead of relying on heuristics. </li>
+                <li>Use versioned or fingerprinted asset URLs to enable <strong>aggressive</strong> long-lived caching while guaranteeing users always fetch the latest deploy. </li>
+                <li>Monitor cache hit ratios and TTFB per PoP to <strong>identify</strong> underperforming regions or misconfigured caching rules early. </li>
+                <li>Implement a shield or mid-tier cache to <strong>protect</strong> the origin from thundering-herd cache misses when popular content expires simultaneously. </li>
+                <li>Enforce TLS everywhere and enable HSTS headers to <strong>ensure</strong> data integrity and confidentiality between the user, edge, and origin. </li>
+                <li>Test cache behavior in staging with tools like <code>curl -I</code> or CDN-specific debug headers to <strong>verify</strong> that TTLs and vary rules work as intended before going live.</li>
             </ul>
         </article-section>
     </div>

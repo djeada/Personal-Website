@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", function() {
         return null;
     }
 
-    /* ── canvas refs ─────────────────────────────────────── */
+
     const inputCanvas = document.getElementById('inputCanvas');
     const filteredCanvas = document.getElementById('filteredCanvas');
     const spectrumCanvas = document.getElementById('spectrumCanvas');
@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const spectrumCtx = spectrumCanvas.getContext('2d');
     const responseCtx = responseCanvas.getContext('2d');
 
-    /* ── DOM controls ────────────────────────────────────── */
+
     const waveformSelect = document.getElementById('waveform');
     const amplitudeSlider = document.getElementById('amplitude');
     const frequencySlider = document.getElementById('frequency');
@@ -67,7 +67,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const presetButtons = document.querySelectorAll('.preset-option');
     const toastContainer = document.getElementById('toast-container');
 
-    /* ── state ────────────────────────────────────────────── */
+
     let amplitude = parseFloat(amplitudeSlider.value);
     let frequency = parseFloat(frequencySlider.value);
     let phase = parseFloat(phaseSlider.value);
@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", function() {
     let isPaused = false;
     let animationId = null;
 
-    /* ── DPI-aware canvas sizing ─────────────────────────── */
+
     function resizeCanvas(canvas) {
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.getBoundingClientRect();
@@ -103,7 +103,7 @@ document.addEventListener("DOMContentLoaded", function() {
     window.addEventListener('resize', resizeAllCanvases);
     resizeAllCanvases();
 
-    /* ── Filter class (biquad IIR) ───────────────────────── */
+
     class Filter {
         constructor(type, cutoffFrequency, Q) {
             this.type = type;
@@ -191,7 +191,7 @@ document.addEventListener("DOMContentLoaded", function() {
             return output;
         }
 
-        /** Compute magnitude response at a given frequency */
+
         magnitudeAt(f, fs) {
             if (this.type === 'none') return 1;
 
@@ -206,26 +206,46 @@ document.addEventListener("DOMContentLoaded", function() {
 
             switch (this.type) {
                 case 'lowpass':
-                    b0 = (1 - cosO) / 2; b1 = 1 - cosO; b2 = (1 - cosO) / 2;
-                    a0 = 1 + alpha; a1 = -2 * cosO; a2 = 1 - alpha;
+                    b0 = (1 - cosO) / 2;
+                    b1 = 1 - cosO;
+                    b2 = (1 - cosO) / 2;
+                    a0 = 1 + alpha;
+                    a1 = -2 * cosO;
+                    a2 = 1 - alpha;
                     break;
                 case 'highpass':
-                    b0 = (1 + cosO) / 2; b1 = -(1 + cosO); b2 = (1 + cosO) / 2;
-                    a0 = 1 + alpha; a1 = -2 * cosO; a2 = 1 - alpha;
+                    b0 = (1 + cosO) / 2;
+                    b1 = -(1 + cosO);
+                    b2 = (1 + cosO) / 2;
+                    a0 = 1 + alpha;
+                    a1 = -2 * cosO;
+                    a2 = 1 - alpha;
                     break;
                 case 'bandpass':
-                    b0 = alpha; b1 = 0; b2 = -alpha;
-                    a0 = 1 + alpha; a1 = -2 * cosO; a2 = 1 - alpha;
+                    b0 = alpha;
+                    b1 = 0;
+                    b2 = -alpha;
+                    a0 = 1 + alpha;
+                    a1 = -2 * cosO;
+                    a2 = 1 - alpha;
                     break;
                 case 'bandstop':
-                    b0 = 1; b1 = -2 * cosO; b2 = 1;
-                    a0 = 1 + alpha; a1 = -2 * cosO; a2 = 1 - alpha;
+                    b0 = 1;
+                    b1 = -2 * cosO;
+                    b2 = 1;
+                    a0 = 1 + alpha;
+                    a1 = -2 * cosO;
+                    a2 = 1 - alpha;
                     break;
                 default:
                     return 1;
             }
 
-            b0 /= a0; b1 /= a0; b2 /= a0; a1 /= a0; a2 /= a0;
+            b0 /= a0;
+            b1 /= a0;
+            b2 /= a0;
+            a1 /= a0;
+            a2 /= a0;
 
             const w = 2 * Math.PI * f / fs;
             const cosW = Math.cos(w);
@@ -247,7 +267,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     let filter = new Filter(filterSelect.value, cutoffFrequency || centerFrequency, filterQ);
 
-    /* ── Toast notifications ─────────────────────────────── */
+
     function showToast(message, type) {
         type = type || "info";
         const toast = document.createElement("div");
@@ -271,13 +291,13 @@ document.addEventListener("DOMContentLoaded", function() {
         }, 3000);
     }
 
-    /* ── Color helpers ───────────────────────────────────── */
+
     function getColorForMode(colorLight, colorDark) {
         const darkModeValue = getCookie("darkMode");
         return darkModeValue && darkModeValue.toLowerCase() === "true" ? colorDark : colorLight;
     }
 
-    /* ── Signal generation ───────────────────────────────── */
+
     function generateSignal(t, dt) {
         var y = 0;
         var omega = 2 * Math.PI * frequency;
@@ -307,7 +327,7 @@ document.addEventListener("DOMContentLoaded", function() {
         return y;
     }
 
-    /* ── Sample-buffer model ─────────────────────────────── */
+
     var BUFFER_SIZE = 1024;
     var WARMUP = 64;
     var timeScale = 0.005;
@@ -317,7 +337,7 @@ document.addEventListener("DOMContentLoaded", function() {
         var filteredBuf = new Float64Array(WARMUP + numPoints);
         var dt = timeScale;
 
-        /* fresh filter copy so frame history does not leak */
+
         var fCopy = new Filter(filter.type, filter.cutoffFrequency, filter.Q);
 
         for (var i = 0; i < WARMUP + numPoints; i++) {
@@ -332,19 +352,26 @@ document.addEventListener("DOMContentLoaded", function() {
         };
     }
 
-    /* ── Simple FFT (radix-2 DIT, power-of-2 only) ──────── */
+
     function fft(re, im) {
         var n = re.length;
         if (n <= 1) return;
 
-        /* bit-reversal permutation */
+
         for (var i = 1, j = 0; i < n; i++) {
             var bit = n >> 1;
-            while (j & bit) { j ^= bit; bit >>= 1; }
+            while (j & bit) {
+                j ^= bit;
+                bit >>= 1;
+            }
             j ^= bit;
             if (i < j) {
-                var tmp = re[i]; re[i] = re[j]; re[j] = tmp;
-                tmp = im[i]; im[i] = im[j]; im[j] = tmp;
+                var tmp = re[i];
+                re[i] = re[j];
+                re[j] = tmp;
+                tmp = im[i];
+                im[i] = im[j];
+                im[j] = tmp;
             }
         }
 
@@ -353,7 +380,8 @@ document.addEventListener("DOMContentLoaded", function() {
             var wRe = Math.cos(ang);
             var wIm = Math.sin(ang);
             for (var i = 0; i < n; i += len) {
-                var curRe = 1, curIm = 0;
+                var curRe = 1,
+                    curIm = 0;
                 for (var jj = 0; jj < len / 2; jj++) {
                     var uRe = re[i + jj];
                     var uIm = im[i + jj];
@@ -373,12 +401,12 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function computeMagnitudeSpectrum(buf) {
         if (buf.length < 2) return new Float64Array(1);
-        /* zero-pad to next power of 2 */
+
         var n = 1;
         while (n < buf.length) n <<= 1;
         var re = new Float64Array(n);
         var im = new Float64Array(n);
-        /* apply Hann window */
+
         var denom = buf.length - 1;
         for (var i = 0; i < buf.length; i++) {
             var w = 0.5 * (1 - Math.cos(2 * Math.PI * i / denom));
@@ -394,10 +422,11 @@ document.addEventListener("DOMContentLoaded", function() {
         return mag;
     }
 
-    /* ── Drawing helpers ─────────────────────────────────── */
+
     function cssWidth(canvas) {
         return canvas.getBoundingClientRect().width;
     }
+
     function cssHeight(canvas) {
         return canvas.getBoundingClientRect().height;
     }
@@ -437,7 +466,12 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function drawAxes(ctx, canvas) {
-        var metrics = getChartMetrics(canvas, { left: 52, right: 18, top: 18, bottom: 28 });
+        var metrics = getChartMetrics(canvas, {
+            left: 52,
+            right: 18,
+            top: 18,
+            bottom: 28
+        });
         var axisColor = getColorForMode('#e2e8f0', '#475569');
         var labelColor = getColorForMode('#64748b', '#94a3b8');
         var fonts = getChartFontSizes(metrics.width);
@@ -470,7 +504,12 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function drawSpectrumAxes(ctx, canvas) {
-        var metrics = getChartMetrics(canvas, { left: 52, right: 18, top: 18, bottom: 34 });
+        var metrics = getChartMetrics(canvas, {
+            left: 52,
+            right: 18,
+            top: 18,
+            bottom: 34
+        });
         var axisColor = getColorForMode('#e2e8f0', '#475569');
         var labelColor = getColorForMode('#64748b', '#94a3b8');
         var fonts = getChartFontSizes(metrics.width);
@@ -511,9 +550,14 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    /* ── Rendering ───────────────────────────────────────── */
+
     function drawTimeDomain(ctx, canvas, buf, color) {
-        var metrics = getChartMetrics(canvas, { left: 52, right: 18, top: 18, bottom: 28 });
+        var metrics = getChartMetrics(canvas, {
+            left: 52,
+            right: 18,
+            top: 18,
+            bottom: 28
+        });
         var midY = metrics.midY;
         var yScale = Math.max(1, metrics.plotHeight / 2 - 12) / amplitudeMax();
 
@@ -532,15 +576,20 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function drawSpectrum(ctx, canvas, inputMag, filteredMag) {
-        var metrics = getChartMetrics(canvas, { left: 52, right: 18, top: 18, bottom: 34 });
+        var metrics = getChartMetrics(canvas, {
+            left: 52,
+            right: 18,
+            top: 18,
+            bottom: 34
+        });
         var fonts = getChartFontSizes(metrics.width);
         var fs = 1 / timeScale;
         var n = inputMag.length;
         if (n < 2) return;
-        var maxFreqBin = Math.min(n, Math.ceil(6 / (fs / (2 * n)) )); /* up to ~6 Hz */
+        var maxFreqBin = Math.min(n, Math.ceil(6 / (fs / (2 * n))));
         if (maxFreqBin < 2) maxFreqBin = n;
 
-        /* find max magnitude for scaling */
+
         var maxMag = 0.001;
         for (var i = 1; i < maxFreqBin; i++) {
             if (inputMag[i] > maxMag) maxMag = inputMag[i];
@@ -553,7 +602,7 @@ document.addEventListener("DOMContentLoaded", function() {
         var barWidth = Math.max(2, groupWidth * 0.32);
 
         ctx.save();
-        /* input bars */
+
         ctx.fillStyle = inputColor;
         ctx.globalAlpha = 0.6;
         for (var i = 1; i < maxFreqBin; i++) {
@@ -562,7 +611,7 @@ document.addEventListener("DOMContentLoaded", function() {
             ctx.fillRect(px - barWidth - 1, metrics.bottom - barH, barWidth, barH);
         }
 
-        /* filtered bars */
+
         ctx.fillStyle = filteredColor;
         ctx.globalAlpha = 0.6;
         for (var i = 1; i < maxFreqBin; i++) {
@@ -572,7 +621,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
         ctx.globalAlpha = 1.0;
 
-        /* frequency labels */
+
         var labelColor = getColorForMode('#64748b', '#94a3b8');
         ctx.fillStyle = labelColor;
         ctx.font = fonts.tick + 'px system-ui, -apple-system, sans-serif';
@@ -590,7 +639,12 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function drawFilterResponse(ctx, canvas) {
-        var metrics = getChartMetrics(canvas, { left: 76, right: 18, top: 28, bottom: 36 });
+        var metrics = getChartMetrics(canvas, {
+            left: 76,
+            right: 18,
+            top: 28,
+            bottom: 36
+        });
         var fonts = getChartFontSizes(metrics.width);
         var fs = 1 / timeScale;
         var maxFreq = 6;
@@ -602,7 +656,7 @@ document.addEventListener("DOMContentLoaded", function() {
         var labelColor = getColorForMode('#64748b', '#94a3b8');
 
         ctx.save();
-        /* axes */
+
         ctx.strokeStyle = axisColor;
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -614,7 +668,7 @@ document.addEventListener("DOMContentLoaded", function() {
         ctx.lineTo(metrics.left, metrics.bottom);
         ctx.stroke();
 
-        /* labels */
+
         ctx.fillStyle = labelColor;
         ctx.font = fonts.axis + 'px system-ui, -apple-system, sans-serif';
         ctx.textAlign = 'left';
@@ -624,7 +678,7 @@ document.addEventListener("DOMContentLoaded", function() {
         ctx.textBaseline = 'alphabetic';
         ctx.fillText('Frequency', metrics.right, metrics.height - 8);
 
-        /* frequency tick labels */
+
         ctx.font = fonts.tick + 'px system-ui, -apple-system, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -633,12 +687,12 @@ document.addEventListener("DOMContentLoaded", function() {
             ctx.fillText(f + ' Hz', lx, metrics.bottom + 14);
         }
 
-        /* dB range: 0 dB at top, -40 dB at bottom */
+
         var dbMin = -40;
         var dbMax = 6;
         var dbRange = dbMax - dbMin;
 
-        /* dB gridlines */
+
         ctx.strokeStyle = axisColor;
         ctx.lineWidth = 0.5;
         for (var db = 0; db >= dbMin; db -= 10) {
@@ -652,7 +706,7 @@ document.addEventListener("DOMContentLoaded", function() {
             ctx.fillText(db + ' dB', metrics.left - 8, gy);
         }
 
-        /* response curve */
+
         if (filter.type !== 'none') {
             ctx.beginPath();
             for (var i = 0; i < numPoints; i++) {
@@ -668,7 +722,7 @@ document.addEventListener("DOMContentLoaded", function() {
             ctx.lineWidth = 2.5;
             ctx.stroke();
 
-            /* cutoff / center marker */
+
             var markerFreq = filter.cutoffFrequency;
             var markerMag = filter.magnitudeAt(markerFreq, fs);
             var markerDb = 20 * Math.log10(Math.max(markerMag, 1e-10));
@@ -715,7 +769,7 @@ document.addEventListener("DOMContentLoaded", function() {
             ctx.fillText(labelLine1, markerLabelX + labelPaddingX, markerLabelY + labelPaddingY + 5);
             ctx.fillText(labelLine2, markerLabelX + labelPaddingX, markerLabelY + labelPaddingY + 5 + lineGap);
         } else {
-            /* flat line at 0 dB */
+
             var py0 = metrics.top + (1 - (0 - dbMin) / dbRange) * metrics.plotHeight;
             ctx.beginPath();
             ctx.moveTo(metrics.left, py0);
@@ -733,7 +787,7 @@ document.addEventListener("DOMContentLoaded", function() {
         ctx.restore();
     }
 
-    /* ── Animation loop ──────────────────────────────────── */
+
     function animate() {
         if (isPaused) {
             animationId = requestAnimationFrame(animate);
@@ -742,51 +796,61 @@ document.addEventListener("DOMContentLoaded", function() {
 
         resizeAllCanvases();
 
-        /* clear all canvases */
+
         var cW, cH;
-        cW = cssWidth(inputCanvas); cH = cssHeight(inputCanvas);
+        cW = cssWidth(inputCanvas);
+        cH = cssHeight(inputCanvas);
         inputCtx.clearRect(0, 0, cW, cH);
-        cW = cssWidth(filteredCanvas); cH = cssHeight(filteredCanvas);
+        cW = cssWidth(filteredCanvas);
+        cH = cssHeight(filteredCanvas);
         filteredCtx.clearRect(0, 0, cW, cH);
-        cW = cssWidth(spectrumCanvas); cH = cssHeight(spectrumCanvas);
+        cW = cssWidth(spectrumCanvas);
+        cH = cssHeight(spectrumCanvas);
         spectrumCtx.clearRect(0, 0, cW, cH);
-        cW = cssWidth(responseCanvas); cH = cssHeight(responseCanvas);
+        cW = cssWidth(responseCanvas);
+        cH = cssHeight(responseCanvas);
         responseCtx.clearRect(0, 0, cW, cH);
 
-        /* build deterministic sample buffers */
+
         var numPoints = Math.max(256, Math.round(cssWidth(inputCanvas)));
         var bufs = buildBuffers(numPoints);
 
-        /* time-domain plots */
+
         drawAxes(inputCtx, inputCanvas);
         drawTimeDomain(inputCtx, inputCanvas, bufs.input, getColorForMode('#10b981', '#4ade80'));
 
         drawAxes(filteredCtx, filteredCanvas);
         drawTimeDomain(filteredCtx, filteredCanvas, bufs.filtered, getColorForMode('#ea8400', '#fbbf24'));
 
-        /* spectrum plot */
+
         drawSpectrumAxes(spectrumCtx, spectrumCanvas);
         var inputSpec = computeMagnitudeSpectrum(bufs.input);
         var filteredSpec = computeMagnitudeSpectrum(bufs.filtered);
         drawSpectrum(spectrumCtx, spectrumCanvas, inputSpec, filteredSpec);
 
-        /* filter frequency response */
+
         drawFilterResponse(responseCtx, responseCanvas);
 
-        /* advance time */
+
         time -= (velocity / 60);
         animationId = requestAnimationFrame(animate);
     }
 
-    /* ── Stats / value updates ───────────────────────────── */
+
     function updateStats() {
         var waveformNames = {
-            'sine': 'Sine', 'square': 'Square', 'triangle': 'Triangle',
-            'sawtooth': 'Sawtooth', 'pulse': 'Pulse'
+            'sine': 'Sine',
+            'square': 'Square',
+            'triangle': 'Triangle',
+            'sawtooth': 'Sawtooth',
+            'pulse': 'Pulse'
         };
         var filterNames = {
-            'none': 'None', 'lowpass': 'Low-Pass', 'highpass': 'High-Pass',
-            'bandpass': 'Band-Pass', 'bandstop': 'Band-Stop'
+            'none': 'None',
+            'lowpass': 'Low-Pass',
+            'highpass': 'High-Pass',
+            'bandpass': 'Band-Pass',
+            'bandstop': 'Band-Stop'
         };
 
         waveformDisplay.textContent = waveformNames[waveformSelect.value] || 'Sine';
@@ -820,7 +884,7 @@ document.addEventListener("DOMContentLoaded", function() {
         dutyCycleValue.textContent = (dutyCycle * 100).toFixed(0) + '%';
         velocityValue.textContent = velocity.toFixed(2);
 
-        /* show/hide duty-cycle control */
+
         if (waveformSelect.value === 'pulse') {
             dutyCycleControl.classList.remove('hidden');
         } else {
@@ -864,32 +928,67 @@ document.addEventListener("DOMContentLoaded", function() {
         updateStats();
     }
 
-    /* ── Presets ──────────────────────────────────────────── */
+
     var presets = {
         sine: {
-            waveform: 'sine', amplitude: 1, frequency: 1, phase: 0,
-            velocity: 1, dutyCycle: 0.5, filter: 'none'
+            waveform: 'sine',
+            amplitude: 1,
+            frequency: 1,
+            phase: 0,
+            velocity: 1,
+            dutyCycle: 0.5,
+            filter: 'none'
         },
         lowpass_demo: {
-            waveform: 'square', amplitude: 0.8, frequency: 0.5, phase: 0,
-            velocity: 1, dutyCycle: 0.5, filter: 'lowpass', cutoff: 1.5, filterQ: 1
+            waveform: 'square',
+            amplitude: 0.8,
+            frequency: 0.5,
+            phase: 0,
+            velocity: 1,
+            dutyCycle: 0.5,
+            filter: 'lowpass',
+            cutoff: 1.5,
+            filterQ: 1
         },
         highpass_demo: {
-            waveform: 'sawtooth', amplitude: 0.7, frequency: 0.8, phase: 0,
-            velocity: 1, dutyCycle: 0.5, filter: 'highpass', cutoff: 2, filterQ: 1
+            waveform: 'sawtooth',
+            amplitude: 0.7,
+            frequency: 0.8,
+            phase: 0,
+            velocity: 1,
+            dutyCycle: 0.5,
+            filter: 'highpass',
+            cutoff: 2,
+            filterQ: 1
         },
         bandpass_demo: {
-            waveform: 'sawtooth', amplitude: 0.7, frequency: 1.5, phase: 1.57,
-            velocity: 1.5, dutyCycle: 0.5, filter: 'bandpass', centerFrequency: 2, bandwidth: 1
+            waveform: 'sawtooth',
+            amplitude: 0.7,
+            frequency: 1.5,
+            phase: 1.57,
+            velocity: 1.5,
+            dutyCycle: 0.5,
+            filter: 'bandpass',
+            centerFrequency: 2,
+            bandwidth: 1
         },
         pulse_pwm: {
-            waveform: 'pulse', amplitude: 0.9, frequency: 1, phase: 0,
-            velocity: 1, dutyCycle: 0.25, filter: 'lowpass', cutoff: 2.5, filterQ: 0.7
+            waveform: 'pulse',
+            amplitude: 0.9,
+            frequency: 1,
+            phase: 0,
+            velocity: 1,
+            dutyCycle: 0.25,
+            filter: 'lowpass',
+            cutoff: 2.5,
+            filterQ: 0.7
         }
     };
 
     function formatPresetName(name) {
-        return name.replace(/_/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); });
+        return name.replace(/_/g, ' ').replace(/\b\w/g, function(l) {
+            return l.toUpperCase();
+        });
     }
 
     function applyPreset(presetName) {
@@ -927,7 +1026,7 @@ document.addEventListener("DOMContentLoaded", function() {
         showToast(formatPresetName(presetName) + ' preset applied', 'success');
     }
 
-    /* ── Event listeners ─────────────────────────────────── */
+
     document.querySelectorAll('.card-toggle').forEach(function(toggle) {
         toggle.addEventListener('click', function() {
             var expanded = toggle.getAttribute('aria-expanded') === 'true';
@@ -1018,7 +1117,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
-    /* ── Collapsible educational section ─────────────────── */
+
     var learnToggle = document.getElementById('learn-toggle');
     if (learnToggle) {
         learnToggle.addEventListener('click', function() {
@@ -1031,7 +1130,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    /* ── Init ────────────────────────────────────────────── */
+
     updateValues();
     updateFilterValues();
     animate();

@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Basics of XML</title>
-    <meta content="XML, or Extensible Markup Language, is a markup language used to encode documents in a format that is both human-readable and machine-readable." name="description" />
+    <meta content="XML, or Extensible Markup Language, is a W3C-standardized markup language designed to encode documents in a format that is both human-readable and machine-readable." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/02_xml"
             },
             "url": "https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/02_xml",
-            "description": "XML, or Extensible Markup Language, is a markup language used to encode documents in a format that is both human-readable and machine-readable.",
-            "dateModified": "2026-01-24"
+            "description": "XML, or Extensible Markup Language, is a W3C-standardized markup language designed to encode documents in a format that is both human-readable and machine-readable.",
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -80,7 +80,13 @@
                 <ol>
                     <li><a href="#basics-of-xml">Basics of XML</a></li>
                     <li><a href="#xml-syntax-rules">XML Syntax Rules</a></li>
+                    <li><a href="#document-tree-structure">Document Tree Structure</a></li>
                     <li><a href="#example">Example</a></li>
+                    <li><a href="#xml-namespaces">XML Namespaces</a></li>
+                    <li><a href="#dtd-vs-xsd-schema-validation-">DTD vs XSD (Schema Validation)</a></li>
+                    <li><a href="#xpath-basics">XPath Basics</a></li>
+                    <li><a href="#parsing-xml-dom-vs-sax">Parsing XML: DOM vs SAX</a></li>
+                    <li><a href="#security-considerations-xxe-">Security Considerations (XXE)</a></li>
                     <li><a href="#benefits-of-xml">Benefits of XML</a></li>
                     <li><a href="#common-uses-of-xml">Common Uses of XML</a></li>
                     <li><a href="#best-practices-for-xml">Best Practices for XML</a></li>
@@ -189,32 +195,53 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <header>XML Format</header>
-            <p>XML, or Extensible Markup Language, is a markup language used to encode documents in a format that is both human-readable and machine-readable. It is widely used for the representation of arbitrary data structures, such as those used in web services.</p>
+            <p>XML, or Extensible Markup Language, is a <strong>W3C</strong>-standardized markup language designed to encode documents in a format that is both human-readable and machine-readable. Unlike HTML, which has a fixed set of tags, XML lets you define your own <strong>vocabulary</strong> of elements to represent arbitrary data structures. It remains widely used in enterprise web services, configuration files, and document interchange where strict schema validation matters.</p>
             <h2 id="basics-of-xml">Basics of XML</h2>
             <ol>
-                <li><strong>Elements</strong>: The building blocks of an XML document, they can contain other elements, text, or attributes.</li>
-                <li><strong>Attributes</strong>: Contain additional information about elements but are not considered part of the data contained in the elements.</li>
-                <li><strong>Syntax</strong>: XML syntax refers to the rules that govern the way an XML document is coded.</li>
+                <li><strong>Elements</strong> are the building blocks of every XML document; they can nest other elements, hold text content, or carry attributes.</li>
+                <li><strong>Attributes</strong> provide supplementary metadata about an element, written as name-value pairs inside the opening tag.</li>
+                <li><strong>Text Content</strong> is the actual data between an opening and closing tag, which the parser delivers to the application.</li>
+                <li><strong>Comments</strong> follow the <code>&lt;!-- ... --&gt;</code> syntax and are ignored by parsers but useful for <strong>documenting</strong> intent inside the file.</li>
+                <li><strong>Processing Instructions</strong> such as <code>&lt;?xml-stylesheet ... ?&gt;</code> give directives to the application <strong>consuming</strong> the document.</li>
             </ol>
             <h2 id="xml-syntax-rules">XML Syntax Rules</h2>
             <ol>
-                <li><strong>XML Declaration</strong>: An XML document starts with an XML declaration which specifies the XML version.</li>
-                <li><strong>Root Element</strong>: Each XML document should have a root element that contains all other elements.</li>
-                <li><strong>Tag Names</strong>: XML tags are case sensitive and must start with a letter or underscore.</li>
-                <li><strong>Closing Tags</strong>: Every start tag in XML should have a matching end tag.</li>
-                <li><strong>Attribute Values</strong>: Attribute values must be surrounded by quotation marks.</li>
+                <li><strong>XML Declaration</strong> – a document should begin with <code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;</code> to declare the version and <strong>character</strong> encoding.</li>
+                <li><strong>Single Root</strong> – every well-formed document must have exactly one root element that <strong>wraps</strong> all other elements.</li>
+                <li><strong>Case Sensitivity</strong> – tag names are case-sensitive, so <code>&lt;Name&gt;</code> and <code>&lt;name&gt;</code> are treated as <strong>different</strong> elements.</li>
+                <li><strong>Proper Nesting</strong> – elements must close in the reverse order they were opened, ensuring a <strong>balanced</strong> tree.</li>
+                <li><strong>Quoted Attributes</strong> – attribute values must always be enclosed in single or <strong>double</strong> quotation marks.</li>
+                <li><strong>Special Characters</strong> – reserved characters like <code>&lt;</code>, <code>&gt;</code>, and <code>&amp;</code> must be written as <strong>entity</strong> references (<code>&amp;lt;</code>, <code>&amp;gt;</code>, <code>&amp;amp;</code>).</li>
             </ol>
+            <h2 id="document-tree-structure">Document Tree Structure</h2>
+            <p>Every XML document forms a logical <strong>tree</strong> rooted at the single root element. Understanding this tree is key to querying and transforming XML.</p>
+            <div>
+                <pre><code class="language-shell">[document]
+                           |
+                     &lt;employee&gt;
+                    /    |     \
+              &lt;name&gt;  &lt;address&gt;  &lt;skills&gt;
+               |      /   |  \       |
+          "John"  &lt;street&gt; &lt;city&gt; &lt;zipCode&gt;  &lt;skill&gt; &lt;skill&gt;
+                    |       |       |          |       |
+               "1234.."  "Any.."  "12345"   "Java"  "C#"</code></pre>
+            </div>
+            <ul>
+                <li>Each <strong>node</strong> in the tree is either an element, a text node, an attribute, or a processing instruction.</li>
+                <li><strong>Parent-child</strong> relationships mirror the nesting of tags in the source document.</li>
+                <li><strong>Sibling</strong> elements share the same parent and are ordered by their position in the document.</li>
+            </ul>
             <h2 id="example">Example</h2>
-            <p>Here's an example of an XML (eXtensible Markup Language) file:</p>
+            <p>Below is a complete XML document demonstrating <strong>nested</strong> elements, attributes, and namespaces:</p>
             <div>
                 <pre><code class="language-xml">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
-&lt;employee&gt;
+&lt;employee id="E1001" xmlns:hr="http://example.com/hr"&gt;
   &lt;name&gt;John Doe&lt;/name&gt;
   &lt;age&gt;30&lt;/age&gt;
-  &lt;department&gt;Engineering&lt;/department&gt;
+  &lt;hr:department code="ENG"&gt;Engineering&lt;/hr:department&gt;
   &lt;address&gt;
     &lt;street&gt;1234 Main St&lt;/street&gt;
     &lt;city&gt;Anytown&lt;/city&gt;
@@ -222,32 +249,219 @@
     &lt;zipCode&gt;12345&lt;/zipCode&gt;
   &lt;/address&gt;
   &lt;skills&gt;
-    &lt;skill&gt;Java&lt;/skill&gt;
-    &lt;skill&gt;C#&lt;/skill&gt;
-    &lt;skill&gt;Python&lt;/skill&gt;
+    &lt;skill level="senior"&gt;Java&lt;/skill&gt;
+    &lt;skill level="mid"&gt;C#&lt;/skill&gt;
+    &lt;skill level="junior"&gt;Python&lt;/skill&gt;
   &lt;/skills&gt;
 &lt;/employee&gt;</code></pre>
             </div>
+            <h2 id="xml-namespaces">XML Namespaces</h2>
+            <p>When multiple XML vocabularies are combined in one document, <strong>name collisions</strong> can occur. Namespaces solve this by qualifying element and attribute names with a URI.</p>
+            <ul>
+                <li>A <strong>declaration</strong> like <code>xmlns:hr="http://example.com/hr"</code> binds the prefix <code>hr</code> to a unique namespace URI.</li>
+                <li>The <strong>default</strong> namespace (<code>xmlns="..."</code>) applies to all unprefixed child elements within its scope.</li>
+                <li>Namespace URIs do not need to <strong>resolve</strong> to an actual web page; they serve only as unique identifiers.</li>
+                <li><strong>Prefixed</strong> elements such as <code>&lt;hr:department&gt;</code> clearly indicate which vocabulary the element belongs to.</li>
+            </ul>
+            <div>
+                <pre><code class="language-xml">&lt;root xmlns:app="http://example.com/app"
+      xmlns:db="http://example.com/db"&gt;
+  &lt;app:config&gt;
+    &lt;db:connection host="localhost" port="5432"/&gt;
+  &lt;/app:config&gt;
+&lt;/root&gt;</code></pre>
+            </div>
+            <h2 id="dtd-vs-xsd-schema-validation-">DTD vs XSD (Schema Validation)</h2>
+            <p>Validation ensures an XML document conforms to a <strong>predefined</strong> structure. Two main technologies exist:</p>
+            <div>
+                <pre><code class="language-shell">XML Document
+       |
+       v
++---------------+      +---------------------+
+|  Well-formed? |--No-&gt;|  Reject (parse err) |
++-------+-------+      +---------------------+
+        | Yes
+        v
++---------------+      +---------------------+
+| Valid against |--No-&gt;| Reject (validation  |
+| DTD or XSD?   |      |        error)       |
++-------+-------+      +---------------------+
+        | Yes
+        v
+  Accept Document</code></pre>
+            </div>
+            <ul>
+                <li><strong>DTD</strong> (Document Type Definition) uses a non-XML syntax to define allowed elements, attributes, and their <strong>ordering</strong> constraints.</li>
+                <li><strong>XSD</strong> (XML Schema Definition) is itself written in XML and supports rich <strong>data types</strong> like integers, dates, and custom patterns.</li>
+                <li>XSD offers <strong>namespace-aware</strong> validation, making it the preferred choice for complex, multi-vocabulary documents.</li>
+                <li>DTD remains useful for <strong>simple</strong> documents where lightweight validation is sufficient.</li>
+            </ul>
+            <p>
+            <table>
+                <tr>
+                    <td>Feature</td>
+                    <td>DTD</td>
+                    <td>XSD</td>
+                </tr>
+                <tr>
+                    <td>Syntax</td>
+                    <td>Non-XML, <strong>compact</strong> grammar</td>
+                    <td>XML-based</td>
+                </tr>
+                <tr>
+                    <td>Data Types</td>
+                    <td>Limited (CDATA, ID, IDREF)</td>
+                    <td>Rich (int, date, <strong>regex</strong>, etc.)</td>
+                </tr>
+                <tr>
+                    <td>Namespace Support</td>
+                    <td>None</td>
+                    <td>Full <strong>namespace</strong> awareness</td>
+                </tr>
+                <tr>
+                    <td>Extensibility</td>
+                    <td>Low</td>
+                    <td>High (inheritance, <strong>groups</strong>)</td>
+                </tr>
+                <tr>
+                    <td>Industry Adoption</td>
+                    <td>Legacy systems</td>
+                    <td>Modern <strong>enterprise</strong> standards</td>
+                </tr>
+            </table>
+            </p>
+            <h2 id="xpath-basics">XPath Basics</h2>
+            <p>XPath is a query language for selecting <strong>nodes</strong> from an XML document tree. It is used heavily in XSLT, XQuery, and many programming APIs.</p>
+            <ul>
+                <li><code>/employee/name</code> selects the <code>&lt;name&gt;</code> child using an <strong>absolute</strong> path from the root.</li>
+                <li><code>//skill</code> selects every <code>&lt;skill&gt;</code> element anywhere in the document with a <strong>recursive</strong> descent.</li>
+                <li><code>//skill[@level='senior']</code> filters elements by <strong>attribute</strong> value using a predicate.</li>
+                <li><code>..</code> navigates to the <strong>parent</strong> of the current node, similar to filesystem paths.</li>
+                <li><code>text()</code> returns the <strong>text</strong> content within the matched element.</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">XPath: /employee/address/city
+
+  &lt;employee&gt;                    
+       |                        
+    &lt;address&gt;        &lt;-- step 2  
+       |                        
+     &lt;city&gt;          &lt;-- step 3  
+       |                        
+    "Anytown"        &lt;-- result</code></pre>
+            </div>
+            <h2 id="parsing-xml-dom-vs-sax">Parsing XML: DOM vs SAX</h2>
+            <p>Two dominant strategies exist for reading XML, each with distinct <strong>memory</strong> and performance trade-offs.</p>
+            <div>
+                <pre><code class="language-shell">XML Document
+                 |
+       +---------+---------+
+       |                   |
+       v                   v
+  DOM Parser           SAX Parser
+  (tree in RAM)        (event stream)
+       |                   |
+       v                   v
+  Full node tree      Callbacks fired
+  available for       for each start-tag,
+  random access       end-tag, and text</code></pre>
+            </div>
+            <ul>
+                <li><strong>DOM</strong> (Document Object Model) loads the entire document into memory as a tree, allowing <strong>random</strong> access to any node at any time.</li>
+                <li><strong>SAX</strong> (Simple API for XML) reads the document sequentially and fires events, using <strong>constant</strong> memory regardless of file size.</li>
+                <li>DOM is ideal for <strong>small-to-medium</strong> documents that need frequent reads, updates, or XPath queries.</li>
+                <li>SAX is preferred for <strong>large</strong> files or streaming scenarios where only a subset of elements is needed.</li>
+                <li><strong>StAX</strong> (Streaming API for XML) is a pull-based alternative to SAX that gives the application <strong>control</strong> over when to read the next event.</li>
+            </ul>
+            <p>
+            <table>
+                <tr>
+                    <td>Aspect</td>
+                    <td>DOM</td>
+                    <td>SAX</td>
+                    <td>StAX</td>
+                </tr>
+                <tr>
+                    <td>Memory</td>
+                    <td><strong>High</strong> (full tree in RAM)</td>
+                    <td><strong>Low</strong> (event-driven)</td>
+                    <td><strong>Low</strong> (pull-based)</td>
+                </tr>
+                <tr>
+                    <td>Access Pattern</td>
+                    <td>Random</td>
+                    <td><strong>Sequential</strong> only</td>
+                    <td>Sequential only</td>
+                </tr>
+                <tr>
+                    <td>Ease of Use</td>
+                    <td>Simple <strong>navigation</strong> API</td>
+                    <td>Callback-heavy</td>
+                    <td>Iterator-style</td>
+                </tr>
+                <tr>
+                    <td>Write Support</td>
+                    <td>Yes (modify and <strong>serialize</strong>)</td>
+                    <td>Read-only</td>
+                    <td>Read and write</td>
+                </tr>
+                <tr>
+                    <td>Best For</td>
+                    <td>Small docs, <strong>editing</strong></td>
+                    <td>Large docs, filtering</td>
+                    <td><strong>Streaming</strong> pipelines</td>
+                </tr>
+            </table>
+            </p>
+            <h2 id="security-considerations-xxe-">Security Considerations (XXE)</h2>
+            <p>XML parsers can be exploited if they process <strong>untrusted</strong> input without proper safeguards. The most critical vulnerability is XML External Entity (XXE) injection.</p>
+            <div>
+                <pre><code class="language-shell">Attacker crafts XML with external entity:
+
+  &lt;?xml version="1.0"?&gt;
+  &lt;!DOCTYPE foo [
+    &lt;!ENTITY xxe SYSTEM "file:///etc/passwd"&gt;
+  ]&gt;
+  &lt;data&gt;&amp;xxe;&lt;/data&gt;
+
+  Parser Flow:
+  1. Parser reads DTD   --&gt;  sees ENTITY declaration
+  2. Resolves "file://" --&gt;  reads /etc/passwd from disk
+  3. Substitutes &amp;xxe;  --&gt;  sensitive data in &lt;data&gt; output</code></pre>
+            </div>
+            <ul>
+                <li><strong>XXE</strong> (XML External Entity) attacks trick the parser into reading local files or making <strong>network</strong> requests on the server's behalf.</li>
+                <li><strong>Billion Laughs</strong> (entity expansion) defines recursively nested entities that expand into enormous strings, causing <strong>denial-of-service</strong>.</li>
+                <li>Always <strong>disable</strong> external entity resolution and DTD processing when parsing untrusted XML.</li>
+                <li>In Java, set <code>XMLConstants.FEATURE_SECURE_PROCESSING</code> to <strong>true</strong> and disallow doctype declarations.</li>
+                <li>In Python, use <code>defusedxml</code> instead of the standard library's <code>xml.etree</code> for <strong>safe</strong> parsing of untrusted data.</li>
+            </ul>
             <h2 id="benefits-of-xml">Benefits of XML</h2>
             <ol>
-                <li><strong>Self-descriptive</strong>: XML uses text strings rather than binary code, which makes it easy for humans to read and write.</li>
-                <li><strong>Platform Independent</strong>: XML data can be processed by any machine or operating system, making it a versatile choice for data storage and transmission.</li>
-                <li><strong>Supports Unicode</strong>: This allows almost any information in any human language to be communicated.</li>
+                <li><strong>Self-descriptive</strong> tags make the document readable without external documentation, unlike binary formats.</li>
+                <li><strong>Platform-independent</strong> text encoding ensures data can be exchanged between any operating system or programming language.</li>
+                <li><strong>Unicode</strong> support allows representation of virtually any human language or symbol set.</li>
+                <li><strong>Extensible</strong> vocabularies let each domain define its own element names without modifying the core specification.</li>
+                <li><strong>Mature tooling</strong> across every major language provides robust parsers, validators, and transformation engines.</li>
             </ol>
             <h2 id="common-uses-of-xml">Common Uses of XML</h2>
             <ul>
-                <li><strong>Data Storage</strong>: XML is often used for storing data in a structured manner.</li>
-                <li><strong>Data Transport</strong>: XML provides a hardware- and software-independent way of sharing data.</li>
-                <li><strong>Configuration Files</strong>: Many software use XML files for configuration.</li>
-                <li><strong>RSS Feeds</strong>: RSS feeds, which are used to syndicate content on the web, are typically written in XML.</li>
+                <li><strong>SOAP Web Services</strong> rely on XML envelopes to encode requests and responses in enterprise <strong>integration</strong> layers.</li>
+                <li><strong>Configuration Files</strong> for tools like Maven (<code>pom.xml</code>), Spring, and Android manifests use XML for <strong>structured</strong> settings.</li>
+                <li><strong>Document Formats</strong> such as XHTML, SVG, and Office Open XML (<code>.docx</code>) are built on <strong>XML</strong> foundations.</li>
+                <li><strong>RSS and Atom</strong> feeds syndicate web content using well-defined XML <strong>schemas</strong>.</li>
+                <li><strong>Data Interchange</strong> between heterogeneous systems in healthcare (HL7), finance (FIX/FIXML), and government often mandates <strong>XML</strong>.</li>
             </ul>
             <h2 id="best-practices-for-xml">Best Practices for XML</h2>
             <ol>
-                <li><strong>Use Meaningful Element Names</strong>: Element names should describe the data and be easy to understand.</li>
-                <li><strong>Keep it Simple</strong>: Try to minimize the depth of your XML structure and the number of attributes.</li>
-                <li><strong>Error Handling</strong>: Use a parser that supports error handling to ensure that your XML documents are well-formed.</li>
-                <li><strong>Validate Your XML</strong>: Use an XML Schema or DTD (Document Type Definition) to validate the structure and content of your XML.</li>
-                <li><strong>Security</strong>: Be aware of potential security issues, such as XML External Entity (XXE) attacks, when parsing XML documents.</li>
+                <li><strong>Meaningful Names</strong> – choose element and attribute names that clearly describe their content, improving long-term <strong>maintainability</strong>.</li>
+                <li><strong>Shallow Nesting</strong> – keep the tree depth reasonable to avoid unnecessary complexity and simplify <strong>XPath</strong> queries.</li>
+                <li><strong>Schema Validation</strong> – always validate documents against an XSD to catch structural errors <strong>before</strong> they reach application logic.</li>
+                <li><strong>Namespace Discipline</strong> – declare namespaces at the root element and use consistent prefixes to prevent <strong>collision</strong> across vocabularies.</li>
+                <li><strong>Secure Parsing</strong> – disable external entities and DTD processing on every parser that handles <strong>untrusted</strong> input.</li>
+                <li><strong>Encoding Declaration</strong> – explicitly set <code>encoding="UTF-8"</code> in the XML declaration to avoid <strong>character</strong> misinterpretation.</li>
+                <li><strong>Prefer Elements Over Attributes</strong> – use attributes for metadata like IDs and elements for <strong>data</strong> to keep the document intuitive.</li>
+                <li><strong>Version Your Schemas</strong> – include a version attribute or namespace so consumers can handle <strong>backward-compatible</strong> changes gracefully.</li>
             </ol>
         </article-section>
     </div>

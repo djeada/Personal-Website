@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/numerical_methods/6_regression/linear_interpolation",
             "description": "Linear interpolation is one of the most basic and commonly used interpolation methods.",
-            "dateModified": "2020-11-27"
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -81,8 +81,11 @@
                     <ol>
                         <li><a href="#mathematical-formulation">Mathematical Formulation</a></li>
                         <li><a href="#derivation">Derivation</a></li>
+                        <li><a href="#alternative-form">Alternative Form</a></li>
+                        <li><a href="#error-analysis">Error Analysis</a></li>
                         <li><a href="#algorithm-steps">Algorithm Steps</a></li>
                         <li><a href="#example">Example</a></li>
+                        <li><a href="#example-2">Example 2</a></li>
                         <li><a href="#advantages">Advantages</a></li>
                         <li><a href="#limitations">Limitations</a></li>
                     </ol>
@@ -174,7 +177,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: November 27, 2020</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="linear-interpolation">Linear interpolation</h2>
             <p>Linear interpolation is one of the most basic and commonly used interpolation methods. The idea is to approximate the value of a function between two known data points by assuming that the function behaves linearly (like a straight line) between these points. Although this assumption may be simplistic, it often provides a reasonable approximation, especially when the data points are close together or the underlying function is relatively smooth.</p>
@@ -204,6 +207,14 @@
             <p>IV. <strong>Final Formula:</strong></p>
             <p>Simplifying:</p>
             <p>$$y = y_i + \frac{(y_{i+1} - y_i)}{x_{i+1}-x_i} (x - x_i).$$</p>
+            <h3 id="alternative-form">Alternative Form</h3>
+            <p>The interpolation formula can be rewritten as a weighted average of the two $y$-values:</p>
+            <p>$$y = \frac{x_{i+1} - x}{x_{i+1} - x_i} \, y_i + \frac{x - x_i}{x_{i+1} - x_i} \, y_{i+1}.$$</p>
+            <p>The two weights sum to one and are non-negative for $x \in [x_i, x_{i+1}]$, so the result is a <strong>convex combination</strong> of $y_i$ and $y_{i+1}$. At $x = x_i$ the first weight is 1, recovering $y_i$; at $x = x_{i+1}$ the second weight is 1, recovering $y_{i+1}$.</p>
+            <h3 id="error-analysis">Error Analysis</h3>
+            <p>If the function $f$ being interpolated has a continuous second derivative on $[x_i, x_{i+1}]$ (i.e. $f \in C^2[x_i, x_{i+1}]$), the interpolation error is bounded by:</p>
+            <p>$$|f(x) - y| \leq \frac{1}{8} h^2 \max_{\xi \in [x_i, x_{i+1}]} |f''(\xi)|,$$</p>
+            <p>where $h = x_{i+1} - x_i$ is the interval width. Because the error is $O(h^2)$, halving the spacing between data points reduces the maximum error by a factor of four.</p>
             <h3 id="algorithm-steps">Algorithm Steps</h3>
             <p>I. Identify the interval $[x_i, x_{i+1}]$ that contains the target $x$.</p>
             <p>II. Compute the slope:</p>
@@ -218,17 +229,39 @@
             <p>II. Substitute $x=1$:</p>
             <p>$$y = 0 + 0.5 (1 - (-2)) = 0.5 \times 3 = 1.5.$$</p>
             <p>So, the line passing through $(-2,0)$ and $(2,2)$ gives $y=1.5$ when $x=1$.</p>
+            <p><strong>Verification at the endpoints:</strong></p>
+            <ul>
+                <li>At $x = -2$: $y = 0 + 0.5(-2 - (-2)) = 0 + 0 = 0$ ✓</li>
+                <li>At $x = 2$: $y = 0 + 0.5(2 - (-2)) = 0.5 \times 4 = 2$ ✓</li>
+            </ul>
+            <p><strong>Error bound:</strong> If we know only that $|f''(\xi)| \leq M$ for all $\xi \in [-2, 2]$, then $h = 2 - (-2) = 4$ and the maximum interpolation error is:</p>
+            <p>$$|f(x) - y| \leq \frac{1}{8}(4)^2 M = 2M.$$</p>
+            <h3 id="example-2">Example 2</h3>
+            <p><strong>Estimating $\sin(\pi/4)$ from two known values of $\sin(x)$.</strong></p>
+            <p>Known points: $(0,\, 0)$ and $(\pi/2,\, 1)$, since $\sin(0) = 0$ and $\sin(\pi/2) = 1$. Estimate $f(\pi/4) = \sin(\pi/4)$.</p>
+            <p>I. Compute the slope:</p>
+            <p>$$\alpha = \frac{1 - 0}{\pi/2 - 0} = \frac{2}{\pi} \approx 0.6366.$$</p>
+            <p>II. Substitute $x = \pi/4$:</p>
+            <p>$$y = 0 + \frac{2}{\pi}\left(\frac{\pi}{4} - 0\right) = \frac{2}{\pi} \cdot \frac{\pi}{4} = \frac{1}{2} = 0.5.$$</p>
+            <p>III. Compare with the exact value:</p>
+            <p>$$\sin!\left(\frac{\pi}{4}\right) = \frac{\sqrt{2}}{2} \approx 0.7071.$$</p>
+            <p>The absolute error is $|0.7071 - 0.5| = 0.2071$.</p>
+            <p>IV. Check against the error bound. Here $h = \pi/2$ and $|f''(x)| = |!-!\sin(x)| \leq 1$ on $[0, \pi/2]$, so:</p>
+            <p>$$\text{max error} \leq \frac{1}{8}\left(\frac{\pi}{2}\right)^2 \cdot 1 \approx 0.3084.$$</p>
+            <p>Indeed $0.2071 &lt; 0.3084$ ✓. This illustrates that for highly curved functions, linear interpolation can have significant error even though the bound is still respected.</p>
             <h3 id="advantages">Advantages</h3>
             <ul>
                 <li>The method offers <strong>simplicity</strong>, as the calculation involves straightforward arithmetic, making it easy and quick to apply.</li>
                 <li><strong>Minimal data requirements</strong> make it practical, needing only two data points to estimate intermediate values.</li>
                 <li>It provides a <strong>local approximation</strong>, working well when the function is nearly linear within the specified interval.</li>
+                <li>When applied piecewise over consecutive intervals, the result is a <strong>continuous interpolant</strong> (a connected chain of line segments).</li>
             </ul>
             <h3 id="limitations">Limitations</h3>
             <ul>
                 <li>The <strong>linear assumption</strong> can lead to poor results if the actual relationship between points is not close to linear.</li>
                 <li>Linear interpolation uses <strong>no derivative information</strong>, ignoring the slope or curvature of the function, which could enhance accuracy.</li>
                 <li><strong>Accuracy diminishes</strong> as the interval between points increases or as the function becomes more non-linear, leading to potential errors in approximation.</li>
+                <li>The piecewise-linear interpolant is <strong>not differentiable at the knot points</strong> (the data points), producing "kinks" where adjacent line segments meet.</li>
             </ul>
         </article-section>
     </div>

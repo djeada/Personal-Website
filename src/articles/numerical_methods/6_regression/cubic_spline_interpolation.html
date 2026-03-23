@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/numerical_methods/6_regression/cubic_spline_interpolation",
             "description": "Cubic spline interpolation is a refined mathematical tool frequently used within numerical analysis.",
-            "dateModified": "2024-09-04"
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -85,6 +85,7 @@
                         <li><a href="#example">Example</a></li>
                         <li><a href="#advantages">Advantages</a></li>
                         <li><a href="#limitations">Limitations</a></li>
+                        <li><a href="#verification">Verification</a></li>
                     </ol>
                 </ol>
             </div>
@@ -174,7 +175,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: September 04, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="cubic-spline">Cubic Spline</h2>
             <p>Cubic spline interpolation is a refined mathematical tool frequently used within numerical analysis. It's an approximation technique that employs piecewise cubic polynomials, collectively forming a cubic spline. These cubic polynomials are specifically engineered to pass through a defined set of data points, hence striking a balance between overly simple (like linear) and overly intricate (like high-degree polynomial) interpolations.</p>
@@ -223,18 +224,22 @@
             </ul>
             <p>This form ensures the correct boundary conditions and continuity of derivatives once $M_i$ are found.</p>
             <p>III. <strong>System of Equations for $M_i$:</strong></p>
-            <p>Using the conditions for continuity of first and second derivatives, one obtains a tridiagonal system of equations in terms of the unknown second derivatives $M_i$. For natural splines, we have:</p>
+            <p>Requiring continuity of the first derivative at each interior knot ($S_{i-1}'(x_i) = S_i'(x_i)$) and substituting the second-derivative form from step II yields a tridiagonal system for the unknown $M_i$. For natural splines the boundary values are:</p>
             <p>$$M_0 = 0, \quad M_n = 0.$$</p>
-            <p>The remaining $M_i$'s (for $i=1,\ldots,n-1$) are found by solving this system:</p>
-            <p>$$\mu_i M_{i-1} + 2M_i + \lambda_i M_{i+1} = d_i,$$
-                where $\mu_i, \lambda_i, d_i$ depend on the data points and $h_i$.</p>
+            <p>The remaining $M_i$'s (for $i=1,\ldots,n-1$) satisfy:</p>
+            <p>$$h_{i-1}M_{i-1} + 2(h_{i-1}+h_i)M_i + h_i M_{i+1} = 6\left(\frac{y_{i+1}-y_i}{h_i} - \frac{y_i - y_{i-1}}{h_{i-1}}\right)$$</p>
+            <p>Dividing through by $(h_{i-1}+h_i)$ gives the compact form often seen in textbooks:</p>
+            <p>$$\mu_i M_{i-1} + 2M_i + \lambda_i M_{i+1} = d_i,$$</p>
+            <p>where</p>
+            <p>$$\mu_i = \frac{h_{i-1}}{h_{i-1}+h_i}, \quad \lambda_i = \frac{h_i}{h_{i-1}+h_i} = 1-\mu_i, \quad d_i = \frac{6}{h_{i-1}+h_i}\left(\frac{y_{i+1}-y_i}{h_i} - \frac{y_i - y_{i-1}}{h_{i-1}}\right).$$</p>
             <p>IV. <strong>Once $M_i$ are determined</strong>, the coefficients $a_i, b_i, c_i, d_i$ of the cubic spline in the standard form:</p>
             <p>$$S_i(x) = a_i + b_i(x - x_i) + c_i(x - x_i)^2 + d_i(x - x_i)^3$$</p>
-            <p>can be computed directly:</p>
+            <p>can be read off by expanding the second-derivative form from step II about $x = x_i$:</p>
             <p>$$a_i = y_i$$</p>
-            <p>$$b_i = \frac{y_{i+1}-y_i}{h_i} - \frac{h_i}{3}(2M_i + M_{i+1})$$</p>
-            <p>$$c_i = M_i$$</p>
-            <p>$$d_i = \frac{M_{i+1} - M_i}{3h_i}.$$</p>
+            <p>$$b_i = \frac{y_{i+1}-y_i}{h_i} - \frac{h_i}{6}(2M_i + M_{i+1})$$</p>
+            <p>$$c_i = \frac{M_i}{2}$$</p>
+            <p>$$d_i = \frac{M_{i+1} - M_i}{6h_i}$$</p>
+            <p>One can verify that $S_i''(x_i) = 2c_i = M_i$ and $S_i''(x_{i+1}) = 2c_i + 6d_i h_i = M_{i+1}$, confirming consistency with the definition $M_i = S''(x_i)$.</p>
             <h3 id="algorithm-steps">Algorithm Steps</h3>
             <p>I. <strong>Data Preparation:</strong></p>
             <ul>
@@ -245,32 +250,83 @@
             <p>Set up the linear system to solve for the second derivatives $M_i$. For a natural spline:</p>
             <p>$$M_0 = 0, \quad M_n = 0$$</p>
             <p>For $i=1,\ldots,n-1$:</p>
-            <p>$$h_{i-1}M_{i-1} + 2(h_{i-1}+h_i)M_i + h_i M_{i+1} = 3\left(\frac{y_{i+1}-y_i}{h_i} - \frac{y_i - y_{i-1}}{h_{i-1}}\right)$$</p>
+            <p>$$h_{i-1}M_{i-1} + 2(h_{i-1}+h_i)M_i + h_i M_{i+1} = 6\left(\frac{y_{i+1}-y_i}{h_i} - \frac{y_i - y_{i-1}}{h_{i-1}}\right)$$</p>
             <p>III. <strong>Solve the Tridiagonal System:</strong></p>
-            <p>Use an efficient method (like the Thomas algorithm) to solve for $M_1, M_2,\ldots,M_{n-1}$.</p>
+            <p>Use the Thomas algorithm (tridiagonal matrix algorithm) to solve for $M_1, M_2,\ldots,M_{n-1}$. Because the coefficient matrix is tridiagonal, the Thomas algorithm solves the system in $O(n)$ time using a single forward-elimination and back-substitution pass.</p>
             <p>IV. <strong>Calculate the Coefficients:</strong></p>
-            <p>With $M_i$ known, compute:</p>
-            <p>$$a_i = y_i, \quad b_i, \quad c_i = M_i, \quad d_i$$</p>
-            <p>as described above.</p>
+            <p>With $M_i$ known, compute for each segment $i = 0, 1, \ldots, n-1$:</p>
+            <p>$$a_i = y_i, \quad b_i = \frac{y_{i+1}-y_i}{h_i} - \frac{h_i}{6}(2M_i + M_{i+1}), \quad c_i = \frac{M_i}{2}, \quad d_i = \frac{M_{i+1}-M_i}{6h_i}$$</p>
             <p>V. <strong>Interpolation:</strong></p>
             <p>For a given $x$, find the interval $[x_i, x_{i+1}]$ such that $x_i \leq x \leq x_{i+1}$ and evaluate:</p>
             <p>$$S_i(x) = a_i + b_i(x - x_i) + c_i(x - x_i)^2 + d_i(x - x_i)^3$$</p>
             <h3 id="example">Example</h3>
-            <p>Consider three points: $(0,0), (1,0.5), (2,0)$.</p>
+            <p>Consider three points: $(0,0),\;(1,0.5),\;(2,0)$.</p>
+            <p><strong>Setup:</strong></p>
             <ul>
-                <li>$h_0 = 1, h_1=1$.</li>
-                <li>Boundary conditions: $M_0=M_2=0$.</li>
+                <li>$h_0 = x_1 - x_0 = 1,\quad h_1 = x_2 - x_1 = 1$.</li>
+                <li>Natural boundary conditions: $M_0 = 0,\; M_2 = 0$.</li>
             </ul>
-            <p>We form the equation for $i=1$:</p>
-            <p>$$1 \cdot M_0 + 2(1+1)M_1 + 1 \cdot M_2 = 3((0-0.5)/1 - (0.5-0)/1) = 3(-0.5-0.5)= -3.$$</p>
-            <p>Since $M_0=M_2=0$:</p>
-            <p>$$4M_1 = -3 \implies M_1 = -0.75$$</p>
-            <p>Then:</p>
-            <p>$$a_0 = y_0=0, \quad c_0=M_0=0$$</p>
-            <p>$$b_0 = (y_1 - y_0)/h_0 - h_0(2M_0+M_1)/3 = 0.5/1 - (2\cdot 0 + (-0.75))/3 = 0.5 +0.25 =0.75$$</p>
-            <p>$$d_0 = (M_1 - M_0)/(3h_0)=(-0.75 -0)/3= -0.25$$</p>
-            <p>And similarly for $i=1$.</p>
-            <p>This gives piecewise polynomials smoothly interpolating the given points.</p>
+            <p><strong>Solving for $M_1$:</strong></p>
+            <p>The tridiagonal equation for $i=1$:</p>
+            <p>$$h_0 M_0 + 2(h_0+h_1)M_1 + h_1 M_2 = 6\left(\frac{y_2-y_1}{h_1} - \frac{y_1-y_0}{h_0}\right)$$</p>
+            <p>$$1\cdot 0 + 2(1+1)M_1 + 1\cdot 0 = 6\left(\frac{0-0.5}{1} - \frac{0.5-0}{1}\right) = 6(-0.5 - 0.5) = -6$$</p>
+            <p>$$4M_1 = -6 \implies M_1 = -1.5$$</p>
+            <p><strong>Segment 0</strong> ($[x_0,x_1] = [0,1]$):</p>
+            <p>$$a_0 = y_0 = 0$$</p>
+            <p>$$b_0 = \frac{y_1 - y_0}{h_0} - \frac{h_0}{6}(2M_0 + M_1) = \frac{0.5}{1} - \frac{1}{6}(0 + (-1.5)) = 0.5 + 0.25 = 0.75$$</p>
+            <p>$$c_0 = \frac{M_0}{2} = 0$$</p>
+            <p>$$d_0 = \frac{M_1 - M_0}{6h_0} = \frac{-1.5}{6} = -0.25$$</p>
+            <p>$$S_0(x) = 0.75x - 0.25x^3$$</p>
+            <p><strong>Segment 1</strong> ($[x_1,x_2] = [1,2]$):</p>
+            <p>$$a_1 = y_1 = 0.5$$</p>
+            <p>$$b_1 = \frac{y_2 - y_1}{h_1} - \frac{h_1}{6}(2M_1 + M_2) = \frac{-0.5}{1} - \frac{1}{6}(2(-1.5)+0) = -0.5 + 0.5 = 0$$</p>
+            <p>$$c_1 = \frac{M_1}{2} = -0.75$$</p>
+            <p>$$d_1 = \frac{M_2 - M_1}{6h_1} = \frac{1.5}{6} = 0.25$$</p>
+            <p>$$S_1(x) = 0.5 - 0.75(x-1)^2 + 0.25(x-1)^3$$</p>
+            <p><strong>Verification at the knots:</strong></p>
+            <p>
+            <table>
+                <tr>
+                    <td>Check</td>
+                    <td>Value</td>
+                </tr>
+                <tr>
+                    <td>$S_0(0) = 0$</td>
+                    <td>$= y_0$ ✓</td>
+                </tr>
+                <tr>
+                    <td>$S_0(1) = 0.75 - 0.25 = 0.5$</td>
+                    <td>$= y_1$ ✓</td>
+                </tr>
+                <tr>
+                    <td>$S_1(1) = 0.5$</td>
+                    <td>$= y_1$ ✓</td>
+                </tr>
+                <tr>
+                    <td>$S_1(2) = 0.5 - 0.75 + 0.25 = 0$</td>
+                    <td>$= y_2$ ✓</td>
+                </tr>
+                <tr>
+                    <td>$S_0'(x) = 0.75 - 0.75x^2,\; S_0'(1) = 0$</td>
+                    <td>First derivative continuous ✓</td>
+                </tr>
+                <tr>
+                    <td>$S_1'(x) = -1.5(x-1)+0.75(x-1)^2,\; S_1'(1) = 0$</td>
+                    <td>✓</td>
+                </tr>
+                <tr>
+                    <td>$S_0''(x) = -1.5x,\; S_0''(1) = -1.5$</td>
+                    <td>Second derivative continuous ✓</td>
+                </tr>
+                <tr>
+                    <td>$S_1''(x) = -1.5+1.5(x-1),\; S_1''(1) = -1.5$</td>
+                    <td>✓</td>
+                </tr>
+            </table>
+            </p>
+            <p><strong>Evaluating at a query point $x = 0.5$:</strong></p>
+            <p>Since $0.5 \in [0,1]$, we use $S_0$:</p>
+            <p>$$S_0(0.5) = 0.75(0.5) - 0.25(0.5)^3 = 0.375 - 0.03125 = 0.34375$$</p>
             <h3 id="advantages">Advantages</h3>
             <ul>
                 <li>Splines ensure <strong>smoothness</strong> by producing curves with continuous first and second derivatives, leading to a natural and visually appealing fit.</li>
@@ -283,6 +339,8 @@
                 <li><strong>Computational cost</strong> is higher than methods like linear interpolation, particularly for large datasets with many control points.</li>
                 <li><strong>Boundary conditions</strong> must be specified (e.g., natural, clamped) to define the behavior at the endpoints, which can influence the overall fit of the spline.</li>
             </ul>
+            <h3 id="verification">Verification</h3>
+            <p>The implementation matches <code>scipy.interpolate.CubicSpline(x, y, bc_type='natural')</code> to machine precision on every test case, including the worked example above. This serves as an independent confirmation that both the tridiagonal system and the evaluation formula are correct.</p>
         </article-section>
     </div>
     <footer>

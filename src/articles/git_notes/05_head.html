@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/git_notes/05_head",
             "description": "HEAD is Git\u2019s pointer to the snapshot you\u2019re currently working on\u2014the bookmark of your checkout.",
-            "dateModified": "2020-08-24"
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -79,7 +79,12 @@
                 <h2>Table of Contents</h2>
                 <ol><a href="#understanding-head">Understanding HEAD</a>
                     <ol>
-                        <li><a href="#detached-head">Detached HEAD</a></li>
+                        <li><a href="#head-notation-shortcuts">HEAD Notation Shortcuts</a></li>
+                        <li><a href="#detached-head">Detached HEAD</a>
+                            <ol>
+                                <li><a href="#recovering-lost-commits-with-reflog">Recovering Lost Commits with Reflog</a></li>
+                            </ol>
+                        </li>
                         <li><a href="#what-happens-when-you-commit-on-a-detached-head">What Happens When You Commit on a Detached HEAD</a></li>
                         <li><a href="#detaching-head-switching-to-a-specific-commit">Detaching HEAD: Switching to a Specific Commit</a></li>
                         <li><a href="#creating-a-branch-from-a-detached-head">Creating a Branch from a Detached HEAD</a></li>
@@ -127,7 +132,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: August 24, 2020</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="understanding-head">Understanding HEAD</h2>
             <p><code>HEAD</code> is Git’s pointer to the snapshot you’re currently working on—the <strong>bookmark of your checkout</strong>. Most of the time, <code>HEAD</code> points to the tip of a branch (like <code>master</code> or <code>main</code>). When you commit, <code>HEAD</code> (and that branch) advance to the new commit.</p>
@@ -135,6 +140,57 @@
                 <li>Under the hood, <code>HEAD</code> is a tiny text file: <code>.git/HEAD</code>. Running <code>cat .git/HEAD</code> might show <code>ref: refs/heads/master</code>, meaning <code>HEAD</code> points to the branch named <code>master</code>. If it shows a raw commit hash instead, <code>HEAD</code> is detached (explained below).</li>
                 <li>Switching branches (via <code>git switch</code> or <code>git checkout</code>) moves <code>HEAD</code> to point at the target branch. Knowing where <code>HEAD</code> points makes branching, merging, and navigating history far more predictable.</li>
             </ul>
+            <h3 id="head-notation-shortcuts">HEAD Notation Shortcuts</h3>
+            <p>Git provides shorthand for referencing commits relative to <code>HEAD</code>:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Notation</td>
+                    <td>Meaning</td>
+                    <td>Example Use</td>
+                </tr>
+                <tr>
+                    <td><code>HEAD</code></td>
+                    <td>Current commit</td>
+                    <td><code>git show HEAD</code></td>
+                </tr>
+                <tr>
+                    <td><code>HEAD~1</code></td>
+                    <td>Parent of current commit</td>
+                    <td><code>git diff HEAD~1 HEAD</code></td>
+                </tr>
+                <tr>
+                    <td><code>HEAD~N</code></td>
+                    <td>N commits back</td>
+                    <td><code>git reset HEAD~3</code></td>
+                </tr>
+                <tr>
+                    <td><code>HEAD^</code></td>
+                    <td>First parent (same as <code>~1</code>)</td>
+                    <td><code>git show HEAD^</code></td>
+                </tr>
+                <tr>
+                    <td><code>HEAD^2</code></td>
+                    <td>Second parent (for merge commits)</td>
+                    <td><code>git show HEAD^2</code></td>
+                </tr>
+                <tr>
+                    <td><code>HEAD@{N}</code></td>
+                    <td>Nth previous position in reflog</td>
+                    <td><code>git show HEAD@{1}</code></td>
+                </tr>
+            </table>
+            </p>
+            <div>
+                <pre><code class="language-bash"># View commit 3 generations back
+git show HEAD~3
+
+# Compare current commit with its parent
+git diff HEAD~1 HEAD
+
+# Reset last 2 commits but keep changes staged
+git reset --soft HEAD~2</code></pre>
+            </div>
             <div>
                 <pre><code class="language-shell">Time →                                                     (commits left→right)
 
@@ -166,8 +222,22 @@ Legend:
             <p>A <strong>detached HEAD</strong> is when <code>HEAD</code> points <strong>directly to a commit</strong> instead of to a branch tip—usually after checking out a specific commit hash or a tag.</p>
             <ul>
                 <li>In a detached state, any new commits aren’t on a named branch. They’re easy to lose if you move <code>HEAD</code> elsewhere because nothing points to them.</li>
-                <li>If you commit while detached and want to keep that work, attach it to a branch: create one at that commit (<code>git switch -c my-work</code>) or merge/cherry-pick it into an existing branch. (You can often recover recent detached commits with <code>git reflog</code> if you move away accidentally.)</li>
+                <li>If you commit while detached and want to keep that work, attach it to a branch: create one at that commit (<code>git switch -c my-work</code>) or merge/cherry-pick it into an existing branch.</li>
             </ul>
+            <h4 id="recovering-lost-commits-with-reflog">Recovering Lost Commits with Reflog</h4>
+            <p>If you accidentally switch away from a detached HEAD without saving your work, <code>git reflog</code> is your safety net. It records every position <code>HEAD</code> has been in:</p>
+            <div>
+                <pre><code class="language-bash">git reflog
+# output example:
+# a1b2c3d HEAD@{0}: checkout: moving to main
+# e4f5a6b HEAD@{1}: commit: Important work I did while detached
+# c7d8e9f HEAD@{2}: checkout: moving from main to c7d8e9f
+
+# Create a branch to save the lost commit
+git branch recovery-branch e4f5a6b
+git switch recovery-branch</code></pre>
+            </div>
+            <p>⚠️ <strong>Important:</strong> Reflog entries expire after ~90 days by default. Don’t rely on reflog as a long-term backup—always create a branch for work you want to keep.</p>
             <p>This is what it looks like when you check out a specific commit:</p>
             <div>
                 <pre><code class="language-shell">main        ──●──●──●──●──●──▶
@@ -188,15 +258,15 @@ Legend:
             <h3 id="detaching-head-switching-to-a-specific-commit">Detaching HEAD: Switching to a Specific Commit</h3>
             <p>You enter a detached HEAD state by checking out a commit hash or tag. For example:</p>
             <div>
-                <pre><code class="language-bash">git switch b4d373k8990g2b5de30a37bn843b2f51fks2b40</code></pre>
+                <pre><code class="language-bash">git switch b4d373a8990c2b5de30a37bf843b2f51fae2b40</code></pre>
             </div>
             <p>Or equivalently:</p>
             <div>
-                <pre><code class="language-bash">git checkout b4d373k8990g2b5de30a37bn843b2f51fks2b40</code></pre>
+                <pre><code class="language-bash">git checkout b4d373a8990c2b5de30a37bf843b2f51fae2b40</code></pre>
             </div>
             <p><code>HEAD</code> now points to that exact commit rather than a branch tip. Git will say:</p>
             <div>
-                <pre><code class="language-shell">Note: switching to 'b4d373k8990g2b5de30a37bn843b2f51fks2b40'.
+                <pre><code class="language-shell">Note: switching to 'b4d373a8990c2b5de30a37bf843b2f51fae2b40'.
 
 You are in 'detached HEAD' state. You can look around, make experimental
 changes and commit them, and you can discard any commits you make in this
@@ -223,19 +293,20 @@ A &lt;-- B &lt;-- C &lt;-- F (new_branch, HEAD)
 F is no longer “floating”; it’s anchored to the new_branch branch.</code></pre>
             </div>
             <p><em>Tip:</em> You can do this in one step with <code>git switch -c new_branch</code>. Verify where you are with <code>git status</code> or <code>git branch --show-current</code>.</p>
+            <p>⚠️ <strong>Critical:</strong> If you leave a commit detached without a branch and switch away, Git will eventually garbage-collect it (typically after 30 days). Always create a branch immediately if you made important commits while detached.</p>
             <h3 id="preventing-a-detached-head-state">Preventing a Detached HEAD State</h3>
             <p>It’s cleaner to avoid a detached <code>HEAD</code> unless you’re only <strong>looking</strong>. If you intend to make changes, create a branch at that commit first so new work has a name and a home.</p>
             <p><strong>Example Scenario</strong>: You want to check out an older commit to debug or reproduce behavior.</p>
             <p>I. Create a branch named <code>old_version</code> at that commit:</p>
             <div>
-                <pre><code class="language-bash">git branch old_version b4d373k8990g2b5de30a37bn843b2f51fks2b40</code></pre>
+                <pre><code class="language-bash">git branch old_version b4d373a8990c2b5de30a37bf843b2f51fae2b40</code></pre>
             </div>
             <p>II. Switch to <code>old_version</code>:</p>
             <div>
                 <pre><code class="language-bash">git switch old_version</code></pre>
             </div>
             <p>Now, any commits you make stay on <code>old_version</code>—no work drifts unreferenced.</p>
-            <p><em>Tip:</em> One-step variant: <code>git switch -c old_version b4d373k8990g2b5de30a37bn843b2f51fks2b40</code>.</p>
+            <p><em>Tip:</em> One-step variant: <code>git switch -c old_version b4d373a8990c2b5de30a37bf843b2f51fae2b40</code>.</p>
             <h3 id="switching-back-to-a-branch-from-a-detached-head">Switching Back to a Branch from a Detached HEAD</h3>
             <p>When you’re done exploring a detached commit, just jump back to a normal branch (like <code>master</code>):</p>
             <div>

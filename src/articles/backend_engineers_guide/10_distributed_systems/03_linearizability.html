@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Linearizability</title>
-    <meta content="Linearizability is a consistency model used to make it seem like there's only one copy of the data." name="description" />
+    <meta content="Linearizability is a consistency model that makes a distributed system appear as if there is only a single copy of the data, and every operation takes effect atomically at some point between its invocation and its response." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/03_linearizability"
             },
             "url": "https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/03_linearizability",
-            "description": "Linearizability is a consistency model used to make it seem like there's only one copy of the data.",
-            "dateModified": "2026-01-24"
+            "description": "Linearizability is a consistency model that makes a distributed system appear as if there is only a single copy of the data, and every operation takes effect atomically at some point between its invocation and its response.",
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -79,8 +79,13 @@
                 <h2>Table of Contents</h2>
                 <ol>
                     <li><a href="#linearizability">Linearizability</a></li>
+                    <li><a href="#linearizability-vs-serializability">Linearizability vs Serializability</a></li>
+                    <li><a href="#real-world-examples">Real-World Examples</a></li>
                     <li><a href="#ordering">Ordering</a></li>
                     <li><a href="#total-order-broadcast">Total Order Broadcast</a></li>
+                    <li><a href="#cap-theorem-implications">CAP Theorem Implications</a></li>
+                    <li><a href="#cost-of-linearizability">Cost of Linearizability</a></li>
+                    <li><a href="#consistency-models-comparison">Consistency Models Comparison</a></li>
                     <li><a href="#distributed-transactions-and-consensus">Distributed Transactions and Consensus</a></li>
                     <li><a href="#quorum-and-consensus-algorithms">Quorum and Consensus Algorithms</a></li>
                 </ol>
@@ -188,55 +193,230 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="linearizability">Linearizability</h2>
-            <p>Linearizability is a consistency model used to make it seem like there's only one copy of the data. It ensures that:</p>
+            <p>Linearizability is a consistency model that makes a distributed system appear as if there is only a single copy of the data, and every operation takes effect atomically at some point between its invocation and its response. Even when data is replicated across multiple nodes, a linearizable system guarantees that clients always see the most recent write.</p>
             <ul>
-                <li>All reads reflect the latest written value.</li>
-                <li>The system appears consistent and up-to-date.</li>
-                <li>Availability and speed may be impacted.</li>
+                <li><strong>Recency</strong>: Every read returns the value of the most recent completed write, regardless of which replica handles the request.</li>
+                <li><strong>Atomicity</strong>: Each operation appears to execute instantaneously at a single point in time, with no intermediate states visible to other clients.</li>
+                <li><strong>Ordering</strong>: If operation A completes before operation B begins, then B must see the effects of A.</li>
+                <li><strong>Trade-off</strong>: Providing these guarantees often comes at the cost of higher latency and reduced availability during network partitions.</li>
             </ul>
             <div>
-                <pre><code class="language-shell">Write Request       Read Request       Read Request
-     |                  |                  |
-     V                  V                  V
-+----------+       +----------+       +----------+
-|          |       |          |       |          |
-| Database | ----&gt; | Database | ----&gt; | Database |
-| (Latest  |       | (Latest  |       | (Latest  |
-|  Value)  |       |  Value)  |       |  Value)  |
-|          |       |          |       |          |
-+----------+       +----------+       +----------+</code></pre>
+                <pre><code class="language-shell">Client A (Write x=1)        Client B (Read x)        Client C (Read x)
+        |                            |                         |
+   t0   |------- write(x,1) -------&gt;|                         |
+        |                           |                         |
+   t1   |                     [write completes]               |
+        |                           |                         |
+   t2   |                           |------- read(x) -------&gt;|
+        |                           |                         |
+   t3   |                           |    returns x=1          |
+        |                           |                         |
+   t4   |                           |          |--- read(x) -&gt;|
+        |                           |          |              |
+   t5   |                           |          | returns x=1  |
+        |                           |          |              |
+        v                           v          v              v
+
+   +------------+            +------------+           +------------+
+   |  Replica 1 |  --------&gt; |  Replica 2 |  -------&gt; |  Replica 3 |
+   |   x = 1    |  replicate |   x = 1    | replicate |   x = 1    |
+   +------------+            +------------+           +------------+
+        All replicas converge so every read reflects the latest write</code></pre>
             </div>
+            <h2 id="linearizability-vs-serializability">Linearizability vs Serializability</h2>
+            <p>These two terms sound similar but describe <strong>different</strong> guarantees. Serializability is a property of transactions in a database, while linearizability is a property of individual read and write operations on a register or object.</p>
+            <ul>
+                <li><strong>Serializability</strong>: Guarantees that the outcome of executing transactions concurrently is equivalent to some serial (one-at-a-time) execution order, but that order does not have to match real-time ordering.</li>
+                <li><strong>Linearizability</strong>: Guarantees that individual operations appear to take effect in real-time order, meaning if operation A finishes before operation B starts, A must precede B.</li>
+                <li><strong>Scope</strong>: Serializability applies to multi-operation transactions, while linearizability applies to single-object, single-operation guarantees.</li>
+                <li><strong>Combination</strong>: Strict serializability (also called one-copy serializability) combines both properties, providing the strongest consistency guarantee available.</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">Serializability (Transaction-level)        Linearizability (Operation-level)
+   +-----------------------------------+      +-----------------------------------+
+   |  Tx1: Read A, Write B             |      |  Op1: Write(x, 5)   at t=0       |
+   |  Tx2: Read B, Write A             |      |  Op2: Read(x) =&gt; 5  at t=1       |
+   |                                   |      |  Op3: Write(x, 8)   at t=2       |
+   |  Result equivalent to Tx1-&gt;Tx2    |      |  Op4: Read(x) =&gt; 8  at t=3       |
+   |  OR Tx2-&gt;Tx1 (any serial order)   |      |  (must respect real-time order)   |
+   +-----------------------------------+      +-----------------------------------+</code></pre>
+            </div>
+            <h2 id="real-world-examples">Real-World Examples</h2>
+            <p>Linearizability matters in many practical scenarios where stale data can cause correctness problems.</p>
+            <ul>
+                <li><strong>Leader Election</strong>: When a distributed system uses a lock to elect a leader, every node must agree on who holds the lock; a stale read could result in two nodes both believing they are the leader (split-brain).</li>
+                <li><strong>Uniqueness Constraints</strong>: If two users try to register the same username concurrently, a linearizable check ensures only one succeeds and the other receives an error.</li>
+                <li><strong>Bank Transfers</strong>: When moving money between accounts, the system must ensure that a balance check reflects all prior debits and credits to avoid overdrafts.</li>
+                <li><strong>Distributed Locking</strong>: Services like Apache ZooKeeper and etcd provide linearizable operations so that distributed locks and leases behave correctly across nodes.</li>
+                <li><strong>Configuration Management</strong>: Updating a feature flag or routing rule must propagate atomically so that all nodes act on the same configuration at any given time.</li>
+            </ul>
             <h2 id="ordering">Ordering</h2>
-            <p>To achieve linearizability, an order for data operations is required:</p>
+            <p>To achieve linearizability, an ordering mechanism for data operations is required. Without a shared global clock, distributed systems must use logical clocks or consensus protocols to agree on operation order.</p>
             <ul>
-                <li>Use Lamport timestamps to generate sequence numbers across multiple machines.</li>
-                <li>Timestamps are tuples of the counter and the node ID.</li>
-                <li>Nodes and clients track the maximum counter value and include it in every request.</li>
-                <li>Lamport timestamps provide a total ordering but can't show concurrent operations.</li>
+                <li><strong>Lamport Timestamps</strong>: Generate sequence numbers across multiple machines by combining a logical counter with a node ID, producing a tuple like <code>(counter, nodeId)</code>.</li>
+                <li><strong>Tracking</strong>: Every node and client tracks the maximum counter value it has seen and includes it in every request, incrementing it with each new operation.</li>
+                <li><strong>Total Ordering</strong>: Lamport timestamps impose a total ordering on all operations, but they cannot distinguish between concurrent and causally related operations.</li>
+                <li><strong>Vector Clocks</strong>: An alternative that maintains a counter per node, allowing the system to detect concurrent operations, at the cost of larger metadata per message.</li>
+                <li><strong>Limitation</strong>: Knowing the total order after the fact is not always sufficient; sometimes you need to know the order in real time to make decisions, which requires consensus.</li>
             </ul>
+            <div>
+                <pre><code class="language-shell">Node A                     Node B                     Node C
+   counter=0                  counter=0                  counter=0
+      |                          |                          |
+      |-- send(counter=1) -----&gt;|                          |
+      |                         |-- recv, set counter=2 --&gt;|
+      |                         |                          |-- counter=3
+      |                         |                          |
+      |&lt;-- send(counter=4) ------------------------------ |
+      |                         |                          |
+   counter=5                    |                          |
+      |                         |                          |
+      v                         v                          v
+
+   Lamport Timestamp = (counter, nodeId)
+   Example ordering:  (1,A) &lt; (2,B) &lt; (3,C) &lt; (4,C) &lt; (5,A)</code></pre>
+            </div>
             <h2 id="total-order-broadcast">Total Order Broadcast</h2>
-            <p>Total order broadcast is a protocol to exchange messages between nodes:</p>
+            <p>Total order broadcast is a protocol for exchanging messages between nodes that guarantees two key properties: reliable delivery and total ordering. It serves as the foundation for implementing linearizable systems and state machine replication.</p>
             <ul>
-                <li>Ensures no messages are lost.</li>
-                <li>Delivers messages to every node in the same order.</li>
-                <li>Helps solve problems like uniqueness constraints across different replicas.</li>
+                <li><strong>Reliable Delivery</strong>: If a message is delivered to one node, it is guaranteed to be delivered to all non-faulty nodes, ensuring no messages are silently lost.</li>
+                <li><strong>Total Order</strong>: Every node receives all messages in exactly the same order, so all replicas process state transitions identically.</li>
+                <li><strong>Uniqueness Constraints</strong>: By funneling concurrent requests through total order broadcast, you can enforce constraints like unique usernames across all replicas without conflicts.</li>
+                <li><strong>State Machine Replication</strong>: If every replica starts from the same initial state and applies the same sequence of messages, they all converge to the same final state.</li>
+                <li><strong>Equivalence</strong>: Total order broadcast is formally equivalent to consensus, meaning any system that solves one can solve the other.</li>
             </ul>
+            <div>
+                <pre><code class="language-shell">Client Request              Total Order Broadcast Layer
+       |
+       v
+   +--------+       +-------------------------------------------+
+   | Submit  | ----&gt; |  Assign global sequence number            |
+   | Message |       |  Broadcast to all nodes in order          |
+   +--------+       +-------------------------------------------+
+                          |              |              |
+                          v              v              v
+                     +---------+    +---------+    +---------+
+                     | Node A  |    | Node B  |    | Node C  |
+                     | msg #1  |    | msg #1  |    | msg #1  |
+                     | msg #2  |    | msg #2  |    | msg #2  |
+                     | msg #3  |    | msg #3  |    | msg #3  |
+                     +---------+    +---------+    +---------+
+                     All nodes deliver messages in the same order</code></pre>
+            </div>
+            <h2 id="cap-theorem-implications">CAP Theorem Implications</h2>
+            <p>The CAP theorem states that a distributed system can provide at most two of three guarantees simultaneously: Consistency (linearizability), Availability, and Partition tolerance. Since network partitions are unavoidable in practice, the real choice is between consistency and availability during a partition.</p>
+            <ul>
+                <li><strong>CP Systems</strong>: Choose consistency over availability; during a network partition, some requests may be rejected or delayed until the partition heals (e.g., etcd, ZooKeeper, HBase).</li>
+                <li><strong>AP Systems</strong>: Choose availability over consistency; every request receives a response, but reads may return stale data during a partition (e.g., Cassandra, DynamoDB with eventual consistency).</li>
+                <li><strong>Partition Tolerance</strong>: Network partitions (lost or delayed messages between nodes) are a fact of life in distributed systems and cannot be avoided.</li>
+                <li><strong>Nuance</strong>: In practice, CAP is more of a spectrum than a binary choice; systems often allow tunable consistency levels per operation rather than a single global setting.</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">Consistency (C)
+                              /      \
+                             /        \
+                            /    CP    \
+                           /   systems  \
+                          /              \
+                         /________________\
+                        /                  \
+          Availability (A) ----------- Partition Tolerance (P)
+                         \    AP systems   /
+                          \               /
+                           \_____________/
+
+   Network partitions are inevitable, so the practical trade-off
+   is between Consistency and Availability during a partition.</code></pre>
+            </div>
+            <h2 id="cost-of-linearizability">Cost of Linearizability</h2>
+            <p>Linearizability is a strong guarantee, but it comes with measurable performance and availability costs that engineers must consider when designing a system.</p>
+            <ul>
+                <li><strong>Latency</strong>: Every write must be acknowledged by enough replicas before it is considered committed, adding round-trip delays proportional to network distance.</li>
+                <li><strong>Availability</strong>: During a network partition, a linearizable system must reject requests to the minority partition to preserve correctness, reducing overall availability.</li>
+                <li><strong>Throughput</strong>: Coordination overhead (consensus rounds, synchronous replication) limits the number of operations the system can process per second compared to eventually consistent systems.</li>
+                <li><strong>Geographic Replication</strong>: Multi-datacenter deployments suffer the most, since cross-datacenter round trips can add tens or hundreds of milliseconds per operation.</li>
+                <li><strong>Workaround</strong>: Many systems offer per-request consistency levels, allowing critical operations (like payments) to use linearizability while less critical operations (like analytics reads) use eventual consistency.</li>
+            </ul>
+            <h2 id="consistency-models-comparison">Consistency Models Comparison</h2>
+            <p>
+            <table>
+                <tr>
+                    <td>Model</td>
+                    <td>Guarantee</td>
+                    <td>Latency</td>
+                    <td>Example Systems</td>
+                </tr>
+                <tr>
+                    <td><strong>Linearizability</strong></td>
+                    <td>Reads always return the latest write; real-time ordering</td>
+                    <td>Highest</td>
+                    <td>etcd, ZooKeeper, Spanner</td>
+                </tr>
+                <tr>
+                    <td><strong>Sequential Consistency</strong></td>
+                    <td>All nodes see operations in the same order, but not necessarily real-time</td>
+                    <td>High</td>
+                    <td>ZooKeeper (for some operations)</td>
+                </tr>
+                <tr>
+                    <td><strong>Causal Consistency</strong></td>
+                    <td>Operations that are causally related are seen in order; concurrent operations may differ</td>
+                    <td>Medium</td>
+                    <td>MongoDB (causal sessions)</td>
+                </tr>
+                <tr>
+                    <td><strong>Eventual Consistency</strong></td>
+                    <td>All replicas converge eventually, but reads may return stale data temporarily</td>
+                    <td>Lowest</td>
+                    <td>Cassandra, DynamoDB, Riak</td>
+                </tr>
+                <tr>
+                    <td><strong>Strict Serializability</strong></td>
+                    <td>Combines serializability and linearizability for the strongest guarantee</td>
+                    <td>Highest</td>
+                    <td>CockroachDB, Spanner</td>
+                </tr>
+            </table>
+            </p>
             <h2 id="distributed-transactions-and-consensus">Distributed Transactions and Consensus</h2>
-            <p>Distributed transactions can use the two-phase commit:</p>
+            <p>Distributed transactions coordinate writes across multiple nodes. The most common protocol is two-phase commit (2PC), which ensures all participants either commit or abort a transaction together.</p>
             <ul>
-                <li>Coordinator node sends writes and prepare requests to other nodes.</li>
-                <li>Nodes either commit or abort based on the coordinator's decision.</li>
-                <li>The coordinator maintains an internal log of decisions for crash recovery.</li>
+                <li><strong>Phase One (Prepare)</strong>: The coordinator sends a prepare request to every participant node; each participant checks whether it can commit and replies with a vote (yes or no).</li>
+                <li><strong>Phase Two (Commit/Abort)</strong>: If all participants voted yes, the coordinator sends a commit command; if any participant voted no, it sends an abort command to all.</li>
+                <li><strong>Coordinator Log</strong>: The coordinator writes its decision to a durable log before sending the final commit or abort, ensuring it can recover and complete the protocol after a crash.</li>
+                <li><strong>Blocking Problem</strong>: If the coordinator crashes after sending prepare but before sending commit/abort, participants are stuck holding locks and waiting indefinitely, which is a major drawback of 2PC.</li>
+                <li><strong>Three-Phase Commit</strong>: An extension of 2PC that adds a pre-commit phase to reduce blocking, though it is rarely used in practice due to added complexity.</li>
             </ul>
+            <div>
+                <pre><code class="language-shell">Coordinator                  Participant A             Participant B
+       |                             |                          |
+       |--- prepare ---------------&gt;|                          |
+       |--- prepare -----------------------------------------&gt;|
+       |                             |                          |
+       |&lt;-- vote yes ---------------|                          |
+       |&lt;-- vote yes ------------------------------------------|
+       |                             |                          |
+       | (write decision to log)     |                          |
+       |                             |                          |
+       |--- commit ----------------&gt;|                          |
+       |--- commit ------------------------------------------&gt;|
+       |                             |                          |
+       |&lt;-- ack --------------------|                          |
+       |&lt;-- ack ------------------------------------------------|
+       |                             |                          |</code></pre>
+            </div>
             <h2 id="quorum-and-consensus-algorithms">Quorum and Consensus Algorithms</h2>
-            <p>Consensus algorithms use a majority (quorum) of nodes to improve availability:</p>
+            <p>Consensus algorithms use a majority (quorum) of nodes to make decisions, avoiding the single-point-of-failure problem that plagues two-phase commit. They form the backbone of modern fault-tolerant distributed systems.</p>
             <ul>
-                <li>New leaders are elected in subsequent epochs to prevent split-brain scenarios.</li>
-                <li>Consensus algorithms define a recovery process for nodes to reach a consistent state.</li>
-                <li>Coordination services like ZooKeeper provide replicated in-memory key-value stores for total order broadcast.</li>
+                <li><strong>Quorum</strong>: A majority of nodes (e.g., 3 out of 5) must agree on a value for it to be considered committed, ensuring that any two quorums overlap by at least one node.</li>
+                <li><strong>Leader Election</strong>: In each epoch (term), a new leader is elected through a vote; a node can only be elected if it has the most up-to-date log, preventing stale data from being promoted.</li>
+                <li><strong>Split-Brain Prevention</strong>: Because a quorum requires a strict majority, at most one leader can be elected per epoch, eliminating the risk of conflicting decisions.</li>
+                <li><strong>Recovery</strong>: When a failed node rejoins, it synchronizes its log with the current leader and replays any missing entries to reach a consistent state.</li>
+                <li><strong>Raft and Paxos</strong>: Raft is the most widely adopted consensus algorithm due to its understandability; Paxos is theoretically equivalent but harder to implement correctly.</li>
+                <li><strong>Coordination Services</strong>: Systems like ZooKeeper, etcd, and Consul implement consensus internally and expose linearizable key-value operations, leader election, and distributed locking as building blocks for other applications.</li>
             </ul>
         </article-section>
     </div>

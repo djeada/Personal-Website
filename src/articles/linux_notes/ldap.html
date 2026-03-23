@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/ldap",
             "description": "LDAP is a protocol used to access and manage directory information over an IP network.",
-            "dateModified": "2024-07-02"
+            "dateModified": "2026-03-23"
         }
     </script>
 </head>
@@ -115,7 +115,22 @@
                                     <li><a href="#5-enable-home-directory-creation">5. Enable Home Directory Creation</a></li>
                                 </ol>
                             </li>
-                            <li><a href="#verification-and-testing">Verification and Testing</a></li>
+                            <li><a href="#verification-and-testing">Verification and Testing</a>
+                                <ol>
+                                    <li><a href="#testing-ldap-server-connectivity">Testing LDAP Server Connectivity</a></li>
+                                    <li><a href="#testing-search-operations">Testing Search Operations</a></li>
+                                    <li><a href="#testing-add-modify-and-delete-operations">Testing Add, Modify, and Delete Operations</a></li>
+                                    <li><a href="#testing-nss-integration">Testing NSS Integration</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#authentication-mechanisms">Authentication Mechanisms</a>
+                                <ol>
+                                    <li><a href="#simple-authentication">Simple Authentication</a></li>
+                                    <li><a href="#securing-connections-with-tls">Securing Connections with TLS</a></li>
+                                    <li><a href="#password-policies">Password Policies</a></li>
+                                    <li><a href="#local-single-machine-setup">Local (Single-Machine) Setup</a></li>
+                                </ol>
+                            </li>
                             <li><a href="#maintenance-and-management">Maintenance and Management</a>
                                 <ol>
                                     <li><a href="#adding-more-users">Adding More Users</a></li>
@@ -191,14 +206,10 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: July 02, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <header>LDAP (Lightweight Directory Access Protocol)</header>
             <p>LDAP is a protocol used to access and manage directory information over an IP network. It is open, vendor-neutral, and an industry standard. LDAP is commonly used for centralized authentication, where user credentials and permissions are managed in a single directory and applied across multiple systems and applications.</p>
-            <p>TODO:
-                - explain clearer client and server setup, also completely local setup
-                - tests
-                - more on auth</p>
             <h2 id="understanding-ldap-concepts">Understanding LDAP Concepts</h2>
             <h3 id="directory">Directory</h3>
             <ul>
@@ -702,6 +713,136 @@ auth    required        pam_unix.so nullok_secure try_first_pass</code></pre>
                 <li>Prompt for password.</li>
                 <li>Upon successful authentication, home directory is created.</li>
             </ul>
+            <h4 id="testing-ldap-server-connectivity">Testing LDAP Server Connectivity</h4>
+            <p>Verify that the LDAP service is listening and reachable:</p>
+            <div>
+                <pre><code class="language-bash">ldapwhoami -x -H ldap://localhost</code></pre>
+            </div>
+            <p>Expected output for an anonymous bind:</p>
+            <div>
+                <pre><code class="language-anonymous"></code></pre>
+            </div>
+            <p>For an authenticated bind, supply credentials:</p>
+            <div>
+                <pre><code class="language-bash">ldapwhoami -x -D "cn=admin,dc=example,dc=com" -W -H ldap://localhost</code></pre>
+            </div>
+            <p>Expected output:</p>
+            <div>
+                <pre><code class="language-shell">dn:cn=admin,dc=example,dc=com</code></pre>
+            </div>
+            <h4 id="testing-search-operations">Testing Search Operations</h4>
+            <p>Search for all user entries to confirm the directory is populated:</p>
+            <div>
+                <pre><code class="language-bash">ldapsearch -x -b "ou=users,dc=example,dc=com" -H ldap://localhost "(objectClass=inetOrgPerson)" uid cn</code></pre>
+            </div>
+            <p>Verify a specific group:</p>
+            <div>
+                <pre><code class="language-bash">ldapsearch -x -b "ou=groups,dc=example,dc=com" -H ldap://localhost "(cn=developers)"</code></pre>
+            </div>
+            <h4 id="testing-add-modify-and-delete-operations">Testing Add, Modify, and Delete Operations</h4>
+            <p>Create a temporary test user (<code>testuser.ldif</code>):</p>
+            <div>
+                <pre><code class="language-ldif">dn: uid=testuser,ou=users,dc=example,dc=com
+objectClass: inetOrgPerson
+uid: testuser
+cn: Test User
+sn: User
+userPassword: testpass</code></pre>
+            </div>
+            <p>Add, verify, and then remove the test entry:</p>
+            <div>
+                <pre><code class="language-bash">sudo ldapadd -x -D "cn=admin,dc=example,dc=com" -W -f testuser.ldif
+ldapsearch -x -b "dc=example,dc=com" "(uid=testuser)" uid cn
+sudo ldapdelete -x -D "cn=admin,dc=example,dc=com" -W "uid=testuser,ou=users,dc=example,dc=com"</code></pre>
+            </div>
+            <h4 id="testing-nss-integration">Testing NSS Integration</h4>
+            <p>After configuring NSS, verify that the system can resolve LDAP users and groups:</p>
+            <div>
+                <pre><code class="language-bash">getent passwd          # should list LDAP users alongside local users
+getent group           # should list LDAP groups
+id jdoe                # should show uid, gid, and groups from LDAP</code></pre>
+            </div>
+            <h3 id="authentication-mechanisms">Authentication Mechanisms</h3>
+            <p>LDAP supports several methods for authenticating clients to the directory server.</p>
+            <h4 id="simple-authentication">Simple Authentication</h4>
+            <p>Simple authentication sends a DN and password to the server. It should always be used over an encrypted connection to prevent credentials from being transmitted in clear text.</p>
+            <div>
+                <pre><code class="language-bash">ldapwhoami -x -D "uid=jdoe,ou=users,dc=example,dc=com" -W -H ldap://localhost</code></pre>
+            </div>
+            <h4 id="securing-connections-with-tls">Securing Connections with TLS</h4>
+            <p>Transport Layer Security (TLS) encrypts the communication channel between the client and the server.</p>
+            <p>I. Generate or obtain a TLS certificate and key for the LDAP server.</p>
+            <p>II. Configure slapd to use TLS by creating an LDIF file (<code>tls.ldif</code>):</p>
+            <div>
+                <pre><code class="language-ldif">dn: cn=config
+changetype: modify
+add: olcTLSCACertificateFile
+olcTLSCACertificateFile: /etc/ssl/certs/ca-certificates.crt
+-
+add: olcTLSCertificateFile
+olcTLSCertificateFile: /etc/ldap/ssl/ldap-server.crt
+-
+add: olcTLSCertificateKeyFile
+olcTLSCertificateKeyFile: /etc/ldap/ssl/ldap-server.key</code></pre>
+            </div>
+            <p>Apply the configuration:</p>
+            <div>
+                <pre><code class="language-bash">sudo ldapmodify -Y EXTERNAL -H ldapi:/// -f tls.ldif</code></pre>
+            </div>
+            <p>III. Configure clients to require TLS by adding to <code>/etc/ldap/ldap.conf</code>:</p>
+            <div>
+                <pre><code class="language-conf">TLS_CACERT /etc/ssl/certs/ca-certificates.crt
+TLS_REQCERT demand</code></pre>
+            </div>
+            <p>IV. Test a TLS connection:</p>
+            <div>
+                <pre><code class="language-bash">ldapwhoami -x -ZZ -D "uid=jdoe,ou=users,dc=example,dc=com" -W -H ldap://localhost</code></pre>
+            </div>
+            <p>The <code>-ZZ</code> flag enforces StartTLS and fails if encryption cannot be established.</p>
+            <h4 id="password-policies">Password Policies</h4>
+            <p>OpenLDAP supports password policies through the <code>ppolicy</code> overlay, which allows administrators to enforce rules like minimum length, expiration, and lockout after failed attempts.</p>
+            <p>Load the password policy module and schema:</p>
+            <div>
+                <pre><code class="language-bash">sudo ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/ldap/schema/ppolicy.ldif</code></pre>
+            </div>
+            <p>Create a default password policy entry (<code>ppolicy_default.ldif</code>):</p>
+            <div>
+                <pre><code class="language-ldif">dn: cn=default,ou=policies,dc=example,dc=com
+objectClass: pwdPolicy
+objectClass: person
+cn: default
+sn: default
+pwdAttribute: userPassword
+pwdMaxAge: 7776000
+pwdMinLength: 8
+pwdMaxFailure: 5
+pwdLockout: TRUE
+pwdLockoutDuration: 900
+pwdMustChange: TRUE</code></pre>
+            </div>
+            <p>Add the policy:</p>
+            <div>
+                <pre><code class="language-bash">sudo ldapadd -x -D "cn=admin,dc=example,dc=com" -W -f ppolicy_default.ldif</code></pre>
+            </div>
+            <h4 id="local-single-machine-setup">Local (Single-Machine) Setup</h4>
+            <p>For development or testing purposes, you can run both the LDAP server and client on the same host. Follow the server installation steps above, then configure the client to connect to <code>localhost</code>:</p>
+            <p>I. Install client libraries:</p>
+            <div>
+                <pre><code class="language-bash">sudo apt-get install libnss-ldap libpam-ldap ldap-utils nscd</code></pre>
+            </div>
+            <p>When prompted for the LDAP server URI, enter <code>ldap://127.0.0.1</code>.</p>
+            <p>II. Edit <code>/etc/nsswitch.conf</code> to add <code>ldap</code>:</p>
+            <div>
+                <pre><code class="language-conf">passwd:         compat systemd ldap
+group:          compat systemd ldap
+shadow:         compat ldap</code></pre>
+            </div>
+            <p>III. Restart services and test:</p>
+            <div>
+                <pre><code class="language-bash">sudo service nscd restart
+getent passwd jdoe</code></pre>
+            </div>
+            <p>Because both the server and client processes share the same machine, no network configuration is required beyond verifying that slapd listens on <code>127.0.0.1:389</code>.</p>
             <h3 id="maintenance-and-management">Maintenance and Management</h3>
             <h4 id="adding-more-users">Adding More Users</h4>
             <p><strong>Create LDIF File for New User</strong> (<code>user2.ldif</code>):</p>
