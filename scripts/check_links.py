@@ -279,6 +279,7 @@ def scan_links(
                 try:
                     reason = future.result()
                 except Exception as exc:  # noqa: BLE001
+                    logger.debug("Unexpected error checking %s: %s", ext_url, exc)
                     reason = str(exc)
                 seen_external[ext_url] = reason
 
