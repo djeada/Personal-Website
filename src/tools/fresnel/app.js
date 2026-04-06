@@ -56,25 +56,50 @@ let animationRunning = false;
 let frameCounter = 0;
 
 
-const INCIDENT_COLOR = "#3b82f6";
-const REFLECTED_COLOR = "#ef4444";
-const REFRACTED_COLOR = "#10b981";
-const S_POL_COLOR = "#3b82f6";
-const P_POL_COLOR = "#ef4444";
-const BREWSTER_COLOR = "#f59e0b";
-const INTERFACE_COLOR = "#64748b";
+function isDarkMode() {
+    return document.documentElement.classList.contains('dark-mode') ||
+        document.body.classList.contains('dark-mode');
+}
+
+function getThemeColors() {
+    const dark = isDarkMode();
+    return {
+        incident: dark ? "#60a5fa" : "#3b82f6",
+        reflected: dark ? "#f87171" : "#ef4444",
+        refracted: dark ? "#34d399" : "#10b981",
+        sPol: dark ? "#60a5fa" : "#3b82f6",
+        pPol: dark ? "#f87171" : "#ef4444",
+        brewster: dark ? "#fbbf24" : "#f59e0b",
+        interface: dark ? "#94a3b8" : "#64748b",
+        medium1: dark ? "rgba(135, 206, 235, 0.05)" : "rgba(135, 206, 235, 0.1)",
+        medium2: dark ? "rgba(100, 149, 237, 0.08)" : "rgba(100, 149, 237, 0.2)"
+    };
+}
 
 
 function getCSSColor(variableName) {
-    return getComputedStyle(document.documentElement)
+    return getComputedStyle(document.body)
         .getPropertyValue(variableName).trim() || getDefaultColor(variableName);
 }
 
 function getDefaultColor(variableName) {
-    const defaults = {
+    const dark = isDarkMode();
+    const defaults = dark ? {
+        '--border-color': '#475569',
+        '--text-primary': '#f1f5f9',
+        '--text-secondary': '#cbd5e1',
+        '--text-muted': '#94a3b8',
+        '--primary-color': '#ff9d1a',
+        '--surface-color': '#1e293b',
+        '--surface-elevated': '#334155'
+    } : {
+        '--border-color': '#e2e8f0',
+        '--text-primary': '#1e293b',
+        '--text-secondary': '#64748b',
         '--text-muted': '#94a3b8',
         '--primary-color': '#ea8400',
-        '--text-primary': '#1e293b'
+        '--surface-color': '#ffffff',
+        '--surface-elevated': '#f8fafc'
     };
     return defaults[variableName] || '#94a3b8';
 }
@@ -263,8 +288,9 @@ function drawEFieldVector(x, y, amplitude, angle, color, isP = false, phase = 0)
 
     if (isP) {
 
-        const ex = amplitude * oscillation * Math.cos(angle);
-        const ey = amplitude * oscillation * Math.sin(angle);
+        const perpAngle = angle + Math.PI / 2;
+        const ex = amplitude * oscillation * Math.cos(perpAngle);
+        const ey = amplitude * oscillation * Math.sin(perpAngle);
         drawArrow(x, y, x + ex * scale, y + ey * scale, color, 2);
     } else {
 
@@ -297,18 +323,18 @@ function drawEFieldVector(x, y, amplitude, angle, color, isP = false, phase = 0)
 
 function drawInterface() {
     const interfaceY = ch / 2;
+    const colors = getThemeColors();
 
 
-
-    ctx.fillStyle = "rgba(135, 206, 235, 0.1)";
+    ctx.fillStyle = colors.medium1;
     ctx.fillRect(0, 0, cw, interfaceY);
 
 
-    ctx.fillStyle = "rgba(100, 149, 237, 0.2)";
+    ctx.fillStyle = colors.medium2;
     ctx.fillRect(0, interfaceY, cw, ch - interfaceY);
 
 
-    ctx.strokeStyle = INTERFACE_COLOR;
+    ctx.strokeStyle = colors.interface;
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(0, interfaceY);
@@ -341,53 +367,60 @@ function drawRays() {
     const originX = cw / 2;
     const originY = interfaceY;
     const rayLength = 180;
+    const colors = getThemeColors();
 
     const coeffs = calculateFresnelCoefficients(theta1);
+    const sinT1 = Math.sin(theta1);
+    const cosT1 = Math.cos(theta1);
 
 
-    const incidentAngle = Math.PI / 2 + theta1;
-    const incStartX = originX - rayLength * Math.cos(incidentAngle);
-    const incStartY = originY - rayLength * Math.sin(incidentAngle);
+    const incStartX = originX - rayLength * sinT1;
+    const incStartY = originY - rayLength * cosT1;
 
-    drawArrow(incStartX, incStartY, originX, originY, INCIDENT_COLOR, 4);
-
-
-    const reflectedAngle = Math.PI / 2 - theta1;
-    const refEndX = originX + rayLength * Math.cos(reflectedAngle);
-    const refEndY = originY - rayLength * Math.sin(reflectedAngle);
+    drawArrow(incStartX, incStartY, originX, originY, colors.incident, 4);
 
 
     const avgReflection = (coeffs.rs + coeffs.rp) / 2;
     const reflectedLineWidth = 2 + avgReflection * 4;
-    drawArrow(originX, originY, refEndX, refEndY, REFLECTED_COLOR, reflectedLineWidth);
+    const refEndX = originX + rayLength * sinT1;
+    const refEndY = originY - rayLength * cosT1;
+
+    drawArrow(originX, originY, refEndX, refEndY, colors.reflected, reflectedLineWidth);
 
 
     if (!coeffs.tir && coeffs.theta2 !== undefined) {
-        const refrAngle = -Math.PI / 2 + coeffs.theta2;
-        const refrEndX = originX + rayLength * Math.cos(refrAngle);
-        const refrEndY = originY - rayLength * Math.sin(refrAngle);
-
+        const sinT2 = Math.sin(coeffs.theta2);
+        const cosT2 = Math.cos(coeffs.theta2);
         const avgTransmission = (coeffs.ts + coeffs.tp) / 2;
         const refractedLineWidth = 2 + avgTransmission * 4;
-        drawArrow(originX, originY, refrEndX, refrEndY, REFRACTED_COLOR, refractedLineWidth);
+        const refrEndX = originX + rayLength * sinT2;
+        const refrEndY = originY + rayLength * cosT2;
+
+        drawArrow(originX, originY, refrEndX, refrEndY, colors.refracted, refractedLineWidth);
     }
 
 
-    drawAngleArc(originX, originY, 40, Math.PI / 2, incidentAngle, "θ₁", INCIDENT_COLOR);
-    drawAngleArc(originX, originY, 50, Math.PI / 2, reflectedAngle, "θ₁", REFLECTED_COLOR);
+    drawAngleArc(originX, originY, 40, Math.PI / 2, Math.PI / 2 + theta1, "θ₁", colors.incident);
+    drawAngleArc(originX, originY, 50, Math.PI / 2, Math.PI / 2 - theta1, "θ₁", colors.reflected);
 
     if (!coeffs.tir && coeffs.theta2 !== undefined) {
-        drawAngleArc(originX, originY, 40, -Math.PI / 2, -Math.PI / 2 + coeffs.theta2, "θ₂", REFRACTED_COLOR);
+        drawAngleArc(originX, originY, 40, -Math.PI / 2, -Math.PI / 2 + coeffs.theta2, "θ₂", colors.refracted);
     }
 
 
     if (animationRunning) {
         const phase = (frameCounter * 3) % 30;
-        drawWaveFronts(incStartX, incStartY, incidentAngle, rayLength, INCIDENT_COLOR, phase);
-        drawWaveFronts(originX, originY, reflectedAngle, rayLength, REFLECTED_COLOR, phase);
+
+        const incCanvasAngle = Math.atan2(cosT1, sinT1);
+        drawWaveFronts(incStartX, incStartY, incCanvasAngle, rayLength, colors.incident, phase);
+
+        const refCanvasAngle = Math.atan2(-cosT1, sinT1);
+        drawWaveFronts(originX, originY, refCanvasAngle, rayLength, colors.reflected, phase);
         if (!coeffs.tir && coeffs.theta2 !== undefined) {
-            const refrAngle = -Math.PI / 2 + coeffs.theta2;
-            drawWaveFronts(originX, originY, refrAngle, rayLength, REFRACTED_COLOR, phase);
+            const sinT2 = Math.sin(coeffs.theta2);
+            const cosT2 = Math.cos(coeffs.theta2);
+            const refrCanvasAngle = Math.atan2(cosT2, sinT2);
+            drawWaveFronts(originX, originY, refrCanvasAngle, rayLength, colors.refracted, phase);
         }
     }
 }
@@ -423,60 +456,65 @@ function drawEFields() {
     const originX = cw / 2;
     const originY = interfaceY;
     const rayLength = 180;
+    const colors = getThemeColors();
 
     const coeffs = calculateFresnelCoefficients(theta1);
     const phase = animationRunning ? (frameCounter * 0.15) : 0;
+    const sinT1 = Math.sin(theta1);
+    const cosT1 = Math.cos(theta1);
 
 
     const positions = [0.3, 0.6, 0.9];
 
 
-    const incidentAngle = Math.PI / 2 + theta1;
+    const incCanvasAngle = Math.atan2(cosT1, sinT1);
     positions.forEach((pos, i) => {
-        const x = originX - rayLength * pos * Math.cos(incidentAngle);
-        const y = originY - rayLength * pos * Math.sin(incidentAngle);
+        const x = originX - rayLength * pos * sinT1;
+        const y = originY - rayLength * pos * cosT1;
         const fieldPhase = phase - pos * 3;
 
         if (polarizationType === "both" || polarizationType === "s") {
-            drawEFieldVector(x - 10, y, 1, incidentAngle, S_POL_COLOR, false, fieldPhase);
+            drawEFieldVector(x - 10, y, 1, incCanvasAngle, colors.sPol, false, fieldPhase);
         }
         if (polarizationType === "both" || polarizationType === "p") {
-            drawEFieldVector(x + 10, y, 1, incidentAngle, P_POL_COLOR, true, fieldPhase);
+            drawEFieldVector(x + 10, y, 1, incCanvasAngle, colors.pPol, true, fieldPhase);
         }
     });
 
 
-    const reflectedAngle = Math.PI / 2 - theta1;
+    const refCanvasAngle = Math.atan2(-cosT1, sinT1);
     positions.forEach((pos, i) => {
-        const x = originX + rayLength * pos * Math.cos(reflectedAngle);
-        const y = originY - rayLength * pos * Math.sin(reflectedAngle);
+        const x = originX + rayLength * pos * sinT1;
+        const y = originY - rayLength * pos * cosT1;
         const fieldPhase = phase - pos * 3;
 
         if (polarizationType === "both" || polarizationType === "s") {
             const amplitude = Math.sqrt(coeffs.rs);
-            drawEFieldVector(x - 10, y, amplitude, reflectedAngle, S_POL_COLOR, false, fieldPhase);
+            drawEFieldVector(x - 10, y, amplitude, refCanvasAngle, colors.sPol, false, fieldPhase);
         }
         if (polarizationType === "both" || polarizationType === "p") {
             const amplitude = Math.sqrt(coeffs.rp);
-            drawEFieldVector(x + 10, y, amplitude, reflectedAngle, P_POL_COLOR, true, fieldPhase);
+            drawEFieldVector(x + 10, y, amplitude, refCanvasAngle, colors.pPol, true, fieldPhase);
         }
     });
 
 
     if (!coeffs.tir && coeffs.theta2 !== undefined) {
-        const refrAngle = -Math.PI / 2 + coeffs.theta2;
+        const sinT2 = Math.sin(coeffs.theta2);
+        const cosT2 = Math.cos(coeffs.theta2);
+        const refrCanvasAngle = Math.atan2(cosT2, sinT2);
         positions.forEach((pos, i) => {
-            const x = originX + rayLength * pos * Math.cos(refrAngle);
-            const y = originY - rayLength * pos * Math.sin(refrAngle);
+            const x = originX + rayLength * pos * sinT2;
+            const y = originY + rayLength * pos * cosT2;
             const fieldPhase = phase - pos * 3;
 
             if (polarizationType === "both" || polarizationType === "s") {
                 const amplitude = Math.sqrt(coeffs.ts);
-                drawEFieldVector(x - 10, y, amplitude, refrAngle, S_POL_COLOR, false, fieldPhase);
+                drawEFieldVector(x - 10, y, amplitude, refrCanvasAngle, colors.sPol, false, fieldPhase);
             }
             if (polarizationType === "both" || polarizationType === "p") {
                 const amplitude = Math.sqrt(coeffs.tp);
-                drawEFieldVector(x + 10, y, amplitude, refrAngle, P_POL_COLOR, true, fieldPhase);
+                drawEFieldVector(x + 10, y, amplitude, refrCanvasAngle, colors.pPol, true, fieldPhase);
             }
         });
     }
@@ -489,15 +527,16 @@ function drawBrewsterHighlight() {
     if (isAtBrewster) {
         const interfaceY = ch / 2;
         const originX = cw / 2;
+        const colors = getThemeColors();
 
 
-        ctx.fillStyle = BREWSTER_COLOR;
+        ctx.fillStyle = colors.brewster;
         ctx.beginPath();
         ctx.arc(originX, interfaceY, 8, 0, 2 * Math.PI);
         ctx.fill();
 
 
-        ctx.strokeStyle = BREWSTER_COLOR;
+        ctx.strokeStyle = colors.brewster;
         ctx.lineWidth = 2;
         for (let i = 0; i < 8; i++) {
             const angle = (i / 8) * 2 * Math.PI;
@@ -512,7 +551,7 @@ function drawBrewsterHighlight() {
         }
 
 
-        ctx.fillStyle = BREWSTER_COLOR;
+        ctx.fillStyle = colors.brewster;
         ctx.font = "bold 14px Arial";
         ctx.textAlign = "center";
         ctx.fillText("Brewster Angle!", originX, interfaceY - 35);
@@ -523,35 +562,36 @@ function drawLegend() {
     const legendX = cw - 150;
     const legendY = 20;
     const spacing = 20;
+    const colors = getThemeColors();
 
     ctx.font = "12px Arial";
     ctx.textAlign = "left";
 
 
-    ctx.fillStyle = INCIDENT_COLOR;
+    ctx.fillStyle = colors.incident;
     ctx.fillRect(legendX, legendY, 15, 3);
     ctx.fillText("Incident", legendX + 20, legendY + 5);
 
 
-    ctx.fillStyle = REFLECTED_COLOR;
+    ctx.fillStyle = colors.reflected;
     ctx.fillRect(legendX, legendY + spacing, 15, 3);
     ctx.fillText("Reflected", legendX + 20, legendY + spacing + 5);
 
 
-    ctx.fillStyle = REFRACTED_COLOR;
+    ctx.fillStyle = colors.refracted;
     ctx.fillRect(legendX, legendY + 2 * spacing, 15, 3);
     ctx.fillText("Refracted", legendX + 20, legendY + 2 * spacing + 5);
 
     if (showEFields.checked) {
 
-        ctx.fillStyle = S_POL_COLOR;
+        ctx.fillStyle = colors.sPol;
         ctx.beginPath();
         ctx.arc(legendX + 7, legendY + 3.5 * spacing, 5, 0, 2 * Math.PI);
         ctx.fill();
         ctx.fillText("s-pol (⊥)", legendX + 20, legendY + 3.5 * spacing + 4);
 
 
-        ctx.fillStyle = P_POL_COLOR;
+        ctx.fillStyle = colors.pPol;
         ctx.fillRect(legendX, legendY + 4.5 * spacing, 15, 3);
         ctx.fillText("p-pol (∥)", legendX + 20, legendY + 4.5 * spacing + 5);
     }
@@ -684,6 +724,23 @@ resetBtn.addEventListener("click", () => {
     updatePresetButtons(btnGrazing);
     updateStats();
     drawAll();
+});
+
+let darkModeRedrawFrameId = null;
+function onDarkModeChange() {
+    if (darkModeRedrawFrameId) return;
+    darkModeRedrawFrameId = requestAnimationFrame(() => {
+        darkModeRedrawFrameId = null;
+        drawAll();
+    });
+}
+new MutationObserver(onDarkModeChange).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class']
+});
+new MutationObserver(onDarkModeChange).observe(document.body, {
+    attributes: true,
+    attributeFilter: ['class']
 });
 
 
