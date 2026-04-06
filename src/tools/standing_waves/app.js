@@ -46,8 +46,10 @@ function getCSSColor(variableName) {
 function getDefaultColor(variableName) {
     const defaults = {
         '--text-muted': '#94a3b8',
+        '--text-primary': '#1e293b',
         '--primary-color': '#ea8400',
-        '--text-primary': '#1e293b'
+        '--danger-color': '#ef4444',
+        '--success-color': '#10b981'
     };
     return defaults[variableName] || '#94a3b8';
 }
@@ -77,8 +79,6 @@ function findNodes() {
     var nodes = [];
     var steps = 1000;
 
-    var t1 = 0.25;
-    var t2 = 0.0;
     for (var i = 0; i <= steps; i++) {
         var xNorm = i / steps;
         var maxAbs = 0;
@@ -194,7 +194,7 @@ function drawWave(waveFunc, t, color, lineWidth) {
 function drawEnvelope() {
     ctx.setLineDash([4, 4]);
     ctx.lineWidth = 1.5;
-    ctx.strokeStyle = "rgba(234, 132, 0, 0.4)";
+    ctx.strokeStyle = getCSSColor('--primary-color') + "66";
 
     var steps = plotWidth;
     var envValues = [];
@@ -232,14 +232,17 @@ function drawEnvelope() {
 
 function drawNodeMarkers() {
     var nodes = findNodes();
+    var nodeColor = getCSSColor('--danger-color');
+    var antinodeColor = getCSSColor('--success-color');
+
     nodes.forEach(function (xNorm) {
         var px = plotLeft + xNorm * plotWidth;
-        ctx.fillStyle = "#ef4444";
+        ctx.fillStyle = nodeColor;
         ctx.beginPath();
         ctx.arc(px, centerY, 6, 0, 2 * Math.PI);
         ctx.fill();
 
-        ctx.fillStyle = "#ef4444";
+        ctx.fillStyle = nodeColor;
         ctx.font = "bold 11px Arial";
         ctx.textAlign = "center";
         ctx.fillText("N", px, centerY - 12);
@@ -248,12 +251,12 @@ function drawNodeMarkers() {
     var antinodes = findAntinodes();
     antinodes.forEach(function (xNorm) {
         var px = plotLeft + xNorm * plotWidth;
-        ctx.fillStyle = "#10b981";
+        ctx.fillStyle = antinodeColor;
         ctx.beginPath();
         ctx.arc(px, centerY, 5, 0, 2 * Math.PI);
         ctx.fill();
 
-        ctx.strokeStyle = "#10b981";
+        ctx.strokeStyle = antinodeColor;
         ctx.lineWidth = 1.5;
         ctx.setLineDash([3, 3]);
         ctx.beginPath();
@@ -262,7 +265,7 @@ function drawNodeMarkers() {
         ctx.stroke();
         ctx.setLineDash([]);
 
-        ctx.fillStyle = "#10b981";
+        ctx.fillStyle = antinodeColor;
         ctx.font = "bold 11px Arial";
         ctx.textAlign = "center";
         ctx.fillText("A", px, margin - 6);
