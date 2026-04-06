@@ -293,7 +293,7 @@ function drawIntensityPattern(screenX, slitInfo) {
     const cy = ch / 2;
     const scale = getFringeScale();
     const waveColor = wavelengthToColor(wavelength);
-    const slitWidthScale = scale * (slitSeparation / wavelength) * 0.25;
+    const diffractionScale = scale * (slitSeparation / wavelength) * 0.25;
 
     ctx.lineWidth = 2;
 
@@ -302,7 +302,7 @@ function drawIntensityPattern(screenX, slitInfo) {
         const alpha = Math.PI * yPos / scale;
         const interference = Math.pow(Math.cos(alpha), 2);
 
-        const beta = (slitWidthScale > 0) ? Math.PI * yPos / slitWidthScale : 0;
+        const beta = (diffractionScale > 0) ? Math.PI * yPos / diffractionScale : 0;
         const sinc2 = (Math.abs(beta) < 1e-6) ? 1 : Math.pow(Math.sin(beta) / beta, 2);
 
         const intensity = interference * sinc2;
@@ -332,7 +332,7 @@ function drawIntensityPlot(slitInfo) {
     ctx.strokeRect(plotX, 40, plotWidth, plotHeight);
 
     const scale = getFringeScale();
-    const slitWidthScale = scale * (slitSeparation / wavelength) * 0.25;
+    const diffractionScale = scale * (slitSeparation / wavelength) * 0.25;
 
     ctx.beginPath();
     ctx.strokeStyle = getCSSColor('--primary-color');
@@ -343,7 +343,7 @@ function drawIntensityPlot(slitInfo) {
         const alpha = Math.PI * yPos / scale;
         const interference = Math.pow(Math.cos(alpha), 2);
 
-        const beta = (slitWidthScale > 0) ? Math.PI * yPos / slitWidthScale : 0;
+        const beta = (diffractionScale > 0) ? Math.PI * yPos / diffractionScale : 0;
         const sinc2 = (Math.abs(beta) < 1e-6) ? 1 : Math.pow(Math.sin(beta) / beta, 2);
 
         const intensity = interference * sinc2;
@@ -510,11 +510,19 @@ resetBtn.addEventListener("click", () => {
 updateStats();
 drawAll();
 
-new MutationObserver(() => drawAll()).observe(document.documentElement, {
+let darkModeRedrawTimer = null;
+function onDarkModeChange() {
+    if (darkModeRedrawTimer) return;
+    darkModeRedrawTimer = requestAnimationFrame(() => {
+        darkModeRedrawTimer = null;
+        drawAll();
+    });
+}
+new MutationObserver(onDarkModeChange).observe(document.documentElement, {
     attributes: true,
     attributeFilter: ['class']
 });
-new MutationObserver(() => drawAll()).observe(document.body, {
+new MutationObserver(onDarkModeChange).observe(document.body, {
     attributes: true,
     attributeFilter: ['class']
 });
