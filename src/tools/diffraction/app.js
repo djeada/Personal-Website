@@ -35,6 +35,9 @@ let screenDistance = +screenDistanceSlider.value;
 
 const samplesPerCycle = 60;
 
+/* Visual scale factor mapping wavelength to pixel spacing for wavefront lines */
+const WAVE_SPACING_FACTOR = 0.08;
+
 function getCSSColor(variableName) {
     return getComputedStyle(document.body)
         .getPropertyValue(variableName).trim() || getDefaultColor(variableName);
@@ -191,7 +194,10 @@ btnCircular.addEventListener("click", function () {
     applyPreset(50, 550, 200, true, btnCircular);
 });
 
-/* ---- Drawing helpers ---- */
+function getWaveSpacing() {
+    var spacing = wavelength * WAVE_SPACING_FACTOR;
+    return Math.max(12, Math.min(spacing, 50));
+}
 
 function drawBarrier() {
     var barrierX = 120;
@@ -231,8 +237,7 @@ function drawBarrier() {
 function drawIncomingWaves(barrierInfo) {
     var waveColor = wavelengthToColor(wavelength);
     var w = 2 * Math.PI * (frameCounter / samplesPerCycle);
-    var waveSpacing = wavelength * 0.08;
-    waveSpacing = Math.max(12, Math.min(waveSpacing, 50));
+    var waveSpacing = getWaveSpacing();
 
     ctx.lineWidth = 2;
     ctx.strokeStyle = waveColor;
@@ -253,8 +258,7 @@ function drawHuygensWavelets(barrierInfo) {
 
     var waveColor = wavelengthToColor(wavelength);
     var w = 2 * Math.PI * (frameCounter / samplesPerCycle);
-    var waveSpacing = wavelength * 0.08;
-    waveSpacing = Math.max(12, Math.min(waveSpacing, 50));
+    var waveSpacing = getWaveSpacing();
     var maxRadius = cw - barrierInfo.x;
 
     /* Place Huygens sources across the aperture */
@@ -312,8 +316,8 @@ function slitIntensity(yPos, scale) {
 /* Circular aperture Airy pattern: [2*J1(x)/x]^2 */
 function airyIntensity(yPos, scale) {
     if (scale === 0) return 1;
-    /* For circular aperture, the first zero is at 1.22 * lambda/D instead of lambda/a.
-       We adjust scale by the factor 1.22/1 to account for circular geometry. */
+    /* The factor 0.82 ≈ 1/1.22 adjusts the angular scale so the first dark ring
+       matches the Airy pattern condition sin(θ) = 1.22 λ/D instead of λ/a. */
     var x = Math.PI * yPos / (scale * 0.82);
     if (Math.abs(x) < 1e-6) return 1;
     var val = 2 * besselJ1(x) / x;
