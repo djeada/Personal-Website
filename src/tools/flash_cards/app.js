@@ -1,19 +1,24 @@
-(function() {
+(function () {
     'use strict';
 
-
-
+    // =========================================================================
+    // Configuration
+    // =========================================================================
 
     const CONFIG = {
-
         categoriesUrl: 'categories.json',
         categoryDataUrl: (category) => `${category}.json`,
         animationDuration: 300,
         autoFlipDelay: 0,
+        timerSecondsPerCard: 90,
+        timerWarningThreshold: 60,
+        timerCriticalThreshold: 15,
+        timerEmoji: '\u23F1\uFE0F',
     };
 
-
-
+    // =========================================================================
+    // Application State
+    // =========================================================================
 
     const state = {
         currentCategory: null,
@@ -23,10 +28,16 @@
         cardStatus: [],
         isFlipped: false,
         isLoading: false,
+        // Timer state
+        timerInterval: null,
+        timerSecondsLeft: 0,
+        // Streak state
+        currentStreak: 0,
     };
 
-
-
+    // =========================================================================
+    // DOM Element References
+    // =========================================================================
 
     const elements = {
         categorySelect: null,
@@ -47,12 +58,17 @@
         remainingCards: null,
         completedCards: null,
         errorDiv: null,
+        // New elements
+        timerDisplay: null,
+        timerToggle: null,
+        cardNav: null,
+        streakBadge: null,
+        streakText: null,
     };
 
-
-
-
-
+    // =========================================================================
+    // Utility Functions
+    // =========================================================================
 
     function displayError(msg) {
         if (!elements.errorDiv) {
@@ -78,12 +94,10 @@
         elements.errorDiv.textContent = msg;
         elements.errorDiv.style.display = 'block';
 
-
         setTimeout(() => {
             elements.errorDiv.style.display = 'none';
         }, 5000);
     }
-
 
     function clearError() {
         if (elements.errorDiv) {
@@ -91,14 +105,12 @@
         }
     }
 
-
     function setLoading(isLoading) {
         state.isLoading = isLoading;
         if (elements.loadingSpinner) {
             elements.loadingSpinner.style.display = isLoading ? 'flex' : 'none';
         }
     }
-
 
     function shuffleArray(array) {
         const shuffled = [...array];
@@ -109,11 +121,15 @@
         return shuffled;
     }
 
-
     function formatCategoryName(name) {
         return name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     }
 
+    function formatTime(totalSeconds) {
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
+        return String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+    }
 
     function resizeText(elementId) {
         const container = document.getElementById(elementId);
@@ -122,12 +138,10 @@
         const textElements = container.querySelectorAll('p');
         if (textElements.length === 0) return;
 
-
         textElements.forEach(el => el.style.fontSize = '');
 
         let fontSize = parseFloat(window.getComputedStyle(textElements[0]).fontSize);
         const minFontSize = 12;
-
 
         const checkOverflow = () => {
             const totalHeight = Array.from(textElements).reduce((sum, el) => sum + el.scrollHeight, 0);
@@ -140,10 +154,9 @@
         }
     }
 
-
-
-
-
+    // =========================================================================
+    // Data Loading
+    // =========================================================================
 
     async function fetchJson(url) {
         clearError();
@@ -165,7 +178,6 @@
         }
     }
 
-
     async function loadCategories() {
         const categories = await fetchJson(CONFIG.categoriesUrl);
 
@@ -186,7 +198,6 @@
         }
     }
 
-
     async function loadCategoryData(category) {
         const data = await fetchJson(CONFIG.categoryDataUrl(category));
 
@@ -200,10 +211,9 @@
         }
     }
 
-
-
-
-
+    // =========================================================================
+    // Subcategory Management
+    // =========================================================================
 
     function populateSubcategories() {
         elements.subcategoriesDiv.innerHTML = '';
@@ -228,7 +238,6 @@
         });
     }
 
-
     function selectAllSubcategories() {
         state.currentSubcategories = new Set(
             state.currentCategory.subcategories.map(sc => sc.name)
@@ -237,7 +246,6 @@
             cb.checked = true;
         });
     }
-
 
     function filterCards() {
         state.cards = [];
@@ -255,11 +263,17 @@
         state.currentCardIndex = 0;
         state.isFlipped = false;
 
+        resetStreak();
         showCard();
         populateQuestionsTable();
+        buildCardNav();
         updateProgress();
+        restartTimerIfEnabled();
     }
 
+    // =========================================================================
+    // Questions Table
+    // =========================================================================
 
     function populateQuestionsTable() {
         elements.questionsTableBody.innerHTML = '';
@@ -268,21 +282,17 @@
             const row = document.createElement('tr');
             row.id = `question-row-${idx}`;
 
-
             const idxCell = document.createElement('td');
             idxCell.textContent = idx + 1;
 
-
             const questionCell = document.createElement('td');
             questionCell.innerHTML = card.front;
-
 
             const subcategoryCell = document.createElement('td');
             const badge = document.createElement('span');
             badge.className = 'subcategory-badge';
             badge.textContent = card.subcategory;
             subcategoryCell.appendChild(badge);
-
 
             const statusCell = document.createElement('td');
             const checkbox = document.createElement('input');
@@ -294,7 +304,7 @@
                 state.cardStatus[idx] = checkbox.checked;
                 row.classList.toggle('completed', !checkbox.checked);
                 updateProgress();
-
+                updateCardNavStates();
 
                 if (idx === state.currentCardIndex && !checkbox.checked) {
                     showCard();
@@ -315,10 +325,9 @@
         });
     }
 
-
-
-
-
+    // =========================================================================
+    // Card Display
+    // =========================================================================
 
     function showCard() {
         if (state.cards.length === 0) {
@@ -332,9 +341,9 @@
                 </div>
             `;
             elements.flashcardBack.innerHTML = '';
+            updateCardNavStates();
             return;
         }
-
 
         let start = state.currentCardIndex;
         let found = false;
@@ -348,7 +357,6 @@
         } while (state.currentCardIndex !== start);
 
         if (!found) {
-
             elements.flashcardFront.innerHTML = `
                 <div class="empty-state">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -359,6 +367,7 @@
                 </div>
             `;
             elements.flashcardBack.innerHTML = '';
+            stopTimer();
         } else {
             const card = state.cards[state.currentCardIndex];
             elements.flashcardFront.innerHTML = `
@@ -371,10 +380,8 @@
             `;
         }
 
-
         elements.flashcard.classList.remove('flipped');
         state.isFlipped = false;
-
 
         requestAnimationFrame(() => {
             resizeText('flashcardFront');
@@ -387,10 +394,9 @@
             }
         });
 
-
         highlightCurrentRow();
+        updateCardNavStates();
     }
-
 
     function highlightCurrentRow() {
         const rows = elements.questionsTableBody.querySelectorAll('tr');
@@ -399,18 +405,15 @@
         });
     }
 
-
     function updateProgress() {
         const total = state.cards.length;
         const completed = state.cardStatus.filter(s => !s).length;
         const remaining = total - completed;
         const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-
         if (elements.totalCards) elements.totalCards.textContent = total;
         if (elements.remainingCards) elements.remainingCards.textContent = remaining;
         if (elements.completedCards) elements.completedCards.textContent = completed;
-
 
         if (elements.progressBar) {
             elements.progressBar.style.width = `${percentage}%`;
@@ -420,10 +423,135 @@
         }
     }
 
+    // =========================================================================
+    // Timer System
+    // =========================================================================
 
+    function startTimer() {
+        stopTimer();
+        const remaining = state.cardStatus.filter(s => s).length;
+        if (remaining === 0) return;
 
+        state.timerSecondsLeft = remaining * CONFIG.timerSecondsPerCard;
+        updateTimerDisplay();
 
+        state.timerInterval = setInterval(() => {
+            state.timerSecondsLeft--;
+            if (state.timerSecondsLeft <= 0) {
+                state.timerSecondsLeft = 0;
+                updateTimerDisplay();
+                stopTimer();
+                handleReset();
+            } else {
+                updateTimerDisplay();
+            }
+        }, 1000);
+    }
 
+    function stopTimer() {
+        if (state.timerInterval) {
+            clearInterval(state.timerInterval);
+            state.timerInterval = null;
+        }
+    }
+
+    function resetTimerDisplay() {
+        stopTimer();
+        state.timerSecondsLeft = 0;
+        if (elements.timerDisplay) {
+            elements.timerDisplay.textContent = CONFIG.timerEmoji + ' --:--';
+            elements.timerDisplay.classList.remove('warning', 'critical');
+        }
+    }
+
+    function updateTimerDisplay() {
+        if (!elements.timerDisplay) return;
+
+        elements.timerDisplay.textContent = CONFIG.timerEmoji + ' ' + formatTime(state.timerSecondsLeft);
+        elements.timerDisplay.classList.remove('warning', 'critical');
+
+        if (state.timerSecondsLeft <= CONFIG.timerCriticalThreshold) {
+            elements.timerDisplay.classList.add('critical');
+        } else if (state.timerSecondsLeft <= CONFIG.timerWarningThreshold) {
+            elements.timerDisplay.classList.add('warning');
+        }
+    }
+
+    function restartTimerIfEnabled() {
+        if (elements.timerToggle && elements.timerToggle.checked) {
+            startTimer();
+        } else {
+            resetTimerDisplay();
+        }
+    }
+
+    // =========================================================================
+    // Card Navigation Sidebar
+    // =========================================================================
+
+    function buildCardNav() {
+        if (!elements.cardNav) return;
+        elements.cardNav.innerHTML = '';
+
+        state.cards.forEach((_card, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'card-nav-btn';
+            btn.textContent = index + 1;
+            btn.setAttribute('aria-label', 'Go to card ' + (index + 1));
+            btn.addEventListener('click', () => {
+                navigateToCard(index);
+            });
+            elements.cardNav.appendChild(btn);
+        });
+
+        updateCardNavStates();
+    }
+
+    function navigateToCard(index) {
+        if (index < 0 || index >= state.cards.length) return;
+        state.currentCardIndex = index;
+        showCard();
+    }
+
+    function updateCardNavStates() {
+        if (!elements.cardNav) return;
+        const buttons = elements.cardNav.querySelectorAll('.card-nav-btn');
+        buttons.forEach((btn, i) => {
+            btn.classList.toggle('current', i === state.currentCardIndex);
+            btn.classList.toggle('known', !state.cardStatus[i]);
+        });
+    }
+
+    // =========================================================================
+    // Streak Tracking
+    // =========================================================================
+
+    function incrementStreak() {
+        state.currentStreak++;
+        updateStreakDisplay();
+    }
+
+    function resetStreak() {
+        state.currentStreak = 0;
+        updateStreakDisplay();
+    }
+
+    function updateStreakDisplay() {
+        if (!elements.streakBadge) return;
+
+        if (state.currentStreak >= 2) {
+            elements.streakBadge.style.display = '';
+            if (elements.streakText) {
+                elements.streakText.textContent = state.currentStreak + ' streak';
+            }
+        } else {
+            elements.streakBadge.style.display = 'none';
+        }
+    }
+
+    // =========================================================================
+    // Event Handlers
+    // =========================================================================
 
     function handleSubcategoryChange(e) {
         if (e.target.checked) {
@@ -434,11 +562,9 @@
         filterCards();
     }
 
-
     function handleCategoryChange(e) {
         loadCategoryData(e.target.value);
     }
-
 
     function handleFlip() {
         elements.flashcard.classList.toggle('flipped');
@@ -450,12 +576,10 @@
         });
     }
 
-
     function handleKnowIt() {
         if (state.cards.length === 0) return;
 
         state.cardStatus[state.currentCardIndex] = false;
-
 
         const row = document.getElementById(`question-row-${state.currentCardIndex}`);
         if (row) {
@@ -464,18 +588,22 @@
             row.classList.add('completed');
         }
 
+        incrementStreak();
         updateProgress();
-
-
+        updateCardNavStates();
         moveToNextCard();
     }
-
 
     function handleNext() {
         if (state.cards.length === 0) return;
+        resetStreak();
         moveToNextCard();
     }
 
+    function handlePrevious() {
+        if (state.cards.length === 0) return;
+        moveToPreviousCard();
+    }
 
     function moveToNextCard() {
         const start = state.currentCardIndex;
@@ -487,30 +615,57 @@
         showCard();
     }
 
+    function moveToPreviousCard() {
+        const start = state.currentCardIndex;
+
+        do {
+            state.currentCardIndex = (state.currentCardIndex - 1 + state.cards.length) % state.cards.length;
+        } while (!state.cardStatus[state.currentCardIndex] && state.currentCardIndex !== start);
+
+        showCard();
+    }
 
     function handleShuffle() {
-
         state.currentCategory.subcategories.forEach(sc => {
             if (state.currentSubcategories.has(sc.name)) {
                 sc.cards = shuffleArray(sc.cards);
             }
         });
+        resetStreak();
         filterCards();
     }
-
 
     function handleReset() {
         state.cardStatus = Array(state.cards.length).fill(true);
         state.currentCardIndex = 0;
+        resetStreak();
         showCard();
         populateQuestionsTable();
+        buildCardNav();
         updateProgress();
+        restartTimerIfEnabled();
     }
 
+    function handleTimerToggle() {
+        if (elements.timerToggle.checked) {
+            startTimer();
+        } else {
+            resetTimerDisplay();
+        }
+    }
 
     function handleKeydown(e) {
-
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+        // Number keys 1-9: jump to that card
+        if (e.key >= '1' && e.key <= '9') {
+            const cardIndex = parseInt(e.key, 10) - 1;
+            if (cardIndex < state.cards.length) {
+                e.preventDefault();
+                navigateToCard(cardIndex);
+            }
+            return;
+        }
 
         switch (e.key) {
             case ' ':
@@ -524,6 +679,12 @@
             case 'N':
                 e.preventDefault();
                 handleNext();
+                break;
+            case 'ArrowLeft':
+            case 'p':
+            case 'P':
+                e.preventDefault();
+                handlePrevious();
                 break;
             case 'Enter':
             case 'k':
@@ -544,15 +705,13 @@
         }
     }
 
-
     function handleFlashcardClick() {
         handleFlip();
     }
 
-
-
-
-
+    // =========================================================================
+    // Initialization
+    // =========================================================================
 
     function cacheElements() {
         elements.categorySelect = document.getElementById('categorySelect');
@@ -572,13 +731,16 @@
         elements.totalCards = document.getElementById('totalCards');
         elements.remainingCards = document.getElementById('remainingCards');
         elements.completedCards = document.getElementById('completedCards');
+        // New elements
+        elements.timerDisplay = document.getElementById('timerDisplay');
+        elements.timerToggle = document.getElementById('timerToggle');
+        elements.cardNav = document.getElementById('cardNav');
+        elements.streakBadge = document.getElementById('streakBadge');
+        elements.streakText = elements.streakBadge?.querySelector('.streak-text');
     }
 
-
     function attachEventListeners() {
-
         elements.categorySelect?.addEventListener('change', handleCategoryChange);
-
 
         elements.flipButton?.addEventListener('click', handleFlip);
         elements.knowButton?.addEventListener('click', handleKnowIt);
@@ -586,12 +748,11 @@
         elements.shuffleAllButton?.addEventListener('click', handleShuffle);
         elements.resetButton?.addEventListener('click', handleReset);
 
-
         elements.flashcard?.addEventListener('click', handleFlashcardClick);
 
+        elements.timerToggle?.addEventListener('change', handleTimerToggle);
 
         document.addEventListener('keydown', handleKeydown);
-
 
         elements.flashcard?.addEventListener('keydown', (e) => {
             if (e.key === ' ' || e.key === 'Enter') {
@@ -601,13 +762,11 @@
         });
     }
 
-
     function init() {
         cacheElements();
         attachEventListeners();
         loadCategories();
     }
-
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);

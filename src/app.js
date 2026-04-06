@@ -296,6 +296,12 @@ function initializeThreeJS() {
     const container = document.getElementById('threejs-container');
     if (!container) return;
 
+    let isVisible = true;
+    const visibilityObserver = new IntersectionObserver((entries) => {
+        isVisible = entries[0].isIntersecting;
+    }, { threshold: 0.1 });
+    visibilityObserver.observe(container);
+
     let darkMode = getCookie("darkMode") === "true";
 
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
@@ -317,28 +323,32 @@ function initializeThreeJS() {
         dark: {
             bg: 0x0B1020,
             fog: 0x0F1428,
-            ringPrimary: 0x6B7FD7,
+            ringPrimary: 0x7C8FE8,
             ringSecondary: 0x8892E0,
-            ringAccent: 0xE0A458,
+            ringAccent: 0xF0B060,
             star: 0xffffff,
             nebula1: 0x2A2F4F,
             nebula2: 0x3D4466,
             nebula3: 0x3A5555,
             energy: 0xC7D2FF,
-            trail: 0x7B86CC
+            trail: 0x7B86CC,
+            spark: 0xFFFFFF,
+            aurora: 0x60E0C0
         },
         light: {
             bg: 0x1a1a2e,
             fog: 0x1E2440,
-            ringPrimary: 0x6B7FD7,
-            ringSecondary: 0x9BA5E8,
-            ringAccent: 0xD9A456,
+            ringPrimary: 0x8899F0,
+            ringSecondary: 0xA0AAEF,
+            ringAccent: 0xF5B868,
             star: 0xffffff,
             nebula1: 0x5A5F7F,
             nebula2: 0x7A6B8F,
             nebula3: 0x6B8B8B,
             energy: 0xB5C5F5,
-            trail: 0x8B92D8
+            trail: 0x8B92D8,
+            spark: 0xFFFFFF,
+            aurora: 0x70F0D0
         }
     };
 
@@ -422,11 +432,13 @@ function initializeThreeJS() {
         metalness: 0.95,
         roughness: 0.08,
         clearcoat: 1.0,
-        clearcoatRoughness: 0.03,
+        clearcoatRoughness: 0.01,
         reflectivity: 1.0,
         envMapIntensity: 1.5,
         emissive: colors.ringPrimary,
-        emissiveIntensity: 0.25
+        emissiveIntensity: 0.3,
+        iridescence: 0.3,
+        iridescenceIOR: 1.3
     });
     const mainRing = new THREE.Mesh(mainRingGeo, mainRingMat);
     mainRing.castShadow = !isMobile;
@@ -453,7 +465,7 @@ function initializeThreeJS() {
     const outerGlow = new THREE.Mesh(outerGlowGeo, outerGlowMat);
     ringGroup.add(outerGlow);
 
-    const coreGeo = new THREE.SphereGeometry(0.6, 32, 32);
+    const coreGeo = new THREE.SphereGeometry(0.7, 32, 32);
     const coreMat = new THREE.MeshBasicMaterial({
         color: 0xffffff,
         transparent: true,
@@ -530,6 +542,10 @@ function initializeThreeJS() {
     const particleColors = new Float32Array(particleCount * 3);
     const particleVelocities = new Float32Array(particleCount * 3);
     const particleLife = new Float32Array(particleCount);
+    const particleAngles = new Float32Array(particleCount);
+    const particleOrbitSpeeds = new Float32Array(particleCount);
+    const particleOrbitRadii = new Float32Array(particleCount);
+    const particleBaseSizes = new Float32Array(particleCount);
 
     for (let i = 0; i < particleCount; i++) {
         const angle = Math.random() * Math.PI * 2;
@@ -547,6 +563,11 @@ function initializeThreeJS() {
         particleVelocities[i3] = (Math.random() - 0.5) * 0.04;
         particleVelocities[i3 + 1] = Math.random() * 0.08;
         particleVelocities[i3 + 2] = (Math.random() - 0.5) * 0.04;
+
+        particleAngles[i] = angle;
+        particleOrbitSpeeds[i] = (0.3 + Math.random() * 0.7) * (Math.random() < 0.5 ? 1 : -1);
+        particleOrbitRadii[i] = radius;
+        particleBaseSizes[i] = 0.8 + Math.random() * 0.4;
 
         const colorChoice = Math.random();
         if (colorChoice < 0.4) {
@@ -785,6 +806,20 @@ function initializeThreeJS() {
     impactRing.rotation.x = -Math.PI / 2;
     impactRing.position.y = GROUND_LEVEL + 0.05;
     scene.add(impactRing);
+
+    const impactRing2Geo = new THREE.RingGeometry(0.1, 1, 32);
+    const impactRing2Mat = new THREE.MeshBasicMaterial({
+        color: colors.aurora,
+        transparent: true,
+        opacity: 0,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending
+    });
+    const impactRing2 = new THREE.Mesh(impactRing2Geo, impactRing2Mat);
+    impactRing2.rotation.x = -Math.PI / 2;
+    impactRing2.position.y = GROUND_LEVEL + 0.04;
+    scene.add(impactRing2);
+    let impactIntensity2 = 0;
 
     let isMouseDown = false;
     let isTouching = false;
@@ -1116,6 +1151,9 @@ function initializeThreeJS() {
 
     function animate() {
         requestAnimationFrame(animate);
+        if (!isVisible) {
+            return;
+        }
         const deltaTime = Math.min(clock.getDelta(), 0.1);
         time += deltaTime;
         frameCount++;
@@ -1166,6 +1204,7 @@ function initializeThreeJS() {
             cosmicLight1.color.setHex(colors.nebula1);
             cosmicLight2.color.setHex(colors.nebula2);
             impactRingMat.color.setHex(colors.energy);
+            impactRing2Mat.color.setHex(colors.aurora);
         }
 
 
@@ -1226,13 +1265,19 @@ function initializeThreeJS() {
                 const impactSpeed = Math.abs(ringVelocity.y);
                 if (impactSpeed > MIN_BOUNCE_VELOCITY && !ringOnGround) {
                     ringVelocity.y *= -0.35;
-                    impactIntensity = Math.min(1.0, impactSpeed / 15);
-                    energyLevel = Math.max(energyLevel, impactIntensity * 40);
+                    impactIntensity = Math.min(1.0, impactSpeed / 12);
+                    energyLevel = Math.max(energyLevel, impactIntensity * 55);
 
                     impactRing.position.x = ringPosition.x;
                     impactRing.position.z = ringPosition.z;
                     impactRing.scale.set(0.5, 0.5, 0.5);
-                    impactRingMat.opacity = impactIntensity * 0.8;
+                    impactRingMat.opacity = impactIntensity * 0.9;
+
+                    impactRing2.position.x = ringPosition.x;
+                    impactRing2.position.z = ringPosition.z;
+                    impactRing2.scale.set(0.3, 0.3, 0.3);
+                    impactRing2Mat.opacity = impactIntensity * 0.7;
+                    impactIntensity2 = impactIntensity * 0.85;
                 } else {
                     ringVelocity.y = 0;
                     ringOnGround = true;
@@ -1244,7 +1289,13 @@ function initializeThreeJS() {
         if (impactIntensity > 0) {
             const scale = 1 + (1 - impactIntensity) * 15;
             impactRing.scale.set(scale, scale, scale);
-            impactRingMat.opacity = impactIntensity * 0.6;
+            impactRingMat.opacity = impactIntensity * 0.7;
+        }
+        impactIntensity2 = Math.max(0, impactIntensity2 - deltaTime * 2.5);
+        if (impactIntensity2 > 0) {
+            const scale2 = 1 + (1 - impactIntensity2) * 12;
+            impactRing2.scale.set(scale2, scale2, scale2);
+            impactRing2Mat.opacity = impactIntensity2 * 0.5;
         }
 
         launchFlash = Math.max(0, launchFlash - deltaTime * 4);
@@ -1268,18 +1319,22 @@ function initializeThreeJS() {
         const speedFactor = Math.min(1, speed / 20);
         const combinedEnergy = Math.max(energyFactor, speedFactor * 0.5, launchFlash * 0.8);
 
-        const basePulse = 1 + Math.sin(time * 4) * 0.05;
-        const energyPulse = basePulse + Math.sin(time * 8) * 0.08 * combinedEnergy;
+        const basePulse = 1 + Math.sin(time * 4) * 0.12;
+        const energyPulse = basePulse + Math.sin(time * 8) * 0.12 * combinedEnergy;
         core.scale.setScalar(energyPulse);
         coreGlow.scale.setScalar(energyPulse * 1.6);
         coreOuterGlow.scale.setScalar(energyPulse * 1.8 + Math.sin(time * 3) * 0.1);
         coreHalo.scale.setScalar(1 + Math.sin(time * 2) * 0.15 + combinedEnergy * 0.3);
 
+        const coreHue = (time * 0.1) % 1;
+        const coreShiftColor = new THREE.Color().setHSL(coreHue, 0.3, 0.7 + combinedEnergy * 0.2);
+        coreGlowMat.color.copy(coreShiftColor);
+
         coreGlowMat.opacity = 0.35 + combinedEnergy * 0.25 + Math.sin(time * 5) * 0.08;
         coreOuterGlowMat.opacity = 0.12 + combinedEnergy * 0.15;
         coreHaloMat.opacity = 0.04 + combinedEnergy * 0.06;
 
-        mainRingMat.emissiveIntensity = 0.15 + combinedEnergy * 0.7 + launchFlash * 0.6;
+        mainRingMat.emissiveIntensity = 0.3 + combinedEnergy * 0.7 + launchFlash * 0.6;
         innerGlowMat.opacity = 0.25 + combinedEnergy * 0.25;
         outerGlowMat.opacity = 0.2 + combinedEnergy * 0.25;
 
@@ -1295,16 +1350,28 @@ function initializeThreeJS() {
         for (let i = 0; i < particleCount; i += particleUpdateStep) {
             const i3 = i * 3;
 
-            particleVelocities[i3 + 1] += 0.002 * (1 + combinedEnergy);
-            particlePositions[i3] += particleVelocities[i3];
-            particlePositions[i3 + 1] += particleVelocities[i3 + 1];
-            particlePositions[i3 + 2] += particleVelocities[i3 + 2];
+            particleAngles[i] += particleOrbitSpeeds[i] * deltaTime;
+            const orbitR = particleOrbitRadii[i];
+            const orbitAngle = particleAngles[i];
+
+            particlePositions[i3] = Math.cos(orbitAngle) * orbitR + ringPosition.x;
+            particlePositions[i3 + 1] += particleVelocities[i3 + 1] + 0.002 * (1 + combinedEnergy);
+            particlePositions[i3 + 2] = Math.sin(orbitAngle) * orbitR + ringPosition.z;
 
             particleLife[i] -= deltaTime * 0.4;
+
+            const lifeFraction = Math.max(0, particleLife[i]);
+            const sizeVariation = particleBaseSizes[i] * (0.6 + 0.4 * Math.sin(time * 3 + i));
+            particleMat.size = (isMobile ? 2.0 : 3.0) * sizeVariation;
 
             if (particleLife[i] <= 0 || particlePositions[i3 + 1] > ringPosition.y + 8) {
                 const angle = Math.random() * Math.PI * 2;
                 const radius = THREE.MathUtils.randFloat(3.0, 5.5);
+
+                particleAngles[i] = angle;
+                particleOrbitRadii[i] = radius;
+                particleOrbitSpeeds[i] = (0.3 + Math.random() * 0.7) * (Math.random() < 0.5 ? 1 : -1);
+                particleBaseSizes[i] = 0.8 + Math.random() * 0.4;
 
                 particlePositions[i3] = Math.cos(angle) * radius + ringPosition.x;
                 particlePositions[i3 + 1] = ringPosition.y + (Math.random() - 0.5) * 2;
@@ -1364,19 +1431,22 @@ function initializeThreeJS() {
         starField.rotation.y = time * 0.002;
         starField.rotation.x = time * 0.0008;
 
-        cameraDistance += (targetCameraDistance - cameraDistance) * 0.05;
-        cameraVerticalAngle += (targetCameraVerticalAngle - cameraVerticalAngle) * 0.05;
+        cameraDistance += (targetCameraDistance - cameraDistance) * 0.07;
+        cameraVerticalAngle += (targetCameraVerticalAngle - cameraVerticalAngle) * 0.07;
 
         if (cameraAutoRotate) {
-            cameraAngle += deltaTime * (isMobile ? 0.04 : 0.06);
+            cameraAngle += deltaTime * (isMobile ? 0.03 : 0.04);
         }
 
-        const camRadius = cameraDistance + Math.sin(time * 0.3) * (isMobile ? 2 : 3);
-        const baseHeight = 8 + Math.sin(time * 0.2) * 2;
+        const camRadius = cameraDistance + Math.sin(time * 0.25) * (isMobile ? 2 : 3);
+        const verticalBob = cameraAutoRotate ? Math.sin(time * 0.4) * 0.8 : 0;
+        const baseHeight = 8 + Math.sin(time * 0.2) * 2 + verticalBob;
         const camHeight = baseHeight + cameraVerticalAngle * 15 + (ringPosition.y - 10) * 0.25;
-        camera.position.x = Math.cos(cameraAngle) * camRadius + ringPosition.x * 0.3;
-        camera.position.z = Math.sin(cameraAngle) * camRadius + (isMobile ? 5 : 8) + ringPosition.z * 0.3;
-        camera.position.y = camHeight;
+        const targetCamX = Math.cos(cameraAngle) * camRadius + ringPosition.x * 0.3;
+        const targetCamZ = Math.sin(cameraAngle) * camRadius + (isMobile ? 5 : 8) + ringPosition.z * 0.3;
+        camera.position.x += (targetCamX - camera.position.x) * 0.08;
+        camera.position.z += (targetCamZ - camera.position.z) * 0.08;
+        camera.position.y += (camHeight - camera.position.y) * 0.08;
 
         camera.lookAt(ringGroup.position);
 
@@ -1388,56 +1458,73 @@ function initializeThreeJS() {
     const instructions = document.createElement('div');
     const instructionStyle = `
         position: absolute;
-        ${isMobile ? 'bottom: 12px; left: 12px; right: 12px;' : 'bottom: 20px; left: 20px;'}
-        background: linear-gradient(135deg, rgba(0,15,40,0.92) 0%, rgba(0,5,20,0.95) 100%);
-        color: #e0e8ff;
-        padding: ${isMobile ? '10px 14px' : '16px 22px'};
-        border-radius: 14px;
+        ${isMobile ? 'bottom: 10px; left: 10px; right: 10px;' : 'bottom: 16px; left: 16px;'}
+        background: rgba(8,12,30,0.75);
+        color: #d0d8f0;
+        padding: ${isMobile ? '8px 12px' : '12px 16px'};
+        border-radius: 12px;
         font-family: 'Segoe UI', system-ui, sans-serif;
-        font-size: ${isMobile ? '11px' : '12px'};
-        pointer-events: none;
+        font-size: ${isMobile ? '10px' : '11px'};
+        pointer-events: auto;
         z-index: 1000;
-        border: 1px solid rgba(0,200,255,0.25);
-        box-shadow: 0 8px 32px rgba(0,100,200,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
-        backdrop-filter: blur(12px);
-        max-width: ${isMobile ? 'auto' : '340px'};
+        border: 1px solid transparent;
+        border-image: linear-gradient(135deg, rgba(124,143,232,0.4), rgba(240,176,96,0.3), rgba(96,224,192,0.3)) 1;
+        box-shadow: 0 4px 20px rgba(0,60,120,0.25);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        max-width: ${isMobile ? 'auto' : '320px'};
+        opacity: 1;
+        transition: opacity 0.6s ease;
     `;
 
     instructions.style.cssText = instructionStyle;
 
     instructions.innerHTML = isMobile ? `
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-            <span style="font-size: 20px;">🌌</span>
-            <strong style="color: #00ccff; font-size: 13px; letter-spacing: 1px;">COSMIC RING</strong>
+        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+            <span style="font-size: 14px;">✦</span>
+            <strong style="color: #8899f0; font-size: 11px; letter-spacing: 0.5px;">CONTROLS</strong>
         </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 10px; opacity: 0.9;">
-            <span style="color: #ff66aa;">👆 Tap to launch</span>
-            <span style="color: #ffaa44;">👆👆 Double-tap superjump</span>
-            <span style="color: #66ffaa;">↕️ Drag for force</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 10px; opacity: 0.85;">
+            <span>👆 Launch</span>
+            <span>👆👆 Super</span>
+            <span>↕ Force</span>
         </div>
     ` : `
-        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
-            <span style="font-size: 28px;">🌌</span>
-            <div>
-                <strong style="color: #00ccff; font-size: 15px; letter-spacing: 1.5px;">COSMIC PHYSICS RING</strong>
-                <div style="font-size: 10px; color: #8899bb; margin-top: 2px;">Interactive 3D Simulation</div>
-            </div>
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span style="font-size: 16px;">✦</span>
+            <strong style="color: #8899f0; font-size: 12px; letter-spacing: 0.5px;">CONTROLS</strong>
         </div>
-        <div style="display: grid; gap: 4px; font-size: 11px; opacity: 0.95;">
-            <div><span style="color: #ff66aa;">🖱️ Click</span> Launch ring upward</div>
-            <div><span style="color: #ffaa44;">🖱️🖱️ Double-click</span> Super launch</div>
-            <div><span style="color: #66ffaa;">↔️ Left-drag</span> Apply force in flight</div>
-            <div><span style="color: #88ddff;">🖱️ Right-drag</span> Rotate camera view</div>
-            <div><span style="color: #ddaaff;">⇧+Drag</span> Rotate ring manually</div>
-            <div><span style="color: #aaddcc;">🖲️ Scroll</span> Zoom in/out</div>
-            <div><span style="color: #88aaff;">⌨️ A/D</span> Rotate camera</div>
-            <div><span style="color: #ffcc88;">⌨️ Q/E</span> Spin ring left/right</div>
-            <div><span style="color: #aabbcc;">⌨️ +/-</span> Speed up/down</div>
-            <div><span style="color: #ff8888;">⌨️ R</span> Reset all</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3px 16px; font-size: 10px; opacity: 0.85; line-height: 1.6;">
+            <div><span style="color: #ff66aa;">Click</span> Launch</div>
+            <div><span style="color: #ffaa44;">Dbl-click</span> Super</div>
+            <div><span style="color: #66ffaa;">Drag</span> Force</div>
+            <div><span style="color: #88ddff;">R-drag</span> Camera</div>
+            <div><span style="color: #ddaaff;">⇧+Drag</span> Spin</div>
+            <div><span style="color: #aaddcc;">Scroll</span> Zoom</div>
+            <div><span style="color: #88aaff;">A/D</span> Orbit</div>
+            <div><span style="color: #ffcc88;">Q/E</span> Rotate</div>
+            <div><span style="color: #aabbcc;">+/−</span> Speed</div>
+            <div><span style="color: #ff8888;">R</span> Reset</div>
         </div>
     `;
 
     container.appendChild(instructions);
+
+    // Fade out instructions after 8 seconds, show on hover
+    setTimeout(() => {
+        instructions.style.opacity = '0';
+    }, 8000);
+    instructions.addEventListener('mouseenter', () => {
+        instructions.style.opacity = '1';
+    });
+    instructions.addEventListener('mouseleave', () => {
+        instructions.style.opacity = '0';
+    });
+    // For touch: tap to toggle
+    instructions.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+        instructions.style.opacity = instructions.style.opacity === '0' ? '1' : '0';
+    }, { passive: true });
 
     if (isMobile) {
         const resetButton = document.createElement('button');
