@@ -726,11 +726,11 @@ resetBtn.addEventListener("click", () => {
     drawAll();
 });
 
-let darkModeRedrawTimer = null;
+let darkModeRedrawFrameId = null;
 function onDarkModeChange() {
-    if (darkModeRedrawTimer) return;
-    darkModeRedrawTimer = requestAnimationFrame(() => {
-        darkModeRedrawTimer = null;
+    if (darkModeRedrawFrameId) return;
+    darkModeRedrawFrameId = requestAnimationFrame(() => {
+        darkModeRedrawFrameId = null;
         drawAll();
     });
 }
