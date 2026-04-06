@@ -35,17 +35,29 @@ let screenDistance = +screenDistanceSlider.value;
 const samplesPerCycle = 60;
 
 function getCSSColor(variableName) {
-    return getComputedStyle(document.documentElement)
+    return getComputedStyle(document.body)
         .getPropertyValue(variableName).trim() || getDefaultColor(variableName);
 }
 
 function getDefaultColor(variableName) {
-    const defaults = {
+    const dark = document.documentElement.classList.contains('dark-mode') ||
+        document.body.classList.contains('dark-mode');
+    const defaults = dark ? {
+        '--border-color': '#475569',
+        '--text-primary': '#f1f5f9',
+        '--text-secondary': '#cbd5e1',
+        '--text-muted': '#94a3b8',
+        '--primary-color': '#ff9d1a',
+        '--surface-color': '#1e293b',
+        '--surface-elevated': '#334155'
+    } : {
         '--border-color': '#e2e8f0',
         '--text-primary': '#1e293b',
         '--text-secondary': '#64748b',
         '--text-muted': '#94a3b8',
-        '--primary-color': '#ea8400'
+        '--primary-color': '#ea8400',
+        '--surface-color': '#ffffff',
+        '--surface-elevated': '#f8fafc'
     };
     return defaults[variableName] || '#94a3b8';
 }
@@ -191,7 +203,7 @@ function drawBarrier() {
     const slitGap = slitSeparation * 0.6;
     const cy = ch / 2;
 
-    ctx.fillStyle = "#1e293b";
+    ctx.fillStyle = getCSSColor('--text-primary');
     ctx.fillRect(barrierX, 0, barrierWidth, cy - slitGap / 2 - slitHeight);
     ctx.fillRect(barrierX, cy - slitGap / 2, barrierWidth, slitGap - slitHeight);
     ctx.fillRect(barrierX, cy + slitGap / 2, barrierWidth, ch - cy - slitGap / 2);
@@ -210,7 +222,7 @@ function drawBarrier() {
     return {
         x: barrierX + barrierWidth / 2,
         slit1Y: cy - slitGap / 2 - slitHeight / 2,
-        slit2Y: cy + slitGap / 2 + slitHeight / 2
+        slit2Y: cy + slitGap / 2 - slitHeight / 2
     };
 }
 
@@ -266,7 +278,7 @@ function drawScreen() {
     const screenWidth = 8;
     const cy = ch / 2;
 
-    ctx.fillStyle = "#334155";
+    ctx.fillStyle = getCSSColor('--text-secondary');
     ctx.fillRect(screenX - screenWidth / 2, 20, screenWidth, ch - 40);
 
     ctx.fillStyle = getCSSColor('--text-muted');
@@ -281,12 +293,19 @@ function drawIntensityPattern(screenX, slitInfo) {
     const cy = ch / 2;
     const scale = getFringeScale();
     const waveColor = wavelengthToColor(wavelength);
+    const diffractionScale = scale * (slitSeparation / wavelength) * 0.25;
 
     ctx.lineWidth = 2;
 
     for (let y = 20; y < ch - 20; y++) {
         const yPos = y - cy;
-        const intensity = Math.pow(Math.cos(Math.PI * yPos / scale), 2);
+        const alpha = Math.PI * yPos / scale;
+        const interference = Math.pow(Math.cos(alpha), 2);
+
+        const beta = (diffractionScale > 0) ? Math.PI * yPos / diffractionScale : 0;
+        const sinc2 = (Math.abs(beta) < 1e-6) ? 1 : Math.pow(Math.sin(beta) / beta, 2);
+
+        const intensity = interference * sinc2;
 
         ctx.fillStyle = waveColor;
         ctx.globalAlpha = intensity * 0.9;
@@ -304,13 +323,16 @@ function drawIntensityPlot(slitInfo) {
     const plotHeight = ch - 80;
     const cy = ch / 2;
 
-    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+    ctx.fillStyle = getCSSColor('--surface-color');
+    ctx.globalAlpha = 0.9;
     ctx.fillRect(plotX, 40, plotWidth, plotHeight);
+    ctx.globalAlpha = 1;
     ctx.strokeStyle = getCSSColor('--border-color');
     ctx.lineWidth = 1;
     ctx.strokeRect(plotX, 40, plotWidth, plotHeight);
 
     const scale = getFringeScale();
+    const diffractionScale = scale * (slitSeparation / wavelength) * 0.25;
 
     ctx.beginPath();
     ctx.strokeStyle = getCSSColor('--primary-color');
@@ -318,7 +340,13 @@ function drawIntensityPlot(slitInfo) {
 
     for (let y = 40; y < 40 + plotHeight; y++) {
         const yPos = y - cy;
-        const intensity = Math.pow(Math.cos(Math.PI * yPos / scale), 2);
+        const alpha = Math.PI * yPos / scale;
+        const interference = Math.pow(Math.cos(alpha), 2);
+
+        const beta = (diffractionScale > 0) ? Math.PI * yPos / diffractionScale : 0;
+        const sinc2 = (Math.abs(beta) < 1e-6) ? 1 : Math.pow(Math.sin(beta) / beta, 2);
+
+        const intensity = interference * sinc2;
 
         const x = plotX + 6 + intensity * (plotWidth - 12);
         if (y === 40) {
@@ -367,8 +395,10 @@ function drawLegend() {
     const legendX = 10;
     const legendY = 10;
 
-    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+    ctx.fillStyle = getCSSColor('--surface-color');
+    ctx.globalAlpha = 0.9;
     ctx.fillRect(legendX, legendY, 100, 50);
+    ctx.globalAlpha = 1;
     ctx.strokeStyle = getCSSColor('--border-color');
     ctx.lineWidth = 1;
     ctx.strokeRect(legendX, legendY, 100, 50);
@@ -396,7 +426,7 @@ function drawLegend() {
 function drawAll() {
     ctx.clearRect(0, 0, cw, ch);
 
-    ctx.fillStyle = "#f8fafc";
+    ctx.fillStyle = getCSSColor('--surface-elevated');
     ctx.fillRect(0, 0, cw, ch);
 
     const slitInfo = drawBarrier();
@@ -479,3 +509,20 @@ resetBtn.addEventListener("click", () => {
 
 updateStats();
 drawAll();
+
+let darkModeRedrawTimer = null;
+function onDarkModeChange() {
+    if (darkModeRedrawTimer) return;
+    darkModeRedrawTimer = requestAnimationFrame(() => {
+        darkModeRedrawTimer = null;
+        drawAll();
+    });
+}
+new MutationObserver(onDarkModeChange).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class']
+});
+new MutationObserver(onDarkModeChange).observe(document.body, {
+    attributes: true,
+    attributeFilter: ['class']
+});
