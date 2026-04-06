@@ -13,6 +13,7 @@
         timerSecondsPerCard: 90,
         timerWarningThreshold: 60,
         timerCriticalThreshold: 15,
+        timerEmoji: '\u23F1\uFE0F',
     };
 
     // =========================================================================
@@ -62,6 +63,7 @@
         timerToggle: null,
         cardNav: null,
         streakBadge: null,
+        streakText: null,
     };
 
     // =========================================================================
@@ -457,7 +459,7 @@
         stopTimer();
         state.timerSecondsLeft = 0;
         if (elements.timerDisplay) {
-            elements.timerDisplay.textContent = '\u23F1\uFE0F --:--';
+            elements.timerDisplay.textContent = CONFIG.timerEmoji + ' --:--';
             elements.timerDisplay.classList.remove('warning', 'critical');
         }
     }
@@ -465,7 +467,7 @@
     function updateTimerDisplay() {
         if (!elements.timerDisplay) return;
 
-        elements.timerDisplay.textContent = '\u23F1\uFE0F ' + formatTime(state.timerSecondsLeft);
+        elements.timerDisplay.textContent = CONFIG.timerEmoji + ' ' + formatTime(state.timerSecondsLeft);
         elements.timerDisplay.classList.remove('warning', 'critical');
 
         if (state.timerSecondsLeft <= CONFIG.timerCriticalThreshold) {
@@ -539,9 +541,8 @@
 
         if (state.currentStreak >= 2) {
             elements.streakBadge.style.display = '';
-            const textEl = elements.streakBadge.querySelector('.streak-text');
-            if (textEl) {
-                textEl.textContent = state.currentStreak + ' streak';
+            if (elements.streakText) {
+                elements.streakText.textContent = state.currentStreak + ' streak';
             }
         } else {
             elements.streakBadge.style.display = 'none';
@@ -735,6 +736,7 @@
         elements.timerToggle = document.getElementById('timerToggle');
         elements.cardNav = document.getElementById('cardNav');
         elements.streakBadge = document.getElementById('streakBadge');
+        elements.streakText = elements.streakBadge?.querySelector('.streak-text');
     }
 
     function attachEventListeners() {
