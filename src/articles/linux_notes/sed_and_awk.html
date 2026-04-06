@@ -93,7 +93,27 @@
 </ul>
 <p>Example:</p>
 <div><pre><code class="language-bash">sed '5d' file.txt</code></pre></div>
-<p>Delete line 5.</p>
+<ul>
+<li><code>5</code> selects line 5</li>
+<li><code>d</code> deletes that line</li>
+<li>all other lines are printed normally</li>
+</ul>
+<p>This is useful when you know the exact line number you want to remove.</p>
+<p><strong>Before — <code>file.txt</code></strong></p>
+<div><pre><code class="language-txt">line one
+line two
+line three
+line four
+line five
+line six
+line seven</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">line one
+line two
+line three
+line four
+line six
+line seven</code></pre></div>
 <h4 id="addresses">Addresses</h4>
 <p>Addresses tell <code>sed</code> <strong>which lines</strong> a command should apply to. They can target specific line numbers, ranges, or patterns, making it easy to operate on only part of the input.</p>
 <p>
@@ -126,7 +146,24 @@
 </p>
 <p>Example:</p>
 <div><pre><code class="language-bash">sed 's/apple/orange/g' fruits.txt</code></pre></div>
-<p>Replace every <code>apple</code> with <code>orange</code>.</p>
+<ul>
+<li><code>s/.../.../</code> is the substitution command</li>
+<li><code>apple</code> is the text to search for</li>
+<li><code>orange</code> is the replacement text</li>
+<li><code>g</code> means replace all matches on each line, not just the first one</li>
+</ul>
+<p>This is useful when the same word may appear multiple times in a line and you want to replace every occurrence.</p>
+<p><strong>Before — <code>fruits.txt</code></strong></p>
+<div><pre><code class="language-txt">apple pie
+green apple and red apple
+pineapple apple
+banana grape</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">orange pie
+green orange and red orange
+pineorange orange
+banana grape</code></pre></div>
+<p>Notice that <code>sed</code> replaces the text wherever it appears, so <code>pineapple</code> becomes <code>pineorange</code> too.</p>
 <h4 id="regular-expressions">Regular expressions</h4>
 <p><code>sed</code> supports regular expressions for matching text.</p>
 <p>
@@ -134,32 +171,180 @@
 </p>
 <p>Example:</p>
 <div><pre><code class="language-bash">sed '/^Error/s/^Error/Warning/' logs.txt</code></pre></div>
-<p>For lines starting with <code>Error</code>, replace that beginning with <code>Warning</code>.</p>
+<ul>
+<li><code>/^Error/</code> limits the substitution to lines that start with <code>Error</code></li>
+<li><code>s/^Error/Warning/</code> replaces <code>Error</code> only at the beginning of the line</li>
+<li>lines that do not start with <code>Error</code> are left unchanged</li>
+</ul>
+<p>This is useful when you want to change only leading status words without affecting the same word later in the line.</p>
+<p><strong>Before — <code>logs.txt</code></strong></p>
+<div><pre><code class="language-txt">Error disk full on /dev/sda1
+Info service started
+Error timeout while connecting
+Warning retry scheduled
+Critical Error in module loader</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">Warning disk full on /dev/sda1
+Info service started
+Warning timeout while connecting
+Warning retry scheduled
+Critical Error in module loader</code></pre></div>
+<p>Notice:</p>
+<ul>
+<li><code>Error disk full on /dev/sda1</code> changed because the line starts with <code>Error</code></li>
+<li><code>Critical Error in module loader</code> did not change because <code>Error</code> is not at the start of the line</li>
+</ul>
 <h4 id="extended-regex">Extended regex</h4>
 <p>With <code>-E</code>, patterns are easier to read because you usually do not need escaped grouping and repetition syntax.</p>
 <div><pre><code class="language-bash">sed -E 's/([0-9]{3})-([0-9]{2})-([0-9]{4})/XXX-XX-\3/' ssn.txt</code></pre></div>
-<p>This masks the first five digits of an SSN-like pattern.</p>
+<ul>
+<li><code>-E</code> enables extended regular expressions</li>
+<li><code>([0-9]{3})</code> matches the first 3 digits</li>
+<li><code>([0-9]{2})</code> matches the next 2 digits</li>
+<li><code>([0-9]{4})</code> matches the last 4 digits</li>
+<li><code>\3</code> reuses only the 3rd captured group</li>
+<li>the replacement changes the first five digits to <code>XXX-XX-</code></li>
+</ul>
+<p>This is useful when you want to hide sensitive data while keeping the last 4 digits visible.</p>
+<p><strong>Before — <code>ssn.txt</code></strong></p>
+<div><pre><code class="language-txt">Alice 123-45-6789
+Bob 987-65-4321
+Cara 555-11-2222
+NoSSN here</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">Alice XXX-XX-6789
+Bob XXX-XX-4321
+Cara XXX-XX-2222
+NoSSN here</code></pre></div>
+<p>Only text matching the <code>123-45-6789</code> style pattern is changed. Lines without that pattern stay the same.</p>
 <h4 id="common-examples">Common examples</h4>
-<p>These are typical <code>sed</code> one-liners for replacing text, filtering lines, and making simple edits to files or streams.</p>
+<p>These are typical <code>sed</code> one-liners for replacing text, filtering lines, and making simple edits to files or streams. Each example below shows what the input file might look like before running the command, and what the output would look like after.</p>
 <p><strong>Replace first match on each line</strong></p>
 <div><pre><code class="language-bash">sed 's/old/new/' file.txt</code></pre></div>
+<p>Replaces only the first occurrence of <code>old</code> on each line.</p>
+<p><strong>Before — <code>file.txt</code></strong></p>
+<div><pre><code class="language-txt">old value here
+this old item has old twice
+nothing to change
+old old old</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">new value here
+this new item has old twice
+nothing to change
+new old old</code></pre></div>
 <p><strong>Replace all matches</strong></p>
 <div><pre><code class="language-bash">sed 's/old/new/g' file.txt</code></pre></div>
+<p>Replaces every occurrence of <code>old</code> on each line. The <code>g</code> flag means “global” for that line.</p>
+<p><strong>Before — <code>file.txt</code></strong></p>
+<div><pre><code class="language-txt">old value here
+this old item has old twice
+nothing to change
+old old old</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">new value here
+this new item has new twice
+nothing to change
+new new new</code></pre></div>
 <p><strong>Delete lines containing a word</strong></p>
 <div><pre><code class="language-bash">sed '/unwanted/d' file.txt</code></pre></div>
+<p>Deletes every line that contains the text <code>unwanted</code>.</p>
+<p><strong>Before — <code>file.txt</code></strong></p>
+<div><pre><code class="language-txt">keep this line
+this line is unwanted
+another good line
+unwanted content appears here too
+final line</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">keep this line
+another good line
+final line</code></pre></div>
 <p><strong>Delete empty lines</strong></p>
 <div><pre><code class="language-bash">sed '/^$/d' file.txt</code></pre></div>
+<p>Deletes blank lines. <code>^$</code> matches lines that begin and end immediately, with nothing in between.</p>
+<p><strong>Before — <code>file.txt</code></strong></p>
+<div><pre><code class="language-txt">alpha
+
+beta
+
+
+gamma
+delta</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">alpha
+beta
+gamma
+delta</code></pre></div>
 <p><strong>Print only matching lines</strong></p>
 <div><pre><code class="language-bash">sed -n '/error/p' log.txt</code></pre></div>
+<p>Prints only lines containing <code>error</code>. The <code>-n</code> option suppresses normal output, and <code>p</code> prints only matched lines.</p>
+<p><strong>Before — <code>log.txt</code></strong></p>
+<div><pre><code class="language-txt">info: service started
+warning: low memory
+error: failed to connect
+info: retrying
+error: timeout reached</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">error: failed to connect
+error: timeout reached</code></pre></div>
 <p><strong>Insert a line before line 1</strong></p>
 <div><pre><code class="language-bash">sed '1i\Header Text' file.txt</code></pre></div>
+<p>Inserts <code>Header Text</code> before the first line of the file.</p>
+<p><strong>Before — <code>file.txt</code></strong></p>
+<div><pre><code class="language-txt">apple
+banana
+cherry</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">Header Text
+apple
+banana
+cherry</code></pre></div>
 <p><strong>Append text after matching lines</strong></p>
 <div><pre><code class="language-bash">sed '/pattern/a\New line of text' file.txt</code></pre></div>
+<p>Adds a new line immediately after every line that matches <code>pattern</code>.</p>
+<p><strong>Before — <code>file.txt</code></strong></p>
+<div><pre><code class="language-txt">start section
+pattern found here
+middle line
+pattern appears again
+end section</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">start section
+pattern found here
+New line of text
+middle line
+pattern appears again
+New line of text
+end section</code></pre></div>
 <p><strong>Edit file in place with backup</strong></p>
 <div><pre><code class="language-bash">sed -i.bak 's/foo/bar/g' file.txt</code></pre></div>
-<p>This modifies <code>file.txt</code> and keeps a backup as <code>file.txt.bak</code>.</p>
+<p>Modifies <code>file.txt</code> directly and saves the original file as <code>file.txt.bak</code>.</p>
+<p><strong>Before — <code>file.txt</code></strong></p>
+<div><pre><code class="language-txt">foo is here
+foo and foo again
+no match here</code></pre></div>
+<p><strong>After — <code>file.txt</code></strong></p>
+<div><pre><code class="language-txt">bar is here
+bar and bar again
+no match here</code></pre></div>
+<p><strong>Backup — <code>file.txt.bak</code></strong></p>
+<div><pre><code class="language-txt">foo is here
+foo and foo again
+no match here</code></pre></div>
+<p>This is useful when you want to change a file directly but still keep a copy of the original.</p>
 <p><strong>Convert commas to pipes</strong></p>
 <div><pre><code class="language-bash">sed 's/,/|/g' data.csv &gt; data.psv</code></pre></div>
+<p>Replaces all commas with pipe characters and writes the result to a new file.</p>
+<p><strong>Before — <code>data.csv</code></strong></p>
+<div><pre><code class="language-txt">name,age,city
+Alice,29,Berlin
+Bob,34,Paris
+Cara,41,Rome</code></pre></div>
+<p><strong>After — <code>data.psv</code></strong></p>
+<div><pre><code class="language-txt">name|age|city
+Alice|29|Berlin
+Bob|34|Paris
+Cara|41|Rome</code></pre></div>
+<p>This is a simple way to convert comma-separated data into pipe-separated data without changing the original file.</p>
 <h4 id="multi-line-and-hold-space">Multi-line and hold space</h4>
 <p><code>sed</code> normally works on one line at a time, but it also has:
 Editor) and awk are powerful command-line utilities that originated from Unix and have become indispensable tools in Unix-like operating systems, including Linux and macOS. They are designed for processing and transforming text, allowing users to perform complex text manipulations with simple commands. This guide provides a comprehensive overview of both utilities, including their history, usage, syntax, options, and practical examples.</p>
@@ -175,6 +360,20 @@ Editor) and awk are powerful command-line utilities that originated from Unix an
 <li>the substitution swaps them</li>
 </ul>
 <p>This is more advanced, but useful for multi-line edits.</p>
+<p><strong>Before — <code>file.txt</code></strong></p>
+<div><pre><code class="language-txt">first line
+second line
+third line
+fourth line
+fifth line
+sixth line</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">second line
+first line
+fourth line
+third line
+sixth line
+fifth line</code></pre></div>
 <h4 id="practical-tips">Practical tips</h4>
 <ul>
 <li>Put scripts in <strong>single quotes</strong> to avoid shell interference</li>
@@ -222,7 +421,7 @@ Editor) and awk are powerful command-line utilities that originated from Unix an
                      ▼
         ┌─────────────────────────────────┐
         │        PATTERN (condition)      │
-        │   e.g. $2 &gt; 10 or /error/      │
+        │   e.g. $2 &gt; 10 or /error/       │
         └─────────────────────────────────┘
                      │
           ┌──────────┴──────────┐
@@ -274,6 +473,17 @@ If you omit the action, <code>awk</code> prints the matching line by default.</p
 <p>Example:</p>
 <div><pre><code class="language-bash">awk '{ print $1, $3 }' data.txt</code></pre></div>
 <p>Print the first and third fields from each line.</p>
+<p>Useful for extracting only the columns you need from plain text data.</p>
+<p><strong>Before — <code>data.txt</code></strong></p>
+<div><pre><code class="language-txt">Alice Sales 5400 Berlin
+Bob HR 4200 Paris
+Cara IT 6100 Rome
+Dina Finance 5800 Madrid</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">Alice 5400
+Bob 4200
+Cara 6100
+Dina 5800</code></pre></div>
 <h4 id="patterns-and-actions">Patterns and actions</h4>
 <p>The usual shape of an <code>awk</code> command is:</p>
 <div><pre><code class="language-bash">awk 'pattern { action }' file</code></pre></div>
@@ -283,6 +493,16 @@ If you omit the action, <code>awk</code> prints the matching line by default.</p
 <li><code>$2 == "Error"</code> = match lines where field 2 is <code>Error</code></li>
 <li><code>{ print }</code> = print those lines</li>
 </ul>
+<p>Useful for filtering log files or structured text by status, level, or category.</p>
+<p><strong>Before — <code>logs.txt</code></strong></p>
+<div><pre><code class="language-txt">2026-04-01 Info Started
+2026-04-01 Error DiskFull
+2026-04-02 Warning Retry
+2026-04-02 Error Timeout
+2026-04-03 Info Recovered</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">2026-04-01 Error DiskFull
+2026-04-02 Error Timeout</code></pre></div>
 <h4 id="field-separators">Field separators</h4>
 <p>By default, <code>awk</code> splits fields on spaces and tabs.</p>
 <p>To use a different separator, use <strong><code>-F</code></strong>.</p>
@@ -293,6 +513,14 @@ If you omit the action, <code>awk</code> prints the matching line by default.</p
 <li><code>$1</code> = first field</li>
 <li><code>$3</code> = third field</li>
 </ul>
+<p><strong>Before — sample <code>/etc/passwd</code> content</strong></p>
+<div><pre><code class="language-txt">root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">root 0
+daemon 1
+nobody 65534</code></pre></div>
 <h4 id="common-operators-and-tests">Common operators and tests</h4>
 <p>These operators are used in <code>awk</code> patterns and conditions to compare values, combine logic, and match text using regular expressions.</p>
 <p>
@@ -301,6 +529,16 @@ If you omit the action, <code>awk</code> prints the matching line by default.</p
 <p>Example:</p>
 <div><pre><code class="language-bash">awk '$3 &gt; 100 { print $1, $3 }' data.txt</code></pre></div>
 <p>Print fields 1 and 3 only when field 3 is greater than 100.</p>
+<p><strong>Before — <code>data.txt</code></strong></p>
+<div><pre><code class="language-txt">apple red 80
+banana yellow 120
+grape purple 140
+melon green 95
+orange orange 101</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">banana 120
+grape 140
+orange 101</code></pre></div>
 <h4 id="begin-and-end"><code>BEGIN</code> and <code>END</code></h4>
 <p>These are special blocks.</p>
 <p>
@@ -308,6 +546,16 @@ If you omit the action, <code>awk</code> prints the matching line by default.</p
 </p>
 <p>Example:</p>
 <div><pre><code class="language-bash">awk 'BEGIN { print "Start" } { print $0 } END { print "Done" }' file.txt</code></pre></div>
+<p><strong>Before — <code>file.txt</code></strong></p>
+<div><pre><code class="language-txt">alpha
+beta
+gamma</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">Start
+alpha
+beta
+gamma
+Done</code></pre></div>
 <h4 id="common-functions-and-features">Common functions and features</h4>
 <p>These built-in functions cover the most common string manipulation, text replacement, and numeric operations in <code>awk</code>. They are frequently used for data cleaning and transformation.</p>
 <p>
@@ -322,6 +570,15 @@ If you omit the action, <code>awk</code> prints the matching line by default.</p
 <li>separates fields with a space (default <code>OFS</code>)</li>
 <li>automatically adds a newline</li>
 </ul>
+<p>Prints the 1st and 2nd fields from each line, separated by a space.</p>
+<p><strong>Before — <code>file.txt</code></strong></p>
+<div><pre><code class="language-txt">Alice Sales Berlin
+Bob HR Paris
+Cara IT Rome</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">Alice Sales
+Bob HR
+Cara IT</code></pre></div>
 <p><strong><code>printf</code></strong></p>
 <p>Formatted output with full control over layout:</p>
 <div><pre><code class="language-bash">awk '{ printf "%-10s %-10s %5.2f\n", $1, $2, $3 }' data.txt</code></pre></div>
@@ -330,26 +587,123 @@ If you omit the action, <code>awk</code> prints the matching line by default.</p
 <li>supports formatting (width, alignment, decimals)</li>
 <li>ideal for aligned columns and numeric output</li>
 </ul>
+<p>Formats the output into neat aligned columns:</p>
+<ul>
+<li><code>%-10s</code> = left-aligned string in a 10-character field</li>
+<li><code>%5.2f</code> = floating-point number with 2 decimals</li>
+</ul>
+<p><strong>Before — <code>data.txt</code></strong></p>
+<div><pre><code class="language-txt">Alice Sales 42.5
+Bob HR 7
+Cara IT 128.345</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">Alice      Sales      42.50
+Bob        HR          7.00
+Cara       IT        128.34</code></pre></div>
+<p>Note that <code>printf</code> does not add a newline automatically, so <code>\n</code> is required at the end of the format string.</p>
 <h4 id="common-examples">Common examples</h4>
-<p>These are typical one-liners that cover the most common <code>awk</code> use cases: selecting fields, filtering rows, and doing simple calculations.</p>
+<p>These are typical one-liners that cover the most common <code>awk</code> use cases: selecting fields, filtering rows, and doing simple calculations. Each example below shows sample input and the resulting output.</p>
 <p><strong>Print specific columns</strong></p>
 <div><pre><code class="language-bash">awk '{ print $1, $3 }' data.txt</code></pre></div>
+<p>Prints the 1st and 3rd whitespace-separated fields from each line.</p>
+<p><strong>Before — <code>data.txt</code></strong></p>
+<div><pre><code class="language-txt">Alice Sales 5400 Berlin
+Bob HR 4200 Paris
+Cara IT 6100 Rome</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">Alice 5400
+Bob 4200
+Cara 6100</code></pre></div>
 <p><strong>Print lines matching a condition</strong></p>
 <div><pre><code class="language-bash">awk '$2 == "Error" { print }' logs.txt</code></pre></div>
+<p>Prints only lines where the 2nd field is exactly <code>Error</code>.</p>
+<p><strong>Before — <code>logs.txt</code></strong></p>
+<div><pre><code class="language-txt">2026-04-01 Info Started
+2026-04-01 Error DiskFull
+2026-04-02 Warning Retry
+2026-04-02 Error Timeout</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">2026-04-01 Error DiskFull
+2026-04-02 Error Timeout</code></pre></div>
 <p><strong>Sum a column</strong></p>
 <div><pre><code class="language-bash">awk '{ sum += $3 } END { print "Total:", sum }' data.txt</code></pre></div>
+<p>Adds up all values in the 3rd field and prints the total at the end.</p>
+<p><strong>Before — <code>data.txt</code></strong></p>
+<div><pre><code class="language-txt">itemA north 12
+itemB south 8
+itemC west 15
+itemD east 10</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">Total: 45</code></pre></div>
 <p><strong>Compute an average</strong></p>
 <div><pre><code class="language-bash">awk '{ total += $3; count++ } END { print "Average:", total/count }' data.txt</code></pre></div>
+<p>Adds the 3rd field for every line, counts the rows, and prints the average.</p>
+<p><strong>Before — <code>data.txt</code></strong></p>
+<div><pre><code class="language-txt">itemA north 12
+itemB south 8
+itemC west 16
+itemD east 14</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">Average: 12.5</code></pre></div>
 <p><strong>Filter rows by numeric value</strong></p>
 <div><pre><code class="language-bash">awk '$4 &gt;= 50 { print }' scores.txt</code></pre></div>
+<p>Prints only rows where the 4th field is greater than or equal to <code>50</code>.</p>
+<p><strong>Before — <code>scores.txt</code></strong></p>
+<div><pre><code class="language-txt">Lina Math Midterm 48
+Omar Math Midterm 77
+Nia Math Midterm 50
+Jules Math Midterm 39</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">Omar Math Midterm 77
+Nia Math Midterm 50</code></pre></div>
 <p><strong>Convert a field to uppercase</strong></p>
 <div><pre><code class="language-bash">awk '{ $2 = toupper($2); print }' data.txt</code></pre></div>
+<p>Converts the 2nd field to uppercase, then prints the whole line.</p>
+<p><strong>Before — <code>data.txt</code></strong></p>
+<div><pre><code class="language-txt">100 apple red
+101 banana yellow
+102 grape purple</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">100 APPLE red
+101 BANANA yellow
+102 GRAPE purple</code></pre></div>
 <p><strong>Count repeated values</strong></p>
 <div><pre><code class="language-bash">awk '{ count[$1]++ } END { for (word in count) print word, count[word] }' words.txt</code></pre></div>
+<p>Counts how many times the 1st field appears.</p>
+<p><strong>Before — <code>words.txt</code></strong></p>
+<div><pre><code class="language-txt">apple
+banana
+apple
+orange
+banana
+apple</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">orange 1
+banana 2
+apple 3</code></pre></div>
+<p>The output order may vary because associative arrays in <code>awk</code> are not always printed in insertion order.</p>
 <p><strong>Print line number with content</strong></p>
 <div><pre><code class="language-bash">awk '{ print NR, $0 }' file.txt</code></pre></div>
+<p>Prints each line prefixed with its line number. <code>NR</code> is the current record number.</p>
+<p><strong>Before — <code>file.txt</code></strong></p>
+<div><pre><code class="language-txt">first task
+second task
+third task</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">1 first task
+2 second task
+3 third task</code></pre></div>
 <p><strong>Use a custom field separator</strong></p>
 <div><pre><code class="language-bash">awk -F ':' '{ print $1, $3 }' /etc/passwd</code></pre></div>
+<p>Uses <code>:</code> as the field separator instead of spaces, then prints the 1st and 3rd fields.</p>
+<p><strong>Before — sample colon-separated file</strong></p>
+<div><pre><code class="language-txt">root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin</code></pre></div>
+<p><strong>After</strong></p>
+<div><pre><code class="language-txt">root 0
+daemon 1
+nobody 65534</code></pre></div>
 <h4 id="control-structures">Control structures</h4>
 <p><code>awk</code> includes basic programming constructs like conditionals and loops, allowing you to apply more complex logic during text processing.</p>
 <p><strong><code>if</code></strong></p>
