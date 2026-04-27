@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Inotify</title>
+    <meta content="Inotify is a Linux kernel subsystem that provides a mechanism for monitoring file system events." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/linux_notes/inotify" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Inotify",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/linux_notes/inotify"
+            },
+            "url": "https://adamdjellouli.com/articles/linux_notes/inotify",
+            "description": "Inotify is a Linux kernel subsystem that provides a mechanism for monitoring file system events.",
+            "dateModified": "2026-04-27"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol><a href="#inotify">Inotify</a>
+                    <ol>
+                        <li><a href="#how-inotify-works">How Inotify Works</a></li>
+                        <li><a href="#event-types">Event Types</a></li>
+                        <li><a href="#using-inotifywait-and-inotifywatch">Using inotifywait and inotifywatch</a>
+                            <ol>
+                                <li><a href="#installing-inotify-tools">Installing inotify-tools</a></li>
+                                <li><a href="#inotifywait">inotifywait</a></li>
+                                <li><a href="#inotifywatch">inotifywatch</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#practical-shell-script-examples">Practical Shell Script Examples</a>
+                            <ol>
+                                <li><a href="#automated-backup-on-file-change">Automated Backup on File Change</a></li>
+                                <li><a href="#log-watcher-with-alert">Log Watcher with Alert</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#the-inotify-c-api">The Inotify C API</a></li>
+                        <li><a href="#kernel-limits-and-tuning">Kernel Limits and Tuning</a></li>
+                        <li><a href="#inotify-vs-alternatives">Inotify vs Alternatives</a></li>
+                        <li><a href="#common-use-cases">Common Use Cases</a></li>
+                        <li><a href="#challenges">Challenges</a></li>
+                    </ol>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ci_cd.html">Ci Cd</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/commands.html">Commands</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/containers_and_docker.html">Containers and Docker</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/cron_jobs.html">Cron Jobs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/disk_io_analysis.html">Disk Io Analysis</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/disk_usage.html">Disk Usage</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/dwm.html">Dwm</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/encryption.html">Encryption</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/environment_modules.html">Environment Modules</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/environment_variable.html">Environment Variable</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/file_system.html">File System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/files_and_dirs.html">Files and Dirs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/finding_files.html">Finding Files</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/firewall.html">Firewall</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/grep.html">Grep</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/hardware.html">Hardware</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/infrastructure_as_code.html">Infrastructure As Code</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/inodes_and_symlinks.html">Inodes and Symlinks</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/inotify.html">Inotify</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/introduction.html">Introduction</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/kernel.html">Kernel</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ldap.html">Ldap</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/lfcs.html">Lfcs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/linux_certification_overview.html">Linux Certification Overview</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/log_files_and_journals.html">Log Files and Journals</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/logical_volume_management.html">Logical Volume Management</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/managing_users.html">Managing Users</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/mounting.html">Mounting</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/networking.html">Networking</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/nfs.html">Nfs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/package_managers.html">Package Managers</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/partitions.html">Partitions</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/performance_monitoring.html">Performance Monitoring</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/permissions.html">Permissions</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/pipe_and_redirect.html">Pipe and Redirect</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ports.html">Ports</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/processes.html">Processes</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/rhcsa.html">Rhcsa</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/running_executables.html">Running Executables</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/sed_and_awk.html">Sed and Awk</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/selinux.html">Selinux</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/services.html">Services</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/shells_and_bash_configuration.html">Shells and Bash Configuration</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ssh_and_scp.html">Ssh and Scp</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/system_startup.html">System Startup</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/tar_and_gzip.html">Tar and Gzip</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/task_state_analysis.html">Task State Analysis</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/utilities.html">Utilities</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/virtual_machines.html">Virtual Machines</a></li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: April 27, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="inotify">Inotify</h2>
+            <p>Inotify is a Linux kernel subsystem that provides a mechanism for monitoring file system events. It allows applications to watch files and directories for changes such as creation, deletion, modification, and access. Rather than repeatedly polling the file system to detect changes, inotify delivers event notifications directly to user-space programs, making it both efficient and responsive.</p>
+            <p>System administrators, developers, and DevOps engineers rely on inotify for tasks ranging from live log monitoring and automated backup triggers to build-system watchers and security auditing. The kernel-level integration means inotify imposes minimal overhead, even when watching large numbers of files.</p>
+            <h3 id="how-inotify-works">How Inotify Works</h3>
+            <div>
+                <pre><code class="language-+------------------------------------------------------------------+">|                      Inotify Workflow Overview                   |
++------------------------------------------------------------------+
+         │
+         ▼
++--------------------------------------+       +----------------------------------+
+|       User-Space Application         |       |        Kernel (VFS Layer)        |
+|   (Creates inotify instance and      |       |  (Tracks watched inodes and      |
+|    adds watches on files/dirs)       |       |   generates events on changes)   |
++--------------------------------------+       +----------------------------------+
+         │                                                      │
+         │   inotify_init() / inotify_add_watch()               │
+         --------------------------------------------------------
+                                       |
+                                       ▼
+                         +-------------------------------+
+                         |     Inotify File Descriptor   |
+                         |   (Readable via read()/poll() |
+                         |    when events are queued)     |
+                         +-------------------------------+
+                                       │
+                                       │ Kernel queues inotify_event
+                                       │ structs as changes happen
+                                       ▼
+                         +---------------------------------+
+                         |   Application Reads Events      |
+                         | (Processes each event and acts) |
+                         +---------------------------------+</code></pre>
+            </div>
+            <ul>
+                <li>An application begins by calling <code>inotify_init()</code> to create an inotify instance, which returns a <strong>file descriptor</strong> used for all subsequent operations.</li>
+                <li>Watches are added with <code>inotify_add_watch()</code>, specifying a <strong>path</strong> and a bitmask of event types to monitor (e.g., <code>IN_MODIFY</code>, <code>IN_CREATE</code>, <code>IN_DELETE</code>).</li>
+                <li>When a watched event occurs, the kernel places an <code>inotify_event</code> structure on the inotify file descriptor's <strong>read queue</strong>.</li>
+                <li>The application retrieves events by calling <code>read()</code> on the file descriptor, or uses <code>poll()</code>/<code>select()</code>/<code>epoll()</code> to <strong>wait</strong> for events without busy-looping.</li>
+                <li>Each event contains the <strong>watch descriptor</strong>, the event <strong>mask</strong>, an optional <strong>cookie</strong> for pairing rename events, and the <strong>filename</strong> when the watch is on a directory.</li>
+                <li>A watch can be removed with <code>inotify_rm_watch()</code>, and closing the inotify file descriptor <strong>cleans up</strong> all associated watches automatically.</li>
+            </ul>
+            <h3 id="event-types">Event Types</h3>
+            <p>Inotify can watch for a variety of file system events. The table below lists the most commonly used event masks.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Event Mask</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td><code>IN_ACCESS</code></td>
+                    <td>File was accessed (read).</td>
+                </tr>
+                <tr>
+                    <td><code>IN_MODIFY</code></td>
+                    <td>File was modified (write).</td>
+                </tr>
+                <tr>
+                    <td><code>IN_ATTRIB</code></td>
+                    <td>Metadata changed (permissions, timestamps, extended attributes).</td>
+                </tr>
+                <tr>
+                    <td><code>IN_CLOSE_WRITE</code></td>
+                    <td>File opened for writing was closed.</td>
+                </tr>
+                <tr>
+                    <td><code>IN_CLOSE_NOWRITE</code></td>
+                    <td>File opened read-only was closed.</td>
+                </tr>
+                <tr>
+                    <td><code>IN_OPEN</code></td>
+                    <td>File was opened.</td>
+                </tr>
+                <tr>
+                    <td><code>IN_MOVED_FROM</code></td>
+                    <td>File was moved out of the watched directory.</td>
+                </tr>
+                <tr>
+                    <td><code>IN_MOVED_TO</code></td>
+                    <td>File was moved into the watched directory.</td>
+                </tr>
+                <tr>
+                    <td><code>IN_CREATE</code></td>
+                    <td>File or directory was created in the watched directory.</td>
+                </tr>
+                <tr>
+                    <td><code>IN_DELETE</code></td>
+                    <td>File or directory was deleted from the watched directory.</td>
+                </tr>
+                <tr>
+                    <td><code>IN_DELETE_SELF</code></td>
+                    <td>Watched file or directory itself was deleted.</td>
+                </tr>
+                <tr>
+                    <td><code>IN_MOVE_SELF</code></td>
+                    <td>Watched file or directory itself was moved.</td>
+                </tr>
+            </table>
+            </p>
+            <p>Convenience masks combine related events for common use cases:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Convenience Mask</td>
+                    <td>Equivalent Events</td>
+                </tr>
+                <tr>
+                    <td><code>IN_CLOSE</code></td>
+                    <td><code>IN_CLOSE_WRITE</code> \</td>
+                    <td><code>IN_CLOSE_NOWRITE</code></td>
+                </tr>
+                <tr>
+                    <td><code>IN_MOVE</code></td>
+                    <td><code>IN_MOVED_FROM</code> \</td>
+                    <td><code>IN_MOVED_TO</code></td>
+                </tr>
+                <tr>
+                    <td><code>IN_ALL_EVENTS</code></td>
+                    <td>All of the above events combined.</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="using-inotifywait-and-inotifywatch">Using inotifywait and inotifywatch</h3>
+            <p>The <code>inotify-tools</code> package provides two command-line utilities that expose the inotify API without writing any code.</p>
+            <h4 id="installing-inotify-tools">Installing inotify-tools</h4>
+            <p>On Debian/Ubuntu-based systems:</p>
+            <div>
+                <pre><code class="language-bash">sudo apt install inotify-tools</code></pre>
+            </div>
+            <p>On Red Hat/Fedora-based systems:</p>
+            <div>
+                <pre><code class="language-bash">sudo dnf install inotify-tools</code></pre>
+            </div>
+            <p>On Arch Linux:</p>
+            <div>
+                <pre><code class="language-bash">sudo pacman -S inotify-tools</code></pre>
+            </div>
+            <h4 id="inotifywait">inotifywait</h4>
+            <p><code>inotifywait</code> blocks until one or more inotify events occur on the specified files or directories. It is the most commonly used tool for scripting file-system triggers.</p>
+            <p>I. Watch a single file for modification:</p>
+            <div>
+                <pre><code class="language-bash">inotifywait -e modify /var/log/syslog</code></pre>
+            </div>
+            <p>When <code>/var/log/syslog</code> is written to, the command prints the event and exits:</p>
+            <div>
+                <pre><code class="language-shell">/var/log/syslog MODIFY</code></pre>
+            </div>
+            <p>II. Continuously monitor a directory for any changes:</p>
+            <div>
+                <pre><code class="language-bash">inotifywait -m -r /home/user/projects</code></pre>
+            </div>
+            <p>The <code>-m</code> flag keeps the watcher running (monitor mode) and <code>-r</code> watches all subdirectories recursively. Sample output as files change:</p>
+            <div>
+                <pre><code class="language-shell">/home/user/projects/ CREATE main.c
+/home/user/projects/ MODIFY main.c
+/home/user/projects/ CLOSE_WRITE,CLOSE main.c
+/home/user/projects/build/ CREATE output.o</code></pre>
+            </div>
+            <p>III. Watch for specific events with a custom output format:</p>
+            <div>
+                <pre><code class="language-bash">inotifywait -m -r -e create -e delete --format '%T %w%f %e' --timefmt '%Y-%m-%d %H:%M:%S' /etc</code></pre>
+            </div>
+            <p>This monitors <code>/etc</code> for file creation and deletion, printing a timestamped log:</p>
+            <div>
+                <pre><code class="language-shell">2025-03-21 10:15:42 /etc/nginx/sites-enabled/mysite CREATE
+2025-03-21 10:16:03 /etc/nginx/sites-enabled/oldsite DELETE</code></pre>
+            </div>
+            <h4 id="inotifywatch">inotifywatch</h4>
+            <p><code>inotifywatch</code> collects file system event statistics over a period of time, rather than printing individual events. This is useful for profiling which files or directories see the most activity.</p>
+            <p>I. Gather statistics for 60 seconds on a directory:</p>
+            <div>
+                <pre><code class="language-bash">inotifywatch -t 60 -r /var/log</code></pre>
+            </div>
+            <p>After 60 seconds, it prints a summary table:</p>
+            <div>
+                <pre><code class="language-shell">total  access  modify  close_write  open  filename
+45     12      8       8            17    /var/log/
+22     5       6       6            5     /var/log/nginx/
+9      3       2       2            2     /var/log/auth.log</code></pre>
+            </div>
+            <p>II. Focus on specific event types:</p>
+            <div>
+                <pre><code class="language-bash">inotifywatch -t 30 -e modify -e create /home/user/uploads</code></pre>
+            </div>
+            <h3 id="practical-shell-script-examples">Practical Shell Script Examples</h3>
+            <p>Inotify is especially powerful when combined with shell scripts to automate responses to file system changes.</p>
+            <h4 id="automated-backup-on-file-change">Automated Backup on File Change</h4>
+            <p>This script watches a directory and copies any modified or newly created file to a backup location:</p>
+            <div>
+                <pre><code class="language-bash">#!/bin/bash
+WATCH_DIR="/home/user/documents"
+BACKUP_DIR="/home/user/backups"
+
+inotifywait -m -r -e close_write -e moved_to --format '%w%f' "$WATCH_DIR" |
+while read -r FILE; do
+    RELATIVE="${FILE#$WATCH_DIR/}"
+    mkdir -p "$BACKUP_DIR/$(dirname "$RELATIVE")"
+    cp "$FILE" "$BACKUP_DIR/$RELATIVE"
+    echo "Backed up: $RELATIVE"
+done</code></pre>
+            </div>
+            <ul>
+                <li>The script uses <code>close_write</code> to trigger only after a file has been completely written and closed.</li>
+                <li>The <code>moved_to</code> event catches files moved into the directory.</li>
+                <li><code>--format '%w%f'</code> outputs the full path of the affected file for easy processing.</li>
+            </ul>
+            <h4 id="log-watcher-with-alert">Log Watcher with Alert</h4>
+            <p>This script monitors a log file for error messages and sends a notification:</p>
+            <div>
+                <pre><code class="language-bash">#!/bin/bash
+LOG_FILE="/var/log/application.log"
+
+inotifywait -m -e modify --format '%w%f' "$LOG_FILE" |
+while read -r FILE; do
+    if tail -n 1 "$FILE" | grep -qi "error"; then
+        echo "ERROR detected in $FILE at $(date)" &gt;&gt; /var/log/alert.log
+    fi
+done</code></pre>
+            </div>
+            <h3 id="the-inotify-c-api">The Inotify C API</h3>
+            <p>For applications that need tighter integration, the inotify system calls are available directly in C.</p>
+            <div>
+                <pre><code class="language-+------------------------------------------+">|           inotify C API Flow             |
++------------------------------------------+
+|                                          |
+|  1. fd = inotify_init()                  |
+|        │                                 |
+|        ▼                                 |
+|  2. wd = inotify_add_watch(fd,           |
+|           "/path", IN_MODIFY | IN_CREATE)|
+|        │                                 |
+|        ▼                                 |
+|  3. read(fd, buf, BUF_LEN)              |
+|        │                                 |
+|        ▼                                 |
+|  4. Process inotify_event structs        |
+|     from buf                             |
+|        │                                 |
+|        ▼                                 |
+|  5. inotify_rm_watch(fd, wd)            |
+|     close(fd)                            |
++------------------------------------------+</code></pre>
+            </div>
+            <p>A minimal C program that watches a directory:</p>
+            <div>
+                <pre><code class="language-clike">#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;sys/inotify.h&gt;
+
+#define BUF_LEN (10 * (sizeof(struct inotify_event) + 256))
+
+int main(int argc, char *argv[]) {
+    if (argc &lt; 2) {
+        fprintf(stderr, "Usage: %s &lt;path&gt;\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
+    int fd = inotify_init();
+    if (fd == -1) {
+        perror("inotify_init");
+        exit(EXIT_FAILURE);
+    }
+
+    int wd = inotify_add_watch(fd, argv[1], IN_CREATE | IN_DELETE | IN_MODIFY);
+    if (wd == -1) {
+        perror("inotify_add_watch");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Watching %s for changes...\n", argv[1]);
+
+    char buf[BUF_LEN];
+    for (;;) {
+        ssize_t len = read(fd, buf, BUF_LEN);
+        if (len &lt;= 0) {
+            perror("read");
+            exit(EXIT_FAILURE);
+        }
+
+        char *ptr = buf;
+        while (ptr &lt; buf + len) {
+            struct inotify_event *event = (struct inotify_event *)ptr;
+            if (event-&gt;mask &amp; IN_CREATE) printf("CREATED: %s\n", event-&gt;name);
+            if (event-&gt;mask &amp; IN_DELETE) printf("DELETED: %s\n", event-&gt;name);
+            if (event-&gt;mask &amp; IN_MODIFY) printf("MODIFIED: %s\n", event-&gt;name);
+            ptr += sizeof(struct inotify_event) + event-&gt;len;
+        }
+    }
+
+    inotify_rm_watch(fd, wd);
+    close(fd);
+    return 0;
+}</code></pre>
+            </div>
+            <h3 id="kernel-limits-and-tuning">Kernel Limits and Tuning</h3>
+            <p>Inotify operates within kernel-imposed limits that control resource usage. These limits can be viewed and adjusted through <code>/proc/sys/fs/inotify/</code>.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Parameter</td>
+                    <td>Description</td>
+                    <td>Default</td>
+                </tr>
+                <tr>
+                    <td><code>max_user_instances</code></td>
+                    <td>Maximum number of inotify instances per user.</td>
+                    <td>128</td>
+                </tr>
+                <tr>
+                    <td><code>max_user_watches</code></td>
+                    <td>Maximum number of watches per user across all instances.</td>
+                    <td>65536</td>
+                </tr>
+                <tr>
+                    <td><code>max_queued_events</code></td>
+                    <td>Maximum number of events queued before events start being dropped.</td>
+                    <td>16384</td>
+                </tr>
+            </table>
+            </p>
+            <p>I. View the current watch limit:</p>
+            <div>
+                <pre><code class="language-bash">cat /proc/sys/fs/inotify/max_user_watches</code></pre>
+            </div>
+            <p>II. Temporarily increase the watch limit:</p>
+            <div>
+                <pre><code class="language-bash">sudo sysctl fs.inotify.max_user_watches=524288</code></pre>
+            </div>
+            <p>III. Make the change persistent across reboots by adding to <code>/etc/sysctl.conf</code>:</p>
+            <div>
+                <pre><code class="language-bash">echo "fs.inotify.max_user_watches=524288" | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p</code></pre>
+            </div>
+            <p>Applications that monitor many files (such as IDEs, build tools, or file-syncing utilities) may require increasing <code>max_user_watches</code>. The kernel allocates approximately 1 KB of kernel memory per watch on 64-bit systems, so setting the limit to 524288 uses roughly 512 MB of memory.</p>
+            <h3 id="inotify-vs-alternatives">Inotify vs Alternatives</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Feature</td>
+                    <td>Inotify</td>
+                    <td>fanotify</td>
+                    <td>dnotify (legacy)</td>
+                </tr>
+                <tr>
+                    <td>Granularity</td>
+                    <td>File and directory level</td>
+                    <td>Filesystem-wide or mount-point</td>
+                    <td>Directory level only</td>
+                </tr>
+                <tr>
+                    <td>Recursive watching</td>
+                    <td>Not built-in (requires manual)</td>
+                    <td>Mark entire mount points</td>
+                    <td>Not supported</td>
+                </tr>
+                <tr>
+                    <td>Permission decisions</td>
+                    <td>No</td>
+                    <td>Yes (allow/deny file access)</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td>Event detail</td>
+                    <td>Rich (path, mask, cookie)</td>
+                    <td>Rich (includes file descriptor)</td>
+                    <td>Signal-based, limited info</td>
+                </tr>
+                <tr>
+                    <td>Kernel version required</td>
+                    <td>2.6.13+</td>
+                    <td>2.6.37+</td>
+                    <td>2.4+</td>
+                </tr>
+                <tr>
+                    <td>Typical use case</td>
+                    <td>File watchers, build tools</td>
+                    <td>Antivirus, access control</td>
+                    <td>Legacy applications</td>
+                </tr>
+            </table>
+            </p>
+            <ul>
+                <li><strong>Inotify</strong> is the standard choice for monitoring individual files and directories with fine-grained event information. Most user-space tools and frameworks (e.g., <code>inotifywait</code>, Node.js <code>fs.watch</code>, Python <code>watchdog</code>) are built on it.</li>
+                <li><strong>fanotify</strong> is suited for system-wide monitoring and access-control decisions, commonly used by antivirus software and security tools.</li>
+                <li><strong>dnotify</strong> is the predecessor to inotify and is considered obsolete. It required holding open file descriptors on watched directories and delivered events via signals, making it cumbersome and limited.</li>
+            </ul>
+            <h3 id="common-use-cases">Common Use Cases</h3>
+            <ul>
+                <li><strong>Build systems</strong> such as <code>make</code>, <code>webpack</code>, and <code>cargo</code> use inotify to detect source file changes and trigger automatic rebuilds.</li>
+                <li><strong>File synchronization</strong> tools like <code>rsync</code>-based watchers and <code>lsyncd</code> use inotify to detect changes and replicate them to remote servers in near real-time.</li>
+                <li><strong>Log monitoring</strong> is simplified with inotify because utilities can react to new log entries the moment they are written rather than polling at intervals.</li>
+                <li><strong>Security auditing</strong> benefits from inotify by allowing administrators to watch critical configuration files (e.g., <code>/etc/passwd</code>, <code>/etc/shadow</code>) for unauthorized modifications.</li>
+                <li><strong>Development environments</strong> including IDEs and text editors use inotify to refresh file listings and detect external modifications to open files.</li>
+                <li><strong>Containerized workloads</strong> and orchestration tools watch configuration files for hot-reload without restarting services.</li>
+            </ul>
+            <h3 id="challenges">Challenges</h3>
+            <ol>
+                <li>Install <code>inotify-tools</code> on your system and use <code>inotifywait</code> to monitor your home directory for any file creation events. Create a few files and observe the output.</li>
+                <li>Write a shell script that uses <code>inotifywait</code> in monitor mode to watch a directory and log every modification event with a timestamp to a log file.</li>
+                <li>Use <code>inotifywatch</code> to gather file system event statistics on <code>/tmp</code> for two minutes, then analyze which event types occurred most frequently.</li>
+                <li>Investigate the current inotify kernel limits on your system by reading the values in <code>/proc/sys/fs/inotify/</code>. Explain what each parameter controls and when you might need to increase them.</li>
+                <li>Create a shell script that watches a directory for new files and automatically moves any file with a <code>.tmp</code> extension to a designated cleanup folder.</li>
+                <li>Monitor <code>/etc</code> for any changes using <code>inotifywait</code> with recursive mode. Make a small configuration change and verify that inotify reports it correctly.</li>
+                <li>Write a C program using the inotify API that watches a directory and prints a message whenever a file is created, modified, or deleted.</li>
+                <li>Compare the behavior of <code>inotifywait</code> when watching a single file versus a directory. Explain the differences in event reporting and the role of the filename field in <code>inotify_event</code>.</li>
+                <li>Set up two terminal sessions: in one, run an <code>inotifywait</code> monitor on a directory, and in the other, perform operations such as creating, renaming, and deleting files. Observe how rename events use the <code>cookie</code> field to pair <code>IN_MOVED_FROM</code> and <code>IN_MOVED_TO</code>.</li>
+                <li>Research the limitations of inotify with respect to recursive directory watching and high watch counts. Propose a strategy for monitoring a large project tree with thousands of subdirectories while staying within kernel limits.</li>
+            </ol>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/git_notes/16_dangerous_commands",
             "description": "Some git commands are powerful but risky because they can rewrite history, move branch tips, or discard work.",
-            "dateModified": "2026-03-23"
+            "dateModified": "2026-04-27"
         }
     </script>
 </head>
@@ -157,7 +157,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: April 27, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="dangerous-commands">Dangerous Commands</h2>
             <p>Some git commands are powerful but risky because they can rewrite history, move branch tips, or discard work. Used carelessly, they break open reviews, hide teammates’ changes, and make it hard to trace what actually shipped. Treat history edits as exceptional: prefer additive fixes for shared code, keep risky changes local until you’re sure, and coordinate before publishing them. Always back up your branch, read prompts carefully, and verify the target you’re changing. In short, these tools are essential for cleanup—just use them sparingly, with safeguards and team alignment.</p>
@@ -172,8 +172,7 @@ main:    A──B──C
 feature:        D──E
 
 AFTER
-main:    A──B──C
-                 └──D'──E'   (D,E replayed; new hashes)</code></pre>
+main:    A──B──C──D'──E'   (D,E replayed; new hashes)</code></pre>
             </div>
             <p><strong>Does this rewrite history?</strong></p>
             <p>Yes. Rebased commits get <strong>new hashes</strong>. If others already pulled the old history, you’ll create divergence.</p>
@@ -200,22 +199,54 @@ main:    A──B──C
             <h3 id="reset-git-reset-">Reset (<code>git reset</code>)</h3>
             <p><strong>Reset</strong> moves the current branch (and possibly your index and working tree) to another commit. Mode determines what happens to your files: <code>--soft</code> keeps changes staged, <code>--mixed</code> (default) keeps changes unstaged, <code>--hard</code> discards them.</p>
             <div>
-                <pre><code class="language-shell">Visual — before → after (moving HEAD from C to B)
+                <pre><code class="language-shell">Move HEAD from C → B (git reset)
 
-BEFORE
-branch: A──B──C   (HEAD)
+──────────────── BEFORE ────────────────
 
-AFTER --soft
-branch: A──B   (HEAD)
-        └─ changes from C kept **staged**
+COMMITS (history)
+  A ── B ── C   ← HEAD
 
-AFTER --mixed (default)
-branch: A──B   (HEAD)
-        └─ changes from C kept **unstaged**
+STAGING AREA (index)
+  matches C
 
-AFTER --hard
-branch: A──B   (HEAD)
-        (changes from C **discarded**)</code></pre>
+WORKING DIRECTORY
+  matches C
+
+
+──────────────── AFTER --soft ──────────
+
+COMMITS (history)
+  A ── B        ← HEAD
+
+STAGING AREA (index)
+  changes from C (STAGED)
+
+WORKING DIRECTORY
+  changes from C (same as index)
+
+
+──────────────── AFTER --mixed (default)
+
+COMMITS (history)
+  A ── B        ← HEAD
+
+STAGING AREA (index)
+  matches B
+
+WORKING DIRECTORY
+  changes from C (UNSTAGED)
+
+
+──────────────── AFTER --hard ──────────
+
+COMMITS (history)
+  A ── B        ← HEAD
+
+STAGING AREA (index)
+  matches B
+
+WORKING DIRECTORY
+  matches B (changes from C DISCARDED)</code></pre>
             </div>
             <p><strong>Does this rewrite history?</strong></p>
             <p>Yes, the branch pointer moves. On shared branches this <strong>rewrites public history</strong>.</p>

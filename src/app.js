@@ -299,7 +299,9 @@ function initializeThreeJS() {
     let isVisible = true;
     const visibilityObserver = new IntersectionObserver((entries) => {
         isVisible = entries[0].isIntersecting;
-    }, { threshold: 0.1 });
+    }, {
+        threshold: 0.1
+    });
     visibilityObserver.observe(container);
 
     let darkMode = getCookie("darkMode") === "true";
@@ -1510,7 +1512,7 @@ function initializeThreeJS() {
 
     container.appendChild(instructions);
 
-    // Fade out instructions after 8 seconds, show on hover
+
     setTimeout(() => {
         instructions.style.opacity = '0';
     }, 8000);
@@ -1520,11 +1522,13 @@ function initializeThreeJS() {
     instructions.addEventListener('mouseleave', () => {
         instructions.style.opacity = '0';
     });
-    // For touch: tap to toggle
+
     instructions.addEventListener('touchstart', (e) => {
         e.stopPropagation();
         instructions.style.opacity = instructions.style.opacity === '0' ? '1' : '0';
-    }, { passive: true });
+    }, {
+        passive: true
+    });
 
     if (isMobile) {
         const resetButton = document.createElement('button');

@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Infrastructure as Code</title>
+    <meta content="If you have ever spent hours manually configuring Linux servers, installing packages one by one, editing configuration files by hand, and then trying to remember exactly what you did when it is time to set up the next server, you already understand the problem that Infrastructure as Code solves." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/linux_notes/infrastructure_as_code" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Infrastructure as Code",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/linux_notes/infrastructure_as_code"
+            },
+            "url": "https://adamdjellouli.com/articles/linux_notes/infrastructure_as_code",
+            "description": "If you have ever spent hours manually configuring Linux servers, installing packages one by one, editing configuration files by hand, and then trying to remember exactly what you did when it is time to set up the next server, you already understand the problem that Infrastructure as Code solves.",
+            "dateModified": "2026-04-27"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol><a href="#infrastructure-as-code">Infrastructure as Code</a>
+                    <ol>
+                        <li><a href="#core-principles-of-iac">Core Principles of IaC</a>
+                            <ol>
+                                <li><a href="#idempotency">Idempotency</a></li>
+                                <li><a href="#declarative-vs-imperative">Declarative vs Imperative</a></li>
+                                <li><a href="#version-control">Version Control</a></li>
+                                <li><a href="#immutable-infrastructure">Immutable Infrastructure</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#configuration-management-with-ansible">Configuration Management with Ansible</a>
+                            <ol>
+                                <li><a href="#how-ansible-works">How Ansible Works</a></li>
+                                <li><a href="#inventory-files">Inventory Files</a></li>
+                                <li><a href="#playbook-syntax">Playbook Syntax</a></li>
+                                <li><a href="#common-ansible-modules-for-linux-administration">Common Ansible Modules for Linux Administration</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#ansible-practical-examples">Ansible Practical Examples</a>
+                            <ol>
+                                <li><a href="#managing-packages-and-services">Managing Packages and Services</a></li>
+                                <li><a href="#configuring-firewalls">Configuring Firewalls</a></li>
+                                <li><a href="#managing-users-and-groups">Managing Users and Groups</a></li>
+                                <li><a href="#running-playbooks">Running Playbooks</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#infrastructure-provisioning-with-terraform">Infrastructure Provisioning with Terraform</a>
+                            <ol>
+                                <li><a href="#providers">Providers</a></li>
+                                <li><a href="#resources-and-data-sources">Resources and Data Sources</a></li>
+                                <li><a href="#state-management">State Management</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#terraform-practical-examples">Terraform Practical Examples</a>
+                            <ol>
+                                <li><a href="#creating-a-web-server-instance">Creating a Web Server Instance</a></li>
+                                <li><a href="#output-variables">Output Variables</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#comparison-of-iac-tools">Comparison of IaC Tools</a></li>
+                        <li><a href="#iac-best-practices">IaC Best Practices</a>
+                            <ol>
+                                <li><a href="#use-version-control-for-everything">Use Version Control for Everything</a></li>
+                                <li><a href="#write-modular-reusable-code">Write Modular, Reusable Code</a></li>
+                                <li><a href="#manage-secrets-securely">Manage Secrets Securely</a></li>
+                                <li><a href="#test-your-infrastructure-code">Test Your Infrastructure Code</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#integrating-iac-with-linux-administration">Integrating IaC with Linux Administration</a></li>
+                        <li><a href="#challenges">Challenges</a></li>
+                    </ol>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ci_cd.html">Ci Cd</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/commands.html">Commands</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/containers_and_docker.html">Containers and Docker</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/cron_jobs.html">Cron Jobs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/disk_io_analysis.html">Disk Io Analysis</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/disk_usage.html">Disk Usage</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/dwm.html">Dwm</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/encryption.html">Encryption</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/environment_modules.html">Environment Modules</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/environment_variable.html">Environment Variable</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/file_system.html">File System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/files_and_dirs.html">Files and Dirs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/finding_files.html">Finding Files</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/firewall.html">Firewall</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/grep.html">Grep</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/hardware.html">Hardware</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/infrastructure_as_code.html">Infrastructure As Code</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/inodes_and_symlinks.html">Inodes and Symlinks</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/inotify.html">Inotify</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/introduction.html">Introduction</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/kernel.html">Kernel</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ldap.html">Ldap</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/lfcs.html">Lfcs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/linux_certification_overview.html">Linux Certification Overview</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/log_files_and_journals.html">Log Files and Journals</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/logical_volume_management.html">Logical Volume Management</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/managing_users.html">Managing Users</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/mounting.html">Mounting</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/networking.html">Networking</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/nfs.html">Nfs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/package_managers.html">Package Managers</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/partitions.html">Partitions</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/performance_monitoring.html">Performance Monitoring</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/permissions.html">Permissions</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/pipe_and_redirect.html">Pipe and Redirect</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ports.html">Ports</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/processes.html">Processes</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/rhcsa.html">Rhcsa</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/running_executables.html">Running Executables</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/sed_and_awk.html">Sed and Awk</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/selinux.html">Selinux</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/services.html">Services</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/shells_and_bash_configuration.html">Shells and Bash Configuration</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ssh_and_scp.html">Ssh and Scp</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/system_startup.html">System Startup</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/tar_and_gzip.html">Tar and Gzip</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/task_state_analysis.html">Task State Analysis</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/utilities.html">Utilities</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/virtual_machines.html">Virtual Machines</a></li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: April 27, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="infrastructure-as-code">Infrastructure as Code</h2>
+            <p>If you have ever spent hours manually configuring Linux servers, installing packages one by one, editing configuration files by hand, and then trying to remember exactly what you did when it is time to set up the next server, you already understand the problem that Infrastructure as Code solves. Infrastructure as Code, or IaC, is the practice of managing and provisioning computing infrastructure through machine-readable definition files rather than through interactive configuration tools or physical hardware configuration. Instead of logging into servers and running commands by hand, you describe your desired infrastructure in code, and tools take care of making it happen.</p>
+            <p>Think of it this way: all the Linux administration skills you have built, managing packages, configuring services, setting up firewalls, creating users, are still essential. IaC simply gives you a repeatable, version-controlled, and automated way to apply those skills across one server or a thousand.</p>
+            <div>
+                <pre><code class="language-+----------------------------------------------------------------------+">|                     Traditional Manual Approach                      |
++----------------------------------------------------------------------+
+|                                                                      |
+|   Admin SSH's into Server A ----&gt; Runs commands manually             |
+|   Admin SSH's into Server B ----&gt; Runs commands manually             |
+|   Admin SSH's into Server C ----&gt; Runs commands manually             |
+|                                                                      |
+|   Problem: Inconsistent configs, no audit trail, hard to scale       |
++----------------------------------------------------------------------+
+
++----------------------------------------------------------------------+
+|                   Infrastructure as Code Approach                    |
++----------------------------------------------------------------------+
+|                                                                      |
+|   Admin writes code -----&gt; IaC Tool -----&gt; Server A (configured)     |
+|         (one file)            |  |                                    |
+|                               |  +-------&gt; Server B (configured)     |
+|                               |                                      |
+|                               +----------&gt; Server C (configured)     |
+|                                                                      |
+|   Benefit: Consistent configs, version controlled, scales easily     |
++----------------------------------------------------------------------+</code></pre>
+            </div>
+            <h3 id="core-principles-of-iac">Core Principles of IaC</h3>
+            <p>Before diving into specific tools, it helps to understand the foundational ideas that make IaC effective. These principles guide how every major IaC tool is designed and how you should think about writing infrastructure code.</p>
+            <h4 id="idempotency">Idempotency</h4>
+            <p>An operation is idempotent if running it once produces the same result as running it multiple times. This is critical in IaC because you want to be able to apply your configuration repeatedly without causing unintended side effects. If your code says "ensure nginx is installed," it should not fail or reinstall nginx if it is already present. It should simply verify the desired state and move on.</p>
+            <h4 id="declarative-vs-imperative">Declarative vs Imperative</h4>
+            <p>There are two broad approaches to writing IaC:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Approach</td>
+                    <td>Description</td>
+                    <td>Example</td>
+                </tr>
+                <tr>
+                    <td><strong>Declarative</strong></td>
+                    <td>You describe the desired end state, and the tool figures out how to achieve it.</td>
+                    <td>"There should be 3 web servers running nginx."</td>
+                </tr>
+                <tr>
+                    <td><strong>Imperative</strong></td>
+                    <td>You describe the exact steps to take in order.</td>
+                    <td>"Create a VM, install nginx, start the service, repeat 2 more times."</td>
+                </tr>
+            </table>
+            </p>
+            <p>Most modern IaC tools lean declarative because it is easier to reason about and the tool handles the complexity of determining what changes are needed.</p>
+            <h4 id="version-control">Version Control</h4>
+            <p>IaC files are plain text, which means they belong in a version control system like Git. This gives you a full history of every infrastructure change, the ability to review changes before applying them, and the power to roll back if something goes wrong. Treat your infrastructure definitions with the same care you would give application source code.</p>
+            <h4 id="immutable-infrastructure">Immutable Infrastructure</h4>
+            <p>With immutable infrastructure, rather than updating a running server in place, you replace it entirely with a new one built from the latest code. This eliminates configuration drift, where servers slowly become different from each other over time due to manual patches and tweaks.</p>
+            <div>
+                <pre><code class="language-+----------------------------------------------------------------------+">|                        IaC Workflow Overview                         |
++----------------------------------------------------------------------+
+|                                                                      |
+|   +----------+     +-----------+     +----------+     +----------+   |
+|   |  Write   |----&gt;|  Version  |----&gt;|  Review  |----&gt;|  Apply   |   |
+|   |   Code   |     |  Control  |     |  &amp; Test  |     | (Deploy) |   |
+|   +----------+     +-----------+     +----------+     +----------+   |
+|        |                                                    |        |
+|        |                                                    v        |
+|        |                                            +----------+     |
+|        +&lt;------- Iterate on failures &lt;--------------|  Verify  |     |
+|                                                     +----------+     |
+|                                                                      |
++----------------------------------------------------------------------+</code></pre>
+            </div>
+            <h3 id="configuration-management-with-ansible">Configuration Management with Ansible</h3>
+            <p>Ansible is one of the most popular IaC tools for configuration management, and it is especially friendly to Linux administrators because it works over SSH. There is no agent to install on your target machines, which means you can start using Ansible with your existing infrastructure immediately.</p>
+            <h4 id="how-ansible-works">How Ansible Works</h4>
+            <p>Ansible follows an agentless, push-based architecture. You run Ansible from a control node (your workstation or a dedicated management server), and it connects to your managed nodes over SSH, pushes small programs called modules, executes them, and then removes them.</p>
+            <div>
+                <pre><code class="language-+----------------------------------------------------------------------+">|                      Ansible Architecture                            |
++----------------------------------------------------------------------+
+|                                                                      |
+|   +------------------+         SSH          +------------------+     |
+|   |                  |---------------------&gt;|  Managed Node A  |     |
+|   |   Control Node   |---------------------&gt;|  Managed Node B  |     |
+|   |  (runs Ansible)  |---------------------&gt;|  Managed Node C  |     |
+|   |                  |                      +------------------+     |
+|   +------------------+                                               |
+|          |                                                           |
+|          v                                                           |
+|   +------------------+                                               |
+|   |    Inventory     |  Defines which hosts belong to which groups   |
+|   |    Playbooks     |  Defines what configuration to apply          |
+|   |    Roles         |  Reusable bundles of tasks                    |
+|   +------------------+                                               |
+|                                                                      |
++----------------------------------------------------------------------+</code></pre>
+            </div>
+            <h4 id="inventory-files">Inventory Files</h4>
+            <p>The inventory file tells Ansible which machines to manage. At its simplest, it is a list of hostnames or IP addresses, but you can organize hosts into groups for easier management.</p>
+            <div>
+                <pre><code class="language-ini"># /etc/ansible/hosts or a custom inventory file
+
+[webservers]
+web1.example.com
+web2.example.com
+192.168.1.50
+
+[dbservers]
+db1.example.com
+db2.example.com
+
+[loadbalancers]
+lb1.example.com
+
+[production:children]
+webservers
+dbservers
+loadbalancers</code></pre>
+            </div>
+            <p>You can also use a dynamic inventory that queries a cloud provider's API to automatically discover your hosts, which becomes essential as your infrastructure grows.</p>
+            <h4 id="playbook-syntax">Playbook Syntax</h4>
+            <p>Playbooks are YAML files that describe the desired state of your systems. Each playbook contains one or more plays, and each play targets a group of hosts and defines a list of tasks.</p>
+            <div>
+                <pre><code class="language-yaml">---
+- name: Configure web servers
+  hosts: webservers
+  become: yes
+
+  vars:
+    http_port: 80
+    doc_root: /var/www/html
+
+  tasks:
+    - name: Install nginx
+      apt:
+        name: nginx
+        state: present
+        update_cache: yes
+
+    - name: Start and enable nginx
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Deploy index page
+      copy:
+        content: "&lt;h1&gt;Managed by Ansible&lt;/h1&gt;"
+        dest: "{{ doc_root }}/index.html"
+        owner: www-data
+        group: www-data
+        mode: "0644"</code></pre>
+            </div>
+            <h4 id="common-ansible-modules-for-linux-administration">Common Ansible Modules for Linux Administration</h4>
+            <p>Ansible ships with hundreds of modules that map directly to the Linux administration tasks you already know.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Module</td>
+                    <td>Purpose</td>
+                    <td>Linux Admin Equivalent</td>
+                </tr>
+                <tr>
+                    <td><code>apt</code> / <code>yum</code> / <code>dnf</code></td>
+                    <td>Package management</td>
+                    <td><code>apt install</code>, <code>yum install</code></td>
+                </tr>
+                <tr>
+                    <td><code>service</code> / <code>systemd</code></td>
+                    <td>Service management</td>
+                    <td><code>systemctl start</code>, <code>systemctl enable</code></td>
+                </tr>
+                <tr>
+                    <td><code>user</code></td>
+                    <td>User account management</td>
+                    <td><code>useradd</code>, <code>usermod</code></td>
+                </tr>
+                <tr>
+                    <td><code>group</code></td>
+                    <td>Group management</td>
+                    <td><code>groupadd</code>, <code>groupmod</code></td>
+                </tr>
+                <tr>
+                    <td><code>copy</code></td>
+                    <td>Copy files to remote hosts</td>
+                    <td><code>scp</code>, manual file editing</td>
+                </tr>
+                <tr>
+                    <td><code>template</code></td>
+                    <td>Deploy Jinja2 templates</td>
+                    <td>Editing config files by hand</td>
+                </tr>
+                <tr>
+                    <td><code>file</code></td>
+                    <td>Manage file properties</td>
+                    <td><code>chmod</code>, <code>chown</code>, <code>mkdir</code></td>
+                </tr>
+                <tr>
+                    <td><code>firewalld</code> / <code>ufw</code></td>
+                    <td>Firewall management</td>
+                    <td><code>firewall-cmd</code>, <code>ufw</code> commands</td>
+                </tr>
+                <tr>
+                    <td><code>cron</code></td>
+                    <td>Manage cron jobs</td>
+                    <td>Editing crontabs manually</td>
+                </tr>
+                <tr>
+                    <td><code>lineinfile</code></td>
+                    <td>Ensure a line exists in a file</td>
+                    <td><code>sed</code>, manual editing</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="ansible-practical-examples">Ansible Practical Examples</h3>
+            <p>The real power of Ansible becomes clear when you see how it handles tasks you would normally do by hand across multiple servers.</p>
+            <h4 id="managing-packages-and-services">Managing Packages and Services</h4>
+            <p>This playbook installs a LAMP stack on your web servers, tying together concepts from <a href="https://github.com/djeada/Linux-Notes/blob/main/notes/package_managers.md">package management</a> and <a href="https://github.com/djeada/Linux-Notes/blob/main/notes/services.md">services</a>:</p>
+            <div>
+                <pre><code class="language-yaml">---
+- name: Deploy LAMP stack
+  hosts: webservers
+  become: yes
+
+  tasks:
+    - name: Install Apache, MariaDB, and PHP
+      apt:
+        name:
+          - apache2
+          - mariadb-server
+          - php
+          - php-mysql
+          - libapache2-mod-php
+        state: present
+        update_cache: yes
+
+    - name: Ensure Apache is running and enabled
+      service:
+        name: apache2
+        state: started
+        enabled: yes
+
+    - name: Ensure MariaDB is running and enabled
+      service:
+        name: mariadb
+        state: started
+        enabled: yes</code></pre>
+            </div>
+            <h4 id="configuring-firewalls">Configuring Firewalls</h4>
+            <p>If you have worked through the <a href="https://github.com/djeada/Linux-Notes/blob/main/notes/firewall.md">firewall notes</a>, you know the importance of controlling network traffic. Ansible can manage firewall rules consistently across all your servers:</p>
+            <div>
+                <pre><code class="language-yaml">---
+- name: Configure firewall rules
+  hosts: webservers
+  become: yes
+
+  tasks:
+    - name: Install firewalld
+      apt:
+        name: firewalld
+        state: present
+
+    - name: Start and enable firewalld
+      service:
+        name: firewalld
+        state: started
+        enabled: yes
+
+    - name: Allow HTTP traffic
+      firewalld:
+        service: http
+        permanent: yes
+        state: enabled
+        immediate: yes
+
+    - name: Allow HTTPS traffic
+      firewalld:
+        service: https
+        permanent: yes
+        state: enabled
+        immediate: yes
+
+    - name: Allow SSH traffic
+      firewalld:
+        service: ssh
+        permanent: yes
+        state: enabled
+        immediate: yes
+
+    - name: Deny all other incoming traffic
+      firewalld:
+        zone: public
+        state: enabled
+        permanent: yes
+        immediate: yes</code></pre>
+            </div>
+            <h4 id="managing-users-and-groups">Managing Users and Groups</h4>
+            <p>User management, a topic covered in <a href="https://github.com/djeada/Linux-Notes/blob/main/notes/managing_users.md">managing users</a>, becomes much simpler when done through code. This playbook creates developer accounts with proper group memberships and SSH keys:</p>
+            <div>
+                <pre><code class="language-yaml">---
+- name: Manage developer accounts
+  hosts: all
+  become: yes
+
+  vars:
+    developers:
+      - name: alice
+        uid: 1050
+        groups: "developers,sudo"
+        ssh_key: "ssh-rsa AAAAB3... alice@workstation"
+      - name: bob
+        uid: 1051
+        groups: "developers"
+        ssh_key: "ssh-rsa AAAAB3... bob@workstation"
+
+  tasks:
+    - name: Create developers group
+      group:
+        name: developers
+        state: present
+
+    - name: Create user accounts
+      user:
+        name: "{{ item.name }}"
+        uid: "{{ item.uid }}"
+        groups: "{{ item.groups }}"
+        shell: /bin/bash
+        create_home: yes
+        state: present
+      loop: "{{ developers }}"
+
+    - name: Deploy SSH authorized keys
+      authorized_key:
+        user: "{{ item.name }}"
+        key: "{{ item.ssh_key }}"
+        state: present
+      loop: "{{ developers }}"
+
+    - name: Set password expiration policy
+      command: "chage -M 90 -W 14 {{ item.name }}"
+      loop: "{{ developers }}"
+      changed_when: false</code></pre>
+            </div>
+            <h4 id="running-playbooks">Running Playbooks</h4>
+            <p>Once your playbook is written, executing it is straightforward:</p>
+            <div>
+                <pre><code class="language-bash"># Run a playbook against the default inventory
+ansible-playbook site.yml
+
+# Run against a specific inventory file
+ansible-playbook -i production_hosts site.yml
+
+# Run with a specific user and ask for the sudo password
+ansible-playbook -i hosts site.yml -u admin --ask-become-pass
+
+# Dry run to see what would change without making changes
+ansible-playbook site.yml --check --diff
+
+# Limit execution to a specific group or host
+ansible-playbook site.yml --limit webservers</code></pre>
+            </div>
+            <h3 id="infrastructure-provisioning-with-terraform">Infrastructure Provisioning with Terraform</h3>
+            <p>While Ansible excels at configuring existing servers, Terraform is designed to provision the infrastructure itself, creating virtual machines, networks, storage, and other cloud resources. Terraform uses a declarative language called HCL (HashiCorp Configuration Language) to describe what resources you need.</p>
+            <div>
+                <pre><code class="language-+----------------------------------------------------------------------+">|                     Terraform Workflow                                |
++----------------------------------------------------------------------+
+|                                                                      |
+|   +----------+     +----------+     +----------+     +----------+    |
+|   |  Write   |----&gt;|   Init   |----&gt;|   Plan   |----&gt;|  Apply   |    |
+|   |  .tf     |     | download |     | preview  |     | create/  |    |
+|   |  files   |     | providers|     | changes  |     | update   |    |
+|   +----------+     +----------+     +----------+     +----------+    |
+|                                                            |         |
+|                                                            v         |
+|                                                     +----------+     |
+|                                                     |  State   |     |
+|                                                     |  File    |     |
+|                                                     | (.tfstate)|    |
+|                                                     +----------+     |
+|                                                                      |
++----------------------------------------------------------------------+</code></pre>
+            </div>
+            <h4 id="providers">Providers</h4>
+            <p>Providers are plugins that let Terraform interact with cloud platforms, SaaS providers, and other APIs. Each provider adds a set of resource types and data sources that Terraform can manage.</p>
+            <div>
+                <pre><code class="language-hcl"># Configure the AWS provider
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~&gt; 5.0"
+    }
+  }
+  required_version = "&gt;= 1.5.0"
+}
+
+provider "aws" {
+  region = "us-east-1"
+}</code></pre>
+            </div>
+            <h4 id="resources-and-data-sources">Resources and Data Sources</h4>
+            <p>Resources are the most important element in Terraform. Each resource block describes one or more infrastructure objects, such as a virtual machine, a network interface, or a DNS record.</p>
+            <div>
+                <pre><code class="language-hcl"># Create a VPC
+resource "aws_vpc" "main" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+
+  tags = {
+    Name        = "production-vpc"
+    Environment = "production"
+  }
+}
+
+# Create a subnet within the VPC
+resource "aws_subnet" "web" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.1.0/24"
+  availability_zone       = "us-east-1a"
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "web-subnet"
+  }
+}</code></pre>
+            </div>
+            <h4 id="state-management">State Management</h4>
+            <p>Terraform keeps track of the real-world resources it manages in a state file. This file maps the resources defined in your configuration to the actual objects in your infrastructure. For team environments, storing state remotely is essential.</p>
+            <div>
+                <pre><code class="language-hcl"># Configure remote state storage
+terraform {
+  backend "s3" {
+    bucket         = "my-terraform-state"
+    key            = "production/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "terraform-locks"
+    encrypt        = true
+  }
+}</code></pre>
+            </div>
+            <p>🔴 <strong>Caution</strong>: The state file can contain sensitive information such as database passwords and API keys. Always store it securely and never commit it to a public Git repository.</p>
+            <h3 id="terraform-practical-examples">Terraform Practical Examples</h3>
+            <h4 id="creating-a-web-server-instance">Creating a Web Server Instance</h4>
+            <p>This example provisions an EC2 instance configured as a web server, pulling together networking and compute concepts:</p>
+            <div>
+                <pre><code class="language-hcl"># Security group allowing HTTP, HTTPS, and SSH
+resource "aws_security_group" "web_sg" {
+  name        = "web-server-sg"
+  description = "Allow web and SSH traffic"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "HTTPS"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/8"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# EC2 instance for the web server
+resource "aws_instance" "web" {
+  ami                    = "ami-0c55b159cbfafe1f0"
+  instance_type          = "t3.micro"
+  subnet_id              = aws_subnet.web.id
+  vpc_security_group_ids = [aws_security_group.web_sg.id]
+  key_name               = "my-ssh-key"
+
+  user_data = &lt;&lt;-EOF
+    #!/bin/bash
+    apt-get update
+    apt-get install -y nginx
+    systemctl start nginx
+    systemctl enable nginx
+  EOF
+
+  tags = {
+    Name        = "web-server-01"
+    ManagedBy   = "terraform"
+  }
+}</code></pre>
+            </div>
+            <h4 id="output-variables">Output Variables</h4>
+            <p>Outputs let you extract useful information from your Terraform-managed infrastructure:</p>
+            <div>
+                <pre><code class="language-hcl">output "web_server_public_ip" {
+  description = "Public IP address of the web server"
+  value       = aws_instance.web.public_ip
+}
+
+output "vpc_id" {
+  description = "ID of the production VPC"
+  value       = aws_vpc.main.id
+}</code></pre>
+            </div>
+            <p>After running <code>terraform apply</code>, you can view outputs and manage the lifecycle:</p>
+            <div>
+                <pre><code class="language-bash"># Initialize, plan, and apply
+terraform init
+terraform plan
+terraform apply
+
+# View outputs after deployment
+terraform output web_server_public_ip
+
+# Destroy all resources when no longer needed
+terraform destroy</code></pre>
+            </div>
+            <h3 id="comparison-of-iac-tools">Comparison of IaC Tools</h3>
+            <p>Different tools serve different purposes, and many organizations use more than one. Here is how the major IaC tools compare:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Feature</td>
+                    <td>Ansible</td>
+                    <td>Terraform</td>
+                    <td>Puppet</td>
+                    <td>Chef</td>
+                    <td>SaltStack</td>
+                </tr>
+                <tr>
+                    <td><strong>Primary Use</strong></td>
+                    <td>Configuration management</td>
+                    <td>Infrastructure provisioning</td>
+                    <td>Configuration management</td>
+                    <td>Configuration management</td>
+                    <td>Configuration management</td>
+                </tr>
+                <tr>
+                    <td><strong>Language</strong></td>
+                    <td>YAML (playbooks)</td>
+                    <td>HCL</td>
+                    <td>Puppet DSL (Ruby-based)</td>
+                    <td>Ruby DSL</td>
+                    <td>YAML / Jinja2</td>
+                </tr>
+                <tr>
+                    <td><strong>Approach</strong></td>
+                    <td>Declarative + Imperative</td>
+                    <td>Declarative</td>
+                    <td>Declarative</td>
+                    <td>Imperative</td>
+                    <td>Declarative + Imperative</td>
+                </tr>
+                <tr>
+                    <td><strong>Architecture</strong></td>
+                    <td>Agentless (SSH)</td>
+                    <td>Agentless (API calls)</td>
+                    <td>Agent-based</td>
+                    <td>Agent-based</td>
+                    <td>Agent or agentless</td>
+                </tr>
+                <tr>
+                    <td><strong>State Management</strong></td>
+                    <td>Stateless</td>
+                    <td>Stateful (.tfstate)</td>
+                    <td>Stateful (PuppetDB)</td>
+                    <td>Stateful (Chef Server)</td>
+                    <td>Stateful (Salt Mine)</td>
+                </tr>
+                <tr>
+                    <td><strong>Learning Curve</strong></td>
+                    <td>Low</td>
+                    <td>Medium</td>
+                    <td>High</td>
+                    <td>High</td>
+                    <td>Medium</td>
+                </tr>
+                <tr>
+                    <td><strong>Best For</strong></td>
+                    <td>Server config, app deployment</td>
+                    <td>Cloud resource provisioning</td>
+                    <td>Large enterprise environments</td>
+                    <td>Complex application configs</td>
+                    <td>Event-driven automation</td>
+                </tr>
+                <tr>
+                    <td><strong>Idempotent</strong></td>
+                    <td>Yes (most modules)</td>
+                    <td>Yes</td>
+                    <td>Yes</td>
+                    <td>Yes (with care)</td>
+                    <td>Yes</td>
+                </tr>
+                <tr>
+                    <td><strong>Community</strong></td>
+                    <td>Very large</td>
+                    <td>Very large</td>
+                    <td>Large</td>
+                    <td>Medium</td>
+                    <td>Medium</td>
+                </tr>
+            </table>
+            </p>
+            <p>A common pattern in production environments is to use Terraform to provision the infrastructure and Ansible to configure the software on those machines.</p>
+            <h3 id="iac-best-practices">IaC Best Practices</h3>
+            <h4 id="use-version-control-for-everything">Use Version Control for Everything</h4>
+            <p>Every piece of your infrastructure code should live in a Git repository. This includes playbooks, Terraform configurations, variable files, and documentation. Use branching strategies and pull requests to review infrastructure changes before they are applied.</p>
+            <div>
+                <pre><code class="language-+----------------------------------------------------------------------+">|                   Git-Based IaC Workflow                              |
++----------------------------------------------------------------------+
+|                                                                      |
+|   +----------+     +----------+     +----------+     +----------+    |
+|   | Feature  |----&gt;|  Pull    |----&gt;|  CI/CD   |----&gt;|  Merge   |    |
+|   | Branch   |     | Request  |     |  Tests   |     | &amp; Deploy |    |
+|   +----------+     +----------+     +----------+     +----------+    |
+|                         |                |                            |
+|                         v                v                            |
+|                    Peer Review     Lint + Validate                    |
+|                    of changes      + Dry Run                         |
+|                                                                      |
++----------------------------------------------------------------------+</code></pre>
+            </div>
+            <h4 id="write-modular-reusable-code">Write Modular, Reusable Code</h4>
+            <p>Break your infrastructure code into small, reusable components. In Ansible, this means using roles. In Terraform, this means using modules. Modularity makes your code easier to test, maintain, and share across projects.</p>
+            <div>
+                <pre><code class="language-shell">project/
+├── ansible/
+│   ├── site.yml
+│   ├── inventory/
+│   │   ├── production
+│   │   └── staging
+│   └── roles/
+│       ├── common/
+│       ├── webserver/
+│       └── database/
+├── terraform/
+│   ├── modules/
+│   │   ├── networking/
+│   │   └── compute/
+│   ├── environments/
+│   │   ├── production/
+│   │   └── staging/
+│   └── main.tf
+└── README.md</code></pre>
+            </div>
+            <h4 id="manage-secrets-securely">Manage Secrets Securely</h4>
+            <p>Never store passwords, API keys, or certificates in plain text within your IaC files.
+                I. Use Ansible Vault for encrypting sensitive variables:</p>
+            <div>
+                <pre><code class="language-bash"># Encrypt a variables file
+ansible-vault encrypt group_vars/production/secrets.yml
+
+# Run a playbook that uses encrypted variables
+ansible-playbook site.yml --ask-vault-pass</code></pre>
+            </div>
+            <p>II. Use environment variables or a secrets manager for Terraform:</p>
+            <div>
+                <pre><code class="language-hcl"># Reference a variable without hardcoding the value
+variable "db_password" {
+  description = "Database administrator password"
+  type        = string
+  sensitive   = true
+}
+
+resource "aws_db_instance" "main" {
+  engine         = "mysql"
+  instance_class = "db.t3.micro"
+  username       = "admin"
+  password       = var.db_password
+}</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-bash"># Pass the secret at runtime
+export TF_VAR_db_password="secure-password-from-vault"
+terraform apply</code></pre>
+            </div>
+            <h4 id="test-your-infrastructure-code">Test Your Infrastructure Code</h4>
+            <p>Just as you test application code, you should test infrastructure code before deploying to production.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Testing Level</td>
+                    <td>Tool</td>
+                    <td>Purpose</td>
+                </tr>
+                <tr>
+                    <td>Syntax checking</td>
+                    <td><code>ansible-playbook --syntax-check</code>, <code>terraform validate</code></td>
+                    <td>Catch typos and syntax errors</td>
+                </tr>
+                <tr>
+                    <td>Linting</td>
+                    <td><code>ansible-lint</code>, <code>tflint</code></td>
+                    <td>Enforce best practices and style</td>
+                </tr>
+                <tr>
+                    <td>Dry runs</td>
+                    <td><code>ansible-playbook --check</code>, <code>terraform plan</code></td>
+                    <td>Preview changes without applying</td>
+                </tr>
+                <tr>
+                    <td>Integration testing</td>
+                    <td>Molecule, Terratest</td>
+                    <td>Verify behavior in real environments</td>
+                </tr>
+                <tr>
+                    <td>Compliance testing</td>
+                    <td>InSpec, Open Policy Agent</td>
+                    <td>Ensure security and policy compliance</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="integrating-iac-with-linux-administration">Integrating IaC with Linux Administration</h3>
+            <p>Your existing skills are the foundation. The table below shows how common tasks translate directly into IaC:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Linux Admin Task</td>
+                    <td>Manual Approach</td>
+                    <td>Ansible Equivalent</td>
+                    <td>Terraform Equivalent</td>
+                </tr>
+                <tr>
+                    <td>Install packages</td>
+                    <td><code>apt install nginx</code></td>
+                    <td><code>apt</code> module with <code>state: present</code></td>
+                    <td><code>user_data</code> script in instance resource</td>
+                </tr>
+                <tr>
+                    <td>Manage services</td>
+                    <td><code>systemctl enable nginx</code></td>
+                    <td><code>service</code> module with <code>enabled: yes</code></td>
+                    <td>Cloud-init or provisioner scripts</td>
+                </tr>
+                <tr>
+                    <td>Configure firewall</td>
+                    <td><code>ufw allow 80/tcp</code></td>
+                    <td><code>ufw</code> module with <code>rule: allow</code></td>
+                    <td>Security group resource</td>
+                </tr>
+                <tr>
+                    <td>Create users</td>
+                    <td><code>useradd -m alice</code></td>
+                    <td><code>user</code> module with <code>state: present</code></td>
+                    <td>IAM user resource (cloud level)</td>
+                </tr>
+                <tr>
+                    <td>Edit config files</td>
+                    <td><code>vim /etc/nginx/nginx.conf</code></td>
+                    <td><code>template</code> module with Jinja2</td>
+                    <td>N/A (configuration management domain)</td>
+                </tr>
+                <tr>
+                    <td>Set up cron jobs</td>
+                    <td><code>crontab -e</code></td>
+                    <td><code>cron</code> module</td>
+                    <td>CloudWatch Events / scheduled tasks</td>
+                </tr>
+                <tr>
+                    <td>Manage disk mounts</td>
+                    <td><code>mount /dev/sdb1 /data</code></td>
+                    <td><code>mount</code> module</td>
+                    <td>EBS volume + attachment resources</td>
+                </tr>
+                <tr>
+                    <td>Configure networking</td>
+                    <td><code>ip addr add ...</code></td>
+                    <td><code>nmcli</code> or <code>template</code> for config files</td>
+                    <td>VPC, subnet, and ENI resources</td>
+                </tr>
+            </table>
+            </p>
+            <p>The key insight is that Ansible automates the same commands you would run manually, while Terraform operates at a higher level, creating the machines and networks those commands run on.</p>
+            <p>When building your IaC practice, start with what you know:</p>
+            <p>I. Take a server you have configured manually and write an Ansible playbook that reproduces that configuration from scratch.</p>
+            <p>II. Document every manual step you perform during a server setup, then translate each step into a task in a playbook.</p>
+            <p>III. Use <code>ansible-playbook --check --diff</code> to verify that your playbook matches the current state of a manually configured server.</p>
+            <p>IV. Gradually move from configuring existing servers to provisioning new ones with Terraform and configuring them with Ansible in a single automated pipeline.</p>
+            <h3 id="challenges">Challenges</h3>
+            <ol>
+                <li>
+                    <p>Install Ansible on your local machine and create an inventory file that groups at least three virtual machines (or containers) into two groups called <code>webservers</code> and <code>dbservers</code>. Run the <code>ansible all -m ping</code> command to verify connectivity to all hosts and troubleshoot any connection failures.</p>
+                </li>
+                <li>
+                    <p>Write an Ansible playbook that installs a web server package (such as nginx or Apache) on all hosts in the <code>webservers</code> group, ensures the service is running and enabled at boot, and deploys a custom <code>index.html</code> file. Run the playbook and verify the result by accessing the web server in a browser or with <code>curl</code>.</p>
+                </li>
+                <li>
+                    <p>Create an Ansible playbook that configures firewall rules on your servers, allowing HTTP (port 80), HTTPS (port 443), and SSH (port 22) traffic while blocking all other incoming connections. Test the rules by attempting to connect on both allowed and blocked ports.</p>
+                </li>
+                <li>
+                    <p>Write an Ansible playbook that creates three user accounts, each belonging to a shared <code>developers</code> group and having their own SSH public key deployed to <code>~/.ssh/authorized_keys</code>. Run the playbook twice and confirm that the second run reports no changes, demonstrating idempotency.</p>
+                </li>
+                <li>
+                    <p>Install Terraform and write a configuration that provisions a single virtual machine (using any cloud provider or a local provider like <code>libvirt</code>). Include a VPC or network resource, a security group that allows SSH access, and an output that displays the instance's IP address after creation. Run <code>terraform plan</code> to review the execution plan before applying.</p>
+                </li>
+                <li>
+                    <p>Extend your Terraform configuration to create two web server instances behind a simple network setup with separate subnets. Use variables for the instance type and region so the same configuration can be reused across environments. Run <code>terraform apply</code> and then <code>terraform destroy</code> to verify the full lifecycle.</p>
+                </li>
+                <li>
+                    <p>Take a server you have previously configured manually and write an Ansible playbook that reproduces the entire setup from a fresh base image. Include package installation, service configuration, user creation, firewall rules, and any custom configuration files. Run the playbook against a clean server and compare the result to the original.</p>
+                </li>
+                <li>
+                    <p>Set up a project directory following the modular structure described in the best practices section, with separate Ansible roles for a web server, a database server, and a common baseline configuration. Each role should handle its own packages, services, configuration files, and firewall rules. Write a <code>site.yml</code> that applies the appropriate roles to each host group.</p>
+                </li>
+                <li>
+                    <p>Create an Ansible Vault-encrypted file containing sensitive variables (such as a database password and an API key) and write a playbook that references those variables. Run the playbook using <code>--ask-vault-pass</code> and verify that the secrets are never displayed in the playbook output. Then try running the playbook without the vault password to confirm it fails securely.</p>
+                </li>
+                <li>
+                    <p>Build a complete IaC pipeline that uses Terraform to provision a virtual machine and then uses Ansible to configure it, combining both tools in a single workflow. The Terraform output should generate an Ansible inventory file dynamically, and the Ansible playbook should install and configure a web server with a firewall. Document each step and verify the end-to-end process by accessing the deployed web application.</p>
+                </li>
+            </ol>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

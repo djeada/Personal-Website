@@ -35,7 +35,7 @@ let screenDistance = +screenDistanceSlider.value;
 
 const samplesPerCycle = 60;
 
-/* Visual scale factor mapping wavelength to pixel spacing for wavefront lines */
+
 const WAVE_SPACING_FACTOR = 0.08;
 
 function getCSSColor(variableName) {
@@ -116,7 +116,7 @@ function wavelengthToColor(wl) {
     return `rgb(${r}, ${g}, ${b})`;
 }
 
-/* Approximate J1(x) using a polynomial/series approach */
+
 function besselJ1(x) {
     const ax = Math.abs(x);
     if (ax < 8.0) {
@@ -147,14 +147,14 @@ function updateStats() {
 }
 
 function getPatternScale() {
-    /* Scale factor that maps physical diffraction angles to canvas pixels */
+
     const lambdaMicron = wavelength / 1000;
     const ratio = lambdaMicron / apertureWidth;
     return ratio * screenDistance * 1.8;
 }
 
 function updatePresetButtons(activeBtn) {
-    [btnDefault, btnNarrow, btnWide, btnCircular].forEach(function (btn) {
+    [btnDefault, btnNarrow, btnWide, btnCircular].forEach(function(btn) {
         btn.classList.remove("active");
     });
     if (activeBtn) {
@@ -178,19 +178,19 @@ function applyPreset(aw, wl, sd, circular, activeBtn) {
     drawAll();
 }
 
-btnDefault.addEventListener("click", function () {
+btnDefault.addEventListener("click", function() {
     applyPreset(50, 550, 200, false, btnDefault);
 });
 
-btnNarrow.addEventListener("click", function () {
+btnNarrow.addEventListener("click", function() {
     applyPreset(20, 550, 200, false, btnNarrow);
 });
 
-btnWide.addEventListener("click", function () {
+btnWide.addEventListener("click", function() {
     applyPreset(150, 550, 200, false, btnWide);
 });
 
-btnCircular.addEventListener("click", function () {
+btnCircular.addEventListener("click", function() {
     applyPreset(50, 550, 200, true, btnCircular);
 });
 
@@ -210,7 +210,7 @@ function drawBarrier() {
     ctx.fillRect(barrierX, 0, barrierWidth, cy - slitHeight / 2);
     ctx.fillRect(barrierX, cy + slitHeight / 2, barrierWidth, ch - cy - slitHeight / 2);
 
-    /* Highlight aperture opening */
+
     ctx.strokeStyle = getCSSColor('--primary-color');
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -219,7 +219,7 @@ function drawBarrier() {
     ctx.stroke();
 
     if (circularApertureCheck.checked) {
-        /* Draw a small circle symbol next to the slit to indicate circular aperture */
+
         ctx.strokeStyle = getCSSColor('--primary-color');
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -261,11 +261,11 @@ function drawHuygensWavelets(barrierInfo) {
     var waveSpacing = getWaveSpacing();
     var maxRadius = cw - barrierInfo.x;
 
-    /* Place Huygens sources across the aperture */
+
     var numSources = 7;
     var sources = [];
     for (var i = 0; i < numSources; i++) {
-        var frac = (i / (numSources - 1)) - 0.5; /* -0.5 to +0.5 */
+        var frac = (i / (numSources - 1)) - 0.5;
         sources.push({
             x: barrierInfo.x,
             y: barrierInfo.y + frac * 2 * barrierInfo.halfWidth
@@ -304,7 +304,7 @@ function drawScreen() {
     return screenX;
 }
 
-/* Single-slit sinc^2 intensity */
+
 function slitIntensity(yPos, scale) {
     if (scale === 0) return 1;
     var beta = Math.PI * yPos / scale;
@@ -313,11 +313,10 @@ function slitIntensity(yPos, scale) {
     return sinc * sinc;
 }
 
-/* Circular aperture Airy pattern: [2*J1(x)/x]^2 */
+
 function airyIntensity(yPos, scale) {
     if (scale === 0) return 1;
-    /* The factor 0.82 ≈ 1/1.22 adjusts the angular scale so the first dark ring
-       matches the Airy pattern condition sin(θ) = 1.22 λ/D instead of λ/a. */
+
     var x = Math.PI * yPos / (scale * 0.82);
     if (Math.abs(x) < 1e-6) return 1;
     var val = 2 * besselJ1(x) / x;
@@ -401,12 +400,12 @@ function drawLabels(barrierInfo, screenX) {
     ctx.textAlign = "center";
     ctx.fillText("Aperture", barrierInfo.x, ch - 8);
 
-    /* Label aperture width */
+
     ctx.font = "10px Arial";
     ctx.fillStyle = getCSSColor('--primary-color');
     ctx.fillText("a", barrierInfo.x + 20, barrierInfo.y);
 
-    /* Draw measurement bracket for aperture */
+
     ctx.beginPath();
     ctx.strokeStyle = getCSSColor('--primary-color');
     ctx.setLineDash([3, 3]);
@@ -417,7 +416,7 @@ function drawLabels(barrierInfo, screenX) {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    /* Label distance L */
+
     ctx.fillStyle = getCSSColor('--text-muted');
     ctx.font = "10px Arial";
     ctx.textAlign = "center";
@@ -490,9 +489,9 @@ function animate() {
     requestAnimationFrame(animate);
 }
 
-/* ---- Event listeners ---- */
 
-apertureWidthSlider.addEventListener("input", function () {
+
+apertureWidthSlider.addEventListener("input", function() {
     apertureWidth = +apertureWidthSlider.value;
     apertureValueEl.textContent = apertureWidth + " \u03BCm";
     updateStats();
@@ -500,7 +499,7 @@ apertureWidthSlider.addEventListener("input", function () {
     if (!timerRunning) drawAll();
 });
 
-wavelengthSlider.addEventListener("input", function () {
+wavelengthSlider.addEventListener("input", function() {
     wavelength = +wavelengthSlider.value;
     wavelengthValueEl.textContent = wavelength + " nm";
     updateStats();
@@ -508,7 +507,7 @@ wavelengthSlider.addEventListener("input", function () {
     if (!timerRunning) drawAll();
 });
 
-screenDistanceSlider.addEventListener("input", function () {
+screenDistanceSlider.addEventListener("input", function() {
     screenDistance = +screenDistanceSlider.value;
     screenDistValueEl.textContent = screenDistance + " mm";
     updateStats();
@@ -516,21 +515,21 @@ screenDistanceSlider.addEventListener("input", function () {
     if (!timerRunning) drawAll();
 });
 
-showWaveletsCheck.addEventListener("change", function () {
+showWaveletsCheck.addEventListener("change", function() {
     drawAll();
 });
 
-showIntensityCheck.addEventListener("change", function () {
+showIntensityCheck.addEventListener("change", function() {
     drawAll();
 });
 
-circularApertureCheck.addEventListener("change", function () {
+circularApertureCheck.addEventListener("change", function() {
     updateStats();
     updatePresetButtons(null);
     drawAll();
 });
 
-startStopBtn.addEventListener("click", function () {
+startStopBtn.addEventListener("click", function() {
     timerRunning = !timerRunning;
     startStopBtn.innerHTML = timerRunning ?
         '<span>\u23F8\uFE0F</span> Stop Animation' :
@@ -538,7 +537,7 @@ startStopBtn.addEventListener("click", function () {
     if (timerRunning) animate();
 });
 
-resetBtn.addEventListener("click", function () {
+resetBtn.addEventListener("click", function() {
     timerRunning = false;
     startStopBtn.innerHTML = '<span>\u25B6\uFE0F</span> Start Animation';
     frameCounter = 0;
@@ -547,15 +546,16 @@ resetBtn.addEventListener("click", function () {
     showIntensityCheck.checked = true;
 });
 
-/* ---- Init ---- */
+
 updateStats();
 drawAll();
 
-/* ---- Dark mode redraw ---- */
+
 var darkModeRedrawTimer = null;
+
 function onDarkModeChange() {
     if (darkModeRedrawTimer) return;
-    darkModeRedrawTimer = requestAnimationFrame(function () {
+    darkModeRedrawTimer = requestAnimationFrame(function() {
         darkModeRedrawTimer = null;
         drawAll();
     });

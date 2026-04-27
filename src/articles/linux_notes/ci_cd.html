@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>CI/CD Pipelines</title>
+    <meta content="CI/CD stands for Continuous Integration and Continuous Delivery (or Continuous Deployment)." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/linux_notes/ci_cd" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "CI/CD Pipelines",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/linux_notes/ci_cd"
+            },
+            "url": "https://adamdjellouli.com/articles/linux_notes/ci_cd",
+            "description": "CI/CD stands for Continuous Integration and Continuous Delivery (or Continuous Deployment).",
+            "dateModified": "2026-04-27"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol><a href="#ci-cd-pipelines">CI/CD Pipelines</a>
+                    <ol>
+                        <li><a href="#ci-cd-pipeline-stages">CI/CD Pipeline Stages</a></li>
+                        <li><a href="#continuous-integration">Continuous Integration</a></li>
+                        <li><a href="#continuous-delivery-vs-continuous-deployment">Continuous Delivery vs Continuous Deployment</a></li>
+                        <li><a href="#jenkins">Jenkins</a>
+                            <ol>
+                                <li><a href="#installing-jenkins-on-linux">Installing Jenkins on Linux</a></li>
+                                <li><a href="#jenkinsfile-basics">Jenkinsfile Basics</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#gitlab-ci-cd">GitLab CI/CD</a>
+                            <ol>
+                                <li><a href="#-gitlab-ci-yml-example">.gitlab-ci.yml Example</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#github-actions">GitHub Actions</a>
+                            <ol>
+                                <li><a href="#workflow-example">Workflow Example</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#common-pipeline-patterns">Common Pipeline Patterns</a>
+                            <ol>
+                                <li><a href="#build-artifacts">Build Artifacts</a></li>
+                                <li><a href="#testing-stages">Testing Stages</a></li>
+                                <li><a href="#deployment-strategies">Deployment Strategies</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#pipeline-security">Pipeline Security</a>
+                            <ol>
+                                <li><a href="#secrets-management">Secrets Management</a></li>
+                                <li><a href="#environment-variables-in-pipelines">Environment Variables in Pipelines</a></li>
+                                <li><a href="#secure-deployment-practices">Secure Deployment Practices</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#integrating-with-linux-systems">Integrating with Linux Systems</a>
+                            <ol>
+                                <li><a href="#ssh-deployment">SSH Deployment</a></li>
+                                <li><a href="#systemd-service-restarts">Systemd Service Restarts</a></li>
+                                <li><a href="#log-monitoring">Log Monitoring</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#challenges">Challenges</a></li>
+                    </ol>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ci_cd.html">Ci Cd</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/commands.html">Commands</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/containers_and_docker.html">Containers and Docker</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/cron_jobs.html">Cron Jobs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/disk_io_analysis.html">Disk Io Analysis</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/disk_usage.html">Disk Usage</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/dwm.html">Dwm</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/encryption.html">Encryption</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/environment_modules.html">Environment Modules</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/environment_variable.html">Environment Variable</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/file_system.html">File System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/files_and_dirs.html">Files and Dirs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/finding_files.html">Finding Files</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/firewall.html">Firewall</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/grep.html">Grep</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/hardware.html">Hardware</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/infrastructure_as_code.html">Infrastructure As Code</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/inodes_and_symlinks.html">Inodes and Symlinks</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/inotify.html">Inotify</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/introduction.html">Introduction</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/kernel.html">Kernel</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ldap.html">Ldap</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/lfcs.html">Lfcs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/linux_certification_overview.html">Linux Certification Overview</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/log_files_and_journals.html">Log Files and Journals</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/logical_volume_management.html">Logical Volume Management</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/managing_users.html">Managing Users</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/mounting.html">Mounting</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/networking.html">Networking</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/nfs.html">Nfs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/package_managers.html">Package Managers</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/partitions.html">Partitions</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/performance_monitoring.html">Performance Monitoring</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/permissions.html">Permissions</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/pipe_and_redirect.html">Pipe and Redirect</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ports.html">Ports</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/processes.html">Processes</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/rhcsa.html">Rhcsa</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/running_executables.html">Running Executables</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/sed_and_awk.html">Sed and Awk</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/selinux.html">Selinux</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/services.html">Services</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/shells_and_bash_configuration.html">Shells and Bash Configuration</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ssh_and_scp.html">Ssh and Scp</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/system_startup.html">System Startup</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/tar_and_gzip.html">Tar and Gzip</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/task_state_analysis.html">Task State Analysis</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/utilities.html">Utilities</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/virtual_machines.html">Virtual Machines</a></li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: April 27, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="ci-cd-pipelines">CI/CD Pipelines</h2>
+            <p>CI/CD stands for Continuous Integration and Continuous Delivery (or Continuous Deployment). It is a set of practices that automate the process of integrating code changes, running tests, and delivering software to production environments. For Linux administrators moving into DevOps, CI/CD pipelines are a natural extension of the automation skills you already use daily—writing shell scripts, managing services with <code>systemd</code>, and configuring servers over SSH.</p>
+            <p>At its core, a CI/CD pipeline is a series of automated steps that take code from a developer's machine all the way to a running production system. Every time someone pushes a commit, the pipeline kicks in: it builds the application, runs tests, and—if everything passes—deploys the result. This removes the error-prone manual process of building and deploying software, and it gives teams the confidence to ship changes frequently.</p>
+            <p>The DevOps philosophy bridges the gap between development and operations. As a Linux admin, you already handle the "ops" side—managing servers, monitoring logs, and maintaining uptime. CI/CD pipelines give you the tools to automate the handoff between developers writing code and administrators deploying it.</p>
+            <div>
+                <pre><code class="language-+----------------------------------------------------------------------+">|                        CI/CD Pipeline Overview                       |
+|                                                                      |
+|   Developer        Pipeline Stages            Production             |
+|                                                                      |
+|   +--------+    +---------+---------+------+---------+  +---------+  |
+|   |  Code  | -&gt; | Source  | Build   | Test | Deploy  |-&gt;| Running |  |
+|   | Change |    | Control | &amp; Pack  |      |         |  | System  |  |
+|   +--------+    +---------+---------+------+---------+  +---------+  |
+|                                                                      |
+|   git push       git repo   compile   unit    ssh/     systemctl     |
+|                  webhook    package  integr.  rsync    restart svc   |
+|                                                                      |
++----------------------------------------------------------------------+</code></pre>
+            </div>
+            <h3 id="ci-cd-pipeline-stages">CI/CD Pipeline Stages</h3>
+            <p>A typical pipeline flows through several stages, each building on the previous one. If any stage fails, the pipeline stops and notifies the team. This fast feedback loop is one of the greatest benefits of CI/CD.</p>
+            <div>
+                <pre><code class="language-shell">+----------+     +----------+     +----------+     +-----------+     +----------+
+|          |     |          |     |          |     |           |     |          |
+|  Source  | --&gt; |  Build   | --&gt; |   Test   | --&gt; |  Staging  | --&gt; |  Deploy  |
+|          |     |          |     |          |     |           |     |          |
++----------+     +----------+     +----------+     +-----------+     +----------+
+  |                |                |                |                  |
+  | Trigger:       | Compile        | Run unit       | Deploy to       | Push to
+  | git push,      | code,          | tests,         | staging env,    | production
+  | pull request,  | resolve        | integration    | run smoke       | server(s)
+  | schedule       | dependencies   | tests, lint    | tests           |</code></pre>
+            </div>
+            <p>
+            <table>
+                <tr>
+                    <td>Stage</td>
+                    <td>Purpose</td>
+                    <td>Typical Tools</td>
+                </tr>
+                <tr>
+                    <td><strong>Source</strong></td>
+                    <td>Detect code changes and trigger the pipeline.</td>
+                    <td>Git, GitHub, GitLab, Bitbucket</td>
+                </tr>
+                <tr>
+                    <td><strong>Build</strong></td>
+                    <td>Compile source code, resolve dependencies, create artifacts.</td>
+                    <td><code>make</code>, <code>gcc</code>, <code>mvn</code>, <code>npm</code>, <code>docker build</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Test</strong></td>
+                    <td>Run automated tests to catch bugs before deployment.</td>
+                    <td><code>pytest</code>, <code>jest</code>, <code>go test</code>, <code>selenium</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Staging</strong></td>
+                    <td>Deploy to a pre-production environment for validation.</td>
+                    <td>Ansible, Terraform, Docker Compose</td>
+                </tr>
+                <tr>
+                    <td><strong>Deploy</strong></td>
+                    <td>Release the artifact to production systems.</td>
+                    <td><code>ssh</code>, <code>rsync</code>, <code>kubectl</code>, Ansible</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="continuous-integration">Continuous Integration</h3>
+            <p>Continuous Integration (CI) is the practice of merging all developer working copies into a shared mainline frequently—ideally several times a day. Each merge triggers an automated build and test cycle, so problems are detected early rather than discovered days or weeks later during a manual integration phase.</p>
+            <p>The key principles of CI include:</p>
+            <ul>
+                <li>Developers commit code to a shared repository frequently.</li>
+                <li>Every commit triggers an automated build.</li>
+                <li>Automated tests run against each build.</li>
+                <li>Failures are reported immediately so the team can fix them.</li>
+                <li>The mainline branch stays in a deployable state at all times.</li>
+            </ul>
+            <p>A minimal CI workflow might look like this on a Linux build server:</p>
+            <div>
+                <pre><code class="language-bash">#!/bin/bash
+# Simple CI script triggered by a webhook
+
+set -e
+
+REPO_DIR="/opt/builds/myapp"
+cd "$REPO_DIR"
+
+git pull origin main
+
+echo "Installing dependencies..."
+npm install
+
+echo "Running linter..."
+npm run lint
+
+echo "Running tests..."
+npm test
+
+echo "Build succeeded at $(date)"</code></pre>
+            </div>
+            <p>The <code>set -e</code> flag ensures the script exits on the first error—mimicking how a CI pipeline halts when a stage fails.</p>
+            <h3 id="continuous-delivery-vs-continuous-deployment">Continuous Delivery vs Continuous Deployment</h3>
+            <p>These two terms are often confused, but they differ in one important way: the presence of a manual approval gate before production.</p>
+            <div>
+                <pre><code class="language-shell">+---------------------+         +---------------------+
+|  Continuous         |         |  Continuous          |
+|  Delivery           |         |  Deployment          |
+|                     |         |                      |
+|  Code -&gt; Build -&gt;   |         |  Code -&gt; Build -&gt;    |
+|  Test -&gt; Staging -&gt; |         |  Test -&gt; Staging -&gt;  |
+|  [Manual Approval]  |         |  Production          |
+|  -&gt; Production      |         |  (automatic)         |
++---------------------+         +---------------------+</code></pre>
+            </div>
+            <p>
+            <table>
+                <tr>
+                    <td>Aspect</td>
+                    <td>Continuous Delivery</td>
+                    <td>Continuous Deployment</td>
+                </tr>
+                <tr>
+                    <td><strong>Definition</strong></td>
+                    <td>Every change is built, tested, and ready to deploy.</td>
+                    <td>Every change that passes tests is automatically deployed.</td>
+                </tr>
+                <tr>
+                    <td><strong>Manual Gate</strong></td>
+                    <td>Yes—a human approves the final release to production.</td>
+                    <td>No—deployment is fully automated.</td>
+                </tr>
+                <tr>
+                    <td><strong>Risk Level</strong></td>
+                    <td>Lower—humans review before release.</td>
+                    <td>Higher—requires extremely robust test suites.</td>
+                </tr>
+                <tr>
+                    <td><strong>Speed</strong></td>
+                    <td>Slower due to approval wait times.</td>
+                    <td>Fastest possible path to production.</td>
+                </tr>
+                <tr>
+                    <td><strong>Best For</strong></td>
+                    <td>Regulated industries, teams building confidence in automation.</td>
+                    <td>Mature teams with comprehensive automated testing.</td>
+                </tr>
+                <tr>
+                    <td><strong>Rollback</strong></td>
+                    <td>Can decide not to deploy a specific version.</td>
+                    <td>Must rely on automated rollback mechanisms.</td>
+                </tr>
+            </table>
+            </p>
+            <p>Most teams start with Continuous Delivery and graduate to Continuous Deployment once their test coverage and monitoring are mature enough to trust full automation.</p>
+            <h3 id="jenkins">Jenkins</h3>
+            <p>Jenkins is one of the oldest and most widely used CI/CD tools. It runs as a Java application on Linux and is managed as a system service—something you already know how to handle from working with <code>systemd</code> (see <a href="https://github.com/djeada/Linux-Notes/blob/main/notes/services.md">services.md</a>).</p>
+            <h4 id="installing-jenkins-on-linux">Installing Jenkins on Linux</h4>
+            <p>On Debian/Ubuntu systems:</p>
+            <div>
+                <pre><code class="language-bash"># Add the Jenkins repository key and source
+curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo tee /usr/share/keyrings/jenkins-keyring.asc &gt; /dev/null
+echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/" | sudo tee /etc/apt/sources.list.d/jenkins.list &gt; /dev/null
+
+sudo apt update
+sudo apt install -y jenkins
+
+# Jenkins runs as a systemd service
+sudo systemctl enable jenkins
+sudo systemctl start jenkins
+sudo systemctl status jenkins</code></pre>
+            </div>
+            <p>On RHEL/CentOS systems:</p>
+            <div>
+                <pre><code class="language-bash">sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
+sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+
+sudo yum install -y jenkins
+
+sudo systemctl enable jenkins
+sudo systemctl start jenkins</code></pre>
+            </div>
+            <p>After installation, Jenkins is accessible at <code>http://your-server:8080</code>. Retrieve the initial admin password with:</p>
+            <div>
+                <pre><code class="language-bash">sudo cat /var/lib/jenkins/secrets/initialAdminPassword</code></pre>
+            </div>
+            <h4 id="jenkinsfile-basics">Jenkinsfile Basics</h4>
+            <p>A <code>Jenkinsfile</code> defines your pipeline as code and lives in the root of your repository. Jenkins supports two syntax styles: Declarative and Scripted. Declarative is more structured and recommended for most use cases.</p>
+            <div>
+                <pre><code class="language-groovy">// Jenkinsfile (Declarative Pipeline)
+pipeline {
+    agent any
+
+    environment {
+        APP_NAME = 'myapp'
+        DEPLOY_SERVER = 'prod.example.com'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/org/myapp.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'npm install'
+                sh 'npm run build'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'npm test'
+            }
+            post {
+                always {
+                    junit 'reports/**/*.xml'
+                }
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                branch 'main'
+            }
+            steps {
+                sh """
+                    rsync -avz --delete dist/ deploy@${DEPLOY_SERVER}:/var/www/${APP_NAME}/
+                    ssh deploy@${DEPLOY_SERVER} 'sudo systemctl restart ${APP_NAME}'
+                """
+            }
+        }
+    }
+
+    post {
+        failure {
+            mail to: 'team@example.com',
+                 subject: "Pipeline Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "Check the build at ${env.BUILD_URL}"
+        }
+    }
+}</code></pre>
+            </div>
+            <p>Notice how the Deploy stage uses <code>rsync</code> over SSH and restarts a <code>systemd</code> service on the remote host—skills directly from your Linux admin toolkit.</p>
+            <h3 id="gitlab-ci-cd">GitLab CI/CD</h3>
+            <p>GitLab CI/CD is configured through a <code>.gitlab-ci.yml</code> file at the root of your repository. GitLab runners—agents installed on Linux machines—execute the pipeline jobs. If you have managed background services on Linux, setting up a runner will feel familiar.</p>
+            <h4 id="-gitlab-ci-yml-example">.gitlab-ci.yml Example</h4>
+            <div>
+                <pre><code class="language-yaml">stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  APP_NAME: "myapp"
+  DEPLOY_PATH: "/var/www/myapp"
+
+build_job:
+  stage: build
+  image: node:20
+  script:
+    - npm ci
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 hour
+
+unit_tests:
+  stage: test
+  image: node:20
+  script:
+    - npm ci
+    - npm test -- --coverage
+  coverage: '/Lines\s*:\s*(\d+\.?\d*)%/'
+  artifacts:
+    reports:
+      junit: reports/junit.xml
+
+lint_check:
+  stage: test
+  image: node:20
+  script:
+    - npm ci
+    - npm run lint
+
+deploy_production:
+  stage: deploy
+  only:
+    - main
+  before_script:
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | ssh-add -
+    - mkdir -p ~/.ssh
+    - echo "$KNOWN_HOSTS" &gt;&gt; ~/.ssh/known_hosts
+  script:
+    - rsync -avz --delete dist/ deploy@prod.example.com:$DEPLOY_PATH/
+    - ssh deploy@prod.example.com "sudo systemctl restart $APP_NAME"
+  environment:
+    name: production
+    url: https://example.com</code></pre>
+            </div>
+            <p>Key concepts in GitLab CI/CD:</p>
+            <ul>
+                <li><strong>Stages</strong> define the order in which groups of jobs run.</li>
+                <li><strong>Jobs</strong> are the individual tasks within a stage; jobs in the same stage run in parallel.</li>
+                <li><strong>Artifacts</strong> are files produced by a job and passed to later stages.</li>
+                <li><strong>Runners</strong> are the Linux machines (or containers) that execute jobs.</li>
+            </ul>
+            <h3 id="github-actions">GitHub Actions</h3>
+            <p>GitHub Actions uses workflow files stored in <code>.github/workflows/</code> within your repository. Each workflow is a YAML file that defines triggers, jobs, and steps.</p>
+            <h4 id="workflow-example">Workflow Example</h4>
+            <div>
+                <pre><code class="language-yaml">name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  APP_NAME: myapp
+  NODE_VERSION: '20'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test -- --coverage
+
+      - name: Build application
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  deploy:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' &amp;&amp; github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Deploy to production
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" &gt; ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan "$DEPLOY_HOST" &gt;&gt; ~/.ssh/known_hosts
+          rsync -avz --delete dist/ deploy@"$DEPLOY_HOST":/var/www/myapp/
+          ssh deploy@"$DEPLOY_HOST" 'sudo systemctl restart myapp'</code></pre>
+            </div>
+            <p>Key concepts in GitHub Actions:</p>
+            <ul>
+                <li><strong>Triggers</strong> (<code>on</code>) define what events start the workflow—pushes, pull requests, schedules, or manual dispatches.</li>
+                <li><strong>Jobs</strong> run on virtual machines called runners; <code>ubuntu-latest</code> gives you a full Linux environment.</li>
+                <li><strong>Steps</strong> are individual commands or reusable actions from the GitHub marketplace.</li>
+                <li><strong>Secrets</strong> are encrypted environment variables configured in repository settings, never exposed in logs.</li>
+                <li><strong>Needs</strong> enforces job ordering—the deploy job waits for build-and-test to succeed.</li>
+            </ul>
+            <h3 id="common-pipeline-patterns">Common Pipeline Patterns</h3>
+            <h4 id="build-artifacts">Build Artifacts</h4>
+            <p>Most pipelines produce an artifact in the build stage—a compiled binary, a Docker image, or a bundled archive—that later stages consume. This ensures every stage tests and deploys the same artifact rather than rebuilding from source.</p>
+            <div>
+                <pre><code class="language-bash"># Example: building and archiving an artifact
+npm run build
+tar -czf myapp-$(git rev-parse --short HEAD).tar.gz -C dist .</code></pre>
+            </div>
+            <h4 id="testing-stages">Testing Stages</h4>
+            <p>A well-structured pipeline runs tests in layers, from fastest to slowest:</p>
+            <div>
+                <pre><code class="language-shell">+-------------+     +-------------------+     +------------------+
+|   Linting   | --&gt; | Unit Tests        | --&gt; | Integration      |
+| (seconds)   |     | (seconds/minutes) |     | Tests (minutes)  |
++-------------+     +-------------------+     +------------------+
+                                                      |
+                                              +------------------+
+                                              | End-to-End Tests |
+                                              | (minutes/hours)  |
+                                              +------------------+</code></pre>
+            </div>
+            <p>Running fast checks first means developers get quick feedback. If linting fails, there is no point running the full integration suite.</p>
+            <h4 id="deployment-strategies">Deployment Strategies</h4>
+            <p>When deploying to production, several strategies help minimize downtime and risk:</p>
+            <div>
+                <pre><code class="language-+---------------------------------------------------------------+">|                   Deployment Strategies                        |
+|                                                               |
+|  Blue-Green                                                   |
+|  +----------+    +----------+                                 |
+|  |  Blue    |    |  Green   |  Traffic switches entirely      |
+|  | (active) | -&gt; | (new ver)|  from Blue to Green once        |
+|  +----------+    +----------+  Green is verified.             |
+|                                                               |
+|  Rolling Update                                               |
+|  +----+ +----+ +----+ +----+                                  |
+|  | v1 | | v2 | | v2 | | v2 |  Instances are updated one      |
+|  +----+ +----+ +----+ +----+  at a time until all run v2.    |
+|                                                               |
+|  Canary                                                       |
+|  +----+ +----+ +----+ +----+                                  |
+|  | v1 | | v1 | | v1 | | v2 |  A small percentage of traffic  |
+|  +----+ +----+ +----+ +----+  goes to v2; expand if healthy. |
+|                                                               |
++---------------------------------------------------------------+</code></pre>
+            </div>
+            <p>
+            <table>
+                <tr>
+                    <td>Strategy</td>
+                    <td>Downtime</td>
+                    <td>Rollback Speed</td>
+                    <td>Resource Cost</td>
+                </tr>
+                <tr>
+                    <td><strong>Blue-Green</strong></td>
+                    <td>Zero (instant switch)</td>
+                    <td>Instant (switch back)</td>
+                    <td>High (double infrastructure)</td>
+                </tr>
+                <tr>
+                    <td><strong>Rolling</strong></td>
+                    <td>Zero (gradual)</td>
+                    <td>Moderate (roll back instances)</td>
+                    <td>Low (reuses existing infra)</td>
+                </tr>
+                <tr>
+                    <td><strong>Canary</strong></td>
+                    <td>Zero (partial traffic)</td>
+                    <td>Fast (redirect traffic)</td>
+                    <td>Low to moderate</td>
+                </tr>
+                <tr>
+                    <td><strong>Recreate</strong></td>
+                    <td>Brief (stop old, start new)</td>
+                    <td>Slow (full redeploy)</td>
+                    <td>Low</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="pipeline-security">Pipeline Security</h3>
+            <p>A CI/CD pipeline has access to your production servers, credentials, and deployment keys. Treating pipeline security casually is one of the most dangerous mistakes a team can make.</p>
+            <h4 id="secrets-management">Secrets Management</h4>
+            <p>Never hardcode secrets in pipeline configuration files. Every major CI/CD platform provides a secrets store:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Platform</td>
+                    <td>Secrets Mechanism</td>
+                    <td>How to Reference</td>
+                </tr>
+                <tr>
+                    <td><strong>Jenkins</strong></td>
+                    <td>Credentials store</td>
+                    <td><code>credentials('my-secret-id')</code></td>
+                </tr>
+                <tr>
+                    <td><strong>GitLab</strong></td>
+                    <td>CI/CD Variables (masked, protected)</td>
+                    <td><code>$MY_SECRET</code> in <code>.gitlab-ci.yml</code></td>
+                </tr>
+                <tr>
+                    <td><strong>GitHub Actions</strong></td>
+                    <td>Repository/Environment secrets</td>
+                    <td><code>${{ secrets.MY_SECRET }}</code></td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="environment-variables-in-pipelines">Environment Variables in Pipelines</h4>
+            <p>CI/CD pipelines rely heavily on environment variables (see <a href="https://github.com/djeada/Linux-Notes/blob/main/notes/environment_variable.md">environment_variable.md</a>) for configuration. Best practices include:</p>
+            <ul>
+                <li>Use the platform's secret store for sensitive values like API keys, SSH keys, and database passwords.</li>
+                <li>Define non-sensitive configuration as plain environment variables in the pipeline file.</li>
+                <li>Scope variables to specific environments (staging vs. production) when the platform supports it.</li>
+                <li>Audit which jobs and stages have access to which secrets.</li>
+            </ul>
+            <div>
+                <pre><code class="language-yaml"># GitHub Actions: scoping secrets to an environment
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy
+        env:
+          DB_HOST: ${{ secrets.PROD_DB_HOST }}
+          DB_PASS: ${{ secrets.PROD_DB_PASS }}
+        run: ./deploy.sh</code></pre>
+            </div>
+            <h4 id="secure-deployment-practices">Secure Deployment Practices</h4>
+            <ul>
+                <li>Run pipeline agents with the minimum permissions required.</li>
+                <li>Use short-lived credentials or tokens instead of long-lived SSH keys where possible.</li>
+                <li>Pin action versions (e.g., <code>actions/checkout@v4</code>) rather than using <code>@latest</code> to prevent supply chain attacks.</li>
+                <li>Enable branch protection rules so only reviewed code reaches the deployment pipeline.</li>
+                <li>Sign commits and verify signatures in the pipeline to ensure code authenticity.</li>
+            </ul>
+            <h3 id="integrating-with-linux-systems">Integrating with Linux Systems</h3>
+            <p>As a Linux administrator, the final stages of a CI/CD pipeline often land squarely in your domain. This is where your existing skills—SSH, <code>systemd</code>, file permissions, and log management—become essential.</p>
+            <h4 id="ssh-deployment">SSH Deployment</h4>
+            <p>Deploying over SSH (see <a href="https://github.com/djeada/Linux-Notes/blob/main/notes/ssh_and_scp.md">ssh_and_scp.md</a>) is one of the most common patterns for pushing artifacts to Linux servers:</p>
+            <div>
+                <pre><code class="language-bash">#!/bin/bash
+# deploy.sh - called by the CI/CD pipeline
+
+set -euo pipefail
+
+DEPLOY_HOST="prod.example.com"
+DEPLOY_USER="deploy"
+DEPLOY_PATH="/var/www/myapp"
+ARTIFACT="dist/"
+
+# Sync the build artifact to the server
+rsync -avz --delete "$ARTIFACT" "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/"
+
+# Restart the application service
+ssh "${DEPLOY_USER}@${DEPLOY_HOST}" &lt;&lt; 'EOF'
+    sudo systemctl restart myapp
+    sleep 2
+    sudo systemctl is-active --quiet myapp &amp;&amp; echo "Service is running" || echo "Service failed to start"
+EOF</code></pre>
+            </div>
+            <h4 id="systemd-service-restarts">Systemd Service Restarts</h4>
+            <p>When your pipeline deploys a new version, it typically needs to restart the application service. A well-designed service unit file (see <a href="https://github.com/djeada/Linux-Notes/blob/main/notes/services.md">services.md</a>) makes this reliable:</p>
+            <div>
+                <pre><code class="language-ini"># /etc/systemd/system/myapp.service
+[Unit]
+Description=My Application
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/myapp
+ExecStart=/usr/bin/node /var/www/myapp/server.js
+Restart=on-failure
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=3000
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+            </div>
+            <p>The <code>Restart=on-failure</code> directive ensures the service recovers automatically if it crashes after a deployment. The pipeline can verify the restart succeeded:</p>
+            <div>
+                <pre><code class="language-bash">ssh deploy@prod.example.com '
+    sudo systemctl daemon-reload
+    sudo systemctl restart myapp
+    sleep 3
+    if sudo systemctl is-active --quiet myapp; then
+        echo "Deployment successful"
+        exit 0
+    else
+        echo "Deployment failed - rolling back"
+        sudo cp -r /var/www/myapp.backup/* /var/www/myapp/
+        sudo systemctl restart myapp
+        exit 1
+    fi
+'</code></pre>
+            </div>
+            <h4 id="log-monitoring">Log Monitoring</h4>
+            <p>After a deployment, checking logs confirms the new version is running correctly. Your pipeline can include a post-deploy verification step:</p>
+            <div>
+                <pre><code class="language-bash"># Check application logs after deployment
+ssh deploy@prod.example.com '
+    sudo journalctl -u myapp --since "2 minutes ago" --no-pager | tail -20
+'</code></pre>
+            </div>
+            <p>Using <code>journalctl</code> to inspect service logs is a direct application of your Linux administration knowledge. Combining this with monitoring tools like Prometheus or Grafana gives you full visibility into whether a deployment is healthy.</p>
+            <h3 id="challenges">Challenges</h3>
+            <ol>
+                <li>Write a simple shell script that simulates a CI pipeline: it should pull the latest code from a Git repository, install dependencies, run a linter, execute tests, and print a success or failure message. Use <code>set -e</code> to halt on the first error, and run it manually to verify its behavior.</li>
+                <li>Install Jenkins on a Linux virtual machine using either <code>apt</code> or <code>yum</code>. Verify it is running with <code>systemctl status jenkins</code>, access the web interface, complete the initial setup wizard, and create a freestyle project that executes a basic shell command like <code>echo "Hello from Jenkins"</code>.</li>
+                <li>Write a <code>Jenkinsfile</code> with Declarative Pipeline syntax that has at least three stages (Build, Test, Deploy). The Deploy stage should only run when the branch is <code>main</code>. Test it by creating a pipeline job in Jenkins and pointing it at a Git repository containing your <code>Jenkinsfile</code>.</li>
+                <li>Create a <code>.gitlab-ci.yml</code> file that defines three stages and uses artifacts to pass a build output from the build stage to the deploy stage. Include a job that runs only on the <code>main</code> branch. If you do not have a GitLab instance, use GitLab's free tier or explain each directive in comments.</li>
+                <li>Write a GitHub Actions workflow file that triggers on pushes to <code>main</code> and pull requests. It should have two jobs: one for building and testing, and a second for deploying that depends on the first job succeeding. Use repository secrets for any sensitive values and explain how you would configure them in the GitHub UI.</li>
+                <li>Compare Blue-Green, Rolling, and Canary deployment strategies. For each, describe a real-world scenario where it would be the best choice, and explain what Linux infrastructure (load balancers, multiple servers, containers) you would need to implement it.</li>
+                <li>Set up a deployment pipeline that uses <code>rsync</code> over SSH to copy build artifacts to a remote Linux server and then restarts a <code>systemd</code> service. Verify the deployment by checking <code>systemctl is-active</code> on the target host. Document the SSH key setup required for passwordless authentication from the CI server.</li>
+                <li>Create a <code>systemd</code> service unit file for a sample application (a simple Node.js or Python HTTP server). Configure it with <code>Restart=on-failure</code> and appropriate environment variables. Then write a pipeline script that deploys a new version and includes a rollback mechanism if the service fails to start after the update.</li>
+                <li>Audit the security of a CI/CD pipeline configuration you have written or found online. Identify at least three potential security issues (such as hardcoded secrets, unpinned action versions, or overly broad permissions) and describe how you would fix each one.</li>
+                <li>Design a complete CI/CD pipeline on paper (or in a YAML file) for a team of five developers working on a web application. Include stages for linting, unit testing, integration testing, building a Docker image, pushing it to a container registry, deploying to a staging environment, and promoting to production with a manual approval gate. Explain the Linux infrastructure needed to support each stage.</li>
+            </ol>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

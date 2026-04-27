@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Memory Map</title>
+    <meta content="mmap, short for memory map, is an operating system mechanism that maps a file or device directly into a process’s virtual memory address space." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/08_memory_map" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Memory Map",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/08_memory_map"
+            },
+            "url": "https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/08_memory_map",
+            "description": "mmap, short for memory map, is an operating system mechanism that maps a file or device directly into a process\u2019s virtual memory address space.",
+            "dateModified": "2026-04-27"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol><a href="#memory-map">Memory Map</a>
+                    <ol>
+                        <li><a href="#concepts">Concepts</a>
+                            <ol>
+                                <li><a href="#memory-mapped-files">Memory-Mapped Files</a></li>
+                                <li><a href="#virtual-memory-and-pages">Virtual Memory and Pages</a></li>
+                                <li><a href="#page-faults">Page Faults</a></li>
+                                <li><a href="#os-page-cache">OS Page Cache</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#basic-mmap-example">Basic mmap Example</a></li>
+                        <li><a href="#mmap-flags-and-modes">mmap Flags and Modes</a>
+                            <ol>
+                                <li><a href="#protection-flags">Protection Flags</a></li>
+                                <li><a href="#map_private">MAP_PRIVATE</a></li>
+                                <li><a href="#map_shared">MAP_SHARED</a></li>
+                                <li><a href="#anonymous-mapping">Anonymous Mapping</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#mmap-vs-read-">mmap vs read()</a></li>
+                        <li><a href="#common-usage-patterns">Common Usage Patterns</a>
+                            <ol>
+                                <li><a href="#large-file-parsing">Large File Parsing</a></li>
+                                <li><a href="#database-storage-engines">Database Storage Engines</a></li>
+                                <li><a href="#search-indexes">Search Indexes</a></li>
+                                <li><a href="#shared-memory-between-processes">Shared Memory Between Processes</a></li>
+                                <li><a href="#memory-mapped-logs">Memory-Mapped Logs</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#durability-and-flushing">Durability and Flushing</a></li>
+                        <li><a href="#mmap-and-performance">mmap and Performance</a>
+                            <ol>
+                                <li><a href="#benefits">Benefits</a></li>
+                                <li><a href="#costs">Costs</a></li>
+                                <li><a href="#sequential-vs-random-access">Sequential vs Random Access</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#mmap-safety-issues">mmap Safety Issues</a>
+                            <ol>
+                                <li><a href="#sigbus-when-file-is-truncated">SIGBUS When File Is Truncated</a></li>
+                                <li><a href="#bounds-checking">Bounds Checking</a></li>
+                                <li><a href="#concurrent-writes">Concurrent Writes</a></li>
+                                <li><a href="#file-format-corruption">File Format Corruption</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#mmap-in-system-design">mmap in System Design</a>
+                            <ol>
+                                <li><a href="#when-mmap-is-a-good-fit">When mmap Is a Good Fit</a></li>
+                                <li><a href="#when-mmap-is-a-poor-fit">When mmap Is a Poor Fit</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#concrete-example-memory-mapped-lookup-table">Concrete Example: Memory-Mapped Lookup Table</a></li>
+                        <li><a href="#concrete-example-shared-metrics-region">Concrete Example: Shared Metrics Region</a></li>
+                        <li><a href="#mmap-vs-database-buffer-pool">mmap vs Database Buffer Pool</a>
+                            <ol>
+                                <li><a href="#mmap-os-page-cache-approach">mmap / OS Page Cache Approach</a></li>
+                                <li><a href="#explicit-buffer-pool-approach">Explicit Buffer Pool Approach</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#monitoring-mmap-behavior">Monitoring mmap Behavior</a>
+                            <ol>
+                                <li><a href="#best-practices">Best Practices</a></li>
+                            </ol>
+                        </li>
+                    </ol>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Api Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/01_api_communication_protocols.html">Api Communication Protocols</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/02_rest.html">Rest</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/03_graphql.html">Graphql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/04_grpc.html">Grpc</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/05_state_management.html">State Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/06_data_transmission.html">Data Transmission</a></li>
+                        </ol>
+                    </li>
+                    <li>Network Communications<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/01_network_communications.html">Network Communications</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/02_tcp_and_udp.html">Tcp and Udp</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/03_http_protocol.html">Http Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/04_web_sockets.html">Web Sockets</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/05_metrics_and_analysis.html">Metrics and Analysis</a></li>
+                        </ol>
+                    </li>
+                    <li>Server Technologies<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/01_web_server_overview.html">Web Server Overview</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/02_static_dynamic_content.html">Static Dynamic Content</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/03_tomcat.html">Tomcat</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/04_apache.html">Apache</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/05_nginx.html">Nginx</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/06_forward_proxies.html">Forward Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/07_reverse_proxies.html">Reverse Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/08_load_balancing.html">Load Balancing</a></li>
+                        </ol>
+                    </li>
+                    <li>Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/01_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/02_transactions.html">Transactions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/03_indexes.html">Indexes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/04_isolation_levels.html">Isolation Levels</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/05_data_warehousing.html">Data Warehousing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/06_replication.html">Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/07_halloween_problem.html">Halloween Problem</a></li>
+                        </ol>
+                    </li>
+                    <li>Caching<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/01_caching_strategies.html">Caching Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/02_redis.html">Redis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/03_content_delivery_networks.html">Content Delivery Networks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/04_database_caching.html">Database Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/05_memcached.html">Memcached</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/06_http_caching.html">Http Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/07_application_level_caching.html">Application Level Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/08_memory_map.html">Memory Map</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Processing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/01_pub_sub_vs_queue.html">Pub Sub vs Queue</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/02_messaging_system_integration.html">Messaging System Integration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/03_batch_processing.html">Batch Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing.html">Stream Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/05_etl_and_pipelines.html">Etl and Pipelines</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/06_lambda_and_kappa_architecture.html">Lambda and Kappa Architecture</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/07_workflow_orchestration.html">Workflow Orchestration</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Formats<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/01_protocol_buffers.html">Protocol Buffers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/02_xml.html">Xml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/03_json.html">Json</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/04_yaml.html">Yaml</a></li>
+                        </ol>
+                    </li>
+                    <li>Security<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/01_auth.html">Auth</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/02_tls.html">Tls</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/03_security_vulnerabilities.html">Security Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/04_security_best_practices_and_measures.html">Security Best Practices and Measures</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/05_third_party_cookies_vulnerabilities.html">Third Party Cookies Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/06_secure_containers.html">Secure Containers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/07_credentials_management.html">Credentials Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/08_supply_chain_attacks.html">Supply Chain Attacks</a></li>
+                        </ol>
+                    </li>
+                    <li>Deployment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/01_centos_digital_ocean.html">Centos Digital Ocean</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/02_static_python_website_netlify.html">Static Python Website Netlify</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/03_docker.html">Docker</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/04_kubernetes.html">Kubernetes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/05_ci_cd.html">Ci Cd</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/06_deployment_strategies.html">Deployment Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/07_infrastructure_as_code.html">Infrastructure As Code</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Systems<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/01_coordination_services.html">Coordination Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/02_gossip_protocol.html">Gossip Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/03_linearizability.html">Linearizability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/04_concurrent_writes.html">Concurrent Writes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/05_operational_transform.html">Operational Transform</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/06_algorithms_summary.html">Algorithms Summary</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/07_optimistic_vs_pessimistic_locking.html">Optimistic vs Pessimistic Locking</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: April 27, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="memory-map">Memory Map</h2>
+            <p><code>mmap</code>, short for <strong>memory map</strong>, is an operating system mechanism that maps a file or device directly into a process’s virtual memory address space. Instead of reading file data explicitly with <code>read()</code> into a buffer, the application can access the file as if it were an array in memory. The operating system loads pages from disk into RAM on demand.</p>
+            <p><code>mmap</code> is commonly used in databases, search engines, embedded storage engines, file parsers, shared-memory communication, and high-performance systems that need efficient access to large files.</p>
+            <p>The key idea is that the application works with memory addresses, while the operating system handles paging data in and out.</p>
+            <div>
+                <pre><code class="language-text">+---------------------+
+| Application Process |
++----------+----------+
+           |
+           | reads memory address
+           v
++---------------------+
+| Virtual Memory      |
+| mmap region         |
++----------+----------+
+           |
+           | page fault if page not loaded
+           v
++---------------------+
+| OS Page Cache       |
++----------+----------+
+           |
+           | disk I/O if page not cached
+           v
++---------------------+
+| File on Disk        |
++---------------------+</code></pre>
+            </div>
+            <p>Example use case:</p>
+            <div>
+                <pre><code class="language-json">{
+  "file": "users.dat",
+  "size": "4GB",
+  "accessPattern": "random reads",
+  "approach": "map file into memory and access needed offsets"
+}</code></pre>
+            </div>
+            <p>With <code>mmap</code>, the process does not need to manually load the whole file. Pages are brought into memory as they are touched.</p>
+            <h3 id="concepts">Concepts</h3>
+            <p><code>mmap</code> sits at the boundary between file I/O and virtual memory. To understand it, it helps to understand virtual memory, pages, page faults, and the operating system page cache.</p>
+            <h4 id="memory-mapped-files">Memory-Mapped Files</h4>
+            <p>A memory-mapped file is a file whose contents are exposed as a range of virtual memory addresses.</p>
+            <p>Instead of doing this:</p>
+            <div>
+                <pre><code class="language-clike">read(fd, buffer, size);</code></pre>
+            </div>
+            <p>The application can do something like this:</p>
+            <div>
+                <pre><code class="language-clike">char *data = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
+char first_byte = data[0];</code></pre>
+            </div>
+            <p>The application accesses <code>data[0]</code> like normal memory. If that part of the file is not already in RAM, the operating system loads the corresponding page from disk.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-json">{
+  "fileOffset": 0,
+  "virtualAddress": "0x7f00...",
+  "access": "data[0]",
+  "osAction": "load page if needed"
+}</code></pre>
+            </div>
+            <p>The application does not directly manage the read buffer. The OS maps file pages into the process address space.</p>
+            <h4 id="virtual-memory-and-pages">Virtual Memory and Pages</h4>
+            <p>Operating systems manage memory in fixed-size chunks called <strong>pages</strong>. A common page size is 4 KiB, though larger pages also exist.</p>
+            <p>When a file is memory-mapped, the mapping is page-based. Accessing a byte causes the OS to load the whole page containing that byte.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">File:
+Offset 0       4096       8192       12288
+   | Page 0 | Page 1 | Page 2 | Page 3 |
+
+Access byte at offset 5000.
+OS loads Page 1.</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "accessedOffset": 5000,
+  "pageSize": 4096,
+  "loadedPage": 1
+}</code></pre>
+            </div>
+            <p>This matters because random access may cause many page faults, while sequential access allows the OS to read ahead efficiently.</p>
+            <h4 id="page-faults">Page Faults</h4>
+            <p>A page fault happens when the process accesses a mapped memory page that is not currently loaded into RAM.</p>
+            <p>For <code>mmap</code>, a page fault does not necessarily mean an error. It often means the OS must load the requested file page from disk into memory.</p>
+            <p>Example flow:</p>
+            <div>
+                <pre><code class="language-text">1. Application accesses mapped address.
+2. Page is not in RAM.
+3. CPU triggers page fault.
+4. Kernel loads file page from disk or page cache.
+5. Application continues as if it read memory.</code></pre>
+            </div>
+            <p>Example page fault result:</p>
+            <div>
+                <pre><code class="language-json">{
+  "event": "page_fault",
+  "pageLoadedFrom": "disk",
+  "applicationVisibleError": false
+}</code></pre>
+            </div>
+            <p>Page faults are normal, but too many major page faults can hurt performance because they require disk I/O.</p>
+            <h4 id="os-page-cache">OS Page Cache</h4>
+            <p>The OS page cache stores file data in RAM. Both <code>read()</code> and <code>mmap()</code> usually use the page cache.</p>
+            <p>With <code>read()</code>, the kernel copies data from the page cache into an application buffer. With <code>mmap()</code>, the application can access the page cache-backed memory more directly.</p>
+            <p>Simplified comparison:</p>
+            <div>
+                <pre><code class="language-text">read():
+Disk -&gt; OS page cache -&gt; copy into user buffer -&gt; application
+
+mmap():
+Disk -&gt; OS page cache -&gt; mapped into process address space -&gt; application</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-json">{
+  "read": "requires explicit syscall and copy into buffer",
+  "mmap": "uses page faults and mapped pages"
+}</code></pre>
+            </div>
+            <p>This can make <code>mmap</code> attractive for workloads that repeatedly access parts of large files.</p>
+            <h3 id="basic-mmap-example">Basic mmap Example</h3>
+            <p>A simple example is mapping a file and reading bytes from it.</p>
+            <p>Example C code:</p>
+            <div>
+                <pre><code class="language-clike">#include &lt;fcntl.h&gt;
+#include &lt;sys/mman.h&gt;
+#include &lt;sys/stat.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;stdio.h&gt;
+
+int main() {
+    int fd = open("example.txt", O_RDONLY);
+
+    struct stat st;
+    fstat(fd, &amp;st);
+
+    char *data = mmap(
+        NULL,
+        st.st_size,
+        PROT_READ,
+        MAP_PRIVATE,
+        fd,
+        0
+    );
+
+    if (data == MAP_FAILED) {
+        perror("mmap");
+        return 1;
+    }
+
+    printf("First byte: %c\n", data[0]);
+
+    munmap(data, st.st_size);
+    close(fd);
+
+    return 0;
+}</code></pre>
+            </div>
+            <p>Example file:</p>
+            <div>
+                <pre><code class="language-text">Hello mmap!</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">First byte: H</code></pre>
+            </div>
+            <p>The file is accessed through memory. The OS loads file pages as needed.</p>
+            <h3 id="mmap-flags-and-modes">mmap Flags and Modes</h3>
+            <p><code>mmap</code> behavior depends on protection flags and mapping flags. These define whether the memory can be read, written, shared, or private.</p>
+            <h4 id="protection-flags">Protection Flags</h4>
+            <p>Protection flags describe what the process is allowed to do with the mapped memory.</p>
+            <p>Common flags:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Flag</td>
+                    <td>Meaning</td>
+                </tr>
+                <tr>
+                    <td><code>PROT_READ</code></td>
+                    <td>Pages can be read</td>
+                </tr>
+                <tr>
+                    <td><code>PROT_WRITE</code></td>
+                    <td>Pages can be written</td>
+                </tr>
+                <tr>
+                    <td><code>PROT_EXEC</code></td>
+                    <td>Pages can be executed</td>
+                </tr>
+                <tr>
+                    <td><code>PROT_NONE</code></td>
+                    <td>Pages cannot be accessed</td>
+                </tr>
+            </table>
+            </p>
+            <p>Example read-only mapping:</p>
+            <div>
+                <pre><code class="language-clike">mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);</code></pre>
+            </div>
+            <p>Example read-write mapping:</p>
+            <div>
+                <pre><code class="language-clike">mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);</code></pre>
+            </div>
+            <p>Example result:</p>
+            <div>
+                <pre><code class="language-json">{
+  "protection": ["read", "write"],
+  "writesAllowed": true
+}</code></pre>
+            </div>
+            <p>Do not map data as executable unless you truly need executable memory. Executable mappings can increase security risk.</p>
+            <h4 id="map_private">MAP_PRIVATE</h4>
+            <p><code>MAP_PRIVATE</code> creates a private copy-on-write mapping. Changes made by the process are not written back to the original file.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-clike">char *data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+data[0] = 'X';</code></pre>
+            </div>
+            <p>The process sees the modified byte, but the file is unchanged.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-json">{
+  "mapping": "MAP_PRIVATE",
+  "processSeesChange": true,
+  "fileChanged": false
+}</code></pre>
+            </div>
+            <p><code>MAP_PRIVATE</code> is useful when you want to read a file and possibly modify the mapped memory without altering the file.</p>
+            <h4 id="map_shared">MAP_SHARED</h4>
+            <p><code>MAP_SHARED</code> allows changes to be written back to the mapped file and potentially seen by other processes mapping the same file.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-clike">char *data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+data[0] = 'X';
+msync(data, size, MS_SYNC);</code></pre>
+            </div>
+            <p>Example result:</p>
+            <div>
+                <pre><code class="language-json">{
+  "mapping": "MAP_SHARED",
+  "fileChanged": true,
+  "otherProcessesCanSeeChange": true
+}</code></pre>
+            </div>
+            <p><code>MAP_SHARED</code> is useful for file-backed shared state, memory-mapped databases, and inter-process communication. It also requires more care because writes affect persistent data.</p>
+            <h4 id="anonymous-mapping">Anonymous Mapping</h4>
+            <p><code>mmap</code> can also allocate memory not backed by a file. This is called anonymous mapping.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-clike">void *mem = mmap(
+    NULL,
+    4096,
+    PROT_READ | PROT_WRITE,
+    MAP_PRIVATE | MAP_ANONYMOUS,
+    -1,
+    0
+);</code></pre>
+            </div>
+            <p>Example result:</p>
+            <div>
+                <pre><code class="language-json">{
+  "mapping": "anonymous",
+  "backingFile": false,
+  "useCase": "allocate memory directly from OS"
+}</code></pre>
+            </div>
+            <p>Anonymous mappings are used by memory allocators, runtimes, shared memory systems, and low-level infrastructure.</p>
+            <h3 id="mmap-vs-read-">mmap vs read()</h3>
+            <p>Both <code>mmap</code> and <code>read()</code> can be used to access file data, but they have different trade-offs.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Aspect</td>
+                    <td><code>read()</code></td>
+                    <td><code>mmap()</code></td>
+                </tr>
+                <tr>
+                    <td>Programming model</td>
+                    <td>Explicit read into buffer</td>
+                    <td>Access file as memory</td>
+                </tr>
+                <tr>
+                    <td>Syscalls</td>
+                    <td>Repeated reads may require repeated syscalls</td>
+                    <td>Initial mapping, then page faults</td>
+                </tr>
+                <tr>
+                    <td>Copying</td>
+                    <td>Kernel copies data to user buffer</td>
+                    <td>Can avoid some copying</td>
+                </tr>
+                <tr>
+                    <td>Access pattern</td>
+                    <td>Good for streaming sequential reads</td>
+                    <td>Good for random access and repeated reads</td>
+                </tr>
+                <tr>
+                    <td>Error model</td>
+                    <td><code>read()</code> returns errors directly</td>
+                    <td>Access may trigger signals such as <code>SIGBUS</code></td>
+                </tr>
+                <tr>
+                    <td>Memory pressure</td>
+                    <td>Application controls buffers</td>
+                    <td>OS controls mapped pages</td>
+                </tr>
+                <tr>
+                    <td>Complexity</td>
+                    <td>Simpler</td>
+                    <td>More subtle edge cases</td>
+                </tr>
+            </table>
+            </p>
+            <p>Example sequential read:</p>
+            <div>
+                <pre><code class="language-clike">while ((n = read(fd, buffer, sizeof(buffer))) &gt; 0) {
+    process(buffer, n);
+}</code></pre>
+            </div>
+            <p>This is simple and often excellent for streaming through a file once.</p>
+            <p>Example random access with <code>mmap</code>:</p>
+            <div>
+                <pre><code class="language-clike">record = data + record_offset;
+process(record);</code></pre>
+            </div>
+            <p>This is convenient when the application frequently jumps to different offsets.</p>
+            <p>Example decision:</p>
+            <div>
+                <pre><code class="language-json">{
+  "useReadFor": "simple sequential streaming",
+  "useMmapFor": "large files with random or repeated access"
+}</code></pre>
+            </div>
+            <p><code>mmap</code> is not always faster. Its performance depends on workload, access pattern, file size, memory pressure, and page fault behavior.</p>
+            <h3 id="common-usage-patterns">Common Usage Patterns</h3>
+            <p><code>mmap</code> appears in many systems where file data is large, structured, or accessed repeatedly.</p>
+            <h4 id="large-file-parsing">Large File Parsing</h4>
+            <p>If a file is large and the application needs random access to parts of it, <code>mmap</code> can simplify parsing.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-json">{
+  "file": "index.bin",
+  "size": "20GB",
+  "accessPattern": "random lookup by offset",
+  "mmapBenefit": "avoid manual read/seek buffer management"
+}</code></pre>
+            </div>
+            <p>Example access:</p>
+            <div>
+                <pre><code class="language-clike">char *record = mapped_file + offset;</code></pre>
+            </div>
+            <p>This is common in search indexes, binary formats, and read-only data files.</p>
+            <h4 id="database-storage-engines">Database Storage Engines</h4>
+            <p>Some storage engines use memory-mapped files to access database pages. Instead of managing their own buffer pool entirely, they rely partly on the OS page cache.</p>
+            <p>Example conceptual database page access:</p>
+            <div>
+                <pre><code class="language-text">Database needs page 42.
+Page 42 corresponds to file offset 42 * page_size.
+Storage engine reads mapped memory at that offset.
+OS loads page if needed.</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-json">{
+  "databasePage": 42,
+  "pageSize": 4096,
+  "fileOffset": 172032
+}</code></pre>
+            </div>
+            <p>Some embedded databases and older storage designs rely heavily on <code>mmap</code>. Other databases prefer explicit I/O and their own buffer pool to control caching more precisely.</p>
+            <h4 id="search-indexes">Search Indexes</h4>
+            <p>Search engines often store index segments as immutable files. <code>mmap</code> is a good fit for read-only or mostly read-only index files because the OS can page in only the portions that are queried.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-json">{
+  "segment": "index_segment_17",
+  "mapping": "read-only",
+  "accessPattern": "random term lookups"
+}</code></pre>
+            </div>
+            <p>When a query touches a term dictionary or posting list, the relevant pages are loaded on demand.</p>
+            <h4 id="shared-memory-between-processes">Shared Memory Between Processes</h4>
+            <p>Multiple processes can map the same file with <code>MAP_SHARED</code> and communicate through it.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">Process A maps shared.dat.
+Process B maps shared.dat.
+Process A writes value.
+Process B reads value.</code></pre>
+            </div>
+            <p>Example shared state:</p>
+            <div>
+                <pre><code class="language-json">{
+  "sharedCounter": 42,
+  "visibleToProcesses": ["process-a", "process-b"]
+}</code></pre>
+            </div>
+            <p>This can be very fast, but synchronization is required. <code>mmap</code> itself does not provide locks or atomic coordination. Processes must use mutexes, futexes, semaphores, file locks, or atomic operations where appropriate.</p>
+            <h4 id="memory-mapped-logs">Memory-Mapped Logs</h4>
+            <p>Some systems use memory-mapped files for append-heavy logs or queue-like structures. The application writes to mapped memory, and the OS flushes dirty pages to disk.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-json">{
+  "file": "commit.log",
+  "mapping": "MAP_SHARED",
+  "writePattern": "append records",
+  "flush": "msync or OS writeback"
+}</code></pre>
+            </div>
+            <p>This can reduce syscall overhead, but durability must be handled carefully. A write to mapped memory is not necessarily durable until flushed.</p>
+            <h3 id="durability-and-flushing">Durability and Flushing</h3>
+            <p>With <code>MAP_SHARED</code>, writes modify memory-backed file pages. The OS eventually flushes dirty pages to disk, but not necessarily immediately.</p>
+            <p>To force flushing, applications can use <code>msync</code>.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-clike">data[0] = 'X';
+msync(data, size, MS_SYNC);</code></pre>
+            </div>
+            <p>Example result:</p>
+            <div>
+                <pre><code class="language-json">{
+  "writeVisibleInMemory": true,
+  "msyncCalled": true,
+  "writeRequestedToDisk": true
+}</code></pre>
+            </div>
+            <p>Important distinction:</p>
+            <div>
+                <pre><code class="language-text">Writing to mmap memory changes the mapped page.
+It does not automatically mean the data is safely persisted to disk immediately.</code></pre>
+            </div>
+            <p>If the system crashes before dirty pages are flushed, recent changes may be lost.</p>
+            <p>For stronger durability, applications may need:</p>
+            <div>
+                <pre><code class="language-text">msync()
+fsync()
+careful write ordering
+checksums
+journaling
+copy-on-write formats</code></pre>
+            </div>
+            <p>This is why database systems must be careful when using <code>mmap</code> for writable files.</p>
+            <h3 id="mmap-and-performance">mmap and Performance</h3>
+            <p><code>mmap</code> can improve performance in some cases, but it can also cause performance surprises.</p>
+            <h4 id="benefits">Benefits</h4>
+            <p><code>mmap</code> can reduce syscall overhead because the application does not need to call <code>read()</code> for every small access. It can also avoid copying data from kernel buffers into user-space buffers.</p>
+            <p>Example benefit:</p>
+            <div>
+                <pre><code class="language-json">{
+  "workload": "random reads from large immutable index",
+  "benefit": "OS loads only touched pages"
+}</code></pre>
+            </div>
+            <p>It can also simplify code for random access:</p>
+            <div>
+                <pre><code class="language-clike">uint32_t value = *(uint32_t *)(data + offset);</code></pre>
+            </div>
+            <p>The file behaves like a memory array.</p>
+            <h4 id="costs">Costs</h4>
+            <p><code>mmap</code> can be slower if it causes many random page faults. A page fault is more expensive than a simple memory access, especially if it requires disk I/O.</p>
+            <p>Example problem:</p>
+            <div>
+                <pre><code class="language-json">{
+  "accessPattern": "random access across 500GB file",
+  "ram": "32GB",
+  "problem": "constant major page faults"
+}</code></pre>
+            </div>
+            <p>Memory pressure can also cause mapped pages to be evicted, leading to repeated page faults.</p>
+            <p>Another cost is less explicit control. With <code>read()</code>, the application decides exactly what to load and when. With <code>mmap</code>, the OS decides paging behavior.</p>
+            <h4 id="sequential-vs-random-access">Sequential vs Random Access</h4>
+            <p>For simple sequential scans, <code>read()</code> can be just as good or better because it is predictable and easy for the OS to prefetch.</p>
+            <p>For random access, <code>mmap</code> can be more convenient and sometimes faster because the application can jump directly to offsets.</p>
+            <p>Example decision:</p>
+            <div>
+                <pre><code class="language-json">{
+  "sequentialLogProcessing": "read() is often simpler",
+  "randomIndexLookup": "mmap may be convenient and efficient"
+}</code></pre>
+            </div>
+            <p>The best choice should be tested with the real workload.</p>
+            <h3 id="mmap-safety-issues">mmap Safety Issues</h3>
+            <p><code>mmap</code> introduces some edge cases that are different from normal file reads.</p>
+            <h4 id="sigbus-when-file-is-truncated">SIGBUS When File Is Truncated</h4>
+            <p>If a file is mapped and another process truncates it, the original process may crash with <code>SIGBUS</code> when it accesses a part of the mapping that no longer exists.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">Process A maps file of size 1GB.
+Process B truncates file to 1MB.
+Process A accesses offset 500MB.
+Process A receives SIGBUS.</code></pre>
+            </div>
+            <p>Example risk:</p>
+            <div>
+                <pre><code class="language-json">{
+  "error": "SIGBUS",
+  "cause": "mapped region no longer backed by file"
+}</code></pre>
+            </div>
+            <p>This is one of the most important <code>mmap</code> hazards. Applications should coordinate file truncation carefully or avoid mapping files that may shrink unexpectedly.</p>
+            <h4 id="bounds-checking">Bounds Checking</h4>
+            <p>Accessing beyond the mapped size is unsafe and may crash the process.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-clike">char value = data[size + 10]; // invalid access</code></pre>
+            </div>
+            <p>Example result:</p>
+            <div>
+                <pre><code class="language-json">{
+  "access": "out of bounds",
+  "result": "undefined behavior or crash"
+}</code></pre>
+            </div>
+            <p>Applications must track file sizes and offsets carefully.</p>
+            <h4 id="concurrent-writes">Concurrent Writes</h4>
+            <p>If multiple processes write to the same mapped region, the result can be corrupted unless synchronization is used.</p>
+            <p>Example unsafe behavior:</p>
+            <div>
+                <pre><code class="language-text">Process A writes counter = counter + 1.
+Process B writes counter = counter + 1.
+Both read old value 10.
+Both write 11.
+Expected 12, actual 11.</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "expectedCounter": 12,
+  "actualCounter": 11,
+  "problem": "lost update"
+}</code></pre>
+            </div>
+            <p><code>mmap</code> shares memory, but it does not automatically make updates atomic or safe.</p>
+            <h4 id="file-format-corruption">File Format Corruption</h4>
+            <p>Writable mappings can corrupt files if the process crashes halfway through an update.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-json">{
+  "operation": "update record header and body",
+  "crashAfter": "header updated",
+  "bodyUpdated": false,
+  "fileState": "inconsistent"
+}</code></pre>
+            </div>
+            <p>Robust systems use checksums, journaling, copy-on-write pages, versioned records, or append-only designs to recover from partial writes.</p>
+            <h3 id="mmap-in-system-design">mmap in System Design</h3>
+            <p>In system design, <code>mmap</code> often appears when discussing storage engines, search systems, local indexes, high-performance file access, or shared memory.</p>
+            <h4 id="when-mmap-is-a-good-fit">When mmap Is a Good Fit</h4>
+            <p><code>mmap</code> is a good fit when:</p>
+            <div>
+                <pre><code class="language-text">The file is large.
+Access is random or repeated.
+The file format is offset-addressable.
+The data is mostly read-only.
+The OS page cache is acceptable.
+The application benefits from simpler pointer-like access.</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-json">{
+  "system": "search index server",
+  "data": "immutable index segments",
+  "reason": "random term lookups over large files"
+}</code></pre>
+            </div>
+            <p>Immutable or append-only files are especially good candidates because they avoid many concurrency and corruption problems.</p>
+            <h4 id="when-mmap-is-a-poor-fit">When mmap Is a Poor Fit</h4>
+            <p><code>mmap</code> may be a poor fit when:</p>
+            <div>
+                <pre><code class="language-text">The file changes size frequently.
+The file may be truncated by other processes.
+The workload is simple sequential streaming.
+The application needs strict control over I/O scheduling.
+The system must handle memory pressure predictably.
+The data requires complex transactional durability.</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-json">{
+  "system": "high-throughput transactional database",
+  "concern": "needs explicit buffer pool and write ordering",
+  "mmapFit": "maybe poor"
+}</code></pre>
+            </div>
+            <p>Many databases avoid relying fully on <code>mmap</code> because they want tighter control over caching, eviction, prefetching, and write durability.</p>
+            <h3 id="concrete-example-memory-mapped-lookup-table">Concrete Example: Memory-Mapped Lookup Table</h3>
+            <p>Suppose an application has a large read-only binary lookup table. Each record is fixed-width and exactly 128 bytes.</p>
+            <p>Record location:</p>
+            <div>
+                <pre><code class="language-text">offset = record_id * 128</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-json">{
+  "recordId": 1000,
+  "recordSize": 128,
+  "offset": 128000
+}</code></pre>
+            </div>
+            <p>With <code>mmap</code>, the application can jump directly to that offset:</p>
+            <div>
+                <pre><code class="language-clike">char *record = data + (record_id * 128);</code></pre>
+            </div>
+            <p>Example result:</p>
+            <div>
+                <pre><code class="language-json">{
+  "lookup": "record 1000",
+  "method": "direct offset into mapped file",
+  "databaseQuery": false
+}</code></pre>
+            </div>
+            <p>This is useful for local indexes, embedded read-only databases, dictionaries, and precomputed lookup tables.</p>
+            <h3 id="concrete-example-shared-metrics-region">Concrete Example: Shared Metrics Region</h3>
+            <p>Two processes can share a memory-mapped file for fast local metrics exchange.</p>
+            <p>Process A writes:</p>
+            <div>
+                <pre><code class="language-clike">metrics-&gt;request_count += 1;</code></pre>
+            </div>
+            <p>Process B reads:</p>
+            <div>
+                <pre><code class="language-clike">printf("%lu\n", metrics-&gt;request_count);</code></pre>
+            </div>
+            <p>Conceptual layout:</p>
+            <div>
+                <pre><code class="language-text">+--------------------+
+| shared_metrics.dat |
++--------------------+
+| request_count      |
+| error_count        |
+| last_update_time   |
++--------------------+</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "request_count": 154220,
+  "error_count": 32
+}</code></pre>
+            </div>
+            <p>This can be extremely fast, but only if synchronization is correct. For counters, atomic operations may be needed.</p>
+            <h3 id="mmap-vs-database-buffer-pool">mmap vs Database Buffer Pool</h3>
+            <p>Some databases rely on the OS page cache through <code>mmap</code>, while others implement their own buffer pool using explicit I/O.</p>
+            <h4 id="mmap-os-page-cache-approach">mmap / OS Page Cache Approach</h4>
+            <div>
+                <pre><code class="language-text">Database reads mapped file.
+OS decides which pages stay in RAM.
+Page faults load data when touched.</code></pre>
+            </div>
+            <p>Benefits:</p>
+            <div>
+                <pre><code class="language-json">{
+  "benefit": [
+    "simpler storage engine code",
+    "OS handles caching",
+    "good for read-heavy mapped files"
+  ]
+}</code></pre>
+            </div>
+            <h4 id="explicit-buffer-pool-approach">Explicit Buffer Pool Approach</h4>
+            <div>
+                <pre><code class="language-text">Database issues read/write calls.
+Database manages its own page cache.
+Database controls eviction, prefetch, and dirty page flushing.</code></pre>
+            </div>
+            <p>Benefits:</p>
+            <div>
+                <pre><code class="language-json">{
+  "benefit": [
+    "more predictable database behavior",
+    "custom eviction policy",
+    "tighter control over durability"
+  ]
+}</code></pre>
+            </div>
+            <p>This trade-off is important in storage engine design. <code>mmap</code> gives simplicity and OS integration, while a custom buffer pool gives control.</p>
+            <h3 id="monitoring-mmap-behavior">Monitoring mmap Behavior</h3>
+            <p>Because <code>mmap</code> performance depends on paging, monitor memory and page fault behavior.</p>
+            <p>Useful things to watch:</p>
+            <div>
+                <pre><code class="language-text">major page faults
+minor page faults
+resident set size
+page cache usage
+I/O wait
+disk read latency
+memory pressure
+swap activity</code></pre>
+            </div>
+            <p>Example monitoring output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "minorPageFaultsPerSecond": 12000,
+  "majorPageFaultsPerSecond": 4,
+  "rss": "2.4GB",
+  "mappedFileSize": "80GB",
+  "ioWait": "3%"
+}</code></pre>
+            </div>
+            <p>Minor page faults usually mean the page was already in memory but needed to be mapped into the process. Major page faults usually require disk I/O and are more expensive.</p>
+            <p>High major page faults may indicate that the working set is larger than available memory.</p>
+            <h4 id="best-practices">Best Practices</h4>
+            <ol>
+                <li><strong>Use mmap for large, mostly read-only files with random access</strong> This is one of the best fits.</li>
+                <li><strong>Avoid mapping files that may be truncated unexpectedly</strong> Truncation can cause <code>SIGBUS</code>.</li>
+                <li><strong>Track file sizes and offsets carefully</strong> Out-of-bounds access can crash the process.</li>
+                <li><strong>Use <code>MAP_PRIVATE</code> for read-mostly data that should not modify the file</strong> It protects the file from accidental writes.</li>
+                <li><strong>Use <code>MAP_SHARED</code> only when writes should affect the underlying file</strong> Combine it with <code>msync</code> and careful durability design.</li>
+                <li><strong>Synchronize concurrent writers</strong> <code>mmap</code> does not automatically prevent races.</li>
+                <li><strong>Test with realistic access patterns</strong> <code>mmap</code> performance depends heavily on sequential vs random access and memory pressure.</li>
+                <li><strong>Monitor major page faults</strong> High major fault rates can cause latency spikes.</li>
+                <li><strong>Do not assume mmap is always faster than read</strong> Benchmark the real workload.</li>
+                <li><strong>Design crash-safe file formats for writable mappings</strong> Use checksums, append-only writes, journaling, or copy-on-write techniques.</li>
+            </ol>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

@@ -14,9 +14,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
-PLAYLIST_URL = "https://www.youtube.com/playlist?list=PLjHlsBDcsWnNzmNAsb-LjVElCO3gUZbbV"
+PLAYLIST_URL = (
+    "https://www.youtube.com/playlist?list=PLjHlsBDcsWnNzmNAsb-LjVElCO3gUZbbV"
+)
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 COURSE_ROOT = ROOT_DIR / "src" / "courses" / "algorithms_and_data_structures"
@@ -31,7 +35,7 @@ class Video:
     video_id: str
     title: str
     description: str
-    index: int  # 0-based position in playlist
+    index: int
 
 
 def _slugify(text: str) -> str:
@@ -81,13 +85,13 @@ def _format_description(description: str) -> str:
     for block in re.split(r"\n{2,}", description.strip()):
         lines = block.strip().splitlines()
         escaped = "<br>\n".join(html_mod.escape(l) for l in lines)
-        # Convert URLs to links
+
         escaped = re.sub(
             r"(https?://[^\s<]+)",
             r'<a href="\1" target="_blank" rel="noopener">\1</a>',
             escaped,
         )
-        # Convert timestamps like 0:00 or 1:23:45 to bold
+
         escaped = re.sub(
             r"\b(\d{1,2}:\d{2}(?::\d{2})?)\b",
             r"<strong>\1</strong>",
@@ -101,7 +105,6 @@ def build_lesson_pages(videos: List[Video]) -> None:
     """Build all per-video lesson pages with correct prev/next links."""
     LESSONS_DIR.mkdir(parents=True, exist_ok=True)
 
-    # First pass: compute slugs
     slugs = [_slugify(f"{v.index + 1:02d}_{v.title}") for v in videos]
 
     for i, video in enumerate(videos):
@@ -109,19 +112,21 @@ def build_lesson_pages(videos: List[Video]) -> None:
         safe_title = html_mod.escape(video.title)
         description_html = _format_description(video.description)
 
-        # Prev/next
         prev_link = ""
         next_link = ""
         if i > 0:
             prev_link = f'<a href="./{slugs[i-1]}.html" class="lesson-nav-prev">&larr; Previous</a>'
         if i < len(videos) - 1:
-            next_link = f'<a href="./{slugs[i+1]}.html" class="lesson-nav-next">Next &rarr;</a>'
+            next_link = (
+                f'<a href="./{slugs[i+1]}.html" class="lesson-nav-next">Next &rarr;</a>'
+            )
 
         footer_html = ""
         if FOOTER_TEMPLATE.exists():
             footer_html = FOOTER_TEMPLATE.read_text(encoding="utf-8")
 
-        page = textwrap.dedent(f"""\
+        page = textwrap.dedent(
+            f"""\
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -244,7 +249,8 @@ def build_lesson_pages(videos: List[Video]) -> None:
                     loading="lazy">
                 </iframe>
             </div>
-""")
+"""
+        )
 
         if description_html:
             page += f'        <div class="video-description">\n{description_html}\n        </div>\n'
@@ -279,7 +285,7 @@ def update_course_page(videos: List[Video]) -> None:
         thumb = f"https://img.youtube.com/vi/{video.video_id}/mqdefault.jpg"
         cards.append(
             f'<a href="./lessons/{slugs[i]}.html" class="tool-card">'
-            f"<img src=\"{thumb}\" alt=\"{safe_title}\" loading=\"lazy\" "
+            f'<img src="{thumb}" alt="{safe_title}" loading="lazy" '
             f'style="width:100%;border-radius:6px 6px 0 0;aspect-ratio:16/9;object-fit:cover;">'
             f"<h3>{i + 1}. {safe_title}</h3>"
             f"</a>"

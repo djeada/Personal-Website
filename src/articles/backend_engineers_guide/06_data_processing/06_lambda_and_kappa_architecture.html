@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Lambda and Kappa Architecture</title>
+    <meta content="As data volumes grew and real-time analytics became a business requirement, engineers needed architectural patterns that could handle both historical re-computation and low-latency stream processing reliably." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/06_lambda_and_kappa_architecture" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Lambda and Kappa Architecture",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/06_lambda_and_kappa_architecture"
+            },
+            "url": "https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/06_lambda_and_kappa_architecture",
+            "description": "As data volumes grew and real-time analytics became a business requirement, engineers needed architectural patterns that could handle both historical re-computation and low-latency stream processing reliably.",
+            "dateModified": "2026-04-27"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol><a href="#lambda-and-kappa-architecture">Lambda and Kappa Architecture</a>
+                    <ol>
+                        <li><a href="#lambda-architecture">Lambda Architecture</a>
+                            <ol>
+                                <li><a href="#batch-layer">Batch Layer</a></li>
+                                <li><a href="#speed-layer">Speed Layer</a></li>
+                                <li><a href="#serving-layer">Serving Layer</a></li>
+                                <li><a href="#lambda-architecture-trade-offs">Lambda Architecture Trade-offs</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#kappa-architecture">Kappa Architecture</a>
+                            <ol>
+                                <li><a href="#re-processing-in-kappa">Re-processing in Kappa</a></li>
+                                <li><a href="#kappa-architecture-trade-offs">Kappa Architecture Trade-offs</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#choosing-between-lambda-and-kappa">Choosing Between Lambda and Kappa</a></li>
+                        <li><a href="#real-world-implementations">Real-World Implementations</a></li>
+                        <li><a href="#modern-hybrid-approaches">Modern Hybrid Approaches</a></li>
+                    </ol>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Api Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/01_api_communication_protocols.html">Api Communication Protocols</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/02_rest.html">Rest</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/03_graphql.html">Graphql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/04_grpc.html">Grpc</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/05_state_management.html">State Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/06_data_transmission.html">Data Transmission</a></li>
+                        </ol>
+                    </li>
+                    <li>Network Communications<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/01_network_communications.html">Network Communications</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/02_tcp_and_udp.html">Tcp and Udp</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/03_http_protocol.html">Http Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/04_web_sockets.html">Web Sockets</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/05_metrics_and_analysis.html">Metrics and Analysis</a></li>
+                        </ol>
+                    </li>
+                    <li>Server Technologies<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/01_web_server_overview.html">Web Server Overview</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/02_static_dynamic_content.html">Static Dynamic Content</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/03_tomcat.html">Tomcat</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/04_apache.html">Apache</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/05_nginx.html">Nginx</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/06_forward_proxies.html">Forward Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/07_reverse_proxies.html">Reverse Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/08_load_balancing.html">Load Balancing</a></li>
+                        </ol>
+                    </li>
+                    <li>Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/01_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/02_transactions.html">Transactions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/03_indexes.html">Indexes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/04_isolation_levels.html">Isolation Levels</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/05_data_warehousing.html">Data Warehousing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/06_replication.html">Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/07_halloween_problem.html">Halloween Problem</a></li>
+                        </ol>
+                    </li>
+                    <li>Caching<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/01_caching_strategies.html">Caching Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/02_redis.html">Redis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/03_content_delivery_networks.html">Content Delivery Networks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/04_database_caching.html">Database Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/05_memcached.html">Memcached</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/06_http_caching.html">Http Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/07_application_level_caching.html">Application Level Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/08_memory_map.html">Memory Map</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Processing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/01_pub_sub_vs_queue.html">Pub Sub vs Queue</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/02_messaging_system_integration.html">Messaging System Integration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/03_batch_processing.html">Batch Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing.html">Stream Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/05_etl_and_pipelines.html">Etl and Pipelines</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/06_lambda_and_kappa_architecture.html">Lambda and Kappa Architecture</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/07_workflow_orchestration.html">Workflow Orchestration</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Formats<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/01_protocol_buffers.html">Protocol Buffers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/02_xml.html">Xml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/03_json.html">Json</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/04_yaml.html">Yaml</a></li>
+                        </ol>
+                    </li>
+                    <li>Security<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/01_auth.html">Auth</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/02_tls.html">Tls</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/03_security_vulnerabilities.html">Security Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/04_security_best_practices_and_measures.html">Security Best Practices and Measures</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/05_third_party_cookies_vulnerabilities.html">Third Party Cookies Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/06_secure_containers.html">Secure Containers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/07_credentials_management.html">Credentials Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/08_supply_chain_attacks.html">Supply Chain Attacks</a></li>
+                        </ol>
+                    </li>
+                    <li>Deployment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/01_centos_digital_ocean.html">Centos Digital Ocean</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/02_static_python_website_netlify.html">Static Python Website Netlify</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/03_docker.html">Docker</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/04_kubernetes.html">Kubernetes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/05_ci_cd.html">Ci Cd</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/06_deployment_strategies.html">Deployment Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/07_infrastructure_as_code.html">Infrastructure As Code</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Systems<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/01_coordination_services.html">Coordination Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/02_gossip_protocol.html">Gossip Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/03_linearizability.html">Linearizability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/04_concurrent_writes.html">Concurrent Writes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/05_operational_transform.html">Operational Transform</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/06_algorithms_summary.html">Algorithms Summary</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/07_optimistic_vs_pessimistic_locking.html">Optimistic vs Pessimistic Locking</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: April 27, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="lambda-and-kappa-architecture">Lambda and Kappa Architecture</h2>
+            <p>As data volumes grew and real-time analytics became a business requirement, engineers needed architectural patterns that could handle both <strong>historical re-computation</strong> and <strong>low-latency stream processing</strong> reliably. Lambda and Kappa architectures are the two dominant answers to that challenge.</p>
+            <h3 id="lambda-architecture">Lambda Architecture</h3>
+            <p>Lambda architecture, popularised by Nathan Marz, splits processing into three independent layers that run simultaneously. The key insight is that <strong>immutable raw data</strong> stored in the batch layer is the single source of truth, while the speed layer only provides low-latency approximations that are eventually superseded by accurate batch results.</p>
+            <div>
+                <pre><code class="language-shell">Lambda Architecture
+
+  Incoming Data Stream
+         |
+         v
++--------+--------+
+|                 |
+|   Batch Layer   |  &lt;-- immutable raw store (HDFS, S3, Delta Lake)
+|                 |      recomputes full views periodically
++--------+--------+
+         |
+         v (batch views, hours to days old)
++--------+--------+
+|                 |
+|  Serving Layer  |  &lt;-- merges batch view + speed view to answer queries
+|                 |
++--------+--------+
+         ^
+         | (real-time view, seconds to minutes old)
++--------+--------+
+|                 |
+|   Speed Layer   |  &lt;-- stream processor (Kafka + Flink / Spark Streaming)
+|                 |      low-latency, eventually replaced by batch view
++-----------------+</code></pre>
+            </div>
+            <h4 id="batch-layer">Batch Layer</h4>
+            <p>The batch layer stores all raw, immutable data and periodically runs large-scale compute jobs to produce <strong>batch views</strong> – pre-aggregated, correct, complete results.</p>
+            <ul>
+                <li>All incoming events are <strong>appended</strong> to the master dataset; nothing is ever updated or deleted.</li>
+                <li>Batch jobs process the entire history from scratch to compute views, eliminating complex incremental update logic.</li>
+                <li>Results are written to read-optimised storage (Parquet files, columnar tables) accessible by the serving layer.</li>
+                <li>Technologies: <strong>Apache Hadoop MapReduce</strong>, <strong>Apache Spark</strong>, <strong>Apache Hive</strong>, <strong>Presto/Trino</strong>.</li>
+            </ul>
+            <h4 id="speed-layer">Speed Layer</h4>
+            <p>The speed layer compensates for the high latency of batch jobs by processing new events in real time and producing <strong>speed views</strong> that cover the gap since the last batch run.</p>
+            <ul>
+                <li>Only the most <strong>recent</strong> data (since the last completed batch view) needs to be processed.</li>
+                <li>Because accuracy is eventually guaranteed by the batch layer, the speed layer can use approximate or simplified algorithms.</li>
+                <li>Speed views are <strong>discarded</strong> and replaced once a new batch view incorporating that period has been computed.</li>
+                <li>Technologies: <strong>Apache Kafka</strong>, <strong>Apache Flink</strong>, <strong>Apache Storm</strong>, <strong>Spark Streaming</strong>.</li>
+            </ul>
+            <h4 id="serving-layer">Serving Layer</h4>
+            <p>The serving layer merges batch views and speed views at query time, presenting a unified, consistent result to consumers.</p>
+            <ul>
+                <li><strong>Batch view</strong> provides complete, accurate data up to the last batch run.</li>
+                <li><strong>Speed view</strong> provides approximate or partial data for events since the last batch run.</li>
+                <li>A query joins or unions both views so consumers always see <strong>up-to-date</strong> results.</li>
+                <li>Technologies: <strong>Apache Druid</strong>, <strong>Apache HBase</strong>, <strong>Cassandra</strong>, <strong>Elasticsearch</strong>, <strong>Pinot</strong>.</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">Query Answering in Lambda
+
+  User Query
+      |
+      v
+  Serving Layer
+      |
+      +--------&gt; Batch View  (complete, accurate, covers T-0 to T-batch)
+      |                 \
+      +--------&gt; Speed View  (recent, approximate, covers T-batch to now)
+                         \
+                    Merge &amp; Return Result</code></pre>
+            </div>
+            <h4 id="lambda-architecture-trade-offs">Lambda Architecture Trade-offs</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Aspect</td>
+                    <td>Advantage</td>
+                    <td>Challenge</td>
+                </tr>
+                <tr>
+                    <td><strong>Accuracy</strong></td>
+                    <td>Batch layer guarantees correctness over full history</td>
+                    <td>Speed layer may be approximate until batch catches up</td>
+                </tr>
+                <tr>
+                    <td><strong>Latency</strong></td>
+                    <td>Speed layer provides low-latency real-time views</td>
+                    <td>Batch layer has high latency (hours to days)</td>
+                </tr>
+                <tr>
+                    <td><strong>Complexity</strong></td>
+                    <td>Clear separation of concerns</td>
+                    <td>Two separate codebases for batch and streaming logic</td>
+                </tr>
+                <tr>
+                    <td><strong>Re-processing</strong></td>
+                    <td>Trivial – recompute batch views from raw data</td>
+                    <td>Speed view state must be carefully managed</td>
+                </tr>
+                <tr>
+                    <td><strong>Fault tolerance</strong></td>
+                    <td>Immutable batch store simplifies recovery</td>
+                    <td>Speed layer state recovery can be complex</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="kappa-architecture">Kappa Architecture</h3>
+            <p>Kappa architecture, proposed by Jay Kreps (co-creator of Kafka), eliminates the batch layer entirely. The central thesis is that <strong>a well-designed streaming system can replace batch processing</strong> if the stream log is retained long enough to enable historical re-computation by replaying it from the beginning.</p>
+            <div>
+                <pre><code class="language-shell">Kappa Architecture
+
+  Incoming Data Stream
+         |
+         v
++--------+--------+
+|                 |
+|  Stream Log     |  &lt;-- durable, replayable log (Apache Kafka, Kinesis)
+|  (retained)     |      acts as the single source of truth
++--------+--------+
+         |
+         v
++--------+--------+
+|                 |
+| Stream Processor|  &lt;-- single processing layer (Flink, Kafka Streams)
+| (current code)  |      handles both real-time and historical replay
++--------+--------+
+         |
+         v
++--------+--------+
+|                 |
+|  Serving Store  |  &lt;-- queryable output (Cassandra, Elasticsearch, etc.)
+|                 |
++-----------------+</code></pre>
+            </div>
+            <h4 id="re-processing-in-kappa">Re-processing in Kappa</h4>
+            <p>When business logic changes or a bug must be corrected, Kappa handles re-processing by:</p>
+            <ol>
+                <li>Deploying a new version of the stream processing job alongside the existing one.</li>
+                <li>Starting the new job from <strong>offset 0</strong> (the beginning of the retained log).</li>
+                <li>Writing the new job's output to a <strong>new output table</strong> while the old table remains live.</li>
+                <li>Performing an atomic <strong>cutover</strong> to the new output table once the new job has caught up.</li>
+                <li>Shutting down the old job and dropping the old output table.</li>
+            </ol>
+            <div>
+                <pre><code class="language-shell">Kappa Re-processing Cutover
+
+  Log (all history retained)
+       |
+       +-----&gt; Old Job (v1) -------&gt; Output Table v1  (serving live traffic)
+       |
+       +-----&gt; New Job (v2) -------&gt; Output Table v2  (catching up from offset 0)
+                                           |
+                                    (when caught up)
+                                           |
+                                    Atomic swap: v2 becomes primary
+                                           |
+                                    Old job + v1 table decommissioned</code></pre>
+            </div>
+            <h4 id="kappa-architecture-trade-offs">Kappa Architecture Trade-offs</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Aspect</td>
+                    <td>Advantage</td>
+                    <td>Challenge</td>
+                </tr>
+                <tr>
+                    <td><strong>Simplicity</strong></td>
+                    <td>Single codebase for all processing</td>
+                    <td>Streaming code can be harder to write than batch SQL</td>
+                </tr>
+                <tr>
+                    <td><strong>Latency</strong></td>
+                    <td>Consistently low latency for all queries</td>
+                    <td>Log retention for full history can be expensive</td>
+                </tr>
+                <tr>
+                    <td><strong>Re-processing</strong></td>
+                    <td>Replay from any offset in the log</td>
+                    <td>Re-processing large history takes significant time</td>
+                </tr>
+                <tr>
+                    <td><strong>Fault tolerance</strong></td>
+                    <td>Checkpointing and offset management</td>
+                    <td>Stateful stream operators require careful design</td>
+                </tr>
+                <tr>
+                    <td><strong>Tooling</strong></td>
+                    <td>Mature streaming frameworks available</td>
+                    <td>Historical replay at batch scale requires careful tuning</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="choosing-between-lambda-and-kappa">Choosing Between Lambda and Kappa</h3>
+            <div>
+                <pre><code class="language-shell">Decision Guide
+
+  Is low-latency (&lt; seconds) required?
+      |
+      +-- No --&gt; Classic Batch ETL is sufficient (simpler)
+      |
+      Yes
+      |
+      v
+  Is exactly-correct re-computation of history important?
+      |
+      +-- Yes + team has capacity for two codebases --&gt; Lambda
+      |
+      +-- Yes + team prefers single codebase + log retention feasible --&gt; Kappa
+      |
+      +-- Approximate / near-correct is acceptable --&gt; Speed layer only (simplified Lambda)</code></pre>
+            </div>
+            <p>
+            <table>
+                <tr>
+                    <td>Factor</td>
+                    <td>Favour Lambda</td>
+                    <td>Favour Kappa</td>
+                </tr>
+                <tr>
+                    <td><strong>Team size / complexity</strong></td>
+                    <td>Larger teams with specialised roles</td>
+                    <td>Smaller teams preferring unified code</td>
+                </tr>
+                <tr>
+                    <td><strong>Correctness requirements</strong></td>
+                    <td>Strict – batch layer guarantees accuracy</td>
+                    <td>Achievable through idempotent streaming</td>
+                </tr>
+                <tr>
+                    <td><strong>Log retention cost</strong></td>
+                    <td>Not required to retain full history</td>
+                    <td>Full history must be kept in stream log</td>
+                </tr>
+                <tr>
+                    <td><strong>Re-processing frequency</strong></td>
+                    <td>Infrequent, scheduled batch runs OK</td>
+                    <td>Frequent logic changes need fast replay</td>
+                </tr>
+                <tr>
+                    <td><strong>Data volume</strong></td>
+                    <td>Petabyte-scale where streaming is hard</td>
+                    <td>Manageable with stream parallelism</td>
+                </tr>
+                <tr>
+                    <td><strong>Existing infrastructure</strong></td>
+                    <td>Hadoop / Spark ecosystem in place</td>
+                    <td>Kafka-centric organisation</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="real-world-implementations">Real-World Implementations</h3>
+            <ul>
+                <li><strong>LinkedIn</strong> uses a Kappa-inspired architecture built around Kafka and Samza to power its activity feed, notifications, and analytics at scale.</li>
+                <li><strong>Netflix</strong> combines a Lambda-style batch layer (Spark on S3) with a speed layer (Flink + Kafka) for its recommendation and A/B testing systems.</li>
+                <li><strong>Uber</strong> operates a Lambda-like system where batch Hive/Spark jobs produce accurate aggregate metrics, while Flink provides real-time surge pricing signals.</li>
+                <li><strong>Twitter</strong> moved parts of its analytics from Hadoop batch jobs toward a streaming-first Kappa model with Kafka and Heron (a Flink/Storm successor).</li>
+            </ul>
+            <h3 id="modern-hybrid-approaches">Modern Hybrid Approaches</h3>
+            <p>Newer frameworks blur the line between Lambda and Kappa:</p>
+            <ul>
+                <li><strong>Apache Flink</strong> processes both bounded (batch) and unbounded (stream) datasets with a unified API, making it natural to implement Lambda-like correctness with a single codebase.</li>
+                <li><strong>Apache Spark Structured Streaming</strong> uses the same DataFrame API for both batch and streaming jobs, reducing the dual-codebase problem.</li>
+                <li><strong>Delta Lake / Apache Iceberg / Apache Hudi</strong> provide transactional ACID semantics on object storage, enabling <strong>streaming writes</strong> and <strong>batch reads</strong> from the same table without the complexity of separate serving layers.</li>
+                <li><strong>Materialize / RisingWave</strong> are streaming SQL databases that maintain incremental query results in real time, aiming to make streaming as accessible as SQL batch queries.</li>
+            </ul>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

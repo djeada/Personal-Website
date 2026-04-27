@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Database Caching</title>
-    <meta content="Database caching stores frequently used query results or objects in a cache, bringing them closer to the application for faster data retrieval." name="description" />
+    <meta content="Database caching stores frequently requested database query results, rows, aggregates, or relational lookup data in a faster layer so the application does not repeatedly execute the same expensive database operations." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/04_database_caching"
             },
             "url": "https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/04_database_caching",
-            "description": "Database caching stores frequently used query results or objects in a cache, bringing them closer to the application for faster data retrieval.",
-            "dateModified": "2026-03-19"
+            "description": "Database caching stores frequently requested database query results, rows, aggregates, or relational lookup data in a faster layer so the application does not repeatedly execute the same expensive database operations.",
+            "dateModified": "2026-04-27"
         }
     </script>
 </head>
@@ -79,16 +79,34 @@
                 <h2>Table of Contents</h2>
                 <ol><a href="#database-caching">Database Caching</a>
                     <ol>
-                        <li><a href="#how-database-caching-works">How Database Caching Works</a></li>
-                        <li><a href="#types-of-database-caches">Types of Database Caches</a></li>
-                        <li><a href="#benefits-of-database-caching">Benefits of Database Caching</a></li>
-                        <li><a href="#cache-strategies">Cache Strategies</a></li>
-                        <li><a href="#cache-eviction-policies">Cache Eviction Policies</a></li>
-                        <li><a href="#cache-consistency">Cache Consistency</a></li>
-                        <li><a href="#tools-and-technologies">Tools and Technologies</a></li>
-                        <li><a href="#implementation-best-practices">Implementation Best Practices</a></li>
-                        <li><a href="#common-use-cases">Common Use Cases</a></li>
-                        <li><a href="#challenges">Challenges</a></li>
+                        <li><a href="#why-database-caching-matters">Why Database Caching Matters</a></li>
+                        <li><a href="#concrete-database-cache-targets">Concrete Database Cache Targets</a>
+                            <ol>
+                                <li><a href="#1-single-row-lookups">1. Single-Row Lookups</a></li>
+                                <li><a href="#2-multi-row-list-queries">2. Multi-Row List Queries</a></li>
+                                <li><a href="#3-expensive-join-results">3. Expensive Join Results</a></li>
+                                <li><a href="#4-aggregates-and-counts">4. Aggregates and Counts</a></li>
+                                <li><a href="#5-reference-tables">5. Reference Tables</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#cache-aside-with-a-database-example">Cache-Aside with a Database Example</a></li>
+                        <li><a href="#read-through-database-cache">Read-Through Database Cache</a></li>
+                        <li><a href="#write-through-database-cache">Write-Through Database Cache</a></li>
+                        <li><a href="#cache-invalidation-with-database-writes">Cache Invalidation with Database Writes</a></li>
+                        <li><a href="#ttls-for-database-query-results">TTLs for Database Query Results</a></li>
+                        <li><a href="#database-specific-consistency-problems">Database-Specific Consistency Problems</a></li>
+                        <li><a href="#queries-that-usually-should-not-be-cached">Queries That Usually Should Not Be Cached</a>
+                            <ol>
+                                <li><a href="#highly-personalized-queries">Highly Personalized Queries</a></li>
+                                <li><a href="#security-critical-permission-checks">Security-Critical Permission Checks</a></li>
+                                <li><a href="#rapidly-changing-counters">Rapidly Changing Counters</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#concrete-example-caching-product-pages-from-sql">Concrete Example: Caching Product Pages from SQL</a></li>
+                        <li><a href="#concrete-example-caching-dashboard-aggregates">Concrete Example: Caching Dashboard Aggregates</a></li>
+                        <li><a href="#concrete-example-caching-reference-tables">Concrete Example: Caching Reference Tables</a></li>
+                        <li><a href="#monitoring-database-cache-effectiveness">Monitoring Database Cache Effectiveness</a></li>
+                        <li><a href="#database-caching-best-practices">Database Caching Best Practices</a></li>
                     </ol>
                 </ol>
             </div>
@@ -138,6 +156,10 @@
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/02_redis.html">Redis</a></li>
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/03_content_delivery_networks.html">Content Delivery Networks</a></li>
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/04_database_caching.html">Database Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/05_memcached.html">Memcached</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/06_http_caching.html">Http Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/07_application_level_caching.html">Application Level Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/08_memory_map.html">Memory Map</a></li>
                         </ol>
                     </li>
                     <li>Data Processing<ol>
@@ -145,6 +167,9 @@
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/02_messaging_system_integration.html">Messaging System Integration</a></li>
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/03_batch_processing.html">Batch Processing</a></li>
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing.html">Stream Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/05_etl_and_pipelines.html">Etl and Pipelines</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/06_lambda_and_kappa_architecture.html">Lambda and Kappa Architecture</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/07_workflow_orchestration.html">Workflow Orchestration</a></li>
                         </ol>
                     </li>
                     <li>Data Formats<ol>
@@ -160,11 +185,19 @@
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/03_security_vulnerabilities.html">Security Vulnerabilities</a></li>
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/04_security_best_practices_and_measures.html">Security Best Practices and Measures</a></li>
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/05_third_party_cookies_vulnerabilities.html">Third Party Cookies Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/06_secure_containers.html">Secure Containers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/07_credentials_management.html">Credentials Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/08_supply_chain_attacks.html">Supply Chain Attacks</a></li>
                         </ol>
                     </li>
                     <li>Deployment<ol>
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/01_centos_digital_ocean.html">Centos Digital Ocean</a></li>
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/02_static_python_website_netlify.html">Static Python Website Netlify</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/03_docker.html">Docker</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/04_kubernetes.html">Kubernetes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/05_ci_cd.html">Ci Cd</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/06_deployment_strategies.html">Deployment Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/07_infrastructure_as_code.html">Infrastructure As Code</a></li>
                         </ol>
                     </li>
                     <li>Distributed Systems<ol>
@@ -195,121 +228,632 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: March 19, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: April 27, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="database-caching">Database Caching</h2>
-            <p>Database caching stores frequently used query results or objects in a cache, bringing them closer to the application for <em>faster</em> data retrieval. This reduces load on the primary database and shortens response times, ultimately improving user experience.</p>
+            <p>Database caching stores frequently requested <strong>database query results, rows, aggregates, or relational lookup data</strong> in a faster layer so the application does not repeatedly execute the same expensive database operations. The main goal is to reduce database read load, lower query latency, and protect the primary database from repetitive traffic.</p>
+            <p>In backend systems, databases often become bottlenecks because many requests depend on the same tables. For example, thousands of users may repeatedly request the same product page, category list, dashboard count, or account metadata. Instead of executing the same SQL query again and again, the application can cache the result and reuse it until the data changes or expires.</p>
             <div>
-                <pre><code class="language-shell">#
-+--------------+
-|  Application |
+                <pre><code class="language-text">+--------------+
+| Application  |
 +-------+------+
         |
-        | (Query/Write)
+        | 1. Need product id=123
         v
 +-------+------+
-|    Cache     |
+| Database     |
+| Cache        |
 +-------+------+
-        | (Cache Miss)
+        |
+        | 2. Cache miss
         v
 +-------+------+
-|  Database    |
+| PostgreSQL / |
+| MySQL / etc. |
 +--------------+</code></pre>
             </div>
-            <ul>
-                <li>Using a database cache is <strong>beneficial</strong> for minimizing round trips to the main database system. </li>
-                <li>It can be <strong>vulnerable</strong> to stale data if invalidation or refresh mechanisms are not managed carefully. </li>
-                <li>A high cache hit ratio is <strong>indicative</strong> of effective caching strategies and configurations. </li>
-                <li>Miss penalties can be <strong>costly</strong> if frequent queries bypass the cache due to short time-to-live settings or poor usage patterns. </li>
-                <li>The right caching approach can be <strong>advantageous</strong> for supporting more concurrent requests and reducing infrastructure costs.</li>
-            </ul>
-            <h3 id="how-database-caching-works">How Database Caching Works</h3>
-            <ul>
-                <li>Query results caching can be <strong>helpful</strong> by storing entire result sets for fast retrieval on subsequent identical queries. </li>
-                <li>Object caching is <strong>useful</strong> when individual rows or entities need to be reused frequently by the application. </li>
-                <li>Page caching is <strong>common</strong> in systems that render HTML or certain content fragments from database-driven processes. </li>
-                <li>Application logic is <strong>essential</strong> in deciding what gets cached and under which conditions to keep the cache effective.</li>
-            </ul>
-            <h3 id="types-of-database-caches">Types of Database Caches</h3>
-            <ul>
-                <li>In-memory caches like Redis or Memcached store <strong>fast</strong> access data directly in RAM. </li>
-                <li>Distributed caches can be <strong>scalable</strong> because they handle large datasets and high traffic across multiple nodes. </li>
-                <li>Local caches reside <strong>within</strong> an application server’s memory space, offering quick lookups without network overhead. </li>
-                <li>Hybrid approaches are <strong>possible</strong> if you combine local caches for quick hits and distributed caches for system-wide consistency.</li>
-            </ul>
-            <h3 id="benefits-of-database-caching">Benefits of Database Caching</h3>
-            <ul>
-                <li>Reduced latency is <strong>crucial</strong> for delivering a responsive user experience with minimal delays. </li>
-                <li>Improved performance is <strong>key</strong> to handling more transactions or concurrent users without database bottlenecks. </li>
-                <li>Scalability is <strong>enhanced</strong> since the application can scale horizontally without proportionally increasing database load. </li>
-                <li>Cost efficiency is <strong>sought</strong> by offloading repetitive queries from the main database to a cheaper caching layer.</li>
-            </ul>
-            <h3 id="cache-strategies">Cache Strategies</h3>
+            <p>Example uncached database query:</p>
             <div>
-                <pre><code class="language-shell">#
-Read-Through:
-App -&gt; Cache -&gt; DB
-          ^
-          Log updates from DB
-
-Write-Through:
-App -&gt; (Cache &amp; DB simultaneously)
-
-Write-Behind:
-App -&gt; Cache -&gt; DB (asynchronously)
-
-Cache-Aside:
-App -&gt; (Cache first, then DB if not found)</code></pre>
+                <pre><code class="language-sql">SELECT id, name, price, stock_count
+FROM products
+WHERE id = 123;</code></pre>
             </div>
+            <p>Example cached result:</p>
+            <div>
+                <pre><code class="language-json">{
+  "id": 123,
+  "name": "Laptop Stand",
+  "price": 29.99,
+  "stock_count": 42
+}</code></pre>
+            </div>
+            <p>If many users request product <code>123</code>, the application can serve this cached row instead of repeatedly querying the <code>products</code> table.</p>
+            <h3 id="why-database-caching-matters">Why Database Caching Matters</h3>
+            <p>Database queries can be expensive. Even a simple query may involve network latency, query parsing, permission checks, index lookups, row fetching, locking behavior, serialization, and result transfer. More complex queries may involve joins, grouping, sorting, filtering, subqueries, and scans over large tables.</p>
+            <p>Caching is especially helpful when:</p>
             <ul>
-                <li>A read-through policy is <strong>common</strong> because the cache automatically retrieves from the database on a miss. </li>
-                <li>A write-through approach can be <strong>valuable</strong> for ensuring the cache always reflects the latest writes. </li>
-                <li>A write-behind strategy is <strong>efficient</strong> if asynchronous database updates are acceptable and short delays are tolerable. </li>
-                <li>A cache-aside (lazy loading) pattern is <strong>flexible</strong> since the application explicitly manages when to load or update cache entries.</li>
+                <li>The same query is executed frequently.</li>
+                <li>The result changes less often than it is read.</li>
+                <li>The query is expensive because of joins, aggregations, or large table scans.</li>
+                <li>The database is under heavy read load.</li>
+                <li>Slightly stale data is acceptable for a short period.</li>
             </ul>
-            <h3 id="cache-eviction-policies">Cache Eviction Policies</h3>
-            <ul>
-                <li>LRU evicts items <strong>unused</strong> for the longest period, matching many typical read access patterns. </li>
-                <li>MRU eliminates the <strong>most</strong> recently used items, which can be helpful for specific workloads. </li>
-                <li>FIFO discards items <strong>inserted</strong> earliest, regardless of recent usage frequency. </li>
-                <li>LFU targets items <strong>accessed</strong> the least often, which is ideal for data with skewed popularity distributions. </li>
-            </ul>
-            <h3 id="cache-consistency">Cache Consistency</h3>
-            <ul>
-                <li>Strong consistency is <strong>guaranteed</strong> when the cache always reflects the current database state, often at the cost of performance. </li>
-                <li>Eventual consistency is <strong>acceptable</strong> in systems tolerant of brief delays or slight data staleness after updates. </li>
-                <li>Conflict resolution can be <strong>tricky</strong> in distributed caches, requiring well-defined update and invalidation rules. </li>
-                <li>Monitoring your application’s correctness needs is <strong>important</strong> in determining which consistency model to adopt.</li>
-            </ul>
-            <h3 id="tools-and-technologies">Tools and Technologies</h3>
-            <ul>
-                <li>Redis is <strong>popular</strong> for storing key-value pairs and more complex data structures in memory. </li>
-                <li>Memcached is <strong>lightweight</strong> and widely used for simple, high-performance caching of strings or objects. </li>
-                <li>Amazon ElastiCache is <strong>managed</strong> within AWS, offering easy setup for Redis or Memcached clusters. </li>
-                <li>Ehcache is <strong>versatile</strong>, integrating smoothly with Java-based applications and various storage backends.</li>
-            </ul>
-            <h3 id="implementation-best-practices">Implementation Best Practices</h3>
-            <ul>
-                <li>Identifying cacheable data is <strong>critical</strong> for avoiding overhead from caching unneeded or rarely accessed items. </li>
-                <li>Setting TTLs appropriately is <strong>vital</strong> to balance performance with the risk of serving stale data. </li>
-                <li>Monitoring cache performance is <strong>essential</strong> for adjusting configurations and eviction policies over time. </li>
-                <li>Handling cache invalidation is <strong>important</strong> if frequent updates to underlying data can lead to inconsistency. </li>
-                <li>Optimizing cache size is <strong>necessary</strong> to ensure that caches are neither overfilled nor underutilized.</li>
-            </ul>
-            <h3 id="common-use-cases">Common Use Cases</h3>
-            <ul>
-                <li>Web applications are <strong>accelerated</strong> by caching query-intensive pages or session data. </li>
-                <li>E-commerce platforms gain <strong>efficiency</strong> by caching product details, price checks, and user profiles. </li>
-                <li>CMS-based websites see <strong>improvements</strong> in response times when articles and media are readily accessible. </li>
-                <li>Analytics workloads can be <strong>streamlined</strong> by caching results of complex queries or transformations.</li>
-            </ul>
-            <h3 id="challenges">Challenges</h3>
-            <ul>
-                <li>Cache invalidation is <strong>difficult</strong> because stale or outdated data can lead to inconsistencies. </li>
-                <li>Consistency management becomes <strong>complex</strong> in distributed setups requiring synchronization among multiple caches. </li>
-                <li>Cache miss penalties are <strong>heightened</strong> if the system frequently retrieves data from the database due to short TTLs or improper caching logic. </li>
-                <li>Strike a balance between <strong>performance</strong> benefits and potential complexities introduced by caching layers.</li>
-            </ul>
+            <p>Example expensive query:</p>
+            <div>
+                <pre><code class="language-sql">SELECT category_id, COUNT(*) AS product_count
+FROM products
+WHERE active = true
+GROUP BY category_id;</code></pre>
+            </div>
+            <p>Example cached aggregate:</p>
+            <div>
+                <pre><code class="language-json">{
+  "1": 1842,
+  "2": 921,
+  "3": 377
+}</code></pre>
+            </div>
+            <p>Without caching, every request for category counts may force the database to aggregate data again. With caching, the result can be reused for a short period, such as 60 seconds or 5 minutes.</p>
+            <h3 id="concrete-database-cache-targets">Concrete Database Cache Targets</h3>
+            <p>Database caching should focus on specific database access patterns. Not every query should be cached.</p>
+            <h4 id="1-single-row-lookups">1. Single-Row Lookups</h4>
+            <p>Single-row lookups are common in APIs. They often use a primary key and return one entity.</p>
+            <p>Example query:</p>
+            <div>
+                <pre><code class="language-sql">SELECT id, username, display_name, avatar_url
+FROM users
+WHERE id = 42;</code></pre>
+            </div>
+            <p>Cache key:</p>
+            <div>
+                <pre><code class="language-text">db:user:id:42</code></pre>
+            </div>
+            <p>Cached value:</p>
+            <div>
+                <pre><code class="language-json">{
+  "id": 42,
+  "username": "alice",
+  "display_name": "Alice",
+  "avatar_url": "https://cdn.example.com/alice.png"
+}</code></pre>
+            </div>
+            <p>This is useful when the same user profile is loaded frequently across pages, comments, posts, or notifications.</p>
+            <h4 id="2-multi-row-list-queries">2. Multi-Row List Queries</h4>
+            <p>List queries return multiple rows and are often used for category pages, feeds, search results, or admin tables.</p>
+            <p>Example query:</p>
+            <div>
+                <pre><code class="language-sql">SELECT id, name, price
+FROM products
+WHERE category_id = 7 AND active = true
+ORDER BY popularity DESC
+LIMIT 20;</code></pre>
+            </div>
+            <p>Cache key:</p>
+            <div>
+                <pre><code class="language-text">db:products:category:7:active:true:sort:popularity:limit:20</code></pre>
+            </div>
+            <p>Cached value:</p>
+            <div>
+                <pre><code class="language-json">[
+  { "id": 123, "name": "Laptop Stand", "price": 29.99 },
+  { "id": 456, "name": "USB-C Dock", "price": 79.99 }
+]</code></pre>
+            </div>
+            <p>This type of cache must include all query parameters in the key. If <code>category_id</code>, <code>sort</code>, <code>limit</code>, filters, or pagination values change, the cache key must change too.</p>
+            <h4 id="3-expensive-join-results">3. Expensive Join Results</h4>
+            <p>Joins can be expensive, especially when they combine large tables or are executed frequently.</p>
+            <p>Example query:</p>
+            <div>
+                <pre><code class="language-sql">SELECT
+  o.id AS order_id,
+  o.created_at,
+  o.total,
+  c.name AS customer_name,
+  c.email AS customer_email
+FROM orders o
+JOIN customers c ON c.id = o.customer_id
+WHERE o.id = 9001;</code></pre>
+            </div>
+            <p>Cache key:</p>
+            <div>
+                <pre><code class="language-text">db:order_summary:id:9001</code></pre>
+            </div>
+            <p>Cached value:</p>
+            <div>
+                <pre><code class="language-json">{
+  "order_id": 9001,
+  "created_at": "2026-04-25T10:30:00Z",
+  "total": 149.99,
+  "customer_name": "Alice Example",
+  "customer_email": "alice@example.com"
+}</code></pre>
+            </div>
+            <p>This avoids repeatedly joining <code>orders</code> and <code>customers</code> when the order summary is viewed many times.</p>
+            <h4 id="4-aggregates-and-counts">4. Aggregates and Counts</h4>
+            <p>Aggregates are often good cache candidates because they may scan or group many rows.</p>
+            <p>Example query:</p>
+            <div>
+                <pre><code class="language-sql">SELECT COUNT(*) AS open_ticket_count
+FROM support_tickets
+WHERE status = 'open';</code></pre>
+            </div>
+            <p>Cache key:</p>
+            <div>
+                <pre><code class="language-text">db:support_tickets:count:status:open</code></pre>
+            </div>
+            <p>Cached value:</p>
+            <div>
+                <pre><code class="language-json">{
+  "open_ticket_count": 128
+}</code></pre>
+            </div>
+            <p>For dashboards, counts and aggregates can often tolerate short staleness.</p>
+            <p>Another example:</p>
+            <div>
+                <pre><code class="language-sql">SELECT
+  DATE(created_at) AS day,
+  SUM(total) AS revenue
+FROM orders
+WHERE created_at &gt;= CURRENT_DATE - INTERVAL '30 days'
+GROUP BY DATE(created_at)
+ORDER BY day;</code></pre>
+            </div>
+            <p>Cache key:</p>
+            <div>
+                <pre><code class="language-text">db:orders:revenue:last_30_days:daily</code></pre>
+            </div>
+            <p>Cached value:</p>
+            <div>
+                <pre><code class="language-json">[
+  { "day": "2026-03-27", "revenue": 18420.50 },
+  { "day": "2026-03-28", "revenue": 19311.25 }
+]</code></pre>
+            </div>
+            <p>This is a strong cache candidate because daily revenue charts are often read repeatedly but do not need millisecond-level freshness.</p>
+            <h4 id="5-reference-tables">5. Reference Tables</h4>
+            <p>Reference tables are small, stable tables used frequently in joins or validations.</p>
+            <p>Examples:</p>
+            <div>
+                <pre><code class="language-sql">SELECT code, name
+FROM countries;</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-sql">SELECT id, name, tax_rate
+FROM tax_regions;</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-sql">SELECT id, label
+FROM order_statuses;</code></pre>
+            </div>
+            <p>Cache key:</p>
+            <div>
+                <pre><code class="language-text">db:reference:countries</code></pre>
+            </div>
+            <p>Cached value:</p>
+            <div>
+                <pre><code class="language-json">{
+  "DE": "Germany",
+  "FR": "France",
+  "US": "United States"
+}</code></pre>
+            </div>
+            <p>Reference data is one of the safest database-specific cache targets because it changes rarely and is read often.</p>
+            <h3 id="cache-aside-with-a-database-example">Cache-Aside with a Database Example</h3>
+            <p>The most common database caching pattern is <strong>cache-aside</strong>. The application explicitly checks the cache before querying the database.</p>
+            <p>Flow:</p>
+            <div>
+                <pre><code class="language-text">1. Application needs product 123.
+2. Check cache key db:product:id:123.
+3. If found, return cached product.
+4. If missing, query database.
+5. Store database result in cache.
+6. Return result.</code></pre>
+            </div>
+            <p>Example Python-style pseudo-code:</p>
+            <div>
+                <pre><code class="language-python">def get_product(product_id):
+    cache_key = f"db:product:id:{product_id}"
+
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    product = db.query_one(
+        """
+        SELECT id, name, price, stock_count
+        FROM products
+        WHERE id = %s
+        """,
+        [product_id]
+    )
+
+    if product is not None:
+        cache.set(cache_key, product, ttl=300)
+
+    return product</code></pre>
+            </div>
+            <p>Example first request:</p>
+            <div>
+                <pre><code class="language-json">{
+  "product_id": 123,
+  "cache": "MISS",
+  "database_query_executed": true,
+  "latency_ms": 84
+}</code></pre>
+            </div>
+            <p>Example second request:</p>
+            <div>
+                <pre><code class="language-json">{
+  "product_id": 123,
+  "cache": "HIT",
+  "database_query_executed": false,
+  "latency_ms": 4
+}</code></pre>
+            </div>
+            <p>This example is specifically caching the result of a database lookup, not general application state.</p>
+            <h3 id="read-through-database-cache">Read-Through Database Cache</h3>
+            <p>In a read-through pattern, the cache layer knows how to load missing data from the database. The application asks the cache for data, and the cache handles the database read on a miss.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">Application asks cache for db:user:id:42.
+Cache misses.
+Cache loader executes SELECT query.
+Cache stores result.
+Cache returns result to application.</code></pre>
+            </div>
+            <p>Example loader query:</p>
+            <div>
+                <pre><code class="language-sql">SELECT id, username, display_name
+FROM users
+WHERE id = 42;</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "strategy": "read-through",
+  "cache_key": "db:user:id:42",
+  "cache_status": "MISS",
+  "loaded_from_database": true
+}</code></pre>
+            </div>
+            <p>Read-through can keep application code cleaner, but it requires a cache abstraction that understands how to fetch data from the database.</p>
+            <h3 id="write-through-database-cache">Write-Through Database Cache</h3>
+            <p>In a write-through pattern, the application writes changes to the database and cache together. This helps keep cached database rows fresh.</p>
+            <p>Example update:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE products
+SET price = 34.99
+WHERE id = 123;</code></pre>
+            </div>
+            <p>Cache update:</p>
+            <div>
+                <pre><code class="language-text">SET db:product:id:123 {"id":123,"name":"Laptop Stand","price":34.99,"stock_count":42}</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "database_updated": true,
+  "cache_updated": true,
+  "cache_key": "db:product:id:123"
+}</code></pre>
+            </div>
+            <p>Write-through is useful when cached rows must stay close to the current database state. The downside is that writes become more complex because both the database and cache must be updated correctly.</p>
+            <h3 id="cache-invalidation-with-database-writes">Cache Invalidation with Database Writes</h3>
+            <p>Database cache invalidation means deleting or refreshing cached query results when the underlying database rows change.</p>
+            <p>Example cached keys:</p>
+            <div>
+                <pre><code class="language-text">db:product:id:123
+db:products:category:7:active:true:sort:popularity:limit:20
+db:orders:revenue:last_30_days:daily</code></pre>
+            </div>
+            <p>If product <code>123</code> changes, it may not be enough to invalidate only <code>db:product:id:123</code>. The product might also appear in category lists, search results, recommendations, or aggregate counts.</p>
+            <p>Example update:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE products
+SET price = 34.99
+WHERE id = 123;</code></pre>
+            </div>
+            <p>Invalidation actions:</p>
+            <div>
+                <pre><code class="language-text">DELETE db:product:id:123
+DELETE db:products:category:7:active:true:sort:popularity:limit:20
+DELETE db:homepage:popular_products</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "database_row_updated": "products.id=123",
+  "invalidated_cache_keys": [
+    "db:product:id:123",
+    "db:products:category:7:active:true:sort:popularity:limit:20",
+    "db:homepage:popular_products"
+  ]
+}</code></pre>
+            </div>
+            <p>This is the hard part of database caching: one row can influence many cached query results.</p>
+            <h3 id="ttls-for-database-query-results">TTLs for Database Query Results</h3>
+            <p>A TTL, or time to live, controls how long a cached database result remains valid before expiring.</p>
+            <p>Different database data should have different TTLs.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Data Type</td>
+                    <td>Example Query</td>
+                    <td>Suggested TTL</td>
+                </tr>
+                <tr>
+                    <td>Country list</td>
+                    <td><code>SELECT * FROM countries</code></td>
+                    <td>Hours or days</td>
+                </tr>
+                <tr>
+                    <td>Product details</td>
+                    <td><code>SELECT * FROM products WHERE id = ?</code></td>
+                    <td>Minutes</td>
+                </tr>
+                <tr>
+                    <td>Inventory count</td>
+                    <td><code>SELECT stock_count FROM products WHERE id = ?</code></td>
+                    <td>Seconds</td>
+                </tr>
+                <tr>
+                    <td>Dashboard aggregate</td>
+                    <td><code>SELECT COUNT(*) FROM events ...</code></td>
+                    <td>1–15 minutes</td>
+                </tr>
+                <tr>
+                    <td>User permissions</td>
+                    <td><code>SELECT role FROM user_roles ...</code></td>
+                    <td>Very short TTL or explicit invalidation</td>
+                </tr>
+            </table>
+            </p>
+            <p>Example TTL configuration:</p>
+            <div>
+                <pre><code class="language-json">{
+  "db:reference:countries": "24h",
+  "db:product:id:*": "5m",
+  "db:inventory:product:*": "10s",
+  "db:dashboard:*": "15m"
+}</code></pre>
+            </div>
+            <p>The TTL should depend on how often the database value changes and how harmful stale data would be.</p>
+            <h3 id="database-specific-consistency-problems">Database-Specific Consistency Problems</h3>
+            <p>Caching database results introduces consistency problems because the cache and database can disagree.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-sql">SELECT price
+FROM products
+WHERE id = 123;</code></pre>
+            </div>
+            <p>Database value:</p>
+            <div>
+                <pre><code class="language-json">{
+  "price": 34.99
+}</code></pre>
+            </div>
+            <p>Cached value:</p>
+            <div>
+                <pre><code class="language-json">{
+  "price": 29.99
+}</code></pre>
+            </div>
+            <p>Problem:</p>
+            <div>
+                <pre><code class="language-json">{
+  "status": "inconsistent",
+  "database_price": 34.99,
+  "cache_price": 29.99,
+  "cause": "cache was not invalidated after product update"
+}</code></pre>
+            </div>
+            <p>For product descriptions, this might be acceptable briefly. For account balances, payment status, permissions, or inventory reservations, it may not be acceptable.</p>
+            <h3 id="queries-that-usually-should-not-be-cached">Queries That Usually Should Not Be Cached</h3>
+            <p>Some database queries are poor cache candidates.</p>
+            <h4 id="highly-personalized-queries">Highly Personalized Queries</h4>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM notifications
+WHERE user_id = 42
+ORDER BY created_at DESC
+LIMIT 20;</code></pre>
+            </div>
+            <p>This may change frequently and may have a low reuse rate across users. Caching it can be useful in some cases, but the cache key must include the user ID and invalidation must be precise.</p>
+            <h4 id="security-critical-permission-checks">Security-Critical Permission Checks</h4>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-sql">SELECT role
+FROM user_roles
+WHERE user_id = 42 AND organization_id = 9;</code></pre>
+            </div>
+            <p>Caching permissions for too long can be dangerous. If an admin removes a user’s access, stale cached permissions may still allow access.</p>
+            <p>Safer approach:</p>
+            <div>
+                <pre><code class="language-text">Use very short TTLs or explicit invalidation on role changes.</code></pre>
+            </div>
+            <h4 id="rapidly-changing-counters">Rapidly Changing Counters</h4>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-sql">SELECT stock_count
+FROM products
+WHERE id = 123;</code></pre>
+            </div>
+            <p>Inventory and counters can change rapidly. If stale values are harmful, either avoid caching or use very short TTLs and strong invalidation.</p>
+            <h3 id="concrete-example-caching-product-pages-from-sql">Concrete Example: Caching Product Pages from SQL</h3>
+            <p>Suppose an e-commerce product page needs this query:</p>
+            <div>
+                <pre><code class="language-sql">SELECT
+  p.id,
+  p.name,
+  p.description,
+  p.price,
+  p.stock_count,
+  c.name AS category_name
+FROM products p
+JOIN categories c ON c.id = p.category_id
+WHERE p.id = 123 AND p.active = true;</code></pre>
+            </div>
+            <p>Cache key:</p>
+            <div>
+                <pre><code class="language-text">db:product_page:id:123</code></pre>
+            </div>
+            <p>Cached value:</p>
+            <div>
+                <pre><code class="language-json">{
+  "id": 123,
+  "name": "Laptop Stand",
+  "description": "Adjustable aluminum laptop stand",
+  "price": 29.99,
+  "stock_count": 42,
+  "category_name": "Accessories"
+}</code></pre>
+            </div>
+            <p>When the product is updated:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE products
+SET price = 34.99
+WHERE id = 123;</code></pre>
+            </div>
+            <p>Invalidate:</p>
+            <div>
+                <pre><code class="language-text">DELETE db:product_page:id:123</code></pre>
+            </div>
+            <p>Then the next page request reloads the fresh value from the database.</p>
+            <p>Example reload output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "cache_status": "MISS",
+  "database_query_executed": true,
+  "new_price": 34.99
+}</code></pre>
+            </div>
+            <h3 id="concrete-example-caching-dashboard-aggregates">Concrete Example: Caching Dashboard Aggregates</h3>
+            <p>A dashboard may run this expensive query:</p>
+            <div>
+                <pre><code class="language-sql">SELECT
+  DATE(created_at) AS day,
+  COUNT(*) AS order_count,
+  SUM(total) AS revenue
+FROM orders
+WHERE created_at &gt;= CURRENT_DATE - INTERVAL '30 days'
+GROUP BY DATE(created_at)
+ORDER BY day;</code></pre>
+            </div>
+            <p>Cache key:</p>
+            <div>
+                <pre><code class="language-text">db:dashboard:orders:last_30_days</code></pre>
+            </div>
+            <p>Cached value:</p>
+            <div>
+                <pre><code class="language-json">[
+  {
+    "day": "2026-04-01",
+    "order_count": 892,
+    "revenue": 45210.75
+  },
+  {
+    "day": "2026-04-02",
+    "order_count": 914,
+    "revenue": 46883.20
+  }
+]</code></pre>
+            </div>
+            <p>This query may be expensive because it scans and groups many order rows. If the dashboard is viewed often, caching the result for 5 minutes can significantly reduce database load.</p>
+            <p>Example cache result:</p>
+            <div>
+                <pre><code class="language-json">{
+  "cache_key": "db:dashboard:orders:last_30_days",
+  "ttl": "5m",
+  "database_queries_avoided_last_hour": 1140
+}</code></pre>
+            </div>
+            <h3 id="concrete-example-caching-reference-tables">Concrete Example: Caching Reference Tables</h3>
+            <p>Reference tables are excellent database cache candidates because they change rarely and are read often.</p>
+            <p>Example query:</p>
+            <div>
+                <pre><code class="language-sql">SELECT code, name, currency
+FROM countries;</code></pre>
+            </div>
+            <p>Cache key:</p>
+            <div>
+                <pre><code class="language-text">db:ref:countries</code></pre>
+            </div>
+            <p>Cached value:</p>
+            <div>
+                <pre><code class="language-json">{
+  "DE": {
+    "name": "Germany",
+    "currency": "EUR"
+  },
+  "US": {
+    "name": "United States",
+    "currency": "USD"
+  },
+  "GB": {
+    "name": "United Kingdom",
+    "currency": "GBP"
+  }
+}</code></pre>
+            </div>
+            <p>Example use in application:</p>
+            <div>
+                <pre><code class="language-text">Order has country_code = "DE".
+Application reads country metadata from cache.
+Application displays Germany, EUR.</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "country_code": "DE",
+  "country_name": "Germany",
+  "currency": "EUR",
+  "source": "database_cache"
+}</code></pre>
+            </div>
+            <p>This avoids repeatedly querying the <code>countries</code> table for stable lookup data.</p>
+            <h3 id="monitoring-database-cache-effectiveness">Monitoring Database Cache Effectiveness</h3>
+            <p>Database cache monitoring should focus on whether the cache is actually reducing database work.</p>
+            <p>Useful metrics include:</p>
+            <div>
+                <pre><code class="language-json">{
+  "cache_hit_ratio": "87%",
+  "database_queries_avoided": 250000,
+  "average_cached_read_ms": 4,
+  "average_database_read_ms": 92,
+  "evictions_per_minute": 80,
+  "stale_read_incidents": 0
+}</code></pre>
+            </div>
+            <p>Important questions:</p>
+            <div>
+                <pre><code class="language-text">Which SQL queries are being cached?
+Which cache keys have the most hits?
+Which cache keys miss too often?
+Are cached results becoming stale?
+Is the database CPU lower after caching?
+Are slow queries reduced?</code></pre>
+            </div>
+            <p>A high cache hit ratio is useful only if it reduces expensive database work. Caching cheap queries that are rarely repeated may add complexity without meaningful benefit.</p>
+            <h3 id="database-caching-best-practices">Database Caching Best Practices</h3>
+            <ol>
+                <li><strong>Cache expensive and repeated database reads</strong> Focus on repeated SQL queries, joins, aggregates, and lookup tables.</li>
+                <li><strong>Design cache keys from query parameters</strong> Include IDs, filters, sort order, pagination, tenant ID, and user scope where relevant.</li>
+                <li><strong>Use short TTLs for frequently changing data</strong> Inventory, permissions, and status fields should not stay stale for long.</li>
+                <li><strong>Invalidate caches on writes</strong> When database rows change, delete or refresh related cached query results.</li>
+                <li><strong>Avoid caching sensitive permission checks for too long</strong> Stale authorization data can create security issues.</li>
+                <li><strong>Measure database impact</strong> Track reduced query volume, lower database CPU, improved p95 latency, and fewer slow queries.</li>
+                <li><strong>Protect against cache stampedes</strong> When an expensive cached query expires, prevent thousands of requests from recomputing it at once.</li>
+            </ol>
+            <p>Example stampede-safe behavior:</p>
+            <div>
+                <pre><code class="language-json">{
+  "cache_key": "db:dashboard:orders:last_30_days",
+  "cache_expired": true,
+  "first_request_recomputes": true,
+  "other_requests_wait_or_use_stale_value": true
+}</code></pre>
+            </div>
         </article-section>
     </div>
     <footer>

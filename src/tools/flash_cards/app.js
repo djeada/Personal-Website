@@ -1,9 +1,9 @@
-(function () {
+(function() {
     'use strict';
 
-    // =========================================================================
-    // Configuration
-    // =========================================================================
+
+
+
 
     const CONFIG = {
         categoriesUrl: 'categories.json',
@@ -16,9 +16,9 @@
         timerEmoji: '\u23F1\uFE0F',
     };
 
-    // =========================================================================
-    // Application State
-    // =========================================================================
+
+
+
 
     const state = {
         currentCategory: null,
@@ -28,16 +28,16 @@
         cardStatus: [],
         isFlipped: false,
         isLoading: false,
-        // Timer state
+
         timerInterval: null,
         timerSecondsLeft: 0,
-        // Streak state
+
         currentStreak: 0,
     };
 
-    // =========================================================================
-    // DOM Element References
-    // =========================================================================
+
+
+
 
     const elements = {
         categorySelect: null,
@@ -58,7 +58,7 @@
         remainingCards: null,
         completedCards: null,
         errorDiv: null,
-        // New elements
+
         timerDisplay: null,
         timerToggle: null,
         cardNav: null,
@@ -66,9 +66,9 @@
         streakText: null,
     };
 
-    // =========================================================================
-    // Utility Functions
-    // =========================================================================
+
+
+
 
     function displayError(msg) {
         if (!elements.errorDiv) {
@@ -154,9 +154,9 @@
         }
     }
 
-    // =========================================================================
-    // Data Loading
-    // =========================================================================
+
+
+
 
     async function fetchJson(url) {
         clearError();
@@ -211,9 +211,9 @@
         }
     }
 
-    // =========================================================================
-    // Subcategory Management
-    // =========================================================================
+
+
+
 
     function populateSubcategories() {
         elements.subcategoriesDiv.innerHTML = '';
@@ -271,9 +271,9 @@
         restartTimerIfEnabled();
     }
 
-    // =========================================================================
-    // Questions Table
-    // =========================================================================
+
+
+
 
     function populateQuestionsTable() {
         elements.questionsTableBody.innerHTML = '';
@@ -325,9 +325,9 @@
         });
     }
 
-    // =========================================================================
-    // Card Display
-    // =========================================================================
+
+
+
 
     function showCard() {
         if (state.cards.length === 0) {
@@ -423,9 +423,9 @@
         }
     }
 
-    // =========================================================================
-    // Timer System
-    // =========================================================================
+
+
+
 
     function startTimer() {
         stopTimer();
@@ -485,9 +485,9 @@
         }
     }
 
-    // =========================================================================
-    // Card Navigation Sidebar
-    // =========================================================================
+
+
+
 
     function buildCardNav() {
         if (!elements.cardNav) return;
@@ -522,9 +522,9 @@
         });
     }
 
-    // =========================================================================
-    // Streak Tracking
-    // =========================================================================
+
+
+
 
     function incrementStreak() {
         state.currentStreak++;
@@ -549,9 +549,9 @@
         }
     }
 
-    // =========================================================================
-    // Event Handlers
-    // =========================================================================
+
+
+
 
     function handleSubcategoryChange(e) {
         if (e.target.checked) {
@@ -657,7 +657,7 @@
     function handleKeydown(e) {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
 
-        // Number keys 1-9: jump to that card
+
         if (e.key >= '1' && e.key <= '9') {
             const cardIndex = parseInt(e.key, 10) - 1;
             if (cardIndex < state.cards.length) {
@@ -709,9 +709,9 @@
         handleFlip();
     }
 
-    // =========================================================================
-    // Initialization
-    // =========================================================================
+
+
+
 
     function cacheElements() {
         elements.categorySelect = document.getElementById('categorySelect');
@@ -731,7 +731,7 @@
         elements.totalCards = document.getElementById('totalCards');
         elements.remainingCards = document.getElementById('remainingCards');
         elements.completedCards = document.getElementById('completedCards');
-        // New elements
+
         elements.timerDisplay = document.getElementById('timerDisplay');
         elements.timerToggle = document.getElementById('timerToggle');
         elements.cardNav = document.getElementById('cardNav');

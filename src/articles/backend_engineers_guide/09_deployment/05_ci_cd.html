@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>CI/CD Pipelines</title>
+    <meta content="Continuous Integration (CI) and Continuous Delivery/Deployment (CD) automate the path from a code commit to running software in production." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/05_ci_cd" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "CI/CD Pipelines",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/05_ci_cd"
+            },
+            "url": "https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/05_ci_cd",
+            "description": "Continuous Integration (CI) and Continuous Delivery/Deployment (CD) automate the path from a code commit to running software in production.",
+            "dateModified": "2026-04-27"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol><a href="#ci-cd-pipelines">CI/CD Pipelines</a>
+                    <ol>
+                        <li><a href="#core-concepts">Core Concepts</a>
+                            <ol>
+                                <li><a href="#pipeline">Pipeline</a></li>
+                                <li><a href="#artifact">Artifact</a></li>
+                                <li><a href="#environment">Environment</a></li>
+                                <li><a href="#secrets-management">Secrets Management</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#github-actions-example">GitHub Actions Example</a></li>
+                        <li><a href="#gitlab-ci-example">GitLab CI Example</a></li>
+                        <li><a href="#pipeline-best-practices">Pipeline Best Practices</a>
+                            <ol>
+                                <li><a href="#fail-fast">Fail Fast</a></li>
+                                <li><a href="#immutable-artifacts">Immutable Artifacts</a></li>
+                                <li><a href="#branch-strategy">Branch Strategy</a></li>
+                                <li><a href="#security-in-ci-cd">Security in CI/CD</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#testing-in-the-pipeline">Testing in the Pipeline</a></li>
+                        <li><a href="#notifications-and-observability">Notifications and Observability</a></li>
+                    </ol>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Api Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/01_api_communication_protocols.html">Api Communication Protocols</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/02_rest.html">Rest</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/03_graphql.html">Graphql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/04_grpc.html">Grpc</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/05_state_management.html">State Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/06_data_transmission.html">Data Transmission</a></li>
+                        </ol>
+                    </li>
+                    <li>Network Communications<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/01_network_communications.html">Network Communications</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/02_tcp_and_udp.html">Tcp and Udp</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/03_http_protocol.html">Http Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/04_web_sockets.html">Web Sockets</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/05_metrics_and_analysis.html">Metrics and Analysis</a></li>
+                        </ol>
+                    </li>
+                    <li>Server Technologies<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/01_web_server_overview.html">Web Server Overview</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/02_static_dynamic_content.html">Static Dynamic Content</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/03_tomcat.html">Tomcat</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/04_apache.html">Apache</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/05_nginx.html">Nginx</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/06_forward_proxies.html">Forward Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/07_reverse_proxies.html">Reverse Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/08_load_balancing.html">Load Balancing</a></li>
+                        </ol>
+                    </li>
+                    <li>Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/01_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/02_transactions.html">Transactions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/03_indexes.html">Indexes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/04_isolation_levels.html">Isolation Levels</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/05_data_warehousing.html">Data Warehousing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/06_replication.html">Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/07_halloween_problem.html">Halloween Problem</a></li>
+                        </ol>
+                    </li>
+                    <li>Caching<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/01_caching_strategies.html">Caching Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/02_redis.html">Redis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/03_content_delivery_networks.html">Content Delivery Networks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/04_database_caching.html">Database Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/05_memcached.html">Memcached</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/06_http_caching.html">Http Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/07_application_level_caching.html">Application Level Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/08_memory_map.html">Memory Map</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Processing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/01_pub_sub_vs_queue.html">Pub Sub vs Queue</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/02_messaging_system_integration.html">Messaging System Integration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/03_batch_processing.html">Batch Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing.html">Stream Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/05_etl_and_pipelines.html">Etl and Pipelines</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/06_lambda_and_kappa_architecture.html">Lambda and Kappa Architecture</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/07_workflow_orchestration.html">Workflow Orchestration</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Formats<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/01_protocol_buffers.html">Protocol Buffers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/02_xml.html">Xml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/03_json.html">Json</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/04_yaml.html">Yaml</a></li>
+                        </ol>
+                    </li>
+                    <li>Security<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/01_auth.html">Auth</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/02_tls.html">Tls</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/03_security_vulnerabilities.html">Security Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/04_security_best_practices_and_measures.html">Security Best Practices and Measures</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/05_third_party_cookies_vulnerabilities.html">Third Party Cookies Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/06_secure_containers.html">Secure Containers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/07_credentials_management.html">Credentials Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/08_supply_chain_attacks.html">Supply Chain Attacks</a></li>
+                        </ol>
+                    </li>
+                    <li>Deployment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/01_centos_digital_ocean.html">Centos Digital Ocean</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/02_static_python_website_netlify.html">Static Python Website Netlify</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/03_docker.html">Docker</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/04_kubernetes.html">Kubernetes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/05_ci_cd.html">Ci Cd</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/06_deployment_strategies.html">Deployment Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/07_infrastructure_as_code.html">Infrastructure As Code</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Systems<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/01_coordination_services.html">Coordination Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/02_gossip_protocol.html">Gossip Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/03_linearizability.html">Linearizability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/04_concurrent_writes.html">Concurrent Writes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/05_operational_transform.html">Operational Transform</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/06_algorithms_summary.html">Algorithms Summary</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/07_optimistic_vs_pessimistic_locking.html">Optimistic vs Pessimistic Locking</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: April 27, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="ci-cd-pipelines">CI/CD Pipelines</h2>
+            <p>Continuous Integration (CI) and Continuous Delivery/Deployment (CD) automate the path from a code commit to running software in production. CI catches integration problems early by building and testing on every commit. CD takes those validated artifacts and delivers them to one or more environments automatically.</p>
+            <div>
+                <pre><code class="language-developer">|
+     | git push
+     v
+  +----------+     +----------+     +----------+     +------------+
+  |  Source  | --&gt; |   CI     | --&gt; |  CD      | --&gt; | Production |
+  |  Control |     |  Build   |     |  Deploy  |     | Environment|
+  |  (Git)   |     |  &amp; Test  |     |  Stage   |     |            |
+  +----------+     +----------+     +----------+     +------------+
+                       |                |
+                  Unit Tests        Integration
+                  Lint/Format       Tests
+                  Security Scan     Smoke Tests
+                  Build Artifact    Approval Gate</code></pre>
+            </div>
+            <ul>
+                <li><strong>Continuous Integration</strong> – merge frequently, build and test automatically on every push.</li>
+                <li><strong>Continuous Delivery</strong> – every passing build is a release candidate that <em>can</em> be deployed with a manual approval.</li>
+                <li><strong>Continuous Deployment</strong> – every passing build is deployed to production automatically with no manual gate.</li>
+            </ul>
+            <h3 id="core-concepts">Core Concepts</h3>
+            <h4 id="pipeline">Pipeline</h4>
+            <p>A pipeline is a sequence of stages (jobs) that transform source code into a deployed application. Stages run sequentially; jobs within a stage may run in parallel.</p>
+            <h4 id="artifact">Artifact</h4>
+            <p>An artifact is the versioned, immutable output of a build stage — a Docker image, a compiled binary, or a JAR file. The same artifact is promoted through staging, QA, and production rather than rebuilt per environment.</p>
+            <h4 id="environment">Environment</h4>
+            <p>An environment is a named deployment target (development, staging, production). Each environment typically has its own configuration and credentials.</p>
+            <h4 id="secrets-management">Secrets Management</h4>
+            <p>Credentials, API keys, and tokens are stored outside the repository in a secrets store (GitHub Actions Secrets, GitLab CI Variables, Vault) and injected into pipeline jobs at runtime.</p>
+            <h3 id="github-actions-example">GitHub Actions Example</h3>
+            <p>GitHub Actions defines pipelines in YAML files under <code>.github/workflows/</code>.</p>
+            <div>
+                <pre><code class="language-yaml"># .github/workflows/ci-cd.yml
+name: CI / CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  # ── CI stage ──────────────────────────────────────────
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Unit tests
+        run: pytest --tb=short
+
+  # ── Build &amp; push ──────────────────────────────────────
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=sha,prefix=sha-
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: ${{ steps.meta.outputs.tags }}
+
+  # ── Deploy to staging ─────────────────────────────────
+  deploy-staging:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Deploy to staging
+        run: |
+          kubectl set image deployment/myapp \
+            myapp=${{ needs.build.outputs.image_tag }} \
+            -n staging
+        env:
+          KUBECONFIG_DATA: ${{ secrets.STAGING_KUBECONFIG }}
+
+  # ── Deploy to production (manual approval) ────────────
+  deploy-production:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://api.example.com
+    steps:
+      - name: Deploy to production
+        run: |
+          kubectl set image deployment/myapp \
+            myapp=${{ needs.build.outputs.image_tag }} \
+            -n production
+        env:
+          KUBECONFIG_DATA: ${{ secrets.PROD_KUBECONFIG }}</code></pre>
+            </div>
+            <p>The <code>environment: production</code> setting in GitHub Actions triggers a required reviewer approval before the job runs.</p>
+            <h3 id="gitlab-ci-example">GitLab CI Example</h3>
+            <p>GitLab CI defines the pipeline in <code>.gitlab-ci.yml</code> at the repository root.</p>
+            <div>
+                <pre><code class="language-yaml">stages:
+  - test
+  - build
+  - deploy
+
+variables:
+  IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+
+test:
+  stage: test
+  image: python:3.11-slim
+  script:
+    - pip install -r requirements.txt
+    - pytest --tb=short
+
+build:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build -t $IMAGE .
+    - docker push $IMAGE
+
+deploy-staging:
+  stage: deploy
+  environment: staging
+  script:
+    - kubectl set image deployment/myapp myapp=$IMAGE -n staging
+  only:
+    - main
+
+deploy-production:
+  stage: deploy
+  environment: production
+  script:
+    - kubectl set image deployment/myapp myapp=$IMAGE -n production
+  when: manual
+  only:
+    - main</code></pre>
+            </div>
+            <h3 id="pipeline-best-practices">Pipeline Best Practices</h3>
+            <h4 id="fail-fast">Fail Fast</h4>
+            <ul>
+                <li><strong>Run quick checks first</strong> (lint, type-check, unit tests) before slow integration tests.</li>
+                <li><strong>Cache dependencies</strong> between runs to avoid re-downloading packages.</li>
+            </ul>
+            <div>
+                <pre><code class="language-yaml"># GitHub Actions – cache pip packages
+- uses: actions/cache@v4
+  with:
+    path: ~/.cache/pip
+    key: pip-${{ hashFiles('requirements.txt') }}</code></pre>
+            </div>
+            <h4 id="immutable-artifacts">Immutable Artifacts</h4>
+            <ul>
+                <li><strong>Build once, promote everywhere</strong> – never rebuild the same source for different environments.</li>
+                <li><strong>Tag images with the commit SHA</strong> rather than a mutable tag like <code>latest</code>.</li>
+            </ul>
+            <h4 id="branch-strategy">Branch Strategy</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Branch</td>
+                    <td>Purpose</td>
+                    <td>Deploys to</td>
+                </tr>
+                <tr>
+                    <td><code>feature/*</code></td>
+                    <td>Isolated development</td>
+                    <td>No automatic deploy</td>
+                </tr>
+                <tr>
+                    <td><code>main</code></td>
+                    <td>Integration branch</td>
+                    <td>Staging (automatic)</td>
+                </tr>
+                <tr>
+                    <td><code>release/*</code></td>
+                    <td>Release candidates</td>
+                    <td>Production (manual approval)</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="security-in-ci-cd">Security in CI/CD</h4>
+            <ul>
+                <li><strong>Store secrets</strong> in the CI/CD secrets store, never in the repository.</li>
+                <li><strong>Rotate credentials</strong> regularly and revoke them immediately if a pipeline is compromised.</li>
+                <li><strong>Pin action versions</strong> to a specific commit SHA to prevent supply-chain attacks:</li>
+            </ul>
+            <div>
+                <pre><code class="language-yaml">- uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2</code></pre>
+            </div>
+            <ul>
+                <li><strong>Scan dependencies and images</strong> for CVEs in the pipeline before deploying.</li>
+                <li><strong>Restrict which branches can deploy</strong> to production.</li>
+            </ul>
+            <h3 id="testing-in-the-pipeline">Testing in the Pipeline</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Stage</td>
+                    <td>Tests</td>
+                </tr>
+                <tr>
+                    <td>Pre-commit</td>
+                    <td>Lint, format</td>
+                </tr>
+                <tr>
+                    <td>CI (unit)</td>
+                    <td>Unit tests, type checks</td>
+                </tr>
+                <tr>
+                    <td>CI (integration)</td>
+                    <td>Service integration tests, database migrations</td>
+                </tr>
+                <tr>
+                    <td>Post-deploy (staging)</td>
+                    <td>Smoke tests, contract tests</td>
+                </tr>
+                <tr>
+                    <td>Post-deploy (production)</td>
+                    <td>Synthetic monitoring, canary metrics</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="notifications-and-observability">Notifications and Observability</h3>
+            <ul>
+                <li><strong>Notify</strong> the team in Slack or email on pipeline failure and recovery.</li>
+                <li><strong>Track</strong> deployment frequency, lead time, change failure rate, and mean time to recovery (MTTR) as DORA metrics.</li>
+                <li><strong>Link</strong> each deployment to the commit that triggered it for fast incident triage.</li>
+            </ul>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

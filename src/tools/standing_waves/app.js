@@ -235,7 +235,7 @@ function drawNodeMarkers() {
     var nodeColor = getCSSColor('--danger-color');
     var antinodeColor = getCSSColor('--success-color');
 
-    nodes.forEach(function (xNorm) {
+    nodes.forEach(function(xNorm) {
         var px = plotLeft + xNorm * plotWidth;
         ctx.fillStyle = nodeColor;
         ctx.beginPath();
@@ -249,7 +249,7 @@ function drawNodeMarkers() {
     });
 
     var antinodes = findAntinodes();
-    antinodes.forEach(function (xNorm) {
+    antinodes.forEach(function(xNorm) {
         var px = plotLeft + xNorm * plotWidth;
         ctx.fillStyle = antinodeColor;
         ctx.beginPath();
@@ -282,7 +282,7 @@ function updateStats() {
 }
 
 function updatePresetButtons(activeBtn) {
-    [btnFundamental, btnSecondHarmonic, btnThirdHarmonic, btnHighFreq].forEach(function (btn) {
+    [btnFundamental, btnSecondHarmonic, btnThirdHarmonic, btnHighFreq].forEach(function(btn) {
         btn.classList.remove("active");
     });
     if (activeBtn) {
@@ -315,7 +315,7 @@ function animate() {
     requestAnimationFrame(animate);
 }
 
-btnFundamental.addEventListener("click", function () {
+btnFundamental.addEventListener("click", function() {
     freqSlider.value = "0.5";
     frequency = 0.5;
     phaseSlider.value = "0";
@@ -327,7 +327,7 @@ btnFundamental.addEventListener("click", function () {
     if (!timerRunning) drawAll();
 });
 
-btnSecondHarmonic.addEventListener("click", function () {
+btnSecondHarmonic.addEventListener("click", function() {
     freqSlider.value = "1";
     frequency = 1;
     phaseSlider.value = "0";
@@ -339,7 +339,7 @@ btnSecondHarmonic.addEventListener("click", function () {
     if (!timerRunning) drawAll();
 });
 
-btnThirdHarmonic.addEventListener("click", function () {
+btnThirdHarmonic.addEventListener("click", function() {
     freqSlider.value = "1.5";
     frequency = 1.5;
     phaseSlider.value = "0";
@@ -351,7 +351,7 @@ btnThirdHarmonic.addEventListener("click", function () {
     if (!timerRunning) drawAll();
 });
 
-btnHighFreq.addEventListener("click", function () {
+btnHighFreq.addEventListener("click", function() {
     freqSlider.value = "3";
     frequency = 3;
     phaseSlider.value = "0";
@@ -363,7 +363,7 @@ btnHighFreq.addEventListener("click", function () {
     if (!timerRunning) drawAll();
 });
 
-freqSlider.addEventListener("input", function () {
+freqSlider.addEventListener("input", function() {
     frequency = +freqSlider.value;
     freqValue.textContent = frequency.toFixed(1) + " Hz";
     updateStats();
@@ -371,7 +371,7 @@ freqSlider.addEventListener("input", function () {
     if (!timerRunning) drawAll();
 });
 
-phaseSlider.addEventListener("input", function () {
+phaseSlider.addEventListener("input", function() {
     phase = +phaseSlider.value * Math.PI / 180;
     phaseValue.textContent = phaseSlider.value + "°";
     updateStats();
@@ -379,20 +379,20 @@ phaseSlider.addEventListener("input", function () {
     if (!timerRunning) drawAll();
 });
 
-boundarySelect.addEventListener("change", function () {
+boundarySelect.addEventListener("change", function() {
     updateStats();
     if (!timerRunning) drawAll();
 });
 
-showIncidentCheck.addEventListener("change", function () {
+showIncidentCheck.addEventListener("change", function() {
     if (!timerRunning) drawAll();
 });
 
-showReflectedCheck.addEventListener("change", function () {
+showReflectedCheck.addEventListener("change", function() {
     if (!timerRunning) drawAll();
 });
 
-startStopBtn.addEventListener("click", function () {
+startStopBtn.addEventListener("click", function() {
     timerRunning = !timerRunning;
     startStopBtn.innerHTML = timerRunning ?
         '<span>⏸️</span> Stop Animation' :
@@ -400,7 +400,7 @@ startStopBtn.addEventListener("click", function () {
     if (timerRunning) animate();
 });
 
-resetBtn.addEventListener("click", function () {
+resetBtn.addEventListener("click", function() {
     timerRunning = false;
     startStopBtn.innerHTML = '<span>▶️</span> Start Animation';
     frameCounter = 0;

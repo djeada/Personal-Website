@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Memcached</title>
+    <meta content="Memcached is a high-performance, distributed, in-memory key-value cache." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/05_memcached" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Memcached",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/05_memcached"
+            },
+            "url": "https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/05_memcached",
+            "description": "Memcached is a high-performance, distributed, in-memory key-value cache.",
+            "dateModified": "2026-04-27"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol><a href="#memcached">Memcached</a>
+                    <ol>
+                        <li><a href="#concepts">Concepts</a>
+                            <ol>
+                                <li><a href="#in-memory-cache">In-Memory Cache</a></li>
+                                <li><a href="#simple-key-value-model">Simple Key-Value Model</a></li>
+                                <li><a href="#ttl-and-expiration">TTL and Expiration</a></li>
+                                <li><a href="#client-side-distribution">Client-Side Distribution</a></li>
+                                <li><a href="#memcached-data-model">Memcached Data Model</a></li>
+                                <li><a href="#strings-and-serialized-objects">Strings and Serialized Objects</a></li>
+                                <li><a href="#numeric-counters">Numeric Counters</a></li>
+                                <li><a href="#cas-compare-and-swap">CAS: Compare-And-Swap</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#memory-management">Memory Management</a>
+                            <ol>
+                                <li><a href="#slab-allocator">Slab Allocator</a></li>
+                                <li><a href="#eviction">Eviction</a></li>
+                                <li><a href="#value-size">Value Size</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#using-memcached-as-a-database-cache">Using Memcached as a Database Cache</a>
+                            <ol>
+                                <li><a href="#cache-aside-pattern">Cache-Aside Pattern</a></li>
+                                <li><a href="#caching-single-row-queries">Caching Single-Row Queries</a></li>
+                                <li><a href="#caching-expensive-list-queries">Caching Expensive List Queries</a></li>
+                                <li><a href="#caching-aggregates">Caching Aggregates</a></li>
+                                <li><a href="#caching-reference-tables">Caching Reference Tables</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#cache-invalidation">Cache Invalidation</a>
+                            <ol>
+                                <li><a href="#delete-on-write">Delete on Write</a></li>
+                                <li><a href="#ttl-based-invalidation">TTL-Based Invalidation</a></li>
+                                <li><a href="#versioned-keys">Versioned Keys</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#common-usage-patterns">Common Usage Patterns</a>
+                            <ol>
+                                <li><a href="#database-query-cache">Database Query Cache</a></li>
+                                <li><a href="#session-cache">Session Cache</a></li>
+                                <li><a href="#fragment-or-page-cache">Fragment or Page Cache</a></li>
+                                <li><a href="#lightweight-rate-limiting">Lightweight Rate Limiting</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#memcached-vs-redis">Memcached vs Redis</a></li>
+                        <li><a href="#monitoring-and-maintenance">Monitoring and Maintenance</a></li>
+                        <li><a href="#failure-behavior">Failure Behavior</a></li>
+                        <li><a href="#security-considerations">Security Considerations</a></li>
+                        <li><a href="#best-practices">Best Practices</a></li>
+                    </ol>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Api Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/01_api_communication_protocols.html">Api Communication Protocols</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/02_rest.html">Rest</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/03_graphql.html">Graphql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/04_grpc.html">Grpc</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/05_state_management.html">State Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/06_data_transmission.html">Data Transmission</a></li>
+                        </ol>
+                    </li>
+                    <li>Network Communications<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/01_network_communications.html">Network Communications</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/02_tcp_and_udp.html">Tcp and Udp</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/03_http_protocol.html">Http Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/04_web_sockets.html">Web Sockets</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/05_metrics_and_analysis.html">Metrics and Analysis</a></li>
+                        </ol>
+                    </li>
+                    <li>Server Technologies<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/01_web_server_overview.html">Web Server Overview</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/02_static_dynamic_content.html">Static Dynamic Content</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/03_tomcat.html">Tomcat</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/04_apache.html">Apache</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/05_nginx.html">Nginx</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/06_forward_proxies.html">Forward Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/07_reverse_proxies.html">Reverse Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/08_load_balancing.html">Load Balancing</a></li>
+                        </ol>
+                    </li>
+                    <li>Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/01_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/02_transactions.html">Transactions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/03_indexes.html">Indexes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/04_isolation_levels.html">Isolation Levels</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/05_data_warehousing.html">Data Warehousing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/06_replication.html">Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/07_halloween_problem.html">Halloween Problem</a></li>
+                        </ol>
+                    </li>
+                    <li>Caching<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/01_caching_strategies.html">Caching Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/02_redis.html">Redis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/03_content_delivery_networks.html">Content Delivery Networks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/04_database_caching.html">Database Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/05_memcached.html">Memcached</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/06_http_caching.html">Http Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/07_application_level_caching.html">Application Level Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/08_memory_map.html">Memory Map</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Processing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/01_pub_sub_vs_queue.html">Pub Sub vs Queue</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/02_messaging_system_integration.html">Messaging System Integration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/03_batch_processing.html">Batch Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing.html">Stream Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/05_etl_and_pipelines.html">Etl and Pipelines</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/06_lambda_and_kappa_architecture.html">Lambda and Kappa Architecture</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/07_workflow_orchestration.html">Workflow Orchestration</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Formats<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/01_protocol_buffers.html">Protocol Buffers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/02_xml.html">Xml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/03_json.html">Json</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/04_yaml.html">Yaml</a></li>
+                        </ol>
+                    </li>
+                    <li>Security<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/01_auth.html">Auth</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/02_tls.html">Tls</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/03_security_vulnerabilities.html">Security Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/04_security_best_practices_and_measures.html">Security Best Practices and Measures</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/05_third_party_cookies_vulnerabilities.html">Third Party Cookies Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/06_secure_containers.html">Secure Containers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/07_credentials_management.html">Credentials Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/08_supply_chain_attacks.html">Supply Chain Attacks</a></li>
+                        </ol>
+                    </li>
+                    <li>Deployment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/01_centos_digital_ocean.html">Centos Digital Ocean</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/02_static_python_website_netlify.html">Static Python Website Netlify</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/03_docker.html">Docker</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/04_kubernetes.html">Kubernetes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/05_ci_cd.html">Ci Cd</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/06_deployment_strategies.html">Deployment Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/07_infrastructure_as_code.html">Infrastructure As Code</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Systems<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/01_coordination_services.html">Coordination Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/02_gossip_protocol.html">Gossip Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/03_linearizability.html">Linearizability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/04_concurrent_writes.html">Concurrent Writes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/05_operational_transform.html">Operational Transform</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/06_algorithms_summary.html">Algorithms Summary</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/07_optimistic_vs_pessimistic_locking.html">Optimistic vs Pessimistic Locking</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: April 27, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="memcached">Memcached</h2>
+            <p>Memcached is a high-performance, distributed, in-memory key-value cache. It is designed for one main purpose: storing small pieces of frequently accessed data in RAM so applications can avoid repeatedly querying slower systems such as relational databases, APIs, or disk-backed storage.</p>
+            <p>Unlike Redis, Memcached is intentionally simple. It stores keys and values, supports expiration, distributes data across multiple cache nodes through client-side hashing, and focuses on very fast cache reads and writes. It does not provide rich data structures, persistence, streams, Pub/Sub, or built-in replication in the same way Redis does.</p>
+            <p>Memcached is best understood as a <strong>temporary, disposable cache</strong>. If a Memcached node restarts or evicts data, the application should be able to rebuild missing values from the source of truth, usually a database.</p>
+            <div>
+                <pre><code class="language-text">+-----------+        +-----------+        +-----------+
+  | Client A  |        | Client B  |        | Client C  |
+  | Web App   |        | Worker    |        | API       |
+  +-----+-----+        +-----+-----+        +-----+-----+
+        |                     |                     |
+        | get/set             | get/set             | get/delete
+        |                     |                     |
+        +----------+----------+----------+----------+
+                   |
+                   v
+        +-------------------------------------------+
+        |              Memcached Layer              |
+        |-------------------------------------------|
+        |  Storage: In-memory key-value cache        |
+        |  Model: Simple strings / binary values     |
+        |  Expiration: TTL-based item expiry         |
+        |  Distribution: Client-side hashing         |
+        |  Persistence: None                         |
+        |  Best use: Disposable database cache        |
+        +---------------------+---------------------+
+                              |
+                              | cache miss
+                              v
+                    +-------------------+
+                    | Primary Database  |
+                    | Source of Truth   |
+                    +-------------------+</code></pre>
+            </div>
+            <h3 id="concepts">Concepts</h3>
+            <p>Memcached is deliberately minimal. Its simplicity is one of its main strengths. It works well when the application needs a fast, shared, distributed cache and does not need advanced Redis-style features.</p>
+            <h4 id="in-memory-cache">In-Memory Cache</h4>
+            <p>Memcached stores data in RAM. This makes it much faster than reading from disk or repeatedly executing database queries.</p>
+            <p>Example database query:</p>
+            <div>
+                <pre><code class="language-sql">SELECT id, name, price
+FROM products
+WHERE id = 8842;</code></pre>
+            </div>
+            <p>Example cached value in Memcached:</p>
+            <div>
+                <pre><code class="language-json">{
+  "id": 8842,
+  "name": "Laptop Stand",
+  "price": 29.99
+}</code></pre>
+            </div>
+            <p>Example cache behavior:</p>
+            <div>
+                <pre><code class="language-json">{
+  "cache": "HIT",
+  "databaseQueried": false,
+  "latencyMs": 2
+}</code></pre>
+            </div>
+            <p>If the key is missing, the application queries the database and stores the result in Memcached for future requests.</p>
+            <div>
+                <pre><code class="language-json">{
+  "cache": "MISS",
+  "databaseQueried": true,
+  "latencyMs": 75
+}</code></pre>
+            </div>
+            <p>Memcached should not be treated as durable storage. It can lose data when a node restarts, when memory fills up, or when items expire.</p>
+            <h4 id="simple-key-value-model">Simple Key-Value Model</h4>
+            <p>Memcached stores data by key. Each key maps to a value, which is usually a string, serialized object, JSON blob, or binary payload.</p>
+            <p>Example keys:</p>
+            <div>
+                <pre><code class="language-text">product:8842:details
+user:1001:profile
+dashboard:orders:last_30_days
+category:7:popular_products</code></pre>
+            </div>
+            <p>Example command style:</p>
+            <div>
+                <pre><code class="language-text">set product:8842:details 0 300 52
+{"id":8842,"name":"Laptop Stand","price":29.99}</code></pre>
+            </div>
+            <p>Example retrieval:</p>
+            <div>
+                <pre><code class="language-text">get product:8842:details</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">VALUE product:8842:details 0 52
+{"id":8842,"name":"Laptop Stand","price":29.99}
+END</code></pre>
+            </div>
+            <p>The application is responsible for serialization and deserialization. Memcached does not understand the structure of your value.</p>
+            <p>Example application interpretation:</p>
+            <div>
+                <pre><code class="language-json">{
+  "key": "product:8842:details",
+  "serializedFormat": "JSON",
+  "applicationParsesValue": true
+}</code></pre>
+            </div>
+            <h4 id="ttl-and-expiration">TTL and Expiration</h4>
+            <p>Memcached supports expiration times. When setting a key, the application can provide a TTL. After the TTL expires, the item is no longer returned.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">set product:8842:details 0 300 52
+{"id":8842,"name":"Laptop Stand","price":29.99}</code></pre>
+            </div>
+            <p>This stores the product details for 300 seconds.</p>
+            <p>Example TTL design:</p>
+            <div>
+                <pre><code class="language-json">{
+  "productDetails": "5 minutes",
+  "categoryLists": "2 minutes",
+  "dashboardAggregates": "15 minutes",
+  "referenceData": "1 hour"
+}</code></pre>
+            </div>
+            <p>Memcached can also evict items before their TTL expires if memory is full. This is why cached data must always be rebuildable from the database or another source of truth.</p>
+            <h4 id="client-side-distribution">Client-Side Distribution</h4>
+            <p>Memcached does not have built-in clustering in the same way Redis Cluster does. In most deployments, the client library distributes keys across multiple Memcached servers using hashing.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">hash(product:8842:details) -&gt; memcached-node-2
+hash(user:1001:profile)    -&gt; memcached-node-1
+hash(category:7:popular)   -&gt; memcached-node-3</code></pre>
+            </div>
+            <p>Diagram:</p>
+            <div>
+                <pre><code class="language-text">+-------------+
+        | Application |
+        +------+------+
+               |
+       client-side hashing
+               |
+   +-----------+-----------+
+   |           |           |
+   v           v           v
++------+    +------+    +------+
+| MC 1 |    | MC 2 |    | MC 3 |
++------+    +------+    +------+</code></pre>
+            </div>
+            <p>Example routing output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "key": "product:8842:details",
+  "selectedNode": "memcached-node-2",
+  "method": "client-side hashing"
+}</code></pre>
+            </div>
+            <p>Many clients use consistent hashing so that adding or removing a Memcached node remaps only a portion of keys rather than the entire keyspace.</p>
+            <h4 id="memcached-data-model">Memcached Data Model</h4>
+            <p>Memcached has a much simpler data model than Redis. It stores opaque values. The server does not provide lists, sets, sorted sets, hashes, streams, or server-side querying.</p>
+            <h4 id="strings-and-serialized-objects">Strings and Serialized Objects</h4>
+            <p>Most Memcached values are strings or serialized objects.</p>
+            <p>Example JSON value:</p>
+            <div>
+                <pre><code class="language-json">{
+  "id": 1001,
+  "name": "Alice",
+  "plan": "premium"
+}</code></pre>
+            </div>
+            <p>Stored under:</p>
+            <div>
+                <pre><code class="language-text">user:1001:profile</code></pre>
+            </div>
+            <p>Example application pseudo-code:</p>
+            <div>
+                <pre><code class="language-python">profile = memcached.get("user:1001:profile")
+
+if profile is None:
+    profile = db.query_one(
+        "SELECT id, name, plan FROM users WHERE id = %s",
+        [1001]
+    )
+    memcached.set("user:1001:profile", json.dumps(profile), expire=300)
+
+return json.loads(profile)</code></pre>
+            </div>
+            <p>Example first request:</p>
+            <div>
+                <pre><code class="language-json">{
+  "cacheStatus": "MISS",
+  "databaseQueried": true,
+  "storedInMemcached": true
+}</code></pre>
+            </div>
+            <p>Example second request:</p>
+            <div>
+                <pre><code class="language-json">{
+  "cacheStatus": "HIT",
+  "databaseQueried": false
+}</code></pre>
+            </div>
+            <h4 id="numeric-counters">Numeric Counters</h4>
+            <p>Memcached supports atomic increment and decrement operations for numeric values. This is useful for counters, lightweight rate limiting, and temporary metrics.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">set page:123:views 0 3600 1
+0
+
+incr page:123:views 1</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">1</code></pre>
+            </div>
+            <p>Example use:</p>
+            <div>
+                <pre><code class="language-json">{
+  "key": "rate_limit:ip:203.0.113.10",
+  "count": 42,
+  "windowSeconds": 60
+}</code></pre>
+            </div>
+            <p>Counters in Memcached are temporary. They are not durable and should not be used as the only source of truth for important business data.</p>
+            <h4 id="cas-compare-and-swap">CAS: Compare-And-Swap</h4>
+            <p>Memcached supports CAS, or compare-and-swap, for optimistic concurrency. CAS lets a client update a value only if it has not changed since the client last read it.</p>
+            <p>Example flow:</p>
+            <div>
+                <pre><code class="language-text">1. Client reads key with gets.
+2. Memcached returns value plus CAS token.
+3. Client modifies value.
+4. Client writes using cas token.
+5. Write succeeds only if token still matches.</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">gets user:1001:profile
+VALUE user:1001:profile 0 38 927364
+{"id":1001,"name":"Alice","visits":3}
+END</code></pre>
+            </div>
+            <p>The last number is the CAS token.</p>
+            <p>Example CAS update:</p>
+            <div>
+                <pre><code class="language-text">cas user:1001:profile 0 300 38 927364
+{"id":1001,"name":"Alice","visits":4}</code></pre>
+            </div>
+            <p>Example successful output:</p>
+            <div>
+                <pre><code class="language-text">STORED</code></pre>
+            </div>
+            <p>Example failed output:</p>
+            <div>
+                <pre><code class="language-text">EXISTS</code></pre>
+            </div>
+            <p><code>EXISTS</code> means another client updated the value first. The application should reread and retry if appropriate.</p>
+            <h3 id="memory-management">Memory Management</h3>
+            <p>Memcached is designed around fixed memory allocation. When you start Memcached, you assign a memory limit. Memcached uses that memory for cached items and evicts old items when needed.</p>
+            <h4 id="slab-allocator">Slab Allocator</h4>
+            <p>Memcached uses a slab allocator. It divides memory into slab classes for different item sizes. This reduces fragmentation and makes memory allocation fast.</p>
+            <p>Conceptual layout:</p>
+            <div>
+                <pre><code class="language-text">Memcached Memory
+
++--------------------+
+| Slab Class 1       | small items
++--------------------+
+| Slab Class 2       | medium items
++--------------------+
+| Slab Class 3       | larger items
++--------------------+</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-json">{
+  "smallItems": "user session IDs",
+  "mediumItems": "profile JSON",
+  "largeItems": "dashboard result blobs"
+}</code></pre>
+            </div>
+            <p>This is one reason Memcached is efficient for simple caching workloads.</p>
+            <h4 id="eviction">Eviction</h4>
+            <p>When memory is full, Memcached evicts items. Its traditional eviction policy is based on least recently used behavior within slab classes.</p>
+            <p>Example eviction:</p>
+            <div>
+                <pre><code class="language-json">{
+  "evictedKey": "product:old:details",
+  "reason": "memory pressure",
+  "slabClass": "medium"
+}</code></pre>
+            </div>
+            <p>Eviction does not mean an error occurred. It is normal behavior for a cache. The application should treat evicted keys as cache misses and reload from the database.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-json">{
+  "cacheMissReason": "evicted",
+  "fallback": "query database and repopulate cache"
+}</code></pre>
+            </div>
+            <p>If evictions are very frequent, the cache may be undersized or storing data that is not useful enough.</p>
+            <h4 id="value-size">Value Size</h4>
+            <p>Memcached is optimized for relatively small values. The default maximum item size is commonly 1 MB, though it can be configured.</p>
+            <p>Example poor fit:</p>
+            <div>
+                <pre><code class="language-json">{
+  "key": "report:huge_export",
+  "valueSize": "20MB",
+  "problem": "too large for typical Memcached usage"
+}</code></pre>
+            </div>
+            <p>Better approach:</p>
+            <div>
+                <pre><code class="language-json">{
+  "largeReportStoredIn": "object storage or database",
+  "memcachedStores": "small metadata or precomputed summary"
+}</code></pre>
+            </div>
+            <p>Memcached works best when caching compact values that are frequently reused.</p>
+            <h3 id="using-memcached-as-a-database-cache">Using Memcached as a Database Cache</h3>
+            <p>Memcached is most often used to cache database query results. This is its strongest and most common use case.</p>
+            <h4 id="cache-aside-pattern">Cache-Aside Pattern</h4>
+            <p>The cache-aside pattern is the standard Memcached pattern. The application controls the cache.</p>
+            <p>Flow:</p>
+            <div>
+                <pre><code class="language-text">1. Application needs product details.
+2. Check Memcached.
+3. If hit, return cached value.
+4. If miss, query database.
+5. Store result in Memcached.
+6. Return result.</code></pre>
+            </div>
+            <p>Example pseudo-code:</p>
+            <div>
+                <pre><code class="language-python">def get_product(product_id):
+    key = f"product:{product_id}:details"
+
+    cached = memcached.get(key)
+    if cached is not None:
+        return json.loads(cached)
+
+    product = db.query_one(
+        """
+        SELECT id, name, price, stock_count
+        FROM products
+        WHERE id = %s
+        """,
+        [product_id]
+    )
+
+    memcached.set(key, json.dumps(product), expire=300)
+    return product</code></pre>
+            </div>
+            <p>Example cache miss:</p>
+            <div>
+                <pre><code class="language-json">{
+  "key": "product:8842:details",
+  "cacheStatus": "MISS",
+  "databaseQuery": "executed",
+  "memcachedSet": true
+}</code></pre>
+            </div>
+            <p>Example cache hit:</p>
+            <div>
+                <pre><code class="language-json">{
+  "key": "product:8842:details",
+  "cacheStatus": "HIT",
+  "databaseQuery": "skipped"
+}</code></pre>
+            </div>
+            <p>This reduces repeated database reads for popular records.</p>
+            <h4 id="caching-single-row-queries">Caching Single-Row Queries</h4>
+            <p>Single-row primary-key lookups are excellent candidates for Memcached.</p>
+            <p>Example SQL:</p>
+            <div>
+                <pre><code class="language-sql">SELECT id, username, display_name
+FROM users
+WHERE id = 1001;</code></pre>
+            </div>
+            <p>Cache key:</p>
+            <div>
+                <pre><code class="language-text">user:1001:profile</code></pre>
+            </div>
+            <p>Cached value:</p>
+            <div>
+                <pre><code class="language-json">{
+  "id": 1001,
+  "username": "alice",
+  "display_name": "Alice"
+}</code></pre>
+            </div>
+            <p>This avoids repeating the same database query whenever the user appears in comments, posts, messages, or profile pages.</p>
+            <h4 id="caching-expensive-list-queries">Caching Expensive List Queries</h4>
+            <p>Memcached can store results of expensive list queries, as long as the cache key includes all important query parameters.</p>
+            <p>Example SQL:</p>
+            <div>
+                <pre><code class="language-sql">SELECT id, name, price
+FROM products
+WHERE category_id = 7 AND active = true
+ORDER BY popularity DESC
+LIMIT 20;</code></pre>
+            </div>
+            <p>Cache key:</p>
+            <div>
+                <pre><code class="language-text">products:category:7:active:true:sort:popularity:limit:20</code></pre>
+            </div>
+            <p>Cached value:</p>
+            <div>
+                <pre><code class="language-json">[
+  { "id": 8842, "name": "Laptop Stand", "price": 29.99 },
+  { "id": 9910, "name": "USB-C Dock", "price": 79.99 }
+]</code></pre>
+            </div>
+            <p>If the query changes, the key must change. For example, sorting by price needs a different key.</p>
+            <div>
+                <pre><code class="language-text">products:category:7:active:true:sort:price_asc:limit:20</code></pre>
+            </div>
+            <h4 id="caching-aggregates">Caching Aggregates</h4>
+            <p>Memcached works well for expensive aggregate query results.</p>
+            <p>Example SQL:</p>
+            <div>
+                <pre><code class="language-sql">SELECT
+  DATE(created_at) AS day,
+  COUNT(*) AS order_count,
+  SUM(total) AS revenue
+FROM orders
+WHERE created_at &gt;= CURRENT_DATE - INTERVAL '30 days'
+GROUP BY DATE(created_at)
+ORDER BY day;</code></pre>
+            </div>
+            <p>Cache key:</p>
+            <div>
+                <pre><code class="language-text">dashboard:orders:last_30_days</code></pre>
+            </div>
+            <p>Cached value:</p>
+            <div>
+                <pre><code class="language-json">[
+  {
+    "day": "2026-04-01",
+    "order_count": 892,
+    "revenue": 45210.75
+  },
+  {
+    "day": "2026-04-02",
+    "order_count": 914,
+    "revenue": 46883.20
+  }
+]</code></pre>
+            </div>
+            <p>Example benefit:</p>
+            <div>
+                <pre><code class="language-json">{
+  "dashboardRequestsPerMinute": 300,
+  "ttlSeconds": 300,
+  "databaseQueriesAvoided": "many repeated aggregate scans"
+}</code></pre>
+            </div>
+            <p>Aggregate caching is useful when dashboards are read frequently but can tolerate slightly stale data.</p>
+            <h4 id="caching-reference-tables">Caching Reference Tables</h4>
+            <p>Reference tables are strong Memcached candidates because they change rarely and are read often.</p>
+            <p>Example SQL:</p>
+            <div>
+                <pre><code class="language-sql">SELECT code, name, currency
+FROM countries;</code></pre>
+            </div>
+            <p>Cache key:</p>
+            <div>
+                <pre><code class="language-text">ref:countries</code></pre>
+            </div>
+            <p>Cached value:</p>
+            <div>
+                <pre><code class="language-json">{
+  "DE": {
+    "name": "Germany",
+    "currency": "EUR"
+  },
+  "US": {
+    "name": "United States",
+    "currency": "USD"
+  }
+}</code></pre>
+            </div>
+            <p>Example use:</p>
+            <div>
+                <pre><code class="language-json">{
+  "countryCode": "DE",
+  "countryName": "Germany",
+  "source": "memcached"
+}</code></pre>
+            </div>
+            <p>Reference data can often have long TTLs because it changes infrequently.</p>
+            <h3 id="cache-invalidation">Cache Invalidation</h3>
+            <p>Memcached does not automatically know when the database changes. The application must delete or refresh cached values when underlying database rows change.</p>
+            <h4 id="delete-on-write">Delete on Write</h4>
+            <p>A common strategy is to delete cache entries after updating the database. The next read repopulates the cache.</p>
+            <p>Example database update:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE products
+SET price = 34.99
+WHERE id = 8842;</code></pre>
+            </div>
+            <p>Example invalidation:</p>
+            <div>
+                <pre><code class="language-text">delete product:8842:details
+delete products:category:7:active:true:sort:popularity:limit:20</code></pre>
+            </div>
+            <p>Example result:</p>
+            <div>
+                <pre><code class="language-json">{
+  "databaseUpdated": true,
+  "cacheKeysDeleted": [
+    "product:8842:details",
+    "products:category:7:active:true:sort:popularity:limit:20"
+  ]
+}</code></pre>
+            </div>
+            <p>Deleting is often safer than trying to update every cached copy because the next read will rebuild from the database.</p>
+            <h4 id="ttl-based-invalidation">TTL-Based Invalidation</h4>
+            <p>TTL-based invalidation lets cached values expire automatically.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">set dashboard:orders:last_30_days 0 300 4096
+...</code></pre>
+            </div>
+            <p>This keeps the dashboard result for 5 minutes.</p>
+            <p>Example trade-off:</p>
+            <div>
+                <pre><code class="language-json">{
+  "ttl": "5 minutes",
+  "benefit": "fewer database queries",
+  "risk": "dashboard may show data up to 5 minutes stale"
+}</code></pre>
+            </div>
+            <p>TTL-based invalidation is simple, but it allows temporary staleness.</p>
+            <h4 id="versioned-keys">Versioned Keys</h4>
+            <p>Versioned keys avoid stale data when the cached format changes.</p>
+            <p>Old key:</p>
+            <div>
+                <pre><code class="language-text">v1:user:1001:profile</code></pre>
+            </div>
+            <p>New key:</p>
+            <div>
+                <pre><code class="language-text">v2:user:1001:profile</code></pre>
+            </div>
+            <p>Example result:</p>
+            <div>
+                <pre><code class="language-json">{
+  "oldCacheIgnored": true,
+  "newKeyUsed": "v2:user:1001:profile"
+}</code></pre>
+            </div>
+            <p>This is useful when application code changes the shape of cached JSON or serialized objects.</p>
+            <h3 id="common-usage-patterns">Common Usage Patterns</h3>
+            <p>Memcached is intentionally narrow, but it is very effective in the right roles.</p>
+            <h4 id="database-query-cache">Database Query Cache</h4>
+            <p>This is the primary Memcached use case.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-json">{
+  "query": "SELECT id, name, price FROM products WHERE id = 8842",
+  "cacheKey": "product:8842:details",
+  "ttl": "300 seconds"
+}</code></pre>
+            </div>
+            <p>The database remains the source of truth. Memcached only stores a temporary copy.</p>
+            <h4 id="session-cache">Session Cache</h4>
+            <p>Memcached can store session data, although Redis is often chosen when persistence or richer features are needed.</p>
+            <p>Example key:</p>
+            <div>
+                <pre><code class="language-text">session:abc123</code></pre>
+            </div>
+            <p>Example value:</p>
+            <div>
+                <pre><code class="language-json">{
+  "user_id": 1001,
+  "csrf_token": "token-value",
+  "expires_at": "2026-04-25T12:30:00Z"
+}</code></pre>
+            </div>
+            <p>If Memcached loses session data, users may be logged out. This may be acceptable for some applications but not others.</p>
+            <h4 id="fragment-or-page-cache">Fragment or Page Cache</h4>
+            <p>Memcached can store rendered HTML fragments or full pages.</p>
+            <p>Example key:</p>
+            <div>
+                <pre><code class="language-text">page:/products/8842</code></pre>
+            </div>
+            <p>Example value:</p>
+            <div>
+                <pre><code class="language-html">&lt;div class="product"&gt;
+  &lt;h1&gt;Laptop Stand&lt;/h1&gt;
+  &lt;span&gt;$29.99&lt;/span&gt;
+&lt;/div&gt;</code></pre>
+            </div>
+            <p>Example benefit:</p>
+            <div>
+                <pre><code class="language-json">{
+  "templateRenderingSkipped": true,
+  "databaseQuerySkipped": true,
+  "servedFrom": "memcached"
+}</code></pre>
+            </div>
+            <p>This is useful for high-traffic pages that are expensive to render.</p>
+            <h4 id="lightweight-rate-limiting">Lightweight Rate Limiting</h4>
+            <p>Memcached counters can support simple rate limiting.</p>
+            <p>Example flow:</p>
+            <div>
+                <pre><code class="language-text">Key: rate:ip:203.0.113.10
+TTL: 60 seconds
+Increment on each request
+Reject when count &gt; 100</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "ip": "203.0.113.10",
+  "count": 84,
+  "limit": 100,
+  "allowed": true
+}</code></pre>
+            </div>
+            <p>For complex or high-assurance rate limiting, Redis Lua scripts or a dedicated rate-limit service may be better.</p>
+            <h3 id="memcached-vs-redis">Memcached vs Redis</h3>
+            <p>Memcached and Redis are often compared because both are used as in-memory caches. Their design goals are different.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Feature</td>
+                    <td>Memcached</td>
+                    <td>Redis</td>
+                </tr>
+                <tr>
+                    <td>Main purpose</td>
+                    <td>Simple distributed cache</td>
+                    <td>Data structure store, cache, broker, lightweight database</td>
+                </tr>
+                <tr>
+                    <td>Data model</td>
+                    <td>Key-value blobs</td>
+                    <td>Strings, hashes, lists, sets, sorted sets, streams</td>
+                </tr>
+                <tr>
+                    <td>Persistence</td>
+                    <td>None</td>
+                    <td>RDB and AOF available</td>
+                </tr>
+                <tr>
+                    <td>Distribution</td>
+                    <td>Client-side hashing</td>
+                    <td>Redis Cluster hash slots</td>
+                </tr>
+                <tr>
+                    <td>Replication</td>
+                    <td>Not built-in like Redis</td>
+                    <td>Built-in primary-replica</td>
+                </tr>
+                <tr>
+                    <td>Pub/Sub</td>
+                    <td>Not supported</td>
+                    <td>Supported</td>
+                </tr>
+                <tr>
+                    <td>Streams</td>
+                    <td>Not supported</td>
+                    <td>Supported</td>
+                </tr>
+                <tr>
+                    <td>Scripting</td>
+                    <td>Not supported</td>
+                    <td>Lua / functions</td>
+                </tr>
+                <tr>
+                    <td>Memory model</td>
+                    <td>Slab allocator</td>
+                    <td>More varied structures and encodings</td>
+                </tr>
+                <tr>
+                    <td>Operational complexity</td>
+                    <td>Lower</td>
+                    <td>Higher</td>
+                </tr>
+                <tr>
+                    <td>Best fit</td>
+                    <td>Disposable database cache</td>
+                    <td>Richer caching and data-structure use cases</td>
+                </tr>
+            </table>
+            </p>
+            <p>Example decision:</p>
+            <div>
+                <pre><code class="language-json">{
+  "chooseMemcachedWhen": [
+    "you need a simple cache",
+    "values are small serialized blobs",
+    "data is disposable",
+    "you want low operational complexity"
+  ],
+  "chooseRedisWhen": [
+    "you need sorted sets or hashes",
+    "you need persistence",
+    "you need streams or pub/sub",
+    "you need atomic server-side logic"
+  ]
+}</code></pre>
+            </div>
+            <p>Memcached is often the better choice when the use case is simply “cache database query result by key.” Redis is better when the cache also needs richer behavior.</p>
+            <h3 id="monitoring-and-maintenance">Monitoring and Maintenance</h3>
+            <p>Memcached should be monitored because cache health directly affects database load and application latency.</p>
+            <p>Useful command:</p>
+            <div>
+                <pre><code class="language-text">stats</code></pre>
+            </div>
+            <p>Example metrics:</p>
+            <div>
+                <pre><code class="language-json">{
+  "curr_items": "number of currently stored items",
+  "bytes": "memory currently used",
+  "limit_maxbytes": "configured memory limit",
+  "get_hits": "successful cache reads",
+  "get_misses": "cache misses",
+  "evictions": "items removed due to memory pressure",
+  "curr_connections": "current client connections"
+}</code></pre>
+            </div>
+            <p>Important metrics include:</p>
+            <ul>
+                <li>Hit ratio.</li>
+                <li>Miss ratio.</li>
+                <li>Eviction count.</li>
+                <li>Memory usage.</li>
+                <li>Current connections.</li>
+                <li>Item count.</li>
+                <li>Network throughput.</li>
+                <li>Get/set command rates.</li>
+                <li>Database load during cache misses.</li>
+            </ul>
+            <p>Example monitoring output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "hitRatio": "88%",
+  "memoryUsage": "76%",
+  "evictionsLastHour": 320,
+  "getMissesLastHour": 45000,
+  "status": "healthy"
+}</code></pre>
+            </div>
+            <p>If hit ratio is low, the cache may not be storing the right data, TTLs may be too short, or keys may be poorly designed.</p>
+            <p>If evictions are high, the cache may need more memory or better item selection.</p>
+            <h3 id="failure-behavior">Failure Behavior</h3>
+            <p>Memcached should be treated as an optional acceleration layer. The application should keep working if Memcached is unavailable, although it may be slower.</p>
+            <p>Example failure:</p>
+            <div>
+                <pre><code class="language-json">{
+  "memcached": "unavailable",
+  "fallback": "query database",
+  "userImpact": "higher latency"
+}</code></pre>
+            </div>
+            <p>The danger is that if Memcached fails under heavy traffic, the database may suddenly receive a large number of requests.</p>
+            <p>Example failure cascade:</p>
+            <div>
+                <pre><code class="language-json">{
+  "event": "cache_cluster_down",
+  "databaseTrafficBefore": "5k qps",
+  "databaseTrafficAfter": "80k qps",
+  "risk": "database overload"
+}</code></pre>
+            </div>
+            <p>Mitigations include:</p>
+            <ul>
+                <li>Database query limits.</li>
+                <li>Circuit breakers.</li>
+                <li>Request coalescing.</li>
+                <li>Stale cache fallback where possible.</li>
+                <li>Gradual cache warmup.</li>
+                <li>Avoiding simultaneous expiration of many hot keys.</li>
+            </ul>
+            <h3 id="security-considerations">Security Considerations</h3>
+            <p>Memcached should not be exposed to the public internet. It has historically been abused in amplification attacks when publicly reachable over UDP.</p>
+            <p>Basic security practices:</p>
+            <ul>
+                <li>Bind Memcached to private interfaces.</li>
+                <li>Use firewall rules or security groups.</li>
+                <li>Disable UDP if not needed.</li>
+                <li>Restrict access to trusted application servers.</li>
+                <li>Do not store sensitive data unless encrypted by the application.</li>
+                <li>Use SASL authentication if supported and required.</li>
+                <li>Place Memcached inside private networks only.</li>
+            </ul>
+            <p>Example safe network posture:</p>
+            <div>
+                <pre><code class="language-json">{
+  "publicInternetAccessible": false,
+  "allowedClients": ["app-server-subnet"],
+  "udpEnabled": false,
+  "sensitiveDataStored": false
+}</code></pre>
+            </div>
+            <p>Example risky posture:</p>
+            <div>
+                <pre><code class="language-json">{
+  "port": 11211,
+  "publicInternetAccessible": true,
+  "risk": "critical"
+}</code></pre>
+            </div>
+            <p>Because Memcached is a cache, applications often put user profiles, sessions, or rendered content in it. Treat this data as sensitive if it contains private information.</p>
+            <h3 id="best-practices">Best Practices</h3>
+            <ol>
+                <li><strong>Use Memcached for disposable cached data</strong> The database or source service should remain the source of truth.</li>
+                <li><strong>Cache repeated database reads</strong> Focus on primary-key lookups, expensive list queries, aggregates, and reference data.</li>
+                <li><strong>Design clear cache keys</strong> Include entity type, ID, filters, sorting, pagination, tenant, and schema version where needed.</li>
+                <li><strong>Set appropriate TTLs</strong> Use shorter TTLs for frequently changing data and longer TTLs for stable reference data.</li>
+                <li><strong>Invalidate on writes</strong> Delete affected keys after database updates.</li>
+                <li><strong>Avoid huge values</strong> Memcached is best for compact serialized values, not large files or reports.</li>
+                <li><strong>Monitor hit ratio and evictions</strong> A cache with low hit ratio or high eviction rate may not be helping enough.</li>
+                <li><strong>Prepare for cache failure</strong> Applications should degrade gracefully when Memcached is unavailable.</li>
+                <li><strong>Use consistent hashing</strong> This reduces key remapping when cache nodes are added or removed.</li>
+                <li><strong>Keep it private</strong> Never expose Memcached directly to the internet.</li>
+            </ol>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

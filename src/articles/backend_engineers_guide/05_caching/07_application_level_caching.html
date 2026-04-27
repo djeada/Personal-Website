@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Application-Level Caching</title>
+    <meta content="Application-level caching stores computed results or frequently accessed objects directly inside the running process or in a dedicated in-process store." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/07_application_level_caching" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Application-Level Caching",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/07_application_level_caching"
+            },
+            "url": "https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/07_application_level_caching",
+            "description": "Application-level caching stores computed results or frequently accessed objects directly inside the running process or in a dedicated in-process store.",
+            "dateModified": "2026-04-27"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol><a href="#application-level-caching">Application-Level Caching</a>
+                    <ol>
+                        <li><a href="#common-in-process-cache-libraries">Common In-Process Cache Libraries</a>
+                            <ol>
+                                <li><a href="#caffeine-java-">Caffeine (Java)</a></li>
+                                <li><a href="#guava-cache-java-">Guava Cache (Java)</a></li>
+                                <li><a href="#ehcache-java-">Ehcache (Java)</a></li>
+                                <li><a href="#python-functools-lru_cache-and-cachetools">Python: functools.lru_cache and cachetools</a></li>
+                                <li><a href="#node-js-node-cache-and-lru-cache">Node.js: node-cache and lru-cache</a></li>
+                                <li><a href="#go-sync-map-and-groupcache">Go: sync.Map and groupcache</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#cache-patterns-at-the-application-layer">Cache Patterns at the Application Layer</a>
+                            <ol>
+                                <li><a href="#cache-aside">Cache-Aside</a></li>
+                                <li><a href="#read-through">Read-Through</a></li>
+                                <li><a href="#write-through">Write-Through</a></li>
+                                <li><a href="#write-behind-write-back-">Write-Behind (Write-Back)</a></li>
+                                <li><a href="#refresh-ahead">Refresh-Ahead</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#invalidation-strategies">Invalidation Strategies</a></li>
+                        <li><a href="#two-tier-l1-l2-caching">Two-Tier (L1 + L2) Caching</a></li>
+                        <li><a href="#sizing-and-capacity-planning">Sizing and Capacity Planning</a></li>
+                        <li><a href="#observability">Observability</a></li>
+                    </ol>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Api Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/01_api_communication_protocols.html">Api Communication Protocols</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/02_rest.html">Rest</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/03_graphql.html">Graphql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/04_grpc.html">Grpc</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/05_state_management.html">State Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/06_data_transmission.html">Data Transmission</a></li>
+                        </ol>
+                    </li>
+                    <li>Network Communications<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/01_network_communications.html">Network Communications</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/02_tcp_and_udp.html">Tcp and Udp</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/03_http_protocol.html">Http Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/04_web_sockets.html">Web Sockets</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/05_metrics_and_analysis.html">Metrics and Analysis</a></li>
+                        </ol>
+                    </li>
+                    <li>Server Technologies<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/01_web_server_overview.html">Web Server Overview</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/02_static_dynamic_content.html">Static Dynamic Content</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/03_tomcat.html">Tomcat</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/04_apache.html">Apache</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/05_nginx.html">Nginx</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/06_forward_proxies.html">Forward Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/07_reverse_proxies.html">Reverse Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/08_load_balancing.html">Load Balancing</a></li>
+                        </ol>
+                    </li>
+                    <li>Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/01_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/02_transactions.html">Transactions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/03_indexes.html">Indexes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/04_isolation_levels.html">Isolation Levels</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/05_data_warehousing.html">Data Warehousing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/06_replication.html">Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/07_halloween_problem.html">Halloween Problem</a></li>
+                        </ol>
+                    </li>
+                    <li>Caching<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/01_caching_strategies.html">Caching Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/02_redis.html">Redis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/03_content_delivery_networks.html">Content Delivery Networks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/04_database_caching.html">Database Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/05_memcached.html">Memcached</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/06_http_caching.html">Http Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/07_application_level_caching.html">Application Level Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/08_memory_map.html">Memory Map</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Processing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/01_pub_sub_vs_queue.html">Pub Sub vs Queue</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/02_messaging_system_integration.html">Messaging System Integration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/03_batch_processing.html">Batch Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing.html">Stream Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/05_etl_and_pipelines.html">Etl and Pipelines</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/06_lambda_and_kappa_architecture.html">Lambda and Kappa Architecture</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/07_workflow_orchestration.html">Workflow Orchestration</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Formats<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/01_protocol_buffers.html">Protocol Buffers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/02_xml.html">Xml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/03_json.html">Json</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/04_yaml.html">Yaml</a></li>
+                        </ol>
+                    </li>
+                    <li>Security<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/01_auth.html">Auth</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/02_tls.html">Tls</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/03_security_vulnerabilities.html">Security Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/04_security_best_practices_and_measures.html">Security Best Practices and Measures</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/05_third_party_cookies_vulnerabilities.html">Third Party Cookies Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/06_secure_containers.html">Secure Containers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/07_credentials_management.html">Credentials Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/08_supply_chain_attacks.html">Supply Chain Attacks</a></li>
+                        </ol>
+                    </li>
+                    <li>Deployment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/01_centos_digital_ocean.html">Centos Digital Ocean</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/02_static_python_website_netlify.html">Static Python Website Netlify</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/03_docker.html">Docker</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/04_kubernetes.html">Kubernetes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/05_ci_cd.html">Ci Cd</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/06_deployment_strategies.html">Deployment Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/07_infrastructure_as_code.html">Infrastructure As Code</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Systems<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/01_coordination_services.html">Coordination Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/02_gossip_protocol.html">Gossip Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/03_linearizability.html">Linearizability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/04_concurrent_writes.html">Concurrent Writes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/05_operational_transform.html">Operational Transform</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/06_algorithms_summary.html">Algorithms Summary</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/07_optimistic_vs_pessimistic_locking.html">Optimistic vs Pessimistic Locking</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: April 27, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="application-level-caching">Application-Level Caching</h2>
+            <p>Application-level caching stores computed results or frequently accessed objects directly inside the running process or in a dedicated in-process store. Because data never leaves the application's memory space, reads are limited only by CPU and memory bandwidth — no network hop, no serialisation, and no socket overhead. This makes application-level caches the fastest possible cache tier, complementing distributed caches like Redis or Memcached that serve data across multiple instances.</p>
+            <div>
+                <pre><code class="language-shell">Application-Level vs Distributed Cache
+
+  Single Process                       Distributed Setup
+  +--------------------------+         +----------------------------------+
+  |  Application Instance    |         | App1   App2   App3   App4       |
+  |                          |         | +---+  +---+  +---+  +---+      |
+  |  +--------------------+  |         | |L1 |  |L1 |  |L1 |  |L1 |     |
+  |  |  In-Process Cache  |  |         | +--++  +--++  +-+-+  +-+-+     |
+  |  | (heap / off-heap)  |  |         |    |      |     |       |       |
+  |  +--------+-----------+  |         |    +--+---+--+--+       |       |
+  |           |              |         |       |         |       |       |
+  |           v              |         |  +----+----+ +--+----+  |       |
+  |  +--------------------+  |         |  | Redis / | | Redis / | |      |
+  |  |  Database / Source |  |         |  |Memcached | |Memcached| |      |
+  |  +--------------------+  |         |  +---------+ +---------+  |     |
+  +--------------------------+         +----------------------------------+
+
+  In-process cache = L1 (ultra-fast, node-local)
+  Distributed cache = L2 (fast, cluster-wide)
+  Database = source of truth</code></pre>
+            </div>
+            <ul>
+                <li>An in-process cache is <strong>faster</strong> than any network-based store because it requires no serialisation or I/O to serve a cached entry.</li>
+                <li>Application-level caches are <strong>bounded</strong> by the JVM heap or native memory limit of a single process, unlike distributed caches that scale across many nodes.</li>
+                <li>When multiple application instances run behind a load balancer, each instance holds its own <strong>independent</strong> cache, meaning cache entries are not shared across nodes without a distributed layer.</li>
+                <li>A local cache combined with a distributed cache forms a <strong>two-tier</strong> hierarchy that minimises latency for hot keys while still maintaining cluster-wide consistency.</li>
+                <li>Cache population is <strong>event-driven</strong> in most frameworks, triggered automatically on a cache miss or explicitly pre-loaded at startup.</li>
+            </ul>
+            <h3 id="common-in-process-cache-libraries">Common In-Process Cache Libraries</h3>
+            <h4 id="caffeine-java-">Caffeine (Java)</h4>
+            <p>Caffeine is a high-performance, near-optimal Java caching library based on the W-TinyLFU eviction algorithm.</p>
+            <div>
+                <pre><code class="language-java">LoadingCache&lt;String, Product&gt; cache = Caffeine.newBuilder()
+    .maximumSize(10_000)
+    .expireAfterWrite(Duration.ofMinutes(5))
+    .refreshAfterWrite(Duration.ofMinutes(1))
+    .recordStats()
+    .build(key -&gt; productRepository.findById(key));
+
+Product p = cache.get("product:42");  // auto-loads on miss</code></pre>
+            </div>
+            <ul>
+                <li>The W-TinyLFU policy is <strong>optimal</strong> for workloads with skewed access patterns because it evicts items with both low frequency and low recency.</li>
+                <li><code>expireAfterWrite</code> resets the TTL after each <strong>write</strong>, ensuring stale entries are eventually removed even if they remain popular.</li>
+                <li><code>refreshAfterWrite</code> triggers a <strong>background</strong> reload after the specified interval while still serving the old value until the refresh completes.</li>
+                <li><code>maximumSize</code> bounds heap usage, and the eviction algorithm automatically <strong>selects</strong> the lowest-value entries when the limit is reached.</li>
+                <li>Caffeine's <code>recordStats()</code> method exposes <strong>metrics</strong> including hit rate, load time, and eviction count via a <code>CacheStats</code> object.</li>
+            </ul>
+            <h4 id="guava-cache-java-">Guava Cache (Java)</h4>
+            <p>Guava Cache is the predecessor to Caffeine and is still widely used in the Java ecosystem.</p>
+            <div>
+                <pre><code class="language-java">LoadingCache&lt;String, User&gt; userCache = CacheBuilder.newBuilder()
+    .maximumSize(5000)
+    .expireAfterAccess(10, TimeUnit.MINUTES)
+    .weakValues()
+    .build(key -&gt; userDao.load(key));</code></pre>
+            </div>
+            <ul>
+                <li><code>expireAfterAccess</code> removes entries that have not been <strong>read</strong> within the specified duration, which is useful for session-like data.</li>
+                <li><code>weakValues()</code> tells Guava to hold values via weak references, allowing the garbage collector to <strong>reclaim</strong> memory under pressure.</li>
+                <li>Guava Cache is <strong>thread-safe</strong> by default and segments its internal structure to reduce contention under concurrent reads and writes.</li>
+            </ul>
+            <h4 id="ehcache-java-">Ehcache (Java)</h4>
+            <p>Ehcache is a full-featured cache framework widely used in enterprise Java and Spring applications.</p>
+            <div>
+                <pre><code class="language-xml">&lt;!-- ehcache.xml --&gt;
+&lt;cache name="products"
+       maxEntriesLocalHeap="10000"
+       timeToLiveSeconds="300"
+       timeToIdleSeconds="120"
+       overflowToDisk="true"&gt;
+&lt;/cache&gt;</code></pre>
+            </div>
+            <ul>
+                <li>Ehcache supports both <strong>heap</strong> and off-heap storage, allowing very large caches without adding GC pressure.</li>
+                <li>Off-heap storage serialises entries to native memory that is <strong>not</strong> managed by the JVM garbage collector.</li>
+                <li>Ehcache integrates with <strong>JCache</strong> (JSR-107), enabling portable cache code that can be swapped between providers.</li>
+                <li>Terracotta clustering adds a distributed <strong>tier</strong> to Ehcache for sharing entries across multiple nodes without a separate Redis deployment.</li>
+            </ul>
+            <h4 id="python-functools-lru_cache-and-cachetools">Python: functools.lru_cache and cachetools</h4>
+            <div>
+                <pre><code class="language-python">from functools import lru_cache
+from cachetools import TTLCache, cached
+
+@lru_cache(maxsize=512)
+def get_config(key: str) -&gt; str:
+    return db.fetch(key)
+
+_ttl_cache: TTLCache = TTLCache(maxsize=1000, ttl=300)
+
+@cached(cache=_ttl_cache)
+def get_user(user_id: int) -&gt; dict:
+    return user_service.fetch(user_id)</code></pre>
+            </div>
+            <ul>
+                <li><code>lru_cache</code> uses Python's <strong>built-in</strong> LRU eviction and is suitable for functions whose inputs have a small, bounded cardinality.</li>
+                <li><code>cachetools.TTLCache</code> adds time-based <strong>expiry</strong> on top of LRU eviction, removing entries that are older than the configured TTL.</li>
+                <li>Neither cache is <strong>thread-safe</strong> by default under concurrent writes, so a lock wrapper is needed in multithreaded applications.</li>
+            </ul>
+            <h4 id="node-js-node-cache-and-lru-cache">Node.js: node-cache and lru-cache</h4>
+            <div>
+                <pre><code class="language-javascript">import LRU from 'lru-cache';
+
+const cache = new LRU({
+  max: 500,
+  ttl: 1000 * 60 * 5,  // 5 minutes
+});
+
+function getProduct(id) {
+  const hit = cache.get(id);
+  if (hit) return hit;
+  const product = db.query(id);
+  cache.set(id, product);
+  return product;
+}</code></pre>
+            </div>
+            <ul>
+                <li><code>lru-cache</code> is a widely-used <strong>npm</strong> package providing an LRU cache with optional TTL support.</li>
+                <li>Because Node.js runs on a single event-loop thread, in-process caches require <strong>no</strong> locking for concurrent access within the same process.</li>
+                <li>Multiple Node.js worker processes (via <code>cluster</code> or PM2) each have their own <strong>isolated</strong> cache, making a distributed layer necessary for cross-process consistency.</li>
+            </ul>
+            <h4 id="go-sync-map-and-groupcache">Go: sync.Map and groupcache</h4>
+            <div>
+                <pre><code class="language-go">var cache sync.Map
+
+func GetUser(id string) *User {
+    if val, ok := cache.Load(id); ok {
+        return val.(*User)
+    }
+    user := db.FetchUser(id)
+    cache.Store(id, user)
+    return user
+}</code></pre>
+            </div>
+            <ul>
+                <li><code>sync.Map</code> provides <strong>concurrent</strong> read and write access without explicit locking, optimised for the case where entries are written once and read many times.</li>
+                <li><code>groupcache</code> (from the Go team) fills the gap between a simple map and Redis by providing <strong>consistent</strong> hashing, request coalescing, and hot-key replication across a small cluster of app servers.</li>
+                <li>Libraries like <code>ristretto</code> from Dgraph offer a more <strong>sophisticated</strong> eviction algorithm (TinyLFU) and metrics collection for production Go services.</li>
+            </ul>
+            <h3 id="cache-patterns-at-the-application-layer">Cache Patterns at the Application Layer</h3>
+            <h4 id="cache-aside">Cache-Aside</h4>
+            <div>
+                <pre><code class="language-shell">Application code manages loading:
+
+  func Get(key) -&gt; value:
+    val = cache.get(key)
+    if val == nil:
+      val = db.fetch(key)
+      cache.set(key, val, ttl)
+    return val</code></pre>
+            </div>
+            <ul>
+                <li>The calling code is <strong>responsible</strong> for populating the cache on a miss, giving it full control over what is stored and for how long.</li>
+                <li>This pattern is <strong>lazy</strong>: data is only loaded into the cache when it is first requested, keeping memory usage proportional to actual demand.</li>
+            </ul>
+            <h4 id="read-through">Read-Through</h4>
+            <ul>
+                <li>The cache itself is <strong>responsible</strong> for fetching from the backing store on a miss, using a loader function configured at setup time.</li>
+                <li>Read-through simplifies <strong>calling</strong> code because it always reads from a single interface regardless of whether the data is cached.</li>
+                <li><code>Caffeine.build(loader)</code> and Spring's <code>@Cacheable</code> annotation both implement the <strong>read-through</strong> pattern transparently.</li>
+            </ul>
+            <h4 id="write-through">Write-Through</h4>
+            <ul>
+                <li>Every write goes to both the cache and the <strong>backing</strong> store synchronously before the operation is acknowledged.</li>
+                <li>Write-through keeps the cache <strong>consistent</strong> with the database at the cost of higher write latency.</li>
+                <li>Spring's <code>@CachePut</code> annotation implements <strong>write-through</strong> by updating the cache entry alongside the database call.</li>
+            </ul>
+            <h4 id="write-behind-write-back-">Write-Behind (Write-Back)</h4>
+            <ul>
+                <li>The application writes to the cache <strong>immediately</strong> and defers persistence to the backing store asynchronously.</li>
+                <li>Write-behind improves <strong>write</strong> throughput by batching multiple updates into fewer database calls.</li>
+                <li>The risk of data loss is <strong>higher</strong> because any crash between the cache write and the deferred flush can result in lost updates.</li>
+            </ul>
+            <h4 id="refresh-ahead">Refresh-Ahead</h4>
+            <ul>
+                <li>The cache <strong>pre-emptively</strong> refreshes an entry in the background before it expires, ensuring reads never block on a slow loader.</li>
+                <li>Caffeine's <code>refreshAfterWrite</code> implements this pattern by triggering a <strong>background</strong> reload when a read occurs after the refresh threshold has passed.</li>
+                <li>Refresh-ahead is most <strong>beneficial</strong> for entries with predictable, high-frequency access where expiry-induced latency spikes are unacceptable.</li>
+            </ul>
+            <h3 id="invalidation-strategies">Invalidation Strategies</h3>
+            <div>
+                <pre><code class="language-shell">Invalidation Approaches
+
+  Time-based (TTL)         Event-based              Version-based
+  +---------------+        +---------------+         +--------------+
+  | Entry expires |        | DB update     |         | Key includes |
+  | after N secs  |        | triggers a    |         | version or   |
+  | automatically |        | cache.delete  |         | hash suffix  |
+  +---------------+        +---------------+         +--------------+
+  Simple, no coupling    Precise, event-driven     No invalidation needed;
+  Risk: stale data       Complexity: messaging     old keys expire naturally</code></pre>
+            </div>
+            <ul>
+                <li>Time-to-live invalidation is <strong>simple</strong> to implement but may serve stale data for the entire TTL interval after an update.</li>
+                <li>Event-driven invalidation reacts to <strong>domain</strong> events (e.g., "product updated") and removes or refreshes the affected key immediately.</li>
+                <li>Version-based keys embed a <strong>hash</strong> of the data version into the cache key so a data change produces a new key and the old entry is naturally displaced.</li>
+                <li>Spring's <code>@CacheEvict</code> annotation removes <strong>specific</strong> cache entries by key or clears the entire cache when a method modifies underlying data.</li>
+            </ul>
+            <h3 id="two-tier-l1-l2-caching">Two-Tier (L1 + L2) Caching</h3>
+            <p>Many production architectures combine a local in-process cache (L1) with a distributed cache (L2) for maximum efficiency.</p>
+            <div>
+                <pre><code class="language-shell">Two-Tier Cache Read Flow
+
+  App Instance
+  +--------------------------------------------+
+  |  1. Check L1 (Caffeine / lru-cache)         |
+  |         |                                   |
+  |    HIT  +  MISS                             |
+  |     |         |                             |
+  |     v         v                             |
+  |  Return    2. Check L2 (Redis / Memcached)  |
+  |  value          |                           |
+  |            HIT  +  MISS                     |
+  |             |         |                     |
+  |             v         v                     |
+  |     Populate L1   3. Fetch from DB          |
+  |     Return val        |                     |
+  |                  Populate L2 + L1           |
+  |                  Return value               |
+  +--------------------------------------------+</code></pre>
+            </div>
+            <ul>
+                <li>L1 serves the <strong>hottest</strong> keys with zero network latency; L2 catches misses that fall through from L1.</li>
+                <li>L1 invalidation across nodes is <strong>challenging</strong> because a write on one instance does not automatically update the in-process caches of other instances.</li>
+                <li>Pub/Sub invalidation broadcasts a <strong>delete</strong> message over Redis or a message queue so all instances evict their local copy when the source data changes.</li>
+                <li>Short L1 TTLs (a few seconds) combined with longer L2 TTLs achieve a <strong>balance</strong> between staleness risk and latency reduction.</li>
+                <li>Near-cache patterns keep a <strong>replica</strong> of a remote distributed cache entry locally, refreshed on demand, and are used by frameworks like Hazelcast and Apache Ignite.</li>
+            </ul>
+            <h3 id="sizing-and-capacity-planning">Sizing and Capacity Planning</h3>
+            <ul>
+                <li>The target hit rate for an in-process cache is typically <strong>95%</strong> or higher; lower rates suggest the cache is undersized or the key space is too large.</li>
+                <li>Access frequency histograms should <strong>guide</strong> sizing: if the top 1 % of keys account for 80 % of requests, a small cache serving those keys provides most of the benefit.</li>
+                <li>Heap impact can be <strong>estimated</strong> by multiplying the average serialised entry size by the maximum number of entries.</li>
+                <li>Off-heap caches in Ehcache or Chronicle Map allow <strong>large</strong> caches (tens of GB) without triggering long GC pauses.</li>
+                <li>Monitoring eviction rate trends over time is <strong>important</strong> to detect a growing working set that is outpacing the configured cache size.</li>
+            </ul>
+            <h3 id="observability">Observability</h3>
+            <ul>
+                <li>Hit rate, miss rate, load time, and eviction count are the <strong>core</strong> metrics every application cache should expose.</li>
+                <li>Caffeine's <code>CacheStats</code> object provides all <strong>four</strong> standard metrics and integrates with Micrometer for Prometheus or Datadog export.</li>
+                <li>Tracing cache operations with OpenTelemetry spans makes it <strong>visible</strong> how much time each request spends in cache lookup versus database I/O.</li>
+                <li>Setting up alerts on a sudden drop in hit rate is <strong>valuable</strong> for catching cache misconfigurations or deployment-induced invalidation storms.</li>
+                <li>Logging slow cache loads (loader duration &gt; threshold) helps <strong>identify</strong> backing queries that need their own optimisation independent of the cache.</li>
+            </ul>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

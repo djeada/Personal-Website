@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Containers and Docker</title>
+    <meta content="Containers have fundamentally changed the way software is built, shipped, and run." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/linux_notes/containers_and_docker" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Containers and Docker",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/linux_notes/containers_and_docker"
+            },
+            "url": "https://adamdjellouli.com/articles/linux_notes/containers_and_docker",
+            "description": "Containers have fundamentally changed the way software is built, shipped, and run.",
+            "dateModified": "2026-04-27"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol><a href="#containers-and-docker">Containers and Docker</a>
+                    <ol>
+                        <li><a href="#containers-vs-virtual-machines">Containers vs Virtual Machines</a></li>
+                        <li><a href="#docker-architecture">Docker Architecture</a></li>
+                        <li><a href="#installing-docker">Installing Docker</a>
+                            <ol>
+                                <li><a href="#on-ubuntu-debian">On Ubuntu / Debian</a></li>
+                                <li><a href="#on-centos-rhel-fedora">On CentOS / RHEL / Fedora</a></li>
+                                <li><a href="#post-installation-steps">Post-Installation Steps</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#working-with-docker-images">Working with Docker Images</a>
+                            <ol>
+                                <li><a href="#pulling-images">Pulling Images</a></li>
+                                <li><a href="#listing-and-inspecting-images">Listing and Inspecting Images</a></li>
+                                <li><a href="#removing-images">Removing Images</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#running-containers">Running Containers</a>
+                            <ol>
+                                <li><a href="#basic-container-operations">Basic Container Operations</a></li>
+                                <li><a href="#port-mapping">Port Mapping</a></li>
+                                <li><a href="#volume-mounting">Volume Mounting</a></li>
+                                <li><a href="#running-interactive-containers">Running Interactive Containers</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#building-custom-images-with-dockerfiles">Building Custom Images with Dockerfiles</a>
+                            <ol>
+                                <li><a href="#dockerfile-syntax">Dockerfile Syntax</a></li>
+                                <li><a href="#example-building-a-python-web-application-image">Example: Building a Python Web Application Image</a></li>
+                                <li><a href="#multi-stage-builds">Multi-Stage Builds</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#docker-networking">Docker Networking</a>
+                            <ol>
+                                <li><a href="#network-drivers">Network Drivers</a></li>
+                                <li><a href="#managing-networks">Managing Networks</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#docker-volumes-and-data-persistence">Docker Volumes and Data Persistence</a>
+                            <ol>
+                                <li><a href="#named-volumes-vs-bind-mounts">Named Volumes vs Bind Mounts</a></li>
+                                <li><a href="#working-with-volumes">Working with Volumes</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#docker-compose">Docker Compose</a>
+                            <ol>
+                                <li><a href="#example-a-web-application-stack">Example: A Web Application Stack</a></li>
+                                <li><a href="#docker-compose-commands">Docker Compose Commands</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#podman-as-an-alternative">Podman as an Alternative</a></li>
+                        <li><a href="#container-best-practices">Container Best Practices</a>
+                            <ol>
+                                <li><a href="#keep-images-small">Keep Images Small</a></li>
+                                <li><a href="#security">Security</a></li>
+                                <li><a href="#use-dockerignore">Use .dockerignore</a></li>
+                                <li><a href="#health-checks">Health Checks</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#challenges">Challenges</a></li>
+                    </ol>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ci_cd.html">Ci Cd</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/commands.html">Commands</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/containers_and_docker.html">Containers and Docker</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/cron_jobs.html">Cron Jobs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/disk_io_analysis.html">Disk Io Analysis</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/disk_usage.html">Disk Usage</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/dwm.html">Dwm</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/encryption.html">Encryption</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/environment_modules.html">Environment Modules</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/environment_variable.html">Environment Variable</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/file_system.html">File System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/files_and_dirs.html">Files and Dirs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/finding_files.html">Finding Files</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/firewall.html">Firewall</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/grep.html">Grep</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/hardware.html">Hardware</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/infrastructure_as_code.html">Infrastructure As Code</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/inodes_and_symlinks.html">Inodes and Symlinks</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/inotify.html">Inotify</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/introduction.html">Introduction</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/kernel.html">Kernel</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ldap.html">Ldap</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/lfcs.html">Lfcs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/linux_certification_overview.html">Linux Certification Overview</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/log_files_and_journals.html">Log Files and Journals</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/logical_volume_management.html">Logical Volume Management</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/managing_users.html">Managing Users</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/mounting.html">Mounting</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/networking.html">Networking</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/nfs.html">Nfs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/package_managers.html">Package Managers</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/partitions.html">Partitions</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/performance_monitoring.html">Performance Monitoring</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/permissions.html">Permissions</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/pipe_and_redirect.html">Pipe and Redirect</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ports.html">Ports</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/processes.html">Processes</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/rhcsa.html">Rhcsa</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/running_executables.html">Running Executables</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/sed_and_awk.html">Sed and Awk</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/selinux.html">Selinux</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/services.html">Services</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/shells_and_bash_configuration.html">Shells and Bash Configuration</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ssh_and_scp.html">Ssh and Scp</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/system_startup.html">System Startup</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/tar_and_gzip.html">Tar and Gzip</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/task_state_analysis.html">Task State Analysis</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/utilities.html">Utilities</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/virtual_machines.html">Virtual Machines</a></li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: April 27, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="containers-and-docker">Containers and Docker</h2>
+            <p>Containers have fundamentally changed the way software is built, shipped, and run. If you've spent time administering Linux systems—managing packages, configuring services, and troubleshooting dependency conflicts—you already understand the pain that containers were designed to solve. A container packages an application together with all of its dependencies, libraries, and configuration files into a single, portable unit that runs consistently on any Linux system.</p>
+            <p>Unlike traditional approaches where you install software directly onto a host and hope that library versions don't clash, containers provide <strong>process-level isolation</strong> using features built right into the Linux kernel. Technologies like <strong>namespaces</strong> (which isolate what a process can see) and <strong>cgroups</strong> (which limit what resources a process can consume) make containers lightweight and fast. There is no separate operating system to boot—containers share the host kernel and start in milliseconds.</p>
+            <p>Docker popularized containers by providing a simple CLI and a standardized image format. Today, containers are at the heart of DevOps workflows, continuous integration pipelines, and orchestration platforms like Kubernetes. Whether you're deploying a single web application or managing hundreds of microservices, understanding containers is an essential skill for any Linux administrator moving into DevOps.</p>
+            <h3 id="containers-vs-virtual-machines">Containers vs Virtual Machines</h3>
+            <p>One of the first questions people ask is: "How are containers different from virtual machines?" Both provide isolation, but they do it at very different levels.</p>
+            <p>A <strong>virtual machine</strong> runs an entire guest operating system on top of a hypervisor. Each VM includes its own kernel, init system, and full set of system libraries. This is powerful but heavy—VMs can take minutes to boot and consume gigabytes of RAM just for the OS overhead.</p>
+            <p>A <strong>container</strong>, on the other hand, shares the host's Linux kernel. It only packages the application and its userspace dependencies. This makes containers dramatically lighter—a typical container image might be 50–200 MB compared to several gigabytes for a VM image, and containers start in under a second.</p>
+            <div>
+                <pre><code class="language-+---------------------------------------------------+">|                  Virtual Machines                  |
++---------------------------------------------------+
+|  +-------------+  +-------------+  +-------------+|
+|  |    App A    |  |    App B    |  |    App C    ||
+|  +-------------+  +-------------+  +-------------+|
+|  |   Bins/Libs |  |   Bins/Libs |  |   Bins/Libs ||
+|  +-------------+  +-------------+  +-------------+|
+|  | Guest OS    |  | Guest OS    |  | Guest OS    ||
+|  +-------------+  +-------------+  +-------------+|
+|  +-----------------------------------------------+|
+|  |              Hypervisor (KVM, Xen)            ||
+|  +-----------------------------------------------+|
+|  |              Host Operating System            ||
+|  +-----------------------------------------------+|
+|  |                  Hardware                     ||
+|  +-----------------------------------------------+|
++---------------------------------------------------+
+
++---------------------------------------------------+
+|                    Containers                      |
++---------------------------------------------------+
+|  +-------------+  +-------------+  +-------------+|
+|  |    App A    |  |    App B    |  |    App C    ||
+|  +-------------+  +-------------+  +-------------+|
+|  |   Bins/Libs |  |   Bins/Libs |  |   Bins/Libs ||
+|  +-------------+  +-------------+  +-------------+|
+|  +-----------------------------------------------+|
+|  |         Container Runtime (Docker)            ||
+|  +-----------------------------------------------+|
+|  |     Host Operating System (Shared Kernel)     ||
+|  +-----------------------------------------------+|
+|  |                  Hardware                     ||
+|  +-----------------------------------------------+|
++---------------------------------------------------+</code></pre>
+            </div>
+            <p>Notice the key difference: containers eliminate the guest OS layer entirely. This is why you can run dozens of containers on a machine that might only support a handful of VMs.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Feature</td>
+                    <td>Virtual Machines</td>
+                    <td>Containers</td>
+                </tr>
+                <tr>
+                    <td>Isolation level</td>
+                    <td>Hardware-level (hypervisor)</td>
+                    <td>OS-level (namespaces, cgroups)</td>
+                </tr>
+                <tr>
+                    <td>Boot time</td>
+                    <td>Minutes</td>
+                    <td>Seconds or less</td>
+                </tr>
+                <tr>
+                    <td>Image size</td>
+                    <td>Gigabytes</td>
+                    <td>Megabytes</td>
+                </tr>
+                <tr>
+                    <td>Resource overhead</td>
+                    <td>High (full OS per VM)</td>
+                    <td>Low (shared kernel)</td>
+                </tr>
+                <tr>
+                    <td>Portability</td>
+                    <td>Requires compatible hypervisor</td>
+                    <td>Runs on any Linux host with container runtime</td>
+                </tr>
+                <tr>
+                    <td>Density</td>
+                    <td>Tens per host</td>
+                    <td>Hundreds per host</td>
+                </tr>
+                <tr>
+                    <td>Security boundary</td>
+                    <td>Strong (separate kernels)</td>
+                    <td>Moderate (shared kernel)</td>
+                </tr>
+                <tr>
+                    <td>Use case</td>
+                    <td>Full OS environments, mixed OS</td>
+                    <td>Microservices, CI/CD, app packaging</td>
+                </tr>
+            </table>
+            </p>
+            <p>In practice, VMs and containers are complementary. Many production environments run containers <em>inside</em> VMs to combine the strong isolation of a hypervisor with the lightweight packaging of containers.</p>
+            <h3 id="docker-architecture">Docker Architecture</h3>
+            <p>Docker uses a client-server architecture. The <strong>Docker client</strong> (<code>docker</code> CLI) sends commands to the <strong>Docker daemon</strong> (<code>dockerd</code>), which builds images, runs containers, and manages networks and volumes. They communicate over a Unix socket or network interface.</p>
+            <div>
+                <pre><code class="language-+----------------------------------------------------------+">|                      Docker Host                         |
+|                                                          |
+|  +-------------------+       +------------------------+  |
+|  |   Docker Client   | &lt;---&gt; |    Docker Daemon       |  |
+|  |   (docker CLI)    |  REST |    (dockerd)           |  |
+|  +-------------------+  API  |                        |  |
+|                              |  +-------+ +-------+   |  |
+|                              |  | Image | | Image |   |  |
+|                              |  +-------+ +-------+   |  |
+|                              |                        |  |
+|                              |  +----------+ +------+ |  |
+|                              |  |Container | |Contai| |  |
+|                              |  |   A      | |ner B | |  |
+|                              |  +----------+ +------+ |  |
+|                              +------------------------+  |
+|                                       |                  |
++---------------------------------------|------------------+
+                                        |
+                                        v
+                             +---------------------+
+                             |   Docker Registry   |
+                             |   (Docker Hub /     |
+                             |    Private)         |
+                             +---------------------+</code></pre>
+            </div>
+            <p>The key components are:</p>
+            <ul>
+                <li><strong>Images</strong>: Read-only templates used to create containers. Built in layers—each Dockerfile instruction creates a new layer, and layers are cached and shared.</li>
+                <li><strong>Containers</strong>: Running instances of images. A container adds a writable layer on top of the image layers.</li>
+                <li><strong>Registry</strong>: A storage and distribution system for images. Docker Hub is the default public registry.</li>
+                <li><strong>Dockerfile</strong>: A text file with instructions for building an image.</li>
+            </ul>
+            <h3 id="installing-docker">Installing Docker</h3>
+            <p>Docker is available for all major Linux distributions. The recommended approach is to use Docker's official repository rather than your distro's default repos (which are often outdated).</p>
+            <h4 id="on-ubuntu-debian">On Ubuntu / Debian</h4>
+            <div>
+                <pre><code class="language-bash">sudo apt remove docker docker-engine docker.io containerd runc
+sudo apt update
+sudo apt install -y ca-certificates curl gnupg
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+  https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+  | sudo tee /etc/apt/sources.list.d/docker.list &gt; /dev/null
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin</code></pre>
+            </div>
+            <h4 id="on-centos-rhel-fedora">On CentOS / RHEL / Fedora</h4>
+            <div>
+                <pre><code class="language-bash">sudo yum remove docker docker-client docker-common docker-engine
+sudo yum install -y yum-utils
+sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+sudo yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin</code></pre>
+            </div>
+            <h4 id="post-installation-steps">Post-Installation Steps</h4>
+            <p>By default, Docker commands require <code>sudo</code>. To run Docker as a non-root user:</p>
+            <div>
+                <pre><code class="language-bash">sudo usermod -aG docker $USER
+newgrp docker</code></pre>
+            </div>
+            <p>Verify the installation:</p>
+            <div>
+                <pre><code class="language-bash">docker --version</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-shell">Docker version 24.0.7, build afdd53b</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-bash">docker run hello-world</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-shell">Hello from Docker!
+This message shows that your installation appears to be working correctly.
+...</code></pre>
+            </div>
+            <h3 id="working-with-docker-images">Working with Docker Images</h3>
+            <p>Images are the building blocks of containers. You pull images from a registry, and each image is identified by a <strong>repository name</strong> and a <strong>tag</strong>. If you don't specify a tag, Docker defaults to <code>latest</code>.</p>
+            <h4 id="pulling-images">Pulling Images</h4>
+            <div>
+                <pre><code class="language-bash">docker pull nginx
+docker pull nginx:1.25-alpine
+docker pull ghcr.io/owner/my-app:v2.1</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-shell">1.25-alpine: Pulling from library/nginx
+c926b61bad3b: Pull complete
+eb2b50a703e2: Pull complete
+Digest: sha256:a5127daff3d6...
+Status: Downloaded newer image for nginx:1.25-alpine</code></pre>
+            </div>
+            <h4 id="listing-and-inspecting-images">Listing and Inspecting Images</h4>
+            <div>
+                <pre><code class="language-bash">docker images</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-shell">REPOSITORY   TAG           IMAGE ID       CREATED        SIZE
+nginx        latest        a6bd71f48f68   2 days ago     187MB
+nginx        1.25-alpine   2bc7edbc3cf2   2 days ago     43.2MB
+ubuntu       22.04         3b418d7b466a   3 weeks ago    77.8MB</code></pre>
+            </div>
+            <p>The <code>alpine</code> variant is worth noting—Alpine-based images are dramatically smaller because they use musl libc and BusyBox instead of the full GNU toolchain.</p>
+            <h4 id="removing-images">Removing Images</h4>
+            <div>
+                <pre><code class="language-bash">docker rmi nginx:1.25-alpine                 # remove a specific image
+docker image prune                           # remove dangling images
+docker image prune -a                        # remove ALL unused images</code></pre>
+            </div>
+            <h3 id="running-containers">Running Containers</h3>
+            <p>The <code>docker run</code> command creates and starts a container from an image.</p>
+            <h4 id="basic-container-operations">Basic Container Operations</h4>
+            <div>
+                <pre><code class="language-bash"># Run a container in the foreground
+docker run ubuntu:22.04 echo "Hello from a container"</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-shell">Hello from a container</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-bash"># Run in detached mode (background)
+docker run -d --name my-nginx nginx</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-a3f8b2c9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1"></code></pre>
+            </div>
+            <div>
+                <pre><code class="language-bash"># List running containers
+docker ps</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-shell">CONTAINER ID   IMAGE   COMMAND                  CREATED         STATUS         PORTS     NAMES
+a3f8b2c9d7e6   nginx   "/docker-entrypoint.…"   5 seconds ago   Up 4 seconds   80/tcp    my-nginx</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-bash"># List all containers (including stopped)
+docker ps -a
+
+# Stop and remove a container
+docker stop my-nginx
+docker rm my-nginx
+
+# Stop and remove in one step
+docker rm -f my-nginx</code></pre>
+            </div>
+            <h4 id="port-mapping">Port Mapping</h4>
+            <p>Containers have their own network namespace. To expose a service to the host, map ports with <code>-p</code>:</p>
+            <div>
+                <pre><code class="language-bash">docker run -d --name web -p 8080:80 nginx</code></pre>
+            </div>
+            <p>Now you can access nginx at <code>http://localhost:8080</code>. The format is <code>-p HOST_PORT:CONTAINER_PORT</code>.</p>
+            <div>
+                <pre><code class="language-bash">docker run -d -p 8080:80 -p 8443:443 nginx          # multiple ports
+docker run -d -p 127.0.0.1:8080:80 nginx             # bind to specific interface</code></pre>
+            </div>
+            <h4 id="volume-mounting">Volume Mounting</h4>
+            <p>To persist data or share files between the host and a container:</p>
+            <div>
+                <pre><code class="language-bash"># Bind mount: map a host directory into the container
+docker run -d --name web \
+  -p 8080:80 \
+  -v /home/user/website:/usr/share/nginx/html:ro \
+  nginx</code></pre>
+            </div>
+            <p>The <code>:ro</code> suffix makes the mount read-only inside the container—a good security practice when the container only needs to read files.</p>
+            <h4 id="running-interactive-containers">Running Interactive Containers</h4>
+            <div>
+                <pre><code class="language-bash">docker run -it ubuntu:22.04 /bin/bash               # interactive shell in new container
+docker exec -it my-nginx /bin/sh                     # exec into a running container
+docker logs my-nginx                                 # view container logs
+docker logs -f my-nginx                              # follow logs (like tail -f)</code></pre>
+            </div>
+            <h3 id="building-custom-images-with-dockerfiles">Building Custom Images with Dockerfiles</h3>
+            <p>A <strong>Dockerfile</strong> is a text file containing instructions for assembling a Docker image. Each instruction creates a layer.</p>
+            <h4 id="dockerfile-syntax">Dockerfile Syntax</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Instruction</td>
+                    <td>Purpose</td>
+                </tr>
+                <tr>
+                    <td><code>FROM</code></td>
+                    <td>Sets the base image (required as the first instruction)</td>
+                </tr>
+                <tr>
+                    <td><code>RUN</code></td>
+                    <td>Executes a command during the build (installs packages, etc.)</td>
+                </tr>
+                <tr>
+                    <td><code>COPY</code></td>
+                    <td>Copies files from the build context into the image</td>
+                </tr>
+                <tr>
+                    <td><code>ADD</code></td>
+                    <td>Like <code>COPY</code> but also handles URLs and tar extraction</td>
+                </tr>
+                <tr>
+                    <td><code>WORKDIR</code></td>
+                    <td>Sets the working directory for subsequent instructions</td>
+                </tr>
+                <tr>
+                    <td><code>ENV</code></td>
+                    <td>Sets environment variables</td>
+                </tr>
+                <tr>
+                    <td><code>EXPOSE</code></td>
+                    <td>Documents which ports the container listens on</td>
+                </tr>
+                <tr>
+                    <td><code>CMD</code></td>
+                    <td>Default command to run when the container starts</td>
+                </tr>
+                <tr>
+                    <td><code>ENTRYPOINT</code></td>
+                    <td>Configures the container to run as an executable</td>
+                </tr>
+                <tr>
+                    <td><code>ARG</code></td>
+                    <td>Defines build-time variables</td>
+                </tr>
+                <tr>
+                    <td><code>VOLUME</code></td>
+                    <td>Creates a mount point for external storage</td>
+                </tr>
+                <tr>
+                    <td><code>USER</code></td>
+                    <td>Sets the user for subsequent instructions and the running container</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="example-building-a-python-web-application-image">Example: Building a Python Web Application Image</h4>
+            <div>
+                <pre><code class="language-bash"># Dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 5000
+
+CMD ["python", "app.py"]</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-bash">docker build -t my-flask-app:1.0 .</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-shell">[+] Building 12.3s (10/10) FINISHED
+ =&gt; [1/5] FROM python:3.11-slim                              3.2s
+ =&gt; [2/5] WORKDIR /app                                       0.0s
+ =&gt; [3/5] COPY requirements.txt .                            0.0s
+ =&gt; [4/5] RUN pip install --no-cache-dir -r requirements...  7.8s
+ =&gt; [5/5] COPY . .                                           0.1s
+ =&gt; exporting to image                                       1.0s</code></pre>
+            </div>
+            <p>Notice the order: we copy <code>requirements.txt</code> and install dependencies <em>before</em> copying application code. This exploits Docker's layer caching—if dependencies don't change, Docker reuses the cached layer.</p>
+            <div>
+                <pre><code class="language-bash"># Run the newly built image
+docker run -d -p 5000:5000 --name flask-app my-flask-app:1.0</code></pre>
+            </div>
+            <h4 id="multi-stage-builds">Multi-Stage Builds</h4>
+            <p>Multi-stage builds let you use one image for building and a smaller image for running:</p>
+            <div>
+                <pre><code class="language-bash"># Dockerfile for a Go application
+FROM golang:1.21-alpine AS builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -o /app/server .
+
+FROM alpine:3.18
+RUN apk --no-cache add ca-certificates
+COPY --from=builder /app/server /usr/local/bin/server
+EXPOSE 8080
+CMD ["server"]</code></pre>
+            </div>
+            <p>The final image contains only the compiled binary and a minimal Alpine base—no Go toolchain, no source code. A Go build image might be 800 MB, but the production image could be under 20 MB.</p>
+            <h3 id="docker-networking">Docker Networking</h3>
+            <p>Docker creates isolated networks for containers. Understanding the network drivers helps you control how containers communicate.</p>
+            <div>
+                <pre><code class="language-+---------------------------------------------------------------+">|                        Docker Host                            |
+|                                                               |
+|  +------------------+    +------------------+                 |
+|  |   Container A    |    |   Container B    |                 |
+|  |  172.17.0.2      |    |  172.17.0.3      |                 |
+|  +--------+---------+    +--------+---------+                 |
+|           |                       |                           |
+|  +--------+-----------------------+---------+                 |
+|  |              docker0 bridge              |                 |
+|  |              172.17.0.1                  |                 |
+|  +---------------------+-------------------+                 |
+|                        | NAT (iptables)                       |
++------------------------|--------------------------------------+
+                         |
+                    eth0 (Host) 192.168.1.100</code></pre>
+            </div>
+            <h4 id="network-drivers">Network Drivers</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Driver</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td><code>bridge</code></td>
+                    <td>Default. Containers on the same bridge can communicate. Isolated from host network.</td>
+                </tr>
+                <tr>
+                    <td><code>host</code></td>
+                    <td>Container shares the host's network namespace. No isolation, but no NAT overhead.</td>
+                </tr>
+                <tr>
+                    <td><code>none</code></td>
+                    <td>No networking. Container is completely isolated.</td>
+                </tr>
+                <tr>
+                    <td><code>overlay</code></td>
+                    <td>Spans multiple Docker hosts. Used in Docker Swarm and orchestration.</td>
+                </tr>
+                <tr>
+                    <td><code>macvlan</code></td>
+                    <td>Assigns a MAC address to the container, making it appear as a physical device on the network.</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="managing-networks">Managing Networks</h4>
+            <div>
+                <pre><code class="language-bash"># List networks
+docker network ls</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-shell">NETWORK ID     NAME      DRIVER    SCOPE
+a1b2c3d4e5f6   bridge    bridge    local
+f6e5d4c3b2a1   host      host      local
+1a2b3c4d5e6f   none      null      local</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-bash">docker network create my-app-network
+
+docker run -d --name db --network my-app-network postgres:16
+docker run -d --name app --network my-app-network my-flask-app:1.0
+
+# Containers on the same custom network can reach each other by name
+docker exec app ping db</code></pre>
+            </div>
+            <p>Custom bridge networks provide <strong>automatic DNS resolution</strong> between containers—you can reference other containers by name instead of IP address.</p>
+            <div>
+                <pre><code class="language-bash">docker network connect my-app-network existing-container   # add network to container
+docker network inspect my-app-network                      # inspect a network
+docker network rm my-app-network                           # remove a network</code></pre>
+            </div>
+            <h3 id="docker-volumes-and-data-persistence">Docker Volumes and Data Persistence</h3>
+            <p>Containers are <strong>ephemeral</strong> by design—when you remove a container, its writable layer is deleted. For data that must persist, Docker provides volumes.</p>
+            <div>
+                <pre><code class="language-+---------------------------------------------------+">|                  Docker Host                      |
+|                                                   |
+|  +-----------+   +-----------------------------+  |
+|  | Container |   |  /var/lib/docker/volumes/   |  |
+|  | /app/data +--&gt;|  my-data/_data/             |  |
+|  +-----------+   |  (Named volume)             |  |
+|                  +-----------------------------+  |
+|  +-----------+   +-----------------------------+  |
+|  | Container |   |  /home/user/project/        |  |
+|  | /app/code +--&gt;|  (Bind mount)               |  |
+|  +-----------+   +-----------------------------+  |
++---------------------------------------------------+</code></pre>
+            </div>
+            <h4 id="named-volumes-vs-bind-mounts">Named Volumes vs Bind Mounts</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Feature</td>
+                    <td>Named Volumes</td>
+                    <td>Bind Mounts</td>
+                </tr>
+                <tr>
+                    <td>Managed by</td>
+                    <td>Docker</td>
+                    <td>You (the host filesystem)</td>
+                </tr>
+                <tr>
+                    <td>Location</td>
+                    <td><code>/var/lib/docker/volumes/</code></td>
+                    <td>Anywhere on the host</td>
+                </tr>
+                <tr>
+                    <td>Created with</td>
+                    <td><code>docker volume create</code> or at run time</td>
+                    <td><code>-v /host/path:/container/path</code></td>
+                </tr>
+                <tr>
+                    <td>Portability</td>
+                    <td>Easy to backup and migrate</td>
+                    <td>Tied to host directory structure</td>
+                </tr>
+                <tr>
+                    <td>Best for</td>
+                    <td>Database storage, persistent app data</td>
+                    <td>Development (live code reload), config files</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="working-with-volumes">Working with Volumes</h4>
+            <div>
+                <pre><code class="language-bash">docker volume create pgdata
+
+docker run -d --name postgres \
+  -e POSTGRES_PASSWORD=mysecretpw \
+  -v pgdata:/var/lib/postgresql/data \
+  postgres:16
+
+docker volume ls</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-shell">DRIVER    VOLUME NAME
+local     pgdata</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-bash">docker volume inspect pgdata</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-json">[
+    {
+        "Driver": "local",
+        "Mountpoint": "/var/lib/docker/volumes/pgdata/_data",
+        "Name": "pgdata",
+        "Scope": "local"
+    }
+]</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-bash">docker volume rm pgdata        # remove a specific volume
+docker volume prune            # remove all unused volumes</code></pre>
+            </div>
+            <h3 id="docker-compose">Docker Compose</h3>
+            <p>Real-world applications rarely consist of a single container. A web application might need a web server, a backend, a database, and a cache. <strong>Docker Compose</strong> lets you define multi-container applications using a single YAML file.</p>
+            <h4 id="example-a-web-application-stack">Example: A Web Application Stack</h4>
+            <p>Create a <code>docker-compose.yml</code>:</p>
+            <div>
+                <pre><code class="language-yaml">services:
+  web:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    networks:
+      - frontend
+  app:
+    build: ./app
+    environment:
+      - DATABASE_URL=postgresql://appuser:apppass@db:5432/myapp
+      - REDIS_URL=redis://cache:6379
+    depends_on:
+      - db
+      - cache
+    networks:
+      - frontend
+      - backend
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=appuser
+      - POSTGRES_PASSWORD=apppass
+      - POSTGRES_DB=myapp
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend
+  cache:
+    image: redis:7-alpine
+    networks:
+      - backend
+
+volumes:
+  pgdata:
+
+networks:
+  frontend:
+  backend:</code></pre>
+            </div>
+            <h4 id="docker-compose-commands">Docker Compose Commands</h4>
+            <div>
+                <pre><code class="language-bash">docker compose up -d</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-shell">[+] Running 5/5
+ ✔ Network myapp_frontend  Created
+ ✔ Network myapp_backend   Created
+ ✔ Container myapp-cache-1 Started
+ ✔ Container myapp-db-1    Started
+ ✔ Container myapp-app-1   Started
+ ✔ Container myapp-web-1   Started</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-bash">docker compose ps                        # view running services
+docker compose logs -f app               # follow logs for a service
+docker compose down                      # stop all services
+docker compose down -v                   # stop and remove volumes (destroys data)
+docker compose up -d --build             # rebuild images and restart</code></pre>
+            </div>
+            <h3 id="podman-as-an-alternative">Podman as an Alternative</h3>
+            <p><strong>Podman</strong> is a container engine developed by Red Hat that serves as a drop-in replacement for Docker. The key difference is that Podman runs <strong>daemonless</strong> and supports <strong>rootless mode</strong>, meaning containers run without requiring root privileges.</p>
+            <div>
+                <pre><code class="language-bash">podman pull nginx:alpine
+podman run -d -p 8080:80 --name web nginx:alpine
+podman ps
+podman stop web &amp;&amp; podman rm web</code></pre>
+            </div>
+            <p>
+            <table>
+                <tr>
+                    <td>Feature</td>
+                    <td>Docker</td>
+                    <td>Podman</td>
+                </tr>
+                <tr>
+                    <td>Architecture</td>
+                    <td>Client-daemon (<code>dockerd</code>)</td>
+                    <td>Daemonless (fork-exec)</td>
+                </tr>
+                <tr>
+                    <td>Root required</td>
+                    <td>Yes (daemon runs as root)</td>
+                    <td>No (rootless by default)</td>
+                </tr>
+                <tr>
+                    <td>Systemd integration</td>
+                    <td>Via service file for daemon</td>
+                    <td>Native with <code>podman generate systemd</code></td>
+                </tr>
+                <tr>
+                    <td>Docker Compose</td>
+                    <td>Native</td>
+                    <td>Via <code>podman-compose</code> or compatibility mode</td>
+                </tr>
+                <tr>
+                    <td>Image format</td>
+                    <td>OCI-compatible</td>
+                    <td>OCI-compatible</td>
+                </tr>
+                <tr>
+                    <td>Docker CLI compatible</td>
+                    <td>Yes</td>
+                    <td>Yes (alias <code>docker=podman</code>)</td>
+                </tr>
+            </table>
+            </p>
+            <p>Many organizations choose Podman for its security posture—running containers without a root daemon reduces the attack surface. On RHEL 8+, Podman is the default container tool.</p>
+            <div>
+                <pre><code class="language-bash"># Create a systemd service from a Podman container
+podman generate systemd --name web --files --new
+sudo mv container-web.service /etc/systemd/system/
+sudo systemctl enable --now container-web.service</code></pre>
+            </div>
+            <h3 id="container-best-practices">Container Best Practices</h3>
+            <p>As you move containers into production, keep these guidelines in mind.</p>
+            <h4 id="keep-images-small">Keep Images Small</h4>
+            <p>Start from minimal base images like <code>alpine</code> or <code>*-slim</code> variants. Combine <code>RUN</code> instructions to reduce layers:</p>
+            <div>
+                <pre><code class="language-bash"># Bad: creates three layers
+RUN apt-get update
+RUN apt-get install -y curl
+RUN rm -rf /var/lib/apt/lists/*
+
+# Good: single layer, cleans up in the same step
+RUN apt-get update &amp;&amp; \
+    apt-get install -y --no-install-recommends curl &amp;&amp; \
+    rm -rf /var/lib/apt/lists/*</code></pre>
+            </div>
+            <h4 id="security">Security</h4>
+            <ul>
+                <li><strong>Don't run as root</strong> inside the container. Use the <code>USER</code> instruction:</li>
+            </ul>
+            <div>
+                <pre><code class="language-bash">FROM node:20-alpine
+RUN addgroup -S appgroup &amp;&amp; adduser -S appuser -G appgroup
+WORKDIR /app
+COPY --chown=appuser:appgroup . .
+USER appuser
+CMD ["node", "server.js"]</code></pre>
+            </div>
+            <ul>
+                <li><strong>Don't store secrets in images.</strong> Use environment variables, Docker secrets, or mounted files instead.</li>
+                <li><strong>Scan images for vulnerabilities</strong> with tools like <code>trivy</code> or <code>docker scout</code>:</li>
+            </ul>
+            <div>
+                <pre><code class="language-bash">docker scout cves my-flask-app:1.0</code></pre>
+            </div>
+            <ul>
+                <li><strong>Pin image versions.</strong> Use <code>nginx:1.25-alpine</code> instead of <code>nginx:latest</code> so builds are reproducible.</li>
+            </ul>
+            <h4 id="use-dockerignore">Use <code>.dockerignore</code></h4>
+            <p>Just as <code>.gitignore</code> keeps files out of your repository, <code>.dockerignore</code> prevents files from being sent to the build context:</p>
+            <div>
+                <pre><code class="language-shell">.git
+node_modules
+*.md
+docker-compose*.yml
+.env</code></pre>
+            </div>
+            <p>This speeds up builds and keeps sensitive files out of images.</p>
+            <h4 id="health-checks">Health Checks</h4>
+            <p>Define a <code>HEALTHCHECK</code> so Docker can monitor whether your application is working:</p>
+            <div>
+                <pre><code class="language-bash">FROM nginx:alpine
+COPY index.html /usr/share/nginx/html/
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+  CMD curl -f http://localhost/ || exit 1</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-bash">docker ps</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-shell">CONTAINER ID   IMAGE     STATUS                   NAMES
+b7c3a1d9e4f2   nginx     Up 5 min (healthy)       web</code></pre>
+            </div>
+            <h3 id="challenges">Challenges</h3>
+            <ol>
+                <li>Install Docker on your Linux system using the official Docker repository (not your distro's default package). Verify the installation by running <code>docker run hello-world</code> and explain what happens behind the scenes when you run that command for the first time.</li>
+                <li>Pull three different variants of the <code>nginx</code> image (<code>nginx:latest</code>, <code>nginx:alpine</code>, and <code>nginx:1.25-bookworm</code>) and compare their sizes using <code>docker images</code>. Discuss why Alpine-based images are significantly smaller and what trade-offs might come with using them.</li>
+                <li>Run an <code>nginx</code> container in detached mode with port <code>8080</code> mapped to port <code>80</code>, then use <code>curl http://localhost:8080</code> to verify it is serving the default page. Practice stopping, removing, and restarting the container using <code>docker stop</code>, <code>docker rm</code>, and <code>docker run</code>.</li>
+                <li>Write a <code>Dockerfile</code> for a simple application (such as a static HTML site served by nginx or a Python script). Build the image, tag it with a version number, and run a container from it. Explain how Docker's layer caching works and why instruction order in a Dockerfile matters.</li>
+                <li>Create a custom bridge network called <code>app-net</code>. Run two containers on this network—one running <code>nginx</code> and one running <code>alpine</code>—and demonstrate that the <code>alpine</code> container can reach the <code>nginx</code> container by its container name using <code>ping</code> or <code>wget</code>. Explain the DNS resolution behavior of custom networks.</li>
+                <li>Create a named Docker volume, attach it to a PostgreSQL container, insert some data, then remove and recreate the container using the same volume. Verify that your data persists across container removal. Discuss the difference between named volumes and bind mounts.</li>
+                <li>Write a <code>docker-compose.yml</code> file that defines at least three services (for example, a web server, an application backend, and a database). Start the stack with <code>docker compose up -d</code>, verify all services are running, and demonstrate that the services can communicate with each other by service name.</li>
+                <li>Build a multi-stage <code>Dockerfile</code> for a compiled application (use any language you are comfortable with, or find a sample Go or C program). Compare the final image size to a single-stage build that includes the full compiler toolchain. Explain why multi-stage builds are important for production images.</li>
+                <li>Install Podman on your system and run the same container image you used with Docker. Compare the Podman and Docker CLI commands and test running a container in rootless mode. Discuss the security benefits of a daemonless, rootless container engine.</li>
+                <li>Audit one of your container images for security best practices: ensure it runs as a non-root user, has no unnecessary packages, pins its base image to a specific version, and includes a <code>HEALTHCHECK</code> instruction. Use <code>docker scout</code> or <code>trivy</code> to scan for known vulnerabilities and fix or document any findings.</li>
+            </ol>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

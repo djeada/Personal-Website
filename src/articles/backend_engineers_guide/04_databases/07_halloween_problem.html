@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Halloween Problem</title>
-    <meta content="The Halloween Problem is a notorious pitfall in relational‐database execution plans." name="description" />
+    <meta content="The Halloween Problem is a database execution-plan issue where an UPDATE operation could theoretically update the same row more than once if the database scans rows through an access path that is changed by the update itself." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/07_halloween_problem"
             },
             "url": "https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/07_halloween_problem",
-            "description": "The Halloween Problem is a notorious pitfall in relational\u2010database execution plans.",
-            "dateModified": "2026-03-23"
+            "description": "The Halloween Problem is a database execution-plan issue where an UPDATE operation could theoretically update the same row more than once if the database scans rows through an access path that is changed by the update itself.",
+            "dateModified": "2026-04-27"
         }
     </script>
 </head>
@@ -79,13 +79,24 @@
                 <h2>Table of Contents</h2>
                 <ol><a href="#halloween-problem">Halloween Problem</a>
                     <ol>
-                        <li><a href="#nature-of-the-halloween-problem">Nature of the Halloween Problem</a></li>
-                        <li><a href="#intermediate-table-method">Intermediate Table Method</a></li>
-                        <li><a href="#indexing-strategies">Indexing Strategies</a></li>
-                        <li><a href="#isolation-levels">Isolation Levels</a></li>
-                        <li><a href="#database-engine-optimization">Database Engine Optimization</a></li>
-                        <li><a href="#order-by-primary-key">Order by Primary Key</a></li>
-                        <li><a href="#locking-mechanisms">Locking Mechanisms</a></li>
+                        <li><a href="#why-it-happens-conceptually">Why It Happens Conceptually</a></li>
+                        <li><a href="#how-modern-databases-usually-prevent-it">How Modern Databases Usually Prevent It</a>
+                            <ol>
+                                <li><a href="#1-spooling-or-materialization">1. Spooling or Materialization</a></li>
+                                <li><a href="#2-stable-row-identifiers">2. Stable Row Identifiers</a></li>
+                                <li><a href="#3-mvcc-or-statement-snapshots">3. MVCC or Statement Snapshots</a></li>
+                                <li><a href="#4-optimizer-plan-rewriting">4. Optimizer Plan Rewriting</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#when-developers-still-need-to-care">When Developers Still Need to Care</a>
+                            <ol>
+                                <li><a href="#example-custom-batch-loop-risk">Example: Custom Batch Loop Risk</a></li>
+                                <li><a href="#example-triggers-or-rules">Example: Triggers or Rules</a></li>
+                                <li><a href="#example-queue-processing">Example: Queue Processing</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#practical-rule-of-thumb">Practical Rule of Thumb</a></li>
+                        <li><a href="#safe-pattern-freeze-the-candidate-set">Safe Pattern: Freeze the Candidate Set</a></li>
                     </ol>
                 </ol>
             </div>
@@ -135,6 +146,10 @@
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/02_redis.html">Redis</a></li>
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/03_content_delivery_networks.html">Content Delivery Networks</a></li>
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/04_database_caching.html">Database Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/05_memcached.html">Memcached</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/06_http_caching.html">Http Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/07_application_level_caching.html">Application Level Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/08_memory_map.html">Memory Map</a></li>
                         </ol>
                     </li>
                     <li>Data Processing<ol>
@@ -142,6 +157,9 @@
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/02_messaging_system_integration.html">Messaging System Integration</a></li>
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/03_batch_processing.html">Batch Processing</a></li>
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing.html">Stream Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/05_etl_and_pipelines.html">Etl and Pipelines</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/06_lambda_and_kappa_architecture.html">Lambda and Kappa Architecture</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/07_workflow_orchestration.html">Workflow Orchestration</a></li>
                         </ol>
                     </li>
                     <li>Data Formats<ol>
@@ -157,11 +175,19 @@
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/03_security_vulnerabilities.html">Security Vulnerabilities</a></li>
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/04_security_best_practices_and_measures.html">Security Best Practices and Measures</a></li>
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/05_third_party_cookies_vulnerabilities.html">Third Party Cookies Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/06_secure_containers.html">Secure Containers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/07_credentials_management.html">Credentials Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/08_supply_chain_attacks.html">Supply Chain Attacks</a></li>
                         </ol>
                     </li>
                     <li>Deployment<ol>
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/01_centos_digital_ocean.html">Centos Digital Ocean</a></li>
                             <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/02_static_python_website_netlify.html">Static Python Website Netlify</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/03_docker.html">Docker</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/04_kubernetes.html">Kubernetes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/05_ci_cd.html">Ci Cd</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/06_deployment_strategies.html">Deployment Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/07_infrastructure_as_code.html">Infrastructure As Code</a></li>
                         </ol>
                     </li>
                     <li>Distributed Systems<ol>
@@ -192,135 +218,283 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: April 27, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="halloween-problem">Halloween Problem</h2>
-            <p>The Halloween Problem is a notorious pitfall in relational‐database execution plans. First observed by IBM System R researchers on <strong>October 31, 1976</strong>—hence the spooky nickname—the phenomenon occurs when an <code>UPDATE</code> statement unwittingly revisits and modifies the same row more than once. Each extra pass can inflate numeric columns, duplicate work, or otherwise corrupt results, so modern optimizers build in explicit defenses. Nevertheless, the problem remains a classic illustration of how row ordering and side effects can interact inside a seemingly simple set operation.</p>
-            <h3 id="nature-of-the-halloween-problem">Nature of the Halloween Problem</h3>
-            <p>The crux of the issue is <strong>state-dependent scanning</strong>: if the executor reads rows through an index whose <strong>key contains the column being updated</strong>, the mutation can reposition that row inside the index, making it visible again later in the scan. Without extra safeguards, the engine has no memory that the tuple was already processed.</p>
-            <p>A textbook example is granting a 10 % raise to employees earning under \$50 000:</p>
+            <p>The <strong>Halloween Problem</strong> is a database execution-plan issue where an <code>UPDATE</code> operation could theoretically update the same row more than once if the database scans rows through an access path that is changed by the update itself.</p>
+            <p>It was first observed by IBM System R researchers on October 31, 1976. The classic example is an update such as:</p>
             <div>
                 <pre><code class="language-sql">UPDATE employees
-   SET salary = salary * 1.10
- WHERE salary &lt; 50000;</code></pre>
+SET salary = salary * 1.10
+WHERE salary &lt; 50000;</code></pre>
             </div>
-            <p>An employee starting at \$45 000 climbs to \$49 500 after the first pass—still under the threshold—so the cursor notices the row again and applies yet another 10 % bump. In a naïve plan, the loop continues until the row finally exits the qualifying range (or, in degenerate cases, forever).</p>
-            <h3 id="intermediate-table-method">Intermediate Table Method</h3>
-            <p>This classic remedy freezes the qualifying set in an auxiliary structure, turning the original scan into a <strong>read-only</strong> operation:</p>
-            <ol>
-                <li><strong>Extract phase</strong> – Copy every row that meets the <code>WHERE</code> predicate into a worktable (e.g., a spool, temporary table, or materialized CTE).</li>
-                <li><strong>Transform phase</strong> – Apply the <code>UPDATE</code> solely to that worktable, guaranteeing each row changes exactly once.</li>
-                <li><strong>Merge phase</strong> – Write the modified rows back to the base table in one, atomic operation, usually inside the same transaction for consistency.</li>
-            </ol>
+            <p>If a naïve database engine scanned an index on <code>salary</code>, then increasing a row’s salary could move that row to a later position in the same index. The engine might then encounter the row again and apply the update a second time.</p>
+            <p>Example intended result:</p>
             <div>
-                <pre><code class="language-shell">Original Table                    Worktable                     Original Table
-+-------------+                  +-------------+                +-------------+
-| Row 1       |  1) Extract ---&gt; | Row 1       |                | Row 1*      |
-| Row 2       |                  | Row 3       |  2) Update --&gt; | Row 2       |
-| Row 3       |                  | Row 5       |                | Row 3*      |
-| Row 4       |                  +-------------+                | Row 4       |
-| Row 5       |                                                 | Row 5*      |
-+-------------+                                                 +-------------+
-       ^                                                               |
-       |___________________ 3) Merge / Insert _________________________|</code></pre>
+                <pre><code class="language-json">{
+  "employee_id": 101,
+  "old_salary": 45000,
+  "new_salary": 49500,
+  "updates_applied": 1
+}</code></pre>
             </div>
-            <p>The extra I/O can be significant, so many engines insert this spool only when the optimizer detects the risk automatically.</p>
-            <h3 id="indexing-strategies">Indexing Strategies</h3>
-            <p>Selecting an access path <strong>orthogonal to the updated column</strong> breaks the feedback loop:</p>
-            <ol>
-                <li>A <strong>non-clustered index</strong> that stores a pointer (RID) to the heap remains logically ordered even after the row’s payload columns change.</li>
-                <li>When the optimizer drives the scan through that index, each RID is visited once and cannot reappear.</li>
-                <li>By contrast, a <strong>clustered index</strong> or any index whose key includes the updated column will physically relocate the record, allowing a naïve scan to see it twice.</li>
-            </ol>
+            <p>Example unsafe theoretical result:</p>
             <div>
-                <pre><code class="language-shell">Base Table (heap)                 Non-Clustered Index
-+----------------------+          +------------------+
-| RID 101 Data A       | &lt;----+   | Key A -&gt; RID 101 |
-| RID 102 Data B       |      |   | Key B -&gt; RID 102 |
-| RID 103 Data C       |  Update   | Key C -&gt; RID 103 |
-| RID 104 Data D       | -------+  | Key D -&gt; RID 104 |
-| RID 105 Data E       |          | Key E -&gt; RID 105 |
-+----------------------+          +------------------+
-      ^     ^                             ^
-      |     |_____________________________|
-      |              Lookup
-      |  (Each RID visited exactly once)</code></pre>
+                <pre><code class="language-json">{
+  "employee_id": 101,
+  "old_salary": 45000,
+  "new_salary": 54450,
+  "updates_applied": 2
+}</code></pre>
             </div>
-            <p>Extra non-clustered indexes speed reads but slow writes, so DBAs must balance mitigation against maintenance cost.</p>
-            <h3 id="isolation-levels">Isolation Levels</h3>
-            <p>ANSI isolation levels can also shield a statement from revisiting modified rows:</p>
+            <p>In modern relational databases, this is usually prevented by the query optimizer or execution engine. Databases such as PostgreSQL, SQL Server, Oracle, MySQL/InnoDB, and others have mechanisms that avoid repeatedly updating the same logical row during one statement.</p>
+            <p>So in normal application development, you usually do <strong>not</strong> need to manually protect every <code>UPDATE</code> statement from the Halloween Problem. It mainly matters when understanding execution plans, database internals, optimizer behavior, triggers, custom procedural loops, unusual update rules, or hand-written batching logic.</p>
+            <h3 id="why-it-happens-conceptually">Why It Happens Conceptually</h3>
+            <p>The Halloween Problem happens when the database is both:</p>
             <ol>
-                <li><strong>Serializable</strong> guarantees the transaction behaves as though it ran alone, blocking or versioning away rows that could alter the result set mid-scan.</li>
-                <li><strong>Repeatable Read</strong> prevents other sessions from changing rows you have touched, but it does not stop your own update from making a row newly qualify, so some Halloween cases persist.</li>
-                <li>Implementations enforce these rules via locks or row-versioning; the stronger the level, the greater the contention or version-store growth.</li>
+                <li><strong>Finding rows through an ordered access path</strong>, such as an index.</li>
+                <li><strong>Changing a value that affects that same access path</strong>, such as the indexed column.</li>
             </ol>
+            <p>Example table:</p>
             <div>
-                <pre><code class="language-shell">Transaction 1 (Serializable)      Transaction 2
-+-----------------------------+   +-------------------------+
-| 1. Read Row 1               |   | 1. Blocked on Row 1     |
-| 2. Update Row 1             |   |                         |
-| 3. Commit                   |   | 2. Read Row 1           |
-+-----------------------------+   | 3. Update Row 1         |
-                                   | 4. Commit               |
-                                   +-------------------------+
-          ^                                      ^
-          |_____________ strict snapshot ________|</code></pre>
+                <pre><code class="language-sql">CREATE TABLE employees (
+  employee_id INT PRIMARY KEY,
+  salary NUMERIC
+);
+
+CREATE INDEX idx_employees_salary ON employees(salary);</code></pre>
             </div>
-            <p>High isolation removes the glitch but can throttle throughput on busy, write-heavy tables.</p>
-            <h3 id="database-engine-optimization">Database Engine Optimization</h3>
-            <p>Modern DBMSs implement several <strong>automatic</strong> defenses:</p>
-            <ol>
-                <li><strong>MVCC / Row versioning</strong> writes new row images rather than updating in place, so the scan sees only the snapshot taken at statement start.</li>
-                <li><strong>Snapshot isolation</strong> freezes the candidate set on first read.</li>
-                <li><strong>Plan rewriting</strong> can inject an implicit spool, switch to a safer index, or add a hash filter of processed keys.</li>
-                <li><strong>Adaptive locking</strong> escalates from row to page only when needed, minimizing the concurrency penalty.</li>
-            </ol>
-            <p>Because each vendor differs, always test critical updates under production-like loads.</p>
-            <h3 id="order-by-primary-key">Order by Primary Key</h3>
-            <p>Running the update in a <strong>stable key order</strong> eliminates back-tracking:</p>
-            <ol>
-                <li>Adding <code>ORDER BY &lt;primary_key&gt;</code> forces the executor to process rows in ascending (or descending) primary-key sequence, which by definition never changes within the statement.</li>
-                <li>Once a row is past the cursor, even large attribute changes cannot cause it to reappear.</li>
-            </ol>
+            <p>Risky-looking update:</p>
             <div>
-                <pre><code class="language-+----------------------------+">| Table: employees           |
-+----------------------------+
-| PK 1  salary 45000         |
-| PK 2  salary 47000         |  --+
-| PK 3  salary 48000         |    | Cursor direction
-| PK 4  salary 49000         |    |  (ascending PK)
-| PK 5  salary 49500         |    |
-+----------------------------+    v
-             |                    +----------------------------------+
-             |  UPDATE ...        | After pass:                      |
-             |  ORDER BY PK       +----------------------------------+
-             |                    | 1  49500 (was 45000)             |
-             |                    | 2  51700 (was 47000)             |
-             v                    | 3  52800 (was 48000)             |
-+----------------------------+    | 4  53900 (was 49000)             |
-| Executor scans once only   |    | 5  54450 (was 49500)             |
-+----------------------------+    +----------------------------------+</code></pre>
+                <pre><code class="language-sql">UPDATE employees
+SET salary = salary * 1.10
+WHERE salary &lt; 50000;</code></pre>
             </div>
-            <p>A supporting index on the key avoids a full-table scan and external sort, keeping the remedy performant.</p>
-            <h3 id="locking-mechanisms">Locking Mechanisms</h3>
-            <p>Finally, explicit <strong>pessimistic locks</strong> guarantee a row is updated exactly once in a transaction:</p>
-            <ol>
-                <li><code>SELECT ... FOR UPDATE</code> (or equivalent) takes an exclusive latch on each qualifying row.</li>
-                <li>Because even the same transaction cannot reacquire a lock it already owns, a self-inflicted Halloween loop is impossible.</li>
-                <li>Deadlocks loom if concurrent writers lock rows in different orders, so pair locking with a deterministic scan strategy.</li>
-            </ol>
+            <p>Conceptual unsafe scan:</p>
             <div>
-                <pre><code class="language-shell">+--------------------------+         +----------------------+
-| Txn A (holds Lock)       |         | Txn B (waiting)      |
-+--------------------------+         +----------------------+
-| 1. SELECT ... FOR UPDATE |   --&gt;   | 1. Blocks on same row|
-| 2. UPDATE Row            |         |                      |
-| 3. COMMIT (release)      |         | 2. Gains lock        |
-+--------------------------+         | 3. UPDATE Row        |
-                                     | 4. COMMIT            |
-                                     +----------------------+</code></pre>
+                <pre><code class="language-text">Salary index before update:
+
+45000 -&gt; employee 101
+47000 -&gt; employee 102
+52000 -&gt; employee 103</code></pre>
             </div>
-            <p>Locks are easy to reason about but can throttle high-throughput workloads, so use them judiciously alongside the other, less intrusive techniques.</p>
+            <p>After employee <code>101</code> is updated:</p>
+            <div>
+                <pre><code class="language-text">Salary index after first update:
+
+47000 -&gt; employee 102
+49500 -&gt; employee 101
+52000 -&gt; employee 103</code></pre>
+            </div>
+            <p>If the engine were naïvely scanning forward through the same <code>salary</code> index, employee <code>101</code> could appear again at <code>49500</code>.</p>
+            <p>Modern engines avoid this by making sure each target row is identified and updated once.</p>
+            <h3 id="how-modern-databases-usually-prevent-it">How Modern Databases Usually Prevent It</h3>
+            <p>Modern databases typically insert protection automatically when an execution plan might be unsafe.</p>
+            <p>Common protections include:</p>
+            <h4 id="1-spooling-or-materialization">1. Spooling or Materialization</h4>
+            <p>The database first stores the target row identifiers in an internal temporary structure, then updates those rows.</p>
+            <p>Conceptual plan:</p>
+            <div>
+                <pre><code class="language-text">Find qualifying employee IDs
+        |
+        v
+Store IDs in internal spool/worktable
+        |
+        v
+Update employees by stable employee_id</code></pre>
+            </div>
+            <p>Example internal target list:</p>
+            <div>
+                <pre><code class="language-json">{
+  "target_employee_ids": [101, 102]
+}</code></pre>
+            </div>
+            <p>Even if salary changes during the update, the database is no longer discovering new candidates from the changing salary index.</p>
+            <h4 id="2-stable-row-identifiers">2. Stable Row Identifiers</h4>
+            <p>The database may scan one structure to find qualifying rows but update by a stable row identifier, such as a primary key, tuple ID, row ID, or internal physical locator.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">Scan finds:
+employee_id = 101
+employee_id = 102
+
+Update phase uses those fixed identifiers.</code></pre>
+            </div>
+            <p>This prevents the update from chasing rows as they move through an index.</p>
+            <h4 id="3-mvcc-or-statement-snapshots">3. MVCC or Statement Snapshots</h4>
+            <p>Many modern engines use MVCC, meaning readers see a stable snapshot while updates create new row versions.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-text">Statement starts.
+Scan sees snapshot S1.
+Updates create new versions.
+The scan does not rediscover its own new versions.</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-json">{
+  "read_snapshot": "statement_start",
+  "updated_versions_visible_to_same_scan": false
+}</code></pre>
+            </div>
+            <p>This naturally separates the read view from the write effects of the same statement.</p>
+            <h4 id="4-optimizer-plan-rewriting">4. Optimizer Plan Rewriting</h4>
+            <p>The optimizer may choose a safer access path or rewrite the update plan to avoid scanning a changing index directly.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-json">{
+  "detected_risk": "updated column participates in scan order",
+  "optimizer_action": "use spool or safer access path"
+}</code></pre>
+            </div>
+            <p>This is why ordinary SQL updates are usually safe in mature database engines.</p>
+            <h3 id="when-developers-still-need-to-care">When Developers Still Need to Care</h3>
+            <p>Although modern databases usually handle the classic Halloween Problem, developers can still create similar issues through <strong>custom logic</strong>.</p>
+            <p>You should be careful when writing code that manually scans and updates rows in loops, especially when the update changes the same condition used to select the next batch.</p>
+            <h4 id="example-custom-batch-loop-risk">Example: Custom Batch Loop Risk</h4>
+            <p>Suppose a script repeatedly updates rows in batches:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE employees
+SET salary = salary * 1.10
+WHERE salary &lt; 50000
+ORDER BY salary
+LIMIT 100;</code></pre>
+            </div>
+            <p>Then the script runs this statement again and again until no rows match.</p>
+            <p>The database may protect each individual statement, but the <strong>application loop</strong> can still update the same row across multiple statements if the row still matches the condition after the first update.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-json">{
+  "employee_id": 101,
+  "salary_after_batch_1": 49500,
+  "still_matches_condition": true,
+  "salary_after_batch_2": 54450
+}</code></pre>
+            </div>
+            <p>This is not the classic engine-level Halloween Problem inside one statement. It is a similar application-level batching bug.</p>
+            <p>Safer pattern:</p>
+            <div>
+                <pre><code class="language-sql">CREATE TEMP TABLE raise_targets AS
+SELECT employee_id
+FROM employees
+WHERE salary &lt; 50000;
+
+UPDATE employees
+SET salary = salary * 1.10
+WHERE employee_id IN (
+  SELECT employee_id FROM raise_targets
+);</code></pre>
+            </div>
+            <p>This fixes the candidate set before running the update.</p>
+            <h4 id="example-triggers-or-rules">Example: Triggers or Rules</h4>
+            <p>Custom database triggers can also create repeated or unexpected updates if they modify rows that are part of the same logical operation.</p>
+            <p>Example risky trigger idea:</p>
+            <div>
+                <pre><code class="language-sql">CREATE TRIGGER adjust_salary_again
+AFTER UPDATE ON employees
+FOR EACH ROW
+WHEN (NEW.salary &lt; 50000)
+EXECUTE FUNCTION apply_extra_raise();</code></pre>
+            </div>
+            <p>If the trigger updates the same table again, it can create recursive or repeated modifications unless carefully controlled.</p>
+            <p>Example protection:</p>
+            <div>
+                <pre><code class="language-json">{
+  "trigger_recursion_guard": true,
+  "max_trigger_depth": 1,
+  "updates_allowed_once": true
+}</code></pre>
+            </div>
+            <p>Triggers should be designed with clear recursion limits and conditions.</p>
+            <h4 id="example-queue-processing">Example: Queue Processing</h4>
+            <p>Queue tables can have Halloween-like bugs if workers repeatedly select “next available” rows while also changing the fields used to select those rows.</p>
+            <p>Risky pattern:</p>
+            <div>
+                <pre><code class="language-sql">SELECT job_id
+FROM jobs
+WHERE status = 'pending'
+ORDER BY priority
+LIMIT 1;</code></pre>
+            </div>
+            <p>Then:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE jobs
+SET priority = priority + 1
+WHERE job_id = ?;</code></pre>
+            </div>
+            <p>If the job remains <code>pending</code>, it may be selected again later.</p>
+            <p>Safer pattern:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE jobs
+SET status = 'processing'
+WHERE job_id = ?
+RETURNING job_id;</code></pre>
+            </div>
+            <p>Or select and claim atomically:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE jobs
+SET status = 'processing'
+WHERE job_id = (
+  SELECT job_id
+  FROM jobs
+  WHERE status = 'pending'
+  ORDER BY priority
+  LIMIT 1
+  FOR UPDATE SKIP LOCKED
+)
+RETURNING job_id;</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "job_id": 42,
+  "old_status": "pending",
+  "new_status": "processing",
+  "can_be_selected_again_as_pending": false
+}</code></pre>
+            </div>
+            <h3 id="practical-rule-of-thumb">Practical Rule of Thumb</h3>
+            <p>For normal single-statement SQL updates in modern relational databases, the Halloween Problem is mostly handled by the engine.</p>
+            <p>The practical risk today is usually in:</p>
+            <div>
+                <pre><code class="language-text">Custom batching loops
+Triggers and recursive rules
+Queue-processing logic
+Manual cursor-based updates
+Stored procedures that repeatedly scan and mutate the same condition
+Unusual execution plans in custom engines or embedded systems</code></pre>
+            </div>
+            <p>A safe design principle is:</p>
+            <div>
+                <pre><code class="language-text">If you are repeatedly scanning rows and updating the same fields that decide which rows are scanned next,
+freeze the target row IDs first.</code></pre>
+            </div>
+            <h3 id="safe-pattern-freeze-the-candidate-set">Safe Pattern: Freeze the Candidate Set</h3>
+            <p>The most practical developer-level defense is to first capture stable primary keys, then update by those keys.</p>
+            <div>
+                <pre><code class="language-sql">CREATE TEMP TABLE target_employees AS
+SELECT employee_id
+FROM employees
+WHERE salary &lt; 50000;</code></pre>
+            </div>
+            <p>Then:</p>
+            <div>
+                <pre><code class="language-sql">UPDATE employees
+SET salary = salary * 1.10
+WHERE employee_id IN (
+  SELECT employee_id
+  FROM target_employees
+);</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-json">{
+  "target_set_fixed_before_update": true,
+  "updated_by_stable_primary_key": true,
+  "same_row_updated_multiple_times": false
+}</code></pre>
+            </div>
+            <p>This pattern is useful for migrations, backfills, batch jobs, stored procedures, and scripts where repeated scans could otherwise change their own future input.</p>
         </article-section>
     </div>
     <footer>

@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Why Container Security Matters</title>
+    <meta content="Containers package an application together with its dependencies, providing portability and reproducibility." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/06_secure_containers" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Why Container Security Matters",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/08_security/06_secure_containers"
+            },
+            "url": "https://adamdjellouli.com/articles/backend_engineers_guide/08_security/06_secure_containers",
+            "description": "Containers package an application together with its dependencies, providing portability and reproducibility.",
+            "dateModified": "2026-04-27"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#why-container-security-matters">Why Container Security Matters</a></li>
+                    <li><a href="#image-hardening">Image Hardening</a>
+                        <ol>
+                            <li><a href="#start-from-a-minimal-base-image">Start from a Minimal Base Image</a></li>
+                            <li><a href="#do-not-run-as-root">Do Not Run as Root</a></li>
+                            <li><a href="#use-multi-stage-builds">Use Multi-Stage Builds</a></li>
+                            <li><a href="#pin-image-versions">Pin Image Versions</a></li>
+                            <li><a href="#remove-secrets-and-sensitive-files-from-images">Remove Secrets and Sensitive Files from Images</a></li>
+                            <li><a href="#scan-images-for-known-vulnerabilities">Scan Images for Known Vulnerabilities</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#runtime-security">Runtime Security</a>
+                        <ol>
+                            <li><a href="#apply-the-principle-of-least-privilege">Apply the Principle of Least Privilege</a></li>
+                            <li><a href="#prevent-privilege-escalation">Prevent Privilege Escalation</a></li>
+                            <li><a href="#use-seccomp-and-apparmor-profiles">Use Seccomp and AppArmor Profiles</a></li>
+                            <li><a href="#limit-container-resources">Limit Container Resources</a></li>
+                            <li><a href="#avoid-privileged-containers">Avoid Privileged Containers</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#network-isolation">Network Isolation</a>
+                        <ol>
+                            <li><a href="#use-private-networks">Use Private Networks</a></li>
+                            <li><a href="#apply-kubernetes-network-policies">Apply Kubernetes Network Policies</a></li>
+                            <li><a href="#encrypt-inter-container-traffic">Encrypt Inter-Container Traffic</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#container-registry-security">Container Registry Security</a>
+                        <ol>
+                            <li><a href="#use-a-private-registry">Use a Private Registry</a></li>
+                            <li><a href="#sign-images">Sign Images</a></li>
+                            <li><a href="#enable-vulnerability-scanning-in-the-registry">Enable Vulnerability Scanning in the Registry</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#ci-cd-pipeline-integration">CI/CD Pipeline Integration</a></li>
+                    <li><a href="#summary">Summary</a></li>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Api Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/01_api_communication_protocols.html">Api Communication Protocols</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/02_rest.html">Rest</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/03_graphql.html">Graphql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/04_grpc.html">Grpc</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/05_state_management.html">State Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/06_data_transmission.html">Data Transmission</a></li>
+                        </ol>
+                    </li>
+                    <li>Network Communications<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/01_network_communications.html">Network Communications</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/02_tcp_and_udp.html">Tcp and Udp</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/03_http_protocol.html">Http Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/04_web_sockets.html">Web Sockets</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/05_metrics_and_analysis.html">Metrics and Analysis</a></li>
+                        </ol>
+                    </li>
+                    <li>Server Technologies<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/01_web_server_overview.html">Web Server Overview</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/02_static_dynamic_content.html">Static Dynamic Content</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/03_tomcat.html">Tomcat</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/04_apache.html">Apache</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/05_nginx.html">Nginx</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/06_forward_proxies.html">Forward Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/07_reverse_proxies.html">Reverse Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/08_load_balancing.html">Load Balancing</a></li>
+                        </ol>
+                    </li>
+                    <li>Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/01_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/02_transactions.html">Transactions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/03_indexes.html">Indexes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/04_isolation_levels.html">Isolation Levels</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/05_data_warehousing.html">Data Warehousing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/06_replication.html">Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/07_halloween_problem.html">Halloween Problem</a></li>
+                        </ol>
+                    </li>
+                    <li>Caching<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/01_caching_strategies.html">Caching Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/02_redis.html">Redis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/03_content_delivery_networks.html">Content Delivery Networks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/04_database_caching.html">Database Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/05_memcached.html">Memcached</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/06_http_caching.html">Http Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/07_application_level_caching.html">Application Level Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/08_memory_map.html">Memory Map</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Processing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/01_pub_sub_vs_queue.html">Pub Sub vs Queue</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/02_messaging_system_integration.html">Messaging System Integration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/03_batch_processing.html">Batch Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing.html">Stream Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/05_etl_and_pipelines.html">Etl and Pipelines</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/06_lambda_and_kappa_architecture.html">Lambda and Kappa Architecture</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/07_workflow_orchestration.html">Workflow Orchestration</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Formats<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/01_protocol_buffers.html">Protocol Buffers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/02_xml.html">Xml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/03_json.html">Json</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/04_yaml.html">Yaml</a></li>
+                        </ol>
+                    </li>
+                    <li>Security<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/01_auth.html">Auth</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/02_tls.html">Tls</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/03_security_vulnerabilities.html">Security Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/04_security_best_practices_and_measures.html">Security Best Practices and Measures</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/05_third_party_cookies_vulnerabilities.html">Third Party Cookies Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/06_secure_containers.html">Secure Containers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/07_credentials_management.html">Credentials Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/08_supply_chain_attacks.html">Supply Chain Attacks</a></li>
+                        </ol>
+                    </li>
+                    <li>Deployment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/01_centos_digital_ocean.html">Centos Digital Ocean</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/02_static_python_website_netlify.html">Static Python Website Netlify</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/03_docker.html">Docker</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/04_kubernetes.html">Kubernetes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/05_ci_cd.html">Ci Cd</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/06_deployment_strategies.html">Deployment Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/07_infrastructure_as_code.html">Infrastructure As Code</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Systems<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/01_coordination_services.html">Coordination Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/02_gossip_protocol.html">Gossip Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/03_linearizability.html">Linearizability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/04_concurrent_writes.html">Concurrent Writes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/05_operational_transform.html">Operational Transform</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/06_algorithms_summary.html">Algorithms Summary</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/07_optimistic_vs_pessimistic_locking.html">Optimistic vs Pessimistic Locking</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: April 27, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <header>Secure Containers</header>
+            <p>Containers package an application together with its dependencies, providing portability and reproducibility. That same packaging surface can, however, introduce security risks if images are built carelessly, runtimes are misconfigured, or containers run with unnecessary privileges. This document covers the key areas of container security: hardening images, locking down the runtime, isolating workloads at the network level, and integrating security scanning into CI/CD pipelines.</p>
+            <h2 id="why-container-security-matters">Why Container Security Matters</h2>
+            <p>A container shares the host kernel with all other containers on the same machine. A successful container-escape exploit gives an attacker access to the host and every other container on it. Even without a full escape, a compromised container can exfiltrate secrets, pivot to internal services, or consume resources that disrupt neighboring workloads.</p>
+            <div>
+                <pre><code class="language-+--------------------------------------+">|              Host OS / Kernel        |
+|   +-----------+   +-----------+      |
+|   | Container |   | Container |      |
+|   |   App A   |   |   App B   |      |
+|   +-----------+   +-----------+      |
+|   shared kernel syscall interface    |
++--------------------------------------+</code></pre>
+            </div>
+            <p>Because the kernel boundary is thinner than a full virtual-machine hypervisor, every layer of defence matters.</p>
+            <h2 id="image-hardening">Image Hardening</h2>
+            <h3 id="start-from-a-minimal-base-image">Start from a Minimal Base Image</h3>
+            <p>Prefer distroless or minimal base images (such as <code>gcr.io/distroless/static</code>, <code>alpine</code>, or <code>debian-slim</code>) over full general-purpose distributions. Fewer packages mean a smaller attack surface and fewer CVEs to patch.</p>
+            <div>
+                <pre><code class="language-dockerfile"># Avoid
+FROM ubuntu:latest
+
+# Prefer
+FROM gcr.io/distroless/base-debian12</code></pre>
+            </div>
+            <h3 id="do-not-run-as-root">Do Not Run as Root</h3>
+            <p>By default many images run processes as <code>root</code> (UID 0). If an attacker exploits the application they immediately have root privileges inside the container, which makes container-escape much easier.</p>
+            <div>
+                <pre><code class="language-dockerfile">FROM node:20-alpine
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+COPY . .
+
+# Create a non-root user and switch to it
+RUN addgroup -S appgroup &amp;&amp; adduser -S appuser -G appgroup
+USER appuser
+
+EXPOSE 3000
+CMD ["node", "server.js"]</code></pre>
+            </div>
+            <h3 id="use-multi-stage-builds">Use Multi-Stage Builds</h3>
+            <p>Multi-stage builds let you compile or build in a full-featured environment and then copy only the final artefacts into a lean runtime image, excluding compilers, build tools, and source code.</p>
+            <div>
+                <pre><code class="language-dockerfile"># --- Build stage ---
+FROM golang:1.22 AS builder
+WORKDIR /src
+COPY . .
+RUN CGO_ENABLED=0 go build -o /app .
+
+# --- Runtime stage ---
+FROM gcr.io/distroless/static-debian12
+COPY --from=builder /app /app
+ENTRYPOINT ["/app"]</code></pre>
+            </div>
+            <h3 id="pin-image-versions">Pin Image Versions</h3>
+            <p>Using <code>latest</code> tags causes silent, potentially breaking or vulnerable image updates. Pin to a specific digest or version tag and update it deliberately.</p>
+            <div>
+                <pre><code class="language-dockerfile"># Avoid
+FROM python:latest
+
+# Prefer
+FROM python:3.12.3-slim-bookworm
+# or pin to SHA digest for maximum reproducibility:
+# FROM python:3.12.3-slim-bookworm@sha256:&lt;digest&gt;</code></pre>
+            </div>
+            <h3 id="remove-secrets-and-sensitive-files-from-images">Remove Secrets and Sensitive Files from Images</h3>
+            <p>Never bake credentials, private keys, or <code>.env</code> files into a Docker image—they are visible to anyone with read access to the image.</p>
+            <div>
+                <pre><code class="language-dockerfile"># Wrong — the secret is baked into a layer even if deleted later
+RUN echo "MY_SECRET=abc123" &gt; /app/.env
+
+# Right — supply secrets at runtime via environment variables or secret mounts</code></pre>
+            </div>
+            <p>Use <code>.dockerignore</code> to prevent sensitive files from ever entering the build context:</p>
+            <div>
+                <pre><code class="language-shell">.env
+.env.*
+*.pem
+*.key
+secrets/
+.git/</code></pre>
+            </div>
+            <h3 id="scan-images-for-known-vulnerabilities">Scan Images for Known Vulnerabilities</h3>
+            <p>Integrate a vulnerability scanner such as Trivy, Grype, or Snyk into the CI pipeline so builds fail when high-severity CVEs are detected.</p>
+            <div>
+                <pre><code class="language-bash"># Scan with Trivy (https://github.com/aquasecurity/trivy)
+trivy image --exit-code 1 --severity HIGH,CRITICAL myapp:1.2.3</code></pre>
+            </div>
+            <h2 id="runtime-security">Runtime Security</h2>
+            <h3 id="apply-the-principle-of-least-privilege">Apply the Principle of Least Privilege</h3>
+            <p>Drop all Linux capabilities and add back only those required by the application.</p>
+            <div>
+                <pre><code class="language-bash">docker run \
+  --cap-drop ALL \
+  --cap-add NET_BIND_SERVICE \
+  --read-only \
+  --tmpfs /tmp \
+  myapp:1.2.3</code></pre>
+            </div>
+            <p>
+            <table>
+                <tr>
+                    <td>Flag</td>
+                    <td>Purpose</td>
+                </tr>
+                <tr>
+                    <td><code>--cap-drop ALL</code></td>
+                    <td>Remove all Linux capabilities</td>
+                </tr>
+                <tr>
+                    <td><code>--cap-add NET_BIND_SERVICE</code></td>
+                    <td>Re-add only the capability needed to bind ports &lt; 1024</td>
+                </tr>
+                <tr>
+                    <td><code>--read-only</code></td>
+                    <td>Mount the root filesystem read-only</td>
+                </tr>
+                <tr>
+                    <td><code>--tmpfs /tmp</code></td>
+                    <td>Provide a writable in-memory temp directory</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="prevent-privilege-escalation">Prevent Privilege Escalation</h3>
+            <p>Set <code>no-new-privileges</code> so a container process cannot gain extra privileges via <code>setuid</code>/<code>setgid</code> binaries.</p>
+            <div>
+                <pre><code class="language-bash">docker run --security-opt no-new-privileges:true myapp:1.2.3</code></pre>
+            </div>
+            <p>In Kubernetes, this is expressed in the <code>securityContext</code>:</p>
+            <div>
+                <pre><code class="language-yaml">securityContext:
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL</code></pre>
+            </div>
+            <h3 id="use-seccomp-and-apparmor-profiles">Use Seccomp and AppArmor Profiles</h3>
+            <p>Seccomp filters the set of system calls a container may make; AppArmor restricts file, network, and capability access via mandatory access-control rules.</p>
+            <div>
+                <pre><code class="language-bash"># Apply the default Docker seccomp profile
+docker run --security-opt seccomp=/path/to/seccomp.json myapp:1.2.3
+
+# Apply an AppArmor profile
+docker run --security-opt apparmor=docker-default myapp:1.2.3</code></pre>
+            </div>
+            <p>Docker applies a default seccomp profile that already blocks ~44 dangerous syscalls. Custom profiles can be even more restrictive.</p>
+            <h3 id="limit-container-resources">Limit Container Resources</h3>
+            <p>Without resource limits a misbehaving or compromised container can starve the host. Always set CPU and memory limits.</p>
+            <div>
+                <pre><code class="language-yaml"># Kubernetes resource limits
+resources:
+  requests:
+    cpu: "250m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "256Mi"</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-bash"># Docker equivalent
+docker run --cpus="0.5" --memory="256m" myapp:1.2.3</code></pre>
+            </div>
+            <h3 id="avoid-privileged-containers">Avoid Privileged Containers</h3>
+            <p>Running with <code>--privileged</code> gives the container nearly full access to the host. Never use it in production; redesign the workload so it does not require it.</p>
+            <div>
+                <pre><code class="language-shell">+------------------+       +------------------+
+| Privileged       |       | Unprivileged     |
+| Container        |       | Container        |
+|                  |       |                  |
+| Full host access |       | Scoped, least-   |
+| kernel devices   |       | privilege access |
++------------------+       +------------------+
+     High risk                  Recommended</code></pre>
+            </div>
+            <h2 id="network-isolation">Network Isolation</h2>
+            <h3 id="use-private-networks">Use Private Networks</h3>
+            <p>Define explicit Docker networks so containers communicate only with the services they need. Avoid attaching all containers to the default bridge network.</p>
+            <div>
+                <pre><code class="language-bash">docker network create --internal backend-net
+docker run --network backend-net myapp:1.2.3
+docker run --network backend-net postgres:16</code></pre>
+            </div>
+            <h3 id="apply-kubernetes-network-policies">Apply Kubernetes Network Policies</h3>
+            <p>In a Kubernetes cluster, <code>NetworkPolicy</code> resources restrict which pods can talk to which other pods.</p>
+            <div>
+                <pre><code class="language-yaml">apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-only-frontend
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      app: backend-api
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: frontend
+      ports:
+        - protocol: TCP
+          port: 8080</code></pre>
+            </div>
+            <p>This allows only pods labelled <code>app: frontend</code> to reach <code>backend-api</code> on port 8080, and blocks all other inbound traffic.</p>
+            <h3 id="encrypt-inter-container-traffic">Encrypt Inter-Container Traffic</h3>
+            <p>For sensitive data flowing between services inside the cluster, use a service mesh (Istio, Linkerd) to enforce mutual TLS (mTLS) automatically.</p>
+            <div>
+                <pre><code class="language-shell">+------------+   mTLS   +-------------+
+| Service A  | &lt;------&gt; |  Service B  |
++------------+          +-------------+
+  cert: A.crt             cert: B.crt</code></pre>
+            </div>
+            <h2 id="container-registry-security">Container Registry Security</h2>
+            <h3 id="use-a-private-registry">Use a Private Registry</h3>
+            <p>Host images in a private registry (AWS ECR, GCP Artifact Registry, Harbor) instead of public Docker Hub, so you control who can push or pull.</p>
+            <h3 id="sign-images">Sign Images</h3>
+            <p>Sign container images with Cosign or Notary so the runtime can verify the image was produced by a trusted build system and has not been tampered with.</p>
+            <div>
+                <pre><code class="language-bash"># Sign an image with Cosign
+cosign sign --key cosign.key myregistry.io/myapp:1.2.3
+
+# Verify before deploying
+cosign verify --key cosign.pub myregistry.io/myapp:1.2.3</code></pre>
+            </div>
+            <h3 id="enable-vulnerability-scanning-in-the-registry">Enable Vulnerability Scanning in the Registry</h3>
+            <p>Registries such as ECR and Harbor support automatic scanning on push. Block deployments of images that contain unresolved critical CVEs by coupling registry scan results to your admission controller.</p>
+            <h2 id="ci-cd-pipeline-integration">CI/CD Pipeline Integration</h2>
+            <div>
+                <pre><code class="language-shell">Code Push
+    |
+    v
++-------------------+
+| Build Image       |
++-------------------+
+    |
+    v
++-------------------+
+| Lint Dockerfile   |  &lt;- hadolint, dockerfile-lint
++-------------------+
+    |
+    v
++-------------------+
+| Scan for CVEs     |  &lt;- Trivy, Grype, Snyk
++-------------------+
+    |   (fail on HIGH/CRITICAL)
+    v
++-------------------+
+| Sign Image        |  &lt;- Cosign
++-------------------+
+    |
+    v
++-------------------+
+| Push to Registry  |
++-------------------+
+    |
+    v
++-------------------+
+| Deploy (with      |
+| admission check)  |  &lt;- OPA/Gatekeeper, Kyverno
++-------------------+</code></pre>
+            </div>
+            <p>Enforce that containers may only be deployed if the image passes a signature verification and has no open high/critical vulnerabilities, using an admission controller such as OPA Gatekeeper or Kyverno.</p>
+            <h2 id="summary">Summary</h2>
+            <p>
+            <table>
+                <tr>
+                    <td>Area</td>
+                    <td>Key Practice</td>
+                </tr>
+                <tr>
+                    <td>Image</td>
+                    <td>Minimal base, non-root user, multi-stage build, pinned tags</td>
+                </tr>
+                <tr>
+                    <td>Image</td>
+                    <td>No secrets baked in; scan for CVEs before push</td>
+                </tr>
+                <tr>
+                    <td>Runtime</td>
+                    <td>Drop all capabilities, read-only filesystem, no-new-privileges</td>
+                </tr>
+                <tr>
+                    <td>Runtime</td>
+                    <td>Seccomp / AppArmor profiles, resource limits</td>
+                </tr>
+                <tr>
+                    <td>Network</td>
+                    <td>Explicit networks, Kubernetes NetworkPolicy, mTLS</td>
+                </tr>
+                <tr>
+                    <td>Registry</td>
+                    <td>Private registry, image signing, scan on push</td>
+                </tr>
+                <tr>
+                    <td>Pipeline</td>
+                    <td>Lint → scan → sign → deploy with admission control</td>
+                </tr>
+            </table>
+            </p>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

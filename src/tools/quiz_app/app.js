@@ -1,9 +1,9 @@
-(function () {
+(function() {
     'use strict';
 
-    // =========================================================================
-    // Configuration
-    // =========================================================================
+
+
+
 
     const CONFIG = {
         PROXY_URL: 'https://api.allorigins.win/get?url=',
@@ -19,9 +19,9 @@
         INTERSECTION_THRESHOLD: 0.5
     };
 
-    // =========================================================================
-    // Application State
-    // =========================================================================
+
+
+
 
     const state = {
         categories: [],
@@ -30,41 +30,41 @@
         userAnswers: new Map(),
         categoryCache: new Map(),
         isSubmitted: false,
-        // Timer state
+
         timerInterval: null,
         timerSecondsLeft: 0,
         quizStartTime: null,
         quizEndTime: null,
-        // Navigation state
+
         activeQuestionIndex: 0,
         questionObserver: null,
-        // Streak state
+
         currentStreak: 0,
         bestStreak: 0
     };
 
-    // =========================================================================
-    // DOM Elements
-    // =========================================================================
+
+
+
 
     let elements = {};
 
     function initializeElements() {
         elements = {
-            // Controls
+
             categorySelect: document.getElementById('categorySelect'),
             maxQuestionsInput: document.getElementById('maxQuestionsInput'),
             reloadBtn: document.getElementById('reloadQuestionsButton'),
             submitBtn: document.getElementById('submitButton'),
-            // Quiz container
+
             quizContainer: document.getElementById('quizContainer'),
-            // Progress
+
             progressText: document.getElementById('progressText'),
             progressPercentage: document.getElementById('progressPercentage'),
             progressBar: document.getElementById('progressBar'),
-            // Loading
+
             loadingOverlay: document.getElementById('loadingOverlay'),
-            // Results modal
+
             resultsModal: document.getElementById('resultsModal'),
             modalBackdrop: document.getElementById('modalBackdrop'),
             modalClose: document.getElementById('modalClose'),
@@ -76,19 +76,19 @@
             resultsMessage: document.getElementById('resultsMessage'),
             reviewAnswersButton: document.getElementById('reviewAnswersButton'),
             tryAgainButton: document.getElementById('tryAgainButton'),
-            // Timer
+
             timerDisplay: document.getElementById('timerDisplay'),
             timerToggle: document.getElementById('timerToggle'),
-            // Navigation sidebar
+
             questionNav: document.getElementById('questionNav'),
-            // Streak
+
             streakBadge: document.getElementById('streakBadge')
         };
     }
 
-    // =========================================================================
-    // Utility Functions
-    // =========================================================================
+
+
+
 
     async function fetchJson(url) {
         try {
@@ -96,7 +96,9 @@
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            const { contents } = await response.json();
+            const {
+                contents
+            } = await response.json();
             return JSON.parse(contents);
         } catch (proxyError) {
             console.warn('Proxy fetch failed, trying local fallback:', proxyError.message);
@@ -186,7 +188,7 @@
         state.quizEndTime = null;
         updateTimerDisplay();
 
-        state.timerInterval = setInterval(function () {
+        state.timerInterval = setInterval(function() {
             state.timerSecondsLeft--;
             if (state.timerSecondsLeft <= 0) {
                 state.timerSecondsLeft = 0;
@@ -244,12 +246,12 @@
         if (!elements.questionNav) return;
         elements.questionNav.innerHTML = '';
 
-        state.displayedQuestions.forEach(function (_question, index) {
+        state.displayedQuestions.forEach(function(_question, index) {
             var btn = document.createElement('button');
             btn.className = 'question-nav-btn';
             btn.textContent = index + 1;
             btn.setAttribute('aria-label', 'Go to question ' + (index + 1));
-            btn.addEventListener('click', function () {
+            btn.addEventListener('click', function() {
                 scrollToQuestion(index);
             });
             elements.questionNav.appendChild(btn);
@@ -259,7 +261,10 @@
     function scrollToQuestion(index) {
         var card = elements.quizContainer.querySelector('[data-question-index="' + index + '"]');
         if (card) {
-            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            card.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
         }
     }
 
@@ -267,7 +272,7 @@
         if (!elements.questionNav) return;
         state.activeQuestionIndex = index;
         var buttons = elements.questionNav.querySelectorAll('.question-nav-btn');
-        buttons.forEach(function (btn, i) {
+        buttons.forEach(function(btn, i) {
             btn.classList.toggle('active', i === index);
         });
     }
@@ -275,7 +280,7 @@
     function updateNavAnsweredState() {
         if (!elements.questionNav) return;
         var buttons = elements.questionNav.querySelectorAll('.question-nav-btn');
-        buttons.forEach(function (btn, i) {
+        buttons.forEach(function(btn, i) {
             btn.classList.toggle('answered', state.userAnswers.has(i));
         });
     }
@@ -283,7 +288,7 @@
     function updateNavResultStates() {
         if (!elements.questionNav) return;
         var buttons = elements.questionNav.querySelectorAll('.question-nav-btn');
-        state.displayedQuestions.forEach(function (question, index) {
+        state.displayedQuestions.forEach(function(question, index) {
             var btn = buttons[index];
             if (!btn) return;
             var userAnswer = state.userAnswers.get(index);
@@ -303,8 +308,8 @@
 
         if (typeof IntersectionObserver === 'undefined') return;
 
-        state.questionObserver = new IntersectionObserver(function (entries) {
-            entries.forEach(function (entry) {
+        state.questionObserver = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
                 if (entry.isIntersecting) {
                     var index = parseInt(entry.target.getAttribute('data-question-index'), 10);
                     if (!isNaN(index)) {
@@ -312,10 +317,12 @@
                     }
                 }
             });
-        }, { threshold: CONFIG.INTERSECTION_THRESHOLD });
+        }, {
+            threshold: CONFIG.INTERSECTION_THRESHOLD
+        });
 
         var cards = elements.quizContainer.querySelectorAll('.question-card');
-        cards.forEach(function (card) {
+        cards.forEach(function(card) {
             state.questionObserver.observe(card);
         });
     }
@@ -481,7 +488,7 @@
 
         // Populate category dropdown
         elements.categorySelect.innerHTML = '';
-        categories.forEach(function (cat) {
+        categories.forEach(function(cat) {
             var option = document.createElement('option');
             option.value = cat.name;
             option.textContent = cat.name;
@@ -490,7 +497,7 @@
 
         // Try to match URL slug to category
         var slug = window.location.pathname.split('/').pop().replace(/\.[^/.]+$/, '');
-        var matchedCategory = categories.find(function (c) {
+        var matchedCategory = categories.find(function(c) {
             return toSlug(c.name) === toSlug(slug);
         });
 
@@ -508,7 +515,9 @@
         showLoading();
 
         // Allow the browser to paint the loading state
-        await new Promise(function (resolve) { requestAnimationFrame(resolve); });
+        await new Promise(function(resolve) {
+            requestAnimationFrame(resolve);
+        });
 
         // Check cache first
         if (!state.categoryCache.has(categoryName)) {
@@ -520,7 +529,9 @@
             }
         }
 
-        state.currentCategoryData = state.categoryCache.get(categoryName) || { questions: [] };
+        state.currentCategoryData = state.categoryCache.get(categoryName) || {
+            questions: []
+        };
         setupQuiz();
         hideLoading();
     }
@@ -567,7 +578,7 @@
             return;
         }
 
-        state.displayedQuestions.forEach(function (question, index) {
+        state.displayedQuestions.forEach(function(question, index) {
             var questionCard = createQuestionCard(question, index);
             // Stagger entrance animation
             questionCard.style.animationDelay = (index * CONFIG.STAGGER_DELAY_MS) + 'ms';
@@ -657,7 +668,7 @@
         list.setAttribute('role', 'radiogroup');
         list.setAttribute('aria-labelledby', 'question-' + questionIndex + '-text');
 
-        question.options.forEach(function (option, optionIndex) {
+        question.options.forEach(function(option, optionIndex) {
             var listItem = document.createElement('li');
             listItem.className = 'option-item';
             listItem.setAttribute('data-option-index', optionIndex);
@@ -670,7 +681,7 @@
             input.id = inputId;
             input.value = optionIndex;
             input.className = 'option-input';
-            input.addEventListener('change', function () {
+            input.addEventListener('change', function() {
                 handleOptionSelect(questionIndex, optionIndex);
             });
 
@@ -710,9 +721,9 @@
         updateProgress();
     }
 
-    // =========================================================================
-    // Quiz Submission
-    // =========================================================================
+
+
+
 
     function submitQuiz() {
         if (state.isSubmitted) return;
@@ -725,18 +736,18 @@
         var incorrect = 0;
         var unanswered = 0;
 
-        state.displayedQuestions.forEach(function (question, index) {
+        state.displayedQuestions.forEach(function(question, index) {
             var correctIndex = question.correctOptionIndex;
             var userAnswer = state.userAnswers.get(index);
             var card = elements.quizContainer.querySelector('[data-question-index="' + index + '"]');
             var optionItems = card.querySelectorAll('.option-item');
 
-            optionItems.forEach(function (item) {
+            optionItems.forEach(function(item) {
                 item.classList.remove('correct', 'incorrect');
             });
             card.classList.remove('correct-answer', 'incorrect-answer');
 
-            // Mark correct option
+
             optionItems[correctIndex].classList.add('correct');
 
             if (userAnswer === undefined) {
@@ -750,8 +761,8 @@
                 optionItems[userAnswer].classList.add('incorrect');
             }
 
-            // Disable all inputs
-            card.querySelectorAll('.option-input').forEach(function (input) {
+
+            card.querySelectorAll('.option-input').forEach(function(input) {
                 input.disabled = true;
             });
         });
@@ -759,10 +770,10 @@
         var total = state.displayedQuestions.length;
         var percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
 
-        // Update navigation buttons with result states
+
         updateNavResultStates();
 
-        // Update streak
+
         updateStreakDisplay();
 
         showResultsModal({
@@ -779,13 +790,16 @@
 
         var firstIncorrect = elements.quizContainer.querySelector('.incorrect-answer, .question-card:not(.correct-answer)');
         if (firstIncorrect) {
-            firstIncorrect.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            firstIncorrect.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
         }
     }
 
-    // =========================================================================
-    // Empty State
-    // =========================================================================
+
+
+
 
     function showEmptyState(message) {
         elements.quizContainer.innerHTML =
@@ -795,9 +809,9 @@
             '</div>';
     }
 
-    // =========================================================================
-    // Keyboard Shortcuts
-    // =========================================================================
+
+
+
 
     function isInputFocused() {
         var tag = document.activeElement && document.activeElement.tagName;
@@ -805,21 +819,21 @@
     }
 
     function handleKeyboardNavigation(event) {
-        // Escape closes modal
+
         if (event.key === 'Escape' && elements.resultsModal.style.display === 'flex') {
             hideResultsModal();
             return;
         }
 
-        // Don't intercept when typing in form fields
+
         if (isInputFocused()) return;
 
-        // Don't process shortcuts after submission (except Escape handled above)
+
         if (state.isSubmitted) return;
 
         var key = event.key;
 
-        // 1-5 keys to select options for currently visible question
+
         if (key >= '1' && key <= '5') {
             var optIndex = parseInt(key, 10) - 1;
             var activeQ = state.activeQuestionIndex;
@@ -836,14 +850,14 @@
             return;
         }
 
-        // Enter to submit
+
         if (key === 'Enter') {
             submitQuiz();
             event.preventDefault();
             return;
         }
 
-        // N or ArrowRight — next question
+
         if (key === 'n' || key === 'N' || key === 'ArrowRight') {
             var next = Math.min(state.activeQuestionIndex + 1, state.displayedQuestions.length - 1);
             scrollToQuestion(next);
@@ -851,7 +865,7 @@
             return;
         }
 
-        // P or ArrowLeft — previous question
+
         if (key === 'p' || key === 'P' || key === 'ArrowLeft') {
             var prev = Math.max(state.activeQuestionIndex - 1, 0);
             scrollToQuestion(prev);
@@ -860,43 +874,46 @@
         }
     }
 
-    // =========================================================================
-    // Event Listeners
-    // =========================================================================
+
+
+
 
     function attachEventListeners() {
-        // Category change
-        elements.categorySelect.addEventListener('change', function (e) {
+
+        elements.categorySelect.addEventListener('change', function(e) {
             loadCategoryData(e.target.value);
         });
 
-        // Debounced question count
+
         var debouncedSetup = debounce(setupQuiz, 300);
         elements.maxQuestionsInput.addEventListener('input', debouncedSetup);
 
-        // Reload / shuffle
+
         elements.reloadBtn.addEventListener('click', setupQuiz);
 
-        // Submit
+
         elements.submitBtn.addEventListener('click', submitQuiz);
 
-        // Modal controls
+
         elements.modalClose.addEventListener('click', hideResultsModal);
         elements.modalBackdrop.addEventListener('click', hideResultsModal);
 
-        // Review answers
+
         elements.reviewAnswersButton.addEventListener('click', reviewAnswers);
 
-        // Try again
-        elements.tryAgainButton.addEventListener('click', function () {
+
+        elements.tryAgainButton.addEventListener('click', function() {
             hideResultsModal();
             setupQuiz();
-            elements.quizContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            elements.quizContainer.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
         });
 
-        // Timer toggle
+
         if (elements.timerToggle) {
-            elements.timerToggle.addEventListener('change', function () {
+            elements.timerToggle.addEventListener('change', function() {
                 if (elements.timerToggle.checked && !state.isSubmitted) {
                     startTimer();
                 } else {
@@ -905,13 +922,13 @@
             });
         }
 
-        // Keyboard shortcuts
+
         document.addEventListener('keydown', handleKeyboardNavigation);
     }
 
-    // =========================================================================
-    // Initialization
-    // =========================================================================
+
+
+
 
     function initialize() {
         initializeElements();

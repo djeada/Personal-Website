@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>ETL and ELT Pipelines</title>
+    <meta content="ETL and ELT are foundational patterns for moving, cleaning, reshaping, and delivering data between systems." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/05_etl_and_pipelines" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "ETL and ELT Pipelines",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/05_etl_and_pipelines"
+            },
+            "url": "https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/05_etl_and_pipelines",
+            "description": "ETL and ELT are foundational patterns for moving, cleaning, reshaping, and delivering data between systems.",
+            "dateModified": "2026-04-27"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol><a href="#etl-and-elt-pipelines">ETL and ELT Pipelines</a>
+                    <ol>
+                        <li><a href="#etl-vs-elt">ETL vs ELT</a></li>
+                        <li><a href="#extract-phase">Extract Phase</a>
+                            <ol>
+                                <li><a href="#full-extraction">Full Extraction</a></li>
+                                <li><a href="#incremental-extraction">Incremental Extraction</a></li>
+                                <li><a href="#change-data-capture">Change Data Capture</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#transform-phase">Transform Phase</a></li>
+                        <li><a href="#load-phase">Load Phase</a>
+                            <ol>
+                                <li><a href="#full-load">Full Load</a></li>
+                                <li><a href="#incremental-append">Incremental Append</a></li>
+                                <li><a href="#upsert-or-merge">Upsert or Merge</a></li>
+                                <li><a href="#slowly-changing-dimensions">Slowly Changing Dimensions</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#data-quality-and-validation">Data Quality and Validation</a></li>
+                        <li><a href="#idempotency-and-restartability">Idempotency and Restartability</a></li>
+                        <li><a href="#common-etl-tools-and-frameworks">Common ETL Tools and Frameworks</a></li>
+                        <li><a href="#best-practices">Best Practices</a></li>
+                    </ol>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Api Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/01_api_communication_protocols.html">Api Communication Protocols</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/02_rest.html">Rest</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/03_graphql.html">Graphql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/04_grpc.html">Grpc</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/05_state_management.html">State Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/06_data_transmission.html">Data Transmission</a></li>
+                        </ol>
+                    </li>
+                    <li>Network Communications<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/01_network_communications.html">Network Communications</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/02_tcp_and_udp.html">Tcp and Udp</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/03_http_protocol.html">Http Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/04_web_sockets.html">Web Sockets</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/05_metrics_and_analysis.html">Metrics and Analysis</a></li>
+                        </ol>
+                    </li>
+                    <li>Server Technologies<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/01_web_server_overview.html">Web Server Overview</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/02_static_dynamic_content.html">Static Dynamic Content</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/03_tomcat.html">Tomcat</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/04_apache.html">Apache</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/05_nginx.html">Nginx</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/06_forward_proxies.html">Forward Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/07_reverse_proxies.html">Reverse Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/08_load_balancing.html">Load Balancing</a></li>
+                        </ol>
+                    </li>
+                    <li>Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/01_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/02_transactions.html">Transactions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/03_indexes.html">Indexes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/04_isolation_levels.html">Isolation Levels</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/05_data_warehousing.html">Data Warehousing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/06_replication.html">Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/07_halloween_problem.html">Halloween Problem</a></li>
+                        </ol>
+                    </li>
+                    <li>Caching<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/01_caching_strategies.html">Caching Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/02_redis.html">Redis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/03_content_delivery_networks.html">Content Delivery Networks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/04_database_caching.html">Database Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/05_memcached.html">Memcached</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/06_http_caching.html">Http Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/07_application_level_caching.html">Application Level Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/08_memory_map.html">Memory Map</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Processing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/01_pub_sub_vs_queue.html">Pub Sub vs Queue</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/02_messaging_system_integration.html">Messaging System Integration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/03_batch_processing.html">Batch Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing.html">Stream Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/05_etl_and_pipelines.html">Etl and Pipelines</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/06_lambda_and_kappa_architecture.html">Lambda and Kappa Architecture</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/07_workflow_orchestration.html">Workflow Orchestration</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Formats<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/01_protocol_buffers.html">Protocol Buffers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/02_xml.html">Xml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/03_json.html">Json</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/04_yaml.html">Yaml</a></li>
+                        </ol>
+                    </li>
+                    <li>Security<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/01_auth.html">Auth</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/02_tls.html">Tls</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/03_security_vulnerabilities.html">Security Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/04_security_best_practices_and_measures.html">Security Best Practices and Measures</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/05_third_party_cookies_vulnerabilities.html">Third Party Cookies Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/06_secure_containers.html">Secure Containers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/07_credentials_management.html">Credentials Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/08_supply_chain_attacks.html">Supply Chain Attacks</a></li>
+                        </ol>
+                    </li>
+                    <li>Deployment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/01_centos_digital_ocean.html">Centos Digital Ocean</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/02_static_python_website_netlify.html">Static Python Website Netlify</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/03_docker.html">Docker</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/04_kubernetes.html">Kubernetes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/05_ci_cd.html">Ci Cd</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/06_deployment_strategies.html">Deployment Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/07_infrastructure_as_code.html">Infrastructure As Code</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Systems<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/01_coordination_services.html">Coordination Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/02_gossip_protocol.html">Gossip Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/03_linearizability.html">Linearizability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/04_concurrent_writes.html">Concurrent Writes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/05_operational_transform.html">Operational Transform</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/06_algorithms_summary.html">Algorithms Summary</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/07_optimistic_vs_pessimistic_locking.html">Optimistic vs Pessimistic Locking</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: April 27, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="etl-and-elt-pipelines">ETL and ELT Pipelines</h2>
+            <p><strong>ETL</strong> and <strong>ELT</strong> are foundational patterns for moving, cleaning, reshaping, and delivering data between systems.</p>
+            <p><strong>ETL</strong> means <strong>Extract, Transform, Load</strong>. Data is extracted from source systems, transformed in a processing layer, and then loaded into the destination.</p>
+            <p><strong>ELT</strong> means <strong>Extract, Load, Transform</strong>. Data is extracted from source systems and loaded into the destination first. Transformations then happen inside the destination system, usually a cloud data warehouse.</p>
+            <p>These patterns are used behind data warehouses, dashboards, analytics platforms, reporting systems, machine learning feature stores, customer data platforms, and business intelligence workflows.</p>
+            <div>
+                <pre><code class="language-text">ETL Pipeline Overview
+
++------------------+    +------------------+    +------------------+    +------------------+
+|                  |    |                  |    |                  |    |                  |
+|  Source Systems  +---&gt;+    Extract       +---&gt;+   Transform      +---&gt;+   Destination    |
+| DBs, APIs, Files |    | read raw data    |    | clean, enrich,   |    | DW, Data Lake,   |
+| Streams, etc.    |    |                  |    | aggregate, join  |    | Analytics DB     |
++------------------+    +------------------+    +------------------+    +------------------+</code></pre>
+            </div>
+            <p>Example source record:</p>
+            <div>
+                <pre><code class="language-json">{
+  "id": "007",
+  "email": " A@B.COM ",
+  "amount": "1,234.5",
+  "country": null,
+  "ts": "01/12/2024"
+}</code></pre>
+            </div>
+            <p>Example processed output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "id": 7,
+  "email": "a@b.com",
+  "amount": 1234.5,
+  "country": "UNKNOWN",
+  "ts": "2024-01-12"
+}</code></pre>
+            </div>
+            <p>The source record is messy and inconsistent. The processed output is cleaner, typed correctly, and easier for downstream analytics systems to use.</p>
+            <hr />
+            <h3 id="etl-vs-elt">ETL vs ELT</h3>
+            <p>ETL and ELT use the same general steps, but the order is different.</p>
+            <p>In classic <strong>ETL</strong>, transformation happens before the data reaches the destination. This is useful when data must be cleaned, masked, filtered, or standardized before landing in a warehouse or analytics environment.</p>
+            <p>In <strong>ELT</strong>, raw data is loaded into the destination first. Transformations then happen inside the data warehouse using SQL or warehouse-native compute. This is common with modern cloud warehouses such as Snowflake, BigQuery, Redshift, and Databricks.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Aspect</td>
+                    <td>ETL</td>
+                    <td>ELT</td>
+                </tr>
+                <tr>
+                    <td><strong>Transform where</strong></td>
+                    <td>Intermediate staging server or compute cluster</td>
+                    <td>Inside the destination data warehouse</td>
+                </tr>
+                <tr>
+                    <td><strong>Tooling</strong></td>
+                    <td>Informatica, Talend, Apache Spark, dbt + Airbyte</td>
+                    <td>Fivetran + dbt, Airbyte + dbt, native SQL jobs</td>
+                </tr>
+                <tr>
+                    <td><strong>Raw data kept</strong></td>
+                    <td>Often discarded after transform</td>
+                    <td>Raw layer preserved for re-transformation</td>
+                </tr>
+                <tr>
+                    <td><strong>Latency</strong></td>
+                    <td>Higher because transform must complete before load</td>
+                    <td>Lower initial load; transforms can run asynchronously</td>
+                </tr>
+                <tr>
+                    <td><strong>Cost model</strong></td>
+                    <td>Compute cost on ETL cluster</td>
+                    <td>Compute cost on warehouse</td>
+                </tr>
+                <tr>
+                    <td><strong>Re-processing</strong></td>
+                    <td>Often requires re-running the full ETL job</td>
+                    <td>Re-run SQL transforms against stored raw layer</td>
+                </tr>
+                <tr>
+                    <td><strong>Best for</strong></td>
+                    <td>Regulated data, limited warehouse compute, strict pre-load cleansing</td>
+                    <td>Cloud warehouses with scalable compute and raw data retention</td>
+                </tr>
+            </table>
+            </p>
+            <p>Example ETL flow:</p>
+            <div>
+                <pre><code class="language-text">Source database → Spark transform job → Clean warehouse table</code></pre>
+            </div>
+            <p>Example ELT flow:</p>
+            <div>
+                <pre><code class="language-text">Source database → Raw warehouse table → dbt SQL models → Clean analytics table</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "etl": "transforms before loading into destination",
+  "elt": "loads raw data first and transforms inside the destination"
+}</code></pre>
+            </div>
+            <p>The choice depends on cost, compliance, data volume, warehouse capability, and how much raw data the organization wants to preserve.</p>
+            <hr />
+            <h3 id="extract-phase">Extract Phase</h3>
+            <p>The extract phase reads data from source systems. These sources may include relational databases, NoSQL stores, SaaS APIs, flat files, object storage, logs, event streams, or message queues.</p>
+            <p>Extraction should be resilient. Source systems may be temporarily unavailable, APIs may rate-limit requests, schemas may change, and data volumes may spike. A good extraction process handles retries, checkpoints, pagination, authentication, and schema changes carefully.</p>
+            <p>Common extraction strategies include full extraction, incremental extraction, and Change Data Capture.</p>
+            <hr />
+            <h4 id="full-extraction">Full Extraction</h4>
+            <p>Full extraction reads the entire source dataset each time the pipeline runs. This is simple because the pipeline does not need to track which records changed.</p>
+            <p>Example full extraction query:</p>
+            <div>
+                <pre><code class="language-sql">SELECT * FROM customers;</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "extractMode": "full",
+  "rowsRead": 250000,
+  "source": "customers"
+}</code></pre>
+            </div>
+            <p>Full extraction is easy to understand, but it can become expensive and slow for large tables. It may also place unnecessary load on the source system.</p>
+            <hr />
+            <h4 id="incremental-extraction">Incremental Extraction</h4>
+            <p>Incremental extraction reads only records that changed since the last successful run. This usually depends on a watermark column such as <code>updated_at</code>, <code>created_at</code>, or a log sequence number.</p>
+            <div>
+                <pre><code class="language-text">Incremental Extraction with Watermark
+
+  Source Table                             ETL Engine
+  +------+------+---------------------+   
+  |  id  | ...  | updated_at          |   1. Read MAX(updated_at) from checkpoint store
+  +------+------+---------------------+   2. SELECT * WHERE updated_at &gt; checkpoint
+  |  1   | ...  | 2024-01-10 08:00    |   3. Process extracted rows
+  |  2   | ...  | 2024-01-11 09:15    |   4. Write new MAX(updated_at) back to checkpoint
+  |  3   | ...  | 2024-01-12 07:30    |   
+  +------+------+---------------------+</code></pre>
+            </div>
+            <p>Example query:</p>
+            <div>
+                <pre><code class="language-sql">SELECT *
+FROM orders
+WHERE updated_at &gt; '2024-01-11 09:15:00';</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "extractMode": "incremental",
+  "checkpoint": "2024-01-11 09:15:00",
+  "rowsRead": 1842,
+  "newCheckpoint": "2024-01-12 07:30:00"
+}</code></pre>
+            </div>
+            <p>Incremental extraction is more efficient than full extraction, but it requires reliable change-tracking fields. If timestamps are missing, delayed, or overwritten incorrectly, changes may be skipped.</p>
+            <hr />
+            <h4 id="change-data-capture">Change Data Capture</h4>
+            <p>Change Data Capture, or CDC, streams row-level database changes from database logs. Instead of repeatedly querying tables, CDC reads changes such as inserts, updates, and deletes from the database’s transaction log, binlog, or write-ahead log.</p>
+            <p>Example CDC event:</p>
+            <div>
+                <pre><code class="language-json">{
+  "operation": "update",
+  "table": "orders",
+  "before": {
+    "id": 42,
+    "status": "pending"
+  },
+  "after": {
+    "id": 42,
+    "status": "paid"
+  },
+  "timestamp": "2024-01-12T07:30:00Z"
+}</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "extractMode": "cdc",
+  "source": "database_transaction_log",
+  "latency": "near-real-time"
+}</code></pre>
+            </div>
+            <p>CDC is useful when teams need low-latency synchronization with minimal source database load. It is common for keeping warehouses, caches, search indexes, and downstream services up to date.</p>
+            <hr />
+            <h3 id="transform-phase">Transform Phase</h3>
+            <p>The transform phase converts raw extracted data into a clean, useful, and reliable shape. This is where business rules are applied.</p>
+            <p>Transforms may fix data quality problems, convert data types, standardize names, remove duplicates, enrich records, join datasets, aggregate metrics, mask sensitive data, or validate constraints.</p>
+            <div>
+                <pre><code class="language-text">Transform Pipeline Stages
+
+  Raw Record                                   Clean Record
+  +---------------------+                      +---------------------+
+  | id: "007"           |  --&gt; Parse int    --&gt; | id: 7               |
+  | email: " A@B.COM "  |  --&gt; Normalise    --&gt; | email: "a@b.com"    |
+  | amount: "1,234.5"   |  --&gt; Parse float  --&gt; | amount: 1234.5      |
+  | country: null       |  --&gt; Default      --&gt; | country: "UNKNOWN"  |
+  | ts: "01/12/2024"    |  --&gt; ISO format   --&gt; | ts: "2024-01-12"    |
+  +---------------------+                      +---------------------+</code></pre>
+            </div>
+            <p>Common transformations include:</p>
+            <ul>
+                <li><strong>Cleaning</strong>: Remove nulls, trim whitespace, standardize casing, and parse malformed dates.</li>
+                <li><strong>Deduplication</strong>: Remove duplicate records caused by retries, at-least-once delivery, or source bugs.</li>
+                <li><strong>Enrichment</strong>: Join with reference data such as currency rates, product dimensions, or geographic mappings.</li>
+                <li><strong>Aggregation</strong>: Calculate sums, averages, counts, and grouped metrics.</li>
+                <li><strong>Schema mapping</strong>: Rename columns, split fields, merge fields, and convert data types.</li>
+                <li><strong>Validation</strong>: Enforce constraints and route invalid records to quarantine.</li>
+            </ul>
+            <p>Example transform input:</p>
+            <div>
+                <pre><code class="language-json">{
+  "customer_id": "0012",
+  "email": " ALICE@EXAMPLE.COM ",
+  "country_code": "de"
+}</code></pre>
+            </div>
+            <p>Example transform output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "customer_id": 12,
+  "email": "alice@example.com",
+  "country_code": "DE",
+  "country_name": "Germany"
+}</code></pre>
+            </div>
+            <p>The transformed record is easier to query, join, validate, and report on.</p>
+            <hr />
+            <h3 id="load-phase">Load Phase</h3>
+            <p>The load phase writes data into the destination system. The destination may be a data warehouse, data lake, analytics database, search index, feature store, or reporting table.</p>
+            <p>Loading must be efficient and reliable. Large datasets should often be written in bulk rather than row by row. The load phase should also avoid partial writes, duplicates, and inconsistent destination state.</p>
+            <p>Common load strategies include full load, append, upsert, and slowly changing dimensions.</p>
+            <hr />
+            <h4 id="full-load">Full Load</h4>
+            <p>A full load replaces the destination table entirely. This is simple and reliable for small datasets.</p>
+            <p>Example full load pattern:</p>
+            <div>
+                <pre><code class="language-sql">TRUNCATE TABLE reporting.customers;
+INSERT INTO reporting.customers
+SELECT * FROM staging.customers_clean;</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "loadMode": "full",
+  "table": "reporting.customers",
+  "rowsLoaded": 250000
+}</code></pre>
+            </div>
+            <p>Full loads are easy to reason about, but they can be expensive for large tables.</p>
+            <hr />
+            <h4 id="incremental-append">Incremental Append</h4>
+            <p>An append load inserts only new records. This is fast when data is immutable, such as event logs, clickstreams, or transaction history.</p>
+            <p>Example append:</p>
+            <div>
+                <pre><code class="language-sql">INSERT INTO analytics.events
+SELECT *
+FROM staging.new_events;</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "loadMode": "append",
+  "rowsInserted": 12000
+}</code></pre>
+            </div>
+            <p>Append-only loads are efficient, but they do not handle updates or deletes unless additional logic is added.</p>
+            <hr />
+            <h4 id="upsert-or-merge">Upsert or Merge</h4>
+            <p>An upsert updates existing rows and inserts new rows. It is useful when source records can change over time.</p>
+            <div>
+                <pre><code class="language-text">Upsert Merge Logic
+
+  Incoming Record key=42              Destination Table
+  +-----+---------------+             +-----+---------------+--------+
+  | key | value_new     |             | key | value_old     | active |
+  +-----+---------------+             +-----+---------------+--------+
+  |  42 | updated_value |   MERGE --&gt; |  42 | old_value     | true   |
+  +-----+---------------+             +-----+---------------+--------+
+                                             row updated in place</code></pre>
+            </div>
+            <p>Example SQL merge:</p>
+            <div>
+                <pre><code class="language-sql">MERGE INTO dim_customers target
+USING staging.customers source
+ON target.customer_id = source.customer_id
+WHEN MATCHED THEN
+  UPDATE SET email = source.email, updated_at = source.updated_at
+WHEN NOT MATCHED THEN
+  INSERT (customer_id, email, updated_at)
+  VALUES (source.customer_id, source.email, source.updated_at);</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "loadMode": "merge",
+  "rowsUpdated": 850,
+  "rowsInserted": 120
+}</code></pre>
+            </div>
+            <p>Merge logic is more complex than append, but it is more accurate for changing business entities.</p>
+            <hr />
+            <h4 id="slowly-changing-dimensions">Slowly Changing Dimensions</h4>
+            <p>Slowly Changing Dimensions, or SCDs, track historical changes to reference data. For example, a customer’s address, subscription tier, or region may change over time.</p>
+            <p>Instead of overwriting the old value, an SCD table can keep history.</p>
+            <p>Example SCD output:</p>
+            <div>
+                <pre><code class="language-json">[
+  {
+    "customer_id": 42,
+    "address": "Old Street 1",
+    "valid_from": "2023-01-01",
+    "valid_to": "2024-01-11",
+    "active": false
+  },
+  {
+    "customer_id": 42,
+    "address": "New Street 9",
+    "valid_from": "2024-01-12",
+    "valid_to": null,
+    "active": true
+  }
+]</code></pre>
+            </div>
+            <p>This allows analysts to answer historical questions accurately, such as “What region was this customer in when the order was placed?”</p>
+            <hr />
+            <h3 id="data-quality-and-validation">Data Quality and Validation</h3>
+            <p>Data quality checks prevent bad data from spreading downstream. If a pipeline silently loads invalid records, dashboards, reports, machine learning models, and business decisions may become unreliable.</p>
+            <p>Quality checks should be embedded directly into the pipeline. They should run before data is published to trusted tables.</p>
+            <p>Common checks include:</p>
+            <ul>
+                <li><strong>Schema validation</strong>: Confirm expected column names, data types, and nullability.</li>
+                <li><strong>Range and format checks</strong>: Verify that amounts are positive, dates are realistic, and enums are valid.</li>
+                <li><strong>Referential integrity</strong>: Confirm foreign keys match known dimension records.</li>
+                <li><strong>Statistical assertions</strong>: Alert when row counts or totals deviate from historical norms.</li>
+                <li><strong>Quarantine tables</strong>: Store invalid records separately for investigation.</li>
+            </ul>
+            <p>Example validation rules:</p>
+            <div>
+                <pre><code class="language-json">{
+  "amount": {
+    "type": "number",
+    "minimum": 0
+  },
+  "email": {
+    "type": "string",
+    "format": "email"
+  },
+  "country_code": {
+    "allowedValues": ["DE", "FR", "US", "GB"]
+  }
+}</code></pre>
+            </div>
+            <p>Example invalid record:</p>
+            <div>
+                <pre><code class="language-json">{
+  "email": "not-an-email",
+  "amount": -500,
+  "country_code": "UNKNOWN"
+}</code></pre>
+            </div>
+            <p>Example quarantine output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "destination": "quarantine.invalid_orders",
+  "reason": [
+    "invalid email format",
+    "amount must be non-negative",
+    "unknown country code"
+  ]
+}</code></pre>
+            </div>
+            <p>Quarantining invalid records allows the pipeline to continue while still preserving evidence for investigation.</p>
+            <hr />
+            <h3 id="idempotency-and-restartability">Idempotency and Restartability</h3>
+            <p>A good pipeline should be safe to rerun after a failure. If a job fails halfway through, rerunning it should not create duplicate rows, double-count metrics, or corrupt the destination.</p>
+            <p><strong>Idempotency</strong> means that running the same operation multiple times produces the same final result as running it once.</p>
+            <p><strong>Restartability</strong> means the pipeline can resume from a known safe point, such as the last successful checkpoint, partition, or offset.</p>
+            <div>
+                <pre><code class="language-text">Idempotent Load Pattern
+
+  1. Load data into temporary staging table stage_orders_20240112
+  2. Run validations against the staging table
+  3. Atomically swap staging → production:
+       BEGIN;
+       DELETE FROM orders WHERE date = '2024-01-12';
+       INSERT INTO orders SELECT * FROM stage_orders_20240112;
+       COMMIT;
+  4. Drop staging table</code></pre>
+            </div>
+            <p>Example checkpoint:</p>
+            <div>
+                <pre><code class="language-json">{
+  "pipeline": "orders_daily",
+  "lastSuccessfulPartition": "2024-01-12",
+  "status": "checkpoint_saved"
+}</code></pre>
+            </div>
+            <p>Example restart output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "pipeline": "orders_daily",
+  "restartFrom": "2024-01-13",
+  "duplicateRowsCreated": false
+}</code></pre>
+            </div>
+            <p>Transactions, staging tables, atomic swaps, and checkpoints help make pipelines reliable even when failures occur.</p>
+            <hr />
+            <h3 id="common-etl-tools-and-frameworks">Common ETL Tools and Frameworks</h3>
+            <p>Different tools solve different parts of the data pipeline problem. Some focus on extraction, some on transformation, some on orchestration, and others on large-scale compute.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Tool / Framework</td>
+                    <td>Category</td>
+                    <td>Key Characteristics</td>
+                </tr>
+                <tr>
+                    <td><strong>Apache Spark</strong></td>
+                    <td>Distributed compute</td>
+                    <td>In-memory processing, large-scale batch and micro-batch workloads</td>
+                </tr>
+                <tr>
+                    <td><strong>dbt</strong></td>
+                    <td>SQL transform layer</td>
+                    <td>Version-controlled SQL models, lineage, testing, documentation</td>
+                </tr>
+                <tr>
+                    <td><strong>Airbyte</strong></td>
+                    <td>Connector platform</td>
+                    <td>Open-source connectors for many sources and destinations</td>
+                </tr>
+                <tr>
+                    <td><strong>Fivetran</strong></td>
+                    <td>Managed ELT</td>
+                    <td>Fully managed connectors, automatic schema migration</td>
+                </tr>
+                <tr>
+                    <td><strong>Apache NiFi</strong></td>
+                    <td>Data flow</td>
+                    <td>Visual dataflow designer, routing, backpressure, provenance</td>
+                </tr>
+                <tr>
+                    <td><strong>AWS Glue</strong></td>
+                    <td>Managed ETL</td>
+                    <td>Serverless Spark integrated with AWS services</td>
+                </tr>
+                <tr>
+                    <td><strong>Talend</strong></td>
+                    <td>Enterprise ETL</td>
+                    <td>GUI-driven pipelines, broad connectors, data quality features</td>
+                </tr>
+                <tr>
+                    <td><strong>Pentaho</strong></td>
+                    <td>Open-source ETL</td>
+                    <td>Kettle engine, GUI designer, community and enterprise options</td>
+                </tr>
+            </table>
+            </p>
+            <p>Example modern ELT stack:</p>
+            <div>
+                <pre><code class="language-text">Fivetran or Airbyte → Raw warehouse tables → dbt models → BI dashboards</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-json">{
+  "extractLoadTool": "Airbyte",
+  "transformTool": "dbt",
+  "destination": "Snowflake",
+  "consumer": "BI dashboard"
+}</code></pre>
+            </div>
+            <p>Tool selection depends on team skills, data volume, latency requirements, cost, connector needs, and governance requirements.</p>
+            <hr />
+            <h3 id="best-practices">Best Practices</h3>
+            <p>Strong ETL and ELT pipelines are reliable, observable, restartable, and easy to change. They should preserve raw data, validate outputs, protect sensitive fields, and provide clear lineage.</p>
+            <p>Recommended practices include:</p>
+            <ol>
+                <li>
+                    <p><strong>Keep raw data in a landing zone</strong>
+                        Store source data before transformation so it can be reprocessed later.</p>
+                </li>
+                <li>
+                    <p><strong>Version control transform logic</strong>
+                        Tools such as dbt allow SQL models to be reviewed, tested, documented, and rolled back.</p>
+                </li>
+                <li>
+                    <p><strong>Log pipeline runs</strong>
+                        Track row counts, timings, failed records, source checkpoints, and destination tables.</p>
+                </li>
+                <li>
+                    <p><strong>Use schema registries for event data</strong>
+                        Schema registries help detect incompatible changes in Avro, Protobuf, or JSON event streams.</p>
+                </li>
+                <li>
+                    <p><strong>Monitor data freshness</strong>
+                        Track the newest record in each destination table and alert when pipelines fall behind their SLA.</p>
+                </li>
+                <li>
+                    <p><strong>Protect sensitive fields</strong>
+                        Apply masking, hashing, tokenization, or encryption for PII, payment data, and credentials.</p>
+                </li>
+            </ol>
+            <p>Example pipeline run log:</p>
+            <div>
+                <pre><code class="language-json">{
+  "pipeline": "orders_to_warehouse",
+  "runId": "run-20240112-001",
+  "rowsExtracted": 120000,
+  "rowsTransformed": 119950,
+  "rowsQuarantined": 50,
+  "rowsLoaded": 119950,
+  "durationSeconds": 420,
+  "status": "success"
+}</code></pre>
+            </div>
+            <p>Example freshness alert:</p>
+            <div>
+                <pre><code class="language-json">{
+  "table": "analytics.orders",
+  "latestRecordTimestamp": "2024-01-12T07:30:00Z",
+  "freshnessSlaMinutes": 60,
+  "status": "within_sla"
+}</code></pre>
+            </div>
+            <p>Good pipelines are not just about moving data. They are about delivering trustworthy, timely, well-documented data that downstream users can rely on.</p>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

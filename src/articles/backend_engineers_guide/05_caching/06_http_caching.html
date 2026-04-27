@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>HTTP Caching</title>
+    <meta content="HTTP caching is the process of storing copies of HTTP responses so that future requests can be served without contacting the origin server." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/06_http_caching" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "HTTP Caching",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/06_http_caching"
+            },
+            "url": "https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/06_http_caching",
+            "description": "HTTP caching is the process of storing copies of HTTP responses so that future requests can be served without contacting the origin server.",
+            "dateModified": "2026-04-27"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol><a href="#http-caching">HTTP Caching</a>
+                    <ol>
+                        <li><a href="#cache-control-header">Cache-Control Header</a>
+                            <ol>
+                                <li><a href="#response-directives">Response Directives</a></li>
+                                <li><a href="#request-directives">Request Directives</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#freshness-and-staleness">Freshness and Staleness</a></li>
+                        <li><a href="#conditional-requests-and-revalidation">Conditional Requests and Revalidation</a></li>
+                        <li><a href="#vary-header">Vary Header</a></li>
+                        <li><a href="#pragma-and-expires-legacy-">Pragma and Expires (Legacy)</a></li>
+                        <li><a href="#browser-caching">Browser Caching</a></li>
+                        <li><a href="#cache-busting">Cache Busting</a></li>
+                        <li><a href="#http-2-and-http-3-caching">HTTP/2 and HTTP/3 Caching</a></li>
+                        <li><a href="#security-considerations">Security Considerations</a></li>
+                        <li><a href="#best-practices">Best Practices</a></li>
+                    </ol>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li>Api Design<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/01_api_communication_protocols.html">Api Communication Protocols</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/02_rest.html">Rest</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/03_graphql.html">Graphql</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/04_grpc.html">Grpc</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/05_state_management.html">State Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/01_api_design/06_data_transmission.html">Data Transmission</a></li>
+                        </ol>
+                    </li>
+                    <li>Network Communications<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/01_network_communications.html">Network Communications</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/02_tcp_and_udp.html">Tcp and Udp</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/03_http_protocol.html">Http Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/04_web_sockets.html">Web Sockets</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/02_network_communications/05_metrics_and_analysis.html">Metrics and Analysis</a></li>
+                        </ol>
+                    </li>
+                    <li>Server Technologies<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/01_web_server_overview.html">Web Server Overview</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/02_static_dynamic_content.html">Static Dynamic Content</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/03_tomcat.html">Tomcat</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/04_apache.html">Apache</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/05_nginx.html">Nginx</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/06_forward_proxies.html">Forward Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/07_reverse_proxies.html">Reverse Proxies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/03_server_technologies/08_load_balancing.html">Load Balancing</a></li>
+                        </ol>
+                    </li>
+                    <li>Databases<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/01_types_of_databases.html">Types of Databases</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/02_transactions.html">Transactions</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/03_indexes.html">Indexes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/04_isolation_levels.html">Isolation Levels</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/05_data_warehousing.html">Data Warehousing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/06_replication.html">Replication</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/04_databases/07_halloween_problem.html">Halloween Problem</a></li>
+                        </ol>
+                    </li>
+                    <li>Caching<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/01_caching_strategies.html">Caching Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/02_redis.html">Redis</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/03_content_delivery_networks.html">Content Delivery Networks</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/04_database_caching.html">Database Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/05_memcached.html">Memcached</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/06_http_caching.html">Http Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/07_application_level_caching.html">Application Level Caching</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/05_caching/08_memory_map.html">Memory Map</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Processing<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/01_pub_sub_vs_queue.html">Pub Sub vs Queue</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/02_messaging_system_integration.html">Messaging System Integration</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/03_batch_processing.html">Batch Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/04_stream_processing.html">Stream Processing</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/05_etl_and_pipelines.html">Etl and Pipelines</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/06_lambda_and_kappa_architecture.html">Lambda and Kappa Architecture</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/06_data_processing/07_workflow_orchestration.html">Workflow Orchestration</a></li>
+                        </ol>
+                    </li>
+                    <li>Data Formats<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/01_protocol_buffers.html">Protocol Buffers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/02_xml.html">Xml</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/03_json.html">Json</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/04_yaml.html">Yaml</a></li>
+                        </ol>
+                    </li>
+                    <li>Security<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/01_auth.html">Auth</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/02_tls.html">Tls</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/03_security_vulnerabilities.html">Security Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/04_security_best_practices_and_measures.html">Security Best Practices and Measures</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/05_third_party_cookies_vulnerabilities.html">Third Party Cookies Vulnerabilities</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/06_secure_containers.html">Secure Containers</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/07_credentials_management.html">Credentials Management</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/08_security/08_supply_chain_attacks.html">Supply Chain Attacks</a></li>
+                        </ol>
+                    </li>
+                    <li>Deployment<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/01_centos_digital_ocean.html">Centos Digital Ocean</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/02_static_python_website_netlify.html">Static Python Website Netlify</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/03_docker.html">Docker</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/04_kubernetes.html">Kubernetes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/05_ci_cd.html">Ci Cd</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/06_deployment_strategies.html">Deployment Strategies</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/09_deployment/07_infrastructure_as_code.html">Infrastructure As Code</a></li>
+                        </ol>
+                    </li>
+                    <li>Distributed Systems<ol>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/01_coordination_services.html">Coordination Services</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/02_gossip_protocol.html">Gossip Protocol</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/03_linearizability.html">Linearizability</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/04_concurrent_writes.html">Concurrent Writes</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/05_operational_transform.html">Operational Transform</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/06_algorithms_summary.html">Algorithms Summary</a></li>
+                            <li><a href="https://adamdjellouli.com/articles/backend_engineers_guide/10_distributed_systems/07_optimistic_vs_pessimistic_locking.html">Optimistic vs Pessimistic Locking</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: April 27, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="http-caching">HTTP Caching</h2>
+            <p>HTTP caching is the process of storing copies of HTTP responses so that future requests can be served without contacting the origin server. It operates at multiple layers — the browser, intermediate proxies, reverse proxies, and CDN edge nodes — and is controlled primarily through standardised HTTP headers. Correctly configured HTTP caching can dramatically reduce latency, lower server load, and improve the experience for end users on slow or expensive connections.</p>
+            <div>
+                <pre><code class="language-shell">HTTP Caching Layers
+
+  +----------+        +----------+        +----------+        +----------+
+  | Browser  |        | Forward  |        | Reverse  |        |  Origin  |
+  | Cache    |&lt;------&gt;| Proxy    |&lt;------&gt;| Proxy /  |&lt;------&gt;|  Server  |
+  | (client) |        | (ISP/org)|        |   CDN    |        |          |
+  +----------+        +----------+        +----------+        +----------+
+      |                    |                   |                    |
+   Private             Shared             Shared              Authoritative
+   per user           per org           per region              source
+
+  Each layer stores a cached copy keyed on the request URL (and Vary fields).
+  A cache HIT at any layer avoids a round-trip to every layer to its right.</code></pre>
+            </div>
+            <ul>
+                <li>Browser caches are <strong>private</strong> and store responses only for the user whose session created them.</li>
+                <li>Shared caches such as CDN edge nodes are <strong>public</strong> and may serve the same stored response to many different users.</li>
+                <li>Each caching layer reduces <strong>latency</strong> proportionally to how close it sits to the end user.</li>
+                <li>A response that is cached at the browser avoids <strong>all</strong> network I/O, making it the fastest possible outcome.</li>
+                <li>Caching at the reverse proxy level is <strong>effective</strong> at shielding origin servers from repeated identical requests.</li>
+            </ul>
+            <h3 id="cache-control-header">Cache-Control Header</h3>
+            <p><code>Cache-Control</code> is the primary HTTP header for specifying caching directives. It appears in both request and response messages.</p>
+            <div>
+                <pre><code class="language-shell">Example response with Cache-Control:
+
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+  Cache-Control: public, max-age=3600, stale-while-revalidate=60
+  ETag: "v3-abc123"
+  Last-Modified: Sat, 26 Apr 2026 06:00:00 GMT
+
+  { "id": 7, "name": "Widget" }</code></pre>
+            </div>
+            <h4 id="response-directives">Response Directives</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Directive</td>
+                    <td>Effect</td>
+                </tr>
+                <tr>
+                    <td><code>public</code></td>
+                    <td>Response may be stored by any shared cache</td>
+                </tr>
+                <tr>
+                    <td><code>private</code></td>
+                    <td>Response is only for the requesting user; shared caches must not store it</td>
+                </tr>
+                <tr>
+                    <td><code>no-cache</code></td>
+                    <td>Cache must revalidate with origin before serving a stored response</td>
+                </tr>
+                <tr>
+                    <td><code>no-store</code></td>
+                    <td>Cache must not store the response at all</td>
+                </tr>
+                <tr>
+                    <td><code>max-age=N</code></td>
+                    <td>Response is fresh for N seconds from the time it was generated</td>
+                </tr>
+                <tr>
+                    <td><code>s-maxage=N</code></td>
+                    <td>Overrides <code>max-age</code> for shared caches (CDNs, proxies)</td>
+                </tr>
+                <tr>
+                    <td><code>must-revalidate</code></td>
+                    <td>Once stale, cache must not serve the response without successful revalidation</td>
+                </tr>
+                <tr>
+                    <td><code>proxy-revalidate</code></td>
+                    <td>Like <code>must-revalidate</code> but applies only to shared caches</td>
+                </tr>
+                <tr>
+                    <td><code>immutable</code></td>
+                    <td>Response will not change during its freshness lifetime; browsers skip revalidation</td>
+                </tr>
+                <tr>
+                    <td><code>stale-while-revalidate=N</code></td>
+                    <td>Serve stale response for up to N seconds while fetching a fresh one in the background</td>
+                </tr>
+                <tr>
+                    <td><code>stale-if-error=N</code></td>
+                    <td>Serve stale response for up to N seconds if origin returns an error</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="request-directives">Request Directives</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Directive</td>
+                    <td>Effect</td>
+                </tr>
+                <tr>
+                    <td><code>no-cache</code></td>
+                    <td>Force revalidation even if cache has a fresh copy</td>
+                </tr>
+                <tr>
+                    <td><code>no-store</code></td>
+                    <td>Do not cache the response to this request</td>
+                </tr>
+                <tr>
+                    <td><code>max-age=0</code></td>
+                    <td>Treat any cached copy as stale</td>
+                </tr>
+                <tr>
+                    <td><code>max-stale=N</code></td>
+                    <td>Accept a response that has been stale for at most N seconds</td>
+                </tr>
+                <tr>
+                    <td><code>min-fresh=N</code></td>
+                    <td>Require the response to be fresh for at least another N seconds</td>
+                </tr>
+                <tr>
+                    <td><code>only-if-cached</code></td>
+                    <td>Return a stored response or a 504; never contact the origin</td>
+                </tr>
+            </table>
+            </p>
+            <ul>
+                <li>The <code>no-cache</code> directive does <strong>not</strong> disable caching entirely; it forces revalidation before the stored entry can be used.</li>
+                <li>The <code>no-store</code> directive is the correct way to <strong>prevent</strong> any persistent copy of a sensitive response from being retained.</li>
+                <li>Setting <code>immutable</code> on versioned assets is <strong>optimal</strong> because browsers skip the conditional request entirely, saving a round-trip.</li>
+                <li><code>stale-while-revalidate</code> improves <strong>perceived</strong> performance by serving an old copy immediately while silently refreshing in the background.</li>
+            </ul>
+            <h3 id="freshness-and-staleness">Freshness and Staleness</h3>
+            <p>A cached response transitions from fresh to stale after its freshness lifetime expires.</p>
+            <div>
+                <pre><code class="language-shell">Freshness Lifetime Calculation
+
+  Response stored at t=0
+  max-age = 3600 s (1 hour)
+
+  t=0       t=1800        t=3600      t=4200
+  |---------|-------------|-----------|--------&gt;
+  |&lt; fresh (serve without revalidation) &gt;|stale|
+
+  Age header = current_time - Date header value
+  Fresh if Age &lt; max-age</code></pre>
+            </div>
+            <ul>
+                <li>The <code>Age</code> header is <strong>set</strong> by caches to indicate how many seconds the response has been held in the cache.</li>
+                <li>A heuristic freshness value may be <strong>applied</strong> when no explicit directives are present, typically 10 % of the interval since <code>Last-Modified</code>.</li>
+                <li>Stale responses are <strong>served</strong> only if the origin is unreachable and <code>stale-if-error</code> is configured, or when <code>stale-while-revalidate</code> permits it.</li>
+                <li>Shared caches compare the <code>Date</code> header against the current time to calculate <strong>staleness</strong> correctly even across time zones.</li>
+            </ul>
+            <h3 id="conditional-requests-and-revalidation">Conditional Requests and Revalidation</h3>
+            <p>When a cached response becomes stale, the cache can ask the origin whether the content has changed rather than fetching the full body.</p>
+            <div>
+                <pre><code class="language-shell">Revalidation Flow (ETag)
+
+  Client/Cache           Origin Server
+      |                       |
+      |-- GET /api/user ------&gt;|
+      |   If-None-Match: "v3" |
+      |                       |
+      |&lt;-- 304 Not Modified --|  (no body, headers only)
+      |   ETag: "v3"          |
+      |                       |
+      Cache is refreshed and   |
+      freshness timer resets.  |
+      Response served from     |
+      local copy.              |</code></pre>
+            </div>
+            <ul>
+                <li><code>ETag</code> is a <strong>fingerprint</strong> (opaque string) that uniquely identifies a specific version of a resource.</li>
+                <li><code>Last-Modified</code> is a <strong>timestamp</strong> that represents when the origin last changed the resource.</li>
+                <li>The <code>If-None-Match</code> request header sends the <strong>ETag</strong> from the cached copy; the server returns 304 if the ETag still matches.</li>
+                <li>The <code>If-Modified-Since</code> request header sends the <code>Last-Modified</code> <strong>date</strong>; the server returns 304 if the resource has not changed since that time.</li>
+                <li>A 304 Not Modified response <strong>omits</strong> the body, saving bandwidth while allowing the cache to reset its freshness timer.</li>
+                <li>Strong ETags (<code>"abc123"</code>) require <strong>byte-level</strong> equality, while weak ETags (<code>W/"abc123"</code>) allow semantically equivalent responses to match even if bytes differ.</li>
+            </ul>
+            <h3 id="vary-header">Vary Header</h3>
+            <p>The <code>Vary</code> header instructs caches to store separate copies of a response based on the value of specified request headers.</p>
+            <div>
+                <pre><code class="language-shell">Vary: Accept-Encoding
+
+  Request 1: Accept-Encoding: gzip   -&gt; cached under key (URL + gzip)
+  Request 2: Accept-Encoding: br     -&gt; cached under key (URL + br)
+  Request 3: Accept-Encoding: (none) -&gt; cached under key (URL + identity)
+
+  Three separate cache entries for the same URL.</code></pre>
+            </div>
+            <ul>
+                <li>A <code>Vary: Accept-Encoding</code> directive tells shared caches to <strong>maintain</strong> separate copies for each compression variant.</li>
+                <li><code>Vary: Accept-Language</code> causes CDNs to <strong>store</strong> per-language versions, which is useful for server-side localised responses.</li>
+                <li>Varying on <code>Cookie</code> or <code>Authorization</code> effectively <strong>disables</strong> caching at shared proxies because each user has a unique header value.</li>
+                <li>Minimising the set of <code>Vary</code> fields improves <strong>cache hit rates</strong> by reducing key cardinality.</li>
+            </ul>
+            <h3 id="pragma-and-expires-legacy-">Pragma and Expires (Legacy)</h3>
+            <ul>
+                <li><code>Pragma: no-cache</code> is a <strong>legacy</strong> HTTP/1.0 directive that behaves like <code>Cache-Control: no-cache</code> and is retained only for backward compatibility.</li>
+                <li>The <code>Expires</code> header sets an absolute expiry date and is <strong>superseded</strong> by <code>max-age</code> in HTTP/1.1, but some older CDNs and proxies still honour it.</li>
+                <li>When both <code>Expires</code> and <code>Cache-Control: max-age</code> are present, <code>max-age</code> takes <strong>precedence</strong> in HTTP/1.1-compliant caches.</li>
+            </ul>
+            <h3 id="browser-caching">Browser Caching</h3>
+            <p>Browsers maintain their own private cache stored on the user's disk or in memory.</p>
+            <div>
+                <pre><code class="language-shell">Browser Cache Decision Tree
+
+  New navigation to URL
+         |
+         v
+   Check memory cache
+         |
+   HIT --+-- MISS
+    |              |
+    v              v
+  Serve       Check disk cache
+  immediately       |
+              HIT --+-- MISS
+               |            |
+               v            v
+         Check freshness  Fetch from
+               |           network
+         FRESH-+-STALE
+           |          |
+           v          v
+         Serve    Revalidate
+         copy     (conditional
+                   request)</code></pre>
+            </div>
+            <ul>
+                <li>Memory cache in browsers is <strong>fastest</strong> because it survives only for the current navigation session and requires no disk I/O.</li>
+                <li>Disk cache persists <strong>across</strong> browser sessions and is used for large or frequently reused resources like fonts and images.</li>
+                <li>Hard refreshes (<code>Ctrl+Shift+R</code>) <strong>bypass</strong> the disk cache and force a full network request with <code>Cache-Control: no-cache</code> on every outgoing request.</li>
+                <li>Service workers give developers <strong>programmatic</strong> control over the browser cache, enabling offline support and customised caching strategies.</li>
+                <li><code>Link: rel=preload</code> hints tell the browser to <strong>fetch</strong> resources early into the memory cache before they are needed by the page.</li>
+            </ul>
+            <h3 id="cache-busting">Cache Busting</h3>
+            <p>When content changes but the URL stays the same, stale cached copies continue to be served until they expire.</p>
+            <ul>
+                <li>Appending a content <strong>hash</strong> to the filename (e.g., <code>main.a3c4d5.js</code>) changes the URL on every deploy, bypassing cached copies automatically.</li>
+                <li>A query string version parameter (e.g., <code>?v=42</code>) is a <strong>simpler</strong> but less reliable technique because some caches ignore query strings.</li>
+                <li>Using a short <code>max-age</code> (e.g., 60 s) on HTML pages while setting a <strong>long</strong> TTL (e.g., 1 year) on versioned static assets balances freshness with performance.</li>
+                <li>CDN cache purge APIs allow <strong>immediate</strong> invalidation of specific URLs after a deployment without waiting for TTL expiry.</li>
+                <li>The <code>Surrogate-Key</code> or <code>Cache-Tag</code> header groups related resources so that a single <strong>tag-based</strong> purge call can invalidate all affected entries at once.</li>
+            </ul>
+            <h3 id="http-2-and-http-3-caching">HTTP/2 and HTTP/3 Caching</h3>
+            <ul>
+                <li>HTTP/2 server push allows the origin to <strong>proactively</strong> send assets into the browser cache before the client requests them.</li>
+                <li>Cache digests (a proposed extension) let the <strong>browser</strong> advertise which resources it already has cached, preventing redundant pushes.</li>
+                <li>HTTP/3 runs over QUIC, which <strong>reduces</strong> connection establishment latency but does not change the caching semantics defined by HTTP headers.</li>
+                <li>Early hints (103 status code) allow servers to <strong>stream</strong> <code>Link: rel=preload</code> headers before the full response is ready, accelerating resource discovery.</li>
+            </ul>
+            <h3 id="security-considerations">Security Considerations</h3>
+            <ul>
+                <li>Sensitive responses such as authentication tokens must carry <code>Cache-Control: private, no-store</code> to <strong>prevent</strong> shared caches from retaining them.</li>
+                <li>Cache poisoning attacks <strong>inject</strong> crafted responses into a shared cache so subsequent users receive malicious content; strict URL normalisation and input validation are defences.</li>
+                <li>The <code>Vary: Origin</code> header mitigates <strong>CORS</strong>-related cache poisoning by ensuring responses are only served to requests with matching origin headers.</li>
+                <li>Web application firewalls and CDN rules can <strong>block</strong> abnormal request headers that are commonly used in cache deception attacks.</li>
+                <li>Responses containing personally identifiable information should <strong>never</strong> be stored in a shared cache, even with short TTLs.</li>
+            </ul>
+            <h3 id="best-practices">Best Practices</h3>
+            <ul>
+                <li>Serve all static assets with <code>Cache-Control: public, max-age=31536000, immutable</code> and <strong>embed</strong> a content hash in the filename to achieve aggressive caching with instant invalidation.</li>
+                <li>Set <code>Cache-Control: no-cache</code> on HTML entry points so browsers always <strong>revalidate</strong> the page, picking up updated asset fingerprints on each deploy.</li>
+                <li>Use <code>ETag</code> or <code>Last-Modified</code> on API responses to enable <strong>conditional</strong> revalidation and reduce unnecessary data transfer.</li>
+                <li>Avoid <code>Vary: *</code>, which <strong>disables</strong> caching entirely by telling caches no two responses are equivalent regardless of headers.</li>
+                <li>Monitor cache hit ratios at every layer and <strong>investigate</strong> a low CDN hit rate caused by overly short TTLs or excessive query-string variation.</li>
+                <li>Test caching behaviour with <code>curl -I</code> and browser DevTools Network panel (look for <code>(disk cache)</code> or <code>304</code> responses) to <strong>verify</strong> headers before going to production.</li>
+            </ul>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

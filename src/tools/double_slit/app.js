@@ -511,6 +511,7 @@ updateStats();
 drawAll();
 
 let darkModeRedrawTimer = null;
+
 function onDarkModeChange() {
     if (darkModeRedrawTimer) return;
     darkModeRedrawTimer = requestAnimationFrame(() => {

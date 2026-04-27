@@ -1,5 +1,6 @@
 import subprocess
 import logging
+from pathlib import Path
 
 
 logging.basicConfig(
@@ -10,6 +11,7 @@ RANDOM_DATE = False
 RANDOM_DATE_START = "2016-01-01"
 RANDOM_DATE_END = "now"
 RANDOM_DATE_SEED = ""
+SCRIPT_DIR = Path(__file__).resolve().parent
 
 SCRIPTS_TO_ARGS = {
     "python3 clean_output_dirs.py": [],
@@ -55,6 +57,7 @@ def run_script(script, args_list):
     process = subprocess.Popen(
         f"{script} {args}",
         shell=True,
+        cwd=SCRIPT_DIR,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,

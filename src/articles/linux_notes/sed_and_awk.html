@@ -1,404 +1,851 @@
 <!DOCTYPE html>
 
 <html lang="en">
+
 <head>
-<script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
-<meta charset="utf-8"/>
-<title>Command-Line Stream Editors</title>
-<meta content="sed (Stream Editor) and awk are powerful command-line utilities that originated from Unix and have become indispensable tools in Unix-like operating systems, including Linux and macOS." name="description"/>
-<meta content="Adam Djellouli" name="author"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<meta content="IE=edge" http-equiv="X-UA-Compatible"/>
-<link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect"/>
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet"/>
-<link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon"/>
-<link href="../../resources/style.css" rel="stylesheet"/>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<link href="https://adamdjellouli.com/articles/linux_notes/sed_and_awk" rel="canonical"/><script id="structured-data" type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "Command-Line Stream Editors", "author": {"@type": "Person", "name": "Adam Djellouli"}, "mainEntityOfPage": {"@type": "WebPage", "@id": "https://adamdjellouli.com/articles/linux_notes/sed_and_awk"}, "url": "https://adamdjellouli.com/articles/linux_notes/sed_and_awk", "description": "sed (Stream Editor) and awk are powerful command-line utilities that originated from Unix and have become indispensable tools in Unix-like operating systems, including Linux and macOS.", "dateModified": "2026-04-06"}</script></head>
-<body><nav aria-label="Main navigation">
-<a class="logo" href="../../index.html">
-<img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG"/>
-</a>
-<input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox"/>
-<ul aria-labelledby="navbar-toggle" role="menu">
-<li role="menuitem">
-<a href="../../index.html" title="Go to Home Page"> Home </a>
-</li>
-<li role="menuitem">
-<a href="../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
-</li>
-<li role="menuitem">
-<a href="../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
-</li>
-<li role="menuitem">
-<a href="../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
-</li>
-<li role="menuitem">
-<a href="../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
-</li>
-<li role="menuitem">
-<a href="../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
-</li>
-<li>
-<script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
-<div class="gcse-search"></div>
-</li>
-<li>
-<button aria-label="Toggle dark mode" id="dark-mode-button"></button>
-</li>
-</ul>
-</nav>
-<div id="article-wrapper"><aside id="article-sidebar"><div id="table-of-contents"><h2>Table of Contents</h2><ol><a href="#command-line-stream-editors">Command-Line Stream Editors</a><ol><li><a href="#sed">sed</a><ol><li><a href="#basic-syntax">Basic syntax</a></li><li><a href="#mental-model">Mental model</a></li><li><a href="#common-options">Common options</a></li><li><a href="#command-structure">Command structure</a></li><li><a href="#addresses">Addresses</a></li><li><a href="#operations-and-flags">Operations and flags</a></li><li><a href="#substitution-command">Substitution command</a></li><li><a href="#regular-expressions">Regular expressions</a></li><li><a href="#extended-regex">Extended regex</a></li><li><a href="#common-examples">Common examples</a></li><li><a href="#multi-line-and-hold-space">Multi-line and hold space</a></li><li><a href="#practical-tips">Practical tips</a></li></ol></li><li><a href="#awk">awk</a><ol><li><a href="#main-idea">Main idea</a></li><li><a href="#basic-syntax">Basic syntax</a></li><li><a href="#common-options">Common options</a></li><li><a href="#main-building-blocks">Main building blocks</a></li><li><a href="#what-1-0-nr-and-nf-mean">What $1, $0, NR, and NF mean</a></li><li><a href="#patterns-and-actions">Patterns and actions</a></li><li><a href="#field-separators">Field separators</a></li><li><a href="#common-operators-and-tests">Common operators and tests</a></li><li><a href="#begin-and-end">BEGIN and END</a></li><li><a href="#common-functions-and-features">Common functions and features</a></li><li><a href="#print-vs-printf">print vs printf</a></li><li><a href="#common-examples">Common examples</a></li><li><a href="#control-structures">Control structures</a></li><li><a href="#arrays">Arrays</a></li><li><a href="#user-defined-functions">User-defined functions</a></li><li><a href="#practical-tips">Practical tips</a></li><li><a href="#quick-reference">Quick reference</a></li></ol></li><li><a href="#challenges">Challenges</a></li></ol></ol></div><div id="related-articles"><h2>Related Articles</h2><ol><li><a href="https://adamdjellouli.com/articles/linux_notes/commands.html">Commands</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/cron_jobs.html">Cron Jobs</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/disk_usage.html">Disk Usage</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/dwm.html">Dwm</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/encryption.html">Encryption</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/environment_modules.html">Environment Modules</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/environment_variable.html">Environment Variable</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/file_system.html">File System</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/files_and_dirs.html">Files and Dirs</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/finding_files.html">Finding Files</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/firewall.html">Firewall</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/grep.html">Grep</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/hardware.html">Hardware</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/inodes_and_symlinks.html">Inodes and Symlinks</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/introduction.html">Introduction</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/kernel.html">Kernel</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/ldap.html">Ldap</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/log_files_and_journals.html">Log Files and Journals</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/logical_volume_management.html">Logical Volume Management</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/managing_users.html">Managing Users</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/mounting.html">Mounting</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/networking.html">Networking</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/nfs.html">Nfs</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/package_managers.html">Package Managers</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/partitions.html">Partitions</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/performance_monitoring.html">Performance Monitoring</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/permissions.html">Permissions</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/pipe_and_redirect.html">Pipe and Redirect</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/ports.html">Ports</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/processes.html">Processes</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/sed_and_awk.html">Sed and Awk</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/selinux.html">Selinux</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/services.html">Services</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/shells_and_bash_configuration.html">Shells and Bash Configuration</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/ssh_and_scp.html">Ssh and Scp</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/system_startup.html">System Startup</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/tar_and_gzip.html">Tar and Gzip</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/utilities.html">Utilities</a></li><li><a href="https://adamdjellouli.com/articles/linux_notes/virtual_machines.html">Virtual Machines</a></li></ol></div></aside><article-section id="article-body">
-<p style="text-align: right;"><i>Last modified: April 06, 2026</i></p>
-<p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
-<h2 id="command-line-stream-editors">Command-Line Stream Editors</h2>
-<p><code>sed</code> (Stream Editor) and <code>awk</code> are powerful command-line utilities that originated from Unix and have become indispensable tools in Unix-like operating systems, including Linux and macOS. They are designed for processing and transforming text, allowing users to perform complex text manipulations with simple commands.</p>
-<h3 id="sed"><code>sed</code></h3>
-<p><code>sed</code> is a <strong>stream editor</strong> used to transform text from files or pipelines without opening an interactive editor.</p>
-<p>It works <strong>line by line</strong>:</p>
-<ol>
-<li>read a line</li>
-<li>apply the command(s)</li>
-<li>print the result</li>
-</ol>
-<p>This makes it fast and useful for automation, scripting, filtering, and bulk text edits.</p>
-<p>Originally developed in the 1970s at Bell Labs by <strong>Lee E. McMahon</strong>, <code>sed</code> is one of the standard Unix text-processing tools.</p>
-<h4 id="basic-syntax">Basic syntax</h4>
-<p><code>sed</code> takes a set of options, a script describing the edits to perform, and one or more input sources. It processes the input line by line, applies the script, and prints the result (unless told otherwise).</p>
-<div><pre><code class="language-bash">sed [OPTIONS] 'SCRIPT' file...</code></pre></div>
-<ul>
-<li><strong><code>OPTIONS</code></strong> change how <code>sed</code> behaves</li>
-<li><strong><code>SCRIPT</code></strong> contains the editing command(s)</li>
-<li><strong><code>file...</code></strong> is one or more input files</li>
-</ul>
-<p>If no file is given, <code>sed</code> reads from <strong>standard input</strong>.</p>
-<h4 id="mental-model">Mental model</h4>
-<p><code>sed</code> works as a simple pipeline: it reads one line at a time, applies the given commands, and outputs the result. Each line is processed independently unless you explicitly use multi-line features.</p>
-<div><pre><code class="language-text">input -&gt; sed reads one line -&gt; applies commands -&gt; prints result</code></pre></div>
-<p>By default, <code>sed</code> does <strong>not</strong> modify the original file. It prints the transformed output to the terminal.</p>
-<h4 id="common-options">Common options</h4>
-<p>These options control how <code>sed</code> reads input, applies commands, and produces output. You’ll mainly use them to suppress default behavior, combine scripts, or modify files directly.</p>
-<p>
-<table><tr><td>Option</td><td>Meaning</td></tr><tr><td><code>-n</code></td><td>Suppress automatic printing</td></tr><tr><td><code>-e 'script'</code></td><td>Add a script/command</td></tr><tr><td><code>-f script.sed</code></td><td>Read commands from a script file</td></tr><tr><td><code>-i</code></td><td>Edit file in place</td></tr><tr><td><code>-i.bak</code></td><td>Edit file in place and create a backup</td></tr><tr><td><code>-E</code></td><td>Use extended regular expressions</td></tr></table>
-</p>
-<h4 id="command-structure">Command structure</h4>
-<p>A <code>sed</code> script often looks like this:</p>
-<div><pre><code class="language-bash">sed 'address command' file</code></pre></div>
-<ul>
-<li><strong>address</strong> decides <strong>where</strong> the command applies</li>
-<li><strong>command</strong> decides <strong>what</strong> to do</li>
-</ul>
-<p>Example:</p>
-<div><pre><code class="language-bash">sed '5d' file.txt</code></pre></div>
-<ul>
-<li><code>5</code> selects line 5</li>
-<li><code>d</code> deletes that line</li>
-<li>all other lines are printed normally</li>
-</ul>
-<p>This is useful when you know the exact line number you want to remove.</p>
-<p><strong>Before — <code>file.txt</code></strong></p>
-<div><pre><code class="language-txt">line one
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Command-Line Stream Editors</title>
+    <meta content="sed (Stream Editor) and awk are powerful command-line utilities that originated from Unix and have become indispensable tools in Unix-like operating systems, including Linux and macOS." name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/linux_notes/sed_and_awk" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Command-Line Stream Editors",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/linux_notes/sed_and_awk"
+            },
+            "url": "https://adamdjellouli.com/articles/linux_notes/sed_and_awk",
+            "description": "sed (Stream Editor) and awk are powerful command-line utilities that originated from Unix and have become indispensable tools in Unix-like operating systems, including Linux and macOS.",
+            "dateModified": "2026-04-27"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol><a href="#command-line-stream-editors">Command-Line Stream Editors</a>
+                    <ol>
+                        <li><a href="#sed">sed</a>
+                            <ol>
+                                <li><a href="#basic-syntax">Basic syntax</a></li>
+                                <li><a href="#mental-model">Mental model</a></li>
+                                <li><a href="#common-options">Common options</a></li>
+                                <li><a href="#command-structure">Command structure</a></li>
+                                <li><a href="#addresses">Addresses</a></li>
+                                <li><a href="#operations-and-flags">Operations and flags</a></li>
+                                <li><a href="#substitution-command">Substitution command</a></li>
+                                <li><a href="#regular-expressions">Regular expressions</a></li>
+                                <li><a href="#extended-regex">Extended regex</a></li>
+                                <li><a href="#common-examples">Common examples</a></li>
+                                <li><a href="#multi-line-and-hold-space">Multi-line and hold space</a></li>
+                                <li><a href="#practical-tips">Practical tips</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#awk">awk</a>
+                            <ol>
+                                <li><a href="#main-idea">Main idea</a></li>
+                                <li><a href="#basic-syntax">Basic syntax</a></li>
+                                <li><a href="#common-options">Common options</a></li>
+                                <li><a href="#main-building-blocks">Main building blocks</a></li>
+                                <li><a href="#what-1-0-nr-and-nf-mean">What $1, $0, NR, and NF mean</a></li>
+                                <li><a href="#patterns-and-actions">Patterns and actions</a></li>
+                                <li><a href="#field-separators">Field separators</a></li>
+                                <li><a href="#common-operators-and-tests">Common operators and tests</a></li>
+                                <li><a href="#begin-and-end">BEGIN and END</a></li>
+                                <li><a href="#common-functions-and-features">Common functions and features</a></li>
+                                <li><a href="#print-vs-printf">print vs printf</a></li>
+                                <li><a href="#common-examples">Common examples</a></li>
+                                <li><a href="#control-structures">Control structures</a></li>
+                                <li><a href="#arrays">Arrays</a></li>
+                                <li><a href="#user-defined-functions">User-defined functions</a></li>
+                                <li><a href="#practical-tips">Practical tips</a></li>
+                                <li><a href="#quick-reference">Quick reference</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#challenges">Challenges</a></li>
+                    </ol>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ci_cd.html">Ci Cd</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/commands.html">Commands</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/containers_and_docker.html">Containers and Docker</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/cron_jobs.html">Cron Jobs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/disk_io_analysis.html">Disk Io Analysis</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/disk_usage.html">Disk Usage</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/dwm.html">Dwm</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/encryption.html">Encryption</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/environment_modules.html">Environment Modules</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/environment_variable.html">Environment Variable</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/file_system.html">File System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/files_and_dirs.html">Files and Dirs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/finding_files.html">Finding Files</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/firewall.html">Firewall</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/grep.html">Grep</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/hardware.html">Hardware</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/infrastructure_as_code.html">Infrastructure As Code</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/inodes_and_symlinks.html">Inodes and Symlinks</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/inotify.html">Inotify</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/introduction.html">Introduction</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/kernel.html">Kernel</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ldap.html">Ldap</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/lfcs.html">Lfcs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/linux_certification_overview.html">Linux Certification Overview</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/log_files_and_journals.html">Log Files and Journals</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/logical_volume_management.html">Logical Volume Management</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/managing_users.html">Managing Users</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/mounting.html">Mounting</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/networking.html">Networking</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/nfs.html">Nfs</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/package_managers.html">Package Managers</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/partitions.html">Partitions</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/performance_monitoring.html">Performance Monitoring</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/permissions.html">Permissions</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/pipe_and_redirect.html">Pipe and Redirect</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ports.html">Ports</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/processes.html">Processes</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/rhcsa.html">Rhcsa</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/running_executables.html">Running Executables</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/sed_and_awk.html">Sed and Awk</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/selinux.html">Selinux</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/services.html">Services</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/shells_and_bash_configuration.html">Shells and Bash Configuration</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/ssh_and_scp.html">Ssh and Scp</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/system_startup.html">System Startup</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/tar_and_gzip.html">Tar and Gzip</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/task_state_analysis.html">Task State Analysis</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/utilities.html">Utilities</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/linux_notes/virtual_machines.html">Virtual Machines</a></li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: April 27, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <h2 id="command-line-stream-editors">Command-Line Stream Editors</h2>
+            <p><code>sed</code> (Stream Editor) and <code>awk</code> are powerful command-line utilities that originated from Unix and have become indispensable tools in Unix-like operating systems, including Linux and macOS. They are designed for processing and transforming text, allowing users to perform complex text manipulations with simple commands.</p>
+            <h3 id="sed"><code>sed</code></h3>
+            <p><code>sed</code> is a <strong>stream editor</strong> used to transform text from files or pipelines without opening an interactive editor.</p>
+            <p>It works <strong>line by line</strong>:</p>
+            <ol>
+                <li>read a line</li>
+                <li>apply the command(s)</li>
+                <li>print the result</li>
+            </ol>
+            <p>This makes it fast and useful for automation, scripting, filtering, and bulk text edits.</p>
+            <p>Originally developed in the 1970s at Bell Labs by <strong>Lee E. McMahon</strong>, <code>sed</code> is one of the standard Unix text-processing tools.</p>
+            <h4 id="basic-syntax">Basic syntax</h4>
+            <p><code>sed</code> takes a set of options, a script describing the edits to perform, and one or more input sources. It processes the input line by line, applies the script, and prints the result (unless told otherwise).</p>
+            <div>
+                <pre><code class="language-bash">sed [OPTIONS] 'SCRIPT' file...</code></pre>
+            </div>
+            <ul>
+                <li><strong><code>OPTIONS</code></strong> change how <code>sed</code> behaves</li>
+                <li><strong><code>SCRIPT</code></strong> contains the editing command(s)</li>
+                <li><strong><code>file...</code></strong> is one or more input files</li>
+            </ul>
+            <p>If no file is given, <code>sed</code> reads from <strong>standard input</strong>.</p>
+            <h4 id="mental-model">Mental model</h4>
+            <p><code>sed</code> works as a simple pipeline: it reads one line at a time, applies the given commands, and outputs the result. Each line is processed independently unless you explicitly use multi-line features.</p>
+            <div>
+                <pre><code class="language-text">input -&gt; sed reads one line -&gt; applies commands -&gt; prints result</code></pre>
+            </div>
+            <p>By default, <code>sed</code> does <strong>not</strong> modify the original file. It prints the transformed output to the terminal.</p>
+            <h4 id="common-options">Common options</h4>
+            <p>These options control how <code>sed</code> reads input, applies commands, and produces output. You’ll mainly use them to suppress default behavior, combine scripts, or modify files directly.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Option</td>
+                    <td>Meaning</td>
+                </tr>
+                <tr>
+                    <td><code>-n</code></td>
+                    <td>Suppress automatic printing</td>
+                </tr>
+                <tr>
+                    <td><code>-e 'script'</code></td>
+                    <td>Add a script/command</td>
+                </tr>
+                <tr>
+                    <td><code>-f script.sed</code></td>
+                    <td>Read commands from a script file</td>
+                </tr>
+                <tr>
+                    <td><code>-i</code></td>
+                    <td>Edit file in place</td>
+                </tr>
+                <tr>
+                    <td><code>-i.bak</code></td>
+                    <td>Edit file in place and create a backup</td>
+                </tr>
+                <tr>
+                    <td><code>-E</code></td>
+                    <td>Use extended regular expressions</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="command-structure">Command structure</h4>
+            <p>A <code>sed</code> script often looks like this:</p>
+            <div>
+                <pre><code class="language-bash">sed 'address command' file</code></pre>
+            </div>
+            <ul>
+                <li><strong>address</strong> decides <strong>where</strong> the command applies</li>
+                <li><strong>command</strong> decides <strong>what</strong> to do</li>
+            </ul>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">sed '5d' file.txt</code></pre>
+            </div>
+            <ul>
+                <li><code>5</code> selects line 5</li>
+                <li><code>d</code> deletes that line</li>
+                <li>all other lines are printed normally</li>
+            </ul>
+            <p>This is useful when you know the exact line number you want to remove.</p>
+            <p><strong>Before — <code>file.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">line one
 line two
 line three
 line four
 line five
 line six
-line seven</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">line one
+line seven</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">line one
 line two
 line three
 line four
 line six
-line seven</code></pre></div>
-<h4 id="addresses">Addresses</h4>
-<p>Addresses tell <code>sed</code> <strong>which lines</strong> a command should apply to. They can target specific line numbers, ranges, or patterns, making it easy to operate on only part of the input.</p>
-<p>
-<table><tr><td>Address</td><td>Meaning</td><td>Example</td></tr><tr><td><code>5</code></td><td>line 5 only</td><td><code>sed '5d' file.txt</code></td></tr><tr><td><code>2,4</code></td><td>lines 2 through 4</td><td><code>sed '2,4d' file.txt</code></td></tr><tr><td><code>/pattern/</code></td><td>lines matching a pattern</td><td><code>sed '/error/d' log.txt</code></td></tr><tr><td><code>/start/,/end/</code></td><td>range between two patterns</td><td><code>sed '/start/,/end/d' file.txt</code></td></tr><tr><td><code>$</code></td><td>last line</td><td><code>sed '$d' file.txt</code></td></tr></table>
-</p>
-<h4 id="operations-and-flags">Operations and flags</h4>
-<p>This table combines the most useful commands and the most common substitution flags in one place.</p>
-<p>
-<table><tr><td>Form</td><td>What it does</td><td>Notes / Example</td></tr><tr><td><code>s/old/new/</code></td><td>Replace first match on a line</td><td><code>sed 's/apple/orange/' file.txt</code></td></tr><tr><td><code>s/old/new/g</code></td><td>Replace all matches on a line</td><td><code>sed 's/apple/orange/g' file.txt</code></td></tr><tr><td><code>s/old/new/i</code></td><td>Case-insensitive match</td><td>GNU <code>sed</code> commonly supports this</td></tr><tr><td><code>s/old/new/p</code></td><td>Print line if substitution happened</td><td>Usually paired with <code>-n</code></td></tr><tr><td><code>d</code></td><td>Delete line</td><td><code>sed '/^$/d' file.txt</code> removes empty lines</td></tr><tr><td><code>p</code></td><td>Print line</td><td><code>sed -n '/error/p' log.txt</code></td></tr><tr><td><code>i\text</code></td><td>Insert text before line</td><td><code>sed '1i\Header' file.txt</code></td></tr><tr><td><code>a\text</code></td><td>Append text after line</td><td><code>sed '/pattern/a\extra line' file.txt</code></td></tr><tr><td><code>c\text</code></td><td>Change matched line(s) to new text</td><td>Replaces the whole addressed line</td></tr><tr><td><code>y/abc/ABC/</code></td><td>Translate characters</td><td>Like <code>tr</code>; character-by-character replacement</td></tr><tr><td><code>q</code></td><td>Quit early</td><td>Useful when you only need first match/range</td></tr><tr><td><code>n</code></td><td>Read next line</td><td>Often used in advanced scripts</td></tr><tr><td><code>N</code></td><td>Append next line to pattern space</td><td>Useful for multi-line processing</td></tr><tr><td><code>h</code></td><td>Copy pattern space to hold space</td><td>Advanced use</td></tr><tr><td><code>H</code></td><td>Append pattern space to hold space</td><td>Advanced use</td></tr><tr><td><code>g</code></td><td>Copy hold space back to pattern space</td><td>Advanced use</td></tr><tr><td><code>G</code></td><td>Append hold space to pattern space</td><td>Advanced use</td></tr><tr><td><code>x</code></td><td>Swap pattern and hold space</td><td>Advanced use</td></tr></table>
-</p>
-<p>Example:</p>
-<div><pre><code class="language-bash">sed '/^$/d' file.txt</code></pre></div>
-<ul>
-<li><code>^$</code> matches an empty line</li>
-<li><code>d</code> deletes it</li>
-</ul>
-<p>So this removes all empty lines.</p>
-<h4 id="substitution-command">Substitution command</h4>
-<p>The most common <code>sed</code> command is substitution:</p>
-<div><pre><code class="language-bash">sed 's/pattern/replacement/flags' file</code></pre></div>
-<ul>
-<li><strong><code>s</code></strong> = substitute</li>
-<li><strong><code>pattern</code></strong> = text or regex to search for</li>
-<li><strong><code>replacement</code></strong> = replacement text</li>
-<li><strong><code>flags</code></strong> = optional modifiers</li>
-</ul>
-<p>Common substitution flags:</p>
-<p>
-<table><tr><td>Flag</td><td>Meaning</td></tr><tr><td><code>g</code></td><td>replace all matches in the line</td></tr><tr><td><code>p</code></td><td>print line if replacement happened</td></tr><tr><td><code>i</code></td><td>case-insensitive matching</td></tr></table>
-</p>
-<p>Example:</p>
-<div><pre><code class="language-bash">sed 's/apple/orange/g' fruits.txt</code></pre></div>
-<ul>
-<li><code>s/.../.../</code> is the substitution command</li>
-<li><code>apple</code> is the text to search for</li>
-<li><code>orange</code> is the replacement text</li>
-<li><code>g</code> means replace all matches on each line, not just the first one</li>
-</ul>
-<p>This is useful when the same word may appear multiple times in a line and you want to replace every occurrence.</p>
-<p><strong>Before — <code>fruits.txt</code></strong></p>
-<div><pre><code class="language-txt">apple pie
+line seven</code></pre>
+            </div>
+            <h4 id="addresses">Addresses</h4>
+            <p>Addresses tell <code>sed</code> <strong>which lines</strong> a command should apply to. They can target specific line numbers, ranges, or patterns, making it easy to operate on only part of the input.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Address</td>
+                    <td>Meaning</td>
+                    <td>Example</td>
+                </tr>
+                <tr>
+                    <td><code>5</code></td>
+                    <td>line 5 only</td>
+                    <td><code>sed '5d' file.txt</code></td>
+                </tr>
+                <tr>
+                    <td><code>2,4</code></td>
+                    <td>lines 2 through 4</td>
+                    <td><code>sed '2,4d' file.txt</code></td>
+                </tr>
+                <tr>
+                    <td><code>/pattern/</code></td>
+                    <td>lines matching a pattern</td>
+                    <td><code>sed '/error/d' log.txt</code></td>
+                </tr>
+                <tr>
+                    <td><code>/start/,/end/</code></td>
+                    <td>range between two patterns</td>
+                    <td><code>sed '/start/,/end/d' file.txt</code></td>
+                </tr>
+                <tr>
+                    <td><code>$</code></td>
+                    <td>last line</td>
+                    <td><code>sed '$d' file.txt</code></td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="operations-and-flags">Operations and flags</h4>
+            <p>This table combines the most useful commands and the most common substitution flags in one place.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Form</td>
+                    <td>What it does</td>
+                    <td>Notes / Example</td>
+                </tr>
+                <tr>
+                    <td><code>s/old/new/</code></td>
+                    <td>Replace first match on a line</td>
+                    <td><code>sed 's/apple/orange/' file.txt</code></td>
+                </tr>
+                <tr>
+                    <td><code>s/old/new/g</code></td>
+                    <td>Replace all matches on a line</td>
+                    <td><code>sed 's/apple/orange/g' file.txt</code></td>
+                </tr>
+                <tr>
+                    <td><code>s/old/new/i</code></td>
+                    <td>Case-insensitive match</td>
+                    <td>GNU <code>sed</code> commonly supports this</td>
+                </tr>
+                <tr>
+                    <td><code>s/old/new/p</code></td>
+                    <td>Print line if substitution happened</td>
+                    <td>Usually paired with <code>-n</code></td>
+                </tr>
+                <tr>
+                    <td><code>d</code></td>
+                    <td>Delete line</td>
+                    <td><code>sed '/^$/d' file.txt</code> removes empty lines</td>
+                </tr>
+                <tr>
+                    <td><code>p</code></td>
+                    <td>Print line</td>
+                    <td><code>sed -n '/error/p' log.txt</code></td>
+                </tr>
+                <tr>
+                    <td><code>i\text</code></td>
+                    <td>Insert text before line</td>
+                    <td><code>sed '1i\Header' file.txt</code></td>
+                </tr>
+                <tr>
+                    <td><code>a\text</code></td>
+                    <td>Append text after line</td>
+                    <td><code>sed '/pattern/a\extra line' file.txt</code></td>
+                </tr>
+                <tr>
+                    <td><code>c\text</code></td>
+                    <td>Change matched line(s) to new text</td>
+                    <td>Replaces the whole addressed line</td>
+                </tr>
+                <tr>
+                    <td><code>y/abc/ABC/</code></td>
+                    <td>Translate characters</td>
+                    <td>Like <code>tr</code>; character-by-character replacement</td>
+                </tr>
+                <tr>
+                    <td><code>q</code></td>
+                    <td>Quit early</td>
+                    <td>Useful when you only need first match/range</td>
+                </tr>
+                <tr>
+                    <td><code>n</code></td>
+                    <td>Read next line</td>
+                    <td>Often used in advanced scripts</td>
+                </tr>
+                <tr>
+                    <td><code>N</code></td>
+                    <td>Append next line to pattern space</td>
+                    <td>Useful for multi-line processing</td>
+                </tr>
+                <tr>
+                    <td><code>h</code></td>
+                    <td>Copy pattern space to hold space</td>
+                    <td>Advanced use</td>
+                </tr>
+                <tr>
+                    <td><code>H</code></td>
+                    <td>Append pattern space to hold space</td>
+                    <td>Advanced use</td>
+                </tr>
+                <tr>
+                    <td><code>g</code></td>
+                    <td>Copy hold space back to pattern space</td>
+                    <td>Advanced use</td>
+                </tr>
+                <tr>
+                    <td><code>G</code></td>
+                    <td>Append hold space to pattern space</td>
+                    <td>Advanced use</td>
+                </tr>
+                <tr>
+                    <td><code>x</code></td>
+                    <td>Swap pattern and hold space</td>
+                    <td>Advanced use</td>
+                </tr>
+            </table>
+            </p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">sed '/^$/d' file.txt</code></pre>
+            </div>
+            <ul>
+                <li><code>^$</code> matches an empty line</li>
+                <li><code>d</code> deletes it</li>
+            </ul>
+            <p>So this removes all empty lines.</p>
+            <h4 id="substitution-command">Substitution command</h4>
+            <p>The most common <code>sed</code> command is substitution:</p>
+            <div>
+                <pre><code class="language-bash">sed 's/pattern/replacement/flags' file</code></pre>
+            </div>
+            <ul>
+                <li><strong><code>s</code></strong> = substitute</li>
+                <li><strong><code>pattern</code></strong> = text or regex to search for</li>
+                <li><strong><code>replacement</code></strong> = replacement text</li>
+                <li><strong><code>flags</code></strong> = optional modifiers</li>
+            </ul>
+            <p>Common substitution flags:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Flag</td>
+                    <td>Meaning</td>
+                </tr>
+                <tr>
+                    <td><code>g</code></td>
+                    <td>replace all matches in the line</td>
+                </tr>
+                <tr>
+                    <td><code>p</code></td>
+                    <td>print line if replacement happened</td>
+                </tr>
+                <tr>
+                    <td><code>i</code></td>
+                    <td>case-insensitive matching</td>
+                </tr>
+            </table>
+            </p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">sed 's/apple/orange/g' fruits.txt</code></pre>
+            </div>
+            <ul>
+                <li><code>s/.../.../</code> is the substitution command</li>
+                <li><code>apple</code> is the text to search for</li>
+                <li><code>orange</code> is the replacement text</li>
+                <li><code>g</code> means replace all matches on each line, not just the first one</li>
+            </ul>
+            <p>This is useful when the same word may appear multiple times in a line and you want to replace every occurrence.</p>
+            <p><strong>Before — <code>fruits.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">apple pie
 green apple and red apple
 pineapple apple
-banana grape</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">orange pie
+banana grape</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">orange pie
 green orange and red orange
 pineorange orange
-banana grape</code></pre></div>
-<p>Notice that <code>sed</code> replaces the text wherever it appears, so <code>pineapple</code> becomes <code>pineorange</code> too.</p>
-<h4 id="regular-expressions">Regular expressions</h4>
-<p><code>sed</code> supports regular expressions for matching text.</p>
-<p>
-<table><tr><td>Symbol</td><td>Meaning</td></tr><tr><td><code>.</code></td><td>any single character</td></tr><tr><td><code>*</code></td><td>zero or more of previous character</td></tr><tr><td><code>[]</code></td><td>character class</td></tr><tr><td><code>^</code></td><td>start of line</td></tr><tr><td><code>$</code></td><td>end of line</td></tr><tr><td><code>\</code></td><td>escape special character</td></tr><tr><td><code>\(</code> <code>\)</code></td><td>capture group in basic regex</td></tr><tr><td><code>\{m,n\}</code></td><td>repetition in basic regex</td></tr></table>
-</p>
-<p>Example:</p>
-<div><pre><code class="language-bash">sed '/^Error/s/^Error/Warning/' logs.txt</code></pre></div>
-<ul>
-<li><code>/^Error/</code> limits the substitution to lines that start with <code>Error</code></li>
-<li><code>s/^Error/Warning/</code> replaces <code>Error</code> only at the beginning of the line</li>
-<li>lines that do not start with <code>Error</code> are left unchanged</li>
-</ul>
-<p>This is useful when you want to change only leading status words without affecting the same word later in the line.</p>
-<p><strong>Before — <code>logs.txt</code></strong></p>
-<div><pre><code class="language-txt">Error disk full on /dev/sda1
+banana grape</code></pre>
+            </div>
+            <p>Notice that <code>sed</code> replaces the text wherever it appears, so <code>pineapple</code> becomes <code>pineorange</code> too.</p>
+            <h4 id="regular-expressions">Regular expressions</h4>
+            <p><code>sed</code> supports regular expressions for matching text.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Symbol</td>
+                    <td>Meaning</td>
+                </tr>
+                <tr>
+                    <td><code>.</code></td>
+                    <td>any single character</td>
+                </tr>
+                <tr>
+                    <td><code>*</code></td>
+                    <td>zero or more of previous character</td>
+                </tr>
+                <tr>
+                    <td><code>[]</code></td>
+                    <td>character class</td>
+                </tr>
+                <tr>
+                    <td><code>^</code></td>
+                    <td>start of line</td>
+                </tr>
+                <tr>
+                    <td><code>$</code></td>
+                    <td>end of line</td>
+                </tr>
+                <tr>
+                    <td><code>\</code></td>
+                    <td>escape special character</td>
+                </tr>
+                <tr>
+                    <td><code>\(</code> <code>\)</code></td>
+                    <td>capture group in basic regex</td>
+                </tr>
+                <tr>
+                    <td><code>\{m,n\}</code></td>
+                    <td>repetition in basic regex</td>
+                </tr>
+            </table>
+            </p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">sed '/^Error/s/^Error/Warning/' logs.txt</code></pre>
+            </div>
+            <ul>
+                <li><code>/^Error/</code> limits the substitution to lines that start with <code>Error</code></li>
+                <li><code>s/^Error/Warning/</code> replaces <code>Error</code> only at the beginning of the line</li>
+                <li>lines that do not start with <code>Error</code> are left unchanged</li>
+            </ul>
+            <p>This is useful when you want to change only leading status words without affecting the same word later in the line.</p>
+            <p><strong>Before — <code>logs.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">Error disk full on /dev/sda1
 Info service started
 Error timeout while connecting
 Warning retry scheduled
-Critical Error in module loader</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">Warning disk full on /dev/sda1
+Critical Error in module loader</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">Warning disk full on /dev/sda1
 Info service started
 Warning timeout while connecting
 Warning retry scheduled
-Critical Error in module loader</code></pre></div>
-<p>Notice:</p>
-<ul>
-<li><code>Error disk full on /dev/sda1</code> changed because the line starts with <code>Error</code></li>
-<li><code>Critical Error in module loader</code> did not change because <code>Error</code> is not at the start of the line</li>
-</ul>
-<h4 id="extended-regex">Extended regex</h4>
-<p>With <code>-E</code>, patterns are easier to read because you usually do not need escaped grouping and repetition syntax.</p>
-<div><pre><code class="language-bash">sed -E 's/([0-9]{3})-([0-9]{2})-([0-9]{4})/XXX-XX-\3/' ssn.txt</code></pre></div>
-<ul>
-<li><code>-E</code> enables extended regular expressions</li>
-<li><code>([0-9]{3})</code> matches the first 3 digits</li>
-<li><code>([0-9]{2})</code> matches the next 2 digits</li>
-<li><code>([0-9]{4})</code> matches the last 4 digits</li>
-<li><code>\3</code> reuses only the 3rd captured group</li>
-<li>the replacement changes the first five digits to <code>XXX-XX-</code></li>
-</ul>
-<p>This is useful when you want to hide sensitive data while keeping the last 4 digits visible.</p>
-<p><strong>Before — <code>ssn.txt</code></strong></p>
-<div><pre><code class="language-txt">Alice 123-45-6789
+Critical Error in module loader</code></pre>
+            </div>
+            <p>Notice:</p>
+            <ul>
+                <li><code>Error disk full on /dev/sda1</code> changed because the line starts with <code>Error</code></li>
+                <li><code>Critical Error in module loader</code> did not change because <code>Error</code> is not at the start of the line</li>
+            </ul>
+            <h4 id="extended-regex">Extended regex</h4>
+            <p>With <code>-E</code>, patterns are easier to read because you usually do not need escaped grouping and repetition syntax.</p>
+            <div>
+                <pre><code class="language-bash">sed -E 's/([0-9]{3})-([0-9]{2})-([0-9]{4})/XXX-XX-\3/' ssn.txt</code></pre>
+            </div>
+            <ul>
+                <li><code>-E</code> enables extended regular expressions</li>
+                <li><code>([0-9]{3})</code> matches the first 3 digits</li>
+                <li><code>([0-9]{2})</code> matches the next 2 digits</li>
+                <li><code>([0-9]{4})</code> matches the last 4 digits</li>
+                <li><code>\3</code> reuses only the 3rd captured group</li>
+                <li>the replacement changes the first five digits to <code>XXX-XX-</code></li>
+            </ul>
+            <p>This is useful when you want to hide sensitive data while keeping the last 4 digits visible.</p>
+            <p><strong>Before — <code>ssn.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">Alice 123-45-6789
 Bob 987-65-4321
 Cara 555-11-2222
-NoSSN here</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">Alice XXX-XX-6789
+NoSSN here</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">Alice XXX-XX-6789
 Bob XXX-XX-4321
 Cara XXX-XX-2222
-NoSSN here</code></pre></div>
-<p>Only text matching the <code>123-45-6789</code> style pattern is changed. Lines without that pattern stay the same.</p>
-<h4 id="common-examples">Common examples</h4>
-<p>These are typical <code>sed</code> one-liners for replacing text, filtering lines, and making simple edits to files or streams. Each example below shows what the input file might look like before running the command, and what the output would look like after.</p>
-<p><strong>Replace first match on each line</strong></p>
-<div><pre><code class="language-bash">sed 's/old/new/' file.txt</code></pre></div>
-<p>Replaces only the first occurrence of <code>old</code> on each line.</p>
-<p><strong>Before — <code>file.txt</code></strong></p>
-<div><pre><code class="language-txt">old value here
+NoSSN here</code></pre>
+            </div>
+            <p>Only text matching the <code>123-45-6789</code> style pattern is changed. Lines without that pattern stay the same.</p>
+            <h4 id="common-examples">Common examples</h4>
+            <p>These are typical <code>sed</code> one-liners for replacing text, filtering lines, and making simple edits to files or streams. Each example below shows what the input file might look like before running the command, and what the output would look like after.</p>
+            <p><strong>Replace first match on each line</strong></p>
+            <div>
+                <pre><code class="language-bash">sed 's/old/new/' file.txt</code></pre>
+            </div>
+            <p>Replaces only the first occurrence of <code>old</code> on each line.</p>
+            <p><strong>Before — <code>file.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">old value here
 this old item has old twice
 nothing to change
-old old old</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">new value here
+old old old</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">new value here
 this new item has old twice
 nothing to change
-new old old</code></pre></div>
-<p><strong>Replace all matches</strong></p>
-<div><pre><code class="language-bash">sed 's/old/new/g' file.txt</code></pre></div>
-<p>Replaces every occurrence of <code>old</code> on each line. The <code>g</code> flag means “global” for that line.</p>
-<p><strong>Before — <code>file.txt</code></strong></p>
-<div><pre><code class="language-txt">old value here
+new old old</code></pre>
+            </div>
+            <p><strong>Replace all matches</strong></p>
+            <div>
+                <pre><code class="language-bash">sed 's/old/new/g' file.txt</code></pre>
+            </div>
+            <p>Replaces every occurrence of <code>old</code> on each line. The <code>g</code> flag means “global” for that line.</p>
+            <p><strong>Before — <code>file.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">old value here
 this old item has old twice
 nothing to change
-old old old</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">new value here
+old old old</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">new value here
 this new item has new twice
 nothing to change
-new new new</code></pre></div>
-<p><strong>Delete lines containing a word</strong></p>
-<div><pre><code class="language-bash">sed '/unwanted/d' file.txt</code></pre></div>
-<p>Deletes every line that contains the text <code>unwanted</code>.</p>
-<p><strong>Before — <code>file.txt</code></strong></p>
-<div><pre><code class="language-txt">keep this line
+new new new</code></pre>
+            </div>
+            <p><strong>Delete lines containing a word</strong></p>
+            <div>
+                <pre><code class="language-bash">sed '/unwanted/d' file.txt</code></pre>
+            </div>
+            <p>Deletes every line that contains the text <code>unwanted</code>.</p>
+            <p><strong>Before — <code>file.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">keep this line
 this line is unwanted
 another good line
 unwanted content appears here too
-final line</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">keep this line
+final line</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">keep this line
 another good line
-final line</code></pre></div>
-<p><strong>Delete empty lines</strong></p>
-<div><pre><code class="language-bash">sed '/^$/d' file.txt</code></pre></div>
-<p>Deletes blank lines. <code>^$</code> matches lines that begin and end immediately, with nothing in between.</p>
-<p><strong>Before — <code>file.txt</code></strong></p>
-<div><pre><code class="language-txt">alpha
+final line</code></pre>
+            </div>
+            <p><strong>Delete empty lines</strong></p>
+            <div>
+                <pre><code class="language-bash">sed '/^$/d' file.txt</code></pre>
+            </div>
+            <p>Deletes blank lines. <code>^$</code> matches lines that begin and end immediately, with nothing in between.</p>
+            <p><strong>Before — <code>file.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">alpha
 
 beta
 
 
 gamma
-delta</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">alpha
+delta</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">alpha
 beta
 gamma
-delta</code></pre></div>
-<p><strong>Print only matching lines</strong></p>
-<div><pre><code class="language-bash">sed -n '/error/p' log.txt</code></pre></div>
-<p>Prints only lines containing <code>error</code>. The <code>-n</code> option suppresses normal output, and <code>p</code> prints only matched lines.</p>
-<p><strong>Before — <code>log.txt</code></strong></p>
-<div><pre><code class="language-txt">info: service started
+delta</code></pre>
+            </div>
+            <p><strong>Print only matching lines</strong></p>
+            <div>
+                <pre><code class="language-bash">sed -n '/error/p' log.txt</code></pre>
+            </div>
+            <p>Prints only lines containing <code>error</code>. The <code>-n</code> option suppresses normal output, and <code>p</code> prints only matched lines.</p>
+            <p><strong>Before — <code>log.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">info: service started
 warning: low memory
 error: failed to connect
 info: retrying
-error: timeout reached</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">error: failed to connect
-error: timeout reached</code></pre></div>
-<p><strong>Insert a line before line 1</strong></p>
-<div><pre><code class="language-bash">sed '1i\Header Text' file.txt</code></pre></div>
-<p>Inserts <code>Header Text</code> before the first line of the file.</p>
-<p><strong>Before — <code>file.txt</code></strong></p>
-<div><pre><code class="language-txt">apple
+error: timeout reached</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">error: failed to connect
+error: timeout reached</code></pre>
+            </div>
+            <p><strong>Insert a line before line 1</strong></p>
+            <div>
+                <pre><code class="language-bash">sed '1i\Header Text' file.txt</code></pre>
+            </div>
+            <p>Inserts <code>Header Text</code> before the first line of the file.</p>
+            <p><strong>Before — <code>file.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">apple
 banana
-cherry</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">Header Text
+cherry</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">Header Text
 apple
 banana
-cherry</code></pre></div>
-<p><strong>Append text after matching lines</strong></p>
-<div><pre><code class="language-bash">sed '/pattern/a\New line of text' file.txt</code></pre></div>
-<p>Adds a new line immediately after every line that matches <code>pattern</code>.</p>
-<p><strong>Before — <code>file.txt</code></strong></p>
-<div><pre><code class="language-txt">start section
+cherry</code></pre>
+            </div>
+            <p><strong>Append text after matching lines</strong></p>
+            <div>
+                <pre><code class="language-bash">sed '/pattern/a\New line of text' file.txt</code></pre>
+            </div>
+            <p>Adds a new line immediately after every line that matches <code>pattern</code>.</p>
+            <p><strong>Before — <code>file.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">start section
 pattern found here
 middle line
 pattern appears again
-end section</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">start section
+end section</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">start section
 pattern found here
 New line of text
 middle line
 pattern appears again
 New line of text
-end section</code></pre></div>
-<p><strong>Edit file in place with backup</strong></p>
-<div><pre><code class="language-bash">sed -i.bak 's/foo/bar/g' file.txt</code></pre></div>
-<p>Modifies <code>file.txt</code> directly and saves the original file as <code>file.txt.bak</code>.</p>
-<p><strong>Before — <code>file.txt</code></strong></p>
-<div><pre><code class="language-txt">foo is here
+end section</code></pre>
+            </div>
+            <p><strong>Edit file in place with backup</strong></p>
+            <div>
+                <pre><code class="language-bash">sed -i.bak 's/foo/bar/g' file.txt</code></pre>
+            </div>
+            <p>Modifies <code>file.txt</code> directly and saves the original file as <code>file.txt.bak</code>.</p>
+            <p><strong>Before — <code>file.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">foo is here
 foo and foo again
-no match here</code></pre></div>
-<p><strong>After — <code>file.txt</code></strong></p>
-<div><pre><code class="language-txt">bar is here
+no match here</code></pre>
+            </div>
+            <p><strong>After — <code>file.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">bar is here
 bar and bar again
-no match here</code></pre></div>
-<p><strong>Backup — <code>file.txt.bak</code></strong></p>
-<div><pre><code class="language-txt">foo is here
+no match here</code></pre>
+            </div>
+            <p><strong>Backup — <code>file.txt.bak</code></strong></p>
+            <div>
+                <pre><code class="language-txt">foo is here
 foo and foo again
-no match here</code></pre></div>
-<p>This is useful when you want to change a file directly but still keep a copy of the original.</p>
-<p><strong>Convert commas to pipes</strong></p>
-<div><pre><code class="language-bash">sed 's/,/|/g' data.csv &gt; data.psv</code></pre></div>
-<p>Replaces all commas with pipe characters and writes the result to a new file.</p>
-<p><strong>Before — <code>data.csv</code></strong></p>
-<div><pre><code class="language-txt">name,age,city
+no match here</code></pre>
+            </div>
+            <p>This is useful when you want to change a file directly but still keep a copy of the original.</p>
+            <p><strong>Convert commas to pipes</strong></p>
+            <div>
+                <pre><code class="language-bash">sed 's/,/|/g' data.csv &gt; data.psv</code></pre>
+            </div>
+            <p>Replaces all commas with pipe characters and writes the result to a new file.</p>
+            <p><strong>Before — <code>data.csv</code></strong></p>
+            <div>
+                <pre><code class="language-txt">name,age,city
 Alice,29,Berlin
 Bob,34,Paris
-Cara,41,Rome</code></pre></div>
-<p><strong>After — <code>data.psv</code></strong></p>
-<div><pre><code class="language-txt">name|age|city
+Cara,41,Rome</code></pre>
+            </div>
+            <p><strong>After — <code>data.psv</code></strong></p>
+            <div>
+                <pre><code class="language-txt">name|age|city
 Alice|29|Berlin
 Bob|34|Paris
-Cara|41|Rome</code></pre></div>
-<p>This is a simple way to convert comma-separated data into pipe-separated data without changing the original file.</p>
-<h4 id="multi-line-and-hold-space">Multi-line and hold space</h4>
-<p><code>sed</code> normally works on one line at a time, but it also has:
-Editor) and awk are powerful command-line utilities that originated from Unix and have become indispensable tools in Unix-like operating systems, including Linux and macOS. They are designed for processing and transforming text, allowing users to perform complex text manipulations with simple commands. This guide provides a comprehensive overview of both utilities, including their history, usage, syntax, options, and practical examples.</p>
-<ul>
-<li><strong>pattern space</strong> = current working text</li>
-<li><strong>hold space</strong> = temporary storage</li>
-</ul>
-<p>Example: swap adjacent lines</p>
-<div><pre><code class="language-bash">sed 'N; s/\(.*\)\n\(.*\)/\2\n\1/' file.txt</code></pre></div>
-<ul>
-<li><code>N</code> reads the next line into the pattern space</li>
-<li>now two lines are available together</li>
-<li>the substitution swaps them</li>
-</ul>
-<p>This is more advanced, but useful for multi-line edits.</p>
-<p><strong>Before — <code>file.txt</code></strong></p>
-<div><pre><code class="language-txt">first line
+Cara|41|Rome</code></pre>
+            </div>
+            <p>This is a simple way to convert comma-separated data into pipe-separated data without changing the original file.</p>
+            <h4 id="multi-line-and-hold-space">Multi-line and hold space</h4>
+            <p><code>sed</code> normally works on one line at a time, but it also has:
+                Editor) and awk are powerful command-line utilities that originated from Unix and have become indispensable tools in Unix-like operating systems, including Linux and macOS. They are designed for processing and transforming text, allowing users to perform complex text manipulations with simple commands. This guide provides a comprehensive overview of both utilities, including their history, usage, syntax, options, and practical examples.</p>
+            <ul>
+                <li><strong>pattern space</strong> = current working text</li>
+                <li><strong>hold space</strong> = temporary storage</li>
+            </ul>
+            <p>Example: swap adjacent lines</p>
+            <div>
+                <pre><code class="language-bash">sed 'N; s/\(.*\)\n\(.*\)/\2\n\1/' file.txt</code></pre>
+            </div>
+            <ul>
+                <li><code>N</code> reads the next line into the pattern space</li>
+                <li>now two lines are available together</li>
+                <li>the substitution swaps them</li>
+            </ul>
+            <p>This is more advanced, but useful for multi-line edits.</p>
+            <p><strong>Before — <code>file.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">first line
 second line
 third line
 fourth line
 fifth line
-sixth line</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">second line
+sixth line</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">second line
 first line
 fourth line
 third line
 sixth line
-fifth line</code></pre></div>
-<h4 id="practical-tips">Practical tips</h4>
-<ul>
-<li>Put scripts in <strong>single quotes</strong> to avoid shell interference</li>
-<li>Test without <code>-i</code> first</li>
-<li>Use <code>-i.bak</code> when editing files directly</li>
-<li>Use <code>-E</code> when regex becomes hard to read</li>
-<li>Escape <code>/</code>, <code>&amp;</code>, and <code>\</code> when needed</li>
-</ul>
-<p>Example with another delimiter:</p>
-<div><pre><code class="language-bash">sed 's|/usr/local|/opt/tools|g' file.txt</code></pre></div>
-<p>Using <code>|</code> instead of <code>/</code> makes path replacements easier to read.</p>
-<p>Here’s the same treatment for <strong><code>awk</code></strong>: cleaner structure, flatter explanations, more readable, with <strong>one main table</strong> covering fields, variables, operators, blocks, and common functions.</p>
-<h3 id="awk"><code>awk</code></h3>
-<p><code>awk</code> is a <strong>text-processing language</strong> designed for extracting, filtering, calculating, and formatting data.</p>
-<p>It is especially useful when your input is structured into <strong>lines</strong> and <strong>fields</strong>.</p>
-<p><code>awk</code> was developed at Bell Labs in the 1970s by <strong>Alfred Aho, Peter Weinberger, and Brian Kernighan</strong>. The name comes from their surnames: <strong>A-W-K</strong>.</p>
-<h4 id="main-idea">Main idea</h4>
-<p><code>awk</code> treats input like a table:</p>
-<ul>
-<li>each <strong>line</strong> is a <strong>record</strong></li>
-<li>each record is split into <strong>fields</strong></li>
-<li>you write <strong>patterns</strong> to choose lines</li>
-<li>you write <strong>actions</strong> to say what to do with them</li>
-</ul>
-<div><pre><code class="language-shell">INPUT FILE (text data)
+fifth line</code></pre>
+            </div>
+            <h4 id="practical-tips">Practical tips</h4>
+            <ul>
+                <li>Put scripts in <strong>single quotes</strong> to avoid shell interference</li>
+                <li>Test without <code>-i</code> first</li>
+                <li>Use <code>-i.bak</code> when editing files directly</li>
+                <li>Use <code>-E</code> when regex becomes hard to read</li>
+                <li>Escape <code>/</code>, <code>&amp;</code>, and <code>\</code> when needed</li>
+            </ul>
+            <p>Example with another delimiter:</p>
+            <div>
+                <pre><code class="language-bash">sed 's|/usr/local|/opt/tools|g' file.txt</code></pre>
+            </div>
+            <p>Using <code>|</code> instead of <code>/</code> makes path replacements easier to read.</p>
+            <p>Here’s the same treatment for <strong><code>awk</code></strong>: cleaner structure, flatter explanations, more readable, with <strong>one main table</strong> covering fields, variables, operators, blocks, and common functions.</p>
+            <h3 id="awk"><code>awk</code></h3>
+            <p><code>awk</code> is a <strong>text-processing language</strong> designed for extracting, filtering, calculating, and formatting data.</p>
+            <p>It is especially useful when your input is structured into <strong>lines</strong> and <strong>fields</strong>.</p>
+            <p><code>awk</code> was developed at Bell Labs in the 1970s by <strong>Alfred Aho, Peter Weinberger, and Brian Kernighan</strong>. The name comes from their surnames: <strong>A-W-K</strong>.</p>
+            <h4 id="main-idea">Main idea</h4>
+            <p><code>awk</code> treats input like a table:</p>
+            <ul>
+                <li>each <strong>line</strong> is a <strong>record</strong></li>
+                <li>each record is split into <strong>fields</strong></li>
+                <li>you write <strong>patterns</strong> to choose lines</li>
+                <li>you write <strong>actions</strong> to say what to do with them</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">INPUT FILE (text data)
         -------------------------------------
         line 1: field1 field2 field3 ...
         line 2: field1 field2 field3 ...
@@ -436,386 +883,818 @@ fifth line</code></pre></div>
 └───────────────────┘
           │
           ▼
-     OUTPUT RESULT</code></pre></div>
-<p>This makes <code>awk</code> very good for:</p>
-<ul>
-<li>selecting rows</li>
-<li>printing columns</li>
-<li>filtering by conditions</li>
-<li>computing sums, counts, and averages</li>
-<li>reformatting output</li>
-</ul>
-<h4 id="basic-syntax">Basic syntax</h4>
-<p><code>awk</code> programs are built from simple <strong>pattern → action</strong> rules: for each line of input, it checks the pattern and runs the action if it matches.</p>
-<div><pre><code class="language-bash">awk 'PATTERN { ACTION }' file</code></pre></div>
-<ul>
-<li><strong><code>PATTERN</code></strong> decides which lines to match</li>
-<li><strong><code>ACTION</code></strong> says what to do for matching lines</li>
-<li><strong><code>file</code></strong> is the input file</li>
-</ul>
-<p>If you omit the pattern, the action runs on <strong>every line</strong>.
-If you omit the action, <code>awk</code> prints the matching line by default.</p>
-<h4 id="common-options">Common options</h4>
-<p>These options control how <code>awk</code> reads input, initializes variables, and loads programs. They are commonly used when working with structured data or larger scripts.</p>
-<p>
-<table><tr><td>Option</td><td>Meaning</td></tr><tr><td><code>-F ':'</code></td><td>Set input field separator</td></tr><tr><td><code>-v var=value</code></td><td>Set an awk variable before processing starts</td></tr><tr><td><code>-f script.awk</code></td><td>Read program from a file</td></tr></table>
-</p>
-<h4 id="main-building-blocks">Main building blocks</h4>
-<p>This table gives the most useful <code>awk</code> pieces in one place.</p>
-<p>
-<table><tr><td>Form</td><td>Meaning</td><td>Example</td></tr><tr><td><code>$1</code>, <code>$2</code>, ...</td><td>field 1, field 2, etc.</td><td><code>awk '{ print $1, $3 }' file</code></td></tr><tr><td><code>$0</code></td><td>entire current line</td><td><code>awk '{ print $0 }' file</code></td></tr><tr><td><code>NF</code></td><td>number of fields in current line</td><td><code>awk '{ print NF }' file</code></td></tr><tr><td><code>NR</code></td><td>current record number</td><td><code>awk '{ print NR, $0 }' file</code></td></tr><tr><td><code>BEGIN { ... }</code></td><td>run before input is read</td><td>initialize variables, print header</td></tr><tr><td><code>END { ... }</code></td><td>run after all input is processed</td><td>print totals, summaries</td></tr><tr><td><code>pattern { ... }</code></td><td>run action only if pattern matches</td><td><code>awk '$2=="Error" { print }' log.txt</code></td></tr><tr><td><code>/regex/ { ... }</code></td><td>match lines by regular expression</td><td><code>awk '/error/ { print }' file</code></td></tr><tr><td><code>condition</code></td><td>logical condition</td><td><code>awk '$3 &gt; 100' file</code></td></tr><tr><td><code>print</code></td><td>print output with separators</td><td><code>awk '{ print $1, $2 }' file</code></td></tr><tr><td><code>printf</code></td><td>formatted output</td><td><code>awk '{ printf "%s %d\n", $1, $2 }' file</code></td></tr><tr><td><code>sum += $3</code></td><td>numeric accumulation</td><td>used for totals</td></tr><tr><td><code>count[$1]++</code></td><td>associative array counter</td><td>count repeated values</td></tr><tr><td><code>if (...)</code></td><td>conditional logic</td><td>choose between outputs</td></tr><tr><td><code>for (...)</code></td><td>loop</td><td>iterate through arrays or counters</td></tr><tr><td><code>function name(x)</code></td><td>user-defined function</td><td>reusable logic</td></tr></table>
-</p>
-<h4 id="what-1-0-nr-and-nf-mean">What <code>$1</code>, <code>$0</code>, <code>NR</code>, and <code>NF</code> mean</h4>
-<p>These are the most important <code>awk</code> variables:</p>
-<p>
-<table><tr><td>Variable</td><td>Meaning</td></tr><tr><td><code>$0</code></td><td>whole current line</td></tr><tr><td><code>$1</code></td><td>first field</td></tr><tr><td><code>$2</code></td><td>second field</td></tr><tr><td><code>$NF</code></td><td>last field</td></tr><tr><td><code>NR</code></td><td>current line number</td></tr><tr><td><code>NF</code></td><td>number of fields in current line</td></tr></table>
-</p>
-<p>Example:</p>
-<div><pre><code class="language-bash">awk '{ print $1, $3 }' data.txt</code></pre></div>
-<p>Print the first and third fields from each line.</p>
-<p>Useful for extracting only the columns you need from plain text data.</p>
-<p><strong>Before — <code>data.txt</code></strong></p>
-<div><pre><code class="language-txt">Alice Sales 5400 Berlin
+     OUTPUT RESULT</code></pre>
+            </div>
+            <p>This makes <code>awk</code> very good for:</p>
+            <ul>
+                <li>selecting rows</li>
+                <li>printing columns</li>
+                <li>filtering by conditions</li>
+                <li>computing sums, counts, and averages</li>
+                <li>reformatting output</li>
+            </ul>
+            <h4 id="basic-syntax">Basic syntax</h4>
+            <p><code>awk</code> programs are built from simple <strong>pattern → action</strong> rules: for each line of input, it checks the pattern and runs the action if it matches.</p>
+            <div>
+                <pre><code class="language-bash">awk 'PATTERN { ACTION }' file</code></pre>
+            </div>
+            <ul>
+                <li><strong><code>PATTERN</code></strong> decides which lines to match</li>
+                <li><strong><code>ACTION</code></strong> says what to do for matching lines</li>
+                <li><strong><code>file</code></strong> is the input file</li>
+            </ul>
+            <p>If you omit the pattern, the action runs on <strong>every line</strong>.
+                If you omit the action, <code>awk</code> prints the matching line by default.</p>
+            <h4 id="common-options">Common options</h4>
+            <p>These options control how <code>awk</code> reads input, initializes variables, and loads programs. They are commonly used when working with structured data or larger scripts.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Option</td>
+                    <td>Meaning</td>
+                </tr>
+                <tr>
+                    <td><code>-F ':'</code></td>
+                    <td>Set input field separator</td>
+                </tr>
+                <tr>
+                    <td><code>-v var=value</code></td>
+                    <td>Set an awk variable before processing starts</td>
+                </tr>
+                <tr>
+                    <td><code>-f script.awk</code></td>
+                    <td>Read program from a file</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="main-building-blocks">Main building blocks</h4>
+            <p>This table gives the most useful <code>awk</code> pieces in one place.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Form</td>
+                    <td>Meaning</td>
+                    <td>Example</td>
+                </tr>
+                <tr>
+                    <td><code>$1</code>, <code>$2</code>, ...</td>
+                    <td>field 1, field 2, etc.</td>
+                    <td><code>awk '{ print $1, $3 }' file</code></td>
+                </tr>
+                <tr>
+                    <td><code>$0</code></td>
+                    <td>entire current line</td>
+                    <td><code>awk '{ print $0 }' file</code></td>
+                </tr>
+                <tr>
+                    <td><code>NF</code></td>
+                    <td>number of fields in current line</td>
+                    <td><code>awk '{ print NF }' file</code></td>
+                </tr>
+                <tr>
+                    <td><code>NR</code></td>
+                    <td>current record number</td>
+                    <td><code>awk '{ print NR, $0 }' file</code></td>
+                </tr>
+                <tr>
+                    <td><code>BEGIN { ... }</code></td>
+                    <td>run before input is read</td>
+                    <td>initialize variables, print header</td>
+                </tr>
+                <tr>
+                    <td><code>END { ... }</code></td>
+                    <td>run after all input is processed</td>
+                    <td>print totals, summaries</td>
+                </tr>
+                <tr>
+                    <td><code>pattern { ... }</code></td>
+                    <td>run action only if pattern matches</td>
+                    <td><code>awk '$2=="Error" { print }' log.txt</code></td>
+                </tr>
+                <tr>
+                    <td><code>/regex/ { ... }</code></td>
+                    <td>match lines by regular expression</td>
+                    <td><code>awk '/error/ { print }' file</code></td>
+                </tr>
+                <tr>
+                    <td><code>condition</code></td>
+                    <td>logical condition</td>
+                    <td><code>awk '$3 &gt; 100' file</code></td>
+                </tr>
+                <tr>
+                    <td><code>print</code></td>
+                    <td>print output with separators</td>
+                    <td><code>awk '{ print $1, $2 }' file</code></td>
+                </tr>
+                <tr>
+                    <td><code>printf</code></td>
+                    <td>formatted output</td>
+                    <td><code>awk '{ printf "%s %d\n", $1, $2 }' file</code></td>
+                </tr>
+                <tr>
+                    <td><code>sum += $3</code></td>
+                    <td>numeric accumulation</td>
+                    <td>used for totals</td>
+                </tr>
+                <tr>
+                    <td><code>count[$1]++</code></td>
+                    <td>associative array counter</td>
+                    <td>count repeated values</td>
+                </tr>
+                <tr>
+                    <td><code>if (...)</code></td>
+                    <td>conditional logic</td>
+                    <td>choose between outputs</td>
+                </tr>
+                <tr>
+                    <td><code>for (...)</code></td>
+                    <td>loop</td>
+                    <td>iterate through arrays or counters</td>
+                </tr>
+                <tr>
+                    <td><code>function name(x)</code></td>
+                    <td>user-defined function</td>
+                    <td>reusable logic</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="what-1-0-nr-and-nf-mean">What <code>$1</code>, <code>$0</code>, <code>NR</code>, and <code>NF</code> mean</h4>
+            <p>These are the most important <code>awk</code> variables:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Variable</td>
+                    <td>Meaning</td>
+                </tr>
+                <tr>
+                    <td><code>$0</code></td>
+                    <td>whole current line</td>
+                </tr>
+                <tr>
+                    <td><code>$1</code></td>
+                    <td>first field</td>
+                </tr>
+                <tr>
+                    <td><code>$2</code></td>
+                    <td>second field</td>
+                </tr>
+                <tr>
+                    <td><code>$NF</code></td>
+                    <td>last field</td>
+                </tr>
+                <tr>
+                    <td><code>NR</code></td>
+                    <td>current line number</td>
+                </tr>
+                <tr>
+                    <td><code>NF</code></td>
+                    <td>number of fields in current line</td>
+                </tr>
+            </table>
+            </p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">awk '{ print $1, $3 }' data.txt</code></pre>
+            </div>
+            <p>Print the first and third fields from each line.</p>
+            <p>Useful for extracting only the columns you need from plain text data.</p>
+            <p><strong>Before — <code>data.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">Alice Sales 5400 Berlin
 Bob HR 4200 Paris
 Cara IT 6100 Rome
-Dina Finance 5800 Madrid</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">Alice 5400
+Dina Finance 5800 Madrid</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">Alice 5400
 Bob 4200
 Cara 6100
-Dina 5800</code></pre></div>
-<h4 id="patterns-and-actions">Patterns and actions</h4>
-<p>The usual shape of an <code>awk</code> command is:</p>
-<div><pre><code class="language-bash">awk 'pattern { action }' file</code></pre></div>
-<p>Example:</p>
-<div><pre><code class="language-bash">awk '$2 == "Error" { print }' logs.txt</code></pre></div>
-<ul>
-<li><code>$2 == "Error"</code> = match lines where field 2 is <code>Error</code></li>
-<li><code>{ print }</code> = print those lines</li>
-</ul>
-<p>Useful for filtering log files or structured text by status, level, or category.</p>
-<p><strong>Before — <code>logs.txt</code></strong></p>
-<div><pre><code class="language-txt">2026-04-01 Info Started
+Dina 5800</code></pre>
+            </div>
+            <h4 id="patterns-and-actions">Patterns and actions</h4>
+            <p>The usual shape of an <code>awk</code> command is:</p>
+            <div>
+                <pre><code class="language-bash">awk 'pattern { action }' file</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">awk '$2 == "Error" { print }' logs.txt</code></pre>
+            </div>
+            <ul>
+                <li><code>$2 == "Error"</code> = match lines where field 2 is <code>Error</code></li>
+                <li><code>{ print }</code> = print those lines</li>
+            </ul>
+            <p>Useful for filtering log files or structured text by status, level, or category.</p>
+            <p><strong>Before — <code>logs.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">2026-04-01 Info Started
 2026-04-01 Error DiskFull
 2026-04-02 Warning Retry
 2026-04-02 Error Timeout
-2026-04-03 Info Recovered</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">2026-04-01 Error DiskFull
-2026-04-02 Error Timeout</code></pre></div>
-<h4 id="field-separators">Field separators</h4>
-<p>By default, <code>awk</code> splits fields on spaces and tabs.</p>
-<p>To use a different separator, use <strong><code>-F</code></strong>.</p>
-<p>Example:</p>
-<div><pre><code class="language-bash">awk -F ':' '{ print $1, $3 }' /etc/passwd</code></pre></div>
-<ul>
-<li><code>-F ':'</code> = fields are separated by <code>:</code></li>
-<li><code>$1</code> = first field</li>
-<li><code>$3</code> = third field</li>
-</ul>
-<p><strong>Before — sample <code>/etc/passwd</code> content</strong></p>
-<div><pre><code class="language-txt">root:x:0:0:root:/root:/bin/bash
+2026-04-03 Info Recovered</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">2026-04-01 Error DiskFull
+2026-04-02 Error Timeout</code></pre>
+            </div>
+            <h4 id="field-separators">Field separators</h4>
+            <p>By default, <code>awk</code> splits fields on spaces and tabs.</p>
+            <p>To use a different separator, use <strong><code>-F</code></strong>.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">awk -F ':' '{ print $1, $3 }' /etc/passwd</code></pre>
+            </div>
+            <ul>
+                <li><code>-F ':'</code> = fields are separated by <code>:</code></li>
+                <li><code>$1</code> = first field</li>
+                <li><code>$3</code> = third field</li>
+            </ul>
+            <p><strong>Before — sample <code>/etc/passwd</code> content</strong></p>
+            <div>
+                <pre><code class="language-txt">root:x:0:0:root:/root:/bin/bash
 daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
-nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">root 0
+nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">root 0
 daemon 1
-nobody 65534</code></pre></div>
-<h4 id="common-operators-and-tests">Common operators and tests</h4>
-<p>These operators are used in <code>awk</code> patterns and conditions to compare values, combine logic, and match text using regular expressions.</p>
-<p>
-<table><tr><td>Form</td><td>Meaning</td><td></td><td></td></tr><tr><td><code>==</code></td><td>equal to</td><td></td><td></td></tr><tr><td><code>!=</code></td><td>not equal to</td><td></td><td></td></tr><tr><td><code>&gt;</code></td><td>greater than</td><td></td><td></td></tr><tr><td><code>&lt;</code></td><td>less than</td><td></td><td></td></tr><tr><td><code>&gt;=</code></td><td>greater than or equal</td><td></td><td></td></tr><tr><td><code>&lt;=</code></td><td>less than or equal</td><td></td><td></td></tr><tr><td><code>&amp;&amp;</code></td><td>logical AND</td><td></td><td></td></tr><tr><td><code>|                       |</code></td><td>logical OR</td></tr><tr><td><code>!</code></td><td>logical NOT</td><td></td><td></td></tr><tr><td><code>~</code></td><td>matches regex</td><td></td><td></td></tr><tr><td><code>!~</code></td><td>does not match regex</td><td></td><td></td></tr></table>
-</p>
-<p>Example:</p>
-<div><pre><code class="language-bash">awk '$3 &gt; 100 { print $1, $3 }' data.txt</code></pre></div>
-<p>Print fields 1 and 3 only when field 3 is greater than 100.</p>
-<p><strong>Before — <code>data.txt</code></strong></p>
-<div><pre><code class="language-txt">apple red 80
+nobody 65534</code></pre>
+            </div>
+            <h4 id="common-operators-and-tests">Common operators and tests</h4>
+            <p>These operators are used in <code>awk</code> patterns and conditions to compare values, combine logic, and match text using regular expressions.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Form</td>
+                    <td>Meaning</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>==</code></td>
+                    <td>equal to</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>!=</code></td>
+                    <td>not equal to</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>&gt;</code></td>
+                    <td>greater than</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>&lt;</code></td>
+                    <td>less than</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>&gt;=</code></td>
+                    <td>greater than or equal</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>&lt;=</code></td>
+                    <td>less than or equal</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>&amp;&amp;</code></td>
+                    <td>logical AND</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>| |</code></td>
+                    <td>logical OR</td>
+                </tr>
+                <tr>
+                    <td><code>!</code></td>
+                    <td>logical NOT</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>~</code></td>
+                    <td>matches regex</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>!~</code></td>
+                    <td>does not match regex</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            </table>
+            </p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">awk '$3 &gt; 100 { print $1, $3 }' data.txt</code></pre>
+            </div>
+            <p>Print fields 1 and 3 only when field 3 is greater than 100.</p>
+            <p><strong>Before — <code>data.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">apple red 80
 banana yellow 120
 grape purple 140
 melon green 95
-orange orange 101</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">banana 120
+orange orange 101</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">banana 120
 grape 140
-orange 101</code></pre></div>
-<h4 id="begin-and-end"><code>BEGIN</code> and <code>END</code></h4>
-<p>These are special blocks.</p>
-<p>
-<table><tr><td>Block</td><td>When it runs</td><td>Common use</td></tr><tr><td><code>BEGIN { ... }</code></td><td>before reading input</td><td>setup, headers, variables</td></tr><tr><td><code>END { ... }</code></td><td>after all input</td><td>totals, summaries, cleanup</td></tr></table>
-</p>
-<p>Example:</p>
-<div><pre><code class="language-bash">awk 'BEGIN { print "Start" } { print $0 } END { print "Done" }' file.txt</code></pre></div>
-<p><strong>Before — <code>file.txt</code></strong></p>
-<div><pre><code class="language-txt">alpha
+orange 101</code></pre>
+            </div>
+            <h4 id="begin-and-end"><code>BEGIN</code> and <code>END</code></h4>
+            <p>These are special blocks.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Block</td>
+                    <td>When it runs</td>
+                    <td>Common use</td>
+                </tr>
+                <tr>
+                    <td><code>BEGIN { ... }</code></td>
+                    <td>before reading input</td>
+                    <td>setup, headers, variables</td>
+                </tr>
+                <tr>
+                    <td><code>END { ... }</code></td>
+                    <td>after all input</td>
+                    <td>totals, summaries, cleanup</td>
+                </tr>
+            </table>
+            </p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">awk 'BEGIN { print "Start" } { print $0 } END { print "Done" }' file.txt</code></pre>
+            </div>
+            <p><strong>Before — <code>file.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">alpha
 beta
-gamma</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">Start
+gamma</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">Start
 alpha
 beta
 gamma
-Done</code></pre></div>
-<h4 id="common-functions-and-features">Common functions and features</h4>
-<p>These built-in functions cover the most common string manipulation, text replacement, and numeric operations in <code>awk</code>. They are frequently used for data cleaning and transformation.</p>
-<p>
-<table><tr><td>Form</td><td>Meaning</td><td>Example</td></tr><tr><td><code>length(str)</code></td><td>length of a string</td><td><code>length($1)</code></td></tr><tr><td><code>substr(str, start, len)</code></td><td>substring</td><td><code>substr($1,1,3)</code></td></tr><tr><td><code>tolower(str)</code></td><td>lowercase conversion</td><td><code>tolower($2)</code></td></tr><tr><td><code>toupper(str)</code></td><td>uppercase conversion</td><td><code>toupper($2)</code></td></tr><tr><td><code>split(str, arr, sep)</code></td><td>split string into array</td><td>advanced use</td></tr><tr><td><code>gsub(r, s, str)</code></td><td>replace all matches</td><td>text cleanup</td></tr><tr><td><code>sub(r, s, str)</code></td><td>replace first match</td><td>text cleanup</td></tr><tr><td><code>int(x)</code></td><td>integer part</td><td>numeric processing</td></tr><tr><td><code>sqrt(x)</code></td><td>square root</td><td>math</td></tr><tr><td><code>rand()</code></td><td>random number</td><td>math/scripts</td></tr></table>
-</p>
-<h4 id="print-vs-printf"><code>print</code> vs <code>printf</code></h4>
-<p><code>awk</code> provides two main ways to produce output: <code>print</code> for simple cases and <code>printf</code> for precise formatting.</p>
-<p><strong><code>print</code></strong></p>
-<p>Simple output with automatic spacing and a newline at the end:</p>
-<div><pre><code class="language-bash">awk '{ print $1, $2 }' file.txt</code></pre></div>
-<ul>
-<li>separates fields with a space (default <code>OFS</code>)</li>
-<li>automatically adds a newline</li>
-</ul>
-<p>Prints the 1st and 2nd fields from each line, separated by a space.</p>
-<p><strong>Before — <code>file.txt</code></strong></p>
-<div><pre><code class="language-txt">Alice Sales Berlin
+Done</code></pre>
+            </div>
+            <h4 id="common-functions-and-features">Common functions and features</h4>
+            <p>These built-in functions cover the most common string manipulation, text replacement, and numeric operations in <code>awk</code>. They are frequently used for data cleaning and transformation.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Form</td>
+                    <td>Meaning</td>
+                    <td>Example</td>
+                </tr>
+                <tr>
+                    <td><code>length(str)</code></td>
+                    <td>length of a string</td>
+                    <td><code>length($1)</code></td>
+                </tr>
+                <tr>
+                    <td><code>substr(str, start, len)</code></td>
+                    <td>substring</td>
+                    <td><code>substr($1,1,3)</code></td>
+                </tr>
+                <tr>
+                    <td><code>tolower(str)</code></td>
+                    <td>lowercase conversion</td>
+                    <td><code>tolower($2)</code></td>
+                </tr>
+                <tr>
+                    <td><code>toupper(str)</code></td>
+                    <td>uppercase conversion</td>
+                    <td><code>toupper($2)</code></td>
+                </tr>
+                <tr>
+                    <td><code>split(str, arr, sep)</code></td>
+                    <td>split string into array</td>
+                    <td>advanced use</td>
+                </tr>
+                <tr>
+                    <td><code>gsub(r, s, str)</code></td>
+                    <td>replace all matches</td>
+                    <td>text cleanup</td>
+                </tr>
+                <tr>
+                    <td><code>sub(r, s, str)</code></td>
+                    <td>replace first match</td>
+                    <td>text cleanup</td>
+                </tr>
+                <tr>
+                    <td><code>int(x)</code></td>
+                    <td>integer part</td>
+                    <td>numeric processing</td>
+                </tr>
+                <tr>
+                    <td><code>sqrt(x)</code></td>
+                    <td>square root</td>
+                    <td>math</td>
+                </tr>
+                <tr>
+                    <td><code>rand()</code></td>
+                    <td>random number</td>
+                    <td>math/scripts</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="print-vs-printf"><code>print</code> vs <code>printf</code></h4>
+            <p><code>awk</code> provides two main ways to produce output: <code>print</code> for simple cases and <code>printf</code> for precise formatting.</p>
+            <p><strong><code>print</code></strong></p>
+            <p>Simple output with automatic spacing and a newline at the end:</p>
+            <div>
+                <pre><code class="language-bash">awk '{ print $1, $2 }' file.txt</code></pre>
+            </div>
+            <ul>
+                <li>separates fields with a space (default <code>OFS</code>)</li>
+                <li>automatically adds a newline</li>
+            </ul>
+            <p>Prints the 1st and 2nd fields from each line, separated by a space.</p>
+            <p><strong>Before — <code>file.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">Alice Sales Berlin
 Bob HR Paris
-Cara IT Rome</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">Alice Sales
+Cara IT Rome</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">Alice Sales
 Bob HR
-Cara IT</code></pre></div>
-<p><strong><code>printf</code></strong></p>
-<p>Formatted output with full control over layout:</p>
-<div><pre><code class="language-bash">awk '{ printf "%-10s %-10s %5.2f\n", $1, $2, $3 }' data.txt</code></pre></div>
-<ul>
-<li>no automatic newline (must use <code>\n</code>)</li>
-<li>supports formatting (width, alignment, decimals)</li>
-<li>ideal for aligned columns and numeric output</li>
-</ul>
-<p>Formats the output into neat aligned columns:</p>
-<ul>
-<li><code>%-10s</code> = left-aligned string in a 10-character field</li>
-<li><code>%5.2f</code> = floating-point number with 2 decimals</li>
-</ul>
-<p><strong>Before — <code>data.txt</code></strong></p>
-<div><pre><code class="language-txt">Alice Sales 42.5
+Cara IT</code></pre>
+            </div>
+            <p><strong><code>printf</code></strong></p>
+            <p>Formatted output with full control over layout:</p>
+            <div>
+                <pre><code class="language-bash">awk '{ printf "%-10s %-10s %5.2f\n", $1, $2, $3 }' data.txt</code></pre>
+            </div>
+            <ul>
+                <li>no automatic newline (must use <code>\n</code>)</li>
+                <li>supports formatting (width, alignment, decimals)</li>
+                <li>ideal for aligned columns and numeric output</li>
+            </ul>
+            <p>Formats the output into neat aligned columns:</p>
+            <ul>
+                <li><code>%-10s</code> = left-aligned string in a 10-character field</li>
+                <li><code>%5.2f</code> = floating-point number with 2 decimals</li>
+            </ul>
+            <p><strong>Before — <code>data.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">Alice Sales 42.5
 Bob HR 7
-Cara IT 128.345</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">Alice      Sales      42.50
+Cara IT 128.345</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">Alice      Sales      42.50
 Bob        HR          7.00
-Cara       IT        128.34</code></pre></div>
-<p>Note that <code>printf</code> does not add a newline automatically, so <code>\n</code> is required at the end of the format string.</p>
-<h4 id="common-examples">Common examples</h4>
-<p>These are typical one-liners that cover the most common <code>awk</code> use cases: selecting fields, filtering rows, and doing simple calculations. Each example below shows sample input and the resulting output.</p>
-<p><strong>Print specific columns</strong></p>
-<div><pre><code class="language-bash">awk '{ print $1, $3 }' data.txt</code></pre></div>
-<p>Prints the 1st and 3rd whitespace-separated fields from each line.</p>
-<p><strong>Before — <code>data.txt</code></strong></p>
-<div><pre><code class="language-txt">Alice Sales 5400 Berlin
+Cara       IT        128.34</code></pre>
+            </div>
+            <p>Note that <code>printf</code> does not add a newline automatically, so <code>\n</code> is required at the end of the format string.</p>
+            <h4 id="common-examples">Common examples</h4>
+            <p>These are typical one-liners that cover the most common <code>awk</code> use cases: selecting fields, filtering rows, and doing simple calculations. Each example below shows sample input and the resulting output.</p>
+            <p><strong>Print specific columns</strong></p>
+            <div>
+                <pre><code class="language-bash">awk '{ print $1, $3 }' data.txt</code></pre>
+            </div>
+            <p>Prints the 1st and 3rd whitespace-separated fields from each line.</p>
+            <p><strong>Before — <code>data.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">Alice Sales 5400 Berlin
 Bob HR 4200 Paris
-Cara IT 6100 Rome</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">Alice 5400
+Cara IT 6100 Rome</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">Alice 5400
 Bob 4200
-Cara 6100</code></pre></div>
-<p><strong>Print lines matching a condition</strong></p>
-<div><pre><code class="language-bash">awk '$2 == "Error" { print }' logs.txt</code></pre></div>
-<p>Prints only lines where the 2nd field is exactly <code>Error</code>.</p>
-<p><strong>Before — <code>logs.txt</code></strong></p>
-<div><pre><code class="language-txt">2026-04-01 Info Started
+Cara 6100</code></pre>
+            </div>
+            <p><strong>Print lines matching a condition</strong></p>
+            <div>
+                <pre><code class="language-bash">awk '$2 == "Error" { print }' logs.txt</code></pre>
+            </div>
+            <p>Prints only lines where the 2nd field is exactly <code>Error</code>.</p>
+            <p><strong>Before — <code>logs.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">2026-04-01 Info Started
 2026-04-01 Error DiskFull
 2026-04-02 Warning Retry
-2026-04-02 Error Timeout</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">2026-04-01 Error DiskFull
-2026-04-02 Error Timeout</code></pre></div>
-<p><strong>Sum a column</strong></p>
-<div><pre><code class="language-bash">awk '{ sum += $3 } END { print "Total:", sum }' data.txt</code></pre></div>
-<p>Adds up all values in the 3rd field and prints the total at the end.</p>
-<p><strong>Before — <code>data.txt</code></strong></p>
-<div><pre><code class="language-txt">itemA north 12
+2026-04-02 Error Timeout</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">2026-04-01 Error DiskFull
+2026-04-02 Error Timeout</code></pre>
+            </div>
+            <p><strong>Sum a column</strong></p>
+            <div>
+                <pre><code class="language-bash">awk '{ sum += $3 } END { print "Total:", sum }' data.txt</code></pre>
+            </div>
+            <p>Adds up all values in the 3rd field and prints the total at the end.</p>
+            <p><strong>Before — <code>data.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">itemA north 12
 itemB south 8
 itemC west 15
-itemD east 10</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">Total: 45</code></pre></div>
-<p><strong>Compute an average</strong></p>
-<div><pre><code class="language-bash">awk '{ total += $3; count++ } END { print "Average:", total/count }' data.txt</code></pre></div>
-<p>Adds the 3rd field for every line, counts the rows, and prints the average.</p>
-<p><strong>Before — <code>data.txt</code></strong></p>
-<div><pre><code class="language-txt">itemA north 12
+itemD east 10</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">Total: 45</code></pre>
+            </div>
+            <p><strong>Compute an average</strong></p>
+            <div>
+                <pre><code class="language-bash">awk '{ total += $3; count++ } END { print "Average:", total/count }' data.txt</code></pre>
+            </div>
+            <p>Adds the 3rd field for every line, counts the rows, and prints the average.</p>
+            <p><strong>Before — <code>data.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">itemA north 12
 itemB south 8
 itemC west 16
-itemD east 14</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">Average: 12.5</code></pre></div>
-<p><strong>Filter rows by numeric value</strong></p>
-<div><pre><code class="language-bash">awk '$4 &gt;= 50 { print }' scores.txt</code></pre></div>
-<p>Prints only rows where the 4th field is greater than or equal to <code>50</code>.</p>
-<p><strong>Before — <code>scores.txt</code></strong></p>
-<div><pre><code class="language-txt">Lina Math Midterm 48
+itemD east 14</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">Average: 12.5</code></pre>
+            </div>
+            <p><strong>Filter rows by numeric value</strong></p>
+            <div>
+                <pre><code class="language-bash">awk '$4 &gt;= 50 { print }' scores.txt</code></pre>
+            </div>
+            <p>Prints only rows where the 4th field is greater than or equal to <code>50</code>.</p>
+            <p><strong>Before — <code>scores.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">Lina Math Midterm 48
 Omar Math Midterm 77
 Nia Math Midterm 50
-Jules Math Midterm 39</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">Omar Math Midterm 77
-Nia Math Midterm 50</code></pre></div>
-<p><strong>Convert a field to uppercase</strong></p>
-<div><pre><code class="language-bash">awk '{ $2 = toupper($2); print }' data.txt</code></pre></div>
-<p>Converts the 2nd field to uppercase, then prints the whole line.</p>
-<p><strong>Before — <code>data.txt</code></strong></p>
-<div><pre><code class="language-txt">100 apple red
+Jules Math Midterm 39</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">Omar Math Midterm 77
+Nia Math Midterm 50</code></pre>
+            </div>
+            <p><strong>Convert a field to uppercase</strong></p>
+            <div>
+                <pre><code class="language-bash">awk '{ $2 = toupper($2); print }' data.txt</code></pre>
+            </div>
+            <p>Converts the 2nd field to uppercase, then prints the whole line.</p>
+            <p><strong>Before — <code>data.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">100 apple red
 101 banana yellow
-102 grape purple</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">100 APPLE red
+102 grape purple</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">100 APPLE red
 101 BANANA yellow
-102 GRAPE purple</code></pre></div>
-<p><strong>Count repeated values</strong></p>
-<div><pre><code class="language-bash">awk '{ count[$1]++ } END { for (word in count) print word, count[word] }' words.txt</code></pre></div>
-<p>Counts how many times the 1st field appears.</p>
-<p><strong>Before — <code>words.txt</code></strong></p>
-<div><pre><code class="language-txt">apple
+102 GRAPE purple</code></pre>
+            </div>
+            <p><strong>Count repeated values</strong></p>
+            <div>
+                <pre><code class="language-bash">awk '{ count[$1]++ } END { for (word in count) print word, count[word] }' words.txt</code></pre>
+            </div>
+            <p>Counts how many times the 1st field appears.</p>
+            <p><strong>Before — <code>words.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">apple
 banana
 apple
 orange
 banana
-apple</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">orange 1
+apple</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">orange 1
 banana 2
-apple 3</code></pre></div>
-<p>The output order may vary because associative arrays in <code>awk</code> are not always printed in insertion order.</p>
-<p><strong>Print line number with content</strong></p>
-<div><pre><code class="language-bash">awk '{ print NR, $0 }' file.txt</code></pre></div>
-<p>Prints each line prefixed with its line number. <code>NR</code> is the current record number.</p>
-<p><strong>Before — <code>file.txt</code></strong></p>
-<div><pre><code class="language-txt">first task
+apple 3</code></pre>
+            </div>
+            <p>The output order may vary because associative arrays in <code>awk</code> are not always printed in insertion order.</p>
+            <p><strong>Print line number with content</strong></p>
+            <div>
+                <pre><code class="language-bash">awk '{ print NR, $0 }' file.txt</code></pre>
+            </div>
+            <p>Prints each line prefixed with its line number. <code>NR</code> is the current record number.</p>
+            <p><strong>Before — <code>file.txt</code></strong></p>
+            <div>
+                <pre><code class="language-txt">first task
 second task
-third task</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">1 first task
+third task</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">1 first task
 2 second task
-3 third task</code></pre></div>
-<p><strong>Use a custom field separator</strong></p>
-<div><pre><code class="language-bash">awk -F ':' '{ print $1, $3 }' /etc/passwd</code></pre></div>
-<p>Uses <code>:</code> as the field separator instead of spaces, then prints the 1st and 3rd fields.</p>
-<p><strong>Before — sample colon-separated file</strong></p>
-<div><pre><code class="language-txt">root:x:0:0:root:/root:/bin/bash
+3 third task</code></pre>
+            </div>
+            <p><strong>Use a custom field separator</strong></p>
+            <div>
+                <pre><code class="language-bash">awk -F ':' '{ print $1, $3 }' /etc/passwd</code></pre>
+            </div>
+            <p>Uses <code>:</code> as the field separator instead of spaces, then prints the 1st and 3rd fields.</p>
+            <p><strong>Before — sample colon-separated file</strong></p>
+            <div>
+                <pre><code class="language-txt">root:x:0:0:root:/root:/bin/bash
 daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
-nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin</code></pre></div>
-<p><strong>After</strong></p>
-<div><pre><code class="language-txt">root 0
+nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin</code></pre>
+            </div>
+            <p><strong>After</strong></p>
+            <div>
+                <pre><code class="language-txt">root 0
 daemon 1
-nobody 65534</code></pre></div>
-<h4 id="control-structures">Control structures</h4>
-<p><code>awk</code> includes basic programming constructs like conditionals and loops, allowing you to apply more complex logic during text processing.</p>
-<p><strong><code>if</code></strong></p>
-<p>Use <code>if</code> to conditionally execute code based on field values or expressions:</p>
-<div><pre><code class="language-bash">awk '{
+nobody 65534</code></pre>
+            </div>
+            <h4 id="control-structures">Control structures</h4>
+            <p><code>awk</code> includes basic programming constructs like conditionals and loops, allowing you to apply more complex logic during text processing.</p>
+            <p><strong><code>if</code></strong></p>
+            <p>Use <code>if</code> to conditionally execute code based on field values or expressions:</p>
+            <div>
+                <pre><code class="language-bash">awk '{
   if ($3 &gt; 100) {
     print $1, $2, "High"
   } else {
     print $1, $2, "Low"
   }
-}' data.txt</code></pre></div>
-<p><strong><code>for</code></strong></p>
-<p>Often used with arrays to iterate over collected values:</p>
-<div><pre><code class="language-bash">awk '{ count[$1]++ } END { for (x in count) print x, count[x] }' file.txt</code></pre></div>
-<ul>
-<li>loops over all keys in the <code>count</code> array</li>
-<li>commonly used for counting and aggregating data</li>
-</ul>
-<h4 id="arrays">Arrays</h4>
-<p><code>awk</code> arrays are <strong>associative arrays</strong>, which means keys can be strings.</p>
-<p>Example:</p>
-<div><pre><code class="language-bash">awk '{ count[$1]++ } END { for (k in count) print k, count[k] }' words.txt</code></pre></div>
-<p>This counts how many times each first-field value appears.</p>
-<h4 id="user-defined-functions">User-defined functions</h4>
-<p>You can define reusable functions.</p>
-<p>Example:</p>
-<div><pre><code class="language-bash">awk 'function square(x) { return x * x }
-     { print $1, square($2) }' data.txt</code></pre></div>
-<p>This prints field 1 and the square of field 2.</p>
-<h4 id="practical-tips">Practical tips</h4>
-<ul>
-<li>Use <strong>single quotes</strong> around the awk program</li>
-<li>Use <strong><code>-F</code></strong> when the input is not whitespace-separated</li>
-<li>Use <strong><code>BEGIN</code></strong> for setup and <strong><code>END</code></strong> for summaries</li>
-<li>Prefer <code>print</code> for simple output and <code>printf</code> for formatted output</li>
-<li>Remember that numeric calculations often need counters to avoid divide-by-zero mistakes</li>
-</ul>
-<h4 id="quick-reference">Quick reference</h4>
-<p>
-<table><tr><td>Goal</td><td>Command pattern</td></tr><tr><td>print whole line</td><td><code>awk '{ print $0 }' file</code></td></tr><tr><td>print first column</td><td><code>awk '{ print $1 }' file</code></td></tr><tr><td>filter by condition</td><td><code>awk '$3 &gt; 10' file</code></td></tr><tr><td>filter by regex</td><td><code>awk '/error/' file</code></td></tr><tr><td>sum a column</td><td><code>awk '{ s += $2 } END { print s }' file</code></td></tr><tr><td>average a column</td><td><code>awk '{ s += $2; n++ } END { print s/n }' file</code></td></tr><tr><td>count values</td><td><code>awk '{ c[$1]++ } END { for (k in c) print k, c[k] }' file</code></td></tr><tr><td>custom delimiter</td><td><code>awk -F ':' '{ print $1 }' file</code></td></tr><tr><td>formatted output</td><td><code>awk '{ printf "%s %d\n", $1, $2 }' file</code></td></tr></table>
-</p>
-<h3 id="challenges">Challenges</h3>
-<ol>
-<li>Research and describe the core differences between <code>sed</code> and <code>awk</code>, focusing on their primary functionalities. Compare how each tool handles text streams and structured data, and discuss when it might be more appropriate to use <code>sed</code> versus <code>awk</code>.</li>
-<li>Describe the sequence of operations <code>sed</code> performs on a text stream, including how it reads input, processes it in the pattern space, and outputs results. Explain the purpose of the pattern space and how <code>sed</code> uses it to manage the text transformations on each line.</li>
-<li>By default, <code>awk</code> uses whitespace as a delimiter to separate columns. Explain how to modify this default setting to use other delimiters, such as a comma (<code>,</code>) or a colon (<code>:</code>). Provide examples demonstrating how to set these delimiters with the <code>-F</code> option in <code>awk</code>.</li>
-<li>Demonstrate how to extract data from multiple columns in <code>awk</code> with a specific example. Show how to retrieve data from the first, third, and fifth columns simultaneously, and explain how this syntax differs from extracting each column individually.</li>
-<li>Use <code>awk</code> to filter lines where a particular column does not match a specific pattern. Provide an example that demonstrates this process, such as displaying lines from a file where the second column does not contain the word "error."</li>
-<li>Explain how <code>awk</code> can perform data aggregation tasks, such as calculating the sum of values in a specific column. Provide an example of using <code>awk</code> to read a file with multiple rows of numeric data and compute the sum of all values in a given column.</li>
-<li>Show how to use <code>sed</code> to replace all occurrences of a word in a text file with another word. Demonstrate how <code>sed</code> can be used both to perform a global replacement within each line and to limit replacements to the first occurrence of the word on each line.</li>
-<li>Explain how to use <code>awk</code> to format and print data in a specific way. For instance, given a file with names and scores, demonstrate how you could use <code>awk</code> to print the names and scores in a formatted table with aligned columns.</li>
-<li>Use <code>sed</code> to delete lines containing a specific pattern from a text file. Describe the command you used and explain how <code>sed</code> processes the file to selectively remove lines based on pattern matching.</li>
-<li>Combine <code>sed</code> and <code>awk</code> in a pipeline to perform more complex text transformations. For example, use <code>sed</code> to remove blank lines from a file, and then use <code>awk</code> to calculate the average of numeric values in a specific column. Explain how combining these tools in a pipeline can solve more advanced text processing tasks.</li>
-</ol>
-</article-section></div><footer>
-<div class="footer-columns">
-<div class="footer-column footer-about">
-<h2>About</h2>
-<p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
-<p class="footer-signature">Built with care in Berlin (UTC+1).</p>
-</div>
-<div class="footer-column footer-links">
-<h2>Quick Links</h2>
-<ul class="footer-links-list">
-<li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
-<li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
-<li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
-<li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
-<li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
-<li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
-<li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
-</ul>
-</div>
-<div class="footer-column footer-social">
-<h2>Follow</h2>
-<ul class="social-media">
-<li>
-<a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
-<span class="social-label">YouTube</span>
-</li>
-<li>
-<a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
-<span class="social-label">LinkedIn</span>
-</li>
-<li>
-<a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
-<span class="social-label">Instagram</span>
-</li>
-<li>
-<a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
-<span class="social-label">GitHub</span>
-</li>
-</ul>
-<img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png"/>
-</div>
-</div>
-<div class="footer-bottom">
-<p id="copyright">
-            © Adam Djellouli. All rights reserved.
-        </p>
-</div>
-<script>
-        document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
-    </script>
-<script src="/app.js"></script>
-</footer></body>
+}' data.txt</code></pre>
+            </div>
+            <p><strong><code>for</code></strong></p>
+            <p>Often used with arrays to iterate over collected values:</p>
+            <div>
+                <pre><code class="language-bash">awk '{ count[$1]++ } END { for (x in count) print x, count[x] }' file.txt</code></pre>
+            </div>
+            <ul>
+                <li>loops over all keys in the <code>count</code> array</li>
+                <li>commonly used for counting and aggregating data</li>
+            </ul>
+            <h4 id="arrays">Arrays</h4>
+            <p><code>awk</code> arrays are <strong>associative arrays</strong>, which means keys can be strings.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">awk '{ count[$1]++ } END { for (k in count) print k, count[k] }' words.txt</code></pre>
+            </div>
+            <p>This counts how many times each first-field value appears.</p>
+            <h4 id="user-defined-functions">User-defined functions</h4>
+            <p>You can define reusable functions.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">awk 'function square(x) { return x * x }
+     { print $1, square($2) }' data.txt</code></pre>
+            </div>
+            <p>This prints field 1 and the square of field 2.</p>
+            <h4 id="practical-tips">Practical tips</h4>
+            <ul>
+                <li>Use <strong>single quotes</strong> around the awk program</li>
+                <li>Use <strong><code>-F</code></strong> when the input is not whitespace-separated</li>
+                <li>Use <strong><code>BEGIN</code></strong> for setup and <strong><code>END</code></strong> for summaries</li>
+                <li>Prefer <code>print</code> for simple output and <code>printf</code> for formatted output</li>
+                <li>Remember that numeric calculations often need counters to avoid divide-by-zero mistakes</li>
+            </ul>
+            <h4 id="quick-reference">Quick reference</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Goal</td>
+                    <td>Command pattern</td>
+                </tr>
+                <tr>
+                    <td>print whole line</td>
+                    <td><code>awk '{ print $0 }' file</code></td>
+                </tr>
+                <tr>
+                    <td>print first column</td>
+                    <td><code>awk '{ print $1 }' file</code></td>
+                </tr>
+                <tr>
+                    <td>filter by condition</td>
+                    <td><code>awk '$3 &gt; 10' file</code></td>
+                </tr>
+                <tr>
+                    <td>filter by regex</td>
+                    <td><code>awk '/error/' file</code></td>
+                </tr>
+                <tr>
+                    <td>sum a column</td>
+                    <td><code>awk '{ s += $2 } END { print s }' file</code></td>
+                </tr>
+                <tr>
+                    <td>average a column</td>
+                    <td><code>awk '{ s += $2; n++ } END { print s/n }' file</code></td>
+                </tr>
+                <tr>
+                    <td>count values</td>
+                    <td><code>awk '{ c[$1]++ } END { for (k in c) print k, c[k] }' file</code></td>
+                </tr>
+                <tr>
+                    <td>custom delimiter</td>
+                    <td><code>awk -F ':' '{ print $1 }' file</code></td>
+                </tr>
+                <tr>
+                    <td>formatted output</td>
+                    <td><code>awk '{ printf "%s %d\n", $1, $2 }' file</code></td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="challenges">Challenges</h3>
+            <ol>
+                <li>Research and describe the core differences between <code>sed</code> and <code>awk</code>, focusing on their primary functionalities. Compare how each tool handles text streams and structured data, and discuss when it might be more appropriate to use <code>sed</code> versus <code>awk</code>.</li>
+                <li>Describe the sequence of operations <code>sed</code> performs on a text stream, including how it reads input, processes it in the pattern space, and outputs results. Explain the purpose of the pattern space and how <code>sed</code> uses it to manage the text transformations on each line.</li>
+                <li>By default, <code>awk</code> uses whitespace as a delimiter to separate columns. Explain how to modify this default setting to use other delimiters, such as a comma (<code>,</code>) or a colon (<code>:</code>). Provide examples demonstrating how to set these delimiters with the <code>-F</code> option in <code>awk</code>.</li>
+                <li>Demonstrate how to extract data from multiple columns in <code>awk</code> with a specific example. Show how to retrieve data from the first, third, and fifth columns simultaneously, and explain how this syntax differs from extracting each column individually.</li>
+                <li>Use <code>awk</code> to filter lines where a particular column does not match a specific pattern. Provide an example that demonstrates this process, such as displaying lines from a file where the second column does not contain the word "error."</li>
+                <li>Explain how <code>awk</code> can perform data aggregation tasks, such as calculating the sum of values in a specific column. Provide an example of using <code>awk</code> to read a file with multiple rows of numeric data and compute the sum of all values in a given column.</li>
+                <li>Show how to use <code>sed</code> to replace all occurrences of a word in a text file with another word. Demonstrate how <code>sed</code> can be used both to perform a global replacement within each line and to limit replacements to the first occurrence of the word on each line.</li>
+                <li>Explain how to use <code>awk</code> to format and print data in a specific way. For instance, given a file with names and scores, demonstrate how you could use <code>awk</code> to print the names and scores in a formatted table with aligned columns.</li>
+                <li>Use <code>sed</code> to delete lines containing a specific pattern from a text file. Describe the command you used and explain how <code>sed</code> processes the file to selectively remove lines based on pattern matching.</li>
+                <li>Combine <code>sed</code> and <code>awk</code> in a pipeline to perform more complex text transformations. For example, use <code>sed</code> to remove blank lines from a file, and then use <code>awk</code> to calculate the average of numeric values in a specific column. Explain how combining these tools in a pipeline can solve more advanced text processing tasks.</li>
+            </ol>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script><script type="text/x-mathjax-config">
-MathJax.Hub.Config({
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
 jax: ["input/TeX", "output/HTML-CSS"],
 extensions: ["tex2jax.js"],
 "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
@@ -824,4 +1703,6 @@ TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE",
 messageStyle: "none"
 });
 </script>
-<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script></html>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

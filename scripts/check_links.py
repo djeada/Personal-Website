@@ -28,14 +28,11 @@ from urllib.parse import urldefrag
 import requests
 from bs4 import BeautifulSoup
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 
 SRC_DIR = Path(__file__).resolve().parent.parent / "src"
 EXCLUDE_PATTERN = re.compile(r"building_blocks")
 
-# Attributes that may contain link targets
+
 LINK_ATTRS: List[Tuple[str, str]] = [
     ("a", "href"),
     ("img", "src"),
@@ -47,15 +44,13 @@ LINK_ATTRS: List[Tuple[str, str]] = [
     ("iframe", "src"),
 ]
 
-# Schemes that represent external URLs
+
 EXTERNAL_SCHEMES = ("http://", "https://")
 
-# Patterns to skip (non-navigable values)
-SKIP_PATTERNS = re.compile(
-    r"^(javascript:|mailto:|tel:|data:|#|$)", re.IGNORECASE
-)
 
-REQUEST_TIMEOUT = 15  # seconds
+SKIP_PATTERNS = re.compile(r"^(javascript:|mailto:|tel:|data:|#|$)", re.IGNORECASE)
+
+REQUEST_TIMEOUT = 15
 MAX_WORKERS = 10
 
 logging.basicConfig(
@@ -63,10 +58,6 @@ logging.basicConfig(
     format="%(levelname)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# Data classes
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -95,17 +86,10 @@ class LinkReport:
         return len(self.broken_links)
 
 
-# ---------------------------------------------------------------------------
-# HTML parsing helpers
-# ---------------------------------------------------------------------------
-
-
 def collect_html_files(root: Path) -> List[Path]:
     """Return all HTML files under *root*, excluding building_blocks."""
     return [
-        p
-        for p in sorted(root.rglob("*.html"))
-        if not EXCLUDE_PATTERN.search(str(p))
+        p for p in sorted(root.rglob("*.html")) if not EXCLUDE_PATTERN.search(str(p))
     ]
 
 
@@ -133,12 +117,9 @@ def extract_links(
     return results
 
 
-# ---------------------------------------------------------------------------
-# Validation helpers
-# ---------------------------------------------------------------------------
-
-
-def resolve_internal_link(url: str, source_file: Path, src_root: Path) -> Optional[Path]:
+def resolve_internal_link(
+    url: str, source_file: Path, src_root: Path
+) -> Optional[Path]:
     """Resolve a relative URL to an absolute file-system path.
 
     Returns *None* when the URL is external or cannot be mapped to a file.
@@ -146,7 +127,6 @@ def resolve_internal_link(url: str, source_file: Path, src_root: Path) -> Option
     if any(url.startswith(s) for s in EXTERNAL_SCHEMES):
         return None
 
-    # Strip fragment
     url_no_frag, _ = urldefrag(url)
     if not url_no_frag:
         return None
@@ -154,7 +134,6 @@ def resolve_internal_link(url: str, source_file: Path, src_root: Path) -> Option
     base_dir = source_file.parent
     target = (base_dir / url_no_frag).resolve()
 
-    # Must remain inside src_root
     try:
         target.relative_to(src_root.resolve())
     except ValueError:
@@ -184,9 +163,13 @@ def check_external_link(url: str) -> Optional[str]:
         )
         if resp.status_code < 400:
             return None
-        # Some servers disallow HEAD; fall back to GET
+
         resp = requests.get(
-            url, headers=headers, timeout=REQUEST_TIMEOUT, allow_redirects=True, stream=True
+            url,
+            headers=headers,
+            timeout=REQUEST_TIMEOUT,
+            allow_redirects=True,
+            stream=True,
         )
         if resp.status_code < 400:
             return None
@@ -201,11 +184,6 @@ def check_external_link(url: str) -> Optional[str]:
         return str(exc)
 
 
-# ---------------------------------------------------------------------------
-# Main scanning logic
-# ---------------------------------------------------------------------------
-
-
 def scan_links(
     src_root: Path,
     check_external: bool = False,
@@ -216,8 +194,7 @@ def scan_links(
     report.total_files = len(html_files)
     logger.info("Found %d HTML files to scan.", report.total_files)
 
-    # Gather every link across all files
-    all_links: List[Tuple[Path, str, str, str]] = []  # (file, tag, attr, url)
+    all_links: List[Tuple[Path, str, str, str]] = []
     for html_path in html_files:
         for tag_name, attr, url in extract_links(html_path):
             all_links.append((html_path, tag_name, attr, url))
@@ -225,7 +202,6 @@ def scan_links(
     report.total_links = len(all_links)
     logger.info("Extracted %d links in total.", report.total_links)
 
-    # ----- Check internal links (fast, sequential) -----
     external_queue: List[Tuple[Path, str, str, str]] = []
     seen_external: Dict[str, Optional[str]] = {}
 
@@ -257,7 +233,6 @@ def scan_links(
         report.broken_count,
     )
 
-    # ----- Optionally check external links (slow, concurrent) -----
     if check_external and external_queue:
         unique_urls: Set[str] = set()
         for _, _, _, url in external_queue:
@@ -271,14 +246,12 @@ def scan_links(
         )
 
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
-            futures = {
-                pool.submit(check_external_link, u): u for u in unique_urls
-            }
+            futures = {pool.submit(check_external_link, u): u for u in unique_urls}
             for future in as_completed(futures):
                 ext_url = futures[future]
                 try:
                     reason = future.result()
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:
                     logger.debug("Unexpected error checking %s: %s", ext_url, exc)
                     reason = str(exc)
                 seen_external[ext_url] = reason
@@ -305,11 +278,6 @@ def scan_links(
         )
 
     return report
-
-
-# ---------------------------------------------------------------------------
-# Output
-# ---------------------------------------------------------------------------
 
 
 def print_report(report: LinkReport) -> None:
@@ -348,11 +316,6 @@ def write_json_report(report: LinkReport, path: Path) -> None:
     }
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     logger.info("JSON report written to %s", path)
-
-
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
 
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
