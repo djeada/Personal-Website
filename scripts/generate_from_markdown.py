@@ -23,6 +23,32 @@ import date_utils
 
 PATH_TO_CONFIG = "input.json"
 OUTPUT_DIR = Path("../src/articles")
+GITHUB_RAW_BASE = "https://raw.githubusercontent.com"
+GITHUB_API_BASE = "https://api.github.com/repos"
+
+SOURCE_REPOSITORIES = [
+    {
+        "owner": "djeada",
+        "repo": "Backend-Engineers-Guide",
+        "branch": "main",
+        "root": "notes",
+        "language": "EN",
+    },
+    {
+        "owner": "djeada",
+        "repo": "Statistics-Notes",
+        "branch": "main",
+        "root": "notes",
+        "language": "EN",
+    },
+    {
+        "owner": "djeada",
+        "repo": "Standard-of-Iron",
+        "branch": "main",
+        "root": "docs",
+        "language": "EN",
+    },
+]
 
 LANGUAGE_MAP: Dict[str, str] = {"🇵🇱": "pl", "🇺🇸": "en", "pl": "🇵🇱", "en": "🇺🇸"}
 
@@ -407,9 +433,81 @@ class HtmlEnhancer:
 
 def read_urls() -> List[UrlData]:
     """Read and parse URL data from a file."""
-    file = Path(PATH_TO_CONFIG).read_text()
-    data = json.loads(file)
+    data = read_url_config()
     return [UrlData.from_json(item) for item in data]
+
+
+def read_url_config() -> list[dict]:
+    """Read input.json and refresh configured GitHub source repositories."""
+    config_path = Path(PATH_TO_CONFIG)
+    data = json.loads(config_path.read_text())
+    refreshed_data = refresh_configured_sources(data)
+    if refreshed_data != data:
+        config_path.write_text(json.dumps(refreshed_data, indent=4) + "\n")
+    return refreshed_data
+
+
+def refresh_configured_sources(data: list[dict]) -> list[dict]:
+    refreshed_by_repo = {}
+    for source in SOURCE_REPOSITORIES:
+        entries = discover_source_entries(source)
+        if entries:
+            refreshed_by_repo[source["repo"]] = entries
+
+    if not refreshed_by_repo:
+        return data
+
+    refreshed_repos = set(refreshed_by_repo)
+    refreshed_data = [
+        item for item in data if item.get("category", [""])[0] not in refreshed_repos
+    ]
+    for source in SOURCE_REPOSITORIES:
+        refreshed_data.extend(refreshed_by_repo.get(source["repo"], []))
+    return refreshed_data
+
+
+def discover_source_entries(source: dict) -> list[dict]:
+    owner = source["owner"]
+    repo = source["repo"]
+    branch = source["branch"]
+    root = source["root"].strip("/")
+    language = source["language"]
+    api_url = f"{GITHUB_API_BASE}/{owner}/{repo}/git/trees/{branch}?recursive=1"
+
+    try:
+        response = requests.get(api_url, timeout=30)
+        response.raise_for_status()
+        tree_data = response.json()
+    except requests.RequestException as exc:
+        print(f"Warning: could not refresh {owner}/{repo}: {exc}", file=sys.stderr)
+        return []
+
+    if tree_data.get("truncated"):
+        print(f"Warning: GitHub tree for {owner}/{repo} was truncated", file=sys.stderr)
+        return []
+
+    prefix = f"{root}/"
+    entries = []
+    for item in tree_data.get("tree", []):
+        path = item.get("path", "")
+        if item.get("type") != "blob":
+            continue
+        if not path.startswith(prefix) or not path.lower().endswith(".md"):
+            continue
+        if "readme" in Path(path).name.lower():
+            continue
+
+        parts = Path(path).parts
+        entries.append(
+            {
+                "url": f"{GITHUB_RAW_BASE}/{owner}/{repo}/{branch}/{path}",
+                "title": Path(path).stem.replace("_", " ").title(),
+                "category": [repo] + list(parts[1:-1]),
+                "language": language,
+            }
+        )
+
+    return entries
 
 
 def process_url(url_data):
