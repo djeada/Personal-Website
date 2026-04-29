@@ -294,26 +294,35 @@ def update_course_page(videos: List[Video]) -> None:
             )
         )
         cards.append(
-            f'<a href="./lessons/{slugs[i]}.html" class="tool-card course-lesson-card">'
-            f'    <div class="course-lesson-card-media">'
-            f'        <img src="{thumb}" alt="{safe_title}" loading="lazy" class="course-lesson-card-thumb">'
-            f'        <span class="course-lesson-card-index">Lesson {i + 1}</span>'
-            f"    </div>"
-            f'    <div class="course-lesson-card-content">'
-            f"        <h3>{safe_title}</h3>"
-            f"        <p>{lesson_summary}</p>"
-            f"    </div>"
-            f"</a>"
+            textwrap.dedent(
+                f"""\
+                <a href="./lessons/{slugs[i]}.html" class="tool-card course-lesson-card">
+                    <div class="course-lesson-card-media">
+                        <img src="{thumb}" alt="{safe_title}" loading="lazy" class="course-lesson-card-thumb">
+                        <span class="course-lesson-card-index">Lesson {i + 1}</span>
+                    </div>
+                    <div class="course-lesson-card-content">
+                        <h3>{safe_title}</h3>
+                        <p>{lesson_summary}</p>
+                    </div>
+                </a>
+                """
+            ).rstrip()
         )
     cards_html = "\n".join(cards)
+    first_lesson_href = f"./lessons/{slugs[0]}.html"
 
     lessons_html = textwrap.dedent(
         f"""\
-        <div class="course-overview-card reveal">
+        <div class="course-overview-card">
             <div class="course-overview-copy">
                 <span class="course-page-badge">Video course</span>
                 <h3>Interview-focused problem solving in Python</h3>
                 <p>{COURSE_DESCRIPTION}</p>
+                <div class="course-overview-actions">
+                    <a href="{first_lesson_href}" class="course-start-button">Start watching</a>
+                    <a href="https://www.youtube.com/playlist?list=PLjHlsBDcsWnNzmNAsb-LjVElCO3gUZbbV" class="course-playlist-link" target="_blank" rel="noopener">Open playlist on YouTube</a>
+                </div>
             </div>
             <div class="course-overview-stats">
                 <div class="course-stat-card">
@@ -330,7 +339,7 @@ def update_course_page(videos: List[Video]) -> None:
                 </div>
             </div>
         </div>
-        <div class="tools-grid course-lessons-grid reveal-stagger">
+        <div class="tools-grid course-lessons-grid">
             {cards_html}
         </div>
         """
