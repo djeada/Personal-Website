@@ -16,6 +16,11 @@ CONFIG = {
         "FOOTER": "../src/building_blocks/footer_article.html",
         "INPUT_DIR": "../src/articles",
     },
+    "COURSES": {
+        "NAVBAR": "../src/building_blocks/navbar_tool.html",
+        "FOOTER": "../src/building_blocks/footer_tool.html",
+        "INPUT_DIR": "../src/courses",
+    },
     "TOOLS": {
         "HEADER": "../src/building_blocks/head_tool.html",
         "NAVBAR": "../src/building_blocks/navbar_tool.html",
@@ -323,6 +328,23 @@ def process_metadata_file(file_path: Path, page_type: str) -> None:
     file_path.write_text(str(soup))
 
 
+def process_course_file(file_path: Path, depth: int = 1) -> None:
+    """Apply the shared course navbar/footer without replacing custom metadata."""
+    html = file_path.read_text()
+    depth_prefix = "../" * (1 + depth)
+    course_configurations = {"NAVBAR": replace_navbar, "FOOTER": replace_footer}
+
+    for config_key, replace_func in course_configurations.items():
+        element_html = Path(CONFIG["COURSES"][config_key]).read_text()
+        if "__DEPTH__" in element_html:
+            element_html = element_html.replace("__DEPTH__", f"{depth_prefix}")
+        else:
+            element_html = element_html.replace("../../", f"{depth_prefix}")
+        html = replace_func(html, element_html)
+
+    file_path.write_text(html)
+
+
 def main() -> None:
     """Main function to process HTML files for articles and tools."""
     article_configurations = {
@@ -345,6 +367,12 @@ def main() -> None:
         for file in tool_dir.rglob("**/*.html"):
             depth = len(file.relative_to(tool_dir).parts) - 1
             executor.submit(process_file, file, "TOOLS", tool_configurations, depth)
+
+    course_dir = Path(CONFIG["COURSES"]["INPUT_DIR"])
+    with ThreadPoolExecutor() as executor:
+        for file in course_dir.rglob("**/*.html"):
+            depth = len(file.relative_to(course_dir).parts) - 1
+            executor.submit(process_course_file, file, depth)
 
     core_dir = Path("../src/core")
     with ThreadPoolExecutor() as executor:

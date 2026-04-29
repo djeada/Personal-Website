@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture",
             "description": "Picture this: you've got thousands of soldiers on screen, each with unique armor, weapons, and animations.",
-            "dateModified": "2026-01-24"
+            "dateModified": "2026-04-29"
         }
     </script>
 </head>
@@ -103,6 +103,7 @@
                 <h2>Related Articles</h2>
                 <ol>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ai_architecture.html">Ai Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/creature_bpat_format.html">Creature Bpat Format</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/macos_signing.html">Macos Signing</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_framework.html">Mission Framework</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/pathfinding_architecture.html">Pathfinding Architecture</a></li>
@@ -127,7 +128,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: April 29, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <header>How the Rendering System Actually Works</header>
             <p>Picture this: you've got thousands of soldiers on screen, each with unique armor, weapons, and animations. Grass is swaying, rivers are flowing, and you need all of this running at 60 frames per second. How do you pull that off without your GPU catching fire?</p>
@@ -538,27 +539,10 @@ void Mesh::draw_instanced(std::size_t instance_count) {
             <p>The base class HumanoidRendererBase in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/render/humanoid/rig.h">humanoid/rig.h</a> handles everything that's common to all humanoids: computing the pose from animation state, drawing the basic body parts, coordinating the rendering sequence. But it has virtual methods for the nation-specific bits.</p>
             <p>Each nation has derived classes that override these methods. Looking at the Carthaginian spearman in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/render/entity/nations/carthage/spearman_renderer.cpp">spearman_renderer.cpp</a>, you'll see it sets up purple tunics, bronze helmets, and the distinctive Carthaginian visual style.</p>
             <p>The entity system stores a unit type string like "spearman_carthage" on each unit. The EntityRendererRegistry in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/render/entity/registry.cpp">registry.cpp</a> maps these strings to renderer functions. When it's time to draw, we look up the right renderer and call it. If a unit type isn't registered, it just doesn't render—that's usually the first thing to check when soldiers are mysteriously invisible.</p>
-            <p>Each nation also gets its own shader files. You can see the pattern in the shader lookup:</p>
-            <div>
-                <pre><code class="language-clike">auto lookup_spearman_shader_resources(const QString &amp;shader_key)
-    -&gt; std::optional&lt;SpearmanShaderResourcePaths&gt; {
-  if (shader_key == QStringLiteral("spearman_carthage")) {
-    return SpearmanShaderResourcePaths{
-        QStringLiteral(":/assets/shaders/spearman_carthage.vert"),
-        QStringLiteral(":/assets/shaders/spearman_carthage.frag")};
-  }
-  if (shader_key == QStringLiteral("spearman_roman_republic")) {
-    return SpearmanShaderResourcePaths{
-        QStringLiteral(":/assets/shaders/spearman_roman_republic.vert"),
-        QStringLiteral(":/assets/shaders/spearman_roman_republic.frag")};
-  }
-  return std::nullopt;
-}</code></pre>
-            </div>
-            <p>The Carthage spearman shader knows how to render bronze with appropriate patina. The Roman shader knows how to render steel with rust patterns. This per-nation customization extends all the way down to the GPU.</p>
+            <p>Troop bodies no longer get per-nation shader files. The rigged creature backend owns the shared <code>character_skinned</code> and <code>character_skinned_instanced</code> programs, while nation, role, and equipment variation is supplied as declarative render data: palette values, material IDs, visual specs, equipment records, and texture slots.</p>
             <h2 id="procedural-shaders">Procedural shaders</h2>
             <p>Here's a memory problem: if 5000 soldiers each need unique 4K textures for their rust, dirt, and wear patterns, that's around 80 gigabytes of VRAM. Obviously impossible. So instead we generate all that detail procedurally in the shader.</p>
-            <p>The shaders in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/assets/shaders">assets/shaders</a> use hash functions and noise to create variation. Looking at <a href="https://github.com/djeada/Standard-of-Iron/blob/main/assets/shaders/spearman_carthage.frag">spearman_carthage.frag</a>, you'll see the building blocks:</p>
+            <p>The shaders in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/assets/shaders">assets/shaders</a> use hash functions and noise for pipeline-owned effects such as terrain, water, vegetation, particles, banners, and shared rigged bodies. A typical procedural fragment block looks like this:</p>
             <div>
                 <pre><code class="language-glsl">// Hash function - turns any position into a pseudo-random number
 float hash2(vec2 p) {
@@ -596,7 +580,7 @@ else if (u_materialId == 1) { // Cloth
   baseColor *= weave;
 }</code></pre>
             </div>
-            <p>The vertex shader sometimes does geometry modifications too. For example, in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/assets/shaders/spearman_carthage.vert">spearman_carthage.vert</a>, shields get a curved surface:</p>
+            <p>Geometry variation now belongs in mesh/spec generation instead of per-troop GLSL. When a vertex shader needs procedural deformation, it should be owned by a backend pipeline rather than selected by a troop renderer:</p>
             <div>
                 <pre><code class="language-glsl">if (u_materialId == 4) {  // Shield
   float curveRadius = 0.52;
@@ -608,7 +592,7 @@ else if (u_materialId == 1) { // Cloth
   position = vec3(curved_x, position.y, curved_z);
 }</code></pre>
             </div>
-            <p>We have about 90 shader files in the <a href="https://github.com/djeada/Standard-of-Iron/blob/main/assets/shaders">assets/shaders</a> folder, covering everything from terrain and rivers to individual unit types and special effects. The ShaderCache in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/render/gl/shader_cache.cpp">shader_cache.cpp</a> loads them on demand and keeps them around so we don't recompile every frame.</p>
+            <p>The shader directory is intentionally small and pipeline-owned. The ShaderCache in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/render/gl/shader_cache.cpp">shader_cache.cpp</a> preloads shared backend programs and keeps them around so we don't recompile every frame.</p>
             <h2 id="common-problems-and-how-to-fix-them">Common problems and how to fix them</h2>
             <p>When nothing renders at all and you're just seeing a black screen, walk through this checklist:</p>
             <ol>

@@ -26,8 +26,12 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 COURSE_ROOT = ROOT_DIR / "src" / "courses" / "algorithms_and_data_structures"
 LESSONS_DIR = COURSE_ROOT / "lessons"
 COURSE_PAGE = COURSE_ROOT / "index.html"
-FOOTER_TEMPLATE = ROOT_DIR / "src" / "building_blocks" / "footer_article.html"
 RESOURCE_PREFIX = "../../../"
+COURSE_TITLE = "Algorithms and Data Structures"
+COURSE_DESCRIPTION = (
+    "Structured interview-style practice with Python walkthroughs for arrays, "
+    "strings, linked lists, trees, graphs, greedy methods, and dynamic programming."
+)
 
 
 @dataclass
@@ -101,6 +105,62 @@ def _format_description(description: str) -> str:
     return "\n".join(paragraphs)
 
 
+def _summarize_text(text: str, fallback: str, width: int = 155) -> str:
+    clean = re.sub(r"\s+", " ", text).strip()
+    if not clean:
+        return fallback
+    return textwrap.shorten(clean, width=width, placeholder="...")
+
+
+def _build_playlist_sidebar(
+    videos: List[Video], slugs: List[str], current_index: int
+) -> str:
+    playlist_items = []
+    for idx, video in enumerate(videos):
+        safe_title = html_mod.escape(video.title)
+        active_class = ' class="active"' if idx == current_index else ""
+        playlist_items.append(
+            f'<li><a href="./{slugs[idx]}.html"{active_class}>{idx + 1}. {safe_title}</a></li>'
+        )
+    playlist_html = "\n".join(playlist_items)
+
+    return textwrap.dedent(
+        f"""\
+        <aside id="article-sidebar">
+            <div id="table-of-contents" class="course-playlist">
+                <h2>Course Playlist</h2>
+                <ol>
+                    {playlist_html}
+                </ol>
+            </div>
+            <div id="related-articles" class="course-sidebar-summary">
+                <h2>Lesson Guide</h2>
+                <div class="course-sidebar-meta">
+                    <p><strong>Course:</strong> {COURSE_TITLE}</p>
+                    <p><strong>Lesson:</strong> {current_index + 1} of {len(videos)}</p>
+                    <p><strong>Format:</strong> YouTube walkthrough</p>
+                </div>
+                <a href="../index.html" class="course-back-link">Back to course overview</a>
+            </div>
+        </aside>
+        """
+    )
+
+
+def _build_nav_card(href: str, label: str, title: str, modifier: str) -> str:
+    safe_title = html_mod.escape(textwrap.shorten(title, width=52, placeholder="..."))
+    return (
+        f'<a href="{href}" class="course-nav-link {modifier}">'
+        f'<span class="course-nav-label">{label}</span>'
+        f'<span class="course-nav-title">{safe_title}</span>'
+        "</a>"
+    )
+
+
+def _build_nav_placeholder() -> str:
+    return '<div class="course-nav-link course-nav-link-placeholder" aria-hidden="true"></div>'
+
+
 def build_lesson_pages(videos: List[Video]) -> None:
     """Build all per-video lesson pages with correct prev/next links."""
     LESSONS_DIR.mkdir(parents=True, exist_ok=True)
@@ -111,19 +171,30 @@ def build_lesson_pages(videos: List[Video]) -> None:
         num = video.index + 1
         safe_title = html_mod.escape(video.title)
         description_html = _format_description(video.description)
-
-        prev_link = ""
-        next_link = ""
-        if i > 0:
-            prev_link = f'<a href="./{slugs[i-1]}.html" class="lesson-nav-prev">&larr; Previous</a>'
-        if i < len(videos) - 1:
-            next_link = (
-                f'<a href="./{slugs[i+1]}.html" class="lesson-nav-next">Next &rarr;</a>'
+        lesson_summary = html_mod.escape(
+            _summarize_text(
+                video.description,
+                "Interview-style Python walkthrough and explanation from the course playlist.",
             )
+        )
+        sidebar_html = _build_playlist_sidebar(videos, slugs, i)
 
-        footer_html = ""
-        if FOOTER_TEMPLATE.exists():
-            footer_html = FOOTER_TEMPLATE.read_text(encoding="utf-8")
+        prev_link = _build_nav_placeholder()
+        next_link = _build_nav_placeholder()
+        if i > 0:
+            prev_link = _build_nav_card(
+                f"./{slugs[i-1]}.html",
+                "Previous lesson",
+                videos[i - 1].title,
+                "course-nav-link-prev",
+            )
+        if i < len(videos) - 1:
+            next_link = _build_nav_card(
+                f"./{slugs[i+1]}.html",
+                "Next lesson",
+                videos[i + 1].title,
+                "course-nav-link-next",
+            )
 
         page = textwrap.dedent(
             f"""\
@@ -158,89 +229,18 @@ def build_lesson_pages(videos: List[Video]) -> None:
         }}
     }}
     </script>
-    <style>
-        .video-container {{
-            position: relative;
-            width: 100%;
-            padding-bottom: 56.25%;
-            margin: 1.5em 0;
-            border-radius: var(--radius-sm, 8px);
-            overflow: hidden;
-            background: var(--surface-1, #f1f5f9);
-        }}
-        .video-container iframe {{
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: 0;
-        }}
-        .lesson-nav {{
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 2em 0;
-            padding: 1em 0;
-            border-top: 1px solid var(--border-default, rgba(0,0,0,0.06));
-        }}
-        .lesson-nav a {{
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5em;
-            padding: 0.6em 1.2em;
-            border-radius: var(--radius-sm, 8px);
-            background: var(--surface-1, #f1f5f9);
-            color: var(--text-primary, #0f172a);
-            text-decoration: none;
-            font-weight: 500;
-            transition: background 0.2s;
-        }}
-        .lesson-nav a:hover {{
-            background: var(--accent, #3b82f6);
-            color: #fff;
-        }}
-        .video-description {{
-            margin: 2em 0;
-            padding: 1.25em;
-            background: var(--surface-1, #f1f5f9);
-            border-radius: var(--radius-sm, 8px);
-            border: 1px solid var(--border-default, rgba(0,0,0,0.06));
-            line-height: 1.7;
-        }}
-        .video-description p {{
-            margin: 0.5em 0;
-        }}
-        .lesson-number {{
-            color: var(--text-secondary, #64748b);
-            font-size: 0.9em;
-            font-weight: 500;
-            margin-bottom: 0.25em;
-        }}
-    </style>
 </head>
-<body>
-    <nav aria-label="Main navigation">
-        <a class="logo" href="{RESOURCE_PREFIX}index.html">
-            <img id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" alt="Adam Djellouli - Home Page Logo">
-        </a>
-        <input id="navbar-toggle" type="checkbox" aria-label="Toggle navigation menu" />
-        <ul role="menu" aria-labelledby="navbar-toggle">
-            <li role="menuitem"><a href="{RESOURCE_PREFIX}index.html" title="Go to Home Page"> Home </a></li>
-            <li role="menuitem"><a href="{RESOURCE_PREFIX}core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a></li>
-            <li role="menuitem"><a href="{RESOURCE_PREFIX}core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a></li>
-            <li role="menuitem"><a href="{RESOURCE_PREFIX}core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a></li>
-            <li role="menuitem"><a href="{RESOURCE_PREFIX}core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a></li>
-            <li role="menuitem"><a href="{RESOURCE_PREFIX}core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a></li>
-            <li><script async src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script><div class="gcse-search"></div></li>
-            <li><button id="dark-mode-button" aria-label="Toggle dark mode"></button></li>
-        </ul>
-    </nav>
+<body class="course-lesson-page">
     <div id="article-wrapper">
+{sidebar_html}
         <article id="article-body">
-            <p class="lesson-number">Lesson {num} of {len(videos)}</p>
+            <div class="course-lesson-meta">
+                <span class="course-page-badge">Video lesson</span>
+                <p class="course-lesson-number">Lesson {num} of {len(videos)}</p>
+            </div>
             <h1>{safe_title}</h1>
-            <div class="video-container">
+            <p class="course-lesson-summary">{lesson_summary}</p>
+            <div class="video-container course-lesson-video">
                 <iframe
                     src="https://www.youtube.com/embed/{video.video_id}"
                     title="{safe_title}"
@@ -253,15 +253,18 @@ def build_lesson_pages(videos: List[Video]) -> None:
         )
 
         if description_html:
-            page += f'        <div class="video-description">\n{description_html}\n        </div>\n'
+            page += f'            <section class="video-description course-lesson-description">\n{description_html}\n            </section>\n'
 
-        page += f"""        <div class="lesson-nav">
-            <span>{prev_link}</span>
-            <span>{next_link}</span>
-        </div>
+        page += f"""            <div class="course-lesson-nav">
+                {prev_link}
+                <a href="../index.html" class="course-nav-link course-nav-link-center">
+                    <span class="course-nav-label">Playlist</span>
+                    <span class="course-nav-title">Back to course overview</span>
+                </a>
+                {next_link}
+            </div>
         </article>
     </div>
-{footer_html}
 </body>
 </html>
 """
@@ -283,15 +286,55 @@ def update_course_page(videos: List[Video]) -> None:
     for i, video in enumerate(videos):
         safe_title = html_mod.escape(video.title)
         thumb = f"https://img.youtube.com/vi/{video.video_id}/mqdefault.jpg"
+        lesson_summary = html_mod.escape(
+            _summarize_text(
+                video.description,
+                f"Lesson {i + 1} in the playlist with a Python solution walkthrough.",
+                width=135,
+            )
+        )
         cards.append(
-            f'<a href="./lessons/{slugs[i]}.html" class="tool-card">'
-            f'<img src="{thumb}" alt="{safe_title}" loading="lazy" '
-            f'style="width:100%;border-radius:6px 6px 0 0;aspect-ratio:16/9;object-fit:cover;">'
-            f"<h3>{i + 1}. {safe_title}</h3>"
+            f'<a href="./lessons/{slugs[i]}.html" class="tool-card course-lesson-card">'
+            f'    <div class="course-lesson-card-media">'
+            f'        <img src="{thumb}" alt="{safe_title}" loading="lazy" class="course-lesson-card-thumb">'
+            f'        <span class="course-lesson-card-index">Lesson {i + 1}</span>'
+            f"    </div>"
+            f'    <div class="course-lesson-card-content">'
+            f"        <h3>{safe_title}</h3>"
+            f"        <p>{lesson_summary}</p>"
+            f"    </div>"
             f"</a>"
         )
+    cards_html = "\n".join(cards)
 
-    lessons_html = '<div class="tools-grid">\n' + "\n".join(cards) + "\n</div>"
+    lessons_html = textwrap.dedent(
+        f"""\
+        <div class="course-overview-card reveal">
+            <div class="course-overview-copy">
+                <span class="course-page-badge">Video course</span>
+                <h3>Interview-focused problem solving in Python</h3>
+                <p>{COURSE_DESCRIPTION}</p>
+            </div>
+            <div class="course-overview-stats">
+                <div class="course-stat-card">
+                    <span class="course-stat-value">{len(videos)}</span>
+                    <span class="course-stat-label">Lessons</span>
+                </div>
+                <div class="course-stat-card">
+                    <span class="course-stat-value">Python</span>
+                    <span class="course-stat-label">Language</span>
+                </div>
+                <div class="course-stat-card">
+                    <span class="course-stat-value">YouTube</span>
+                    <span class="course-stat-label">Format</span>
+                </div>
+            </div>
+        </div>
+        <div class="tools-grid course-lessons-grid reveal-stagger">
+            {cards_html}
+        </div>
+        """
+    )
     pattern = r"<!-- LESSONS:START -->.*?<!-- LESSONS:END -->"
     replacement = f"<!-- LESSONS:START -->\n{lessons_html}\n<!-- LESSONS:END -->"
     updated = re.sub(pattern, lambda _: replacement, html, flags=re.S)
