@@ -5,8 +5,8 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>Purpose</title>
-    <meta content="Status: v1, draft 2026-04-24." name="description" />
+    <title>The story</title>
+    <meta content="BPAT is the game's motion book for a creature species." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -23,7 +23,7 @@
         {
             "@context": "https://schema.org",
             "@type": "Article",
-            "headline": "Purpose",
+            "headline": "The story",
             "author": {
                 "@type": "Person",
                 "name": "Adam Djellouli"
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/standard_of_iron/creature_bpat_format"
             },
             "url": "https://adamdjellouli.com/articles/standard_of_iron/creature_bpat_format",
-            "description": "Status: v1, draft 2026-04-24.",
-            "dateModified": "2026-04-29"
+            "description": "BPAT is the game's motion book for a creature species.",
+            "dateModified": "2026-05-03"
         }
     </script>
 </head>
@@ -78,20 +78,33 @@
             <div id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#purpose">Purpose</a></li>
-                    <li><a href="#design-contract">Design contract</a></li>
-                    <li><a href="#file-layout">File layout</a></li>
-                    <li><a href="#structures-binary-">Structures (binary)</a>
+                    <li><a href="#the-story">The story</a></li>
+                    <li><a href="#why-players-should-care">Why players should care</a></li>
+                    <li><a href="#what-lives-inside-a-bpat-file">What lives inside a BPAT file</a>
                         <ol>
-                            <li><a href="#bpatheader-64-bytes">BpatHeader — 64 bytes</a></li>
-                            <li><a href="#bpatclipentry-32-bytes">BpatClipEntry — 32 bytes</a></li>
-                            <li><a href="#bpatsocketentry-32-bytes">BpatSocketEntry — 32 bytes</a></li>
+                            <li><a href="#header">Header</a></li>
+                            <li><a href="#clip-list">Clip list</a></li>
+                            <li><a href="#socket-list">Socket list</a></li>
+                            <li><a href="#string-table">String table</a></li>
+                            <li><a href="#palette-data">Palette data</a></li>
+                            <li><a href="#socket-data">Socket data</a></li>
                         </ol>
                     </li>
-                    <li><a href="#gpu-representation-informative-">GPU representation (informative)</a></li>
-                    <li><a href="#versioning">Versioning</a></li>
-                    <li><a href="#validation-rules-loader-enforced-">Validation rules (loader-enforced)</a></li>
-                    <li><a href="#reference-c-types">Reference C++ types</a></li>
+                    <li><a href="#how-playback-works-without-the-scary-math">How playback works without the scary math</a></li>
+                    <li><a href="#how-to-use-the-prebaker">How to use the prebaker</a>
+                        <ol>
+                            <li><a href="#recommended">Recommended</a></li>
+                            <li><a href="#direct-cli">Direct CLI</a></li>
+                            <li><a href="#what-it-writes-today">What it writes today</a></li>
+                            <li><a href="#how-a-new-species-plugs-into-the-prebaker">How a new species plugs into the prebaker</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#the-texture-trick-explained-simply">The texture trick, explained simply</a></li>
+                    <li><a href="#a-friendly-glossary">A friendly glossary</a></li>
+                    <li><a href="#the-firm-rules-of-the-format">The firm rules of the format</a></li>
+                    <li><a href="#how-the-frame-data-is-packed">How the frame data is packed</a></li>
+                    <li><a href="#validation-in-plain-language">Validation in plain language</a></li>
+                    <li><a href="#if-you-need-the-exact-binary-contract">If you need the exact binary contract</a></li>
                 </ol>
             </div>
             <div id="related-articles">
@@ -123,300 +136,263 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: April 29, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: May 03, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <header>Creature Bone-Palette Animation Texture (BPAT) Format</header>
-            <p>Status: <strong>v1</strong>, draft 2026-04-24.</p>
-            <h2 id="purpose">Purpose</h2>
-            <p>The BPAT format stores <strong>pre-baked bone palettes</strong> for one creature
-                species across a fixed set of named animation clips. A BPAT file is
-                produced once at build time by <code>tools/bpat_baker</code> and loaded immutably
-                at runtime; <strong>no skeletal evaluation runs in shipping builds</strong>.</p>
-            <p>This is the data backbone of the architectural separation between
-                <em>anatomy/articulation</em> (built once into BPATs) and <em>game intent</em>
-                (<code>PoseIntent { clip, phase }</code> at runtime). See
-                <code>docs/RENDERING_ARCHITECTURE.md</code> for how BPATs are sampled from the
-                GPU.
-            </p>
-            <h2 id="design-contract">Design contract</h2>
+            <p>BPAT is the game's <strong>motion book</strong> for a creature species.</p>
+            <p>A horse, elephant, humanoid, or sword-ready humanoid does not figure out every joint from scratch in the middle of battle. Instead, the hard animation work is prepared ahead of time and packed into a BPAT file. During play, the game only needs to answer two easy questions:</p>
             <ul>
-                <li><strong>Endianness</strong>: little-endian throughout. Producer and current
-                    runtime are both little-endian; loaders MUST refuse on mismatch.</li>
-                <li><strong>Floats</strong>: IEEE 754 32-bit. Matrices are stored <strong>row-major</strong>
-                    (matches <code>QMatrix4x4</code> byte order on disk after a <code>memcpy</code> of the
-                    underlying <code>float[16]</code>).</li>
-                <li><strong>Alignment</strong>: every section starts at a 16-byte boundary.</li>
-                <li><strong>No pointers, no strings inside structs.</strong> All variable-length data
-                    lives in trailing blocks referenced by absolute file offsets.</li>
-                <li><strong>Mmap-friendly</strong>: a loader can <code>mmap</code> the file and reinterpret
-                    spans directly; no allocation is required to read palettes.</li>
-                <li><strong>Forward compat</strong>: every struct ends with <code>reserved</code> words so
-                    future versions can add fields without changing on-disk layout.
-                    Unknown reserved values must be zero.</li>
+                <li><strong>Which move is this creature doing?</strong></li>
+                <li><strong>How far through that move is it?</strong></li>
             </ul>
-            <h2 id="file-layout">File layout</h2>
-            <div>
-                <pre><code class="language-+------------------------------------------+">| BpatHeader                       (64 B)  |  fixed
-+------------------------------------------+
-| BpatClipEntry × clip_count       (32 B ea)
-+------------------------------------------+
-| BpatSocketEntry × socket_count   (32 B ea)
-+------------------------------------------+
-| String table                             |  UTF-8, null-terminated
-+------------------------------------------+
-| pad to 16-byte boundary                  |
-+------------------------------------------+
-| Palette data                             |  float × frame_total × bone_count × 16
-+------------------------------------------+
-| Socket data (optional)                   |  float × frame_total × socket_count × 12
-+------------------------------------------+</code></pre>
-            </div>
-            <p>The palette and socket data blocks are flat: each frame is a
-                contiguous <code>bone_count × 16</code> floats (or <code>socket_count × 12</code> floats),
-                and frames belonging to the same clip are contiguous in file order.
-                Clip <code>c</code>'s frame <code>f</code> lives at byte offset:</p>
-            <div>
-                <pre><code class="language-shell">header.palette_data_offset
-  + (clip[c].frame_offset + f) * bone_count * 16 * sizeof(float)</code></pre>
-            </div>
-            <h2 id="structures-binary-">Structures (binary)</h2>
-            <p>All structs are POD, packed to natural alignment. Sizes are checked at
-                compile time in <code>bpat_format.h</code> via <code>static_assert</code>.</p>
-            <h3 id="bpatheader-64-bytes"><code>BpatHeader</code> — 64 bytes</h3>
-            <p>
-            <table>
-                <tr>
-                    <td>Offset</td>
-                    <td>Type</td>
-                    <td>Field</td>
-                    <td>Notes</td>
-                </tr>
-                <tr>
-                    <td>0</td>
-                    <td><code>u8[4]</code></td>
-                    <td><code>magic</code></td>
-                    <td>ASCII <code>'B','P','A','T'</code></td>
-                </tr>
-                <tr>
-                    <td>4</td>
-                    <td><code>u32</code></td>
-                    <td><code>version</code></td>
-                    <td>currently <code>1</code></td>
-                </tr>
-                <tr>
-                    <td>8</td>
-                    <td><code>u32</code></td>
-                    <td><code>species_id</code></td>
-                    <td>0=humanoid, 1=horse, 2=elephant</td>
-                </tr>
-                <tr>
-                    <td>12</td>
-                    <td><code>u32</code></td>
-                    <td><code>bone_count</code></td>
-                    <td>matches species' rig</td>
-                </tr>
-                <tr>
-                    <td>16</td>
-                    <td><code>u32</code></td>
-                    <td><code>socket_count</code></td>
-                    <td>0 if no sockets baked</td>
-                </tr>
-                <tr>
-                    <td>20</td>
-                    <td><code>u32</code></td>
-                    <td><code>clip_count</code></td>
-                    <td>≥ 1</td>
-                </tr>
-                <tr>
-                    <td>24</td>
-                    <td><code>u32</code></td>
-                    <td><code>frame_total</code></td>
-                    <td>Σ frame_count across clips</td>
-                </tr>
-                <tr>
-                    <td>28</td>
-                    <td><code>u32</code></td>
-                    <td><code>string_table_size</code></td>
-                    <td>bytes, including final NUL</td>
-                </tr>
-                <tr>
-                    <td>32</td>
-                    <td><code>u64</code></td>
-                    <td><code>clip_table_offset</code></td>
-                    <td>absolute file offset</td>
-                </tr>
-                <tr>
-                    <td>40</td>
-                    <td><code>u64</code></td>
-                    <td><code>socket_table_offset</code></td>
-                    <td>0 if <code>socket_count == 0</code></td>
-                </tr>
-                <tr>
-                    <td>48</td>
-                    <td><code>u64</code></td>
-                    <td><code>string_table_offset</code></td>
-                    <td>absolute file offset</td>
-                </tr>
-                <tr>
-                    <td>56</td>
-                    <td><code>u64</code></td>
-                    <td><code>palette_data_offset</code></td>
-                    <td>absolute file offset</td>
-                </tr>
-            </table>
-            </p>
+            <p>That is why large battles can stay lively without turning animation into a performance disaster.</p>
+            <h2 id="the-story">The story</h2>
+            <p>Imagine the animators as drill masters before the campaign begins. They teach each creature its full set of moves: idle, walk, trot, attack, recoil, death, and so on.</p>
+            <p>Then the game's build tools write those lessons into a single travel book for that species: a BPAT file.</p>
+            <p>When the battle starts, the game does <strong>not</strong> re-teach the horse how to bend a knee or swing a neck. It simply opens the book, jumps to the right move, picks the right moment, and says:</p>
             <blockquote>
-                <p>Note: <code>socket_data_offset</code> is computed as
-                    <code>palette_data_offset + frame_total*bone_count*16*4</code> when
-                    <code>socket_count &gt; 0</code>. It is not stored in the header (it is fully
-                    derivable; saves one field).
-                </p>
+                <p>"Show me frame 18 of the gallop."</p>
             </blockquote>
-            <h3 id="bpatclipentry-32-bytes"><code>BpatClipEntry</code> — 32 bytes</h3>
+            <p>The GPU then turns that stored pose into the moving creature you see on screen.</p>
+            <p>So BPAT is a promise:</p>
+            <ul>
+                <li>the expensive pose work happened earlier</li>
+                <li>the game only chooses <strong>move + moment</strong></li>
+                <li>the graphics card does the fast final playback</li>
+            </ul>
+            <h2 id="why-players-should-care">Why players should care</h2>
+            <ul>
+                <li><strong>Smoother battles</strong>: more units can animate at once.</li>
+                <li><strong>More reliable looks</strong>: creatures keep the same approved motion every time.</li>
+                <li><strong>Less stutter</strong>: the engine avoids heavy live skeletal work in the shipping build.</li>
+                <li><strong>Cleaner design</strong>: gameplay decides intent, while BPAT provides the body language.</li>
+            </ul>
+            <p>In code, that "intent" is basically: <em>play this clip at this phase</em>.</p>
+            <h2 id="what-lives-inside-a-bpat-file">What lives inside a BPAT file</h2>
+            <p>Think of the file as a chest with a few labeled compartments.</p>
             <p>
             <table>
                 <tr>
-                    <td>Offset</td>
-                    <td>Type</td>
-                    <td>Field</td>
-                    <td>Notes</td>
+                    <td>Part</td>
+                    <td>Plain-English meaning</td>
                 </tr>
                 <tr>
-                    <td>0</td>
-                    <td><code>u32</code></td>
-                    <td><code>name_offset</code></td>
-                    <td>byte offset into string table</td>
+                    <td>Header</td>
+                    <td>Who this file is for and where the other parts begin</td>
                 </tr>
                 <tr>
-                    <td>4</td>
-                    <td><code>u32</code></td>
-                    <td><code>name_length</code></td>
-                    <td>excluding trailing NUL</td>
+                    <td>Clip list</td>
+                    <td>The named moves, such as walk or attack</td>
                 </tr>
                 <tr>
-                    <td>8</td>
-                    <td><code>u32</code></td>
-                    <td><code>frame_count</code></td>
-                    <td>≥ 1</td>
+                    <td>Socket list</td>
+                    <td>Attachment points for gear, riders, or props</td>
                 </tr>
                 <tr>
-                    <td>12</td>
-                    <td><code>u32</code></td>
-                    <td><code>frame_offset</code></td>
-                    <td>starting frame index in the flat palette stream</td>
+                    <td>String table</td>
+                    <td>The actual text names used by the clip and socket lists</td>
                 </tr>
                 <tr>
-                    <td>16</td>
-                    <td><code>f32</code></td>
-                    <td><code>fps</code></td>
-                    <td>playback frames per second</td>
+                    <td>Palette data</td>
+                    <td>The real pose data for every frame of every move</td>
                 </tr>
                 <tr>
-                    <td>20</td>
-                    <td><code>u8</code></td>
-                    <td><code>loops</code></td>
-                    <td>1 if loops, 0 if one-shot</td>
-                </tr>
-                <tr>
-                    <td>21</td>
-                    <td><code>u8[3]</code></td>
-                    <td><code>_pad</code></td>
-                    <td>zero</td>
-                </tr>
-                <tr>
-                    <td>24</td>
-                    <td><code>u32[2]</code></td>
-                    <td><code>reserved</code></td>
-                    <td>zero</td>
+                    <td>Socket data</td>
+                    <td>Optional pre-baked attachment transforms</td>
                 </tr>
             </table>
             </p>
-            <h3 id="bpatsocketentry-32-bytes"><code>BpatSocketEntry</code> — 32 bytes</h3>
-            <p>
-            <table>
-                <tr>
-                    <td>Offset</td>
-                    <td>Type</td>
-                    <td>Field</td>
-                    <td>Notes</td>
-                </tr>
-                <tr>
-                    <td>0</td>
-                    <td><code>u32</code></td>
-                    <td><code>name_offset</code></td>
-                    <td>byte offset into string table</td>
-                </tr>
-                <tr>
-                    <td>4</td>
-                    <td><code>u32</code></td>
-                    <td><code>name_length</code></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td>8</td>
-                    <td><code>u32</code></td>
-                    <td><code>anchor_bone</code></td>
-                    <td>bone index this socket follows</td>
-                </tr>
-                <tr>
-                    <td>12</td>
-                    <td><code>f32[3]</code></td>
-                    <td><code>local_offset</code></td>
-                    <td>offset in anchor-bone local space</td>
-                </tr>
-                <tr>
-                    <td>24</td>
-                    <td><code>u32[2]</code></td>
-                    <td><code>reserved</code></td>
-                    <td>zero</td>
-                </tr>
-            </table>
-            </p>
-            <blockquote>
-                <p>The runtime-visible socket world transform for clip <code>c</code>, frame <code>f</code>
-                    is <code>palette[c,f][anchor_bone] * translate(local_offset)</code>. The
-                    <code>socket_data</code> block stores this product pre-baked when the writer
-                    chooses to (saves a multiply per equipment vertex shader call).
-                </p>
-            </blockquote>
-            <h2 id="gpu-representation-informative-">GPU representation (informative)</h2>
-            <p>A loaded BPAT is uploaded as a single 2D <code>RGBA32F</code> texture:</p>
+            <h3 id="header">Header</h3>
+            <p>The header gives the game the basics:</p>
             <ul>
-                <li><strong>Width</strong> = <code>bone_count * 4</code> texels (4 texels per <code>mat4</code>, one per row).</li>
-                <li><strong>Height</strong> = <code>frame_total</code> texels.</li>
+                <li>this is really a <strong>BPAT</strong> file</li>
+                <li>which <strong>version</strong> it uses</li>
+                <li>which <strong>species</strong> it belongs to</li>
+                <li>how many <strong>bones</strong>, <strong>sockets</strong>, and <strong>clips</strong> exist</li>
+                <li>how many total animation frames are stored</li>
+                <li>where the clip list, socket list, names, and pose data begin</li>
             </ul>
-            <p>The vertex shader samples four texels for each bone index referenced
-                by the vertex's skinning weights and reconstructs the <code>mat4</code>. Frame
-                index is delivered as a per-instance vertex attribute. No CPU work.</p>
-            <p>Socket data, when present, is uploaded as a separate <code>RGB32F</code> texture
-                with width <code>socket_count * 4</code> and height <code>frame_total</code> — the same
-                sampling pattern but only 3 rows per matrix (translation + rotation
-                basis).</p>
-            <h2 id="versioning">Versioning</h2>
+            <h3 id="clip-list">Clip list</h3>
+            <p>Each clip entry describes one named move:</p>
             <ul>
-                <li><code>version == 1</code> (this document)</li>
-                <li>A loader MUST refuse files with <code>version &gt; 1</code> and warn on <code>version &lt; 1</code>.</li>
-                <li>Future incompatible changes MUST bump <code>version</code> to 2 and the spec
-                    MUST add a new section describing the delta.</li>
+                <li>the clip name</li>
+                <li>how many frames it has</li>
+                <li>where its frames begin inside the big shared frame stream</li>
+                <li>how fast it plays</li>
+                <li>whether it loops</li>
             </ul>
-            <h2 id="validation-rules-loader-enforced-">Validation rules (loader-enforced)</h2>
-            <p>A BPAT file is well-formed iff all of the following hold:</p>
+            <p>In simple terms, the clip list is the table of contents for the motion book.</p>
+            <h3 id="socket-list">Socket list</h3>
+            <p>Some creatures need stable attachment points: a saddle, a rider anchor, a banner pole, a carried prop.</p>
+            <p>Each socket entry says:</p>
+            <ul>
+                <li>the socket name</li>
+                <li>which bone it follows</li>
+                <li>the small offset from that bone</li>
+            </ul>
+            <h3 id="string-table">String table</h3>
+            <p>This is just the name drawer. Instead of storing repeated text inside every entry, the file keeps the names together in one block and points to them from the clip and socket lists.</p>
+            <h3 id="palette-data">Palette data</h3>
+            <p>This is the heart of the file.</p>
+            <p>For every stored frame, BPAT contains the full pose of the creature: where each bone should be and how it should be oriented. The data is laid out in one long run of frames, clip after clip.</p>
+            <p>If you like analogies, this is a flipbook where each page contains the full bone pose for that instant.</p>
+            <h3 id="socket-data">Socket data</h3>
+            <p>This part is optional. If present, it stores ready-to-use attachment transforms so the game does not have to combine the bone pose with that extra socket offset every time. That saves extra work during rendering.</p>
+            <h2 id="how-playback-works-without-the-scary-math">How playback works without the scary math</h2>
             <ol>
-                <li><code>magic == 'BPAT'</code>.</li>
-                <li><code>version == 1</code>.</li>
-                <li><code>species_id ∈ {0, 1, 2}</code>.</li>
-                <li><code>bone_count ∈ [1, 64]</code>. (<code>kMaxCreatureBones</code> = 24 today; the loose
-                    ceiling allows future skeletons.)</li>
-                <li><code>clip_count ≥ 1</code>.</li>
-                <li><code>frame_total = Σ clip[i].frame_count</code>.</li>
-                <li><code>clip[i].frame_offset + clip[i].frame_count ≤ frame_total</code> for all <code>i</code>.</li>
-                <li>All offsets fit within file size; sections do not overlap.</li>
-                <li>Each <code>name_offset + name_length + 1 ≤ string_table_size</code>.</li>
-                <li>The byte at <code>string_table_offset + name_offset + name_length</code> is <code>0x00</code>.</li>
-                <li>All <code>reserved</code> and <code>_pad</code> bytes are zero.</li>
+                <li><strong>Before the game ships</strong>, <code>tools/bpat_baker</code> bakes creature motion into BPAT files.</li>
+                <li><strong>During play</strong>, gameplay chooses a clip and a phase inside it.</li>
+                <li><strong>The engine looks up the right frame</strong> in the BPAT data.</li>
+                <li><strong>The GPU reads the stored pose</strong> and bends the creature mesh into place.</li>
             </ol>
-            <h2 id="reference-c-types">Reference C++ types</h2>
-            <p>See <code>render/creature/bpat/bpat_format.h</code>.</p>
+            <p>No live "solve the whole skeleton from scratch" step runs in the shipping build.</p>
+            <p>That is the idea behind the format.</p>
+            <h2 id="how-to-use-the-prebaker">How to use the prebaker</h2>
+            <p>If you want the game to regenerate the current creature BPAT assets, use the prebaker.</p>
+            <h3 id="recommended">Recommended</h3>
+            <div>
+                <pre><code class="language-bash">make bake-bpat</code></pre>
+            </div>
+            <p>That runs the built baker and writes the generated creature assets into <code>assets/creatures/</code>.</p>
+            <h3 id="direct-cli">Direct CLI</h3>
+            <div>
+                <pre><code class="language-bash">./build/bin/bpat_baker</code></pre>
+            </div>
+            <p>The tool takes one optional argument: the output directory.</p>
+            <div>
+                <pre><code class="language-bash">./build/bin/bpat_baker assets/creatures
+./build/bin/bpat_baker /tmp/creature_bakes</code></pre>
+            </div>
+            <h3 id="what-it-writes-today">What it writes today</h3>
+            <p>At the moment, the prebaker writes all built-in species in one pass:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Output</td>
+                    <td>Notes</td>
+                </tr>
+                <tr>
+                    <td><code>humanoid.bpat</code></td>
+                    <td>default humanoid animation set</td>
+                </tr>
+                <tr>
+                    <td><code>humanoid_sword.bpat</code></td>
+                    <td>sword-ready humanoid animation set</td>
+                </tr>
+                <tr>
+                    <td><code>horse.bpat</code></td>
+                    <td>horse creature BPAT</td>
+                </tr>
+                <tr>
+                    <td><code>horse_minimal.bpsm</code></td>
+                    <td>horse minimal snapshot mesh</td>
+                </tr>
+                <tr>
+                    <td><code>elephant.bpat</code></td>
+                    <td>elephant creature BPAT</td>
+                </tr>
+                <tr>
+                    <td><code>elephant_minimal.bpsm</code></td>
+                    <td>elephant minimal snapshot mesh</td>
+                </tr>
+            </table>
+            </p>
+            <p>So this is not a pick-one-species command yet. The current CLI bakes the whole built-in set.</p>
+            <h3 id="how-a-new-species-plugs-into-the-prebaker">How a new species plugs into the prebaker</h3>
+            <p>For whole-creature species such as horse and elephant, the current prebaker path is driven by <code>SpeciesManifest</code>.</p>
+            <p>To hook a new species in, provide a manifest with:</p>
+            <ul>
+                <li><code>species_id</code></li>
+                <li><code>bpat_file_name</code></li>
+                <li><code>minimal_snapshot_file_name</code></li>
+                <li>clip descriptors</li>
+                <li><code>bind_palette</code></li>
+                <li><code>creature_spec</code></li>
+                <li><code>bake_clip_palette</code></li>
+            </ul>
+            <p>Then expose that manifest and call <code>bake_species_manifest(...)</code> from the baker entrypoint.</p>
+            <h2 id="the-texture-trick-explained-simply">The texture trick, explained simply</h2>
+            <p>The engine uploads the baked pose data as a texture on the GPU.</p>
+            <p>Why a texture? Because GPUs are extremely good at reading texture data quickly and in parallel. Instead of treating the texture like a picture, the engine treats it like a shelf full of pose rows.</p>
+            <p>So when the creature is drawn, the graphics card reads the right bone rows from the texture and bends the mesh into the correct pose.</p>
+            <p>In player terms: the creature animation is packed like an image so the graphics card can replay it fast.</p>
+            <h2 id="a-friendly-glossary">A friendly glossary</h2>
+            <p>
+            <table>
+                <tr>
+                    <td>Term</td>
+                    <td>Easy meaning</td>
+                </tr>
+                <tr>
+                    <td>Bone palette</td>
+                    <td>The full creature pose for one frame</td>
+                </tr>
+                <tr>
+                    <td>Clip</td>
+                    <td>One named move, like idle or attack</td>
+                </tr>
+                <tr>
+                    <td>Frame</td>
+                    <td>One step inside that move</td>
+                </tr>
+                <tr>
+                    <td>Socket</td>
+                    <td>A named attach point for equipment or props</td>
+                </tr>
+                <tr>
+                    <td>Phase</td>
+                    <td>How far through the move the creature currently is</td>
+                </tr>
+                <tr>
+                    <td>Species</td>
+                    <td>Which body plan this file belongs to</td>
+                </tr>
+            </table>
+            </p>
+            <h2 id="the-firm-rules-of-the-format">The firm rules of the format</h2>
+            <p>For readers who want the important hard facts without drowning in byte offset tables:</p>
+            <ul>
+                <li>BPAT v1 is <strong>little-endian</strong>.</li>
+                <li>Floating-point values are <strong>32-bit IEEE 754 floats</strong>.</li>
+                <li>Bone matrices are stored <strong>row-major</strong>.</li>
+                <li>Each section begins on a <strong>16-byte boundary</strong>.</li>
+                <li>Variable-sized data lives in trailing blocks referenced by <strong>absolute file offsets</strong>.</li>
+                <li>Reserved and padding bytes must be <strong>zero</strong>.</li>
+                <li>The file magic must be <strong><code>BPAT</code></strong>.</li>
+                <li>Current supported species ids are <strong>0 = humanoid, 1 = horse, 2 = elephant, 3 = humanoid_sword</strong>.</li>
+            </ul>
+            <h2 id="how-the-frame-data-is-packed">How the frame data is packed</h2>
+            <p>The frame data is flat and simple:</p>
+            <ul>
+                <li>all frames from all clips are stored in one long sequence</li>
+                <li>frames from the same clip stay together</li>
+                <li>each frame stores all bones for that species</li>
+            </ul>
+            <p>So a clip entry does not own a separate chunked mini-file. It simply points to its starting place inside the full shared stream.</p>
+            <h2 id="validation-in-plain-language">Validation in plain language</h2>
+            <p>The current reader accepts a BPAT file when:</p>
+            <ol>
+                <li>it starts with the <code>BPAT</code> magic</li>
+                <li>it uses version <code>1</code></li>
+                <li>its species id is known (<code>0..3</code> today)</li>
+                <li>it has at least one clip</li>
+                <li>its bone count is in range</li>
+                <li>its clip frame offsets are contiguous and its frame counts add up correctly</li>
+                <li>its offsets stay inside the file</li>
+                <li>every referenced clip or socket name really exists inside the string table and ends with <code>NUL</code></li>
+                <li>every socket anchor bone points at a real bone</li>
+            </ol>
+            <p>The writer still emits zeroed padding and reserved fields, but the current reader does <strong>not</strong> actively reject non-zero reserved bytes.</p>
+            <h2 id="if-you-need-the-exact-binary-contract">If you need the exact binary contract</h2>
+            <p>This page now tells the story first.</p>
+            <p>For the exact C++ layout used by the engine, see:</p>
+            <ul>
+                <li><code>render/creature/bpat/bpat_format.h</code></li>
+            </ul>
+            <p>For the broader rendering flow, see:</p>
+            <ul>
+                <li><code>docs/RENDERING_ARCHITECTURE.md</code></li>
+            </ul>
         </article-section>
     </div>
     <footer>

@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Variable Types</title>
-    <meta content="In Unix‐style shells, variables let you store and reuse pieces of information—anything from your editor preference (EDITOR=vim) to the path where executables live (PATH=/usr/local/bin:$PATH) or temporary data in a script (count=0)." name="description" />
+    <meta content="In Unix-style shells, variables let you store and reuse pieces of information, such as your preferred editor:" name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/linux_notes/environment_variable"
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/environment_variable",
-            "description": "In Unix\u2010style shells, variables let you store and reuse pieces of information\u2014anything from your editor preference (EDITOR=vim) to the path where executables live (PATH=/usr/local/bin:$PATH) or temporary data in a script (count=0).",
-            "dateModified": "2016-10-26"
+            "description": "In Unix-style shells, variables let you store and reuse pieces of information, such as your preferred editor:",
+            "dateModified": "2026-05-03"
         }
     </script>
 </head>
@@ -77,34 +77,153 @@
         <aside id="article-sidebar">
             <div id="table-of-contents">
                 <h2>Table of Contents</h2>
-                <ol><a href="#variable-types">Variable Types</a>
-                    <ol>
-                        <li><a href="#environment-variables">Environment Variables</a>
+                <ol>
+                    <li><a href="#variable-types">Variable Types</a>
+                        <ol>
+                            <li><a href="#shell-variables">Shell Variables</a></li>
+                            <li><a href="#environment-variables">Environment Variables</a>
+                                <ol>
+                                    <li><a href="#listing-environment-variables">Listing Environment Variables</a></li>
+                                    <li><a href="#shell-variable-vs-environment-variable">Shell Variable vs Environment Variable</a></li>
+                                    <li><a href="#how-long-do-environment-variables-persist-">How Long Do Environment Variables Persist?</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#parent-and-child-processes">Parent and Child Processes</a>
+                                <ol>
+                                    <li><a href="#concrete-example-parent-gives-environment-to-child">Concrete Example: Parent Gives Environment to Child</a></li>
+                                    <li><a href="#concrete-example-child-changes-its-own-environment">Concrete Example: Child Changes Its Own Environment</a></li>
+                                    <li><a href="#fork-and-exec">Fork and Exec</a></li>
+                                    <li><a href="#normal-shell-command-fork-exec-">Normal Shell Command: fork() + exec()</a></li>
+                                    <li><a href="#why-exec-keeps-the-same-environment-can-be-confusing">Why “exec Keeps the Same Environment” Can Be Confusing</a></li>
+                                    <li><a href="#running-exec-directly-in-the-shell">Running exec Directly in the Shell</a></li>
+                                    <li><a href="#fork-vs-exec-summary">Fork vs Exec Summary</a></li>
+                                    <li><a href="#can-a-child-process-change-the-parent-s-environment-">Can a Child Process Change the Parent’s Environment?</a></li>
+                                    <li><a href="#when-can-a-script-change-the-current-shell-">When Can a Script Change the Current Shell?</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#subshells">Subshells</a></li>
+                            <li><a href="#builtins-vs-external-commands">Builtins vs External Commands</a></li>
+                            <li><a href="#common-environment-variables">Common Environment Variables</a>
+                                <ol>
+                                    <li><a href="#histsize">HISTSIZE</a></li>
+                                    <li><a href="#home">HOME</a></li>
+                                    <li><a href="#pwd">PWD</a></li>
+                                    <li><a href="#oldpwd">OLDPWD</a></li>
+                                    <li><a href="#hostname">HOSTNAME</a></li>
+                                    <li><a href="#path">PATH</a></li>
+                                    <li><a href="#lang">LANG</a></li>
+                                    <li><a href="#editor">EDITOR</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#changing-variables">Changing Variables</a>
+                                <ol>
+                                    <li><a href="#current-shell-only">Current Shell Only</a></li>
+                                    <li><a href="#one-command-only">One Command Only</a></li>
+                                    <li><a href="#permanent-updates">Permanent Updates</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#operations-on-variables">Operations on Variables</a>
+                                <ol>
+                                    <li><a href="#removing-variables">Removing Variables</a></li>
+                                    <li><a href="#making-variables-read-only">Making Variables Read-Only</a></li>
+                                    <li><a href="#enforcing-defined-variables">Enforcing Defined Variables</a></li>
+                                    <li><a href="#customizing-your-prompt-with-ps1">Customizing Your Prompt with PS1</a></li>
+                                    <li><a href="#word-splitting-and-ifs">Word Splitting and IFS</a></li>
+                                    <li><a href="#splitting-on-commas">Splitting on Commas</a></li>
+                                    <li><a href="#empty-ifs">Empty IFS</a></li>
+                                    <li><a href="#listing-shell-definitions">Listing Shell Definitions</a></li>
+                                </ol>
+                            </li>
+                        </ol>
+                    </li>
+                    <li><a href="#env-running-commands-with-modified-environments">env: Running Commands with Modified Environments</a>
+                        <ol>
                             <ol>
-                                <li><a href="#histsize">HISTSIZE</a></li>
-                                <li><a href="#home">HOME</a></li>
-                                <li><a href="#pwd">PWD</a></li>
-                                <li><a href="#hostname">HOSTNAME</a></li>
-                                <li><a href="#path">PATH</a></li>
-                                <li><a href="#changing-variables">Changing Variables</a></li>
-                                <li><a href="#tips-and-safeguards">Tips and Safeguards</a></li>
+                                <li><a href="#safe-script-defaults">Safe Script Defaults</a></li>
                             </ol>
-                        </li>
-                        <li><a href="#shell-variables">Shell Variables</a>
-                            <ol>
-                                <li><a href="#enforcing-defined-variables">Enforcing Defined Variables</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#customizing-your-prompt-ps1-">Customizing Your Prompt (PS1)</a>
-                            <ol>
-                                <li><a href="#word-splitting-and-ifs">Word Splitting and IFS</a></li>
-                                <li><a href="#listing-all-definitions">Listing All Definitions</a></li>
-                                <li><a href="#making-variables-read-only">Making Variables Read-Only</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#safe-script-defaults">Safe Script Defaults</a></li>
-                        <li><a href="#challenges">Challenges</a></li>
-                    </ol>
+                            <li><a href="#practical-debugging-examples">Practical Debugging Examples</a>
+                                <ol>
+                                    <li><a href="#check-whether-a-variable-is-exported">Check Whether a Variable Is Exported</a></li>
+                                    <li><a href="#prove-that-a-child-cannot-change-the-parent">Prove That a Child Cannot Change the Parent</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#prove-that-sourcing-changes-the-current-shell">Prove That Sourcing Changes the Current Shell</a>
+                                <ol>
+                                    <li><a href="#prove-that-different-terminals-do-not-share-environment-changes">Prove That Different Terminals Do Not Share Environment Changes</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#environment-variables-and-python-virtual-environments">Environment Variables and Python Virtual Environments</a></li>
+                            <li><a href="#what-a-python-virtual-environment-contains">What a Python Virtual Environment Contains</a>
+                                <ol>
+                                    <li><a href="#creating-a-virtual-environment-does-not-activate-it">Creating a Virtual Environment Does Not Activate It</a></li>
+                                    <li><a href="#activating-a-virtual-environment">Activating a Virtual Environment</a></li>
+                                    <li><a href="#why-activation-must-be-sourced">Why Activation Must Be Sourced</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#what-activate-actually-changes">What activate Actually Changes</a>
+                                <ol>
+                                    <li><a href="#activation-does-not-magically-change-python-globally">Activation Does Not Magically Change Python Globally</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#pip-install-inside-a-virtual-environment">pip install Inside a Virtual Environment</a>
+                                <ol>
+                                    <li><a href="#concrete-example">Concrete Example</a></li>
+                                    <li><a href="#what-deactivate-does">What deactivate Does</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#why-python-m-pip-is-often-safer-than-pip">Why python -m pip Is Often Safer Than pip</a>
+                                <ol>
+                                    <li><a href="#you-can-use-a-venv-without-activating-it">You Can Use a Venv Without Activating It</a></li>
+                                    <li><a href="#what-a-venv-does-not-isolate">What a Venv Does Not Isolate</a></li>
+                                    <li><a href="#venv-activation-as-environment-manipulation">Venv Activation as Environment Manipulation</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#container-build-credentials-and-environment-variables">Container Build, Credentials, and Environment Variables</a></li>
+                            <li><a href="#build-time-vs-runtime">Build Time vs Runtime</a>
+                                <ol>
+                                    <li><a href="#build-time">Build Time</a></li>
+                                    <li><a href="#runtime">Runtime</a></li>
+                                    <li><a href="#environment-variables-at-runtime">Environment Variables at Runtime</a></li>
+                                    <li><a href="#runtime-environment-variables-flow-to-child-processes">Runtime Environment Variables Flow to Child Processes</a></li>
+                                    <li><a href="#env-in-a-dockerfile">ENV in a Dockerfile</a></li>
+                                    <li><a href="#arg-in-a-dockerfile">ARG in a Dockerfile</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#copying-arg-into-env">Copying ARG into ENV</a>
+                                <ol>
+                                    <li><a href="#do-not-put-secrets-in-env-during-build">Do Not Put Secrets in ENV During Build</a></li>
+                                    <li><a href="#build-secrets-safer-build-time-credentials">Build Secrets: Safer Build-Time Credentials</a></li>
+                                    <li><a href="#runtime-secrets">Runtime Secrets</a></li>
+                                    <li><a href="#-env-file">--env-file</a></li>
+                                    <li><a href="#docker-compose-environment-variables">Docker Compose Environment Variables</a></li>
+                                    <li><a href="#compose-env-vs-container-env_file">Compose .env vs Container env_file</a></li>
+                                    <li><a href="#compose-env-for-substitution">Compose .env for Substitution</a></li>
+                                    <li><a href="#env_file-for-container-environment">env_file: for Container Environment</a></li>
+                                    <li><a href="#build-args-in-compose">Build Args in Compose</a></li>
+                                    <li><a href="#multi-stage-builds-and-secrets">Multi-Stage Builds and Secrets</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#runtime-environment-variables-override-dockerfile-env">Runtime Environment Variables Override Dockerfile ENV</a>
+                                <ol>
+                                    <li><a href="#environment-variables-and-image-layers">Environment Variables and Image Layers</a></li>
+                                    <li><a href="#example-bad-container-secret-pattern">Example: Bad Container Secret Pattern</a></li>
+                                    <li><a href="#example-python-app-reading-runtime-configuration">Example: Python App Reading Runtime Configuration</a></li>
+                                    <li><a href="#example-build-time-version-runtime-secrets">Example: Build-Time Version, Runtime Secrets</a></li>
+                                    <li><a href="#containers-and-env-files-in-python-apps">Containers and .env Files in Python Apps</a></li>
+                                    <li><a href="#-dockerignore-and-secret-protection">.dockerignore and Secret Protection</a></li>
+                                    <li><a href="#inspecting-container-environment">Inspecting Container Environment</a></li>
+                                    <li><a href="#kubernetes-environment-variables">Kubernetes Environment Variables</a></li>
+                                    <li><a href="#ci-cd-credentials-and-docker-builds">CI/CD Credentials and Docker Builds</a></li>
+                                    <li><a href="#common-bad-patterns">Common Bad Patterns</a></li>
+                                    <li><a href="#bad-secrets-in-dockerfile">Bad: Secrets in Dockerfile</a></li>
+                                    <li><a href="#bad-secrets-as-build-args">Bad: Secrets as Build Args</a></li>
+                                    <li><a href="#safer-patterns">Safer Patterns</a></li>
+                                    <li><a href="#practical-decision-table">Practical Decision Table</a></li>
+                                </ol>
+                            </li>
+                            <li><a href="#challenges">Challenges</a></li>
+                        </ol>
+                    </li>
                 </ol>
             </div>
             <div id="related-articles">
@@ -177,152 +296,1063 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: October 26, 2016</i></p>
+            <p style="text-align: right;"><i>Last modified: May 03, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="variable-types">Variable Types</h2>
-            <p>In Unix‐style shells, variables let you store and reuse pieces of information—anything from your editor preference (<code>EDITOR=vim</code>) to the path where executables live (<code>PATH=/usr/local/bin:$PATH</code>) or temporary data in a script (<code>count=0</code>). You’ll encounter two main kinds:</p>
-            <ul>
-                <li><strong>Shell variables</strong> exist only in the current session (e.g. <code>count=5</code>); use them for loop counters or interim calculations in scripts.</li>
-                <li><strong>Environment variables</strong> are exported (<code>export VAR=value</code>) so child processes inherit them—essential for settings like <code>LANG=en_US.UTF-8</code>, <code>HOME=/home/ahmad</code> or API credentials (<code>export AWS_ACCESS_KEY_ID=…</code>).</li>
-            </ul>
+            <p>In Unix-style shells, variables let you store and reuse pieces of information, such as your preferred editor:</p>
+            <div>
+                <pre><code class="language-bash">EDITOR=vim</code></pre>
+            </div>
+            <p>the directories where executables are searched:</p>
+            <div>
+                <pre><code class="language-bash">PATH=/usr/local/bin:$PATH</code></pre>
+            </div>
+            <p>or temporary data inside a script:</p>
+            <div>
+                <pre><code class="language-bash">count=0</code></pre>
+            </div>
+            <p>You will mainly encounter two related but different concepts:</p>
+            <ol>
+                <li><strong>Shell variables</strong></li>
+                <li><strong>Environment variables</strong></li>
+            </ol>
+            <p>The most important distinction is this:</p>
+            <blockquote>
+                <p>A shell variable belongs only to the current shell.
+                    An environment variable is exported so that child processes can inherit it.</p>
+            </blockquote>
+            <h3 id="shell-variables">Shell Variables</h3>
+            <p>A <strong>shell variable</strong> exists only inside the current shell process.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">count=5
+echo "$count"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">5</code></pre>
+            </div>
+            <p>This variable is available to the current shell, but it is <strong>not automatically available to programs started from the shell</strong>.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-bash">count=5
+python3 -c 'import os; print(os.environ.get("count"))'</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">None</code></pre>
+            </div>
+            <p>Why?</p>
+            <p>Because <code>count</code> is only a shell variable. It has not been exported into the environment.</p>
+            <p>To make it visible to child processes, you must use <code>export</code>:</p>
+            <div>
+                <pre><code class="language-bash">export count=5
+python3 -c 'import os; print(os.environ.get("count"))'</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">5</code></pre>
+            </div>
+            <p>So:</p>
+            <div>
+                <pre><code class="language-bash">VAR=value</code></pre>
+            </div>
+            <p>creates a shell variable.</p>
+            <div>
+                <pre><code class="language-bash">export VAR=value</code></pre>
+            </div>
+            <p>creates or updates a shell variable <strong>and marks it for inheritance by child processes</strong>.</p>
             <h3 id="environment-variables">Environment Variables</h3>
-            <p>Environment variables are key-value pairs that every process inherits, supplying critical configuration—like executable search paths, language settings, and user preferences—to your shell and applications. Proper management helps you tailor your environment, avoid runtime errors, and simplify scripts.</p>
-            <p>Run <code>printenv</code> to list all current variables:</p>
+            <p>Environment variables are key-value pairs that a process passes to its child processes. They are commonly used for configuration, such as executable search paths, language settings, home directories, credentials, and feature flags.</p>
+            <p>Examples include:</p>
+            <div>
+                <pre><code class="language-bash">PATH=/usr/local/bin:/usr/bin:/bin
+HOME=/home/ahmad
+LANG=en_US.UTF-8
+EDITOR=vim
+DATABASE_URL=postgres://user:pass@localhost/db</code></pre>
+            </div>
+            <p>A process has its own environment. When it starts another process, the child receives a <strong>copy</strong> of that environment.</p>
+            <p>That copy is extremely important:</p>
+            <blockquote>
+                <p>Environment variables flow downward from parent to child.
+                    They do not flow upward from child to parent.</p>
+            </blockquote>
+            <h4 id="listing-environment-variables">Listing Environment Variables</h4>
+            <p>Use <code>printenv</code> to list environment variables visible to the current process:</p>
             <div>
                 <pre><code class="language-bash">printenv</code></pre>
             </div>
-            <p>Example output: </p>
+            <p>Example output:</p>
             <div>
                 <pre><code class="language-bash">PATH=/usr/local/bin:/usr/bin:/bin:/home/ahmad/bin
 HOME=/home/ahmad
 LANG=en_US.UTF-8</code></pre>
             </div>
-            <p>Each line shows <code>VARIABLE=value</code>. Scanning this output confirms which settings your tools rely on.</p>
-            <h4 id="histsize">HISTSIZE</h4>
-            <p>The number of commands your shell remembers is controlled by <code>HISTSIZE</code>. When <code>HISTSIZE</code> is large, you can retrieve older commands during a <code>Ctrl+R</code> search; if set to <code>0</code>, history is disabled entirely.</p>
+            <p>Each line has this form:</p>
             <div>
-                <pre><code class="language-bash">echo $HISTSIZE</code></pre>
+                <pre><code class="language-bash">VARIABLE=value</code></pre>
             </div>
-            <p>Example output:</p>
+            <p>You can also print one variable:</p>
             <div>
-                <pre><code class="language-bash">1000</code></pre>
-            </div>
-            <p>Here, the last 1,000 commands are stored. You might increase this on a complex debugging session:</p>
-            <div>
-                <pre><code class="language-bash">export HISTSIZE=2000</code></pre>
-            </div>
-            <p>but note that overly long histories can slow down interactive searches or consume more memory.</p>
-            <h4 id="home">HOME</h4>
-            <p>Your home directory path comes from <code>HOME</code>. Scripts and applications use this to locate user-specific files (like <code>~/.config</code> or <code>~/.ssh</code>).</p>
-            <div>
-                <pre><code class="language-bash">echo $HOME</code></pre>
+                <pre><code class="language-bash">printenv HOME</code></pre>
             </div>
             <p>Example output:</p>
             <div>
                 <pre><code class="language-bash">/home/ahmad</code></pre>
             </div>
-            <p>Commands like <code>cp config.json "$HOME/.config/myapp/"</code> work across any user account. If <code>$HOME</code> points to a non-existent path—common in some container setups—you’ll see errors when trying to <code>cd ~</code> or write files there.</p>
-            <h4 id="pwd">PWD</h4>
-            <p>The <code>PWD</code> variable always reflects your current working directory, updating as you <code>cd</code>. When a script logs output to <code>$PWD/log.txt</code>, it dynamically writes where you invoked it.</p>
+            <p>Or use shell expansion:</p>
             <div>
-                <pre><code class="language-bash">echo $PWD</code></pre>
+                <pre><code class="language-bash">echo "$HOME"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">/home/ahmad</code></pre>
+            </div>
+            <h4 id="shell-variable-vs-environment-variable">Shell Variable vs Environment Variable</h4>
+            <p>Consider this example:</p>
+            <div>
+                <pre><code class="language-bash">name=Ahmad
+echo "$name"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">Ahmad</code></pre>
+            </div>
+            <p>The shell can see the variable.</p>
+            <p>But a child process cannot:</p>
+            <div>
+                <pre><code class="language-bash">name=Ahmad
+python3 -c 'import os; print(os.environ.get("name"))'</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">None</code></pre>
+            </div>
+            <p>Now export it:</p>
+            <div>
+                <pre><code class="language-bash">export name=Ahmad
+python3 -c 'import os; print(os.environ.get("name"))'</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">Ahmad</code></pre>
+            </div>
+            <p>So the rule is:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Assignment</td>
+                    <td>Visible in current shell?</td>
+                    <td>Visible to child processes?</td>
+                </tr>
+                <tr>
+                    <td><code>VAR=value</code></td>
+                    <td>Yes</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td><code>export VAR=value</code></td>
+                    <td>Yes</td>
+                    <td>Yes</td>
+                </tr>
+                <tr>
+                    <td><code>VAR=value command</code></td>
+                    <td>Only for that command</td>
+                    <td>Yes, for that command only</td>
+                </tr>
+            </table>
+            </p>
+            <p>Example of a temporary environment variable for one command:</p>
+            <div>
+                <pre><code class="language-bash">DATABASE_URL='postgres://localhost/test' python3 -c 'import os; print(os.environ["DATABASE_URL"])'</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">postgres://localhost/test</code></pre>
+            </div>
+            <p>After the command finishes:</p>
+            <div>
+                <pre><code class="language-bash">echo "$DATABASE_URL"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash"></code></pre>
+            </div>
+            <p>It is empty because <code>DATABASE_URL=value command</code> only applies to that one command invocation.</p>
+            <h4 id="how-long-do-environment-variables-persist-">How Long Do Environment Variables Persist?</h4>
+            <p>Environment variables do <strong>not</strong> automatically persist forever. Their lifetime depends on where they were defined.</p>
+            <h5>1. Current Terminal Session</h5>
+            <p>If you run:</p>
+            <div>
+                <pre><code class="language-bash">export API_KEY=abc123</code></pre>
+            </div>
+            <p>then <code>API_KEY</code> exists in the current shell process and is inherited by child processes started from that shell.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">export API_KEY=abc123
+python3 -c 'import os; print(os.environ.get("API_KEY"))'</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">abc123</code></pre>
+            </div>
+            <p>But when you close the terminal, that shell process exits, and the variable disappears.</p>
+            <h5>2. Between Different Terminals</h5>
+            <p>Environment variables do <strong>not</strong> automatically propagate between separate terminal windows.</p>
+            <p>Terminal 1:</p>
+            <div>
+                <pre><code class="language-bash">export PROJECT=backend
+echo "$PROJECT"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">backend</code></pre>
+            </div>
+            <p>Terminal 2:</p>
+            <div>
+                <pre><code class="language-bash">echo "$PROJECT"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash"></code></pre>
+            </div>
+            <p>The second terminal does not see it because each terminal starts its own shell process. They are usually siblings or independent descendants of some terminal emulator process, not parent and child of each other.</p>
+            <p>So:</p>
+            <blockquote>
+                <p>Terminal 1 variables do not magically appear in Terminal 2.</p>
+            </blockquote>
+            <p>If you want variables available in every new terminal, put them in a shell startup file such as:</p>
+            <div>
+                <pre><code class="language-bash">~/.bashrc
+~/.zshrc
+~/.profile
+~/.bash_profile</code></pre>
+            </div>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-bash">echo 'export EDITOR=vim' &gt;&gt; ~/.bashrc
+source ~/.bashrc</code></pre>
+            </div>
+            <p>Now future interactive Bash sessions that read <code>~/.bashrc</code> will set <code>EDITOR</code>.</p>
+            <h5>3. Permanent Variables via Startup Files</h5>
+            <p>To persist a variable across new shell sessions, add it to a shell startup file.</p>
+            <p>For Bash interactive shells:</p>
+            <div>
+                <pre><code class="language-bash">echo 'export EDITOR=vim' &gt;&gt; ~/.bashrc
+source ~/.bashrc</code></pre>
+            </div>
+            <p>Then:</p>
+            <div>
+                <pre><code class="language-bash">echo "$EDITOR"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">vim</code></pre>
+            </div>
+            <p>For Zsh:</p>
+            <div>
+                <pre><code class="language-bash">echo 'export EDITOR=vim' &gt;&gt; ~/.zshrc
+source ~/.zshrc</code></pre>
+            </div>
+            <p>For login shells, especially on macOS or server logins, variables may belong in:</p>
+            <div>
+                <pre><code class="language-bash">~/.profile
+~/.bash_profile
+~/.zprofile</code></pre>
+            </div>
+            <p>The exact file depends on shell and login mode.</p>
+            <h3 id="parent-and-child-processes">Parent and Child Processes</h3>
+            <p>Every running program is a process.</p>
+            <p>Your shell is a process. When you run a command from the shell, that command usually runs as a <strong>child process</strong> of the shell.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">python3 script.py</code></pre>
+            </div>
+            <p>Usually means:</p>
+            <div>
+                <pre><code class="language-text">shell process
+└── python3 process</code></pre>
+            </div>
+            <p>The shell is the parent. <code>python3</code> is the child.</p>
+            <p>The child receives a <strong>copy</strong> of the parent’s environment.</p>
+            <h4 id="concrete-example-parent-gives-environment-to-child">Concrete Example: Parent Gives Environment to Child</h4>
+            <p>Run this in the shell:</p>
+            <div>
+                <pre><code class="language-bash">export COLOR=blue
+python3 -c 'import os; print("Child sees COLOR =", os.environ.get("COLOR"))'</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">Child sees COLOR = blue</code></pre>
+            </div>
+            <p>The Python process inherited <code>COLOR</code> from the shell.</p>
+            <h4 id="concrete-example-child-changes-its-own-environment">Concrete Example: Child Changes Its Own Environment</h4>
+            <p>Now try this:</p>
+            <div>
+                <pre><code class="language-bash">export COLOR=blue
+
+python3 -c 'import os; os.environ["COLOR"] = "red"; print("Child changed COLOR to", os.environ["COLOR"])'
+
+echo "Parent still has COLOR=$COLOR"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">Child changed COLOR to red
+Parent still has COLOR=blue</code></pre>
+            </div>
+            <p>The child changed its own copy. The parent shell did not change.</p>
+            <p>This is one of the most important rules:</p>
+            <blockquote>
+                <p>A child process cannot modify the environment of its parent process.</p>
+            </blockquote>
+            <p>The environment is copied downward, not shared upward.</p>
+            <h4 id="fork-and-exec">Fork and Exec</h4>
+            <p>When a Unix-style shell runs an external command, it usually uses two important operations:</p>
+            <ol>
+                <li><code>fork()</code></li>
+                <li><code>exec()</code></li>
+            </ol>
+            <p>They do different things.</p>
+            <h5><code>fork()</code></h5>
+            <p><code>fork()</code> creates a new child process.</p>
+            <p>Conceptually, the child starts as a copy of the parent.</p>
+            <p>That includes:</p>
+            <ul>
+                <li>variables in memory</li>
+                <li>open file descriptors</li>
+                <li>current working directory</li>
+                <li>environment variables</li>
+            </ul>
+            <p>Modern systems optimize this with copy-on-write, but conceptually it is a copy.</p>
+            <p>After <code>fork()</code>:</p>
+            <div>
+                <pre><code class="language-text">parent shell
+├── environment: COLOR=blue
+└── child process
+    └── environment: COLOR=blue</code></pre>
+            </div>
+            <p>The child has its own copy. If the child changes <code>COLOR</code>, the parent is not affected.</p>
+            <h5><code>exec()</code></h5>
+            <p><code>exec()</code> does <strong>not</strong> create a new process.</p>
+            <p>Instead, it replaces the current process image with another program.</p>
+            <p>That means the same process ID continues, but the program code changes.</p>
+            <p>Important:</p>
+            <blockquote>
+                <p><code>exec()</code> keeps the environment of the current process unless a different environment is explicitly supplied.</p>
+            </blockquote>
+            <p>So if a child process has:</p>
+            <div>
+                <pre><code class="language-bash">COLOR=blue</code></pre>
+            </div>
+            <p>and then calls <code>exec()</code> to become <code>python3</code>, the new Python program still sees:</p>
+            <div>
+                <pre><code class="language-bash">COLOR=blue</code></pre>
+            </div>
+            <p>But that does not mean the parent shell is affected.</p>
+            <h4 id="normal-shell-command-fork-exec-">Normal Shell Command: <code>fork()</code> + <code>exec()</code></h4>
+            <p>When you run:</p>
+            <div>
+                <pre><code class="language-bash">ls</code></pre>
+            </div>
+            <p>the shell usually does this:</p>
+            <div>
+                <pre><code class="language-text">1. shell calls fork()
+2. child process is created
+3. child calls exec("ls")
+4. child becomes ls
+5. ls runs
+6. ls exits
+7. parent shell continues</code></pre>
+            </div>
+            <p>Process tree:</p>
+            <div>
+                <pre><code class="language-text">shell
+└── ls</code></pre>
+            </div>
+            <p>The important point:</p>
+            <blockquote>
+                <p>The shell itself did not become <code>ls</code>.
+                    A child process became <code>ls</code>.</p>
+            </blockquote>
+            <p>That is why changes made by <code>ls</code>, Python, Node, Ruby, or any other child process do not affect the parent shell environment.</p>
+            <h4 id="why-exec-keeps-the-same-environment-can-be-confusing">Why “exec Keeps the Same Environment” Can Be Confusing</h4>
+            <p>This sentence is true:</p>
+            <blockquote>
+                <p><code>exec()</code> keeps the same environment.</p>
+            </blockquote>
+            <p>But it means:</p>
+            <blockquote>
+                <p>The process that calls <code>exec()</code> keeps its own environment while becoming a new program.</p>
+            </blockquote>
+            <p>It does <strong>not</strong> mean:</p>
+            <blockquote>
+                <p>The child can change the parent’s environment.</p>
+            </blockquote>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">export MODE=dev
+python3 -c 'import os; print(os.environ["MODE"])'</code></pre>
+            </div>
+            <p>The shell forks a child. The child execs Python. Python sees <code>MODE=dev</code>.</p>
+            <p>But:</p>
+            <div>
+                <pre><code class="language-bash">export MODE=dev
+python3 -c 'import os; os.environ["MODE"]="prod"; print(os.environ["MODE"])'
+echo "$MODE"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">prod
+dev</code></pre>
+            </div>
+            <p>Python changed its own environment, not the shell’s environment.</p>
+            <h4 id="running-exec-directly-in-the-shell">Running <code>exec</code> Directly in the Shell</h4>
+            <p>There is a special case.</p>
+            <p>If you run:</p>
+            <div>
+                <pre><code class="language-bash">exec python3</code></pre>
+            </div>
+            <p>then the shell itself is replaced by Python.</p>
+            <p>There is no new child shell continuing afterward.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">export MODE=dev
+exec python3 -c 'import os; print(os.environ["MODE"])'</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">dev</code></pre>
+            </div>
+            <p>After Python exits, your shell is gone. The terminal may close or return to the parent terminal program.</p>
+            <p>So:</p>
+            <div>
+                <pre><code class="language-bash">python3</code></pre>
+            </div>
+            <p>usually means:</p>
+            <div>
+                <pre><code class="language-text">shell forks child
+child execs python3
+parent shell remains</code></pre>
+            </div>
+            <p>But:</p>
+            <div>
+                <pre><code class="language-bash">exec python3</code></pre>
+            </div>
+            <p>means:</p>
+            <div>
+                <pre><code class="language-text">shell execs python3
+shell is replaced
+no original shell remains</code></pre>
+            </div>
+            <h4 id="fork-vs-exec-summary">Fork vs Exec Summary</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Operation</td>
+                    <td>Creates new process?</td>
+                    <td>Keeps same process ID?</td>
+                    <td>Environment behavior</td>
+                </tr>
+                <tr>
+                    <td><code>fork()</code></td>
+                    <td>Yes</td>
+                    <td>No, child gets new PID</td>
+                    <td>Child receives copy of parent environment</td>
+                </tr>
+                <tr>
+                    <td><code>exec()</code></td>
+                    <td>No</td>
+                    <td>Yes</td>
+                    <td>New program keeps current process environment unless replaced</td>
+                </tr>
+                <tr>
+                    <td>normal command</td>
+                    <td>Yes, usually</td>
+                    <td>Child gets new PID</td>
+                    <td>Shell forks; child execs command with copied environment</td>
+                </tr>
+                <tr>
+                    <td><code>exec command</code></td>
+                    <td>No</td>
+                    <td>Yes</td>
+                    <td>Current shell is replaced by command</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="can-a-child-process-change-the-parent-s-environment-">Can a Child Process Change the Parent’s Environment?</h4>
+            <p>No.</p>
+            <p>This does not work:</p>
+            <div>
+                <pre><code class="language-bash">export TOKEN=old
+
+python3 -c 'import os; os.environ["TOKEN"]="new"'
+
+echo "$TOKEN"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">old</code></pre>
+            </div>
+            <p>The Python process changed only itself.</p>
+            <p>Another example with a shell script:</p>
+            <p>Create <code>change_token.sh</code>:</p>
+            <div>
+                <pre><code class="language-bash">#!/usr/bin/env bash
+export TOKEN=new
+echo "Inside child script: TOKEN=$TOKEN"</code></pre>
+            </div>
+            <p>Run it:</p>
+            <div>
+                <pre><code class="language-bash">chmod +x change_token.sh
+
+export TOKEN=old
+./change_token.sh
+echo "Back in parent shell: TOKEN=$TOKEN"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">Inside child script: TOKEN=new
+Back in parent shell: TOKEN=old</code></pre>
+            </div>
+            <p>Why?</p>
+            <p>Because running <code>./change_token.sh</code> starts a child process.</p>
+            <p>The child process can change its own environment, but not the parent shell’s environment.</p>
+            <h4 id="when-can-a-script-change-the-current-shell-">When Can a Script Change the Current Shell?</h4>
+            <p>A script can change your current shell only if you <strong>source</strong> it.</p>
+            <p>Sourcing means the file is executed inside the current shell process instead of in a child process.</p>
+            <p>Create <code>change_token.sh</code>:</p>
+            <div>
+                <pre><code class="language-bash">export TOKEN=new
+echo "Inside sourced script: TOKEN=$TOKEN"</code></pre>
+            </div>
+            <p>Run it with <code>source</code>:</p>
+            <div>
+                <pre><code class="language-bash">export TOKEN=old
+source ./change_token.sh
+echo "Back in same shell: TOKEN=$TOKEN"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">Inside sourced script: TOKEN=new
+Back in same shell: TOKEN=new</code></pre>
+            </div>
+            <p>The shorthand for <code>source</code> is <code>.</code>:</p>
+            <div>
+                <pre><code class="language-bash">. ./change_token.sh</code></pre>
+            </div>
+            <p>So:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Command</td>
+                    <td>Runs in child process?</td>
+                    <td>Can modify current shell variables?</td>
+                </tr>
+                <tr>
+                    <td><code>./script.sh</code></td>
+                    <td>Yes</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td><code>bash script.sh</code></td>
+                    <td>Yes</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td><code>source script.sh</code></td>
+                    <td>No</td>
+                    <td>Yes</td>
+                </tr>
+                <tr>
+                    <td><code>. script.sh</code></td>
+                    <td>No</td>
+                    <td>Yes</td>
+                </tr>
+            </table>
+            </p>
+            <p>This is why tools that modify your shell environment often tell you to use <code>source</code>.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-bash">source venv/bin/activate</code></pre>
+            </div>
+            <p>A Python virtual environment activation script must modify your current shell’s <code>PATH</code>, so it has to be sourced.</p>
+            <p>If you ran it as a normal script:</p>
+            <div>
+                <pre><code class="language-bash">./venv/bin/activate</code></pre>
+            </div>
+            <p>it would modify only a child process and then exit, leaving your shell unchanged.</p>
+            <h3 id="subshells">Subshells</h3>
+            <p>A subshell is a child shell process.</p>
+            <p>Parentheses create a subshell:</p>
+            <div>
+                <pre><code class="language-bash">COLOR=blue
+
+(
+  COLOR=red
+  echo "Inside subshell: COLOR=$COLOR"
+)
+
+echo "Outside subshell: COLOR=$COLOR"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">Inside subshell: COLOR=red
+Outside subshell: COLOR=blue</code></pre>
+            </div>
+            <p>The assignment inside the subshell does not affect the parent shell.</p>
+            <p>By contrast, braces run in the current shell:</p>
+            <div>
+                <pre><code class="language-bash">COLOR=blue
+
+{
+  COLOR=red
+  echo "Inside block: COLOR=$COLOR"
+}
+
+echo "Outside block: COLOR=$COLOR"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">Inside block: COLOR=red
+Outside block: COLOR=red</code></pre>
+            </div>
+            <p>So:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Syntax</td>
+                    <td>Process behavior</td>
+                    <td>Parent affected?</td>
+                </tr>
+                <tr>
+                    <td><code>( commands )</code></td>
+                    <td>runs in subshell</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td><code>{ commands; }</code></td>
+                    <td>runs in current shell</td>
+                    <td>Yes</td>
+                </tr>
+            </table>
+            </p>
+            <p>Remember the required spacing and semicolon with braces:</p>
+            <div>
+                <pre><code class="language-bash">{ commands; }</code></pre>
+            </div>
+            <p>not:</p>
+            <div>
+                <pre><code class="language-bash">{commands}</code></pre>
+            </div>
+            <h3 id="builtins-vs-external-commands">Builtins vs External Commands</h3>
+            <p>Some commands are shell builtins. They run inside the shell process itself.</p>
+            <p>Examples:</p>
+            <div>
+                <pre><code class="language-bash">cd
+export
+unset
+readonly
+alias
+set
+source</code></pre>
+            </div>
+            <p>These can change the current shell.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-bash">cd /tmp</code></pre>
+            </div>
+            <p>changes the current shell’s working directory.</p>
+            <p>If <code>cd</code> were an external child process, it would be useless, because the child would change its directory and then exit, leaving the parent shell unchanged.</p>
+            <p>External commands, such as:</p>
+            <div>
+                <pre><code class="language-bash">ls
+python3
+grep
+awk
+node
+ruby</code></pre>
+            </div>
+            <p>usually run in child processes.</p>
+            <p>They inherit environment variables, but cannot modify the parent shell.</p>
+            <h3 id="common-environment-variables">Common Environment Variables</h3>
+            <h4 id="histsize"><code>HISTSIZE</code></h4>
+            <p>The number of commands your shell remembers is controlled by <code>HISTSIZE</code>.</p>
+            <div>
+                <pre><code class="language-bash">echo "$HISTSIZE"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">1000</code></pre>
+            </div>
+            <p>Here, the shell keeps the last 1,000 commands in memory.</p>
+            <p>You can increase it:</p>
+            <div>
+                <pre><code class="language-bash">export HISTSIZE=2000</code></pre>
+            </div>
+            <p>If you set it to <code>0</code>, command history may be disabled for the current session:</p>
+            <div>
+                <pre><code class="language-bash">export HISTSIZE=0</code></pre>
+            </div>
+            <p>A related variable is <code>HISTFILESIZE</code>, which controls how many lines are saved to the history file.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">echo "$HISTFILESIZE"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">2000</code></pre>
+            </div>
+            <h4 id="home"><code>HOME</code></h4>
+            <p><code>HOME</code> stores your home directory.</p>
+            <div>
+                <pre><code class="language-bash">echo "$HOME"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">/home/ahmad</code></pre>
+            </div>
+            <p>Many commands use this to find user-specific files.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-bash">cp config.json "$HOME/.config/myapp/"</code></pre>
+            </div>
+            <p>The tilde shortcut also usually expands using the home directory:</p>
+            <div>
+                <pre><code class="language-bash">cd ~</code></pre>
+            </div>
+            <p>If <code>HOME</code> points to a nonexistent path, you may see errors in containers, minimal environments, or incorrectly configured users.</p>
+            <h4 id="pwd"><code>PWD</code></h4>
+            <p><code>PWD</code> stores the current working directory.</p>
+            <div>
+                <pre><code class="language-bash">echo "$PWD"</code></pre>
             </div>
             <p>Example output:</p>
             <div>
                 <pre><code class="language-bash">/home/ahmad/projects/env_test</code></pre>
             </div>
-            <p>If that directory involves symbolic links, <code>PWD</code> shows the logical path; use <code>pwd -P</code> when you need the physical filesystem location instead.</p>
-            <h4 id="hostname">HOSTNAME</h4>
-            <p>Every system has a <code>HOSTNAME</code> for network identification. Automated backups that include <code>$(date +%F)-$HOSTNAME.tar.gz</code> clearly tag which machine produced each archive.</p>
+            <p>The shell updates <code>PWD</code> when you use <code>cd</code>.</p>
+            <p>Example:</p>
             <div>
-                <pre><code class="language-bash">echo $HOSTNAME</code></pre>
+                <pre><code class="language-bash">cd /tmp
+echo "$PWD"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">/tmp</code></pre>
+            </div>
+            <p>If your directory path involves symbolic links, <code>PWD</code> usually shows the logical path.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">pwd</code></pre>
+            </div>
+            <p>may show:</p>
+            <div>
+                <pre><code class="language-bash">/home/ahmad/link_to_project</code></pre>
+            </div>
+            <p>while:</p>
+            <div>
+                <pre><code class="language-bash">pwd -P</code></pre>
+            </div>
+            <p>may show the physical path:</p>
+            <div>
+                <pre><code class="language-bash">/mnt/data/projects/real_project</code></pre>
+            </div>
+            <h4 id="oldpwd"><code>OLDPWD</code></h4>
+            <p><code>OLDPWD</code> stores the previous working directory.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">pwd
+cd /tmp
+echo "$OLDPWD"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">/home/ahmad/projects/env_test</code></pre>
+            </div>
+            <p>You can jump back using:</p>
+            <div>
+                <pre><code class="language-bash">cd -</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">/home/ahmad/projects/env_test</code></pre>
+            </div>
+            <h4 id="hostname"><code>HOSTNAME</code></h4>
+            <p><code>HOSTNAME</code> identifies the current machine.</p>
+            <div>
+                <pre><code class="language-bash">echo "$HOSTNAME"</code></pre>
             </div>
             <p>Example output:</p>
             <div>
                 <pre><code class="language-bash">ahmad-laptop</code></pre>
             </div>
-            <p>In cloud instances, the default hostname may be a random ID; setting <code>/etc/hostname</code> ensures consistent naming across reboots.</p>
-            <h4 id="path">PATH</h4>
-            <p>The <code>PATH</code> variable lists directories separated by colons, telling your shell where to find executables. After installing custom tools in <code>/opt/tools/bin</code>, exporting <code>PATH=$PATH:/opt/tools/bin</code> lets you invoke them without full paths.</p>
+            <p>This is useful in logs and backups:</p>
             <div>
-                <pre><code class="language-bash">echo $PATH</code></pre>
+                <pre><code class="language-bash">tar -czf "$(date +%F)-$HOSTNAME-backup.tar.gz" "$HOME/projects"</code></pre>
+            </div>
+            <p>Example filename:</p>
+            <div>
+                <pre><code class="language-bash">2026-05-03-ahmad-laptop-backup.tar.gz</code></pre>
+            </div>
+            <p>In containers or cloud machines, the hostname may be a generated ID.</p>
+            <h4 id="path"><code>PATH</code></h4>
+            <p><code>PATH</code> is one of the most important environment variables.</p>
+            <p>It is a colon-separated list of directories where the shell searches for executable commands.</p>
+            <div>
+                <pre><code class="language-bash">echo "$PATH"</code></pre>
             </div>
             <p>Example output:</p>
             <div>
                 <pre><code class="language-bash">/usr/local/bin:/usr/bin:/bin:/home/ahmad/bin</code></pre>
             </div>
-            <p>Appending a directory is safe, but when you need your own scripts to override system binaries, place your directory first:</p>
+            <p>When you type:</p>
             <div>
-                <pre><code class="language-bash">export PATH=/home/ahmad/custom/bin:$PATH</code></pre>
+                <pre><code class="language-bash">python3</code></pre>
             </div>
-            <p>Duplicate or stale entries slow down command lookup; if you spot <code>/old/path</code>, remove it by reconstructing <code>PATH</code> without it, for example using <code>awk</code>.</p>
-            <h4 id="changing-variables">Changing Variables</h4>
-            <p>To adjust environment variables only for your current session, export them directly:</p>
+            <p>the shell searches each directory in <code>PATH</code> from left to right.</p>
+            <p>You can see which executable is found:</p>
             <div>
-                <pre><code class="language-bash">export DATABASE_URL='postgres://user:pass@localhost/db'
-echo $DATABASE_URL</code></pre>
+                <pre><code class="language-bash">which python3</code></pre>
             </div>
             <p>Example output:</p>
             <div>
-                <pre><code class="language-shell">postgres://user:pass@localhost/db</code></pre>
+                <pre><code class="language-bash">/usr/bin/python3</code></pre>
             </div>
-            <p>This change vanishes when you close the shell. For permanent updates, append export statements to your shell startup files (like <code>~/.bashrc</code> or <code>~/.profile</code>) and reload them:</p>
+            <p>or:</p>
+            <div>
+                <pre><code class="language-bash">command -v python3</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">/usr/bin/python3</code></pre>
+            </div>
+            <p>To append a directory:</p>
+            <div>
+                <pre><code class="language-bash">export PATH="$PATH:/opt/tools/bin"</code></pre>
+            </div>
+            <p>To make your custom scripts override system binaries, prepend the directory:</p>
+            <div>
+                <pre><code class="language-bash">export PATH="$HOME/custom/bin:$PATH"</code></pre>
+            </div>
+            <p>Prepending is powerful but risky. If <code>$HOME/custom/bin</code> contains a script named <code>ls</code>, then typing <code>ls</code> may run your custom script instead of <code>/bin/ls</code>.</p>
+            <p>You can inspect command resolution with:</p>
+            <div>
+                <pre><code class="language-bash">type ls</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">ls is /usr/bin/ls</code></pre>
+            </div>
+            <h4 id="lang"><code>LANG</code></h4>
+            <p><code>LANG</code> controls locale settings such as language, character encoding, sorting behavior, and formatting.</p>
+            <div>
+                <pre><code class="language-bash">echo "$LANG"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">en_US.UTF-8</code></pre>
+            </div>
+            <p>A common safe value is:</p>
+            <div>
+                <pre><code class="language-bash">export LANG=en_US.UTF-8</code></pre>
+            </div>
+            <p>If locale variables are misconfigured, programs may warn about unsupported locales or handle Unicode incorrectly.</p>
+            <h4 id="editor"><code>EDITOR</code></h4>
+            <p><code>EDITOR</code> tells command-line tools which editor to open.</p>
+            <div>
+                <pre><code class="language-bash">export EDITOR=vim</code></pre>
+            </div>
+            <p>Programs such as <code>git commit</code>, <code>crontab -e</code>, and some CLI tools may use it.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">git config --global core.editor "$EDITOR"</code></pre>
+            </div>
+            <h3 id="changing-variables">Changing Variables</h3>
+            <h4 id="current-shell-only">Current Shell Only</h4>
+            <p>To set a variable in the current shell:</p>
+            <div>
+                <pre><code class="language-bash">DATABASE_URL='postgres://user:pass@localhost/db'
+echo "$DATABASE_URL"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">postgres://user:pass@localhost/db</code></pre>
+            </div>
+            <p>This is a shell variable. Child processes will not inherit it unless you export it.</p>
+            <div>
+                <pre><code class="language-bash">python3 -c 'import os; print(os.environ.get("DATABASE_URL"))'</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">None</code></pre>
+            </div>
+            <p>Now export it:</p>
+            <div>
+                <pre><code class="language-bash">export DATABASE_URL
+python3 -c 'import os; print(os.environ.get("DATABASE_URL"))'</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">postgres://user:pass@localhost/db</code></pre>
+            </div>
+            <p>You can also set and export in one line:</p>
+            <div>
+                <pre><code class="language-bash">export DATABASE_URL='postgres://user:pass@localhost/db'</code></pre>
+            </div>
+            <h4 id="one-command-only">One Command Only</h4>
+            <p>You can set an environment variable for only one command:</p>
+            <div>
+                <pre><code class="language-bash">DEBUG=1 python3 -c 'import os; print(os.environ.get("DEBUG"))'</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">1</code></pre>
+            </div>
+            <p>Afterward:</p>
+            <div>
+                <pre><code class="language-bash">echo "$DEBUG"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash"></code></pre>
+            </div>
+            <p>This is useful for temporary configuration:</p>
+            <div>
+                <pre><code class="language-bash">NODE_ENV=production npm start</code></pre>
+            </div>
+            <p>or:</p>
+            <div>
+                <pre><code class="language-bash">AWS_PROFILE=dev terraform plan</code></pre>
+            </div>
+            <h4 id="permanent-updates">Permanent Updates</h4>
+            <p>For permanent updates, add the export statement to a startup file.</p>
+            <p>Bash:</p>
             <div>
                 <pre><code class="language-bash">echo 'export EDITOR=vim' &gt;&gt; ~/.bashrc
-source ~/.bashrc
-echo $EDITOR</code></pre>
+source ~/.bashrc</code></pre>
+            </div>
+            <p>Zsh:</p>
+            <div>
+                <pre><code class="language-bash">echo 'export EDITOR=vim' &gt;&gt; ~/.zshrc
+source ~/.zshrc</code></pre>
+            </div>
+            <p>Then verify:</p>
+            <div>
+                <pre><code class="language-bash">echo "$EDITOR"</code></pre>
             </div>
             <p>Example output:</p>
             <div>
-                <pre><code class="language-vim"></code></pre>
+                <pre><code class="language-bash">vim</code></pre>
             </div>
-            <p>On macOS or login shells, prefer <code>~/.bash_profile</code> or <code>~/.profile</code> when <code>~/.bashrc</code> isn’t sourced.</p>
-            <h4 id="tips-and-safeguards">Tips and Safeguards</h4>
-            <p>Wrap values containing spaces or special characters in quotes (<code>export GREETING="Hello World!"</code>), lock variables with <code>readonly VAR</code> to avoid accidental changes, and remove obsolete settings using <code>unset VAR</code>. In scripts, enable tracing with <code>set -x</code> to follow variable expansions, and use parameter expansions that abort when critical variables are empty:</p>
+            <h3 id="operations-on-variables">Operations on Variables</h3>
+            <h4 id="removing-variables">Removing Variables</h4>
+            <p>Use <code>unset</code> to remove a shell or environment variable from the current shell.</p>
             <div>
-                <pre><code class="language-bash">: "${API_KEY:?API_KEY is required}"  # stops script if API_KEY is unset or blank</code></pre>
-            </div>
-            <h3 id="shell-variables">Shell Variables</h3>
-            <p>Shell variables control the behavior and state of your current shell session. These temporary name–value pairs can store counters, flags, formatting rules, or other pieces of data that your commands and scripts can reference. Because they live only in the running shell, any variables you define will vanish when you close the terminal.</p>
-            <p>Shell variables control the behavior of your current shell session, holding temporary values—such as counters, flags, or formatting rules—that disappear when you close the terminal. You create one simply by assigning a name to a value:</p>
-            <div>
-                <pre><code class="language-bash">count=10
-echo "$count"</code></pre>
+                <pre><code class="language-bash">export API_KEY=abc123
+echo "$API_KEY"</code></pre>
             </div>
             <p>Example output:</p>
             <div>
-                <pre><code class="language-bash">10</code></pre>
+                <pre><code class="language-bash">abc123</code></pre>
             </div>
-            <p>Referencing an unset variable returns an empty string, which can silently break scripts or commands.</p>
+            <p>Now unset it:</p>
+            <div>
+                <pre><code class="language-bash">unset API_KEY
+echo "$API_KEY"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash"></code></pre>
+            </div>
+            <p>If the variable was exported, <code>unset</code> also removes it from the environment of future child processes.</p>
+            <h4 id="making-variables-read-only">Making Variables Read-Only</h4>
+            <p>Once you have set a variable that should not change, mark it as read-only:</p>
+            <div>
+                <pre><code class="language-bash">readonly max_retries=5</code></pre>
+            </div>
+            <p>Now reassignment fails:</p>
+            <div>
+                <pre><code class="language-bash">max_retries=3</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">bash: max_retries: readonly variable</code></pre>
+            </div>
+            <p>Unsetting also fails:</p>
+            <div>
+                <pre><code class="language-bash">unset max_retries</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">bash: unset: max_retries: cannot unset: readonly variable</code></pre>
+            </div>
+            <p>This is useful for constants in scripts:</p>
+            <div>
+                <pre><code class="language-bash">readonly CONFIG_DIR="$HOME/.config/myapp"
+readonly MAX_RETRIES=5</code></pre>
+            </div>
             <h4 id="enforcing-defined-variables">Enforcing Defined Variables</h4>
-            <p>To guard against accidentally using undefined variables in your scripts, you can enable strict mode. This ensures that any reference to a variable that has not been set will cause the script to exit immediately with an error.</p>
+            <p>Referencing an unset variable normally expands to an empty string.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">echo "Hello $username"</code></pre>
+            </div>
+            <p>If <code>username</code> is unset, output is:</p>
+            <div>
+                <pre><code class="language-bash">Hello</code></pre>
+            </div>
+            <p>That can hide bugs.</p>
+            <p>Use:</p>
             <div>
                 <pre><code class="language-bash">set -u</code></pre>
             </div>
-            <p>Example script snippet:</p>
+            <p>or:</p>
+            <div>
+                <pre><code class="language-bash">set -o nounset</code></pre>
+            </div>
+            <p>Now referencing an unset variable causes an error.</p>
+            <p>Example script:</p>
             <div>
                 <pre><code class="language-bash">#!/usr/bin/env bash
 set -u
-echo "Count is $count"   # Aborts here if count is unset.</code></pre>
+
+echo "Count is $count"</code></pre>
             </div>
-            <h3 id="customizing-your-prompt-ps1-">Customizing Your Prompt (PS1)</h3>
-            <p>Your shell prompt is the primary interface for issuing commands, and customizing it can give you at-a-glance information about your session. The <code>PS1</code> variable defines exactly what is displayed at each prompt, letting you include your username, hostname, working directory, and special symbols that reflect your permissions or status.</p>
-            <p>The <code>PS1</code> variable defines what appears at each command prompt. You can include special backslash-escape sequences to display dynamic information:</p>
+            <p>If <code>count</code> is not set, Bash exits with an error like:</p>
+            <div>
+                <pre><code class="language-bash">bash: count: unbound variable</code></pre>
+            </div>
+            <p>You can also require a variable explicitly:</p>
+            <div>
+                <pre><code class="language-bash">: "${API_KEY:?API_KEY is required}"</code></pre>
+            </div>
+            <p>If <code>API_KEY</code> is unset or empty, the script stops with an error.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">#!/usr/bin/env bash
+set -euo pipefail
+
+: "${API_KEY:?API_KEY is required}"
+
+echo "Using API key..."</code></pre>
+            </div>
+            <h4 id="customizing-your-prompt-with-ps1">Customizing Your Prompt with <code>PS1</code></h4>
+            <p>Your shell prompt is controlled by the <code>PS1</code> variable.</p>
+            <p>Example:</p>
             <div>
                 <pre><code class="language-bash">PS1="\u@\h:\w\$ "</code></pre>
             </div>
-            <p>Example output:</p>
+            <p>Your prompt may look like:</p>
             <div>
-                <pre><code class="language-bash"># After setting, your prompt looks like:
-ahmad@machine:/home/ahmad$</code></pre>
+                <pre><code class="language-bash">ahmad@machine:/home/ahmad$</code></pre>
             </div>
-            <p>Unsupported or mistyped escapes (e.g., <code>\x</code>) will appear literally in your prompt.</p>
-            <p><strong>Common escapes:</strong></p>
+            <p>Common escape sequences:</p>
             <p>
             <table>
                 <tr>
-                    <td>Escape Sequence</td>
-                    <td>Description</td>
+                    <td>Escape sequence</td>
+                    <td>Meaning</td>
                 </tr>
                 <tr>
                     <td><code>\u</code></td>
@@ -330,98 +1360,220 @@ ahmad@machine:/home/ahmad$</code></pre>
                 </tr>
                 <tr>
                     <td><code>\h</code></td>
-                    <td>Hostname (up to the first dot)</td>
+                    <td>Hostname up to the first dot</td>
+                </tr>
+                <tr>
+                    <td><code>\H</code></td>
+                    <td>Full hostname</td>
                 </tr>
                 <tr>
                     <td><code>\w</code></td>
-                    <td>Current working directory (full path)</td>
+                    <td>Current working directory</td>
+                </tr>
+                <tr>
+                    <td><code>\W</code></td>
+                    <td>Basename of current working directory</td>
                 </tr>
                 <tr>
                     <td><code>\$</code></td>
-                    <td><code>#</code> if running as root, otherwise <code>$</code></td>
+                    <td><code>#</code> if root, otherwise <code>$</code></td>
+                </tr>
+                <tr>
+                    <td><code>\n</code></td>
+                    <td>Newline</td>
+                </tr>
+                <tr>
+                    <td><code>\t</code></td>
+                    <td>Current time in 24-hour HH:MM:SS format</td>
                 </tr>
             </table>
             </p>
-            <h4 id="word-splitting-and-ifs">Word Splitting and IFS</h4>
-            <p>When you pass a string of words to a shell construct—such as a loop or a command—Bash splits that string into separate words using the <strong>Internal Field Separator</strong> (<code>IFS</code>). By default, <code>IFS</code> includes whitespace characters: spaces, tabs, and newlines. Changing <code>IFS</code> lets you define custom delimiters for splitting, which is essential when working with comma-separated values, semicolon lists, or other structured data in shell scripts.</p>
-            <p>By default, Bash splits input on whitespace (spaces, tabs, newlines) as defined by the <strong>Internal Field Separator</strong> (<code>IFS</code>).</p>
+            <p>Example with a newline:</p>
             <div>
-                <pre><code class="language-bash">printf "%s\n" "a b" "x y" "c"</code></pre>
+                <pre><code class="language-bash">PS1="\u@\h:\w\n\$ "</code></pre>
             </div>
-            <p>Example output:</p>
+            <p>Prompt:</p>
             <div>
-                <pre><code class="language-bash"># With default IFS, output:
-a
-b
-x
-y
-c</code></pre>
+                <pre><code class="language-bash">ahmad@machine:/home/ahmad/projects
+$</code></pre>
             </div>
-            <p>You can change <code>IFS</code> to split on a different character. For example, to split on commas:</p>
+            <p><code>PS1</code> is usually a shell variable used by the interactive shell itself. It does not usually need to be exported.</p>
+            <h4 id="word-splitting-and-ifs">Word Splitting and <code>IFS</code></h4>
+            <p><code>IFS</code> stands for <strong>Internal Field Separator</strong>.</p>
+            <p>It controls how Bash splits unquoted variable expansions into words.</p>
+            <p>By default, <code>IFS</code> contains:</p>
+            <ul>
+                <li>space</li>
+                <li>tab</li>
+                <li>newline</li>
+            </ul>
+            <p>Example:</p>
             <div>
-                <pre><code class="language-bash">IFS=','
-printf "%s\n" "a,b" "x,y" "c"</code></pre>
-            </div>
-            <p>Example output:</p>
-            <div>
-                <pre><code class="language-bash"># With IFS=',' :
-a
-b
-x
-y
-c</code></pre>
-            </div>
-            <p>Setting <code>IFS=</code> (empty) disables splitting entirely. Loops like</p>
-            <div>
-                <pre><code class="language-bash">for item in $list; do …
+                <pre><code class="language-bash">list="alpha beta gamma"
+
+for item in $list; do
+  echo "$item"
 done</code></pre>
             </div>
-            <p>will treat the entire string as a single item, potentially causing infinite loops or logic errors.</p>
-            <h4 id="listing-all-definitions">Listing All Definitions</h4>
-            <p>It’s often useful to see everything that’s currently defined in your shell: variables, functions, and aliases. The built-in <code>set</code> command without any arguments dumps this entire list, allowing you to spot unwanted overrides or debug unexpected behavior—especially cases where a local variable shadows a critical environment variable like <code>PATH</code>.</p>
-            <p>To inspect every variable, function, and alias in your current shell:</p>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">alpha
+beta
+gamma</code></pre>
+            </div>
+            <p>The shell split <code>$list</code> on spaces because <code>$list</code> was unquoted.</p>
+            <p>If you quote it:</p>
+            <div>
+                <pre><code class="language-bash">list="alpha beta gamma"
+
+for item in "$list"; do
+  echo "$item"
+done</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">alpha beta gamma</code></pre>
+            </div>
+            <p>Quoted expansions are not split.</p>
+            <h4 id="splitting-on-commas">Splitting on Commas</h4>
+            <p>You can temporarily set <code>IFS</code> to split comma-separated data.</p>
+            <div>
+                <pre><code class="language-bash">data="red,green,blue"
+
+IFS=',' read -r first second third &lt;&lt;&lt; "$data"
+
+echo "$first"
+echo "$second"
+echo "$third"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">red
+green
+blue</code></pre>
+            </div>
+            <p>Another example:</p>
+            <div>
+                <pre><code class="language-bash">data="red,green,blue"
+old_ifs=$IFS
+IFS=','
+
+for color in $data; do
+  echo "$color"
+done
+
+IFS=$old_ifs</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">red
+green
+blue</code></pre>
+            </div>
+            <p>Be careful changing global <code>IFS</code>. It can break scripts in surprising ways.</p>
+            <p>Prefer local or one-command usage where possible:</p>
+            <div>
+                <pre><code class="language-bash">IFS=',' read -r a b c &lt;&lt;&lt; "$data"</code></pre>
+            </div>
+            <h4 id="empty-ifs">Empty <code>IFS</code></h4>
+            <p>Setting <code>IFS</code> to an empty value disables word splitting for unquoted expansions.</p>
+            <div>
+                <pre><code class="language-bash">list="a b c"
+IFS=
+
+for item in $list; do
+  echo "$item"
+done</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">a b c</code></pre>
+            </div>
+            <p>This can be useful in rare cases, but it can also break loops that expect normal splitting.</p>
+            <h4 id="listing-shell-definitions">Listing Shell Definitions</h4>
+            <p>Use <code>set</code> to inspect shell variables, functions, and shell state:</p>
             <div>
                 <pre><code class="language-bash">set</code></pre>
             </div>
             <p>Example output:</p>
             <div>
                 <pre><code class="language-bash">BASH=/usr/bin/bash
-BASHOPTS=checkwinsize:cmdhist:complete_fullquote:expand_aliases:extglob:extquote:force_fignore:globasciiranges:globskipdots:histappend:interactive_comments:patsub_replacement:progcomp:promptvars:sourcepath
-BASH_ALIASES=()
-BASH_ARGC=([0]="0")
-BASH_ARGV=()
-BASH_CMDS=()
-BASH_COMPLETION_VERSINFO=([0]="2" [1]="11")
+BASHOPTS=checkwinsize:cmdhist:complete_fullquote:expand_aliases:extglob:extquote
+HOME=/home/ahmad
+HOSTNAME=ahmad-laptop
+IFS=$' \t\n'
+PATH=/usr/local/bin:/usr/bin:/bin
 ...</code></pre>
             </div>
-            <h4 id="making-variables-read-only">Making Variables Read-Only</h4>
-            <p>Once you’ve set a variable to a value you don’t want to change—such as a maximum number of retries or a critical directory path—it’s best to mark it as read-only. Any subsequent attempts to reassign or unset the variable will fail with an error, helping prevent logic bugs caused by accidental reassignment.</p>
-            <p>Prevent accidental reassignment by marking variables as immutable:</p>
+            <p><code>set</code> shows more than <code>printenv</code>.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Command</td>
+                    <td>Shows</td>
+                </tr>
+                <tr>
+                    <td><code>printenv</code></td>
+                    <td>Environment variables</td>
+                </tr>
+                <tr>
+                    <td><code>env</code></td>
+                    <td>Environment variables, or runs command with modified environment</td>
+                </tr>
+                <tr>
+                    <td><code>set</code></td>
+                    <td>Shell variables, environment variables, functions, shell options</td>
+                </tr>
+                <tr>
+                    <td><code>declare -p</code></td>
+                    <td>Shell variables in reusable Bash syntax</td>
+                </tr>
+                <tr>
+                    <td><code>export -p</code></td>
+                    <td>Exported variables</td>
+                </tr>
+            </table>
+            </p>
+            <p>Example:</p>
             <div>
-                <pre><code class="language-bash">readonly max_retries=5
-max_retries=3</code></pre>
+                <pre><code class="language-bash">declare -p HOME</code></pre>
             </div>
             <p>Example output:</p>
             <div>
-                <pre><code class="language-bash">bash: max_retries: readonly variable</code></pre>
+                <pre><code class="language-bash">declare -x HOME="/home/ahmad"</code></pre>
             </div>
-            <p>Attempting to unset:</p>
+            <p>The <code>-x</code> means exported.</p>
+            <h2 id="env-running-commands-with-modified-environments"><code>env</code>: Running Commands with Modified Environments</h2>
+            <p>The <code>env</code> command can run a program with a modified environment.</p>
+            <p>Example:</p>
             <div>
-                <pre><code class="language-bash">unset max_retries</code></pre>
+                <pre><code class="language-bash">env MODE=test python3 -c 'import os; print(os.environ["MODE"])'</code></pre>
             </div>
-            <p>yields:</p>
+            <p>Example output:</p>
             <div>
-                <pre><code class="language-bash">bash: unset: max_retries: cannot unset: readonly variable</code></pre>
+                <pre><code class="language-bash">test</code></pre>
             </div>
-            <h3 id="safe-script-defaults">Safe Script Defaults</h3>
-            <p>When writing shell scripts that you expect to run unattended or in production, it’s critical to fail early and loudly on errors, undefined variables, or pipeline failures. The recommended shebang and <code>set</code> options at the top of your script enforce these best practices, leading to safer and more maintainable code.</p>
-            <p>For robust, predictable scripts, combine these options at the top:</p>
+            <p>You can also start with an empty environment using <code>env -i</code>:</p>
+            <div>
+                <pre><code class="language-bash">env -i python3 -c 'import os; print(os.environ)'</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">environ({})</code></pre>
+            </div>
+            <p>A more realistic example:</p>
+            <div>
+                <pre><code class="language-bash">env -i PATH=/usr/bin:/bin HOME="$HOME" python3 -c 'import os; print(os.environ)'</code></pre>
+            </div>
+            <p>This runs Python with only the variables you explicitly provide.</p>
+            <p>This is useful for debugging scripts that accidentally depend on your personal shell environment.</p>
+            <h4 id="safe-script-defaults">Safe Script Defaults</h4>
+            <p>When writing shell scripts intended to run reliably, it is common to start with:</p>
             <div>
                 <pre><code class="language-bash">#!/usr/bin/env bash
 set -euo pipefail</code></pre>
             </div>
-            <p>Immediately stops on errors, avoids cascading failures, and catches typos or missing variables before they cause silent malfunctions.</p>
-            <p><strong>Options:</strong></p>
+            <p>Meaning:</p>
             <p>
             <table>
                 <tr>
@@ -430,30 +1582,1804 @@ set -euo pipefail</code></pre>
                 </tr>
                 <tr>
                     <td><code>-e</code></td>
-                    <td>Exit immediately if any command returns a non-zero status.</td>
+                    <td>Exit immediately if a command fails</td>
                 </tr>
                 <tr>
                     <td><code>-u</code></td>
-                    <td>Treat unset variables as an error when substituting.</td>
+                    <td>Treat unset variables as errors</td>
                 </tr>
                 <tr>
                     <td><code>-o pipefail</code></td>
-                    <td>Return the failure status of the first command in a pipeline that fails.</td>
+                    <td>Make pipelines fail if any command in the pipeline fails</td>
+                </tr>
+            </table>
+            </p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">#!/usr/bin/env bash
+set -euo pipefail
+
+: "${INPUT_FILE:?INPUT_FILE is required}"
+
+grep "ERROR" "$INPUT_FILE" | sort | uniq</code></pre>
+            </div>
+            <p>Without <code>pipefail</code>, this pipeline:</p>
+            <div>
+                <pre><code class="language-bash">grep "ERROR" missing.txt | sort</code></pre>
+            </div>
+            <p>might appear successful because <code>sort</code> succeeded, even though <code>grep</code> failed.</p>
+            <p>With <code>pipefail</code>, the whole pipeline fails.</p>
+            <h3 id="practical-debugging-examples">Practical Debugging Examples</h3>
+            <h4 id="check-whether-a-variable-is-exported">Check Whether a Variable Is Exported</h4>
+            <div>
+                <pre><code class="language-bash">MY_VAR=hello
+export EXPORTED_VAR=world
+
+printenv MY_VAR
+printenv EXPORTED_VAR</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">world</code></pre>
+            </div>
+            <p><code>MY_VAR</code> does not appear because it is not exported.</p>
+            <p>You can also check with Python:</p>
+            <div>
+                <pre><code class="language-bash">MY_VAR=hello
+export EXPORTED_VAR=world
+
+python3 -c 'import os; print("MY_VAR =", os.environ.get("MY_VAR")); print("EXPORTED_VAR =", os.environ.get("EXPORTED_VAR"))'</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">MY_VAR = None
+EXPORTED_VAR = world</code></pre>
+            </div>
+            <h4 id="prove-that-a-child-cannot-change-the-parent">Prove That a Child Cannot Change the Parent</h4>
+            <div>
+                <pre><code class="language-bash">export LEVEL=parent
+
+python3 -c '
+import os
+print("Before change in child:", os.environ.get("LEVEL"))
+os.environ["LEVEL"] = "child"
+print("After change in child:", os.environ.get("LEVEL"))
+'
+
+echo "Back in parent: LEVEL=$LEVEL"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">Before change in child: parent
+After change in child: child
+Back in parent: LEVEL=parent</code></pre>
+            </div>
+            <h3 id="prove-that-sourcing-changes-the-current-shell">Prove That Sourcing Changes the Current Shell</h3>
+            <p>Create <code>set_level.sh</code>:</p>
+            <div>
+                <pre><code class="language-bash">LEVEL=sourced
+export LEVEL</code></pre>
+            </div>
+            <p>Run normally:</p>
+            <div>
+                <pre><code class="language-bash">export LEVEL=parent
+bash set_level.sh
+echo "$LEVEL"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">parent</code></pre>
+            </div>
+            <p>Now source it:</p>
+            <div>
+                <pre><code class="language-bash">source set_level.sh
+echo "$LEVEL"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">sourced</code></pre>
+            </div>
+            <h4 id="prove-that-different-terminals-do-not-share-environment-changes">Prove That Different Terminals Do Not Share Environment Changes</h4>
+            <p>Terminal 1:</p>
+            <div>
+                <pre><code class="language-bash">export DEMO=terminal_one
+echo "$DEMO"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">terminal_one</code></pre>
+            </div>
+            <p>Terminal 2:</p>
+            <div>
+                <pre><code class="language-bash">echo "$DEMO"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash"></code></pre>
+            </div>
+            <p>They are separate shell processes.</p>
+            <h3 id="environment-variables-and-python-virtual-environments">Environment Variables and Python Virtual Environments</h3>
+            <p>Python virtual environments are often described as “isolated Python environments,” but it is important to understand what they really do.</p>
+            <p>A Python virtual environment does <strong>not</strong> create a new operating-system-level container. It does not fully isolate your machine, your filesystem, your users, or your processes.</p>
+            <p>Instead, a virtual environment mainly changes which Python interpreter and Python packages your shell uses.</p>
+            <p>The most important mechanism is environment-variable and shell-variable modification.</p>
+            <h3 id="what-a-python-virtual-environment-contains">What a Python Virtual Environment Contains</h3>
+            <p>When you create a virtual environment:</p>
+            <div>
+                <pre><code class="language-bash">python3 -m venv .venv</code></pre>
+            </div>
+            <p>Python creates a directory like this:</p>
+            <div>
+                <pre><code class="language-text">.venv/
+├── bin/
+│   ├── activate
+│   ├── python
+│   ├── python3
+│   └── pip
+├── lib/
+│   └── python3.x/
+│       └── site-packages/
+└── pyvenv.cfg</code></pre>
+            </div>
+            <p>On Windows, the layout is slightly different:</p>
+            <div>
+                <pre><code class="language-text">.venv/
+├── Scripts/
+│   ├── activate
+│   ├── python.exe
+│   └── pip.exe
+├── Lib/
+│   └── site-packages/
+└── pyvenv.cfg</code></pre>
+            </div>
+            <p>The parts are:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Part</td>
+                    <td>Meaning</td>
+                </tr>
+                <tr>
+                    <td><code>.venv/bin/python</code></td>
+                    <td>Python interpreter used inside the virtual environment</td>
+                </tr>
+                <tr>
+                    <td><code>.venv/bin/pip</code></td>
+                    <td>Pip associated with that environment</td>
+                </tr>
+                <tr>
+                    <td><code>.venv/lib/python3.x/site-packages</code></td>
+                    <td>Packages installed into that environment</td>
+                </tr>
+                <tr>
+                    <td><code>.venv/bin/activate</code></td>
+                    <td>Shell script that modifies your current shell</td>
+                </tr>
+                <tr>
+                    <td><code>pyvenv.cfg</code></td>
+                    <td>Metadata telling Python where the venv came from</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="creating-a-virtual-environment-does-not-activate-it">Creating a Virtual Environment Does Not Activate It</h4>
+            <p>This command:</p>
+            <div>
+                <pre><code class="language-bash">python3 -m venv .venv</code></pre>
+            </div>
+            <p>only creates the <code>.venv</code> directory.</p>
+            <p>It does <strong>not</strong> change your current shell.</p>
+            <p>After creating it, this may still point to the system Python:</p>
+            <div>
+                <pre><code class="language-bash">which python</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">/usr/bin/python</code></pre>
+            </div>
+            <p>or:</p>
+            <div>
+                <pre><code class="language-bash">which python3</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">/usr/bin/python3</code></pre>
+            </div>
+            <p>To use the virtual environment conveniently, you usually activate it.</p>
+            <h4 id="activating-a-virtual-environment">Activating a Virtual Environment</h4>
+            <p>On Linux/macOS with Bash or Zsh:</p>
+            <div>
+                <pre><code class="language-bash">source .venv/bin/activate</code></pre>
+            </div>
+            <p>or equivalently:</p>
+            <div>
+                <pre><code class="language-bash">. .venv/bin/activate</code></pre>
+            </div>
+            <p>After activation:</p>
+            <div>
+                <pre><code class="language-bash">which python</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">/home/ahmad/project/.venv/bin/python</code></pre>
+            </div>
+            <p>And:</p>
+            <div>
+                <pre><code class="language-bash">which pip</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">/home/ahmad/project/.venv/bin/pip</code></pre>
+            </div>
+            <p>Your prompt may also change:</p>
+            <div>
+                <pre><code class="language-text">(.venv) ahmad@machine:~/project$</code></pre>
+            </div>
+            <p>That prompt change is only cosmetic, but it helps you see that the venv is active.</p>
+            <h4 id="why-activation-must-be-sourced">Why Activation Must Be Sourced</h4>
+            <p>This is the most important part.</p>
+            <p>The activation script changes your <strong>current shell environment</strong>.</p>
+            <p>That is why you run:</p>
+            <div>
+                <pre><code class="language-bash">source .venv/bin/activate</code></pre>
+            </div>
+            <p>not:</p>
+            <div>
+                <pre><code class="language-bash">./.venv/bin/activate</code></pre>
+            </div>
+            <p>If you run it as a normal script:</p>
+            <div>
+                <pre><code class="language-bash">./.venv/bin/activate</code></pre>
+            </div>
+            <p>it runs in a child process.</p>
+            <p>That child process may modify its own environment, but then it exits. Your parent shell stays unchanged.</p>
+            <p>This is the same rule as before:</p>
+            <blockquote>
+                <p>A child process cannot modify the environment of its parent process.</p>
+            </blockquote>
+            <p>So activation must be sourced because sourcing executes the file inside the current shell process.</p>
+            <h3 id="what-activate-actually-changes">What <code>activate</code> Actually Changes</h3>
+            <p>Activation mostly does four things:</p>
+            <ol>
+                <li>Sets <code>VIRTUAL_ENV</code></li>
+                <li>Modifies <code>PATH</code></li>
+                <li>Stores the old <code>PATH</code></li>
+                <li>Changes the shell prompt</li>
+            </ol>
+            <p>A simplified activation script looks like this:</p>
+            <div>
+                <pre><code class="language-bash">VIRTUAL_ENV="/home/ahmad/project/.venv"
+export VIRTUAL_ENV
+
+_OLD_VIRTUAL_PATH="$PATH"
+PATH="$VIRTUAL_ENV/bin:$PATH"
+export PATH
+
+_OLD_VIRTUAL_PS1="$PS1"
+PS1="(.venv) $PS1"</code></pre>
+            </div>
+            <p>After activation:</p>
+            <div>
+                <pre><code class="language-bash">echo "$VIRTUAL_ENV"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">/home/ahmad/project/.venv</code></pre>
+            </div>
+            <p>And:</p>
+            <div>
+                <pre><code class="language-bash">echo "$PATH"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">/home/ahmad/project/.venv/bin:/usr/local/bin:/usr/bin:/bin</code></pre>
+            </div>
+            <p>The important change is that the venv’s <code>bin</code> directory is placed at the <strong>front</strong> of <code>PATH</code>.</p>
+            <p>Before activation:</p>
+            <div>
+                <pre><code class="language-bash">PATH=/usr/local/bin:/usr/bin:/bin</code></pre>
+            </div>
+            <p>After activation:</p>
+            <div>
+                <pre><code class="language-bash">PATH=/home/ahmad/project/.venv/bin:/usr/local/bin:/usr/bin:/bin</code></pre>
+            </div>
+            <p>So when you type:</p>
+            <div>
+                <pre><code class="language-bash">python</code></pre>
+            </div>
+            <p>the shell searches:</p>
+            <div>
+                <pre><code class="language-text">/home/ahmad/project/.venv/bin
+/usr/local/bin
+/usr/bin
+/bin</code></pre>
+            </div>
+            <p>It finds:</p>
+            <div>
+                <pre><code class="language-text">/home/ahmad/project/.venv/bin/python</code></pre>
+            </div>
+            <p>before the system Python. That is the main trick.</p>
+            <h4 id="activation-does-not-magically-change-python-globally">Activation Does Not Magically Change Python Globally</h4>
+            <p>Activation does not replace <code>/usr/bin/python</code>. It does not uninstall system packages. It does not rewrite your operating system.It only changes your current shell so that commands like:</p>
+            <div>
+                <pre><code class="language-bash">python
+pip
+pytest
+django-admin
+black
+ruff
+mypy</code></pre>
+            </div>
+            <p>resolve first to executables inside:</p>
+            <div>
+                <pre><code class="language-bash">.venv/bin/</code></pre>
+            </div>
+            <p>You can verify this:</p>
+            <div>
+                <pre><code class="language-bash">which python
+which pip</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">/home/ahmad/project/.venv/bin/python
+/home/ahmad/project/.venv/bin/pip</code></pre>
+            </div>
+            <p>But the system Python still exists:</p>
+            <div>
+                <pre><code class="language-bash">/usr/bin/python3 --version</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">Python 3.11.6</code></pre>
+            </div>
+            <h3 id="pip-install-inside-a-virtual-environment"><code>pip install</code> Inside a Virtual Environment</h3>
+            <p>After activation:</p>
+            <div>
+                <pre><code class="language-bash">source .venv/bin/activate
+pip install requests</code></pre>
+            </div>
+            <p><code>pip</code> resolves to:</p>
+            <div>
+                <pre><code class="language-bash">.venv/bin/pip</code></pre>
+            </div>
+            <p>So packages are installed into:</p>
+            <div>
+                <pre><code class="language-text">.venv/lib/python3.x/site-packages/</code></pre>
+            </div>
+            <p>You can check:</p>
+            <div>
+                <pre><code class="language-bash">python -c 'import requests; print(requests.__file__)'</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">/home/ahmad/project/.venv/lib/python3.11/site-packages/requests/__init__.py</code></pre>
+            </div>
+            <p>That means the package is installed in the virtual environment, not globally.</p>
+            <h4 id="concrete-example">Concrete Example</h4>
+            <p>Suppose your project directory is:</p>
+            <div>
+                <pre><code class="language-bash">/home/ahmad/demo</code></pre>
+            </div>
+            <p>Create a venv:</p>
+            <div>
+                <pre><code class="language-bash">cd /home/ahmad/demo
+python3 -m venv .venv</code></pre>
+            </div>
+            <p>Before activation:</p>
+            <div>
+                <pre><code class="language-bash">which python</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">/usr/bin/python</code></pre>
+            </div>
+            <p>Activate:</p>
+            <div>
+                <pre><code class="language-bash">source .venv/bin/activate</code></pre>
+            </div>
+            <p>Now:</p>
+            <div>
+                <pre><code class="language-bash">echo "$VIRTUAL_ENV"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">/home/ahmad/demo/.venv</code></pre>
+            </div>
+            <p>And:</p>
+            <div>
+                <pre><code class="language-bash">which python</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">/home/ahmad/demo/.venv/bin/python</code></pre>
+            </div>
+            <p>Install a package:</p>
+            <div>
+                <pre><code class="language-bash">pip install requests</code></pre>
+            </div>
+            <p>Check where it went:</p>
+            <div>
+                <pre><code class="language-bash">python -c 'import requests; print(requests.__file__)'</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">/home/ahmad/demo/.venv/lib/python3.11/site-packages/requests/__init__.py</code></pre>
+            </div>
+            <p>Deactivate:</p>
+            <div>
+                <pre><code class="language-bash">deactivate</code></pre>
+            </div>
+            <p>Now:</p>
+            <div>
+                <pre><code class="language-bash">which python</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">/usr/bin/python</code></pre>
+            </div>
+            <p>So activation temporarily changes command lookup. Deactivation restores the old shell state.</p>
+            <h4 id="what-deactivate-does">What <code>deactivate</code> Does</h4>
+            <p>When you activate a venv, the activation script usually saves old values:</p>
+            <div>
+                <pre><code class="language-bash">_OLD_VIRTUAL_PATH="$PATH"
+_OLD_VIRTUAL_PS1="$PS1"</code></pre>
+            </div>
+            <p>When you run:</p>
+            <div>
+                <pre><code class="language-bash">deactivate</code></pre>
+            </div>
+            <p>it restores them.</p>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-bash">PATH="$_OLD_VIRTUAL_PATH"
+PS1="$_OLD_VIRTUAL_PS1"
+unset VIRTUAL_ENV
+unset _OLD_VIRTUAL_PATH
+unset _OLD_VIRTUAL_PS1</code></pre>
+            </div>
+            <p>After deactivation:</p>
+            <div>
+                <pre><code class="language-bash">echo "$VIRTUAL_ENV"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash"></code></pre>
+            </div>
+            <p>And:</p>
+            <div>
+                <pre><code class="language-bash">which python</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-bash">/usr/bin/python</code></pre>
+            </div>
+            <p><code>deactivate</code> works because activation defines a shell function named <code>deactivate</code> in your current shell.</p>
+            <p>That function would not exist if you ran the activation script as a normal child process.</p>
+            <h3 id="why-python-m-pip-is-often-safer-than-pip">Why <code>python -m pip</code> Is Often Safer Than <code>pip</code></h3>
+            <p>Inside a venv, this usually works:</p>
+            <div>
+                <pre><code class="language-bash">pip install flask</code></pre>
+            </div>
+            <p>But this is often safer:</p>
+            <div>
+                <pre><code class="language-bash">python -m pip install flask</code></pre>
+            </div>
+            <p>Why?</p>
+            <p>Because it guarantees that <code>pip</code> belongs to the exact <code>python</code> interpreter you are using.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">which python</code></pre>
+            </div>
+            <p>Output:</p>
+            <div>
+                <pre><code class="language-bash">/home/ahmad/demo/.venv/bin/python</code></pre>
+            </div>
+            <p>Then:</p>
+            <div>
+                <pre><code class="language-bash">python -m pip install flask</code></pre>
+            </div>
+            <p>installs Flask into the environment used by:</p>
+            <div>
+                <pre><code class="language-bash">/home/ahmad/demo/.venv/bin/python</code></pre>
+            </div>
+            <p>This avoids mistakes where <code>pip</code> and <code>python</code> accidentally point to different installations.</p>
+            <h4 id="you-can-use-a-venv-without-activating-it">You Can Use a Venv Without Activating It</h4>
+            <p>Activation is convenient, but not required.</p>
+            <p>You can directly call the venv’s Python:</p>
+            <div>
+                <pre><code class="language-bash">./.venv/bin/python script.py</code></pre>
+            </div>
+            <p>or:</p>
+            <div>
+                <pre><code class="language-bash">./.venv/bin/python -m pip install requests</code></pre>
+            </div>
+            <p>This works even if the venv is not activated.</p>
+            <p>Why?</p>
+            <p>Because you explicitly chose the interpreter:</p>
+            <div>
+                <pre><code class="language-bash">./.venv/bin/python</code></pre>
+            </div>
+            <p>So the shell does not need to find <code>python</code> through <code>PATH</code>.</p>
+            <p>This is useful in scripts, cron jobs, systemd services, and CI pipelines.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">/home/ahmad/demo/.venv/bin/python /home/ahmad/demo/app.py</code></pre>
+            </div>
+            <p>That is often more reliable than relying on activation.</p>
+            <h4 id="what-a-venv-does-not-isolate">What a Venv Does Not Isolate</h4>
+            <p>A Python virtual environment does <strong>not</strong> isolate everything.</p>
+            <p>It does not isolate:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Thing</td>
+                    <td>Is it isolated by venv?</td>
+                </tr>
+                <tr>
+                    <td>Python packages</td>
+                    <td>Mostly yes</td>
+                </tr>
+                <tr>
+                    <td>Python interpreter command lookup</td>
+                    <td>Yes, through <code>PATH</code></td>
+                </tr>
+                <tr>
+                    <td>System libraries</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td>Filesystem</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td>Network access</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td>Users and permissions</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td>Environment variables like <code>HOME</code>, <code>USER</code>, <code>PATH</code> except modified entries</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td>Running processes</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td>OS packages installed by apt/dnf/brew</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td>Non-Python tools</td>
+                    <td>No, unless installed into <code>.venv/bin</code> and found through <code>PATH</code></td>
+                </tr>
+            </table>
+            </p>
+            <p>For real OS-level isolation, use tools like containers, virtual machines, or sandboxing mechanisms.</p>
+            <p>A venv is mainly for Python dependency isolation.</p>
+            <h4 id="venv-activation-as-environment-manipulation">Venv Activation as Environment Manipulation</h4>
+            <p>So when people say:</p>
+            <div>
+                <pre><code class="language-bash">source .venv/bin/activate</code></pre>
+            </div>
+            <p>they are really saying:</p>
+            <blockquote>
+                <p>Modify my current shell so that this project’s Python and Python-installed command-line tools come first.</p>
+            </blockquote>
+            <p>The activation script does not enter a magical Python mode.</p>
+            <p>It mainly changes:</p>
+            <div>
+                <pre><code class="language-bash">PATH
+VIRTUAL_ENV
+PS1</code></pre>
+            </div>
+            <p>and defines:</p>
+            <div>
+                <pre><code class="language-bash">deactivate</code></pre>
+            </div>
+            <p>This is why these commands work after activation:</p>
+            <div>
+                <pre><code class="language-bash">python
+pip
+pytest
+black
+ruff
+mypy</code></pre>
+            </div>
+            <p>They are found inside:</p>
+            <div>
+                <pre><code class="language-bash">.venv/bin/</code></pre>
+            </div>
+            <p>because that directory is now first in <code>PATH</code>.</p>
+            <h3 id="container-build-credentials-and-environment-variables">Container Build, Credentials, and Environment Variables</h3>
+            <p>Containers use environment variables heavily, but you need to separate three different moments:</p>
+            <ol>
+                <li><strong>Image build time</strong></li>
+                <li><strong>Container runtime</strong></li>
+                <li><strong>Application process runtime</strong></li>
+            </ol>
+            <p>These are related, but they are not the same.</p>
+            <p>A common mistake is to think:</p>
+            <blockquote>
+                <p>“If I set an environment variable during <code>docker build</code>, my running container will automatically and safely have it.”</p>
+            </blockquote>
+            <p>Sometimes it will. Sometimes it will not. And sometimes it will leak secrets into the image.</p>
+            <h3 id="build-time-vs-runtime">Build Time vs Runtime</h3>
+            <h4 id="build-time">Build Time</h4>
+            <p>Build time happens when you run:</p>
+            <div>
+                <pre><code class="language-bash">docker build -t myapp .</code></pre>
+            </div>
+            <p>During build time, Docker executes instructions in your <code>Dockerfile</code>.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-dockerfile">FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+
+CMD ["python", "app.py"]</code></pre>
+            </div>
+            <p>The <code>RUN</code> commands execute while the image is being built.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-dockerfile">RUN echo "Installing dependencies"</code></pre>
+            </div>
+            <p>runs during:</p>
+            <div>
+                <pre><code class="language-bash">docker build -t myapp .</code></pre>
+            </div>
+            <p>not when the container starts.</p>
+            <h4 id="runtime">Runtime</h4>
+            <p>Runtime happens when you start a container from an image:</p>
+            <div>
+                <pre><code class="language-bash">docker run myapp</code></pre>
+            </div>
+            <p>At runtime, Docker creates a container process and starts the command from <code>CMD</code> or <code>ENTRYPOINT</code>.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-dockerfile">CMD ["python", "app.py"]</code></pre>
+            </div>
+            <p>means that when you run:</p>
+            <div>
+                <pre><code class="language-bash">docker run myapp</code></pre>
+            </div>
+            <p>Docker starts roughly:</p>
+            <div>
+                <pre><code class="language-bash">python app.py</code></pre>
+            </div>
+            <p>inside the container.</p>
+            <h4 id="environment-variables-at-runtime">Environment Variables at Runtime</h4>
+            <p>The most common way to pass configuration into a container is with <code>docker run -e</code>.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">docker run -e APP_ENV=production myapp</code></pre>
+            </div>
+            <p>Inside the container, the application can read:</p>
+            <div>
+                <pre><code class="language-python">import os
+
+print(os.environ.get("APP_ENV"))</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">production</code></pre>
+            </div>
+            <p>You can pass multiple variables:</p>
+            <div>
+                <pre><code class="language-bash">docker run \
+  -e APP_ENV=production \
+  -e LOG_LEVEL=info \
+  -e DATABASE_URL='postgres://user:pass@db:5432/app' \
+  myapp</code></pre>
+            </div>
+            <p>Inside Python:</p>
+            <div>
+                <pre><code class="language-python">import os
+
+app_env = os.environ.get("APP_ENV")
+log_level = os.environ.get("LOG_LEVEL")
+database_url = os.environ.get("DATABASE_URL")
+
+print(app_env)
+print(log_level)
+print(database_url)</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">production
+info
+postgres://user:pass@db:5432/app</code></pre>
+            </div>
+            <p>These variables are part of the environment of the main process inside the container.</p>
+            <p>If that process starts child processes, those children inherit the environment too.</p>
+            <h4 id="runtime-environment-variables-flow-to-child-processes">Runtime Environment Variables Flow to Child Processes</h4>
+            <p>Suppose your image runs this Python app:</p>
+            <div>
+                <pre><code class="language-python"># app.py
+import os
+import subprocess
+
+print("Parent APP_ENV:", os.environ.get("APP_ENV"))
+
+subprocess.run([
+    "python",
+    "-c",
+    "import os; print('Child APP_ENV:', os.environ.get('APP_ENV'))"
+])</code></pre>
+            </div>
+            <p>Run the container:</p>
+            <div>
+                <pre><code class="language-bash">docker run -e APP_ENV=production myapp</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Parent APP_ENV: production
+Child APP_ENV: production</code></pre>
+            </div>
+            <p>The child Python process inherited the environment from the parent Python process.</p>
+            <p>But if the child changes the environment, the parent does not change.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-python"># app.py
+import os
+import subprocess
+
+os.environ["APP_ENV"] = "parent"
+
+subprocess.run([
+    "python",
+    "-c",
+    "import os; os.environ['APP_ENV']='child'; print('Child APP_ENV:', os.environ['APP_ENV'])"
+])
+
+print("Parent APP_ENV:", os.environ["APP_ENV"])</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Child APP_ENV: child
+Parent APP_ENV: parent</code></pre>
+            </div>
+            <p>Same rule as normal Unix processes:</p>
+            <blockquote>
+                <p>Environment variables are inherited downward.
+                    They do not propagate upward from child to parent.</p>
+            </blockquote>
+            <h4 id="env-in-a-dockerfile"><code>ENV</code> in a Dockerfile</h4>
+            <p>Dockerfile <code>ENV</code> sets an environment variable in the image.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-dockerfile">FROM python:3.12-slim
+
+ENV APP_ENV=production
+ENV LOG_LEVEL=info
+
+WORKDIR /app
+COPY app.py .
+
+CMD ["python", "app.py"]</code></pre>
+            </div>
+            <p>Then in <code>app.py</code>:</p>
+            <div>
+                <pre><code class="language-python">import os
+
+print(os.environ.get("APP_ENV"))
+print(os.environ.get("LOG_LEVEL"))</code></pre>
+            </div>
+            <p>Build and run:</p>
+            <div>
+                <pre><code class="language-bash">docker build -t myapp .
+docker run myapp</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">production
+info</code></pre>
+            </div>
+            <p><code>ENV</code> values become default environment variables for containers created from the image.</p>
+            <p>You can override them at runtime:</p>
+            <div>
+                <pre><code class="language-bash">docker run -e APP_ENV=development myapp</code></pre>
+            </div>
+            <p>Then <code>APP_ENV</code> is:</p>
+            <div>
+                <pre><code class="language-text">development</code></pre>
+            </div>
+            <p>So:</p>
+            <div>
+                <pre><code class="language-dockerfile">ENV APP_ENV=production</code></pre>
+            </div>
+            <p>means:</p>
+            <blockquote>
+                <p>If the user does not provide another value at runtime, use <code>APP_ENV=production</code>.</p>
+            </blockquote>
+            <h4 id="arg-in-a-dockerfile"><code>ARG</code> in a Dockerfile</h4>
+            <p>Dockerfile <code>ARG</code> is for build-time variables.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-dockerfile">FROM python:3.12-slim
+
+ARG APP_VERSION
+RUN echo "Building version: $APP_VERSION"
+
+CMD ["python", "--version"]</code></pre>
+            </div>
+            <p>Build with:</p>
+            <div>
+                <pre><code class="language-bash">docker build --build-arg APP_VERSION=1.2.3 -t myapp .</code></pre>
+            </div>
+            <p>During the build, Docker can use:</p>
+            <div>
+                <pre><code class="language-bash">$APP_VERSION</code></pre>
+            </div>
+            <p>inside Dockerfile instructions after the <code>ARG</code> declaration.</p>
+            <p>But <code>ARG</code> is not automatically available at runtime.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-dockerfile">FROM python:3.12-slim
+
+ARG APP_VERSION
+
+CMD ["python", "-c", "import os; print(os.environ.get('APP_VERSION'))"]</code></pre>
+            </div>
+            <p>Build:</p>
+            <div>
+                <pre><code class="language-bash">docker build --build-arg APP_VERSION=1.2.3 -t myapp .</code></pre>
+            </div>
+            <p>Run:</p>
+            <div>
+                <pre><code class="language-bash">docker run myapp</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">None</code></pre>
+            </div>
+            <p>Why?</p>
+            <p>Because <code>ARG</code> is build-time only unless you explicitly copy it into <code>ENV</code>.</p>
+            <h3 id="copying-arg-into-env">Copying <code>ARG</code> into <code>ENV</code></h3>
+            <p>You can convert a build-time argument into a runtime environment variable:</p>
+            <div>
+                <pre><code class="language-dockerfile">FROM python:3.12-slim
+
+ARG APP_VERSION
+ENV APP_VERSION=$APP_VERSION
+
+CMD ["python", "-c", "import os; print(os.environ.get('APP_VERSION'))"]</code></pre>
+            </div>
+            <p>Build:</p>
+            <div>
+                <pre><code class="language-bash">docker build --build-arg APP_VERSION=1.2.3 -t myapp .</code></pre>
+            </div>
+            <p>Run:</p>
+            <div>
+                <pre><code class="language-bash">docker run myapp</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">1.2.3</code></pre>
+            </div>
+            <p>But be careful:</p>
+            <blockquote>
+                <p>Anything put into <code>ENV</code> becomes part of the image configuration and can be inspected later.</p>
+            </blockquote>
+            <p>This is usually fine for non-secret values like versions:</p>
+            <div>
+                <pre><code class="language-dockerfile">ARG APP_VERSION
+ENV APP_VERSION=$APP_VERSION</code></pre>
+            </div>
+            <p>But it is dangerous for secrets.</p>
+            <h4 id="do-not-put-secrets-in-env-during-build">Do Not Put Secrets in <code>ENV</code> During Build</h4>
+            <p>Bad example:</p>
+            <div>
+                <pre><code class="language-dockerfile">FROM python:3.12-slim
+
+ENV AWS_ACCESS_KEY_ID=AKIA...
+ENV AWS_SECRET_ACCESS_KEY=supersecret
+
+RUN python build_script.py</code></pre>
+            </div>
+            <p>This bakes secrets into the image metadata/layers.</p>
+            <p>Anyone with access to the image may be able to inspect them.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-bash">docker inspect myapp</code></pre>
+            </div>
+            <p>may reveal environment variables stored in the image config.</p>
+            <p>You should also avoid:</p>
+            <div>
+                <pre><code class="language-dockerfile">ARG AWS_SECRET_ACCESS_KEY
+RUN echo "$AWS_SECRET_ACCESS_KEY"</code></pre>
+            </div>
+            <p>and:</p>
+            <div>
+                <pre><code class="language-bash">docker build --build-arg AWS_SECRET_ACCESS_KEY=supersecret -t myapp .</code></pre>
+            </div>
+            <p>Even though <code>ARG</code> is build-time, it can still leak through:</p>
+            <ul>
+                <li>build logs</li>
+                <li>image history</li>
+                <li>cached layers</li>
+                <li>package manager config files</li>
+                <li>files created during build</li>
+                <li>shell history or CI logs</li>
+            </ul>
+            <p>So the rule is:</p>
+            <blockquote>
+                <p>Do not use Dockerfile <code>ARG</code> or <code>ENV</code> for secrets unless you fully understand where they may be recorded.</p>
+            </blockquote>
+            <h4 id="build-secrets-safer-build-time-credentials">Build Secrets: Safer Build-Time Credentials</h4>
+            <p>Sometimes you need credentials during build.</p>
+            <p>For example:</p>
+            <ul>
+                <li>installing private Python packages</li>
+                <li>downloading private source files</li>
+                <li>authenticating to a private package registry</li>
+                <li>cloning a private repository</li>
+            </ul>
+            <p>Do not do this:</p>
+            <div>
+                <pre><code class="language-dockerfile">ARG PIP_TOKEN
+RUN pip install private-package --extra-index-url "https://token:$PIP_TOKEN@example.com/simple"</code></pre>
+            </div>
+            <p>The token may leak into build history or logs.</p>
+            <p>A safer BuildKit-style pattern is to use a build secret.</p>
+            <p>Example Dockerfile:</p>
+            <div>
+                <pre><code class="language-dockerfile"># syntax=docker/dockerfile:1.7
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN --mount=type=secret,id=pip_token \
+    PIP_TOKEN="$(cat /run/secrets/pip_token)" &amp;&amp; \
+    pip install private-package \
+      --extra-index-url "https://token:${PIP_TOKEN}@example.com/simple"</code></pre>
+            </div>
+            <p>Build:</p>
+            <div>
+                <pre><code class="language-bash">DOCKER_BUILDKIT=1 docker build \
+  --secret id=pip_token,env=PIP_TOKEN \
+  -t myapp .</code></pre>
+            </div>
+            <p>With:</p>
+            <div>
+                <pre><code class="language-bash">export PIP_TOKEN=supersecret</code></pre>
+            </div>
+            <p>The secret is mounted temporarily during that <code>RUN</code> instruction at:</p>
+            <div>
+                <pre><code class="language-text">/run/secrets/pip_token</code></pre>
+            </div>
+            <p>It is not meant to be persisted in the final image.</p>
+            <p>Still be careful not to echo it, write it into files, or include it in generated configuration.</p>
+            <p>Bad:</p>
+            <div>
+                <pre><code class="language-dockerfile">RUN --mount=type=secret,id=pip_token \
+    cat /run/secrets/pip_token &gt; /app/token.txt</code></pre>
+            </div>
+            <p>That copies the secret into the image.</p>
+            <p>Good:</p>
+            <div>
+                <pre><code class="language-dockerfile">RUN --mount=type=secret,id=pip_token \
+    PIP_TOKEN="$(cat /run/secrets/pip_token)" &amp;&amp; \
+    use-token-temporarily</code></pre>
+            </div>
+            <h4 id="runtime-secrets">Runtime Secrets</h4>
+            <p>For runtime secrets, pass them at container start time instead of baking them into the image.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">docker run \
+  -e DATABASE_URL='postgres://user:pass@db:5432/app' \
+  -e API_KEY='secret-value' \
+  myapp</code></pre>
+            </div>
+            <p>Inside Python:</p>
+            <div>
+                <pre><code class="language-python">import os
+
+database_url = os.environ["DATABASE_URL"]
+api_key = os.environ["API_KEY"]</code></pre>
+            </div>
+            <p>This is common and convenient.</p>
+            <p>However, environment variables are not perfect secret storage.</p>
+            <p>They can sometimes be exposed through:</p>
+            <ul>
+                <li>process inspection</li>
+                <li>container inspection</li>
+                <li>crash dumps</li>
+                <li>application logs</li>
+                <li>debug pages</li>
+                <li>accidental <code>printenv</code></li>
+                <li>shell history</li>
+                <li>orchestrator metadata</li>
+            </ul>
+            <p>For stronger secret management, use the secret mechanism provided by your platform.</p>
+            <p>Examples:</p>
+            <ul>
+                <li>Docker secrets</li>
+                <li>Kubernetes Secrets</li>
+                <li>cloud secret managers</li>
+                <li>mounted secret files</li>
+                <li>CI/CD secret stores</li>
+            </ul>
+            <h4 id="-env-file"><code>--env-file</code></h4>
+            <p>Instead of passing many <code>-e</code> options, you can use an env file.</p>
+            <p>Create <code>.env</code>:</p>
+            <div>
+                <pre><code class="language-env">APP_ENV=production
+LOG_LEVEL=info
+DATABASE_URL=postgres://user:pass@db:5432/app</code></pre>
+            </div>
+            <p>Run:</p>
+            <div>
+                <pre><code class="language-bash">docker run --env-file .env myapp</code></pre>
+            </div>
+            <p>Inside Python:</p>
+            <div>
+                <pre><code class="language-python">import os
+
+print(os.environ.get("APP_ENV"))
+print(os.environ.get("LOG_LEVEL"))
+print(os.environ.get("DATABASE_URL"))</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">production
+info
+postgres://user:pass@db:5432/app</code></pre>
+            </div>
+            <p>Important:</p>
+            <blockquote>
+                <p>An env file is not automatically secret-safe.</p>
+            </blockquote>
+            <p>If <code>.env</code> contains credentials, protect it:</p>
+            <div>
+                <pre><code class="language-bash">chmod 600 .env</code></pre>
+            </div>
+            <p>and do not commit it:</p>
+            <div>
+                <pre><code class="language-bash">echo ".env" &gt;&gt; .gitignore</code></pre>
+            </div>
+            <h4 id="docker-compose-environment-variables">Docker Compose Environment Variables</h4>
+            <p>With Compose, you can pass runtime environment variables like this:</p>
+            <div>
+                <pre><code class="language-yaml">services:
+  app:
+    image: myapp
+    environment:
+      APP_ENV: production
+      LOG_LEVEL: info
+      DATABASE_URL: postgres://user:pass@db:5432/app</code></pre>
+            </div>
+            <p>Or:</p>
+            <div>
+                <pre><code class="language-yaml">services:
+  app:
+    image: myapp
+    env_file:
+      - .env</code></pre>
+            </div>
+            <p>Then:</p>
+            <div>
+                <pre><code class="language-bash">docker compose up</code></pre>
+            </div>
+            <p>The variables are injected into the container at runtime.</p>
+            <p>Inside the app:</p>
+            <div>
+                <pre><code class="language-python">import os
+
+print(os.environ.get("APP_ENV"))</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">production</code></pre>
+            </div>
+            <h4 id="compose-env-vs-container-env_file">Compose <code>.env</code> vs Container <code>env_file</code></h4>
+            <p>This is a frequent source of confusion.</p>
+            <p>Compose has two different concepts:</p>
+            <ol>
+                <li><code>.env</code> file used by Compose for variable substitution</li>
+                <li><code>env_file:</code> used to pass variables into the container</li>
+            </ol>
+            <p>They are not the same thing.</p>
+            <h4 id="compose-env-for-substitution">Compose <code>.env</code> for Substitution</h4>
+            <p>Suppose you have a <code>.env</code> file:</p>
+            <div>
+                <pre><code class="language-env">APP_IMAGE=myapp:latest
+HOST_PORT=8080</code></pre>
+            </div>
+            <p>And <code>compose.yaml</code>:</p>
+            <div>
+                <pre><code class="language-yaml">services:
+  app:
+    image: ${APP_IMAGE}
+    ports:
+      - "${HOST_PORT}:8000"</code></pre>
+            </div>
+            <p>Compose uses <code>.env</code> to substitute values before creating containers.</p>
+            <p>This affects the Compose file.</p>
+            <p>It does not automatically mean every variable in <code>.env</code> is injected into the container environment.</p>
+            <h4 id="env_file-for-container-environment"><code>env_file:</code> for Container Environment</h4>
+            <p>To inject variables into the container, use:</p>
+            <div>
+                <pre><code class="language-yaml">services:
+  app:
+    image: myapp
+    env_file:
+      - .env</code></pre>
+            </div>
+            <p>Now variables from <code>.env</code> become environment variables inside the container.</p>
+            <p>So:</p>
+            <div>
+                <pre><code class="language-yaml">services:
+  app:
+    image: ${APP_IMAGE}</code></pre>
+            </div>
+            <p>uses <code>.env</code> for Compose substitution.</p>
+            <p>But:</p>
+            <div>
+                <pre><code class="language-yaml">services:
+  app:
+    env_file:
+      - .env</code></pre>
+            </div>
+            <p>passes variables into the container.</p>
+            <h4 id="build-args-in-compose">Build Args in Compose</h4>
+            <p>Compose can also pass build arguments.</p>
+            <div>
+                <pre><code class="language-yaml">services:
+  app:
+    build:
+      context: .
+      args:
+        APP_VERSION: "1.2.3"</code></pre>
+            </div>
+            <p>Dockerfile:</p>
+            <div>
+                <pre><code class="language-dockerfile">FROM python:3.12-slim
+
+ARG APP_VERSION
+RUN echo "Building version $APP_VERSION"</code></pre>
+            </div>
+            <p>This makes <code>APP_VERSION</code> available during image build.</p>
+            <p>But it does not automatically exist at runtime.</p>
+            <p>To preserve it at runtime:</p>
+            <div>
+                <pre><code class="language-dockerfile">ARG APP_VERSION
+ENV APP_VERSION=$APP_VERSION</code></pre>
+            </div>
+            <p>Again, this is okay for non-secrets like versions, commit SHAs, or build metadata.</p>
+            <p>Do not use this pattern for credentials.</p>
+            <h4 id="multi-stage-builds-and-secrets">Multi-Stage Builds and Secrets</h4>
+            <p>Multi-stage builds can reduce accidental secret leakage, but they are not magic.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-dockerfile">FROM python:3.12-slim AS builder
+
+WORKDIR /app
+
+RUN --mount=type=secret,id=pip_token \
+    PIP_TOKEN="$(cat /run/secrets/pip_token)" &amp;&amp; \
+    pip wheel private-package \
+      --extra-index-url "https://token:${PIP_TOKEN}@example.com/simple" \
+      -w /wheels
+
+FROM python:3.12-slim
+
+COPY --from=builder /wheels /wheels
+RUN pip install /wheels/*
+
+CMD ["python", "--version"]</code></pre>
+            </div>
+            <p>The final image does not include the whole builder filesystem, only what you copy.</p>
+            <p>But if you copy secret-containing files from the builder stage, they still leak.</p>
+            <p>Bad:</p>
+            <div>
+                <pre><code class="language-dockerfile">COPY --from=builder /root/.config/pip/pip.conf /root/.config/pip/pip.conf</code></pre>
+            </div>
+            <p>Good:</p>
+            <div>
+                <pre><code class="language-dockerfile">COPY --from=builder /wheels /wheels</code></pre>
+            </div>
+            <p>Also avoid writing secrets to files in the first place.</p>
+            <h3 id="runtime-environment-variables-override-dockerfile-env">Runtime Environment Variables Override Dockerfile <code>ENV</code></h3>
+            <p>Dockerfile:</p>
+            <div>
+                <pre><code class="language-dockerfile">FROM python:3.12-slim
+
+ENV APP_ENV=production
+
+CMD ["python", "-c", "import os; print(os.environ['APP_ENV'])"]</code></pre>
+            </div>
+            <p>Build:</p>
+            <div>
+                <pre><code class="language-bash">docker build -t myapp .</code></pre>
+            </div>
+            <p>Run normally:</p>
+            <div>
+                <pre><code class="language-bash">docker run myapp</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">production</code></pre>
+            </div>
+            <p>Override at runtime:</p>
+            <div>
+                <pre><code class="language-bash">docker run -e APP_ENV=development myapp</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">development</code></pre>
+            </div>
+            <p>So precedence is roughly:</p>
+            <div>
+                <pre><code class="language-text">runtime -e / env_file / orchestrator env
+overrides
+Dockerfile ENV default</code></pre>
+            </div>
+            <h4 id="environment-variables-and-image-layers">Environment Variables and Image Layers</h4>
+            <p>Docker images are built in layers.</p>
+            <p>Each Dockerfile instruction may create metadata or filesystem changes.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-dockerfile">FROM python:3.12-slim
+
+ENV API_KEY=supersecret</code></pre>
+            </div>
+            <p>Even if you later do:</p>
+            <div>
+                <pre><code class="language-dockerfile">ENV API_KEY=</code></pre>
+            </div>
+            <p>the secret may still exist in image history or earlier metadata.</p>
+            <p>Similarly:</p>
+            <div>
+                <pre><code class="language-dockerfile">RUN echo "supersecret" &gt; /tmp/secret.txt
+RUN rm /tmp/secret.txt</code></pre>
+            </div>
+            <p>can still be dangerous because the earlier layer may contain the file.</p>
+            <p>Do not rely on deleting secrets later in the Dockerfile.</p>
+            <p>The safer rule:</p>
+            <blockquote>
+                <p>Never put secrets into image layers in the first place.</p>
+            </blockquote>
+            <h4 id="example-bad-container-secret-pattern">Example: Bad Container Secret Pattern</h4>
+            <p>Bad Dockerfile:</p>
+            <div>
+                <pre><code class="language-dockerfile">FROM python:3.12-slim
+
+ARG GITHUB_TOKEN
+
+RUN git clone https://$GITHUB_TOKEN@github.com/example/private-repo.git /app
+
+WORKDIR /app
+
+CMD ["python", "app.py"]</code></pre>
+            </div>
+            <p>Build:</p>
+            <div>
+                <pre><code class="language-bash">docker build \
+  --build-arg GITHUB_TOKEN=ghp_secret \
+  -t myapp .</code></pre>
+            </div>
+            <p>Problems:</p>
+            <ul>
+                <li>token may appear in build logs</li>
+                <li>token may appear in shell history</li>
+                <li>token may appear in image metadata/history</li>
+                <li>token may be cached in layers</li>
+                <li>private repository metadata may remain in the image</li>
+            </ul>
+            <p>Better:</p>
+            <div>
+                <pre><code class="language-dockerfile"># syntax=docker/dockerfile:1.7
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN --mount=type=secret,id=github_token \
+    GITHUB_TOKEN="$(cat /run/secrets/github_token)" &amp;&amp; \
+    git clone https://x-access-token:${GITHUB_TOKEN}@github.com/example/private-repo.git .</code></pre>
+            </div>
+            <p>Build:</p>
+            <div>
+                <pre><code class="language-bash">export GITHUB_TOKEN=ghp_secret
+
+DOCKER_BUILDKIT=1 docker build \
+  --secret id=github_token,env=GITHUB_TOKEN \
+  -t myapp .</code></pre>
+            </div>
+            <p>Even better, for many workflows:</p>
+            <ul>
+                <li>clone source code outside the Docker build using CI credentials</li>
+                <li>pass the source directory as build context</li>
+                <li>do not make Docker responsible for fetching private source</li>
+            </ul>
+            <h4 id="example-python-app-reading-runtime-configuration">Example: Python App Reading Runtime Configuration</h4>
+            <p><code>app.py</code>:</p>
+            <div>
+                <pre><code class="language-python">import os
+import sys
+
+required = ["DATABASE_URL", "SECRET_KEY"]
+
+missing = [name for name in required if not os.environ.get(name)]
+
+if missing:
+    print(f"Missing required environment variables: {', '.join(missing)}", file=sys.stderr)
+    sys.exit(1)
+
+database_url = os.environ["DATABASE_URL"]
+secret_key = os.environ["SECRET_KEY"]
+
+print("App configured successfully")
+print("DATABASE_URL exists:", bool(database_url))
+print("SECRET_KEY exists:", bool(secret_key))</code></pre>
+            </div>
+            <p>Dockerfile:</p>
+            <div>
+                <pre><code class="language-dockerfile">FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY app.py .
+
+CMD ["python", "app.py"]</code></pre>
+            </div>
+            <p>Build:</p>
+            <div>
+                <pre><code class="language-bash">docker build -t env-demo .</code></pre>
+            </div>
+            <p>Run without env vars:</p>
+            <div>
+                <pre><code class="language-bash">docker run env-demo</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Missing required environment variables: DATABASE_URL, SECRET_KEY</code></pre>
+            </div>
+            <p>Run with env vars:</p>
+            <div>
+                <pre><code class="language-bash">docker run \
+  -e DATABASE_URL='postgres://user:pass@db:5432/app' \
+  -e SECRET_KEY='supersecret' \
+  env-demo</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">App configured successfully
+DATABASE_URL exists: True
+SECRET_KEY exists: True</code></pre>
+            </div>
+            <p>This is the standard pattern:</p>
+            <blockquote>
+                <p>Build the image once.
+                    Configure it differently at runtime using environment variables.</p>
+            </blockquote>
+            <h4 id="example-build-time-version-runtime-secrets">Example: Build-Time Version, Runtime Secrets</h4>
+            <p>A good split:</p>
+            <ul>
+                <li>Build-time: app version, commit SHA, build date</li>
+                <li>Runtime: database password, API tokens, secret keys</li>
+            </ul>
+            <p>Dockerfile:</p>
+            <div>
+                <pre><code class="language-dockerfile">FROM python:3.12-slim
+
+ARG APP_VERSION
+ENV APP_VERSION=$APP_VERSION
+
+WORKDIR /app
+COPY app.py .
+
+CMD ["python", "app.py"]</code></pre>
+            </div>
+            <p><code>app.py</code>:</p>
+            <div>
+                <pre><code class="language-python">import os
+
+print("App version:", os.environ.get("APP_VERSION"))
+print("Runtime environment:", os.environ.get("APP_ENV"))
+print("Has database URL:", bool(os.environ.get("DATABASE_URL")))</code></pre>
+            </div>
+            <p>Build:</p>
+            <div>
+                <pre><code class="language-bash">docker build \
+  --build-arg APP_VERSION=1.2.3 \
+  -t myapp:1.2.3 .</code></pre>
+            </div>
+            <p>Run:</p>
+            <div>
+                <pre><code class="language-bash">docker run \
+  -e APP_ENV=production \
+  -e DATABASE_URL='postgres://user:pass@db:5432/app' \
+  myapp:1.2.3</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">App version: 1.2.3
+Runtime environment: production
+Has database URL: True</code></pre>
+            </div>
+            <p>This is a healthy pattern because <code>APP_VERSION</code> is not secret, while <code>DATABASE_URL</code> is provided at runtime.</p>
+            <h4 id="containers-and-env-files-in-python-apps">Containers and <code>.env</code> Files in Python Apps</h4>
+            <p>Many Python apps use <code>python-dotenv</code> to load a <code>.env</code> file:</p>
+            <div>
+                <pre><code class="language-python">from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+print(os.environ.get("DATABASE_URL"))</code></pre>
+            </div>
+            <p>This is common in local development.</p>
+            <p>But inside containers, there are two different approaches:</p>
+            <h5>Approach 1: Docker injects environment variables</h5>
+            <div>
+                <pre><code class="language-bash">docker run --env-file .env myapp</code></pre>
+            </div>
+            <p>Then Python reads from <code>os.environ</code>.</p>
+            <p>No need for <code>python-dotenv</code> inside the container.</p>
+            <h5>Approach 2: App reads <code>.env</code> from the filesystem</h5>
+            <p>Dockerfile:</p>
+            <div>
+                <pre><code class="language-dockerfile">COPY .env /app/.env</code></pre>
+            </div>
+            <p>Python:</p>
+            <div>
+                <pre><code class="language-python">from dotenv import load_dotenv
+load_dotenv()</code></pre>
+            </div>
+            <p>This is usually worse for secrets because the <code>.env</code> file becomes part of the image if copied during build.</p>
+            <p>Avoid:</p>
+            <div>
+                <pre><code class="language-dockerfile">COPY .env .</code></pre>
+            </div>
+            <p>Better:</p>
+            <div>
+                <pre><code class="language-dockerfile">COPY . .</code></pre>
+            </div>
+            <p>with <code>.dockerignore</code> containing:</p>
+            <div>
+                <pre><code class="language-text">.env
+.git
+__pycache__
+.venv</code></pre>
+            </div>
+            <p>Then pass variables at runtime:</p>
+            <div>
+                <pre><code class="language-bash">docker run --env-file .env myapp</code></pre>
+            </div>
+            <h4 id="-dockerignore-and-secret-protection"><code>.dockerignore</code> and Secret Protection</h4>
+            <p>Your build context is everything Docker can see during build.</p>
+            <p>If your project contains:</p>
+            <div>
+                <pre><code class="language-text">.env
+.aws/
+.ssh/
+.venv/
+.git/</code></pre>
+            </div>
+            <p>and you run:</p>
+            <div>
+                <pre><code class="language-bash">docker build -t myapp .</code></pre>
+            </div>
+            <p>Docker may send those files to the Docker daemon as part of the build context unless excluded.</p>
+            <p>Use <code>.dockerignore</code>.</p>
+            <p>Example <code>.dockerignore</code>:</p>
+            <div>
+                <pre><code class="language-text">.env
+.env.*
+!.env.example
+
+.git
+.venv
+__pycache__
+*.pyc
+
+.aws
+.ssh
+id_rsa
+id_ed25519</code></pre>
+            </div>
+            <p>This helps prevent accidental secret exposure.</p>
+            <p>Important:</p>
+            <blockquote>
+                <p><code>.dockerignore</code> does not protect secrets already copied into the image by Dockerfile instructions.
+                    It only keeps files out of the build context.</p>
+            </blockquote>
+            <h4 id="inspecting-container-environment">Inspecting Container Environment</h4>
+            <p>To see environment variables in a running container:</p>
+            <div>
+                <pre><code class="language-bash">docker exec container_name printenv</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">docker exec myapp-container printenv APP_ENV</code></pre>
+            </div>
+            <p>To inspect image default environment variables:</p>
+            <div>
+                <pre><code class="language-bash">docker image inspect myapp</code></pre>
+            </div>
+            <p>or:</p>
+            <div>
+                <pre><code class="language-bash">docker inspect myapp</code></pre>
+            </div>
+            <p>You may see Dockerfile <code>ENV</code> values in the image configuration.</p>
+            <p>For a running container:</p>
+            <div>
+                <pre><code class="language-bash">docker inspect container_name</code></pre>
+            </div>
+            <p>This can also reveal runtime environment variables.</p>
+            <p>That is another reason not to treat environment variables as perfect secret storage.</p>
+            <h4 id="kubernetes-environment-variables">Kubernetes Environment Variables</h4>
+            <p>In Kubernetes, containers also receive environment variables at runtime.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-yaml">apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+        - name: app
+          image: myapp:1.2.3
+          env:
+            - name: APP_ENV
+              value: "production"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: myapp-secrets
+                  key: database-url</code></pre>
+            </div>
+            <p>Inside Python:</p>
+            <div>
+                <pre><code class="language-python">import os
+
+print(os.environ.get("APP_ENV"))
+print(bool(os.environ.get("DATABASE_URL")))</code></pre>
+            </div>
+            <p>The values are injected into the process environment when the container starts.</p>
+            <p>A Kubernetes Secret is better than hardcoding secrets in the image, but environment-variable secrets can still be exposed to processes with sufficient permissions.</p>
+            <p>Many production systems prefer mounting secrets as files.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-yaml">volumeMounts:
+  - name: secret-volume
+    mountPath: "/run/secrets"
+    readOnly: true
+volumes:
+  - name: secret-volume
+    secret:
+      secretName: myapp-secrets</code></pre>
+            </div>
+            <p>Then your app reads:</p>
+            <div>
+                <pre><code class="language-python">from pathlib import Path
+
+database_url = Path("/run/secrets/database-url").read_text().strip()</code></pre>
+            </div>
+            <h4 id="ci-cd-credentials-and-docker-builds">CI/CD Credentials and Docker Builds</h4>
+            <p>CI systems often provide secrets as environment variables.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">GITHUB_TOKEN
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+PIP_INDEX_URL
+NPM_TOKEN</code></pre>
+            </div>
+            <p>Be careful when using them in Docker builds.</p>
+            <p>Bad:</p>
+            <div>
+                <pre><code class="language-bash">docker build \
+  --build-arg AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+  -t myapp .</code></pre>
+            </div>
+            <p>Better for build-time secret needs:</p>
+            <div>
+                <pre><code class="language-bash">DOCKER_BUILDKIT=1 docker build \
+  --secret id=aws_secret_access_key,env=AWS_SECRET_ACCESS_KEY \
+  -t myapp .</code></pre>
+            </div>
+            <p>Dockerfile:</p>
+            <div>
+                <pre><code class="language-dockerfile"># syntax=docker/dockerfile:1.7
+
+FROM python:3.12-slim
+
+RUN --mount=type=secret,id=aws_secret_access_key \
+    AWS_SECRET_ACCESS_KEY="$(cat /run/secrets/aws_secret_access_key)" &amp;&amp; \
+    some-build-command</code></pre>
+            </div>
+            <p>Even with BuildKit secrets:</p>
+            <ul>
+                <li>do not print the secret</li>
+                <li>do not write it into files copied into final image</li>
+                <li>do not include it in generated config</li>
+                <li>do not put it into <code>ENV</code></li>
+                <li>do not copy secret-containing cache directories</li>
+            </ul>
+            <h4 id="common-bad-patterns">Common Bad Patterns</h4>
+            <h4 id="bad-secrets-in-dockerfile">Bad: Secrets in Dockerfile</h4>
+            <div>
+                <pre><code class="language-dockerfile">ENV SECRET_KEY=supersecret</code></pre>
+            </div>
+            <p>Problem: baked into image metadata.</p>
+            <h4 id="bad-secrets-as-build-args">Bad: Secrets as Build Args</h4>
+            <div>
+                <pre><code class="language-dockerfile">ARG SECRET_KEY
+RUN echo "$SECRET_KEY"</code></pre>
+            </div>
+            <p>Problem: may leak through history, logs, cache, or generated files.</p>
+            <h5>Bad: Copying <code>.env</code> into Image</h5>
+            <div>
+                <pre><code class="language-dockerfile">COPY .env /app/.env</code></pre>
+            </div>
+            <p>Problem: secret file becomes part of image.</p>
+            <h5>Bad: Printing Environment</h5>
+            <div>
+                <pre><code class="language-dockerfile">RUN printenv</code></pre>
+            </div>
+            <p>or:</p>
+            <div>
+                <pre><code class="language-python">print(os.environ)</code></pre>
+            </div>
+            <p>Problem: secrets may appear in logs.</p>
+            <h5>Bad: Installing Private Packages with Token in URL</h5>
+            <div>
+                <pre><code class="language-dockerfile">RUN pip install \
+  --extra-index-url "https://user:token@example.com/simple" \
+  private-package</code></pre>
+            </div>
+            <p>Problem: token may appear in logs or build metadata.</p>
+            <h4 id="safer-patterns">Safer Patterns</h4>
+            <h5>Good: Runtime Environment Variables for Configuration</h5>
+            <div>
+                <pre><code class="language-bash">docker run \
+  -e APP_ENV=production \
+  -e DATABASE_URL="$DATABASE_URL" \
+  myapp</code></pre>
+            </div>
+            <h5>Good: Build Args for Non-Secrets</h5>
+            <div>
+                <pre><code class="language-bash">docker build \
+  --build-arg APP_VERSION=1.2.3 \
+  -t myapp:1.2.3 .</code></pre>
+            </div>
+            <p>Dockerfile:</p>
+            <div>
+                <pre><code class="language-dockerfile">ARG APP_VERSION
+ENV APP_VERSION=$APP_VERSION</code></pre>
+            </div>
+            <h5>Good: BuildKit Secrets for Build-Time Credentials</h5>
+            <div>
+                <pre><code class="language-bash">DOCKER_BUILDKIT=1 docker build \
+  --secret id=pip_token,env=PIP_TOKEN \
+  -t myapp .</code></pre>
+            </div>
+            <p>Dockerfile:</p>
+            <div>
+                <pre><code class="language-dockerfile">RUN --mount=type=secret,id=pip_token \
+    PIP_TOKEN="$(cat /run/secrets/pip_token)" &amp;&amp; \
+    pip install private-package</code></pre>
+            </div>
+            <h5>Good: <code>.dockerignore</code></h5>
+            <div>
+                <pre><code class="language-text">.env
+.env.*
+!.env.example
+.git
+.venv
+.aws
+.ssh</code></pre>
+            </div>
+            <h5>Good: Runtime Secret Files</h5>
+            <div>
+                <pre><code class="language-bash">docker run \
+  --mount type=bind,src="$PWD/secrets",dst=/run/secrets,readonly \
+  myapp</code></pre>
+            </div>
+            <p>Python:</p>
+            <div>
+                <pre><code class="language-python">from pathlib import Path
+
+secret_key = Path("/run/secrets/secret_key").read_text().strip()</code></pre>
+            </div>
+            <h4 id="practical-decision-table">Practical Decision Table</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Need</td>
+                    <td>Best mechanism</td>
+                </tr>
+                <tr>
+                    <td>App mode like <code>production</code> or <code>development</code></td>
+                    <td>Runtime env var</td>
+                </tr>
+                <tr>
+                    <td>Log level</td>
+                    <td>Runtime env var</td>
+                </tr>
+                <tr>
+                    <td>Public app version</td>
+                    <td>Build arg copied to <code>ENV</code></td>
+                </tr>
+                <tr>
+                    <td>Git commit SHA</td>
+                    <td>Build arg copied to <code>ENV</code></td>
+                </tr>
+                <tr>
+                    <td>Database password</td>
+                    <td>Runtime secret, env var, or mounted secret</td>
+                </tr>
+                <tr>
+                    <td>API token needed while app runs</td>
+                    <td>Runtime secret</td>
+                </tr>
+                <tr>
+                    <td>Token needed only during build</td>
+                    <td>BuildKit secret</td>
+                </tr>
+                <tr>
+                    <td>Private package install during build</td>
+                    <td>BuildKit secret</td>
+                </tr>
+                <tr>
+                    <td>Local development config</td>
+                    <td><code>.env</code> file, not committed</td>
+                </tr>
+                <tr>
+                    <td>Compose variable substitution</td>
+                    <td>Compose <code>.env</code></td>
+                </tr>
+                <tr>
+                    <td>Container environment from file</td>
+                    <td>Compose <code>env_file:</code> or <code>docker run --env-file</code></td>
+                </tr>
+                <tr>
+                    <td>Prevent accidental build context leaks</td>
+                    <td><code>.dockerignore</code></td>
                 </tr>
             </table>
             </p>
             <h3 id="challenges">Challenges</h3>
             <ol>
-                <li>Write a Bash script named <code>greetings.sh</code> that prints a welcome message. Make sure the script has executable permissions by using <code>chmod +x greetings.sh</code>. Then, modify the <code>PATH</code> environment variable to include the directory where the script is stored by using <code>export PATH=$PATH:/path/to/script</code>. Test executing the script from any directory without specifying its full path, and explain the importance of the <code>PATH</code> variable.</li>
-                <li>Use the <code>USER</code> environment variable in a command or script to print a personalized greeting, such as “Hello, $USER! Welcome back!”. Discuss how environment variables can add user-specific context to scripts and commands, and explain why <code>USER</code> is automatically set by the system.</li>
-                <li>Display all currently set shell and environment variables by using commands like <code>set</code> or <code>env</code>. Compare the output of these commands and explain the difference between shell variables and environment variables, as well as how they are inherited by child processes.</li>
-                <li>Create a variable in your terminal session and assign a numeric value to it. Perform a few arithmetic operations with this variable, such as addition or multiplication, and print the results. Explain how shell variables differ from environment variables and discuss the syntax for arithmetic operations in Bash.</li>
-                <li>Use the <code>export</code> command to create a new environment variable, then print its value using <code>echo</code>. Discuss how the <code>export</code> command makes a variable available to child processes and explain when you might need to use it in scripting and system configuration.</li>
-                <li>Use <code>env</code> to display all current environment variables, then start a new shell with a completely clean environment by using <code>env -i</code>. Explore the differences between the regular shell and the clean shell, and discuss how environment variables are essential for a functioning user environment.</li>
-                <li>Write a shell script that stores a number in an environment variable and increments this number each time the script is run. Ensure the variable persists between script executions by using a file or another method to save the variable's state. Discuss how environment variables can be used to store persistent state information for scripts.</li>
-                <li>Use the <code>PATH</code> variable to locate an executable file on your system. Then, add a new directory to <code>PATH</code> by using <code>export PATH=$PATH:/new/directory</code>. Test running a command from this new directory without its full path, and explain how the <code>PATH</code> variable affects command discovery and execution in the shell.</li>
-                <li>Write a script that uses <code>printenv</code> to display specific environment variables, such as <code>HOME</code>, <code>SHELL</code>, and <code>PWD</code>. Explain how each of these environment variables is used by the system to manage the user environment, and why they are automatically set when the user logs in.</li>
-                <li>Create a custom environment variable with sensitive information (e.g., an API key or password) and export it. Then, access this variable from within a child process by using <code>echo</code> or another command. Discuss best practices for handling sensitive information in environment variables and explain how to prevent accidental exposure of these variables in shared environments.</li>
+                <li>Create a shell variable and then try to read it from a Python child process. Export the variable and try again. Explain the difference between a shell variable and an environment variable.</li>
+                <li>Export an environment variable in one terminal, then open another terminal and try to read it there. Explain why environment variables do not automatically persist between separate terminals.</li>
+                <li>Write a script that changes an environment variable. Run it normally, then run it with <code>source</code>. Explain why only the sourced version changes the current shell.</li>
+                <li>Use Python or another child process to modify an inherited environment variable. After the child exits, check the value in the parent shell. Explain why the parent was not affected.</li>
+                <li>Compare <code>( VAR=value; echo "$VAR" )</code> with <code>{ VAR=value; echo "$VAR"; }</code>. Explain the difference between a subshell and a current-shell block.</li>
+                <li>Use <code>printenv</code>, <code>env</code>, <code>set</code>, <code>declare -p</code>, and <code>export -p</code> to inspect variables. Compare which commands show only environment variables and which show shell variables too.</li>
+                <li>Modify <code>PATH</code> to include a custom directory containing a small executable script. Run the script from another directory and explain how command lookup uses <code>PATH</code>.</li>
+                <li>Create and activate a Python virtual environment. Check <code>which python</code>, <code>which pip</code>, <code>echo "$PATH"</code>, and <code>echo "$VIRTUAL_ENV"</code> before and after activation. Explain what activation actually changes.</li>
+                <li>Try running a virtual environment’s <code>activate</code> script normally instead of sourcing it. Explain why the current shell is not affected.</li>
+                <li>Run a command with a temporary environment variable, such as <code>DEBUG=1 python3 app.py</code>, then check whether <code>DEBUG</code> still exists afterward. Explain command-scoped environment variables.</li>
+                <li>Use <code>env -i</code> to start a command with an almost empty environment. Add back only selected variables like <code>PATH</code> and <code>HOME</code>. Explain why many programs depend on environment variables.</li>
+                <li>Write a small Dockerfile using both <code>ARG</code> and <code>ENV</code>. Build the image with <code>--build-arg</code>, run a container, and explain which values are available at build time versus runtime.</li>
+                <li>Run a container with <code>docker run -e APP_ENV=production ...</code> and read the value inside the application. Explain how runtime environment variables are injected into the container process.</li>
+                <li>Override a Dockerfile <code>ENV</code> value using <code>docker run -e</code>. Explain the precedence between image defaults and runtime environment variables.</li>
+                <li>Create a <code>.env</code> file and use it with <code>docker run --env-file</code> or Docker Compose <code>env_file</code>. Explain the difference between using <code>.env</code> for Compose substitution and passing variables into the container.</li>
+                <li>Demonstrate why secrets should not be baked into a Docker image using <code>ENV</code> or <code>ARG</code>. Explain safer alternatives such as runtime secrets, mounted secret files, or BuildKit secrets.</li>
+                <li>Add <code>.env</code>, <code>.venv</code>, <code>.git</code>, <code>.ssh</code>, and <code>.aws</code> to <code>.dockerignore</code>. Explain how <code>.dockerignore</code> helps prevent accidental secret or dependency leakage during image builds.</li>
+                <li>Use a Python script inside a container to start a child process. Show that the child inherits runtime environment variables from the parent process.</li>
+                <li>Store a script counter in a file rather than relying only on an environment variable. Explain why environment variables are not a good mechanism for persistent state.</li>
+                <li>Set a variable as read-only with <code>readonly</code>, then try to change and unset it. Explain when read-only variables are useful in scripts.</li>
             </ol>
         </article-section>
     </div>

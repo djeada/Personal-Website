@@ -15,7 +15,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 
 SCRIPTS_TO_ARGS = {
     "python3 clean_output_dirs.py": [],
-    "python3 generate_from_markdown.py": [],
+     # "python3 generate_from_markdown.py": [],
     "python3 generate_course_tasks.py": [],
     "python3 generate_algo_course.py": [],
     "python3 apply_common_elements.py": [],
