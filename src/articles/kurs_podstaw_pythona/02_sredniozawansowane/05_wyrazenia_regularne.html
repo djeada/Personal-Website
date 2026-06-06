@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/kurs_podstaw_pythona/02_sredniozawansowane/05_wyrazenia_regularne",
             "description": "Wyra\u017cenia regularne to pot\u0119\u017cne narz\u0119dzie do wyszukiwania, analizy i manipulacji tekstem.",
-            "dateModified": "2016-02-01"
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -90,6 +90,12 @@
                                 <li><a href="#wyciąganie-numerów-telefonów">Wyciąganie numerów telefonów</a></li>
                             </ol>
                         </li>
+                        <li><a href="#funkcje-modułu-re">Funkcje modułu re</a></li>
+                        <li><a href="#kompilacja-wzorców">Kompilacja wzorców</a></li>
+                        <li><a href="#grupy-nazwane">Grupy nazwane</a></li>
+                        <li><a href="#lookahead-i-lookbehind-asercje-">Lookahead i lookbehind (asercje)</a></li>
+                        <li><a href="#zamiana-z-funkcją-re-sub-callable-">Zamiana z funkcją (re.sub + callable)</a></li>
+                        <li><a href="#tabela-najczęstszych-wzorców">Tabela najczęstszych wzorców</a></li>
                     </ol>
                 </ol>
             </div>
@@ -182,7 +188,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: February 01, 2016</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="wyrażenia-regularne">Wyrażenia regularne</h2>
             <p>Wyrażenia regularne to potężne narzędzie do wyszukiwania, analizy i manipulacji tekstem. Umożliwiają one definiowanie wzorców tekstowych, które można następnie odnaleźć w ciągach znaków. Wyrażenia regularne są często wykorzystywane do:</p>
@@ -345,6 +351,252 @@ print(numery)  # ['123-456-7890', '(123) 456-7890']</code></pre>
                 <li><code>\d{4}</code> - cztery cyfry.</li>
             </ul>
             <p>Zawsze testuj dokładnie wyrażenia regularne przed wdrożeniem w produkcyjnym kodzie, aby upewnić się, że działają zgodnie z oczekiwaniami i są wydajne.</p>
+            <h3 id="funkcje-modułu-re">Funkcje modułu <code>re</code></h3>
+            <p>Moduł <code>re</code> udostępnia kilka kluczowych funkcji:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Funkcja</td>
+                    <td>Opis</td>
+                </tr>
+                <tr>
+                    <td><code>re.match(p, s)</code></td>
+                    <td>Dopasowanie tylko na początku napisu</td>
+                </tr>
+                <tr>
+                    <td><code>re.search(p, s)</code></td>
+                    <td>Dopasowanie pierwszego wystąpienia w dowolnym miejscu</td>
+                </tr>
+                <tr>
+                    <td><code>re.findall(p, s)</code></td>
+                    <td>Lista wszystkich dopasowań (jako napisy)</td>
+                </tr>
+                <tr>
+                    <td><code>re.finditer(p, s)</code></td>
+                    <td>Iterator obiektów <code>Match</code> dla wszystkich dopasowań</td>
+                </tr>
+                <tr>
+                    <td><code>re.sub(p, r, s)</code></td>
+                    <td>Zamiana dopasowań na <code>r</code></td>
+                </tr>
+                <tr>
+                    <td><code>re.split(p, s)</code></td>
+                    <td>Podział napisu w miejscach dopasowań</td>
+                </tr>
+                <tr>
+                    <td><code>re.compile(p)</code></td>
+                    <td>Kompilacja wzorca do wielokrotnego użycia (szybsze)</td>
+                </tr>
+                <tr>
+                    <td><code>re.fullmatch(p, s)</code></td>
+                    <td>Dopasowanie całego napisu do wzorca</td>
+                </tr>
+            </table>
+            </p>
+            <div>
+                <pre><code class="language-python">import re
+
+tekst = "Cena: 12.50 zł, rabat: 2.00 zł"
+
+# findall — lista dopasowań
+ceny = re.findall(r'\d+\.\d+', tekst)
+print(ceny)  # ['12.50', '2.00']
+
+# finditer — iterator z pozycjami
+for dopasowanie in re.finditer(r'\d+\.\d+', tekst):
+    print(f"Znaleziono: {dopasowanie.group()} na pozycji {dopasowanie.start()}")
+# Znaleziono: 12.50 na pozycji 6
+# Znaleziono: 2.00 na pozycji 25
+
+# split — podział wg wzorca
+zdanie = "jabłko,  banan;gruszka  śliwka"
+owoce = re.split(r'[,;\s]+', zdanie)
+print(owoce)  # ['jabłko', 'banan', 'gruszka', 'śliwka']</code></pre>
+            </div>
+            <h3 id="kompilacja-wzorców">Kompilacja wzorców</h3>
+            <p>Jeśli ten sam wzorzec jest używany wielokrotnie, warto go skompilować za pomocą <code>re.compile()</code>. Skompilowany wzorzec jest szybszy przy wielu dopasowaniach:</p>
+            <div>
+                <pre><code class="language-python">import re
+
+# Kompilacja wzorca raz
+wzorzec = re.compile(r'\b[A-Z][a-z]+\b')   # Słowo zaczynające się wielką literą
+
+teksty = [
+    "Python jest świetny",
+    "Jan i Anna programują",
+    "Warszawa to piękne miasto",
+]
+
+for tekst in teksty:
+    dopasowania = wzorzec.findall(tekst)
+    print(dopasowania)
+
+# ['Python']
+# ['Jan', 'Anna']
+# ['Warszawa']</code></pre>
+            </div>
+            <p>Flagi kompilacji:</p>
+            <div>
+                <pre><code class="language-python"># re.IGNORECASE — ignorowanie wielkości liter
+wzorzec = re.compile(r'python', re.IGNORECASE)
+print(wzorzec.findall("Python PYTHON python"))   # ['Python', 'PYTHON', 'python']
+
+# re.MULTILINE — ^ i $ dopasowują też do początku/końca każdej linii
+tekst = "linia1\nlinia2\nlinia3"
+wzorzec = re.compile(r'^\w+', re.MULTILINE)
+print(wzorzec.findall(tekst))   # ['linia1', 'linia2', 'linia3']
+
+# re.DOTALL — . dopasowuje też nową linię
+wzorzec = re.compile(r'&lt;.+&gt;', re.DOTALL)
+html = "&lt;div&gt;\nzawartość\n&lt;/div&gt;"
+print(wzorzec.findall(html))   # ['&lt;div&gt;\nzawartość\n&lt;/div&gt;']</code></pre>
+            </div>
+            <h3 id="grupy-nazwane">Grupy nazwane</h3>
+            <p>Zwykłe grupy <code>()</code> numeruje się od 1. Grupy nazwane (<code>(?P&lt;nazwa&gt;...)</code>) pozwalają odwoływać się do nich po nazwie:</p>
+            <div>
+                <pre><code class="language-python">import re
+
+# Parsowanie daty
+wzorzec = re.compile(r'(?P&lt;rok&gt;\d{4})-(?P&lt;miesiac&gt;\d{2})-(?P&lt;dzien&gt;\d{2})')
+m = wzorzec.match("2024-03-15")
+
+if m:
+    print(m.group("rok"))      # 2024
+    print(m.group("miesiac"))  # 03
+    print(m.group("dzien"))    # 15
+    print(m.groupdict())       # {'rok': '2024', 'miesiac': '03', 'dzien': '15'}
+
+# Zamiana z odwołaniem do grupy nazwanej
+tekst = "2024-03-15"
+nowy = re.sub(r'(?P&lt;rok&gt;\d{4})-(?P&lt;miesiac&gt;\d{2})-(?P&lt;dzien&gt;\d{2})',
+              r'\g&lt;dzien&gt;.\g&lt;miesiac&gt;.\g&lt;rok&gt;', tekst)
+print(nowy)  # 15.03.2024</code></pre>
+            </div>
+            <h3 id="lookahead-i-lookbehind-asercje-">Lookahead i lookbehind (asercje)</h3>
+            <p>Asercje pozwalają sprawdzać kontekst wokół dopasowania, <strong>nie konsumując</strong> znaków:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Składnia</td>
+                    <td>Nazwa</td>
+                    <td>Znaczenie</td>
+                </tr>
+                <tr>
+                    <td><code>(?=...)</code></td>
+                    <td>Lookahead pozytywny</td>
+                    <td>Co dalej musi pasować, ale nie jest przechwytywane</td>
+                </tr>
+                <tr>
+                    <td><code>(?!...)</code></td>
+                    <td>Lookahead negatywny</td>
+                    <td>Co dalej NIE może pasować</td>
+                </tr>
+                <tr>
+                    <td><code>(?&lt;=...)</code></td>
+                    <td>Lookbehind pozytywny</td>
+                    <td>Co przed musi pasować, ale nie jest przechwytywane</td>
+                </tr>
+                <tr>
+                    <td><code>(?&lt;!...)</code></td>
+                    <td>Lookbehind negatywny</td>
+                    <td>Co przed NIE może pasować</td>
+                </tr>
+            </table>
+            </p>
+            <div>
+                <pre><code class="language-python">import re
+
+# Lookahead pozytywny — ceny w złotych (tylko liczby przed "zł")
+tekst = "5 USD, 10 zł, 15 EUR, 20 zł"
+ceny_pln = re.findall(r'\d+(?=\s*zł)', tekst)
+print(ceny_pln)   # ['10', '20']
+
+# Lookahead negatywny — liczby które nie są przed "zł"
+pozostale = re.findall(r'\d+(?!\s*zł)', tekst)
+print(pozostale)  # ['5', '15']
+
+# Lookbehind pozytywny — wartości po "cena: "
+tekst2 = "cena: 99.99, masa: 50kg"
+wartosci = re.findall(r'(?&lt;=cena: )\d+\.\d+', tekst2)
+print(wartosci)   # ['99.99']</code></pre>
+            </div>
+            <h3 id="zamiana-z-funkcją-re-sub-callable-">Zamiana z funkcją (<code>re.sub</code> + callable)</h3>
+            <p><code>re.sub()</code> może przyjąć funkcję zamiast napisu zastępczego:</p>
+            <div>
+                <pre><code class="language-python">import re
+
+def zamien_na_wielkie(m):
+    return m.group(0).upper()
+
+tekst = "hello world foo bar"
+wynik = re.sub(r'\b\w{4}\b', zamien_na_wielkie, tekst)
+print(wynik)   # "hello WORLD foo BAR" — zamieniono 4-literowe słowa
+
+# Zamiana liczb na ich kwadraty
+def kwadrat(m):
+    n = int(m.group(0))
+    return str(n ** 2)
+
+tekst = "2 razy 3 to 6"
+print(re.sub(r'\d+', kwadrat, tekst))  # "4 razy 9 to 36"</code></pre>
+            </div>
+            <h3 id="tabela-najczęstszych-wzorców">Tabela najczęstszych wzorców</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Cel</td>
+                    <td>Wzorzec</td>
+                </tr>
+                <tr>
+                    <td>Adres e-mail</td>
+                    <td><code>r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+'</code></td>
+                </tr>
+                <tr>
+                    <td>URL</td>
+                    <td><code>r'https?://[^\s]+'</code></td>
+                </tr>
+                <tr>
+                    <td>Liczba całkowita</td>
+                    <td><code>r'-?\d+'</code></td>
+                </tr>
+                <tr>
+                    <td>Liczba zmiennoprzecinkowa</td>
+                    <td><code>r'-?\d+\.\d+'</code></td>
+                </tr>
+                <tr>
+                    <td>Polski numer telefonu</td>
+                    <td><code>r'(\+48)?[\s-]?\d{3}[\s-]?\d{3}[\s-]?\d{3}'</code></td>
+                </tr>
+                <tr>
+                    <td>Data YYYY-MM-DD</td>
+                    <td><code>r'\d{4}-\d{2}-\d{2}'</code></td>
+                </tr>
+                <tr>
+                    <td>Czas HH:MM</td>
+                    <td><code>r'\d{2}:\d{2}'</code></td>
+                </tr>
+                <tr>
+                    <td>Kod pocztowy (PL)</td>
+                    <td><code>r'\d{2}-\d{3}'</code></td>
+                </tr>
+                <tr>
+                    <td>Tag HTML</td>
+                    <td><code>r'&lt;[^&gt;]+&gt;'</code></td>
+                </tr>
+                <tr>
+                    <td>Słowo</td>
+                    <td><code>r'\b\w+\b'</code></td>
+                </tr>
+                <tr>
+                    <td>Puste linie</td>
+                    <td><code>r'^\s*$'</code></td>
+                </tr>
+                <tr>
+                    <td>IPv4</td>
+                    <td><code>r'\b\d{1,3}(\.\d{1,3}){3}\b'</code></td>
+                </tr>
+            </table>
+            </p>
         </article-section>
     </div>
     <footer>

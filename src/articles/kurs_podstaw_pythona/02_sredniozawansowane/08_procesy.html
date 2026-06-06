@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/kurs_podstaw_pythona/02_sredniozawansowane/08_procesy",
             "description": "Procesy to samodzielne jednostki wykonywane w systemie operacyjnym, ka\u017cda z w\u0142asn\u0105 przestrzeni\u0105 adresow\u0105 i zasobami.",
-            "dateModified": "2020-06-16"
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -92,6 +92,12 @@
                         </li>
                         <li><a href="#użycie-procesów-do-równoległego-obliczenia-kwadratów-liczb">Użycie procesów do równoległego obliczenia kwadratów liczb</a></li>
                         <li><a href="#dynamiczne-przypisywanie-zadań">Dynamiczne przypisywanie zadań</a></li>
+                        <li><a href="#praktyczne-wskazówki">Praktyczne wskazówki</a>
+                            <ol>
+                                <li><a href="#kiedy-używać-procesów-zamiast-wątków-">Kiedy używać procesów zamiast wątków?</a></li>
+                                <li><a href="#dobre-praktyki">Dobre praktyki</a></li>
+                            </ol>
+                        </li>
                     </ol>
                 </ol>
             </div>
@@ -184,7 +190,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: June 16, 2020</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="procesy">Procesy</h2>
             <p>Procesy to samodzielne jednostki wykonywane w systemie operacyjnym, każda z własną przestrzenią adresową i zasobami. Każdy proces działa niezależnie i jest izolowany od innych procesów. W związku z tym, komunikacja między procesami wymaga specjalnych mechanizmów, takich jak kolejki czy potoki. Procesy są z reguły cięższe niż wątki pod względem zużycia zasobów, ale mają zaletę lepszej izolacji, co sprawia, że są bardziej odporne na błędy i interferencje.</p>
@@ -389,6 +395,65 @@ if __name__ == "__main__":
     print(f"Kwadraty: {list(wynik)}")</code></pre>
             </div>
             <p>W powyższym przykładzie dynamicznie przypisujemy zadania procesom za pomocą kolejki. Jest to bardziej elastyczne podejście, które pozwala lepiej wykorzystać zasoby w przypadku, gdy liczba zadań jest zmienna lub gdy zadania mają różny czas wykonania.</p>
+            <h3 id="praktyczne-wskazówki">Praktyczne wskazówki</h3>
+            <h4 id="kiedy-używać-procesów-zamiast-wątków-">Kiedy używać procesów zamiast wątków?</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Kryterium</td>
+                    <td>Procesy (<code>multiprocessing</code>)</td>
+                    <td>Wątki (<code>threading</code>)</td>
+                </tr>
+                <tr>
+                    <td>Obciążenie CPU (obliczenia)</td>
+                    <td>✅ Tak — omijają GIL</td>
+                    <td>❌ GIL blokuje prawdziwą równoległość</td>
+                </tr>
+                <tr>
+                    <td>Operacje I/O (sieć, pliki)</td>
+                    <td>Możliwe, ale cięższe</td>
+                    <td>✅ Lekkie, wystarczające</td>
+                </tr>
+                <tr>
+                    <td>Współdzielenie pamięci</td>
+                    <td>Trudniejsze (Queue, Value, Array)</td>
+                    <td>Łatwe (wspólna przestrzeń adresowa)</td>
+                </tr>
+                <tr>
+                    <td>Izolacja błędów</td>
+                    <td>✅ Awaria procesu nie zabija reszty</td>
+                    <td>❌ Błąd w wątku może uszkodzić proces</td>
+                </tr>
+                <tr>
+                    <td>Narzut startowy</td>
+                    <td>Wyższy (nowy proces)</td>
+                    <td>Niższy (nowy wątek)</td>
+                </tr>
+            </table>
+            </p>
+            <h4 id="dobre-praktyki">Dobre praktyki</h4>
+            <ol>
+                <li><strong>Zawsze</strong> umieszczaj kod tworzący procesy w bloku <code>if __name__ == "__main__":</code>.</li>
+                <li>Używaj <code>ProcessPoolExecutor</code> z <code>concurrent.futures</code> dla prostszego API.</li>
+                <li>Unikaj dzielenia mutowalnych obiektów między procesami — preferuj <code>Queue</code> lub <code>Pipe</code>.</li>
+                <li>Uważaj na rozmiar danych przekazywanych do procesów (serializacja pickle dodaje narzut).</li>
+            </ol>
+            <div>
+                <pre><code class="language-python">from concurrent.futures import ProcessPoolExecutor
+import math
+
+def oblicz_silnie(n):
+    return math.factorial(n)
+
+if __name__ == "__main__":
+    liczby = [100, 200, 300, 400, 500]
+    
+    with ProcessPoolExecutor(max_workers=4) as executor:
+        wyniki = list(executor.map(oblicz_silnie, liczby))
+    
+    for n, w in zip(liczby, wyniki):
+        print(f"{n}! ma {len(str(w))} cyfr")</code></pre>
+            </div>
         </article-section>
     </div>
     <footer>

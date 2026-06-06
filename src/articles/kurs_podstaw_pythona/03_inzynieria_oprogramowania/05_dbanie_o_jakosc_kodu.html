@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/kurs_podstaw_pythona/03_inzynieria_oprogramowania/05_dbanie_o_jakosc_kodu",
             "description": "Kod mo\u017ce by\u0107 sk\u0142adniowo poprawny, ale jednocze\u015bnie nieczytelny lub \u017ale zorganizowany.",
-            "dateModified": "2024-04-13"
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -113,7 +113,14 @@
                             </ol>
                         </li>
                         <li><a href="#porównanie-narzędzi">Porównanie narzędzi</a></li>
+                        <li><a href="#sprawdzanie-typów-mypy-i-pyright">Sprawdzanie typów — mypy i pyright</a></li>
+                        <li><a href="#pre-commit-hooks">Pre-commit hooks</a></li>
+                        <li><a href="#konwencja-nazewnictwa-w-pythonie-pep-8-">Konwencja nazewnictwa w Pythonie (PEP 8)</a></li>
+                        <li><a href="#wskazówki-dotyczące-importów-isort-">Wskazówki dotyczące importów (isort)</a></li>
                         <li><a href="#linki">Linki</a></li>
+                        <li><a href="#porównanie-narzędzi-do-jakości-kodu">Porównanie narzędzi do jakości kodu</a></li>
+                        <li><a href="#konfiguracja-w-pyproject-toml-współczesny-standard">Konfiguracja w pyproject.toml — współczesny standard</a></li>
+                        <li><a href="#pre-commit-hooks-automatyczne-sprawdzanie-przed-commitem">Pre-commit hooks — automatyczne sprawdzanie przed commitem</a></li>
                     </ol>
                 </ol>
             </div>
@@ -206,7 +213,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: April 13, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="dbanie-o-jakość-kodu-i-lintowanie">Dbanie o jakość kodu i lintowanie</h2>
             <p>Kod może być składniowo poprawny, ale jednocześnie nieczytelny lub źle zorganizowany. Przestrzeganie pewnych standardów i konwencji pisania kodu jest niezbędne, zwłaszcza gdy w projekcie uczestniczy wielu programistów. Konwencje te opisane są w dokumentach PEP (Python Enhancement Proposals), a wśród nich wyróżniają się <strong>PEP8</strong> (styl kodowania) oraz <strong>PEP257</strong> (docstringi).</p>
@@ -423,6 +430,119 @@ max-complexity = 10</code></pre>
                 </tr>
             </table>
             </p>
+            <h3 id="sprawdzanie-typów-mypy-i-pyright">Sprawdzanie typów — <code>mypy</code> i <code>pyright</code></h3>
+            <p>Statyczna analiza typów wychwytuje błędy typów bez uruchamiania kodu:</p>
+            <div>
+                <pre><code class="language-bash">pip install mypy
+mypy skrypt.py</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-python"># skrypt.py
+def oblicz_vat(kwota: float, stawka: float = 0.23) -&gt; float:
+    return kwota * stawka
+
+wynik = oblicz_vat("100")   # mypy: error: Argument 1 to "oblicz_vat" has incompatible type "str"; expected "float"</code></pre>
+            </div>
+            <p><code>pyright</code> (od Microsoftu, używany w VS Code) oferuje jeszcze szybszą i bardziej precyzyjną analizę:</p>
+            <div>
+                <pre><code class="language-bash">pip install pyright
+pyright skrypt.py</code></pre>
+            </div>
+            <h3 id="pre-commit-hooks">Pre-commit hooks</h3>
+            <p><code>pre-commit</code> pozwala automatycznie uruchamiać narzędzia jakości kodu przed każdym commitem:</p>
+            <div>
+                <pre><code class="language-bash">pip install pre-commit</code></pre>
+            </div>
+            <p>Przykładowy plik <code>.pre-commit-config.yaml</code>:</p>
+            <div>
+                <pre><code class="language-yaml">repos:
+  - repo: https://github.com/psf/black
+    rev: 24.4.2
+    hooks:
+      - id: black
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.1.0
+    hooks:
+      - id: flake8
+        args: ["--max-line-length=88"]
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: ["--profile=black"]</code></pre>
+            </div>
+            <div>
+                <pre><code class="language-bash">pre-commit install      # Instalacja hooków
+pre-commit run --all-files  # Uruchomienie na wszystkich plikach</code></pre>
+            </div>
+            <h3 id="konwencja-nazewnictwa-w-pythonie-pep-8-">Konwencja nazewnictwa w Pythonie (PEP 8)</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Typ</td>
+                    <td>Konwencja</td>
+                    <td>Przykład</td>
+                </tr>
+                <tr>
+                    <td>Zmienna</td>
+                    <td><code>snake_case</code></td>
+                    <td><code>moja_zmienna</code>, <code>liczba_wierszy</code></td>
+                </tr>
+                <tr>
+                    <td>Funkcja</td>
+                    <td><code>snake_case</code></td>
+                    <td><code>oblicz_vat()</code>, <code>wczytaj_dane()</code></td>
+                </tr>
+                <tr>
+                    <td>Klasa</td>
+                    <td><code>PascalCase</code></td>
+                    <td><code>NazwaKlasy</code>, <code>KlientHTTP</code></td>
+                </tr>
+                <tr>
+                    <td>Stała</td>
+                    <td><code>UPPER_SNAKE_CASE</code></td>
+                    <td><code>MAX_ROZMIAR</code>, <code>DOMYSLNY_PORT</code></td>
+                </tr>
+                <tr>
+                    <td>Prywatny atrybut</td>
+                    <td><code>_snake_case</code></td>
+                    <td><code>_wartosc</code>, <code>_indeks</code></td>
+                </tr>
+                <tr>
+                    <td>"Dunder" metoda</td>
+                    <td><code>__snake_case__</code></td>
+                    <td><code>__init__</code>, <code>__str__</code></td>
+                </tr>
+                <tr>
+                    <td>Moduł / pakiet</td>
+                    <td><code>snake_case</code></td>
+                    <td><code>utils.py</code>, <code>moj_pakiet/</code></td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="wskazówki-dotyczące-importów-isort-">Wskazówki dotyczące importów (<code>isort</code>)</h3>
+            <p><code>isort</code> automatycznie sortuje importy zgodnie ze standardem PEP 8:</p>
+            <div>
+                <pre><code class="language-bash">pip install isort
+isort skrypt.py</code></pre>
+            </div>
+            <p>Prawidłowa kolejność importów:</p>
+            <div>
+                <pre><code class="language-python"># 1. Importy standardowej biblioteki
+import os
+import sys
+from pathlib import Path
+
+# 2. Importy zewnętrznych bibliotek
+import requests
+import numpy as np
+
+# 3. Importy własnych modułów
+from moj_pakiet import utils
+from moj_pakiet.models import Uzytkownik</code></pre>
+            </div>
             <h3 id="linki">Linki</h3>
             <ul>
                 <li><a href="https://www.python.org/dev/peps/pep-0008/">PEP 8 - Style Guide for Python Code</a></li>
@@ -432,6 +552,141 @@ max-complexity = 10</code></pre>
                 <li><a href="https://github.com/PyCQA/flake8">Flake8 - A tool for checking Python code</a></li>
                 <li><a href="https://github.com/myint/autoflake">autoflake - Removes unused imports and unused variables</a></li>
             </ul>
+            <h3 id="porównanie-narzędzi-do-jakości-kodu">Porównanie narzędzi do jakości kodu</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Narzędzie</td>
+                    <td>Kategoria</td>
+                    <td>Automatyczna naprawa?</td>
+                    <td>Konfiguracja</td>
+                    <td>Szybkość</td>
+                    <td>Główne zastosowanie</td>
+                </tr>
+                <tr>
+                    <td><code>black</code></td>
+                    <td>Formatter</td>
+                    <td>Tak</td>
+                    <td>Minimalna (opinionated)</td>
+                    <td>Szybki</td>
+                    <td>Jednolity styl formatowania</td>
+                </tr>
+                <tr>
+                    <td><code>ruff</code></td>
+                    <td>Linter+Formatter</td>
+                    <td>Tak (częściowo)</td>
+                    <td><code>pyproject.toml</code></td>
+                    <td>Najszybszy</td>
+                    <td>Zamiennik flake8+isort+pyupgrade</td>
+                </tr>
+                <tr>
+                    <td><code>flake8</code></td>
+                    <td>Linter</td>
+                    <td>Nie</td>
+                    <td><code>.flake8</code>, <code>setup.cfg</code></td>
+                    <td>Szybki</td>
+                    <td>Sprawdzanie stylu i błędów</td>
+                </tr>
+                <tr>
+                    <td><code>pylint</code></td>
+                    <td>Linter</td>
+                    <td>Nie</td>
+                    <td><code>.pylintrc</code></td>
+                    <td>Wolny</td>
+                    <td>Głęboka analiza kodu</td>
+                </tr>
+                <tr>
+                    <td><code>mypy</code></td>
+                    <td>Type checker</td>
+                    <td>Nie</td>
+                    <td><code>mypy.ini</code></td>
+                    <td>Średni</td>
+                    <td>Statyczna analiza typów</td>
+                </tr>
+                <tr>
+                    <td><code>pyright</code></td>
+                    <td>Type checker</td>
+                    <td>Nie</td>
+                    <td><code>pyrightconfig.json</code></td>
+                    <td>Szybki</td>
+                    <td>Statyczna analiza typów (VSCode)</td>
+                </tr>
+                <tr>
+                    <td><code>isort</code></td>
+                    <td>Import sorter</td>
+                    <td>Tak</td>
+                    <td><code>pyproject.toml</code></td>
+                    <td>Szybki</td>
+                    <td>Sortowanie importów</td>
+                </tr>
+                <tr>
+                    <td><code>autoflake</code></td>
+                    <td>Cleaner</td>
+                    <td>Tak</td>
+                    <td>Minimalna</td>
+                    <td>Szybki</td>
+                    <td>Usuwanie nieużywanych importów</td>
+                </tr>
+                <tr>
+                    <td><code>bandit</code></td>
+                    <td>Security</td>
+                    <td>Nie</td>
+                    <td><code>.bandit</code></td>
+                    <td>Szybki</td>
+                    <td>Wykrywanie problemów bezpieczeństwa</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="konfiguracja-w-pyproject-toml-współczesny-standard">Konfiguracja w <code>pyproject.toml</code> — współczesny standard</h3>
+            <p>Nowoczesne projekty Python centralizują konfigurację narzędzi w <code>pyproject.toml</code>:</p>
+            <div>
+                <pre><code class="language-toml">[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "W", "I", "N", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.isort]
+known-first-party = ["moj_pakiet"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"</code></pre>
+            </div>
+            <h3 id="pre-commit-hooks-automatyczne-sprawdzanie-przed-commitem">Pre-commit hooks — automatyczne sprawdzanie przed commitem</h3>
+            <div>
+                <pre><code class="language-yaml"># .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/psf/black
+    rev: 24.3.0
+    hooks:
+      - id: black
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.3.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.9.0
+    hooks:
+      - id: mypy</code></pre>
+            </div>
+            <p>Instalacja i użycie:</p>
+            <div>
+                <pre><code class="language-bash">pip install pre-commit
+pre-commit install          # zainstaluj hooki
+pre-commit run --all-files  # uruchom ręcznie na wszystkich plikach</code></pre>
+            </div>
         </article-section>
     </div>
     <footer>

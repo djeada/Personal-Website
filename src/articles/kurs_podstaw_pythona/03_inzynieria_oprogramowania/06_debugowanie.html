@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/kurs_podstaw_pythona/03_inzynieria_oprogramowania/06_debugowanie",
             "description": "Debugowanie to fundamentalny proces w tworzeniu oprogramowania, polegaj\u0105cy na identyfikowaniu, analizowaniu i usuwaniu b\u0142\u0119d\u00f3w (bug\u00f3w) w kodzie \u017ar\u00f3d\u0142owym programu.",
-            "dateModified": "2025-09-29"
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -92,6 +92,17 @@
                         <li><a href="#ustawianie-dodatkowych-punktów-zatrzymania">Ustawianie dodatkowych punktów zatrzymania</a></li>
                         <li><a href="#warunkowe-zatrzymywanie">Warunkowe zatrzymywanie</a></li>
                         <li><a href="#praktyczne-wskazówki">Praktyczne wskazówki</a></li>
+                        <li><a href="#techniki-debugowania-bez-debuggera">Techniki debugowania bez debuggera</a>
+                            <ol>
+                                <li><a href="#print-i-pprint-">print() i pprint()</a></li>
+                                <li><a href="#moduł-logging-zamiast-print-">Moduł logging zamiast print()</a></li>
+                                <li><a href="#assert-szybkie-weryfikowanie-założeń">assert — szybkie weryfikowanie założeń</a></li>
+                                <li><a href="#traceback-szczegółowe-ślady-błędów">traceback — szczegółowe ślady błędów</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#profilowanie-kodu-cprofile-timeit-">Profilowanie kodu (cProfile, timeit)</a></li>
+                        <li><a href="#podsumowanie-narzędzi-debugowania">Podsumowanie narzędzi debugowania</a></li>
+                        <li><a href="#skrócona-ściąga-komend-pdb">Skrócona ściąga komend pdb</a></li>
                     </ol>
                 </ol>
             </div>
@@ -184,7 +195,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: September 29, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="debugowanie"><strong>Debugowanie</strong></h2>
             <p><em>Debugowanie</em> to fundamentalny proces w tworzeniu oprogramowania, polegający na identyfikowaniu, analizowaniu i usuwaniu błędów (bugów) w kodzie źródłowym programu. Błędy te mogą prowadzić do nieprawidłowego działania aplikacji, awarii systemu lub nieoczekiwanych rezultatów. Debugowanie umożliwia programistom dokładne prześledzenie działania programu, co pozwala na zrozumienie, dlaczego program nie działa zgodnie z oczekiwaniami.</p>
@@ -365,6 +376,213 @@ cl 2  # Usuwa breakpoint numer 2</code></pre>
                 <li><code>pdb</code> można integrować z narzędziami takimi jak <code>pytest</code> czy <code>unittest</code>, aby debugować testy jednostkowe.</li>
                 <li>Istnieją rozszerzone wersje <code>pdb</code>, takie jak <code>ipdb</code> czy <code>pudb</code>, oferujące dodatkowe funkcje i interfejsy.</li>
             </ul>
+            <h3 id="techniki-debugowania-bez-debuggera">Techniki debugowania bez debuggera</h3>
+            <p>Często najszybsze debugowanie odbywa się bez uruchamiania debuggera. Oto sprawdzone techniki:</p>
+            <h4 id="print-i-pprint-"><code>print()</code> i <code>pprint()</code></h4>
+            <p>Najbardziej podstawowa technika — wypisanie stanu zmiennych:</p>
+            <div>
+                <pre><code class="language-python">from pprint import pprint
+
+# Zwykłe print z etykietą
+print(f"[DEBUG] lista={lista}, suma={suma}")
+
+# pprint — czytelne wydrukowanie złożonych struktur
+pprint({"klucz": [1, 2, 3], "zagniezdzone": {"a": 1}})
+
+# Inspekcja obiektu
+class Konfiguracja:
+    host = "localhost"
+    port = 8080
+
+cfg = Konfiguracja()
+print(vars(cfg))       # {'host': 'localhost', 'port': 8080}
+print(dir(cfg))        # lista wszystkich atrybutów i metod</code></pre>
+            </div>
+            <h4 id="moduł-logging-zamiast-print-">Moduł <code>logging</code> zamiast <code>print()</code></h4>
+            <p>W produkcyjnym kodzie zamiast <code>print()</code> używamy <code>logging</code>:</p>
+            <div>
+                <pre><code class="language-python">import logging
+
+logging.basicConfig(level=logging.DEBUG,
+                    format="%(levelname)s:%(funcName)s:%(lineno)d: %(message)s")
+
+def oblicz(a, b):
+    logging.debug(f"oblicz wywołana z a={a}, b={b}")
+    wynik = a / b
+    logging.debug(f"wynik: {wynik}")
+    return wynik</code></pre>
+            </div>
+            <h4 id="assert-szybkie-weryfikowanie-założeń"><code>assert</code> — szybkie weryfikowanie założeń</h4>
+            <div>
+                <pre><code class="language-python">def sortuj_posortowane(lista):
+    assert isinstance(lista, list), f"Oczekiwano listy, otrzymano {type(lista)}"
+    assert len(lista) &gt; 0, "Lista nie może być pusta"
+    wynik = sorted(lista)
+    assert wynik[0] &lt;= wynik[-1], "Błąd sortowania!"
+    return wynik</code></pre>
+            </div>
+            <blockquote>
+                <p><strong>Uwaga</strong>: <code>assert</code> jest wyłączane gdy Python jest uruchamiany z flagą <code>-O</code> (optymalizacja). Nie używaj do sprawdzania warunków krytycznych dla bezpieczeństwa — używaj <code>if ... raise</code>.</p>
+            </blockquote>
+            <h4 id="traceback-szczegółowe-ślady-błędów"><code>traceback</code> — szczegółowe ślady błędów</h4>
+            <div>
+                <pre><code class="language-python">import traceback
+
+try:
+    x = 1 / 0
+except ZeroDivisionError:
+    traceback.print_exc()   # Wydrukuj pełny traceback
+    # lub
+    tb_str = traceback.format_exc()   # Pobierz jako string do logu
+    logging.error("Błąd: %s", tb_str)</code></pre>
+            </div>
+            <h3 id="profilowanie-kodu-cprofile-timeit-">Profilowanie kodu (<code>cProfile</code>, <code>timeit</code>)</h3>
+            <p>Profilowanie pozwala znaleźć <strong>wolne miejsca</strong> w kodzie:</p>
+            <div>
+                <pre><code class="language-python">import cProfile
+import pstats
+
+# Profilowanie funkcji
+def wolna_funkcja():
+    return sum(i**2 for i in range(100000))
+
+# Profilowanie z zapisem do pliku
+cProfile.run("wolna_funkcja()", "profil.stats")
+
+# Analiza wyników
+stats = pstats.Stats("profil.stats")
+stats.sort_stats("cumulative")
+stats.print_stats(10)   # Pokaż 10 najwolniejszych funkcji</code></pre>
+            </div>
+            <p>Szybkie porównanie czasu wykonania:</p>
+            <div>
+                <pre><code class="language-python">from timeit import timeit
+
+# Porównanie dwóch podejść
+czas_lista = timeit("[i**2 for i in range(1000)]", number=10000)
+czas_gen   = timeit("sum(i**2 for i in range(1000))", number=10000)
+print(f"Lista: {czas_lista:.3f}s, Generator: {czas_gen:.3f}s")</code></pre>
+            </div>
+            <h3 id="podsumowanie-narzędzi-debugowania">Podsumowanie narzędzi debugowania</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Narzędzie</td>
+                    <td>Zastosowanie</td>
+                    <td>Kiedy używać</td>
+                </tr>
+                <tr>
+                    <td><code>print()</code></td>
+                    <td>Szybkie sprawdzenie wartości</td>
+                    <td>Proste skrypty, jednorazowe debugowanie</td>
+                </tr>
+                <tr>
+                    <td><code>logging</code></td>
+                    <td>Trwałe śledzenie działania aplikacji</td>
+                    <td>Produkcja, złożone aplikacje</td>
+                </tr>
+                <tr>
+                    <td><code>pdb</code> / <code>breakpoint()</code></td>
+                    <td>Interaktywne debugowanie krok po kroku</td>
+                    <td>Złożone błędy logiczne</td>
+                </tr>
+                <tr>
+                    <td><code>traceback</code></td>
+                    <td>Pełny ślad stosu przy wyjątkach</td>
+                    <td>Debugowanie w obsłudze wyjątków</td>
+                </tr>
+                <tr>
+                    <td><code>cProfile</code></td>
+                    <td>Profilowanie wydajności (czas w funkcjach)</td>
+                    <td>Optymalizacja wolnego kodu</td>
+                </tr>
+                <tr>
+                    <td><code>timeit</code></td>
+                    <td>Precyzyjny pomiar czasu fragmentów kodu</td>
+                    <td>Porównywanie wydajności wariantów</td>
+                </tr>
+                <tr>
+                    <td><code>memory_profiler</code></td>
+                    <td>Profilowanie zużycia pamięci</td>
+                    <td>Wycieki pamięci, duże dane</td>
+                </tr>
+                <tr>
+                    <td>IDE debugger</td>
+                    <td>Graficzne debugowanie z breakpointami</td>
+                    <td>Codzienne programowanie</td>
+                </tr>
+                <tr>
+                    <td><code>icecream</code> (<code>ic()</code>)</td>
+                    <td>Czytelniejszy zamiennik <code>print()</code> do debugowania</td>
+                    <td>Szybkie debugowanie bez setupu</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="skrócona-ściąga-komend-pdb">Skrócona ściąga komend <code>pdb</code></h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Komenda</td>
+                    <td>Skrót</td>
+                    <td>Opis</td>
+                </tr>
+                <tr>
+                    <td><code>next</code></td>
+                    <td><code>n</code></td>
+                    <td>Wykonaj następną linię (nie wchodząc w funkcje)</td>
+                </tr>
+                <tr>
+                    <td><code>step</code></td>
+                    <td><code>s</code></td>
+                    <td>Wejdź do wnętrza wywoływanej funkcji</td>
+                </tr>
+                <tr>
+                    <td><code>continue</code></td>
+                    <td><code>c</code></td>
+                    <td>Kontynuuj do następnego breakpointa</td>
+                </tr>
+                <tr>
+                    <td><code>break N</code></td>
+                    <td><code>b N</code></td>
+                    <td>Ustaw breakpoint na linii N</td>
+                </tr>
+                <tr>
+                    <td><code>print expr</code></td>
+                    <td><code>p</code></td>
+                    <td>Wyświetl wartość wyrażenia</td>
+                </tr>
+                <tr>
+                    <td><code>pp expr</code></td>
+                    <td><code>pp</code></td>
+                    <td>Pretty-print wartości wyrażenia</td>
+                </tr>
+                <tr>
+                    <td><code>list</code></td>
+                    <td><code>l</code></td>
+                    <td>Pokaż kod wokół bieżącej linii</td>
+                </tr>
+                <tr>
+                    <td><code>where</code></td>
+                    <td><code>w</code></td>
+                    <td>Pokaż stos wywołań</td>
+                </tr>
+                <tr>
+                    <td><code>up</code> / <code>down</code></td>
+                    <td><code>u</code>/<code>d</code></td>
+                    <td>Poruszanie się po stosie wywołań</td>
+                </tr>
+                <tr>
+                    <td><code>quit</code></td>
+                    <td><code>q</code></td>
+                    <td>Zakończ debugger</td>
+                </tr>
+                <tr>
+                    <td><code>!stmt</code></td>
+                    <td>—</td>
+                    <td>Wykonaj dowolną instrukcję Pythona</td>
+                </tr>
+            </table>
+            </p>
         </article-section>
     </div>
     <footer>

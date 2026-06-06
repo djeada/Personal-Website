@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/standard_of_iron/creature_bpat_format",
             "description": "BPAT is the game's motion book for a creature species.",
-            "dateModified": "2026-05-03"
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -84,6 +84,7 @@
                         <ol>
                             <li><a href="#header">Header</a></li>
                             <li><a href="#clip-list">Clip list</a></li>
+                            <li><a href="#authored-markers-v2-">Authored markers (v2)</a></li>
                             <li><a href="#socket-list">Socket list</a></li>
                             <li><a href="#string-table">String table</a></li>
                             <li><a href="#palette-data">Palette data</a></li>
@@ -111,12 +112,16 @@
                 <h2>Related Articles</h2>
                 <ol>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ai_architecture.html">Ai Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/animation_architecture.html">Animation Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/audio_wishlist.html">Audio Wishlist</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/combat_system.html">Combat System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/creature_bpat_format.html">Creature Bpat Format</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/macos_signing.html">Macos Signing</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_framework.html">Mission Framework</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/pathfinding_architecture.html">Pathfinding Architecture</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture.html">Rendering Architecture</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/save_load_system.html">Save Load System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/victory_system.html">Victory System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/windows_code_signing.html">Windows Code Signing</a></li>
                 </ol>
             </div>
@@ -136,7 +141,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: May 03, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <header>Creature Bone-Palette Animation Texture (BPAT) Format</header>
             <p>BPAT is the game's <strong>motion book</strong> for a creature species.</p>
@@ -220,8 +225,48 @@
                 <li>where its frames begin inside the big shared frame stream</li>
                 <li>how fast it plays</li>
                 <li>whether it loops</li>
+                <li><strong>authored timing markers</strong> (see below) — key moments inside the move</li>
             </ul>
             <p>In simple terms, the clip list is the table of contents for the motion book.</p>
+            <h3 id="authored-markers-v2-">Authored markers (v2)</h3>
+            <p>Starting with <strong>version 2</strong>, every clip entry also carries five <strong>timing markers</strong>,
+                each a normalized phase in <code>[0, 1]</code> (or <code>-1</code> when unset):</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Marker</td>
+                    <td>Meaning</td>
+                </tr>
+                <tr>
+                    <td><code>anticipation_start</code></td>
+                    <td>the wind-up begins</td>
+                </tr>
+                <tr>
+                    <td><code>weapon_release</code></td>
+                    <td>the weapon starts travelling toward the target</td>
+                </tr>
+                <tr>
+                    <td><code>contact</code></td>
+                    <td>the blade/impact connects — <strong>this is when a melee hit lands</strong></td>
+                </tr>
+                <tr>
+                    <td><code>recover_unlocked</code></td>
+                    <td>the attacker may start recovering / chaining</td>
+                </tr>
+                <tr>
+                    <td><code>exit_safe</code></td>
+                    <td>the move can be safely interrupted/blended out</td>
+                </tr>
+            </table>
+            </p>
+            <p>These replace the old, fragile habit of guessing key moments from the clip <em>name</em>. The
+                baker authors the values; the runtime reads them directly. The <code>contact</code> marker is what
+                lets a melee hit apply damage <strong>mid-swing</strong> (when the weapon visually connects) instead of
+                on the trigger frame — see the deferred-melee-strike flow in
+                <a href="ANIMATION_ARCHITECTURE.md"><code>ANIMATION_ARCHITECTURE.md</code></a>. This stays DPS-neutral
+                (the cooldown still resets at swing start) and deterministic (the pending strike is
+                serialized).
+            </p>
             <h3 id="socket-list">Socket list</h3>
             <p>Some creatures need stable attachment points: a saddle, a rider anchor, a banner pole, a carried prop.</p>
             <p>Each socket entry says:</p>
@@ -278,6 +323,14 @@
                 <tr>
                     <td><code>humanoid_sword.bpat</code></td>
                     <td>sword-ready humanoid animation set</td>
+                </tr>
+                <tr>
+                    <td><code>humanoid_spear.bpat</code></td>
+                    <td>spear-ready humanoid animation set</td>
+                </tr>
+                <tr>
+                    <td><code>humanoid_skeleton.bpat</code></td>
+                    <td>skeleton humanoid animation set</td>
                 </tr>
                 <tr>
                     <td><code>horse.bpat</code></td>
@@ -352,14 +405,16 @@
             <h2 id="the-firm-rules-of-the-format">The firm rules of the format</h2>
             <p>For readers who want the important hard facts without drowning in byte offset tables:</p>
             <ul>
-                <li>BPAT v1 is <strong>little-endian</strong>.</li>
+                <li>BPAT v2 is <strong>little-endian</strong>.</li>
                 <li>Floating-point values are <strong>32-bit IEEE 754 floats</strong>.</li>
                 <li>Bone matrices are stored <strong>row-major</strong>.</li>
                 <li>Each section begins on a <strong>16-byte boundary</strong>.</li>
                 <li>Variable-sized data lives in trailing blocks referenced by <strong>absolute file offsets</strong>.</li>
                 <li>Reserved and padding bytes must be <strong>zero</strong>.</li>
                 <li>The file magic must be <strong><code>BPAT</code></strong>.</li>
-                <li>Current supported species ids are <strong>0 = humanoid, 1 = horse, 2 = elephant, 3 = humanoid_sword</strong>.</li>
+                <li>The header is <strong>64 bytes</strong>; each clip entry is <strong>44 bytes</strong> (it carries the 5 marker
+                    floats); each socket entry is <strong>32 bytes</strong>.</li>
+                <li>Current supported species ids are <strong>0 = humanoid, 1 = horse, 2 = elephant, 3 = humanoid_sword, 4 = humanoid_spear, 5 = humanoid_skeleton</strong>.</li>
             </ul>
             <h2 id="how-the-frame-data-is-packed">How the frame data is packed</h2>
             <p>The frame data is flat and simple:</p>
@@ -373,8 +428,8 @@
             <p>The current reader accepts a BPAT file when:</p>
             <ol>
                 <li>it starts with the <code>BPAT</code> magic</li>
-                <li>it uses version <code>1</code></li>
-                <li>its species id is known (<code>0..3</code> today)</li>
+                <li>it uses version <code>2</code></li>
+                <li>its species id is known (<code>0..5</code> today)</li>
                 <li>it has at least one clip</li>
                 <li>its bone count is in range</li>
                 <li>its clip frame offsets are contiguous and its frame counts add up correctly</li>

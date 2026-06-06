@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/kurs_podstaw_pythona/02_sredniozawansowane/15_dekoratory",
             "description": "Dekoratory w Pythonie to pot\u0119\u017cne narz\u0119dzie, kt\u00f3re pozwala na dynamiczne dodawanie funkcjonalno\u015bci do istniej\u0105cych funkcji lub metod.",
-            "dateModified": "2017-01-12"
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -87,8 +87,17 @@
                             <ol>
                                 <li><a href="#caching">Caching</a></li>
                                 <li><a href="#logowanie">Logowanie</a></li>
+                                <li><a href="#mierzenie-czasu-wykonania">Mierzenie czasu wykonania</a></li>
+                                <li><a href="#walidacja-argumentów">Walidacja argumentów</a></li>
+                                <li><a href="#ponowienie-próby-retry-">Ponowienie próby (retry)</a></li>
                             </ol>
                         </li>
+                        <li><a href="#dekoratory-klas">Dekoratory klas</a></li>
+                        <li><a href="#podsumowanie-wzorców-dekoratorów">Podsumowanie wzorców dekoratorów</a></li>
+                        <li><a href="#schemat-działania-dekoratora">Schemat działania dekoratora</a></li>
+                        <li><a href="#łączenie-wielu-dekoratorów-kolejność-stosowania">Łączenie wielu dekoratorów — kolejność stosowania</a></li>
+                        <li><a href="#dekorator-jako-klasa">Dekorator jako klasa</a></li>
+                        <li><a href="#wbudowane-dekoratory-w-pythonie">Wbudowane dekoratory w Pythonie</a></li>
                     </ol>
                 </ol>
             </div>
@@ -181,7 +190,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 12, 2017</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="dekoratory">Dekoratory</h2>
             <p>Dekoratory w Pythonie to potężne narzędzie, które pozwala na dynamiczne dodawanie funkcjonalności do istniejących funkcji lub metod. Są one często używane do rozszerzania, modyfikowania lub dostosowywania zachowania funkcji bez konieczności modyfikowania samego kodu źródłowego.</p>
@@ -287,6 +296,18 @@ def fib(n):
 
 print(fib(10))  # Wyjście: 55</code></pre>
             </div>
+            <p>Python udostępnia gotowy dekorator <code>@functools.lru_cache</code>, który realizuje to samo bez pisania własnego kodu:</p>
+            <div>
+                <pre><code class="language-python">from functools import lru_cache
+
+@lru_cache(maxsize=None)
+def fib(n):
+    if n &lt; 2:
+        return n
+    return fib(n-1) + fib(n-2)
+
+print(fib(50))  # 12586269025</code></pre>
+            </div>
             <h4 id="logowanie">Logowanie</h4>
             <p>Dekorator może dodać logowanie do funkcji, pomagając śledzić wywołania funkcji i ich parametry.</p>
             <div>
@@ -307,7 +328,278 @@ def dodaj(a, b):
 
 dodaj(3, 5)  # Wyjście: Wywoływanie dodaj z argumentami: (3, 5), {} \n dodaj zwrócił: 8</code></pre>
             </div>
+            <h4 id="mierzenie-czasu-wykonania">Mierzenie czasu wykonania</h4>
+            <div>
+                <pre><code class="language-python">import functools
+import time
+
+def mierz_czas(funkcja):
+    @functools.wraps(funkcja)
+    def funkcja_wew(*args, **kwargs):
+        start = time.perf_counter()
+        wynik = funkcja(*args, **kwargs)
+        koniec = time.perf_counter()
+        print(f'{funkcja.__name__} wykonała się w {koniec - start:.4f}s')
+        return wynik
+    return funkcja_wew
+
+@mierz_czas
+def oblicz(n):
+    return sum(range(n))
+
+oblicz(1_000_000)  # oblicz wykonała się w 0.0231s</code></pre>
+            </div>
+            <h4 id="walidacja-argumentów">Walidacja argumentów</h4>
+            <div>
+                <pre><code class="language-python">import functools
+
+def wymaga_dodatnich(funkcja):
+    @functools.wraps(funkcja)
+    def funkcja_wew(*args, **kwargs):
+        for arg in args:
+            if isinstance(arg, (int, float)) and arg &lt; 0:
+                raise ValueError(f"Argument {arg} musi być nieujemny")
+        return funkcja(*args, **kwargs)
+    return funkcja_wew
+
+@wymaga_dodatnich
+def pierwiastek(x):
+    return x ** 0.5
+
+print(pierwiastek(9))   # 3.0
+pierwiastek(-4)         # ValueError: Argument -4 musi być nieujemny</code></pre>
+            </div>
+            <h4 id="ponowienie-próby-retry-">Ponowienie próby (retry)</h4>
+            <div>
+                <pre><code class="language-python">import functools
+import time
+
+def ponow(ilosc_prob=3, opoznienie=1.0):
+    def dekorator(funkcja):
+        @functools.wraps(funkcja)
+        def funkcja_wew(*args, **kwargs):
+            for proba in range(1, ilosc_prob + 1):
+                try:
+                    return funkcja(*args, **kwargs)
+                except Exception as e:
+                    if proba == ilosc_prob:
+                        raise
+                    print(f'Próba {proba} nieudana: {e}. Ponawiam za {opoznienie}s...')
+                    time.sleep(opoznienie)
+        return funkcja_wew
+    return dekorator
+
+@ponow(ilosc_prob=3, opoznienie=0.5)
+def pobierz_dane(url):
+    # symulacja błędu sieciowego
+    raise ConnectionError("Błąd połączenia")
+
+# pobierz_dane("http://example.com")
+# Próba 1 nieudana: Błąd połączenia. Ponawiam za 0.5s...
+# Próba 2 nieudana: Błąd połączenia. Ponawiam za 0.5s...
+# ConnectionError: Błąd połączenia</code></pre>
+            </div>
+            <h3 id="dekoratory-klas">Dekoratory klas</h3>
+            <p>Dekoratory można stosować nie tylko do funkcji, ale też do klas:</p>
+            <div>
+                <pre><code class="language-python">import functools
+
+def singleton(klasa):
+    instancje = {}
+    @functools.wraps(klasa)
+    def pobierz_instancje(*args, **kwargs):
+        if klasa not in instancje:
+            instancje[klasa] = klasa(*args, **kwargs)
+        return instancje[klasa]
+    return pobierz_instancje
+
+@singleton
+class Konfiguracja:
+    def __init__(self):
+        self.ustawienia = {}
+
+k1 = Konfiguracja()
+k2 = Konfiguracja()
+print(k1 is k2)  # True — obie zmienne wskazują na ten sam obiekt</code></pre>
+            </div>
             <p>Dekoratory to funkcjonalność, która sprawia, że Python jest językiem wyjątkowo elastycznym i ekspresyjnym, umożliwiającym tworzenie zaawansowanych wzorców projektowych w prosty i zwięzły sposób.</p>
+            <h3 id="podsumowanie-wzorców-dekoratorów">Podsumowanie wzorców dekoratorów</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Wzorzec</td>
+                    <td>Zastosowanie</td>
+                    <td>Przykład z biblioteki standardowej</td>
+                </tr>
+                <tr>
+                    <td>Logowanie / śledzenie</td>
+                    <td>Rejestrowanie wywołań funkcji</td>
+                    <td>—</td>
+                </tr>
+                <tr>
+                    <td>Memoizacja / cache</td>
+                    <td>Zapamiętywanie wyników kosztownych operacji</td>
+                    <td><code>@functools.lru_cache</code></td>
+                </tr>
+                <tr>
+                    <td>Walidacja argumentów</td>
+                    <td>Sprawdzanie typów / zakresów</td>
+                    <td>—</td>
+                </tr>
+                <tr>
+                    <td>Retry (ponowienie)</td>
+                    <td>Ponawianie w razie błędu sieciowego</td>
+                    <td><code>@tenacity.retry</code></td>
+                </tr>
+                <tr>
+                    <td>Kontrola dostępu</td>
+                    <td>Autoryzacja użytkownika</td>
+                    <td><code>@login_required</code> (Django/Flask)</td>
+                </tr>
+                <tr>
+                    <td>Singleton</td>
+                    <td>Jedna instancja klasy</td>
+                    <td>—</td>
+                </tr>
+                <tr>
+                    <td>Pomiar czasu</td>
+                    <td>Benchmarking i profilowanie</td>
+                    <td>—</td>
+                </tr>
+                <tr>
+                    <td>Rejestracja (registry)</td>
+                    <td>Zbieranie funkcji do wspólnego rejestru</td>
+                    <td><code>@app.route</code> (Flask)</td>
+                </tr>
+                <tr>
+                    <td>Deprecation</td>
+                    <td>Oznaczenie jako przestarzałe</td>
+                    <td><code>@warnings.deprecated</code> (3.13+)</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="schemat-działania-dekoratora">Schemat działania dekoratora</h3>
+            <div>
+                <pre><code class="language-shell">┌──────────────────────────────────────────────────────────────────┐
+│                                                                  │
+│   @dekorator              │   dekorator = dekorator(funkcja)     │
+│   def funkcja():          │   Czyli: funkcja = dekorator(funkcja)│
+│       ...                 │                                      │
+│                                                                  │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   Wywołanie: funkcja()                                           │
+│                                                                  │
+│   ┌─────────────────┐    ┌─────────────────┐                    │
+│   │   owijka()      │    │                 │                    │
+│   │   ├─ KOD PRZED  │───▶│  funkcja()     │                    │
+│   │   ├─ wywołanie  │    │  (oryginalna)  │                    │
+│   │   ├─ KOD PO     │◀───│                 │                    │
+│   │   └─ return     │    └─────────────────┘                    │
+│   └─────────────────┘                                            │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘</code></pre>
+            </div>
+            <h3 id="łączenie-wielu-dekoratorów-kolejność-stosowania">Łączenie wielu dekoratorów — kolejność stosowania</h3>
+            <div>
+                <pre><code class="language-python">@A
+@B
+@C
+def f():
+    pass
+
+# Jest równoważne:
+# f = A(B(C(f)))
+
+# Kolejność wykonania przy WYWOŁANIU f():
+# 1. Kod "przed" z A
+# 2. Kod "przed" z B
+# 3. Kod "przed" z C
+# 4. Ciało f()
+# 5. Kod "po" z C
+# 6. Kod "po" z B
+# 7. Kod "po" z A</code></pre>
+            </div>
+            <h3 id="dekorator-jako-klasa">Dekorator jako klasa</h3>
+            <p>Dekoratory mogą być implementowane jako klasy z metodą <code>__call__</code>:</p>
+            <div>
+                <pre><code class="language-python">import functools
+
+class LiczWywolania:
+    """Dekorator zliczający wywołania funkcji."""
+    def __init__(self, funkcja):
+        functools.update_wrapper(self, funkcja)
+        self.funkcja = funkcja
+        self.licznik = 0
+
+    def __call__(self, *args, **kwargs):
+        self.licznik += 1
+        print(f"{self.funkcja.__name__} wywołana {self.licznik} raz(y)")
+        return self.funkcja(*args, **kwargs)
+
+@LiczWywolania
+def pozdrow(imie):
+    return f"Cześć, {imie}!"
+
+pozdrow("Anna")   # pozdrow wywołana 1 raz(y)
+pozdrow("Jan")    # pozdrow wywołana 2 raz(y)
+print(pozdrow.licznik)  # 2</code></pre>
+            </div>
+            <h3 id="wbudowane-dekoratory-w-pythonie">Wbudowane dekoratory w Pythonie</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Dekorator</td>
+                    <td>Moduł</td>
+                    <td>Zastosowanie</td>
+                </tr>
+                <tr>
+                    <td><code>@staticmethod</code></td>
+                    <td>wbudowany</td>
+                    <td>Metoda bez dostępu do <code>self</code> ani <code>cls</code></td>
+                </tr>
+                <tr>
+                    <td><code>@classmethod</code></td>
+                    <td>wbudowany</td>
+                    <td>Metoda z dostępem do klasy (<code>cls</code>) zamiast instancji</td>
+                </tr>
+                <tr>
+                    <td><code>@property</code></td>
+                    <td>wbudowany</td>
+                    <td>Atrybut obliczany (getter/setter/deleter)</td>
+                </tr>
+                <tr>
+                    <td><code>@abstractmethod</code></td>
+                    <td><code>abc</code></td>
+                    <td>Metoda abstrakcyjna — wymusza implementację</td>
+                </tr>
+                <tr>
+                    <td><code>@functools.wraps</code></td>
+                    <td><code>functools</code></td>
+                    <td>Zachowuje metadane dekorowanej funkcji</td>
+                </tr>
+                <tr>
+                    <td><code>@functools.lru_cache</code></td>
+                    <td><code>functools</code></td>
+                    <td>Cache wyników (memoizacja)</td>
+                </tr>
+                <tr>
+                    <td><code>@functools.cached_property</code></td>
+                    <td><code>functools</code></td>
+                    <td>Property obliczane raz i zapamiętane</td>
+                </tr>
+                <tr>
+                    <td><code>@dataclasses.dataclass</code></td>
+                    <td><code>dataclasses</code></td>
+                    <td>Automatyczne <code>__init__</code>, <code>__repr__</code>, <code>__eq__</code></td>
+                </tr>
+                <tr>
+                    <td><code>@contextlib.contextmanager</code></td>
+                    <td><code>contextlib</code></td>
+                    <td>Tworzenie context managerów z <code>yield</code></td>
+                </tr>
+            </table>
+            </p>
         </article-section>
     </div>
     <footer>

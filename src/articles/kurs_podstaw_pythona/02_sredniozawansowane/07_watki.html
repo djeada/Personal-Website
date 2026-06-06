@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/kurs_podstaw_pythona/02_sredniozawansowane/07_watki",
             "description": "W\u0105tki to jednostki wykonawcze procesu, kt\u00f3re umo\u017cliwiaj\u0105 r\u00f3wnoleg\u0142e wykonanie r\u00f3\u017cnych fragment\u00f3w kodu w obr\u0119bie jednego programu.",
-            "dateModified": "2025-08-21"
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -79,6 +79,7 @@
                 <h2>Spis Treści</h2>
                 <ol><a href="#wątki">Wątki</a>
                     <ol>
+                        <li><a href="#porównanie-wątki-vs-procesy-vs-asyncio">Porównanie: wątki vs procesy vs asyncio</a></li>
                         <li><a href="#jak-działają-wątki-">Jak działają wątki?</a></li>
                         <li><a href="#użycie-wątków">Użycie wątków</a></li>
                         <li><a href="#tworzenie-własnego-wątku">Tworzenie własnego wątku</a></li>
@@ -101,6 +102,14 @@
                                 <li><a href="#rozwiązania-ograniczeń-gil">Rozwiązania ograniczeń GIL</a></li>
                             </ol>
                         </li>
+                        <li><a href="#threadpoolexecutor-nowoczesne-api">ThreadPoolExecutor — nowoczesne API</a>
+                            <ol>
+                                <li><a href="#map-prostsza-składnia-dla-jednorodnych-zadań">map() — prostsza składnia dla jednorodnych zadań</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#dobre-praktyki-i-typowe-pułapki">Dobre praktyki i typowe pułapki</a></li>
+                        <li><a href="#queue-bezpieczna-komunikacja-między-wątkami">Queue — bezpieczna komunikacja między wątkami</a></li>
+                        <li><a href="#timer-opóźnione-wykonanie">Timer — opóźnione wykonanie</a></li>
                     </ol>
                 </ol>
             </div>
@@ -193,10 +202,69 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: August 21, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="wątki">Wątki</h2>
             <p>Wątki to jednostki wykonawcze procesu, które umożliwiają równoległe wykonanie różnych fragmentów kodu w obrębie jednego programu. Zastosowanie wątków może znacząco przyspieszyć działanie aplikacji, zwłaszcza gdy mamy do czynienia z operacjami blokującymi, takimi jak łączenie się z zewnętrznymi serwerami, wczytywanie dużych plików czy obliczenia numeryczne.</p>
+            <h3 id="porównanie-wątki-vs-procesy-vs-asyncio">Porównanie: wątki vs procesy vs asyncio</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Cecha</td>
+                    <td>Wątki (<code>threading</code>)</td>
+                    <td>Procesy (<code>multiprocessing</code>)</td>
+                    <td>Asyncio</td>
+                </tr>
+                <tr>
+                    <td>Równoległość CPU</td>
+                    <td>Nie (GIL)</td>
+                    <td>Tak</td>
+                    <td>Nie</td>
+                </tr>
+                <tr>
+                    <td>Współbieżność I/O</td>
+                    <td>Tak</td>
+                    <td>Tak</td>
+                    <td>Tak</td>
+                </tr>
+                <tr>
+                    <td>Wspólna pamięć</td>
+                    <td>Tak</td>
+                    <td>Nie (wymaga IPC)</td>
+                    <td>Tak (single-thread)</td>
+                </tr>
+                <tr>
+                    <td>Koszt tworzenia</td>
+                    <td>Niski</td>
+                    <td>Wysoki (fork/spawn)</td>
+                    <td>Bardzo niski</td>
+                </tr>
+                <tr>
+                    <td>Synchronizacja</td>
+                    <td>Lock, Semaphore, Event</td>
+                    <td>Lock, Queue, Pipe</td>
+                    <td>Nie wymaga (kooperatywny)</td>
+                </tr>
+                <tr>
+                    <td>Najlepsze dla</td>
+                    <td>I/O-bound</td>
+                    <td>CPU-bound</td>
+                    <td>Wiele połączeń sieciowych</td>
+                </tr>
+                <tr>
+                    <td>Ryzyko deadlocka</td>
+                    <td>Tak</td>
+                    <td>Tak</td>
+                    <td>Minimalne</td>
+                </tr>
+                <tr>
+                    <td>Debugowanie</td>
+                    <td>Trudne</td>
+                    <td>Średnie</td>
+                    <td>Łatwiejsze</td>
+                </tr>
+            </table>
+            </p>
             <h3 id="jak-działają-wątki-">Jak działają wątki?</h3>
             <p>Wątki działają jako lekkie podprocesy wewnątrz głównego procesu programu. Każdy wątek może wykonywać niezależnie fragmenty kodu, współdzieląc zasoby (np. pamięć) z innymi wątkami tego samego procesu. W Pythonie, do zarządzania wątkami używamy modułu <code>threading</code>.</p>
             <p>Kluczowe aspekty działania wątków:</p>
@@ -457,6 +525,126 @@ for proces in procesy:
                 </li>
             </ol>
             <p>Ostateczna uwaga: Gdy chcemy przyspieszyć operacje w Pythonie, warto również rozważyć zastosowanie odpowiednich algorytmów i struktur danych, które mogą wpłynąć na wydajność kodu niezależnie od użycia wątków czy procesów.</p>
+            <h3 id="threadpoolexecutor-nowoczesne-api">ThreadPoolExecutor — nowoczesne API</h3>
+            <p>Od Pythona 3.2 dostępny jest moduł <code>concurrent.futures</code>, który oferuje wysokopoziomowy interfejs do pracy z wątkami (i procesami). <code>ThreadPoolExecutor</code> zarządza pulą wątków automatycznie:</p>
+            <div>
+                <pre><code class="language-python">from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
+
+def pobierz_dane(url):
+    """Symulacja pobierania danych."""
+    time.sleep(1)
+    return f"Dane z {url}"
+
+adresy = [f"http://example.com/page/{i}" for i in range(5)]
+
+# Użycie ThreadPoolExecutor
+with ThreadPoolExecutor(max_workers=3) as executor:
+    # submit — uruchomienie zadań
+    futures = {executor.submit(pobierz_dane, url): url for url in adresy}
+    
+    # as_completed — iteracja po wynikach w kolejności kończenia
+    for future in as_completed(futures):
+        url = futures[future]
+        wynik = future.result()
+        print(f"{url} → {wynik}")</code></pre>
+            </div>
+            <h4 id="map-prostsza-składnia-dla-jednorodnych-zadań"><code>map()</code> — prostsza składnia dla jednorodnych zadań</h4>
+            <div>
+                <pre><code class="language-python">from concurrent.futures import ThreadPoolExecutor
+
+def przetworz(n):
+    return n ** 2
+
+with ThreadPoolExecutor(max_workers=4) as executor:
+    wyniki = list(executor.map(przetworz, range(10)))
+
+print(wyniki)  # [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]</code></pre>
+            </div>
+            <h3 id="dobre-praktyki-i-typowe-pułapki">Dobre praktyki i typowe pułapki</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Pułapka</td>
+                    <td>Problem</td>
+                    <td>Rozwiązanie</td>
+                </tr>
+                <tr>
+                    <td>Brak synchronizacji</td>
+                    <td>Wyścig danych (race condition)</td>
+                    <td>Użyj <code>Lock</code> lub <code>Queue</code></td>
+                </tr>
+                <tr>
+                    <td>Deadlock</td>
+                    <td>Dwa wątki czekają na siebie nawzajem</td>
+                    <td>Zawsze pobieraj blokady w tej samej kolejności</td>
+                </tr>
+                <tr>
+                    <td>Użycie wątków dla CPU-bound</td>
+                    <td>GIL blokuje równoległość</td>
+                    <td>Użyj <code>multiprocessing</code> lub <code>ProcessPoolExecutor</code></td>
+                </tr>
+                <tr>
+                    <td>Mutowalny argument domyślny</td>
+                    <td>Współdzielony stan między wywołaniami</td>
+                    <td>Używaj niemutowalnych wartości domyślnych</td>
+                </tr>
+                <tr>
+                    <td>Brak <code>join()</code></td>
+                    <td>Program kończy się przed wątkami</td>
+                    <td>Zawsze czekaj na zakończenie wątków</td>
+                </tr>
+                <tr>
+                    <td>Print w wielu wątkach</td>
+                    <td>Wymieszane linie w konsoli</td>
+                    <td>Użyj <code>logging</code> lub <code>Lock</code> na <code>print</code></td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="queue-bezpieczna-komunikacja-między-wątkami">Queue — bezpieczna komunikacja między wątkami</h3>
+            <p><code>queue.Queue</code> to struktura FIFO bezpieczna wątkowo (thread-safe), idealna do wzorca producent-konsument:</p>
+            <div>
+                <pre><code class="language-python">import threading
+import queue
+import time
+
+def producent(q, n):
+    for i in range(n):
+        item = f"element-{i}"
+        q.put(item)
+        print(f"Producent dodał: {item}")
+        time.sleep(0.1)
+    q.put(None)  # sygnał zakończenia
+
+def konsument(q):
+    while True:
+        item = q.get()
+        if item is None:
+            break
+        print(f"Konsument przetworzył: {item}")
+        q.task_done()
+
+kolejka = queue.Queue(maxsize=5)
+
+p = threading.Thread(target=producent, args=(kolejka, 5))
+k = threading.Thread(target=konsument, args=(kolejka,))
+
+p.start()
+k.start()
+p.join()
+k.join()</code></pre>
+            </div>
+            <h3 id="timer-opóźnione-wykonanie">Timer — opóźnione wykonanie</h3>
+            <div>
+                <pre><code class="language-python">import threading
+
+def przypomnienie():
+    print("Minęło 5 sekund!")
+
+timer = threading.Timer(5.0, przypomnienie)
+timer.start()
+# Można anulować: timer.cancel()</code></pre>
+            </div>
         </article-section>
     </div>
     <footer>

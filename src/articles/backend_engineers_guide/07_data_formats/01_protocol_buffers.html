@@ -5,8 +5,8 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>Protocol Buffers Overview</title>
-    <meta content="Protocol Buffers (often referred to as protobuf) is a language-neutral, platform-independent method for serializing structured data." name="description" />
+    <title>Protocol Buffers (Protobuf)</title>
+    <meta content="Protocol Buffers, usually shortened to Protobuf, are a way to describe structured data once and then encode that data into a compact binary form." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -23,7 +23,7 @@
         {
             "@context": "https://schema.org",
             "@type": "Article",
-            "headline": "Protocol Buffers Overview",
+            "headline": "Protocol Buffers (Protobuf)",
             "author": {
                 "@type": "Person",
                 "name": "Adam Djellouli"
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/01_protocol_buffers"
             },
             "url": "https://adamdjellouli.com/articles/backend_engineers_guide/07_data_formats/01_protocol_buffers",
-            "description": "Protocol Buffers (often referred to as protobuf) is a language-neutral, platform-independent method for serializing structured data.",
-            "dateModified": "2026-01-24"
+            "description": "Protocol Buffers, usually shortened to Protobuf, are a way to describe structured data once and then encode that data into a compact binary form.",
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -77,15 +77,37 @@
         <aside id="article-sidebar">
             <div id="table-of-contents">
                 <h2>Table of Contents</h2>
-                <ol><a href="#protocol-buffers-overview">Protocol Buffers Overview</a>
+                <ol><a href="#protocol-buffers-protobuf-">Protocol Buffers (Protobuf)</a>
                     <ol>
-                        <li><a href="#basic-concepts">Basic Concepts</a></li>
-                        <li><a href="#example-person-and-addressbook">Example: Person and AddressBook</a></li>
-                        <li><a href="#compilation-and-generated-classes">Compilation and Generated Classes</a></li>
-                        <li><a href="#advantages-of-protocol-buffers">Advantages of Protocol Buffers</a></li>
-                        <li><a href="#common-use-cases">Common Use Cases</a></li>
-                        <li><a href="#protocol-buffers-vs-json">Protocol Buffers vs JSON</a></li>
-                        <li><a href="#best-practices">Best Practices</a></li>
+                        <li><a href="#the-big-picture">The big picture</a></li>
+                        <li><a href="#the-four-pieces-to-remember">The four pieces to remember</a></li>
+                        <li><a href="#a-first-schema-an-address-book">A first schema: an address book</a>
+                            <ol>
+                                <li><a href="#what-do-the-numbers-mean-">What do the numbers mean?</a></li>
+                                <li><a href="#common-field-forms">Common field forms</a></li>
+                                <li><a href="#worked-example-in-python">Worked example in Python</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#step-1-generate-python-code">Step 1: Generate Python code</a>
+                            <ol>
+                                <li><a href="#use-the-generated-messages">Use the generated messages</a></li>
+                                <li><a href="#run-it">Run it</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#what-is-actually-stored-on-the-wire-">What is actually stored on the wire?</a></li>
+                        <li><a href="#safe-schema-evolution">Safe schema evolution</a></li>
+                        <li><a href="#adding-a-field">Adding a field</a>
+                            <ol>
+                                <li><a href="#removing-a-field">Removing a field</a></li>
+                                <li><a href="#changes-to-treat-carefully">Changes to treat carefully</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#protobuf-and-grpc-are-related-not-identical">Protobuf and gRPC are related, not identical</a></li>
+                        <li><a href="#protobuf-compared-with-json">Protobuf compared with JSON</a></li>
+                        <li><a href="#good-use-cases">Good use cases</a></li>
+                        <li><a href="#practical-best-practices">Practical best practices</a></li>
+                        <li><a href="#quick-recap">Quick recap</a></li>
+                        <li><a href="#further-reading">Further reading</a></li>
                     </ol>
                 </ol>
             </div>
@@ -207,77 +229,102 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
-            <h2 id="protocol-buffers-overview">Protocol Buffers Overview</h2>
-            <p>Protocol Buffers (often referred to as <em>protobuf</em>) is a language-neutral, platform-independent method for serializing structured data. Originally created at Google, it excels at enabling efficient data interchange between services, storing information in a compact binary format, and sustaining backward and forward compatibility across different versions of the data schema.</p>
-            <div>
-                <pre><code class="language-shell">ASCII DIAGRAM: Flow of Working with Protobuf
-
- +-----------+         +---------+         +---------------------+ 
- |  .proto   |   Use   |  Protoc |   Gen   |   Language Classes  |
- | (Schema)  +--------&gt;+ Compiler+--------&gt;+  (Java, Python, etc.)
- +-----------+         +----+----+         +----------+----------+
-                              |                      |
-                              |   (Serialize/        |   (Deserialize/
-                              |    Deserialize)      |    Manipulate)
-                              v                      v
-                    +---------------------+   +---------------------+
-                    |  In-memory Objects  |   |  In-memory Objects  |
-                    +---------------------+   +---------------------+
-                             ^                           ^
-                             |        (Binary Data)       |
-                             +------------&lt;---------------&gt;+</code></pre>
-            </div>
+            <h2 id="protocol-buffers-protobuf-">Protocol Buffers (Protobuf)</h2>
+            <p>Protocol Buffers, usually shortened to <strong>Protobuf</strong>, are a way to describe structured data once and then encode that data into a compact binary form.</p>
+            <p>A simple way to think about them is:</p>
+            <blockquote>
+                <p>A <code>.proto</code> file is a shared contract. It says what data exists, what type each value has, and which numbered tag represents it on the wire.</p>
+            </blockquote>
+            <p>That contract can be used by programs written in different languages. A Python service can send a Protobuf message that a Java, Go, C++, or Kotlin service can read, as long as both know the same schema.</p>
+            <p>Protobuf is especially useful when data must be:</p>
             <ul>
-                <li>You <strong>define</strong> your data schema once in a .proto file, which is language-agnostic. </li>
-                <li>The <strong>Protobuf compiler</strong> (<code>protoc</code>) generates data model classes for your target programming language. </li>
-                <li>Your code <strong>creates</strong>, <strong>serializes</strong>, or <strong>deserializes</strong> Protobuf messages using these generated classes. </li>
-                <li>The <strong>resulting</strong> binary format is smaller and faster to process compared to verbose text formats like JSON or XML.</li>
+                <li>exchanged between services;</li>
+                <li>stored efficiently;</li>
+                <li>read by more than one programming language; or</li>
+                <li>evolved over time without breaking old clients.</li>
             </ul>
-            <h3 id="basic-concepts">Basic Concepts</h3>
+            <p>It is not automatically the best format for every job. JSON is often easier to inspect by hand, while Protobuf is usually a better fit when compact messages, clear contracts, and compatibility matter.</p>
+            <h3 id="the-big-picture">The big picture</h3>
+            <p>With JSON, a program may send field names such as <code>"name"</code> and <code>"email"</code> in every message. With Protobuf, the field names and types are described in the schema, and the serialized message mainly carries compact field numbers and values.</p>
+            <div>
+                <pre><code class="language-mermaid">flowchart LR
+    A["addressbook.proto&lt;br/&gt;Schema / contract"] --&gt;|compile| B["protoc&lt;br/&gt;Protobuf compiler"]
+    B --&gt; C["Generated Python code"]
+    B --&gt; D["Generated Java code"]
+    B --&gt; E["Generated Go code"]
+
+    C --&gt; F["Python object"]
+    D --&gt; G["Java object"]
+
+    F --&gt;|serialize| H["Binary Protobuf bytes"]
+    H --&gt;|deserialize| G</code></pre>
+            </div>
+            <p>The usual workflow is:</p>
             <ol>
-                <li><strong>.proto Files</strong> </li>
-                <li>Written in a syntax resembling IDLs (Interface Definition Languages). </li>
-                <li>Contain <strong>message</strong> declarations representing data structures and <strong>fields</strong> with typed, numbered entries. </li>
-                <li>
-                    <p>Each field’s number identifies it in the binary encoding, so it should not be changed once deployed.</p>
-                </li>
-                <li>
-                    <p><strong>Generated Code</strong> </p>
-                </li>
-                <li><code>protoc</code> converts .proto definitions into classes in various languages (Java, Python, C++, Go, etc.). </li>
-                <li>
-                    <p>These classes provide <strong>getters</strong>, <strong>setters</strong>, and <strong>builder</strong> patterns to manipulate field values.</p>
-                </li>
-                <li>
-                    <p><strong>Serialization</strong> </p>
-                </li>
-                <li>Protobuf messages are encoded as a <strong>compact, binary</strong> format. </li>
-                <li>Serialization is <strong>efficient</strong> in terms of both space and time. </li>
-                <li>Deserialization uses the same schema-based approach to reconstruct the original objects.</li>
+                <li>Write a <code>.proto</code> schema.</li>
+                <li>Run the Protobuf compiler, <code>protoc</code>.</li>
+                <li>Import the generated classes into your application.</li>
+                <li>Create normal in-memory message objects.</li>
+                <li>Serialize those objects to bytes for storage or network transfer.</li>
+                <li>Parse the bytes back into message objects later.</li>
             </ol>
-            <h3 id="example-person-and-addressbook">Example: Person and AddressBook</h3>
-            <p>A simple .proto file might define a <code>Person</code> message with nested fields and an <code>AddressBook</code> that holds multiple <code>Person</code> messages:</p>
+            <p>The binary data is not designed to be readable by a person in a text editor. The schema and generated classes make it meaningful.</p>
+            <h3 id="the-four-pieces-to-remember">The four pieces to remember</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Piece</td>
+                    <td>What it is</td>
+                    <td>Why it matters</td>
+                </tr>
+                <tr>
+                    <td><code>.proto</code> file</td>
+                    <td>The schema that defines messages and fields</td>
+                    <td>It is the contract shared by producers and consumers</td>
+                </tr>
+                <tr>
+                    <td><code>protoc</code></td>
+                    <td>The compiler for schema files</td>
+                    <td>It generates language-specific code</td>
+                </tr>
+                <tr>
+                    <td>Generated classes</td>
+                    <td>Classes such as <code>Person</code> or <code>AddressBook</code></td>
+                    <td>Your application uses these rather than manually encoding bytes</td>
+                </tr>
+                <tr>
+                    <td>Binary message</td>
+                    <td>Serialized data sent or stored</td>
+                    <td>It is compact and can be parsed using the schema</td>
+                </tr>
+            </table>
+            </p>
+            <p>A Protobuf schema describes <strong>message types</strong>. A message is similar to a record, data class, or plain object: it groups related fields together.</p>
+            <h3 id="a-first-schema-an-address-book">A first schema: an address book</h3>
+            <p>Create a file named <code>addressbook.proto</code>:</p>
             <div>
                 <pre><code class="language-protobuf">syntax = "proto3";
+
+package contacts;
+
+enum PhoneType {
+  PHONE_TYPE_UNSPECIFIED = 0;
+  PHONE_TYPE_MOBILE = 1;
+  PHONE_TYPE_HOME = 2;
+  PHONE_TYPE_WORK = 3;
+}
+
+message PhoneNumber {
+  string number = 1;
+  PhoneType type = 2;
+}
 
 message Person {
   string name = 1;
   int32 id = 2;
   string email = 3;
-
-  enum PhoneType {
-    MOBILE = 0;
-    HOME = 1;
-    WORK = 2;
-  }
-
-  message PhoneNumber {
-    string number = 1;
-    PhoneType type = 2;
-  }
-
   repeated PhoneNumber phones = 4;
 }
 
@@ -285,142 +332,430 @@ message AddressBook {
   repeated Person people = 1;
 }</code></pre>
             </div>
+            <p>Reading this schema in ordinary language:</p>
             <ul>
-                <li><strong>syntax = "proto3"</strong> designates Protobuf v3 features. </li>
-                <li><strong>message Person</strong> acts like a class, with a <code>name</code>, <code>id</code>, <code>email</code>, and repeated <code>phones</code>. </li>
-                <li><strong>enum PhoneType</strong> lists valid phone types. </li>
-                <li><strong>nested message</strong> <code>PhoneNumber</code> is defined inside <code>Person</code>. </li>
-                <li><strong>AddressBook</strong> holds multiple <code>Person</code> objects via a repeated field.</li>
+                <li>An <code>AddressBook</code> contains zero or more people.</li>
+                <li>A <code>Person</code> has a name, numeric ID, email address, and zero or more phone numbers.</li>
+                <li>A <code>PhoneNumber</code> has the actual number and a controlled phone type.</li>
+                <li><code>PhoneType</code> avoids free-form values such as <code>"cell"</code>, <code>"mobile phone"</code>, or <code>"Mobile"</code> all meaning the same thing.</li>
             </ul>
-            <h3 id="compilation-and-generated-classes">Compilation and Generated Classes</h3>
-            <ol>
-                <li><strong>Compile</strong> the .proto file:</li>
-            </ol>
+            <h4 id="what-do-the-numbers-mean-">What do the numbers mean?</h4>
+            <p>In this line:</p>
             <div>
-                <pre><code class="language-shell">protoc --java_out=. addressbook.proto</code></pre>
+                <pre><code class="language-protobuf">string email = 3;</code></pre>
             </div>
-            <ol>
-                <li>
-                    <p><strong>Output</strong> classes (for example, in Java) will include <code>Person</code>, <code>Person.PhoneNumber</code>, <code>Person.PhoneType</code>, and <code>AddressBook</code>.</p>
-                </li>
-                <li>
-                    <p><strong>Usage</strong> in Java (example):</p>
-                </li>
-            </ol>
-            <div>
-                <pre><code class="language-java">Person person = Person.newBuilder()
-    .setName("Alice")
-    .setId(123)
-    .setEmail("alice@example.com")
-    .addPhones(
-      Person.PhoneNumber.newBuilder()
-        .setNumber("555-1234")
-        .setType(Person.PhoneType.HOME)
-    )
-    .build();
-
-// Serialization
-byte[] data = person.toByteArray();
-
-// Deserialization
-Person parsedPerson = Person.parseFrom(data);
-System.out.println(parsedPerson.getName()); // "Alice"</code></pre>
-            </div>
-            <h3 id="advantages-of-protocol-buffers">Advantages of Protocol Buffers</h3>
-            <ol>
-                <li><strong>Efficiency</strong> </li>
-                <li><strong>Compact</strong> binary representation saves bandwidth and reduces latency. </li>
-                <li>
-                    <p><strong>Fast</strong> to parse compared to JSON or XML due to the binary encoding approach.</p>
-                </li>
-                <li>
-                    <p><strong>Language-Neutral</strong> </p>
-                </li>
-                <li>
-                    <p>Protobuf supports <strong>many</strong> languages and platforms, making it <em>flexible</em> for cross-language communication.</p>
-                </li>
-                <li>
-                    <p><strong>Backward/Forward Compatibility</strong> </p>
-                </li>
-                <li>Fields can be <em>added</em> or <em>removed</em> from message types over time without breaking existing code. </li>
-                <li>
-                    <p>Each field’s unique numeric <strong>tag</strong> enables easy evolution of the schema.</p>
-                </li>
-                <li>
-                    <p><strong>Schema-Driven</strong> </p>
-                </li>
-                <li>The <strong>.proto</strong> file defines a clear contract for data exchange, promoting strong typing and consistent usage across services.</li>
-            </ol>
-            <h3 id="common-use-cases">Common Use Cases</h3>
             <ul>
-                <li><strong>Inter-Service Communication</strong> </li>
-                <li>Microservices exchanging messages across a network in a <em>compact</em>, <em>schema-enforced</em> format. </li>
-                <li>
-                    <p>Often used with gRPC, which builds on HTTP/2 and Protobuf for <em>efficient</em> remote procedure calls.</p>
-                </li>
-                <li>
-                    <p><strong>Persistent Storage</strong> </p>
-                </li>
-                <li>Writing structured data to disk in a binary format that is easily read back or migrated to new formats. </li>
-                <li>
-                    <p>Helps with <em>metadata storage</em>, saving configurations, or logging events with minimal space overhead.</p>
-                </li>
-                <li>
-                    <p><strong>Mobile and IoT</strong> </p>
-                </li>
-                <li>Minimizes data transfer overhead for resource-constrained devices. </li>
-                <li>Minimizes <em>message size</em> for real-time updates or device telemetry.</li>
+                <li><code>string</code> is the value type.</li>
+                <li><code>email</code> is the field name used in code.</li>
+                <li><code>3</code> is the <strong>field number</strong>, also called the <strong>tag</strong>.</li>
             </ul>
-            <h3 id="protocol-buffers-vs-json">Protocol Buffers vs JSON</h3>
+            <p>The field number is a permanent identity for that field in the binary format. Once a message type is in use, do not change the tag for an existing field and do not reuse an old tag for a new meaning.</p>
+            <div>
+                <pre><code class="language-mermaid">flowchart LR
+    A["string email = 3;"] --&gt; B["Type: string"]
+    A --&gt; C["Name in code: email"]
+    A --&gt; D["Tag on the wire: 3"]
+    D --&gt; E["Must remain stable&lt;br/&gt;after release"]</code></pre>
+            </div>
+            <p>Tags <code>1</code> to <code>15</code> are useful for frequently present fields because their keys can be encoded especially compactly.</p>
+            <h4 id="common-field-forms">Common field forms</h4>
+            <p>A beginner can read most schemas by recognizing a few patterns:</p>
+            <div>
+                <pre><code class="language-protobuf">message Example {
+  string title = 1;                   // One text value
+  int32 count = 2;                    // One integer value
+  bool active = 3;                    // true or false
+  repeated string labels = 4;         // A list of strings
+  optional string nickname = 5;       // Presence can be checked
+  map&lt;string, string&gt; metadata = 6;   // Key-value pairs
+}</code></pre>
+            </div>
+            <p>Useful concepts:</p>
             <p>
             <table>
                 <tr>
-                    <td><strong>Aspect</strong></td>
-                    <td><strong>Protobuf</strong></td>
-                    <td><strong>JSON</strong></td>
+                    <td>Form</td>
+                    <td>Meaning</td>
+                    <td>Example use</td>
                 </tr>
                 <tr>
-                    <td><strong>Encoding</strong></td>
-                    <td>Binary</td>
-                    <td>Text (UTF-8, etc.)</td>
+                    <td>Scalar field</td>
+                    <td>A single primitive value</td>
+                    <td><code>string name = 1;</code></td>
                 </tr>
                 <tr>
-                    <td><strong>Readability</strong></td>
-                    <td>Not human-readable</td>
-                    <td>Human-readable (plain text)</td>
+                    <td>Nested message</td>
+                    <td>A structured value inside another message</td>
+                    <td><code>PhoneNumber</code> inside a person</td>
                 </tr>
                 <tr>
-                    <td><strong>Size &amp; Performance</strong></td>
-                    <td>Smaller, faster to parse</td>
-                    <td>Larger, slower to parse</td>
+                    <td><code>repeated</code></td>
+                    <td>A list of values</td>
+                    <td>A person's phone numbers</td>
                 </tr>
                 <tr>
-                    <td><strong>Schema Definition</strong></td>
-                    <td>Required (<code>.proto</code> files)</td>
-                    <td>Not required (schemaless)</td>
+                    <td><code>enum</code></td>
+                    <td>One value from a named set</td>
+                    <td>Mobile, home, or work</td>
                 </tr>
                 <tr>
-                    <td><strong>Evolution</strong></td>
-                    <td>Facilitated by numeric tags (forward/backward)</td>
-                    <td>Relies on optional fields or versioning manually</td>
+                    <td><code>optional</code></td>
+                    <td>Tracks whether a scalar value was explicitly provided</td>
+                    <td>Distinguishing “not supplied” from an empty string</td>
                 </tr>
                 <tr>
-                    <td><strong>Tooling</strong></td>
-                    <td>Protobuf compiler needed, specialized libraries</td>
-                    <td>Widespread support, easy debugging with text format</td>
+                    <td><code>map</code></td>
+                    <td>Key-value collection</td>
+                    <td>Labels or metadata</td>
+                </tr>
+                <tr>
+                    <td><code>oneof</code></td>
+                    <td>Exactly one of several alternatives may be set</td>
+                    <td>Contact by email <em>or</em> phone</td>
                 </tr>
             </table>
             </p>
-            <p><strong>Choose JSON</strong> if easy debugging, simplicity, or direct human editing is a priority.<br />
-                <strong>Choose Protobuf</strong> if efficiency, strict schema, or large-scale message passing is crucial.
-            </p>
-            <h3 id="best-practices">Best Practices</h3>
+            <p>A helpful rule is to model the data you mean, not the output format you hope to see. If the concept is a list, model it as <code>repeated</code>; if only one alternative makes sense at a time, consider <code>oneof</code>.</p>
+            <h4 id="worked-example-in-python">Worked example in Python</h4>
+            <p>This example creates an address book, writes it as Protobuf bytes, reads it back, and prints the restored data.</p>
+            <h3 id="step-1-generate-python-code">Step 1: Generate Python code</h3>
+            <p>From the folder containing <code>addressbook.proto</code>, run:</p>
+            <div>
+                <pre><code class="language-bash">protoc -I=. --python_out=. addressbook.proto</code></pre>
+            </div>
+            <p>This generates a Python module named:</p>
+            <div>
+                <pre><code class="language-text">addressbook_pb2.py</code></pre>
+            </div>
+            <p>Your application imports this generated module. You generally do <strong>not</strong> edit generated code manually; edit the <code>.proto</code> file and compile again when the schema changes.</p>
+            <h4 id="use-the-generated-messages">Use the generated messages</h4>
+            <p>Create <code>demo.py</code>:</p>
+            <div>
+                <pre><code class="language-python">from pathlib import Path
+
+import addressbook_pb2 as pb
+
+
+def create_address_book() -&gt; pb.AddressBook:
+    book = pb.AddressBook()
+
+    alice = book.people.add()
+    alice.id = 101
+    alice.name = "Alice Nguyen"
+    alice.email = "alice@example.com"
+
+    mobile = alice.phones.add()
+    mobile.number = "+49 30 555 1234"
+    mobile.type = pb.PHONE_TYPE_MOBILE
+
+    return book
+
+
+def save_book(book: pb.AddressBook, filename: str) -&gt; None:
+    Path(filename).write_bytes(book.SerializeToString())
+
+
+def load_book(filename: str) -&gt; pb.AddressBook:
+    book = pb.AddressBook()
+    book.ParseFromString(Path(filename).read_bytes())
+    return book
+
+
+def print_book(book: pb.AddressBook) -&gt; None:
+    for person in book.people:
+        print(f"{person.id}: {person.name} &lt;{person.email}&gt;")
+        for phone in person.phones:
+            kind = pb.PhoneType.Name(phone.type)
+            print(f"  {kind}: {phone.number}")
+
+
+if __name__ == "__main__":
+    filename = "addressbook.bin"
+
+    original = create_address_book()
+    save_book(original, filename)
+    print(f"Wrote {filename}")
+
+    restored = load_book(filename)
+    print_book(restored)</code></pre>
+            </div>
+            <h4 id="run-it">Run it</h4>
+            <div>
+                <pre><code class="language-bash">python demo.py</code></pre>
+            </div>
+            <p>Expected output</p>
+            <div>
+                <pre><code class="language-text">Wrote addressbook.bin
+101: Alice Nguyen &lt;alice@example.com&gt;
+  PHONE_TYPE_MOBILE: +49 30 555 1234</code></pre>
+            </div>
+            <p>What happened?</p>
+            <div>
+                <pre><code class="language-mermaid">sequenceDiagram
+    participant App as demo.py
+    participant Obj as AddressBook object
+    participant File as addressbook.bin
+
+    App-&gt;&gt;Obj: Create Alice and phone fields
+    Obj-&gt;&gt;File: SerializeToString() and write bytes
+    File-&gt;&gt;Obj: Read bytes and ParseFromString()
+    Obj--&gt;&gt;App: Restored structured message
+    App--&gt;&gt;App: Print readable values</code></pre>
+            </div>
+            <p>The file <code>addressbook.bin</code> contains bytes, not Python code and not human-friendly text. The generated class knows how to translate between those bytes and the <code>AddressBook</code> structure.</p>
+            <h3 id="what-is-actually-stored-on-the-wire-">What is actually stored on the wire?</h3>
+            <p>Most developers do not need to memorize the binary encoding, but understanding the idea explains why field numbers matter.</p>
+            <p>Consider this tiny schema:</p>
+            <div>
+                <pre><code class="language-protobuf">syntax = "proto3";
+
+message Counter {
+  int32 total = 1;
+}</code></pre>
+            </div>
+            <p>If <code>total</code> is set to <code>150</code>, the encoded message is three bytes:</p>
+            <div>
+                <pre><code class="language-text">08 96 01</code></pre>
+            </div>
+            <p>Conceptually:</p>
+            <div>
+                <pre><code class="language-mermaid">flowchart LR
+    A["08&lt;br/&gt;Field 1 + wire type"] --&gt; B["96 01&lt;br/&gt;Integer value 150"]
+    B --&gt; C["Decoded result:&lt;br/&gt;total = 150"]</code></pre>
+            </div>
+            <p>A serialized message is made of field records. Each record includes:</p>
             <ul>
-                <li><strong>Consistent Naming</strong>: Use descriptive field names in <code>.proto</code> files that match your project’s conventions (e.g., <code>snake_case</code> for field names if in Python or <code>camelCase</code> in Java). </li>
-                <li><strong>Versioning</strong>: <em>Add fields</em> with new tags rather than re-using or changing existing field numbers to maintain backward compatibility. </li>
-                <li><strong>Avoid Floats if Possible</strong>: Floating-point imprecision can cause issues. Prefer integers, fixed, or decimal-encoded strings for currency. </li>
-                <li><strong>Enums for Controlled Values</strong>: If fields have a fixed set of valid options, define them in an enum for stronger validation. </li>
-                <li><strong>Document Your .proto</strong>: Include comments describing each message and field to aid developers who consume your schema. </li>
+                <li>the field number;</li>
+                <li>enough information to tell the parser how the value is encoded; and</li>
+                <li>the value itself.</li>
+            </ul>
+            <p>Small integer values are commonly encoded using <strong>varints</strong>, where smaller numbers take fewer bytes. Field names such as <code>total</code> or <code>email</code> are not repeated in ordinary binary messages; the receiving program uses the schema to understand tag <code>1</code>, tag <code>2</code>, and so on.</p>
+            <p>This is why changing a tag can be dangerous: a reader may interpret old bytes as a completely different field.</p>
+            <h3 id="safe-schema-evolution">Safe schema evolution</h3>
+            <p>One of Protobuf's strongest benefits is that a schema can grow as software evolves. That only works when the field-number rules are respected.</p>
+            <h3 id="adding-a-field">Adding a field</h3>
+            <p>Version 1:</p>
+            <div>
+                <pre><code class="language-protobuf">message Person {
+  string name = 1;
+  int32 id = 2;
+  string email = 3;
+}</code></pre>
+            </div>
+            <p>Version 2 adds a field with a new tag:</p>
+            <div>
+                <pre><code class="language-protobuf">message Person {
+  string name = 1;
+  int32 id = 2;
+  string email = 3;
+  string display_name = 4;
+}</code></pre>
+            </div>
+            <p>This is the normal safe direction: old fields keep their original tags, and new information receives a new unused tag.</p>
+            <div>
+                <pre><code class="language-mermaid">flowchart LR
+    N["New writer&lt;br/&gt;name=Alice&lt;br/&gt;display_name=Ali"] --&gt;|binary message| O["Old reader"]
+    O --&gt; P["Reads fields it knows:&lt;br/&gt;name and id/email"]
+    O --&gt; Q["Does not understand&lt;br/&gt;display_name tag 4"]
+
+    R["Old writer&lt;br/&gt;no display_name"] --&gt;|binary message| S["New reader"]
+    S --&gt; T["Reads known old fields;&lt;br/&gt;display_name is absent/default"]</code></pre>
+            </div>
+            <h4 id="removing-a-field">Removing a field</h4>
+            <p>Suppose <code>email = 3</code> is no longer used. Do not assign tag <code>3</code> to another field later. Reserve both the number and, where useful, the old name:</p>
+            <div>
+                <pre><code class="language-protobuf">message Person {
+  reserved 3;
+  reserved "email";
+
+  string name = 1;
+  int32 id = 2;
+  string display_name = 4;
+}</code></pre>
+            </div>
+            <p>This helps the compiler prevent accidental reuse.</p>
+            <h4 id="changes-to-treat-carefully">Changes to treat carefully</h4>
+            <p>
+            <table>
+                <tr>
+                    <td>Change</td>
+                    <td>General guidance</td>
+                    <td>Why</td>
+                </tr>
+                <tr>
+                    <td>Add a new field using a new tag</td>
+                    <td>Usually safe</td>
+                    <td>Older readers can ignore data they do not recognize</td>
+                </tr>
+                <tr>
+                    <td>Remove a field and reserve its number/name</td>
+                    <td>Safe practice</td>
+                    <td>Prevents accidental reuse</td>
+                </tr>
+                <tr>
+                    <td>Rename a field while keeping its tag</td>
+                    <td>Binary wire format can remain compatible, but check JSON/API consumers</td>
+                    <td>Field names matter outside binary encoding</td>
+                </tr>
+                <tr>
+                    <td>Change an existing tag number</td>
+                    <td>Do not do this after release</td>
+                    <td>Old and new messages disagree about meaning</td>
+                </tr>
+                <tr>
+                    <td>Reuse a deleted field number</td>
+                    <td>Do not do this</td>
+                    <td>Old data may be decoded incorrectly</td>
+                </tr>
+                <tr>
+                    <td>Change <code>repeated</code> to a scalar field</td>
+                    <td>Avoid</td>
+                    <td>Values can be lost or misread</td>
+                </tr>
+                <tr>
+                    <td>Move fields into or out of a <code>oneof</code></td>
+                    <td>Review carefully</td>
+                    <td>Presence and interpretation rules can change</td>
+                </tr>
+            </table>
+            </p>
+            <p>A useful habit is to treat tag numbers the way a database treats published column identities: once released, they are part of the compatibility contract.</p>
+            <h3 id="protobuf-and-grpc-are-related-not-identical">Protobuf and gRPC are related, not identical</h3>
+            <p>These terms are often mentioned together, but they solve different problems.</p>
+            <ul>
+                <li><strong>Protobuf</strong> defines and serializes structured messages.</li>
+                <li><strong>gRPC</strong> is an RPC framework for calling methods across processes or services.</li>
+                <li>gRPC commonly uses Protobuf for both its request/response messages and service definitions, but Protobuf can also be used without gRPC.</li>
+            </ul>
+            <div>
+                <pre><code class="language-mermaid">flowchart TB
+    A[".proto file"] --&gt; B["Messages&lt;br/&gt;Person, AddressBook"]
+    A --&gt; C["Optional service definitions&lt;br/&gt;rpc GetPerson(...)"]
+
+    B --&gt; D["Protobuf binary serialization"]
+    C --&gt; E["gRPC-generated client/server stubs"]
+
+    D --&gt; F["Bytes in files, queues,&lt;br/&gt;HTTP bodies, sockets, etc."]
+    E --&gt; G["Remote procedure calls"]</code></pre>
+            </div>
+            <p>For example, an API could define:</p>
+            <div>
+                <pre><code class="language-protobuf">service AddressBookService {
+  rpc GetPerson(GetPersonRequest) returns (Person);
+}</code></pre>
+            </div>
+            <p>Protobuf describes the messages; gRPC supplies the client/server calling model and transport behavior</p>
+            <h3 id="protobuf-compared-with-json">Protobuf compared with JSON</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Question</td>
+                    <td>Protobuf binary format</td>
+                    <td>JSON</td>
+                </tr>
+                <tr>
+                    <td>Can a person easily read the stored message?</td>
+                    <td>Usually no</td>
+                    <td>Yes</td>
+                </tr>
+                <tr>
+                    <td>Is a schema required for normal use?</td>
+                    <td>Yes</td>
+                    <td>Not necessarily</td>
+                </tr>
+                <tr>
+                    <td>Does it normally send field names in each message?</td>
+                    <td>No; it uses numeric tags</td>
+                    <td>Yes</td>
+                </tr>
+                <tr>
+                    <td>Is it a good fit for cross-language service contracts?</td>
+                    <td>Yes</td>
+                    <td>Yes, often with separate schema tooling</td>
+                </tr>
+                <tr>
+                    <td>Is it convenient to debug directly in logs or a terminal?</td>
+                    <td>Less convenient</td>
+                    <td>Very convenient</td>
+                </tr>
+                <tr>
+                    <td>Does it support disciplined binary-compatible schema evolution?</td>
+                    <td>Yes, when tag rules are followed</td>
+                    <td>Evolution is usually handled at the application/API layer</td>
+                </tr>
+            </table>
+            </p>
+            <p>Protobuf also has a JSON representation, commonly called <strong>ProtoJSON</strong>, for integration with systems that exchange JSON. It is useful, but it does not have all the same schema-evolution properties as the binary wire format because JSON includes field names and does not preserve unknown fields in the same way.</p>
+            <p>Choose Protobuf binary messages when the contract, bandwidth, and evolution rules are important. Choose ordinary JSON when human inspection and simplicity are the main priorities and binary efficiency is not needed.</p>
+            <h3 id="good-use-cases">Good use cases</h3>
+            <p>Protobuf is a strong fit for:</p>
+            <ul>
+                <li>service-to-service messages, especially in typed APIs;</li>
+                <li>gRPC request and response bodies;</li>
+                <li>event payloads where producers and consumers need a stable contract;</li>
+                <li>mobile or device communication where message size matters;</li>
+                <li>stored structured data that must be read by multiple language ecosystems.</li>
+            </ul>
+            <p>It may be unnecessary for:</p>
+            <ul>
+                <li>small configuration files people must edit directly;</li>
+                <li>ad hoc debugging output;</li>
+                <li>simple public integrations where JSON already meets the performance and compatibility needs.</li>
+            </ul>
+            <h3 id="practical-best-practices">Practical best practices</h3>
+            <ol>
+                <li><strong>Never reuse a field number.</strong> If a field is deleted, reserve its tag.</li>
+                <li><strong>Prefer additive changes.</strong> Adding a new optional or ordinary field is usually safer than changing an existing field's meaning.</li>
+                <li><strong>Use clear enum names.</strong> An unspecified zero enum value such as <code>PHONE_TYPE_UNSPECIFIED = 0</code> makes defaults explicit.</li>
+                <li><strong>Keep frequently used fields on low tag numbers.</strong> Tags <code>1</code> through <code>15</code> are especially compact.</li>
+                <li><strong>Use packages.</strong> They help avoid naming collisions as schemas grow.</li>
+                <li><strong>Keep schemas documented.</strong> Comments should explain meaning, units, ownership, and compatibility constraints.</li>
+                <li><strong>Avoid treating serialized bytes as a stable hash input by default.</strong> Equivalent messages are not guaranteed to serialize to identical byte sequences in every implementation or version.</li>
+                <li><strong>Test old and new versions together.</strong> A compatibility test catches mistakes before schemas reach production.</li>
+            </ol>
+            <h3 id="quick-recap">Quick recap</h3>
+            <div>
+                <pre><code class="language-mermaid">mindmap
+  root((Protobuf))
+    Schema
+      .proto file
+      Messages
+      Fields and tags
+    Tooling
+      protoc
+      Generated classes
+      Runtime library
+    Data
+      Binary bytes
+      Serialize
+      Parse
+    Evolution
+      Add new tags
+      Reserve removed tags
+      Never reuse numbers
+    Ecosystem
+      Multiple languages
+      Often paired with gRPC
+      ProtoJSON available</code></pre>
+            </div>
+            <p>The ideas are:</p>
+            <ul>
+                <li>Define the structure once in a <code>.proto</code> schema.</li>
+                <li>Generate code for the language your application uses.</li>
+                <li>Serialize message objects into compact bytes and parse them back later.</li>
+                <li>Treat field numbers as permanent once published.</li>
+                <li>Add new fields rather than changing the identity or meaning of old ones.</li>
+                <li>Use Protobuf when a compact, typed, evolvable data contract matters.</li>
+            </ul>
+            <h3 id="further-reading">Further reading</h3>
+            <p>These notes align with the official Protocol Buffers documentation:</p>
+            <ul>
+                <li><a href="https://protobuf.dev/overview/">Protocol Buffers Overview</a></li>
+                <li><a href="https://protobuf.dev/programming-guides/proto3/">Language Guide: proto3</a></li>
+                <li><a href="https://protobuf.dev/programming-guides/encoding/">Encoding Reference</a></li>
+                <li><a href="https://protobuf.dev/getting-started/pythontutorial/">Protocol Buffer Basics: Python</a></li>
+                <li><a href="https://protobuf.dev/best-practices/dos-donts/">Proto Best Practices</a></li>
+                <li><a href="https://protobuf.dev/programming-guides/json/">ProtoJSON Format</a></li>
             </ul>
         </article-section>
     </div>

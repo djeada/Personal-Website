@@ -15,7 +15,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 
 SCRIPTS_TO_ARGS = {
     "python3 clean_output_dirs.py": [],
-     # "python3 generate_from_markdown.py": [],
+    "python3 generate_from_markdown.py": [],
     "python3 generate_course_tasks.py": [],
     "python3 generate_algo_course.py": [],
     "python3 apply_common_elements.py": [],
@@ -31,6 +31,23 @@ SCRIPTS_TO_ARGS = {
     "python3 create_site_map.py": [],
     "./replace_navbar.sh": [],
 }
+
+
+def validate_pipeline(scripts_to_args):
+    cleaner = "python3 clean_output_dirs.py"
+    article_generator = "python3 generate_from_markdown.py"
+    scripts = list(scripts_to_args)
+
+    if cleaner not in scripts:
+        return
+    if article_generator not in scripts:
+        raise RuntimeError(
+            f"{cleaner} deletes article output, but {article_generator} is not enabled."
+        )
+    if scripts.index(article_generator) < scripts.index(cleaner):
+        raise RuntimeError(
+            f"{article_generator} must run after {cleaner} to regenerate articles."
+        )
 
 
 def run_script(script, args_list):
@@ -133,6 +150,8 @@ def run_all():
             date_args.extend(["--random-date-seed", RANDOM_DATE_SEED])
         scripts_to_args["python3 generate_from_markdown.py"] = date_args
         scripts_to_args["python3 generate_article_list.py"] = date_args
+
+    validate_pipeline(scripts_to_args)
 
     for script, args_list in scripts_to_args.items():
         run_script(script, args_list)

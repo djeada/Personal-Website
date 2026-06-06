@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture",
             "description": "Picture this: you've got thousands of soldiers on screen, each with unique armor, weapons, and animations.",
-            "dateModified": "2026-05-03"
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -79,6 +79,7 @@
                 <h2>Table of Contents</h2>
                 <ol>
                     <li><a href="#what-we-ll-cover">What we'll cover</a></li>
+                    <li><a href="#qsg-render-thread-stages">QSG render-thread stages</a></li>
                     <li><a href="#the-two-phase-dance">The two-phase dance</a></li>
                     <li><a href="#how-qt-gets-opengl-running">How Qt gets OpenGL running</a></li>
                     <li><a href="#recording-what-to-draw">Recording what to draw</a></li>
@@ -86,6 +87,7 @@
                     <li><a href="#the-backend-and-its-pipelines">The backend and its pipelines</a></li>
                     <li><a href="#where-opengl-actually-lives">Where OpenGL actually lives</a></li>
                     <li><a href="#how-nations-get-their-look">How nations get their look</a></li>
+                    <li><a href="#centralized-pose-selection">Centralized pose selection</a></li>
                     <li><a href="#procedural-shaders">Procedural shaders</a></li>
                     <li><a href="#common-problems-and-how-to-fix-them">Common problems and how to fix them</a></li>
                     <li><a href="#battle-render-optimizations">Battle render optimizations</a>
@@ -103,12 +105,16 @@
                 <h2>Related Articles</h2>
                 <ol>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ai_architecture.html">Ai Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/animation_architecture.html">Animation Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/audio_wishlist.html">Audio Wishlist</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/combat_system.html">Combat System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/creature_bpat_format.html">Creature Bpat Format</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/macos_signing.html">Macos Signing</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_framework.html">Mission Framework</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/pathfinding_architecture.html">Pathfinding Architecture</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture.html">Rendering Architecture</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/save_load_system.html">Save Load System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/victory_system.html">Victory System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/windows_code_signing.html">Windows Code Signing</a></li>
                 </ol>
             </div>
@@ -128,13 +134,20 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: May 03, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <header>How the Rendering System Actually Works</header>
             <p>Picture this: you've got thousands of soldiers on screen, each with unique armor, weapons, and animations. Grass is swaying, rivers are flowing, and you need all of this running at 60 frames per second. How do you pull that off without your GPU catching fire?</p>
             <p>This is the story of how Standard of Iron takes game state and turns it into pixels. We'll walk through the whole journey, from the moment Qt creates an OpenGL window to the final draw calls that paint soldiers on screen.</p>
             <h2 id="what-we-ll-cover">What we'll cover</h2>
             <p>We'll start with the big picture of how data flows through the system, then dig into each layer: how Qt bootstraps OpenGL, how we record what needs to be drawn, how the backend executes those commands efficiently, where OpenGL actually lives in the code, how different nations get their unique visual styles, and finally how our shaders generate infinite detail without eating all your VRAM.</p>
+            <h2 id="qsg-render-thread-stages">QSG render-thread stages</h2>
+            <p><code>ui/gl_view.cpp</code> owns the frame callback through <code>GLView::GLRenderer::render()</code>. Qt runs that callback with the FBO OpenGL context current on the QSG render thread. The callback intentionally performs two engine stages in order:</p>
+            <ol>
+                <li><code>GameEngine::update(dt)</code> advances simulation systems before rendering. <code>World::update(dt)</code> runs here, so combat query rebuilds, target searches, attack state updates, hit feedback, target direction, and mode flags are simulation costs even when a profiler groups them under <code>QSGRenderThread</code>.</li>
+                <li><code>GameEngine::render(width, height)</code> records and plays back rendering work from state that already exists. <code>Renderer::render_world(world)</code> may read components such as combat state, attack target, hit feedback, transforms, visibility, and renderable data, but it must not rebuild combat query state or search for targets. <code>Renderer::end_frame()</code> sorts the <code>DrawQueue</code>, then <code>Backend::execute(...)</code> performs OpenGL playback.</li>
+            </ol>
+            <p>When a capture needs stage markers, set <code>SOI_RENDER_STAGE_LOG=1</code>. The extra logs are first-use only and remain disabled during normal gameplay. They identify the simulation update, render submit, renderer setup/cache attachment, creature asset registry load, and first backend playback so one-time setup can be separated from steady-frame costs.</p>
             <h2 id="the-two-phase-dance">The two-phase dance</h2>
             <p>The renderer works like a recording studio. In the first phase, we record: game logic tells us "there are 5000 soldiers here, some trees over there, a river running through." The SceneRenderer listens to all of this and writes down lightweight commands into something called a DrawQueue. No actual OpenGL happens yet—we're just taking notes.</p>
             <p>In the second phase, we play it back. We sort all those commands by material, shader, and transparency so that similar things get drawn together. Then the Backend walks through that sorted list and actually talks to the GPU. This separation is the key insight that makes everything else work. By splitting "what to draw" from "how to draw it," we can sort for optimal GPU performance, we can record frame N+1 while the GPU is still rendering frame N, and we can test our rendering logic without needing OpenGL at all.</p>
@@ -541,6 +554,33 @@ void Mesh::draw_instanced(std::size_t instance_count) {
             <p>Each nation has derived classes that override these methods. Looking at the Carthaginian spearman in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/render/entity/nations/carthage/spearman_renderer.cpp">spearman_renderer.cpp</a>, you'll see it sets up purple tunics, bronze helmets, and the distinctive Carthaginian visual style.</p>
             <p>The entity system stores a unit type string like "spearman_carthage" on each unit. The EntityRendererRegistry in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/render/entity/registry.cpp">registry.cpp</a> maps these strings to renderer functions. When it's time to draw, we look up the right renderer and call it. If a unit type isn't registered, it just doesn't render—that's usually the first thing to check when soldiers are mysteriously invisible.</p>
             <p>Troop bodies no longer get per-nation shader files. The rigged creature backend owns the shared <code>character_skinned</code> and <code>character_skinned_instanced</code> programs, while nation, role, and equipment variation is supplied as declarative render data: palette values, material IDs, visual specs, equipment records, and texture slots.</p>
+            <h2 id="centralized-pose-selection">Centralized pose selection</h2>
+            <p>Every humanoid entity produces exactly one <code>AnimationInputs</code> struct per render frame—a snapshot of its state from game components (is it attacking? dying? constructing?). Previously, each downstream system had its own if/else chain to map these flags to the animation it needed. We replaced all of those with a single function.</p>
+            <div>
+                <pre><code class="language-shell">AnimationInputs  ──►  resolve_pose_intent()  ──►  PoseIntent
+                          [pose_intent.h]
+                                │
+               ┌────────────────┼────────────────┐
+               ▼                ▼                ▼
+   to_humanoid_state()  to_animation_state_id()  ArchetypeVariantTable
+   [clip driver]        [BPAT key builder,        [creature_render_graph.cpp]
+                         render graph]</code></pre>
+            </div>
+            <p><code>PoseIntent</code> is a small enum (17 values) that names the <em>canonical</em> animation intent—<code>Idle</code>, <code>Walk</code>, <code>Run</code>, <code>AttackMelee</code>, <code>Dying</code>, etc.—in strict priority order. The resolver applies that priority once: dying beats dead, dead beats hit-reaction, hit-reaction beats attacking, and so on. All downstream systems convert from this single value instead of re-implementing the priority logic.</p>
+            <p><strong>ArchetypeVariantTable</strong> is the data-driven replacement for the old runtime hook function pointers. Each <code>UnitVisualSpec</code> can carry an optional pointer to a <code>constexpr</code>-constructible table that maps:</p>
+            <ul>
+                <li><code>archetype_for_pose[intent]</code> / <code>state_for_pose[intent]</code> — override archetype or clip state for a specific intent</li>
+                <li><code>archetype_for_variant[k]</code> / <code>state_for_variant[k]</code> — per-variant overrides (e.g. by seed for builders, by <code>FacialHairStyle</code> for spearmen), optionally gated on a trigger intent</li>
+            </ul>
+            <p>Nation renderers that need per-variant animation (builders with different tools, spearmen with beards) simply fill in the table's arrays at static init time instead of registering a function pointer.</p>
+            <p><strong>Caching.</strong> <code>CreatureRenderBatch::add_humanoid</code> calls <code>resolve_pose_intent</code> once and passes the result into both <code>humanoid_state_for_anim</code> (via its two-argument overload) and the variant-table dispatch block. No system in the critical render path calls the resolver more than once per entity per frame.</p>
+            <blockquote>
+                <p>For the full animation/pose pipeline — bake step, BPAT clip resolution and sampling,
+                    the procedural locomotion shaper, the combat visual state machine with marker-driven
+                    melee damage sync, and the shared quadruped gait — see
+                    <a href="ANIMATION_ARCHITECTURE.md">ANIMATION_ARCHITECTURE.md</a>.
+                </p>
+            </blockquote>
             <h2 id="procedural-shaders">Procedural shaders</h2>
             <p>Here's a memory problem: if 5000 soldiers each need unique 4K textures for their rust, dirt, and wear patterns, that's around 80 gigabytes of VRAM. Obviously impossible. So instead we generate all that detail procedurally in the shader.</p>
             <p>The shaders in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/assets/shaders">assets/shaders</a> use hash functions and noise for pipeline-owned effects such as terrain, water, vegetation, particles, banners, and shared rigged bodies. A typical procedural fragment block looks like this:</p>

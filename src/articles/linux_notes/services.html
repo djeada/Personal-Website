@@ -5,8 +5,8 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>Services</title>
-    <meta content="A service in computing is a background process that performs specific tasks or offers various functionalities to other programs." name="description" />
+    <title>Services, Daemons, and systemd</title>
+    <meta content="A service is a background program that provides a function to the system, users, or other programs." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -23,7 +23,7 @@
         {
             "@context": "https://schema.org",
             "@type": "Article",
-            "headline": "Services",
+            "headline": "Services, Daemons, and systemd",
             "author": {
                 "@type": "Person",
                 "name": "Adam Djellouli"
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/linux_notes/services"
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/services",
-            "description": "A service in computing is a background process that performs specific tasks or offers various functionalities to other programs.",
-            "dateModified": "2026-03-23"
+            "description": "A service is a background program that provides a function to the system, users, or other programs.",
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -77,46 +77,127 @@
         <aside id="article-sidebar">
             <div id="table-of-contents">
                 <h2>Table of Contents</h2>
-                <ol>
-                    <li><a href="#services">Services</a>
-                        <ol>
-                            <li><a href="#daemons">Daemons</a></li>
-                            <li><a href="#daemons-vs-services">Daemons vs services</a></li>
-                            <li><a href="#managing-services">Managing Services</a>
-                                <ol>
-                                    <li><a href="#enabling-services">Enabling Services</a></li>
-                                    <li><a href="#disabling-services">Disabling Services</a></li>
-                                    <li><a href="#starting-services">Starting Services</a></li>
-                                    <li><a href="#stopping-services">Stopping Services</a></li>
-                                    <li><a href="#checking-the-status-of-a-service">Checking the Status of a Service</a></li>
-                                    <li><a href="#checking-service-dependencies">Checking Service Dependencies</a></li>
-                                </ol>
-                            </li>
-                            <li><a href="#example-operating-ftp-server">Example: Operating FTP Server</a></li>
-                            <li><a href="#1-installing-ftp-server-using-package-managers-rpm-and-yum-">1. Installing FTP Server using Package Managers (RPM and YUM)</a>
-                                <ol>
-                                    <li><a href="#1-1-using-yum-package-manager">1.1. Using YUM Package Manager</a></li>
-                                    <li><a href="#1-2-using-rpm-package-manager">1.2. Using RPM Package Manager</a></li>
-                                </ol>
-                            </li>
-                            <li><a href="#2-configuring-and-starting-the-ftp-server">2. Configuring and Starting the FTP Server</a></li>
-                            <li><a href="#3-checking-on-which-port-ftp-operates">3. Checking on Which Port FTP Operates</a></li>
-                            <li><a href="#4-checking-if-the-port-is-free">4. Checking if the Port is Free</a></li>
-                            <li><a href="#5-testing-the-ftp-server">5. Testing the FTP Server</a></li>
-                            <li><a href="#6-check-ftp-server-logs">6. Check FTP Server Logs</a></li>
-                        </ol>
-                    </li>
-                    <li><a href="#creating-a-custom-service-with-systemd">Creating a Custom Service with SystemD</a>
-                        <ol>
-                            <li><a href="#common-sections-in-a-service-script">Common Sections in a Service Script</a></li>
-                            <li><a href="#example-of-a-simple-service-script">Example of a Simple Service Script</a>
-                                <ol>
-                                    <li><a href="#additional-notes">Additional Notes</a></li>
-                                </ol>
-                            </li>
-                            <li><a href="#challenges">Challenges</a></li>
-                        </ol>
-                    </li>
+                <ol><a href="#services-daemons-and-systemd">Services, Daemons, and systemd</a>
+                    <ol>
+                        <li><a href="#service-management-big-picture">Service Management Big Picture</a></li>
+                        <li><a href="#services-vs-processes">Services vs Processes</a></li>
+                        <li><a href="#daemons">Daemons</a></li>
+                        <li><a href="#daemon-vs-service">Daemon vs Service</a></li>
+                        <li><a href="#systemd">systemd</a></li>
+                        <li><a href="#units">Units</a></li>
+                        <li><a href="#service-states">Service States</a></li>
+                        <li><a href="#checking-service-status">Checking Service Status</a></li>
+                        <li><a href="#starting-and-stopping-services">Starting and Stopping Services</a></li>
+                        <li><a href="#enabling-and-disabling-services">Enabling and Disabling Services</a></li>
+                        <li><a href="#masking-services">Masking Services</a></li>
+                        <li><a href="#listing-services">Listing Services</a></li>
+                        <li><a href="#service-logs-with-journalctl">Service Logs with journalctl</a></li>
+                        <li><a href="#dependencies">Dependencies</a></li>
+                        <li><a href="#targets">Targets</a></li>
+                        <li><a href="#older-service-management-tools">Older Service Management Tools</a></li>
+                        <li><a href="#installing-and-managing-an-ftp-server-example">Installing and Managing an FTP Server Example</a></li>
+                        <li><a href="#installing-vsftpd">Installing vsftpd</a></li>
+                        <li><a href="#configuring-vsftpd">Configuring vsftpd</a></li>
+                        <li><a href="#starting-and-enabling-vsftpd">Starting and Enabling vsftpd</a></li>
+                        <li><a href="#checking-listening-ports">Checking Listening Ports</a></li>
+                        <li><a href="#testing-an-ftp-service">Testing an FTP Service</a></li>
+                        <li><a href="#checking-ftp-logs">Checking FTP Logs</a></li>
+                        <li><a href="#creating-a-custom-systemd-service">Creating a Custom systemd Service</a></li>
+                        <li><a href="#unit-file-sections">Unit File Sections</a></li>
+                        <li><a href="#simple-custom-service-example">Simple Custom Service Example</a></li>
+                        <li><a href="#common-service-types">Common Service Types</a></li>
+                        <li><a href="#scenario-1-simulate-a-stopped-service">Scenario 1: Simulate a Stopped Service</a>
+                            <ol>
+                                <li><a href="#simulate-the-problem">Simulate the Problem</a></li>
+                                <li><a href="#check-status">Check Status</a></li>
+                                <li><a href="#fix">Fix</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-2-simulate-a-disabled-service">Scenario 2: Simulate a Disabled Service</a>
+                            <ol>
+                                <li><a href="#simulate-the-problem">Simulate the Problem</a></li>
+                                <li><a href="#fix">Fix</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-3-simulate-a-service-that-fails-because-execstart-is-wrong">Scenario 3: Simulate a Service That Fails Because ExecStart Is Wrong</a>
+                            <ol>
+                                <li><a href="#simulate-the-problem">Simulate the Problem</a></li>
+                                <li><a href="#check-status">Check Status</a></li>
+                                <li><a href="#check-logs">Check Logs</a></li>
+                                <li><a href="#fix">Fix</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-4-simulate-a-service-crash-and-auto-restart">Scenario 4: Simulate a Service Crash and Auto-Restart</a>
+                            <ol>
+                                <li><a href="#create-a-crashing-script">Create a Crashing Script</a></li>
+                                <li><a href="#check-status">Check Status</a></li>
+                                <li><a href="#check-logs">Check Logs</a></li>
+                                <li><a href="#fix">Fix</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-5-simulate-a-port-conflict">Scenario 5: Simulate a Port Conflict</a>
+                            <ol>
+                                <li><a href="#simulate-the-problem">Simulate the Problem</a></li>
+                                <li><a href="#fix">Fix</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-6-simulate-a-service-configuration-error">Scenario 6: Simulate a Service Configuration Error</a>
+                            <ol>
+                                <li><a href="#simulate-the-problem">Simulate the Problem</a></li>
+                                <li><a href="#check-status">Check Status</a></li>
+                                <li><a href="#check-logs">Check Logs</a></li>
+                                <li><a href="#fix">Fix</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-7-simulate-a-missing-dependency-or-wrong-startup-order">Scenario 7: Simulate a Missing Dependency or Wrong Startup Order</a>
+                            <ol>
+                                <li><a href="#check-dependencies">Check Dependencies</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-8-simulate-a-failed-service-and-reset-its-state">Scenario 8: Simulate a Failed Service and Reset Its State</a>
+                            <ol>
+                                <li><a href="#simulate-failure">Simulate Failure</a></li>
+                                <li><a href="#reset-failed-state">Reset Failed State</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-9-simulate-a-masked-service">Scenario 9: Simulate a Masked Service</a>
+                            <ol>
+                                <li><a href="#simulate">Simulate</a></li>
+                                <li><a href="#fix">Fix</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-10-simulate-a-service-consuming-too-much-cpu">Scenario 10: Simulate a Service Consuming Too Much CPU</a>
+                            <ol>
+                                <li><a href="#create-a-cpu-heavy-service">Create a CPU-Heavy Service</a></li>
+                                <li><a href="#check-with-systemctl-status">Check with systemctl status</a></li>
+                                <li><a href="#check-with-top">Check with top</a></li>
+                                <li><a href="#fix">Fix</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-11-create-a-one-shot-service">Scenario 11: Create a One-Shot Service</a></li>
+                        <li><a href="#scenario-12-timers-as-scheduled-services">Scenario 12: Timers as Scheduled Services</a></li>
+                        <li><a href="#service-troubleshooting-workflow">Service Troubleshooting Workflow</a></li>
+                        <li><a href="#step-1-check-unit-exists">Step 1: Check Unit Exists</a></li>
+                        <li><a href="#step-2-check-active-state">Step 2: Check Active State</a></li>
+                        <li><a href="#step-3-check-boot-state">Step 3: Check Boot State</a></li>
+                        <li><a href="#step-4-read-status">Step 4: Read Status</a></li>
+                        <li><a href="#step-5-read-logs">Step 5: Read Logs</a></li>
+                        <li><a href="#step-6-check-ports">Step 6: Check Ports</a></li>
+                        <li><a href="#step-7-check-processes">Step 7: Check Processes</a></li>
+                        <li><a href="#step-8-check-configuration">Step 8: Check Configuration</a></li>
+                        <li><a href="#common-service-problems-and-fixes">Common Service Problems and Fixes</a>
+                            <ol>
+                                <li><a href="#problem-service-not-found">Problem: Service Not Found</a></li>
+                                <li><a href="#problem-service-failed-to-start">Problem: Service Failed to Start</a></li>
+                                <li><a href="#problem-service-running-but-not-reachable">Problem: Service Running but Not Reachable</a></li>
+                                <li><a href="#problem-service-starts-manually-but-not-at-boot">Problem: Service Starts Manually but Not at Boot</a></li>
+                                <li><a href="#problem-service-keeps-restarting">Problem: Service Keeps Restarting</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#useful-command-summary">Useful Command Summary</a></li>
+                        <li><a href="#safe-lab-cleanup">Safe Lab Cleanup</a></li>
+                        <li><a href="#challenges">Challenges</a></li>
+                    </ol>
                 </ol>
             </div>
             <div id="related-articles">
@@ -189,482 +270,1525 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
-            <h2 id="services">Services</h2>
-            <p>A service in computing is a background process that performs specific tasks or offers various functionalities to other programs. These services typically communicate using methods such as sockets or inter-process communication (IPC). The primary purposes of a service include:</p>
+            <h2 id="services-daemons-and-systemd">Services, Daemons, and systemd</h2>
+            <p>A service is a background program that provides a function to the system, users, or other programs.</p>
+            <p>Services usually run without direct user interaction. They may start automatically when the system boots, listen for network connections, process scheduled work, write logs, or respond to requests from other programs.</p>
+            <p>Common examples include:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Service</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td><code>sshd</code></td>
+                    <td>SSH server for remote login</td>
+                </tr>
+                <tr>
+                    <td><code>nginx</code></td>
+                    <td>Web server</td>
+                </tr>
+                <tr>
+                    <td><code>httpd</code></td>
+                    <td>Apache web server</td>
+                </tr>
+                <tr>
+                    <td><code>cron</code></td>
+                    <td>Scheduled task service</td>
+                </tr>
+                <tr>
+                    <td><code>mariadb</code></td>
+                    <td>Database server</td>
+                </tr>
+                <tr>
+                    <td><code>postgresql</code></td>
+                    <td>Database server</td>
+                </tr>
+                <tr>
+                    <td><code>vsftpd</code></td>
+                    <td>FTP server</td>
+                </tr>
+                <tr>
+                    <td><code>NetworkManager</code></td>
+                    <td>Network management service</td>
+                </tr>
+            </table>
+            </p>
+            <p>The main idea is:</p>
             <ul>
-                <li>Running in the background without user intervention.</li>
-                <li>Automatically starting during the system's boot process.</li>
-                <li>Being accessible system-wide, providing functionalities to various components.</li>
+                <li>A service provides a function.</li>
+                <li>A daemon is often the background process that provides that function.</li>
+                <li>systemd manages services on many modern Linux systems.</li>
             </ul>
-            <p>Services can be managed through various actions like starting or stopping them on demand, or enabling or disabling them to automatically start or stop during system boot. Common examples of services include the <code>sshd</code> service, which initiates an SSH server, and the <code>httpd</code> service, responsible for web server functionalities using HTTP and/or HTTPS protocols.</p>
-            <p>In modern Unix-like operating systems, <code>SystemD</code> is a prevalent tool for managing services. SystemD orchestrates the system's startup sequence by handling various scripts known as units. These units encompass services, mount points, sockets, and more. To view all units managed by SystemD, use the command <code>systemctl list-units</code>. The <code>systemctl</code> utility, a command-line interface, interacts with SystemD to manage these units, including starting, stopping, and configuring services.</p>
+            <h3 id="service-management-big-picture">Service Management Big Picture</h3>
+            <p>Modern Linux systems commonly use <code>systemd</code> to manage services.</p>
+            <p>The command-line tool used to control systemd is:</p>
             <div>
-                <pre><code class="language-+--------------------------------------------------+">|                Linux Operating System            |
+                <pre><code class="language-bash">systemctl</code></pre>
+            </div>
+            <p>A simplified model looks like this:</p>
+            <div>
+                <pre><code class="language-text">+--------------------------------------------------+
+|                Linux Operating System            |
 |                                                  |
 |    +------------------------+   +-------------+  |
-|    |     Service Manager    |   |             |  |
-|    |     (e.g., systemd)    |&lt;--|  User       |  |
-|    +------------------------+   |  Commands   |  |
-|         |         ^             | (e.g.,      |  |
-|         |         |             |  systemctl  |  |
-|    Start|         |Stop/Restart |  start/stop |  |
-|     /Enable       | /Disable    |  /status)   |  |
-|         v         |             +-------------+  |
+|    |     Service Manager    |   | User        |  |
+|    |       systemd          |&lt;--| Commands    |  |
+|    +------------------------+   | systemctl   |  |
+|         |         ^             +-------------+  |
+|         |         |                              |
+|   start |         | stop/restart/status          |
+| enable  |         | disable                      |
+|         v         |                              |
 |    +------------------------+                    |
 |    |      Linux Service     |                    |
 |    |                        |                    |
-|    | - Runs in background   |                    |
-|    | - Performs tasks       |                    |
-|    | - Listens to events    |                    |
-|    | - Logs activity        |                    |
-|    | - Responds to          |                    |
-|    |   service manager      |                    |
+|    | - runs in background   |                    |
+|    | - performs tasks       |                    |
+|    | - listens on ports     |                    |
+|    | - writes logs          |                    |
+|    | - responds to events   |                    |
 |    +------------------------+                    |
 |                                                  |
 +--------------------------------------------------+</code></pre>
             </div>
+            <p>The administrator uses <code>systemctl</code> to ask systemd to start, stop, enable, disable, restart, reload, or inspect services.</p>
+            <h3 id="services-vs-processes">Services vs Processes</h3>
+            <p>A process is a running instance of a program.</p>
+            <p>A service is a managed system function, usually represented by one or more processes.</p>
+            <p>For example:</p>
+            <div>
+                <pre><code class="language-text">Service:
+sshd.service
+
+Process:
+PID 1234 running /usr/sbin/sshd</code></pre>
+            </div>
+            <p>A service may have one process, several worker processes, or no long-running process if it is a one-shot task.</p>
+            <div>
+                <pre><code class="language-text">systemd unit: nginx.service
+        |
+        v
+main process: nginx master
+        |
+        v
+worker processes: nginx workers</code></pre>
+            </div>
+            <p>So a service is not exactly the same thing as a process.</p>
+            <p>A service is the managed unit. A process is the actual running program.</p>
             <h3 id="daemons">Daemons</h3>
-            <p>Daemons are specialized background processes designed to perform tasks or provide services autonomously. They are typically launched during the system's startup process but can also be initiated manually. Unlike interactive user programs, daemons operate independently of user control.</p>
-            <p>Daemons are traditionally managed using <code>rc</code> (run commands) and <code>init</code> (initialization) scripts, commonly located in <code>/etc/rc.d</code> and <code>/etc/init.d</code> directories. On systems utilizing <code>init.d</code> scripts, you can list all services using <code>ls /etc/init.d</code>. Tools like <code>systemctl</code> (for SystemD-based systems), <code>service</code>, and <code>chkconfig</code> (for SysV-init systems) are used to manage these scripts.</p>
-            <p>While <code>SystemD</code> has become the standard for service and daemon management in modern Unix-like systems, some older systems still rely on <code>rc</code> and <code>init</code> scripts. A program can function as both a service and a daemon, depending on its configuration and role.</p>
-            <h3 id="daemons-vs-services">Daemons vs services</h3>
-            <p>The distinction between daemons and services primarily lies in their roles and operational contexts. Daemons are designed for specific tasks or to provide particular services autonomously. They are generally system-started and can also be manually initiated, operating independently of direct user control, managed via <code>rc</code> and <code>init</code> scripts.</p>
-            <p>In contrast, services are background processes that interface with other programs, often necessitating system-wide availability, starting with the system boot, and running continuously in the background. They are managed by starting, stopping, enabling, or disabling them as needed.</p>
-            <p>
-            <table>
-                <tr>
-                    <td><strong>Aspect</strong></td>
-                    <td><strong>Daemon</strong></td>
-                    <td><strong>Service</strong></td>
-                </tr>
-                <tr>
-                    <td><strong>Definition</strong></td>
-                    <td>A background process running continuously, often from boot time.</td>
-                    <td>A software function provided to users or other programs.</td>
-                </tr>
-                <tr>
-                    <td><strong>Purpose</strong></td>
-                    <td>To handle tasks regularly, automatically, or on demand without user interaction.</td>
-                    <td>To perform a specific function for the system or other applications.</td>
-                </tr>
-                <tr>
-                    <td><strong>Run Model</strong></td>
-                    <td>Always running in the background (continuous).</td>
-                    <td>Can be continuous (always running) or on-demand.</td>
-                </tr>
-                <tr>
-                    <td><strong>Examples</strong></td>
-                    <td><code>httpd</code> (Apache web server), <code>sshd</code> (SSH server), <code>crond</code> (cron scheduler)</td>
-                    <td>Web server, database server, file-sharing service, etc.</td>
-                </tr>
-                <tr>
-                    <td><strong>How It's Managed</strong></td>
-                    <td>By the system (often via tools like <code>systemd</code>, <code>init.d</code>, etc.).</td>
-                    <td>By system administrators or service management tools.</td>
-                </tr>
-                <tr>
-                    <td><strong>Startup</strong></td>
-                    <td>Generally starts at boot time and runs until shutdown.</td>
-                    <td>May start at boot, run on demand, or be manually started/stopped.</td>
-                </tr>
-                <tr>
-                    <td><strong>Scope</strong></td>
-                    <td>Background operation; typically not interacted with directly by users.</td>
-                    <td>May be accessible to users or other programs as a function or API.</td>
-                </tr>
-                <tr>
-                    <td><strong>Naming</strong></td>
-                    <td>Often ends with "d" (e.g., <code>httpd</code>, <code>sshd</code>).</td>
-                    <td>Name is usually descriptive of the function (e.g., web server).</td>
-                </tr>
-                <tr>
-                    <td><strong>Relationship</strong></td>
-                    <td>Provides specific services by running in the background.</td>
-                    <td>Can be implemented as a daemon but not always required to be one.</td>
-                </tr>
-            </table>
-            </p>
+            <p>A daemon is a background process that usually runs independently of direct user control.</p>
+            <p>Many daemon names end with the letter <code>d</code>.</p>
+            <p>Examples:</p>
             <ul>
-                <li>A <strong>daemon</strong> describes <em>how</em> a task runs (continuously and in the background).</li>
-                <li>A <strong>service</strong> describes <em>what</em> a task provides (a specific function).</li>
+                <li>sshd SSH daemon</li>
+                <li>httpd HTTP daemon</li>
+                <li>crond cron daemon</li>
+                <li>slapd LDAP daemon</li>
+                <li>vsftpd Very Secure FTP daemon</li>
             </ul>
-            <p>Daemons are often services, but not all services need to be daemons.</p>
-            <h3 id="managing-services">Managing Services</h3>
-            <p>Services, being integral background processes, offer functionalities or services to other programs or the system. Their management involves starting, stopping, enabling, or disabling them, with the specific commands and tools varying based on the service type and the operating system.</p>
-            <h4 id="enabling-services">Enabling Services</h4>
-            <p>To enable a service means to configure it to start automatically when the system boots up. This is particularly useful for services that are essential for system operations or that provide critical functionalities. The command to enable a service varies depending on the system's initialization system. Here are common examples:</p>
-            <p>I. Using <code>chkconfig</code> for SysV-init systems:</p>
-            <div>
-                <pre><code class="language-bash">chkconfig httpd on</code></pre>
-            </div>
-            <p>This command sets the httpd service to start automatically.</p>
-            <p>II. Using <code>systemctl</code> for SystemD-based systems:</p>
-            <div>
-                <pre><code class="language-bash">systemctl enable httpd.service</code></pre>
-            </div>
-            <p>This command creates a symbolic link for the httpd.service unit file, ensuring it's activated on boot.</p>
-            <h4 id="disabling-services">Disabling Services</h4>
-            <p>Disabling a service prevents it from starting automatically during system boot, which is useful for non-essential services or for troubleshooting conflicts. The specific command also depends on the system's initialization system:</p>
-            <p>I. Using <code>chkconfig</code> for SysV-init systems:</p>
-            <div>
-                <pre><code class="language-bash">chkconfig httpd off</code></pre>
-            </div>
-            <p>This command removes the httpd service from the system's startup sequence.</p>
-            <p>II. Using <code>systemctl</code> for SystemD-based systems:</p>
-            <div>
-                <pre><code class="language-bash">systemctl disable httpd.service</code></pre>
-            </div>
-            <p>This command removes the symbolic link for the httpd.service, preventing it from starting at boot.</p>
-            <h4 id="starting-services">Starting Services</h4>
-            <p>To start a service means to initiate its operation immediately. This is often done after installing a new service or making configuration changes.</p>
-            <p>I. Using <code>chkconfig</code> for SysV-init systems:</p>
-            <div>
-                <pre><code class="language-bash">service httpd start</code></pre>
-            </div>
-            <p>This command triggers the immediate start of the httpd service.</p>
-            <p>II. Using <code>systemctl</code> for SystemD-based systems:</p>
-            <div>
-                <pre><code class="language-bash">systemctl start httpd.service</code></pre>
-            </div>
-            <p>This command tells systemd to start the httpd service right away.</p>
-            <h4 id="stopping-services">Stopping Services</h4>
-            <p>Conversely, stopping a service halts its operation. This can be necessary for maintenance, updates, or to resolve performance issues.</p>
-            <p>I. Using <code>chkconfig</code> for SysV-init systems:</p>
-            <div>
-                <pre><code class="language-bash">service httpd stop</code></pre>
-            </div>
-            <p>This command stops the httpd service immediately, freeing up resources.</p>
-            <p>II. Using <code>systemctl</code> for SystemD-based systems:</p>
-            <div>
-                <pre><code class="language-bash">systemctl stop httpd.service</code></pre>
-            </div>
-            <p>This command instructs systemd to terminate the httpd service.</p>
-            <h4 id="checking-the-status-of-a-service">Checking the Status of a Service</h4>
-            <p>The status of a service shows its current state and if it is active or not. Some common service statuses include:</p>
-            <p>
-            <table>
-                <tr>
-                    <td>Status</td>
-                    <td>Description</td>
-                </tr>
-                <tr>
-                    <td><code>Loaded</code></td>
-                    <td>The unit file was processed, and the unit is now active.</td>
-                </tr>
-                <tr>
-                    <td><code>Active(running)</code></td>
-                    <td>The unit is active with one or more processes.</td>
-                </tr>
-                <tr>
-                    <td><code>Active(exited)</code></td>
-                    <td>A one-time task was successfully performed.</td>
-                </tr>
-                <tr>
-                    <td><code>Active(waiting)</code></td>
-                    <td>The unit is active and waiting for an event.</td>
-                </tr>
-                <tr>
-                    <td><code>Inactive</code></td>
-                    <td>The unit is not running.</td>
-                </tr>
-                <tr>
-                    <td><code>Enabled</code></td>
-                    <td>The unit will be started at boot time.</td>
-                </tr>
-                <tr>
-                    <td><code>Disabled</code></td>
-                    <td>The unit will not be started at boot time.</td>
-                </tr>
-                <tr>
-                    <td><code>Static</code></td>
-                    <td>The unit can't be enabled, but can be started by another unit manually.</td>
-                </tr>
-            </table>
-            </p>
-            <p>To check the status of a service, you can use the status command. The way this command is used depends on the tool being used. Here are some examples:</p>
-            <p>I. Using <code>chkconfig</code> for SysV-init systems:</p>
-            <div>
-                <pre><code class="language-shell">chkconfig --list httpd</code></pre>
-            </div>
-            <p>II. Using <code>systemctl</code> for SystemD-based systems:</p>
-            <div>
-                <pre><code class="language-shell">systemctl status httpd.service</code></pre>
-            </div>
-            <h4 id="checking-service-dependencies">Checking Service Dependencies</h4>
-            <p>Understanding service dependencies is crucial for effective system administration, particularly when managing startup sequences and troubleshooting service issues. To check whether a particular service is dependent on a specific target or another service, the <code>systemctl</code> command can be utilized in conjunction with <code>grep</code>. Here's how to do it:</p>
-            <div>
-                <pre><code class="language-bash">systemctl list-dependencies [target/service] | grep [service-name]</code></pre>
-            </div>
-            <p>For example to determine if the httpd service depends on <code>multi-user.target</code>:</p>
-            <div>
-                <pre><code class="language-bash">systemctl list-dependencies multi-user.target | grep httpd</code></pre>
-            </div>
-            <p>Interpretation of Results:</p>
+            <p>A daemon often starts during boot and keeps running until shutdown.</p>
+            <p>The word daemon describes how the program runs:</p>
             <ul>
-                <li><strong>Output Present</strong>: If the httpd service is listed in the output, this indicates that it indeed has a dependency on the specified <code>multi-user.target</code>.</li>
-                <li><strong>No Output</strong>: If there is no output, it implies that httpd does not depend on <code>multi-user.target</code>.</li>
+                <li>background</li>
+                <li>non-interactive</li>
+                <li>long-running</li>
+                <li>system-managed</li>
             </ul>
-            <p>Note that the syntax of the list-dependencies command and the target you specify may vary depending on the operating system and the version of systemctl being used.</p>
-            <h3 id="example-operating-ftp-server">Example: Operating FTP Server</h3>
-            <h3 id="1-installing-ftp-server-using-package-managers-rpm-and-yum-">1. <strong>Installing FTP Server using Package Managers (RPM and YUM)</strong></h3>
-            <h4 id="1-1-using-yum-package-manager"><strong>1.1. Using YUM Package Manager</strong></h4>
-            <p><strong>Step 1: Search for FTP packages</strong></p>
-            <div>
-                <pre><code class="language-bash">yum list | grep ftp</code></pre>
-            </div>
-            <p><strong>Expected Output</strong>:</p>
-            <div>
-                <pre><code class="language-bash">vsftpd.x86_64      3.0.2-29.el7   @base
-lftp.x86_64        4.4.8-9.el7    @base</code></pre>
-            </div>
+            <h3 id="daemon-vs-service">Daemon vs Service</h3>
+            <p>A daemon describes a background process.</p>
+            <p>A service describes a function provided to the system or users.</p>
             <ul>
-                <li><code>vsftpd</code> is the FTP server package we are interested in.</li>
-                <li><code>lftp</code> is a command-line FTP client package.</li>
-                <li>The <code>@base</code> indicates that these packages are from the base repository.</li>
+                <li>Daemon = how it runs</li>
+                <li>Service = what it provides</li>
             </ul>
-            <p><strong>Step 2: Install vsftpd (FTP server)</strong></p>
-            <div>
-                <pre><code class="language-bash">yum install vsftpd</code></pre>
-            </div>
-            <p><strong>Expected Output</strong>:</p>
-            <div>
-                <pre><code class="language-bash">Dependencies Resolved
-================================================================================
- Package             Arch               Version                  Repository
-================================================================================
-Installing:
- vsftpd              x86_64             3.0.2-29.el7             base
-...
-Is this ok [y/d/N]: y</code></pre>
-            </div>
-            <p>It resolves dependencies and asks for confirmation to proceed with the installation. Press <code>y</code> to install.</p>
-            <h4 id="1-2-using-rpm-package-manager"><strong>1.2. Using RPM Package Manager</strong></h4>
-            <p><strong>Step 1: Search for FTP package using RPM</strong></p>
-            <div>
-                <pre><code class="language-bash">rpm -qa | grep ftp</code></pre>
-            </div>
-            <p><strong>Expected Output</strong>:</p>
-            <div>
-                <pre><code class="language-bash">vsftpd-3.0.2-29.el7.x86_64
-lftp-4.4.8-9.el7.x86_64</code></pre>
-            </div>
+            <p>Example:</p>
             <ul>
-                <li>This lists already installed FTP-related packages.</li>
-                <li><code>vsftpd</code> is the FTP server; if it's listed, you don’t need to install it again.</li>
+                <li>sshd is a daemon process.</li>
+                <li>sshd.service is the systemd service unit.</li>
+                <li>The service provides remote SSH login.</li>
             </ul>
-            <p><strong>Step 2: Install vsftpd using RPM</strong></p>
-            <div>
-                <pre><code class="language-bash">rpm -ivh vsftpd-3.0.2-29.el7.x86_64.rpm</code></pre>
-            </div>
-            <p><strong>Expected Output</strong>:</p>
-            <div>
-                <pre><code class="language-bash">Preparing...                     ################################# [100%]
-Updating / installing...
-   1:vsftpd-3.0.2-29.el7         ################################# [100%]</code></pre>
-            </div>
-            <p>The package installs successfully if no errors appear.</p>
-            <h3 id="2-configuring-and-starting-the-ftp-server">2. <strong>Configuring and Starting the FTP Server</strong></h3>
-            <p><strong>Step 1: Edit the configuration file</strong></p>
-            <div>
-                <pre><code class="language-bash">vi /etc/vsftpd/vsftpd.conf</code></pre>
-            </div>
-            <p>Look for these key options:</p>
+            <p>Daemons are often services, but not every service is a traditional daemon.</p>
+            <p>For example, a one-shot service may run once, complete a task, and exit.</p>
+            <h3 id="systemd">systemd</h3>
+            <p><code>systemd</code> is a service manager and initialization system used by many modern Linux distributions.</p>
+            <p>It is responsible for:</p>
             <ul>
-                <li><code>anonymous_enable=YES</code> or <code>NO</code> (depends on if you want anonymous access).</li>
-                <li><code>local_enable=YES</code> (to allow local users).</li>
-                <li><code>write_enable=YES</code> (if you want to allow file uploads).</li>
+                <li>starting system services</li>
+                <li>stopping services during shutdown</li>
+                <li>tracking service state</li>
+                <li>managing dependencies</li>
+                <li>starting services in the correct order</li>
+                <li>capturing service logs through journald</li>
+                <li>handling sockets, timers, mounts, and targets</li>
             </ul>
-            <p><strong>Step 2: Enable and start vsftpd service</strong></p>
+            <p>At boot time, systemd starts the services and units needed to bring the system into a usable state.</p>
+            <h3 id="units">Units</h3>
+            <p>In systemd, a unit is something systemd can manage.</p>
+            <p>Common unit types include:</p>
+            <ul>
+                <li>.service system service</li>
+                <li>.socket socket activation unit</li>
+                <li>.target group of units, similar to a boot milestone</li>
+                <li>.timer scheduled activation unit</li>
+                <li>.mount mount point</li>
+                <li>.automount automatic mount point</li>
+                <li>.path path-based activation</li>
+                <li>.device device unit</li>
+            </ul>
+            <p>A service unit usually ends in:</p>
             <div>
-                <pre><code class="language-bash">systemctl enable vsftpd
-systemctl start vsftpd</code></pre>
+                <pre><code class="language-text">.service</code></pre>
             </div>
-            <p><strong>Expected Output (Enable command)</strong>:</p>
+            <p>Example:</p>
+            <ul>
+                <li>sshd.service</li>
+                <li>nginx.service</li>
+                <li>vsftpd.service</li>
+                <li>postgresql.service</li>
+            </ul>
+            <p>To list active units:</p>
             <div>
-                <pre><code class="language-bash">Created symlink from /etc/systemd/system/multi-user.target.wants/vsftpd.service to /usr/lib/systemd/system/vsftpd.service.</code></pre>
+                <pre><code class="language-bash">systemctl list-units</code></pre>
             </div>
-            <p>The <code>systemctl enable</code> command sets the service to start on boot. The symlink confirmation indicates success.</p>
-            <p><strong>Expected Output (Start command)</strong>:</p>
+            <p>To list all service units, including inactive ones:</p>
             <div>
-                <pre><code class="language-bash">No output (command completes silently)</code></pre>
+                <pre><code class="language-bash">systemctl list-units --type=service --all</code></pre>
             </div>
-            <p>No output means the service started successfully. Use <code>systemctl status</code> to verify.</p>
-            <p><strong>Step 3: Check service status</strong></p>
+            <h3 id="service-states">Service States</h3>
+            <p>A service can have several important states.</p>
+            <ul>
+                <li>loaded systemd successfully read the unit file</li>
+                <li>active the unit is currently active</li>
+                <li>inactive the unit is not active</li>
+                <li>failed the unit tried to start but failed</li>
+                <li>enabled the unit is configured to start at boot</li>
+                <li>disabled the unit is not configured to start at boot</li>
+                <li>static the unit cannot be enabled directly</li>
+                <li>masked the unit is blocked from being started</li>
+            </ul>
+            <p>Important distinction:</p>
+            <ul>
+                <li>start/stop controls the current running state.</li>
+                <li>enable/disable controls boot-time behavior.</li>
+            </ul>
+            <p>For example:</p>
+            <ul>
+                <li>A service can be active but disabled.</li>
+                <li>
+                    <p>That means it is running now, but will not automatically start at boot.</p>
+                </li>
+                <li>
+                    <p>A service can be inactive but enabled.</p>
+                </li>
+                <li>That means it is stopped now, but should start at boot.</li>
+            </ul>
+            <h3 id="checking-service-status">Checking Service Status</h3>
+            <p>Use:</p>
             <div>
-                <pre><code class="language-bash">systemctl status vsftpd</code></pre>
+                <pre><code class="language-bash">systemctl status sshd.service</code></pre>
             </div>
-            <p><strong>Expected Output</strong>:</p>
+            <p>or sometimes, depending on distribution:</p>
             <div>
-                <pre><code class="language-bash">● vsftpd.service - Vsftpd ftp daemon
+                <pre><code class="language-bash">systemctl status ssh.service</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">● sshd.service - OpenSSH server daemon
+     Loaded: loaded (/usr/lib/systemd/system/sshd.service; enabled; preset: enabled)
+     Active: active (running) since Mon 2026-06-01 10:30:00 CEST; 5min ago
+   Main PID: 1234 (sshd)
+      Tasks: 1
+     Memory: 6.2M
+        CPU: 120ms
+     CGroup: /system.slice/sshd.service
+             └─1234 /usr/sbin/sshd -D</code></pre>
+            </div>
+            <p>Interpretation: </p>
+            <ul>
+                <li>Loaded means systemd found and loaded the unit file.</li>
+                <li>enabled means the service is configured to start at boot.</li>
+                <li>active (running) means it is currently running.</li>
+                <li>Main PID shows the main service process.</li>
+            </ul>
+            <p>If a service is broken, status output often includes recent log lines.</p>
+            <h3 id="starting-and-stopping-services">Starting and Stopping Services</h3>
+            <p>To start a service immediately:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl start sshd.service</code></pre>
+            </div>
+            <p>To stop it immediately:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl stop sshd.service</code></pre>
+            </div>
+            <p>To restart it:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl restart sshd.service</code></pre>
+            </div>
+            <p>To reload configuration without fully stopping the service, if supported:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl reload sshd.service</code></pre>
+            </div>
+            <p>If you are not sure whether reload is supported, use:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl reload-or-restart sshd.service</code></pre>
+            </div>
+            <h3 id="enabling-and-disabling-services">Enabling and Disabling Services</h3>
+            <p>To enable a service at boot:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl enable sshd.service</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Created symlink /etc/systemd/system/multi-user.target.wants/sshd.service → /usr/lib/systemd/system/sshd.service.</code></pre>
+            </div>
+            <p>Interpretation: </p>
+            <ul>
+                <li>systemd created a startup link.</li>
+                <li>The service should start automatically at boot.</li>
+            </ul>
+            <p>To disable a service at boot:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl disable sshd.service</code></pre>
+            </div>
+            <p>This prevents automatic startup, but it does not necessarily stop the service right now.</p>
+            <p>To enable and start at the same time:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl enable --now sshd.service</code></pre>
+            </div>
+            <p>To disable and stop at the same time:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl disable --now sshd.service</code></pre>
+            </div>
+            <h3 id="masking-services">Masking Services</h3>
+            <p>Masking is stronger than disabling.</p>
+            <p>A disabled service can still be started manually.</p>
+            <p>A masked service cannot be started unless it is unmasked first.</p>
+            <p>Mask a service:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl mask service-name.service</code></pre>
+            </div>
+            <p>Unmask it:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl unmask service-name.service</code></pre>
+            </div>
+            <p>Use masking carefully. It is useful when you want to prevent a service from being started by mistake or by another dependency.</p>
+            <h3 id="listing-services">Listing Services</h3>
+            <p>List active services:</p>
+            <div>
+                <pre><code class="language-bash">systemctl list-units --type=service</code></pre>
+            </div>
+            <p>List all services:</p>
+            <div>
+                <pre><code class="language-bash">systemctl list-units --type=service --all</code></pre>
+            </div>
+            <p>List enabled services:</p>
+            <div>
+                <pre><code class="language-bash">systemctl list-unit-files --type=service | grep enabled</code></pre>
+            </div>
+            <p>List failed services:</p>
+            <div>
+                <pre><code class="language-bash">systemctl --failed</code></pre>
+            </div>
+            <p>Example failed output:</p>
+            <div>
+                <pre><code class="language-text">UNIT                  LOAD   ACTIVE SUB    DESCRIPTION
+myapp.service          loaded failed failed My Test Service</code></pre>
+            </div>
+            <p>Interpretation: </p>
+            <ul>
+                <li>myapp.service tried to run but failed.</li>
+                <li>Use systemctl status and journalctl to inspect why.</li>
+            </ul>
+            <h3 id="service-logs-with-journalctl">Service Logs with <code>journalctl</code></h3>
+            <p>systemd services usually log to the system journal.</p>
+            <p>To view logs for a service:</p>
+            <div>
+                <pre><code class="language-bash">journalctl -u sshd.service</code></pre>
+            </div>
+            <p>To view logs from the current boot:</p>
+            <div>
+                <pre><code class="language-bash">journalctl -u sshd.service -b</code></pre>
+            </div>
+            <p>To follow logs live:</p>
+            <div>
+                <pre><code class="language-bash">journalctl -u sshd.service -f</code></pre>
+            </div>
+            <p>To show recent lines:</p>
+            <div>
+                <pre><code class="language-bash">journalctl -u sshd.service -n 50</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Jun 01 10:30:00 host systemd[1]: Started OpenSSH server daemon.
+Jun 01 10:32:10 host sshd[1500]: Accepted publickey for adam from 192.168.1.20 port 53022</code></pre>
+            </div>
+            <p>Interpretation: </p>
+            <ul>
+                <li>The service started successfully.</li>
+                <li>A user logged in using an SSH public key.</li>
+            </ul>
+            <h3 id="dependencies">Dependencies</h3>
+            <p>Services may depend on other units.</p>
+            <p>For example, a web service may need the network to be online before it starts.</p>
+            <p>To list dependencies:</p>
+            <div>
+                <pre><code class="language-bash">systemctl list-dependencies nginx.service</code></pre>
+            </div>
+            <p>To see what depends on a service:</p>
+            <div>
+                <pre><code class="language-bash">systemctl list-dependencies --reverse nginx.service</code></pre>
+            </div>
+            <p>To check dependencies of a target:</p>
+            <div>
+                <pre><code class="language-bash">systemctl list-dependencies multi-user.target</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">systemctl list-dependencies multi-user.target | grep sshd</code></pre>
+            </div>
+            <p>If output appears, <code>sshd.service</code> is part of that dependency tree.</p>
+            <h3 id="targets">Targets</h3>
+            <p>A target is a group of units.</p>
+            <p>Targets are similar to boot milestones.</p>
+            <p>Common targets:</p>
+            <ul>
+                <li>basic.target basic system initialization</li>
+                <li>multi-user.target multi-user text/server mode</li>
+                <li>graphical.target graphical desktop mode</li>
+                <li>rescue.target rescue mode</li>
+                <li>emergency.target minimal emergency shell</li>
+            </ul>
+            <p>To see the default target:</p>
+            <div>
+                <pre><code class="language-bash">systemctl get-default</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">graphical.target</code></pre>
+            </div>
+            <p>Set default target:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl set-default multi-user.target</code></pre>
+            </div>
+            <h3 id="older-service-management-tools">Older Service Management Tools</h3>
+            <p>Older Linux systems may use SysV init scripts.</p>
+            <p>Common tools include:</p>
+            <ul>
+                <li>service</li>
+                <li>chkconfig</li>
+                <li>/etc/init.d/</li>
+            </ul>
+            <p>List old init scripts:</p>
+            <div>
+                <pre><code class="language-bash">ls /etc/init.d</code></pre>
+            </div>
+            <p>Start a service using the older interface:</p>
+            <div>
+                <pre><code class="language-bash">sudo service httpd start</code></pre>
+            </div>
+            <p>Enable a service on older Red Hat-style systems:</p>
+            <div>
+                <pre><code class="language-bash">sudo chkconfig httpd on</code></pre>
+            </div>
+            <p>Modern systems often keep the <code>service</code> command as a compatibility layer, but <code>systemctl</code> is preferred on systemd systems.</p>
+            <h3 id="installing-and-managing-an-ftp-server-example">Installing and Managing an FTP Server Example</h3>
+            <p>The uploaded notes use <code>vsftpd</code> as an example service.</p>
+            <p>FTP is useful for learning service management, ports, logs, and testing, but it is usually not preferred for secure production file transfer unless configured carefully with encryption. For secure remote administration, SSH/SFTP is usually safer.</p>
+            <h3 id="installing-vsftpd">Installing <code>vsftpd</code></h3>
+            <p>On Red Hat/CentOS-style systems:</p>
+            <div>
+                <pre><code class="language-bash">sudo yum install vsftpd</code></pre>
+            </div>
+            <p>or newer systems:</p>
+            <div>
+                <pre><code class="language-bash">sudo dnf install vsftpd</code></pre>
+            </div>
+            <p>On Debian/Ubuntu systems:</p>
+            <div>
+                <pre><code class="language-bash">sudo apt install vsftpd</code></pre>
+            </div>
+            <p>Check if it is installed on RPM-based systems:</p>
+            <div>
+                <pre><code class="language-bash">rpm -qa | grep vsftpd</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">vsftpd-3.0.2-29.el7.x86_64</code></pre>
+            </div>
+            <p>Interpretation: </p>
+            <div>
+                <pre><code class="language-text">The vsftpd package is installed.</code></pre>
+            </div>
+            <h3 id="configuring-vsftpd">Configuring <code>vsftpd</code></h3>
+            <p>The configuration file is commonly:</p>
+            <div>
+                <pre><code class="language-text">/etc/vsftpd/vsftpd.conf</code></pre>
+            </div>
+            <p>Open it:</p>
+            <div>
+                <pre><code class="language-bash">sudo vi /etc/vsftpd/vsftpd.conf</code></pre>
+            </div>
+            <p>Common options:</p>
+            <ul>
+                <li>anonymous_enable=NO</li>
+                <li>local_enable=YES</li>
+                <li>write_enable=YES</li>
+            </ul>
+            <p>Meaning:</p>
+            <ul>
+                <li>anonymous_enable controls anonymous FTP access.</li>
+                <li>local_enable allows local Linux users to log in.</li>
+                <li>write_enable allows uploads and file changes.</li>
+            </ul>
+            <p>After changing configuration, restart the service:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl restart vsftpd.service</code></pre>
+            </div>
+            <h3 id="starting-and-enabling-vsftpd">Starting and Enabling <code>vsftpd</code></h3>
+            <p>Start now:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl start vsftpd.service</code></pre>
+            </div>
+            <p>Enable at boot:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl enable vsftpd.service</code></pre>
+            </div>
+            <p>Enable and start together:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl enable --now vsftpd.service</code></pre>
+            </div>
+            <p>Check status:</p>
+            <div>
+                <pre><code class="language-bash">systemctl status vsftpd.service</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">● vsftpd.service - Vsftpd ftp daemon
    Loaded: loaded (/usr/lib/systemd/system/vsftpd.service; enabled; vendor preset: disabled)
-   Active: active (running) since Mon 2024-10-05 12:30:50 UTC; 5min ago</code></pre>
+   Active: active (running) since Mon 2026-06-01 12:30:50 CEST; 5min ago</code></pre>
             </div>
-            <p><strong>Interpretation</strong>:
-                - <code>Active: active (running)</code> indicates that the FTP service is running.</p>
-            <h3 id="3-checking-on-which-port-ftp-operates">3. <strong>Checking on Which Port FTP Operates</strong></h3>
-            <p><strong>Step 1: Check the port being used</strong></p>
-            <div>
-                <pre><code class="language-bash">netstat -tulnp | grep ftp</code></pre>
-            </div>
-            <p><strong>Expected Output</strong>:</p>
-            <div>
-                <pre><code class="language-bash">tcp   0  0 0.0.0.0:21     0.0.0.0:*       LISTEN      1234/vsftpd
-tcp6  0  0 :::21          :::*            LISTEN      1234/vsftpd</code></pre>
-            </div>
+            <p>Interpretation: </p>
             <ul>
-                <li>This shows that the FTP server is listening on port <code>21</code> (the standard FTP port).</li>
-                <li><code>1234</code> is the process ID (PID) of the vsftpd service.</li>
-                <li><code>LISTEN</code> means it’s actively waiting for incoming connections.</li>
+                <li>The service is installed.</li>
+                <li>It is enabled for boot.</li>
+                <li>It is currently running.</li>
             </ul>
-            <h3 id="4-checking-if-the-port-is-free">4. <strong>Checking if the Port is Free</strong></h3>
-            <p><strong>Step 1: Check if port 21 is in use</strong></p>
+            <h3 id="checking-listening-ports">Checking Listening Ports</h3>
+            <p>FTP normally listens on TCP port 21.</p>
+            <p>Use <code>ss</code>:</p>
             <div>
-                <pre><code class="language-bash">netstat -an | grep 21</code></pre>
+                <pre><code class="language-bash">sudo ss -tulnp | grep ':21'</code></pre>
             </div>
-            <p><strong>Expected Output</strong>:</p>
+            <p>Example output:</p>
             <div>
-                <pre><code class="language-bash">tcp   0  0 0.0.0.0:21     0.0.0.0:*       LISTEN</code></pre>
+                <pre><code class="language-text">tcp LISTEN 0 32 0.0.0.0:21 0.0.0.0:* users:(("vsftpd",pid=1234,fd=3))</code></pre>
             </div>
-            <p>If you see <code>LISTEN</code> on port <code>21</code>, it means the port is in use by FTP. If there's no output, the port is free.</p>
-            <p><strong>Alternative:</strong></p>
+            <p>Interpretation: </p>
+            <ul>
+                <li>vsftpd is listening on TCP port 21.</li>
+                <li>The process ID is 1234.</li>
+                <li>The service is ready for incoming FTP connections.</li>
+            </ul>
+            <p>Older command:</p>
             <div>
-                <pre><code class="language-bash">ss -an | grep 21</code></pre>
+                <pre><code class="language-bash">sudo netstat -tulnp | grep ftp</code></pre>
             </div>
-            <p><strong>Expected Output</strong>:</p>
-            <div>
-                <pre><code class="language-bash">LISTEN     0      100    0.0.0.0:21      0.0.0.0:*</code></pre>
-            </div>
-            <h3 id="5-testing-the-ftp-server">5. <strong>Testing the FTP Server</strong></h3>
-            <p><strong>Step 1: Verify that the FTP service is running</strong></p>
-            <div>
-                <pre><code class="language-bash">ps -ef | grep vsftpd</code></pre>
-            </div>
-            <p><strong>Expected Output</strong>:</p>
-            <div>
-                <pre><code class="language-bash">root     1234     1  0 12:30 ?        00:00:00 /usr/sbin/vsftpd /etc/vsftpd/vsftpd.conf</code></pre>
-            </div>
-            <p>This output shows that vsftpd is running with PID <code>1234</code>.</p>
-            <p><strong>Step 2: Test FTP connection on localhost</strong></p>
+            <p>On modern Linux, <code>ss</code> is usually preferred.</p>
+            <h3 id="testing-an-ftp-service">Testing an FTP Service</h3>
+            <p>Test locally:</p>
             <div>
                 <pre><code class="language-bash">ftp localhost</code></pre>
             </div>
-            <p><strong>Expected Output</strong>:</p>
+            <p>Example output:</p>
             <div>
-                <pre><code class="language-bash">Connected to localhost (127.0.0.1).
+                <pre><code class="language-text">Connected to localhost (127.0.0.1).
 220 (vsFTPd 3.0.2)
 Name (localhost:user):</code></pre>
             </div>
+            <p>Interpretation: </p>
             <ul>
-                <li>The <code>220 (vsFTPd 3.0.2)</code> message indicates the FTP server is ready.</li>
-                <li>You can enter a username to continue, or test anonymous access with <code>anonymous</code>.</li>
+                <li>The FTP server accepted a connection.</li>
+                <li>The 220 message means the server is ready.</li>
             </ul>
-            <p><strong>Step 3: Test FTP connection from another machine</strong></p>
+            <p>Test from another machine:</p>
             <div>
-                <pre><code class="language-bash">ftp &lt;server_ip&gt;</code></pre>
+                <pre><code class="language-bash">ftp SERVER_IP</code></pre>
             </div>
-            <p><strong>Expected Output</strong>:</p>
+            <p>If local testing works but remote testing fails, check:</p>
+            <ul>
+                <li>firewall rules</li>
+                <li>network connectivity</li>
+                <li>service listen address</li>
+                <li>SELinux or security policy</li>
+                <li>router or NAT rules</li>
+            </ul>
+            <h3 id="checking-ftp-logs">Checking FTP Logs</h3>
+            <p>Common log file:</p>
             <div>
-                <pre><code class="language-bash">Connected to &lt;server_ip&gt;.
-220 (vsFTPd 3.0.2)
-Name (&lt;server_ip&gt;:user):</code></pre>
+                <pre><code class="language-bash">sudo tail -f /var/log/vsftpd.log</code></pre>
             </div>
-            <p><strong>Interpretation</strong>:
-                - This output shows that the FTP server is accessible from the network.</p>
-            <p><strong>Step 4: Upload and download test files</strong>
-                1. <strong>Upload file</strong>:</p>
-            <p>CODE_BLOCK_PLACEHOLDER
-                <strong>Expected Output</strong>:
-            </p>
+            <p>Example output:</p>
             <div>
-                <pre><code class="language-bash">put testfile.txt</code></pre>
+                <pre><code class="language-text">Mon Jun  1 12:35:15 2026 [pid 1235] CONNECT: Client "::1"
+Mon Jun  1 12:35:16 2026 [pid 1235] [anonymous] OK LOGIN: Client "::1"
+Mon Jun  1 12:36:20 2026 [pid 1236] [user] UPLOAD: Client "::1", "/home/user/testfile.txt"</code></pre>
             </div>
-            <p><strong>Interpretation</strong>: The file <code>testfile.txt</code> was successfully uploaded.</p>
+            <p>Interpretation: </p>
+            <ul>
+                <li>A client connected.</li>
+                <li>Anonymous login succeeded.</li>
+                <li>A file upload occurred.</li>
+            </ul>
+            <p>You can also use systemd logs:</p>
+            <div>
+                <pre><code class="language-bash">journalctl -u vsftpd.service -f</code></pre>
+            </div>
+            <h3 id="creating-a-custom-systemd-service">Creating a Custom systemd Service</h3>
+            <p>A custom service is defined using a unit file.</p>
+            <p>System-level service unit files are usually stored in:</p>
+            <div>
+                <pre><code class="language-text">/etc/systemd/system/</code></pre>
+            </div>
+            <p>A simple service file has three main sections:</p>
+            <ul>
+                <li>[Unit]</li>
+                <li>[Service]</li>
+                <li>[Install]</li>
+            </ul>
+            <h3 id="unit-file-sections">Unit File Sections</h3>
+            <p><code>[Unit]</code> describes the service and its ordering or dependencies.</p>
+            <p>Common directives:</p>
+            <ul>
+                <li>Description=</li>
+                <li>Documentation=</li>
+                <li>After=</li>
+                <li>Wants=</li>
+                <li>Requires=</li>
+            </ul>
+            <p><code>[Service]</code> describes how the service runs.</p>
+            <p>Common directives:</p>
+            <ul>
+                <li>Type=</li>
+                <li>ExecStart=</li>
+                <li>ExecStop=</li>
+                <li>ExecReload=</li>
+                <li>Restart=</li>
+                <li>User=</li>
+                <li>WorkingDirectory=</li>
+                <li>Environment=</li>
+            </ul>
+            <p><code>[Install]</code> describes how the service is enabled at boot.</p>
+            <p>Common directive:</p>
+            <div>
+                <pre><code class="language-text">WantedBy=multi-user.target</code></pre>
+            </div>
+            <h3 id="simple-custom-service-example">Simple Custom Service Example</h3>
+            <p>Create an executable script:</p>
+            <div>
+                <pre><code class="language-bash">sudo tee /usr/local/bin/sample-service.sh &gt; /dev/null &lt;&lt;'EOF'
+#!/bin/bash
+while true; do
+    echo "$(date): sample service is running"
+    sleep 10
+done
+EOF
+
+sudo chmod +x /usr/local/bin/sample-service.sh</code></pre>
+            </div>
+            <p>Create a service unit:</p>
+            <div>
+                <pre><code class="language-bash">sudo tee /etc/systemd/system/sample.service &gt; /dev/null &lt;&lt;'EOF'
+[Unit]
+Description=Sample Script Service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/sample-service.sh
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF</code></pre>
+            </div>
+            <p>Reload systemd:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl daemon-reload</code></pre>
+            </div>
+            <p>Start the service:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl start sample.service</code></pre>
+            </div>
+            <p>Check status:</p>
+            <div>
+                <pre><code class="language-bash">systemctl status sample.service</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">● sample.service - Sample Script Service
+     Loaded: loaded (/etc/systemd/system/sample.service; disabled)
+     Active: active (running) since Mon 2026-06-01 13:00:00 CEST
+   Main PID: 2401 (sample-service)</code></pre>
+            </div>
+            <p>Interpretation: </p>
+            <ul>
+                <li>The custom service is loaded.</li>
+                <li>It is currently running.</li>
+                <li>It is disabled, so it will not start at boot unless enabled.</li>
+            </ul>
+            <p>Enable it:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl enable sample.service</code></pre>
+            </div>
+            <h3 id="common-service-types">Common Service Types</h3>
+            <p>The <code>Type=</code> field controls how systemd decides whether a service has started successfully.</p>
+            <p>Common types:</p>
+            <ul>
+                <li>simple process started by ExecStart is the main process</li>
+                <li>exec similar to simple, but waits until exec succeeds</li>
+                <li>forking service forks into background</li>
+                <li>oneshot command runs once and exits</li>
+                <li>notify service tells systemd when it is ready</li>
+                <li>idle waits until other startup jobs are dispatched</li>
+            </ul>
+            <p>For most simple scripts, use:</p>
+            <div>
+                <pre><code class="language-text">Type=simple</code></pre>
+            </div>
+            <p>For one-time tasks, use:</p>
+            <div>
+                <pre><code class="language-text">Type=oneshot</code></pre>
+            </div>
+            <h3 id="scenario-1-simulate-a-stopped-service">Scenario 1: Simulate a Stopped Service</h3>
+            <p>Practice identifying when a service is installed but not running.</p>
+            <h4 id="simulate-the-problem">Simulate the Problem</h4>
+            <p>Use the sample service or another safe test service:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl stop sample.service</code></pre>
+            </div>
+            <h4 id="check-status">Check Status</h4>
+            <div>
+                <pre><code class="language-bash">systemctl status sample.service</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">● sample.service - Sample Script Service
+     Loaded: loaded (/etc/systemd/system/sample.service; enabled)
+     Active: inactive (dead)</code></pre>
+            </div>
+            <p>Interpretation: </p>
+            <ul>
+                <li>The service exists.</li>
+                <li>It is enabled for boot.</li>
+                <li>It is not currently running.</li>
+                <li>This is a runtime state problem, not a boot enablement problem.</li>
+            </ul>
+            <h4 id="fix">Fix</h4>
+            <div>
+                <pre><code class="language-bash">sudo systemctl start sample.service</code></pre>
+            </div>
+            <p>Verify:</p>
+            <div>
+                <pre><code class="language-bash">systemctl status sample.service</code></pre>
+            </div>
+            <p>Expected:</p>
+            <div>
+                <pre><code class="language-text">Active: active (running)</code></pre>
+            </div>
+            <h3 id="scenario-2-simulate-a-disabled-service">Scenario 2: Simulate a Disabled Service</h3>
+            <p>Understand the difference between stopped and disabled.</p>
+            <h4 id="simulate-the-problem">Simulate the Problem</h4>
+            <div>
+                <pre><code class="language-bash">sudo systemctl disable sample.service</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">systemctl is-enabled sample.service</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">disabled</code></pre>
+            </div>
+            <p>The service may still be running.</p>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">systemctl is-active sample.service</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">active</code></pre>
+            </div>
+            <p>Interpretation: </p>
+            <ul>
+                <li>The service is running now.</li>
+                <li>But it will not automatically start at boot.</li>
+                <li>This is boot-time configuration, not current runtime state.</li>
+            </ul>
+            <h4 id="fix">Fix</h4>
+            <div>
+                <pre><code class="language-bash">sudo systemctl enable sample.service</code></pre>
+            </div>
+            <p>Or enable and start:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl enable --now sample.service</code></pre>
+            </div>
+            <h3 id="scenario-3-simulate-a-service-that-fails-because-execstart-is-wrong">Scenario 3: Simulate a Service That Fails Because ExecStart Is Wrong</h3>
+            <p>Practice diagnosing a failed custom service.</p>
+            <h4 id="simulate-the-problem">Simulate the Problem</h4>
+            <p>Create a broken unit:</p>
+            <div>
+                <pre><code class="language-bash">sudo tee /etc/systemd/system/broken.service &gt; /dev/null &lt;&lt;'EOF'
+[Unit]
+Description=Broken Service Example
+
+[Service]
+Type=simple
+ExecStart=/not/a/real/path
+
+[Install]
+WantedBy=multi-user.target
+EOF</code></pre>
+            </div>
+            <p>Reload and start:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl daemon-reload
+sudo systemctl start broken.service</code></pre>
+            </div>
+            <h4 id="check-status">Check Status</h4>
+            <div>
+                <pre><code class="language-bash">systemctl status broken.service</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">● broken.service - Broken Service Example
+     Loaded: loaded (/etc/systemd/system/broken.service; disabled)
+     Active: failed (Result: exit-code)
+    Process: 2500 ExecStart=/not/a/real/path (code=exited, status=203/EXEC)</code></pre>
+            </div>
+            <p>Interpretation: </p>
+            <ul>
+                <li>status=203/EXEC usually means systemd could not execute the command.</li>
+                <li>The ExecStart path is wrong, missing, or not executable.</li>
+            </ul>
+            <h4 id="check-logs">Check Logs</h4>
+            <div>
+                <pre><code class="language-bash">journalctl -u broken.service -b</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">systemd[1]: broken.service: Failed to locate executable /not/a/real/path
+systemd[1]: broken.service: Failed at step EXEC spawning /not/a/real/path: No such file or directory</code></pre>
+            </div>
+            <h4 id="fix">Fix</h4>
+            <p>Edit the unit:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl edit --full broken.service</code></pre>
+            </div>
+            <p>Set a valid executable path.</p>
+            <p>Then reload and restart:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl daemon-reload
+sudo systemctl restart broken.service</code></pre>
+            </div>
+            <h3 id="scenario-4-simulate-a-service-crash-and-auto-restart">Scenario 4: Simulate a Service Crash and Auto-Restart</h3>
+            <p>Show how <code>Restart=</code> affects service behavior.</p>
+            <h4 id="create-a-crashing-script">Create a Crashing Script</h4>
+            <div>
+                <pre><code class="language-bash">sudo tee /usr/local/bin/crash-service.sh &gt; /dev/null &lt;&lt;'EOF'
+#!/bin/bash
+echo "crash service started"
+sleep 2
+echo "crash service exiting with error"
+exit 1
+EOF
+
+sudo chmod +x /usr/local/bin/crash-service.sh</code></pre>
+            </div>
+            <p>Create the unit:</p>
+            <div>
+                <pre><code class="language-bash">sudo tee /etc/systemd/system/crash.service &gt; /dev/null &lt;&lt;'EOF'
+[Unit]
+Description=Crash Test Service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/crash-service.sh
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+EOF</code></pre>
+            </div>
+            <p>Start it:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl daemon-reload
+sudo systemctl start crash.service</code></pre>
+            </div>
+            <h4 id="check-status">Check Status</h4>
+            <div>
+                <pre><code class="language-bash">systemctl status crash.service</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">● crash.service - Crash Test Service
+     Loaded: loaded (/etc/systemd/system/crash.service; disabled)
+     Active: activating (auto-restart) (Result: exit-code)
+    Process: 2701 ExecStart=/usr/local/bin/crash-service.sh (code=exited, status=1/FAILURE)</code></pre>
+            </div>
+            <p>Interpretation: </p>
+            <ul>
+                <li>The service exits with an error.</li>
+                <li>systemd is restarting it because Restart=always is set.</li>
+                <li>This can create a restart loop if the underlying problem is not fixed.</li>
+            </ul>
+            <h4 id="check-logs">Check Logs</h4>
+            <div>
+                <pre><code class="language-bash">journalctl -u crash.service -f</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">crash-service.sh[2701]: crash service started
+crash-service.sh[2701]: crash service exiting with error
+systemd[1]: crash.service: Main process exited, code=exited, status=1/FAILURE
+systemd[1]: crash.service: Scheduled restart job, restart counter is at 3.</code></pre>
+            </div>
+            <h4 id="fix">Fix</h4>
+            <p>Fix the script or change restart policy.</p>
+            <p>Stop the test:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl stop crash.service</code></pre>
+            </div>
+            <h3 id="scenario-5-simulate-a-port-conflict">Scenario 5: Simulate a Port Conflict</h3>
+            <p>Understand why a network service may fail to start when its port is already in use.</p>
+            <h4 id="simulate-the-problem">Simulate the Problem</h4>
+            <p>Start a temporary listener on port 8080:</p>
+            <div>
+                <pre><code class="language-bash">python3 -m http.server 8080</code></pre>
+            </div>
+            <p>In another terminal, check the port:</p>
+            <div>
+                <pre><code class="language-bash">ss -tulnp | grep ':8080'</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">tcp LISTEN 0 5 0.0.0.0:8080 0.0.0.0:* users:(("python3",pid=3001,fd=3))</code></pre>
+            </div>
+            <p>Now start another service configured to use the same port.</p>
+            <p>Example failure log may look like:</p>
+            <div>
+                <pre><code class="language-text">Address already in use
+Failed to bind to 0.0.0.0:8080</code></pre>
+            </div>
+            <p>Interpretation: </p>
+            <ul>
+                <li>The service is not failing because systemd is broken.</li>
+                <li>It is failing because another process already owns the port.</li>
+            </ul>
+            <h4 id="fix">Fix</h4>
+            <p>Find and stop the conflicting process:</p>
+            <div>
+                <pre><code class="language-bash">sudo ss -tulnp | grep ':8080'
+sudo kill 3001</code></pre>
+            </div>
+            <p>Or configure one service to use a different port.</p>
+            <h3 id="scenario-6-simulate-a-service-configuration-error">Scenario 6: Simulate a Service Configuration Error</h3>
+            <p>Practice checking service logs after a bad configuration change.</p>
+            <h4 id="simulate-the-problem">Simulate the Problem</h4>
+            <p>For a real service like <code>nginx</code>, a bad config might cause restart failure.</p>
+            <p>For a safer custom example, create a script that exits when a config file contains <code>bad</code>.</p>
+            <div>
+                <pre><code class="language-bash">sudo tee /usr/local/bin/config-check-service.sh &gt; /dev/null &lt;&lt;'EOF'
+#!/bin/bash
+if grep -q bad /etc/config-check-service.conf; then
+    echo "Bad configuration found"
+    exit 1
+fi
+
+echo "Configuration OK"
+sleep infinity
+EOF
+
+sudo chmod +x /usr/local/bin/config-check-service.sh
+echo "bad=true" | sudo tee /etc/config-check-service.conf</code></pre>
+            </div>
+            <p>Create service:</p>
+            <div>
+                <pre><code class="language-bash">sudo tee /etc/systemd/system/config-check.service &gt; /dev/null &lt;&lt;'EOF'
+[Unit]
+Description=Config Check Service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/config-check-service.sh
+
+[Install]
+WantedBy=multi-user.target
+EOF</code></pre>
+            </div>
+            <p>Start it:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl daemon-reload
+sudo systemctl start config-check.service</code></pre>
+            </div>
+            <h4 id="check-status">Check Status</h4>
+            <div>
+                <pre><code class="language-bash">systemctl status config-check.service</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Active: failed (Result: exit-code)
+Process: 3100 ExecStart=/usr/local/bin/config-check-service.sh (code=exited, status=1/FAILURE)</code></pre>
+            </div>
+            <h4 id="check-logs">Check Logs</h4>
+            <div>
+                <pre><code class="language-bash">journalctl -u config-check.service -b</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">config-check-service.sh[3100]: Bad configuration found</code></pre>
+            </div>
+            <p>Interpretation: </p>
+            <ul>
+                <li>The service started successfully enough to run the script.</li>
+                <li>The script rejected the configuration and exited.</li>
+                <li>The issue is application configuration, not systemd itself.</li>
+            </ul>
+            <h4 id="fix">Fix</h4>
+            <div>
+                <pre><code class="language-bash">echo "good=true" | sudo tee /etc/config-check-service.conf
+sudo systemctl restart config-check.service</code></pre>
+            </div>
+            <h3 id="scenario-7-simulate-a-missing-dependency-or-wrong-startup-order">Scenario 7: Simulate a Missing Dependency or Wrong Startup Order</h3>
+            <p>Understand service ordering with <code>After=</code> and <code>Wants=</code>.</p>
+            <p>Suppose a service needs the network before starting.</p>
+            <p>A unit may include:</p>
+            <div>
+                <pre><code class="language-systemd">[Unit]
+Description=Network Dependent App
+Wants=network-online.target
+After=network-online.target</code></pre>
+            </div>
+            <p>Meaning:</p>
+            <ul>
+                <li>Wants asks systemd to start network-online.target too.</li>
+                <li>After controls ordering, so this service starts after network-online.target.</li>
+            </ul>
+            <h4 id="check-dependencies">Check Dependencies</h4>
+            <div>
+                <pre><code class="language-bash">systemctl list-dependencies network-online.target</code></pre>
+            </div>
+            <p>Check reverse dependencies:</p>
+            <div>
+                <pre><code class="language-bash">systemctl list-dependencies --reverse network-online.target</code></pre>
+            </div>
+            <p>Interpretation: </p>
+            <ul>
+                <li>If a network-dependent service starts too early, it may fail because DNS or network routes are not ready.</li>
+                <li>Use After= and Wants= carefully to express startup requirements.</li>
+            </ul>
+            <p>Important note:</p>
+            <ul>
+                <li>After= only controls order.</li>
+                <li>It does not automatically pull in the dependency.</li>
+                <li>Use Wants= or Requires= when the other unit should also be started.</li>
+            </ul>
+            <h3 id="scenario-8-simulate-a-failed-service-and-reset-its-state">Scenario 8: Simulate a Failed Service and Reset Its State</h3>
+            <p>Understand failed state and how to clear it.</p>
+            <h4 id="simulate-failure">Simulate Failure</h4>
+            <p>Use the broken service:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl start broken.service</code></pre>
+            </div>
+            <p>Check failed services:</p>
+            <div>
+                <pre><code class="language-bash">systemctl --failed</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">UNIT             LOAD   ACTIVE SUB    DESCRIPTION
+broken.service   loaded failed failed Broken Service Example</code></pre>
+            </div>
+            <p>Interpretation: </p>
+            <ul>
+                <li>systemd remembers that the service failed.</li>
+                <li>Even after fixing the issue, the failed state may remain until reset.</li>
+            </ul>
+            <h4 id="reset-failed-state">Reset Failed State</h4>
+            <div>
+                <pre><code class="language-bash">sudo systemctl reset-failed broken.service</code></pre>
+            </div>
+            <p>Check again:</p>
+            <div>
+                <pre><code class="language-bash">systemctl --failed</code></pre>
+            </div>
+            <p>Expected output:</p>
+            <div>
+                <pre><code class="language-text">0 loaded units listed.</code></pre>
+            </div>
+            <h3 id="scenario-9-simulate-a-masked-service">Scenario 9: Simulate a Masked Service</h3>
+            <p>Understand why a service may refuse to start even though it exists.</p>
+            <h4 id="simulate">Simulate</h4>
+            <div>
+                <pre><code class="language-bash">sudo systemctl mask sample.service</code></pre>
+            </div>
+            <p>Try to start it:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl start sample.service</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Failed to start sample.service: Unit sample.service is masked.</code></pre>
+            </div>
+            <p>Interpretation: </p>
+            <ul>
+                <li>The service is intentionally blocked.</li>
+                <li>Starting it is not allowed while it is masked.</li>
+            </ul>
+            <h4 id="fix">Fix</h4>
+            <div>
+                <pre><code class="language-bash">sudo systemctl unmask sample.service
+sudo systemctl start sample.service</code></pre>
+            </div>
+            <h3 id="scenario-10-simulate-a-service-consuming-too-much-cpu">Scenario 10: Simulate a Service Consuming Too Much CPU</h3>
+            <p>Use service monitoring tools to identify a resource-heavy service.</p>
+            <h4 id="create-a-cpu-heavy-service">Create a CPU-Heavy Service</h4>
+            <div>
+                <pre><code class="language-bash">sudo tee /usr/local/bin/cpu-service.sh &gt; /dev/null &lt;&lt;'EOF'
+#!/bin/bash
+while true; do
+    :
+done
+EOF
+
+sudo chmod +x /usr/local/bin/cpu-service.sh</code></pre>
+            </div>
+            <p>Create unit:</p>
+            <div>
+                <pre><code class="language-bash">sudo tee /etc/systemd/system/cpu-test.service &gt; /dev/null &lt;&lt;'EOF'
+[Unit]
+Description=CPU Test Service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/cpu-service.sh
+
+[Install]
+WantedBy=multi-user.target
+EOF</code></pre>
+            </div>
+            <p>Start:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl daemon-reload
+sudo systemctl start cpu-test.service</code></pre>
+            </div>
+            <h4 id="check-with-systemctl-status">Check with <code>systemctl status</code></h4>
+            <div>
+                <pre><code class="language-bash">systemctl status cpu-test.service</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">● cpu-test.service - CPU Test Service
+     Active: active (running)
+   Main PID: 3500 (cpu-service.sh)
+      Tasks: 1
+        CPU: 1min 20s</code></pre>
+            </div>
+            <h4 id="check-with-top">Check with <code>top</code></h4>
+            <div>
+                <pre><code class="language-bash">top -p 3500</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">PID USER  PR NI  VIRT RES SHR S %CPU %MEM TIME+ COMMAND
+3500 root 20  0  4000 900 800 R 99.9  0.0  1:20 cpu-service.sh</code></pre>
+            </div>
+            <p>Interpretation: </p>
+            <ul>
+                <li>The service is active.</li>
+                <li>Its main process is consuming nearly one full CPU core.</li>
+                <li>This is a service-level CPU bottleneck.</li>
+            </ul>
+            <h4 id="fix">Fix</h4>
+            <p>Stop the test service:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl stop cpu-test.service</code></pre>
+            </div>
+            <p>For real services, investigate configuration, loops, workload spikes, or bugs.</p>
+            <h3 id="scenario-11-create-a-one-shot-service">Scenario 11: Create a One-Shot Service</h3>
+            <p>Understand services that run once and exit successfully.</p>
+            <p>Create script:</p>
+            <div>
+                <pre><code class="language-bash">sudo tee /usr/local/bin/oneshot-task.sh &gt; /dev/null &lt;&lt;'EOF'
+#!/bin/bash
+echo "$(date): oneshot task ran" &gt;&gt; /var/log/oneshot-task.log
+EOF
+
+sudo chmod +x /usr/local/bin/oneshot-task.sh</code></pre>
+            </div>
+            <p>Create unit:</p>
+            <div>
+                <pre><code class="language-bash">sudo tee /etc/systemd/system/oneshot-task.service &gt; /dev/null &lt;&lt;'EOF'
+[Unit]
+Description=One Shot Task Example
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/oneshot-task.sh
+
+[Install]
+WantedBy=multi-user.target
+EOF</code></pre>
+            </div>
+            <p>Run:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl daemon-reload
+sudo systemctl start oneshot-task.service</code></pre>
+            </div>
+            <p>Check status:</p>
+            <div>
+                <pre><code class="language-bash">systemctl status oneshot-task.service</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Active: inactive (dead)
+Process: 3600 ExecStart=/usr/local/bin/oneshot-task.sh (code=exited, status=0/SUCCESS)</code></pre>
+            </div>
+            <p>Interpretation: </p>
+            <ul>
+                <li>The service is inactive now because the task finished.</li>
+                <li>This is normal for Type=oneshot.</li>
+                <li>status=0/SUCCESS means it completed successfully.</li>
+            </ul>
+            <h3 id="scenario-12-timers-as-scheduled-services">Scenario 12: Timers as Scheduled Services</h3>
+            <p>Understand systemd timers as an alternative to cron.</p>
+            <p>A timer activates a service on a schedule.</p>
+            <p>Create a timer for the one-shot task:</p>
+            <div>
+                <pre><code class="language-bash">sudo tee /etc/systemd/system/oneshot-task.timer &gt; /dev/null &lt;&lt;'EOF'
+[Unit]
+Description=Run oneshot task every minute
+
+[Timer]
+OnCalendar=*:0/1
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF</code></pre>
+            </div>
+            <p>Reload and start timer:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl daemon-reload
+sudo systemctl enable --now oneshot-task.timer</code></pre>
+            </div>
+            <p>List timers:</p>
+            <div>
+                <pre><code class="language-bash">systemctl list-timers --all</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">NEXT                        LEFT LAST                        PASSED UNIT                 ACTIVATES
+Mon 2026-06-01 14:01:00     30s  Mon 2026-06-01 14:00:00     30s    oneshot-task.timer   oneshot-task.service</code></pre>
+            </div>
+            <p>Interpretation: </p>
+            <ul>
+                <li>The timer runs oneshot-task.service every minute.</li>
+                <li>The ACTIVATES column shows which service the timer starts.</li>
+            </ul>
+            <h3 id="service-troubleshooting-workflow">Service Troubleshooting Workflow</h3>
+            <p>When a service is not working, troubleshoot in layers.</p>
             <ol>
-                <li><strong>Download file</strong>:</li>
+                <li>Is the service installed?</li>
+                <li>Does systemd know about the unit?</li>
+                <li>Is it enabled for boot?</li>
+                <li>Is it active right now?</li>
+                <li>Did it fail?</li>
+                <li>What do the logs say?</li>
+                <li>Is the configuration valid?</li>
+                <li>Are required ports available?</li>
+                <li>Are dependencies ready?</li>
+                <li>Are permissions, users, or paths wrong?</li>
             </ol>
-            <p>CODE_BLOCK_PLACEHOLDER
-                <strong>Expected Output</strong>:
-            </p>
+            <h3 id="step-1-check-unit-exists">Step 1: Check Unit Exists</h3>
             <div>
-                <pre><code class="language-bash">200 PORT command successful.
-150 Ok to send data.
-226 Transfer complete.</code></pre>
+                <pre><code class="language-bash">systemctl status service-name.service</code></pre>
             </div>
-            <p><strong>Interpretation</strong>: The file was successfully downloaded.</p>
-            <p><strong>Step 5: Exit the FTP session</strong></p>
+            <p>If output says:</p>
             <div>
-                <pre><code class="language-bash">get testfile.txt</code></pre>
+                <pre><code class="language-text">Unit service-name.service could not be found.</code></pre>
             </div>
-            <p><strong>Expected Output</strong>:</p>
+            <p>then the package may not be installed, or the unit name may be wrong.</p>
+            <p>Search unit files:</p>
             <div>
-                <pre><code class="language-bash">200 PORT command successful.
-150 Opening BINARY mode data connection.
-226 Transfer complete.</code></pre>
+                <pre><code class="language-bash">systemctl list-unit-files | grep service-name</code></pre>
             </div>
-            <h3 id="6-check-ftp-server-logs">6. <strong>Check FTP Server Logs</strong></h3>
+            <h3 id="step-2-check-active-state">Step 2: Check Active State</h3>
             <div>
-                <pre><code class="language-bash">bye</code></pre>
+                <pre><code class="language-bash">systemctl is-active service-name.service</code></pre>
             </div>
-            <p><strong>Expected Output</strong>:</p>
-            <div>
-                <pre><code class="language-bash">221 Goodbye.</code></pre>
-            </div>
-            <p>This shows connection and file transfer logs, which can be helpful for debugging.</p>
-            <h2 id="creating-a-custom-service-with-systemd">Creating a Custom Service with SystemD</h2>
-            <p>Creating a custom service in SystemD involves writing a service unit file. This file is a configuration script that provides instructions to SystemD on how to manage and execute the service. These scripts are typically placed in the <code>/etc/systemd/system/</code> directory. A service script is divided into several sections, each serving a specific purpose.</p>
-            <h3 id="common-sections-in-a-service-script">Common Sections in a Service Script</h3>
-            <p>Most service scripts include the following sections:</p>
+            <p>Possible output:</p>
             <ul>
-                <li>
-                    <p><code>[Unit]</code>: This section provides a description of the service and defines its dependencies. Key directives in this section can include <code>Description</code>, which gives a brief description of the service, <code>Documentation</code>, providing links to the relevant documentation, and <code>After</code>, specifying the order of service startup relative to other units.</p>
-                </li>
-                <li>
-                    <p><code>[Service]</code>: This section details how the service should be started, stopped, and how it should respond under various conditions. Common directives here include <code>Type</code>, defining the startup behavior of the service; <code>ExecStart</code>, specifying the command to run when the service starts; <code>ExecStop</code> and <code>ExecReload</code>, defining the commands to stop and reload the service; and <code>Restart</code>, specifying the service's restart behavior.</p>
-                </li>
-                <li>
-                    <p><code>[Install]</code>: This section is used to define how the service integrates into the system's boot process. It typically includes directives like <code>WantedBy</code> and <code>RequiredBy</code>, which specify the targets that should include this service during their initialization.</p>
-                </li>
+                <li>active</li>
+                <li>inactive</li>
+                <li>failed</li>
+                <li>unknown</li>
             </ul>
-            <h3 id="example-of-a-simple-service-script">Example of a Simple Service Script</h3>
-            <p>Below is an example of a basic service script. This script configures SystemD to run a specific executable file at startup:</p>
+            <h3 id="step-3-check-boot-state">Step 3: Check Boot State</h3>
             <div>
-                <pre><code class="language-bash">tail -f /var/log/vsftpd.log</code></pre>
+                <pre><code class="language-bash">systemctl is-enabled service-name.service</code></pre>
             </div>
-            <p>This script includes:</p>
+            <p>Possible output:</p>
             <ul>
-                <li><code>Description</code>: A brief explanation of the service.</li>
-                <li><code>Type=idle</code>: Indicates that the service should be started after all jobs are dispatched.</li>
-                <li><code>ExecStart</code>: The path to the executable file that will be run when the service starts.</li>
-                <li><code>WantedBy=multi-user.target</code>: Specifies that the service should be started under the <code>multi-user.target</code>, which is a standard target for creating a multi-user environment.</li>
+                <li>enabled</li>
+                <li>disabled</li>
+                <li>static</li>
+                <li>masked</li>
             </ul>
-            <p>You can read more about targets <a href="https://github.com/djeada/Linux-Notes/blob/main/notes/system_startup.md">here</a>.</p>
-            <h4 id="additional-notes">Additional Notes</h4>
-            <p>After creating or modifying a service script, use <code>systemctl daemon-reload</code> to reload the SystemD configuration and <code>systemctl enable [service-name].service</code> to enable the service.</p>
-            <p>In the context of SystemD service management, <code>[service-name]</code> refers to the name of your service unit file, minus the <code>.service</code> extension. It's a unique identifier for your service within the SystemD framework. When you create a custom service script:</p>
-            <ol>
-                <li>The file is named with a <code>.service</code> extension, for example, <code>my_custom_service.service</code>.</li>
-                <li>The <code>[service-name]</code> is the filename without the <code>.service</code> extension, i.e., <code>my_custom_service</code> in this example.</li>
-            </ol>
-            <p>So, when enabling, starting, or checking the status of your service with SystemD commands, you reference it by this <code>[service-name]</code>. For example:</p>
+            <h3 id="step-4-read-status">Step 4: Read Status</h3>
+            <div>
+                <pre><code class="language-bash">systemctl status service-name.service</code></pre>
+            </div>
+            <p>Look for:</p>
             <ul>
-                <li>To enable the service: <code>systemctl enable my_custom_service.service</code></li>
-                <li>To start the service: <code>systemctl start my_custom_service.service</code></li>
-                <li>To check the service status: <code>systemctl status my_custom_service.service</code></li>
+                <li>Loaded</li>
+                <li>Active</li>
+                <li>Main PID</li>
+                <li>status code</li>
+                <li>recent log lines</li>
             </ul>
+            <h3 id="step-5-read-logs">Step 5: Read Logs</h3>
+            <div>
+                <pre><code class="language-bash">journalctl -u service-name.service -b</code></pre>
+            </div>
+            <p>Follow logs:</p>
+            <div>
+                <pre><code class="language-bash">journalctl -u service-name.service -f</code></pre>
+            </div>
+            <h3 id="step-6-check-ports">Step 6: Check Ports</h3>
+            <p>For network services:</p>
+            <div>
+                <pre><code class="language-bash">sudo ss -tulnp</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">sudo ss -tulnp | grep ':80'</code></pre>
+            </div>
+            <p>This helps answer:</p>
+            <ul>
+                <li>Is the service listening?</li>
+                <li>Is another process already using the port?</li>
+                <li>Is it listening on localhost only or all interfaces?</li>
+            </ul>
+            <h3 id="step-7-check-processes">Step 7: Check Processes</h3>
+            <div>
+                <pre><code class="language-bash">ps -ef | grep service-name</code></pre>
+            </div>
+            <p>or use systemd’s process tree:</p>
+            <div>
+                <pre><code class="language-bash">systemctl status service-name.service</code></pre>
+            </div>
+            <h3 id="step-8-check-configuration">Step 8: Check Configuration</h3>
+            <p>Many services have a built-in config test.</p>
+            <p>Examples:</p>
+            <div>
+                <pre><code class="language-bash">sudo nginx -t
+sudo apachectl configtest
+sudo sshd -t</code></pre>
+            </div>
+            <p>If available, always test configuration before restarting production services.</p>
+            <h3 id="common-service-problems-and-fixes">Common Service Problems and Fixes</h3>
+            <h4 id="problem-service-not-found">Problem: Service Not Found</h4>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">Unit nginx.service could not be found.</code></pre>
+            </div>
+            <p>Possible causes:</p>
+            <ul>
+                <li>package not installed</li>
+                <li>wrong service name</li>
+                <li>unit file not reloaded</li>
+                <li>custom unit placed in wrong location</li>
+            </ul>
+            <p>Fix:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl daemon-reload
+systemctl list-unit-files | grep nginx</code></pre>
+            </div>
+            <h4 id="problem-service-failed-to-start">Problem: Service Failed to Start</h4>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">systemctl status service-name.service
+journalctl -u service-name.service -b</code></pre>
+            </div>
+            <p>Common causes:</p>
+            <ul>
+                <li>bad configuration</li>
+                <li>missing executable</li>
+                <li>wrong permissions</li>
+                <li>port already in use</li>
+                <li>missing dependency</li>
+                <li>invalid user or group</li>
+                <li>missing directory</li>
+            </ul>
+            <h4 id="problem-service-running-but-not-reachable">Problem: Service Running but Not Reachable</h4>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">systemctl status service-name.service
+sudo ss -tulnp
+journalctl -u service-name.service -b</code></pre>
+            </div>
+            <p>Possible causes:</p>
+            <ul>
+                <li>service listens only on localhost</li>
+                <li>firewall blocks access</li>
+                <li>wrong port</li>
+                <li>network problem</li>
+                <li>application-level access control</li>
+                <li>SELinux/AppArmor policy</li>
+            </ul>
+            <h4 id="problem-service-starts-manually-but-not-at-boot">Problem: Service Starts Manually but Not at Boot</h4>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">systemctl is-enabled service-name.service
+systemctl status service-name.service</code></pre>
+            </div>
+            <p>If disabled:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl enable service-name.service</code></pre>
+            </div>
+            <p>If enabled but still fails at boot, check:</p>
+            <div>
+                <pre><code class="language-bash">journalctl -u service-name.service -b
+systemctl list-dependencies service-name.service</code></pre>
+            </div>
+            <p>Possible causes:</p>
+            <ul>
+                <li>starts before network is ready</li>
+                <li>missing mount at boot</li>
+                <li>environment differs at boot</li>
+                <li>dependency missing</li>
+                <li>permissions or path issue</li>
+            </ul>
+            <h4 id="problem-service-keeps-restarting">Problem: Service Keeps Restarting</h4>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">systemctl status service-name.service
+journalctl -u service-name.service -b</code></pre>
+            </div>
+            <p>Look for:</p>
+            <ul>
+                <li>Scheduled restart job</li>
+                <li>restart counter</li>
+                <li>exit-code</li>
+                <li>core dump</li>
+                <li>configuration errors</li>
+            </ul>
+            <p>Possible causes:</p>
+            <ul>
+                <li>application crashes</li>
+                <li>bad config</li>
+                <li>missing file</li>
+                <li>health check failure</li>
+                <li>Restart=always hides repeated failure</li>
+            </ul>
+            <h3 id="useful-command-summary">Useful Command Summary</h3>
+            <p>Service state:</p>
+            <div>
+                <pre><code class="language-bash">systemctl status service.service
+systemctl is-active service.service
+systemctl is-enabled service.service
+systemctl --failed</code></pre>
+            </div>
+            <p>Start and stop:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl start service.service
+sudo systemctl stop service.service
+sudo systemctl restart service.service
+sudo systemctl reload service.service
+sudo systemctl reload-or-restart service.service</code></pre>
+            </div>
+            <p>Boot behavior:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl enable service.service
+sudo systemctl disable service.service
+sudo systemctl enable --now service.service
+sudo systemctl disable --now service.service</code></pre>
+            </div>
+            <p>Masking:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl mask service.service
+sudo systemctl unmask service.service</code></pre>
+            </div>
+            <p>Listing:</p>
+            <div>
+                <pre><code class="language-bash">systemctl list-units --type=service
+systemctl list-units --type=service --all
+systemctl list-unit-files --type=service
+systemctl list-timers --all</code></pre>
+            </div>
+            <p>Logs:</p>
+            <div>
+                <pre><code class="language-bash">journalctl -u service.service
+journalctl -u service.service -b
+journalctl -u service.service -f
+journalctl -u service.service -n 50</code></pre>
+            </div>
+            <p>Dependencies:</p>
+            <div>
+                <pre><code class="language-bash">systemctl list-dependencies service.service
+systemctl list-dependencies --reverse service.service</code></pre>
+            </div>
+            <p>Ports and processes:</p>
+            <div>
+                <pre><code class="language-bash">sudo ss -tulnp
+ps -ef | grep service-name</code></pre>
+            </div>
+            <p>Custom units:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl daemon-reload
+sudo systemctl edit --full service.service
+sudo systemctl reset-failed service.service</code></pre>
+            </div>
+            <h3 id="safe-lab-cleanup">Safe Lab Cleanup</h3>
+            <p>If you created the sample services, clean them up:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl stop sample.service broken.service crash.service config-check.service cpu-test.service oneshot-task.timer oneshot-task.service 2&gt;/dev/null
+
+sudo systemctl disable sample.service broken.service crash.service config-check.service cpu-test.service oneshot-task.timer oneshot-task.service 2&gt;/dev/null
+
+sudo rm -f /etc/systemd/system/sample.service
+sudo rm -f /etc/systemd/system/broken.service
+sudo rm -f /etc/systemd/system/crash.service
+sudo rm -f /etc/systemd/system/config-check.service
+sudo rm -f /etc/systemd/system/cpu-test.service
+sudo rm -f /etc/systemd/system/oneshot-task.service
+sudo rm -f /etc/systemd/system/oneshot-task.timer
+
+sudo rm -f /usr/local/bin/sample-service.sh
+sudo rm -f /usr/local/bin/crash-service.sh
+sudo rm -f /usr/local/bin/config-check-service.sh
+sudo rm -f /usr/local/bin/cpu-service.sh
+sudo rm -f /usr/local/bin/oneshot-task.sh
+sudo rm -f /etc/config-check-service.conf
+
+sudo systemctl daemon-reload
+sudo systemctl reset-failed</code></pre>
+            </div>
             <h3 id="challenges">Challenges</h3>
             <ol>
-                <li>Use <code>systemctl</code> to list all active and inactive timers on your system, and identify which services they are associated with. Explain the purpose of timers in SystemD and discuss how they can be used as a replacement for traditional cron jobs for scheduling tasks.</li>
-                <li>Install and configure a DHCP server using the <code>isc-dhcp-server</code> package. Set it up to automatically assign IP addresses to client devices on your network. Document the configuration process and verify the server is working by connecting a client device to the network and checking that it receives the correct IP configuration.</li>
-                <li>Install and configure the <code>nfs-kernel-server</code> package to set up an NFS server. Share a directory over the network and configure permissions to allow client devices to access files in this directory. Test the configuration by mounting the NFS share on a client system.</li>
-                <li>Use the <code>openssh-server</code> package to install and configure an SSH server for secure remote access to your machine. Set up basic security measures, such as disabling root login and enabling key-based authentication, and test the setup by connecting from a remote client.</li>
-                <li>Install the <code>bind9</code> package to configure a DNS server capable of resolving domain names to IP addresses. Create a basic zone file for a sample domain, then test the configuration using tools like <code>nslookup</code> or <code>dig</code> to ensure the server is correctly translating domain names to IPs.</li>
-                <li>Choose between the <code>postfix</code> or <code>sendmail</code> packages and set up a basic mail server. Configure it to handle email delivery and management for a local domain, and verify that the server can successfully send and receive emails. Discuss the differences between <code>postfix</code> and <code>sendmail</code> and the scenarios in which each might be preferred.</li>
-                <li>Install and configure a web server using one of the following: <code>nginx</code>, <code>apache</code>, <code>caddy</code>, or <code>traefik</code>. Set up the server to serve content over HTTP and, if possible, enable HTTPS with a self-signed certificate for secure access. Verify the server by accessing it from a web browser on a client machine.</li>
-                <li>Install and configure a database server using either <code>mysql</code> or <code>postgresql</code>. Create a sample database and user, then verify connectivity to the database from a client tool such as <code>mysql</code> or <code>psql</code>. Discuss how each database system handles user authentication and data access.</li>
-                <li>Set up and configure a caching service such as <code>memcached</code> or <code>redis</code>. Use it to cache data for an application or website, and explain how caching can improve performance by reducing database queries and speeding up response times.</li>
-                <li>Some argue that a service, a daemon, and a process are all the same. Do you agree? Explain the distinctions between them.</li>
+                <li>Use <code>systemctl list-units --type=service --all</code> to list active and inactive services. Pick five services and explain what each one does.</li>
+                <li>Choose one service and inspect it with <code>systemctl status</code>, <code>systemctl is-active</code>, and <code>systemctl is-enabled</code>. Explain the difference between active and enabled.</li>
+                <li>Start, stop, restart, enable, and disable a safe test service. Record the command and output for each action.</li>
+                <li>Use <code>journalctl -u service-name -b</code> to inspect logs for a service. Identify when it started and whether it produced errors.</li>
+                <li>Install and configure a simple service such as <code>vsftpd</code>, <code>nginx</code>, or <code>openssh-server</code> on a lab machine. Verify that it is running and listening on the expected port.</li>
+                <li>Use <code>ss -tulnp</code> to identify which services are listening on network ports.</li>
+                <li>Create a custom systemd service that runs a script. Start it, check its status, view logs, enable it, and then clean it up.</li>
+                <li>Create a broken service with an invalid <code>ExecStart</code>. Start it, inspect the failure, fix it, and restart it.</li>
+                <li>Create a one-shot service and a timer that runs it every minute. Use <code>systemctl list-timers --all</code> to verify the schedule.</li>
+                <li>Explain the difference between a process, daemon, and service using examples such as <code>sshd</code>, <code>nginx</code>, and a one-shot backup task.</li>
             </ol>
         </article-section>
     </div>

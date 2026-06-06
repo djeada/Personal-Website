@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/kurs_podstaw_pythona/02_sredniozawansowane/12_klasy_danych",
             "description": "Klasy danych w Pythonie (data classes) u\u0142atwiaj\u0105 tworzenie klas, kt\u00f3re maj\u0105 g\u0142\u00f3wnie s\u0142u\u017cy\u0107 do przechowywania danych.",
-            "dateModified": "2025-07-04"
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -89,6 +89,13 @@
                             </ol>
                         </li>
                         <li><a href="#funkcjonalności-dostępne-w-klasach-danych">Funkcjonalności dostępne w klasach danych</a></li>
+                        <li><a href="#wartości-domyślne-i-pola-z-wartościami-fabrycznymi">Wartości domyślne i pola z wartościami fabrycznymi</a></li>
+                        <li><a href="#konwersja-do-ze-słownika-i-krotki">Konwersja do/ze słownika i krotki</a></li>
+                        <li><a href="#porównanie-zwykła-klasa-vs-klasa-danych-vs-namedtuple">Porównanie: zwykła klasa vs. klasa danych vs. NamedTuple</a></li>
+                        <li><a href="#opcje-field-kontrola-poszczególnych-pól">Opcje field() — kontrola poszczególnych pól</a></li>
+                        <li><a href="#zmienne-klasowe-classvar-">Zmienne klasowe (ClassVar)</a></li>
+                        <li><a href="#funkcja-replace-tworzenie-kopii-z-modyfikacją">Funkcja replace() — tworzenie kopii z modyfikacją</a></li>
+                        <li><a href="#dziedziczenie-klas-danych">Dziedziczenie klas danych</a></li>
                     </ol>
                 </ol>
             </div>
@@ -181,7 +188,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: July 04, 2025</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="klasy-danych">Klasy danych</h2>
             <p>Klasy danych w Pythonie (data classes) ułatwiają tworzenie klas, które mają głównie służyć do przechowywania danych. Automatyzują one powtarzalne fragmenty kodu, takie jak inicjalizacja atrybutów, implementacja operatorów porównania, a także generowanie metod takich jak <code>__repr__</code> i <code>__eq__</code>. Używanie klas danych może znacząco upraszczać kod, szczególnie w sytuacjach, kiedy klasy służą głównie jako struktury danych.</p>
@@ -291,6 +298,248 @@ print(circle.area)  # 78.53975</code></pre>
                 </tr>
             </table>
             </p>
+            <h3 id="wartości-domyślne-i-pola-z-wartościami-fabrycznymi">Wartości domyślne i pola z wartościami fabrycznymi</h3>
+            <p>Atrybuty klasy danych mogą mieć wartości domyślne. Dla mutowalnych typów (np. list) używamy <code>field(default_factory=...)</code>, aby uniknąć współdzielenia jednego obiektu między instancjami:</p>
+            <div>
+                <pre><code class="language-python">from dataclasses import dataclass, field
+
+@dataclass
+class Osoba:
+    imie: str
+    wiek: int = 0
+    hobby: list = field(default_factory=list)  # każda instancja dostaje własną listę
+
+p1 = Osoba("Jan")
+p2 = Osoba("Anna", wiek=25)
+p1.hobby.append("programowanie")
+
+print(p1)  # Osoba(imie='Jan', wiek=0, hobby=['programowanie'])
+print(p2)  # Osoba(imie='Anna', wiek=25, hobby=[])  — lista p2 jest niezależna</code></pre>
+            </div>
+            <h3 id="konwersja-do-ze-słownika-i-krotki">Konwersja do/ze słownika i krotki</h3>
+            <p>Moduł <code>dataclasses</code> dostarcza funkcji pomocniczych:</p>
+            <div>
+                <pre><code class="language-python">from dataclasses import dataclass, asdict, astuple
+
+@dataclass
+class Punkt:
+    x: float
+    y: float
+
+p = Punkt(1.5, 2.5)
+
+print(asdict(p))    # {'x': 1.5, 'y': 2.5}
+print(astuple(p))   # (1.5, 2.5)
+
+# Tworzenie obiektu ze słownika
+slownik = {"x": 3.0, "y": 4.0}
+p2 = Punkt(**slownik)
+print(p2)           # Punkt(x=3.0, y=4.0)</code></pre>
+            </div>
+            <h3 id="porównanie-zwykła-klasa-vs-klasa-danych-vs-namedtuple">Porównanie: zwykła klasa vs. klasa danych vs. NamedTuple</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Cecha</td>
+                    <td>Zwykła klasa</td>
+                    <td><code>@dataclass</code></td>
+                    <td><code>NamedTuple</code></td>
+                </tr>
+                <tr>
+                    <td>Automatyczny <code>__init__</code></td>
+                    <td>✗ (pisany ręcznie)</td>
+                    <td>✓</td>
+                    <td>✓</td>
+                </tr>
+                <tr>
+                    <td>Automatyczny <code>__repr__</code></td>
+                    <td>✗</td>
+                    <td>✓</td>
+                    <td>✓</td>
+                </tr>
+                <tr>
+                    <td>Automatyczny <code>__eq__</code></td>
+                    <td>✗</td>
+                    <td>✓</td>
+                    <td>✓ (porównanie po wartości)</td>
+                </tr>
+                <tr>
+                    <td>Mutowalność</td>
+                    <td>Tak (domyślnie)</td>
+                    <td>Tak (domyślnie)</td>
+                    <td>Nie (jak krotka)</td>
+                </tr>
+                <tr>
+                    <td>Możliwość dziedziczenia</td>
+                    <td>Tak</td>
+                    <td>Tak</td>
+                    <td>Ograniczona</td>
+                </tr>
+                <tr>
+                    <td><code>frozen=True</code></td>
+                    <td>—</td>
+                    <td>Tak</td>
+                    <td>Zawsze niemutowalna</td>
+                </tr>
+                <tr>
+                    <td>Konwersja do słownika</td>
+                    <td>Ręcznie</td>
+                    <td><code>asdict()</code></td>
+                    <td><code>_asdict()</code></td>
+                </tr>
+                <tr>
+                    <td>Dostęp przez indeks</td>
+                    <td>Nie</td>
+                    <td>Nie</td>
+                    <td>Tak (<code>p[0]</code>)</td>
+                </tr>
+            </table>
+            </p>
+            <div>
+                <pre><code class="language-python">from typing import NamedTuple
+
+class PunktNT(NamedTuple):
+    x: float
+    y: float
+
+p = PunktNT(1.0, 2.0)
+print(p.x)   # 1.0
+print(p[0])  # 1.0 — dostęp jak do krotki
+# p.x = 3.0  # AttributeError — niemutowalna</code></pre>
+            </div>
+            <h3 id="opcje-field-kontrola-poszczególnych-pól">Opcje <code>field()</code> — kontrola poszczególnych pól</h3>
+            <p>Funkcja <code>field()</code> pozwala precyzyjnie kontrolować zachowanie każdego pola:</p>
+            <div>
+                <pre><code class="language-python">from dataclasses import dataclass, field
+
+@dataclass
+class Produkt:
+    nazwa: str
+    cena: float
+    ilosc: int = field(default=0)
+    _id: str = field(init=False, repr=False)  # pole wewnętrzne, pomijane w repr i init
+    tagi: list = field(default_factory=list, compare=False)  # nie brane pod uwagę przy ==
+
+    def __post_init__(self):
+        import uuid
+        self._id = str(uuid.uuid4())[:8]   # generuj ID automatycznie
+
+p1 = Produkt("Jabłko", 2.50, 100)
+p2 = Produkt("Jabłko", 2.50, 100)
+
+print(p1)         # Produkt(nazwa='Jabłko', cena=2.5, ilosc=100)  — _id pominięte
+print(p1 == p2)   # True — tagi pomijane przy porównaniu
+print(p1._id, p2._id)  # różne UUID</code></pre>
+            </div>
+            <p>Dostępne opcje <code>field()</code>:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Opcja</td>
+                    <td>Domyślnie</td>
+                    <td>Opis</td>
+                </tr>
+                <tr>
+                    <td><code>default</code></td>
+                    <td>—</td>
+                    <td>Wartość domyślna pola</td>
+                </tr>
+                <tr>
+                    <td><code>default_factory</code></td>
+                    <td>—</td>
+                    <td>Fabryka wartości domyślnej (np. <code>list</code>)</td>
+                </tr>
+                <tr>
+                    <td><code>init</code></td>
+                    <td><code>True</code></td>
+                    <td>Czy pole jest argumentem <code>__init__</code></td>
+                </tr>
+                <tr>
+                    <td><code>repr</code></td>
+                    <td><code>True</code></td>
+                    <td>Czy pole jest pokazywane w <code>__repr__</code></td>
+                </tr>
+                <tr>
+                    <td><code>compare</code></td>
+                    <td><code>True</code></td>
+                    <td>Czy pole jest brane pod uwagę w <code>__eq__</code></td>
+                </tr>
+                <tr>
+                    <td><code>hash</code></td>
+                    <td><code>None</code></td>
+                    <td>Czy pole jest brane pod uwagę w <code>__hash__</code></td>
+                </tr>
+                <tr>
+                    <td><code>metadata</code></td>
+                    <td><code>None</code></td>
+                    <td>Dowolne metadane (słownik, tylko do odczytu)</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="zmienne-klasowe-classvar-">Zmienne klasowe (<code>ClassVar</code>)</h3>
+            <p>Pole opatrzone adnotacją <code>ClassVar</code> jest <strong>zmienną klasową</strong> — wspólną dla wszystkich instancji, nie tworzącą parametru <code>__init__</code>:</p>
+            <div>
+                <pre><code class="language-python">from dataclasses import dataclass
+from typing import ClassVar
+
+@dataclass
+class Licznik:
+    wartosc: int
+    licznik_instancji: ClassVar[int] = 0   # nie w __init__, wspólna dla klasy
+
+    def __post_init__(self):
+        Licznik.licznik_instancji += 1
+
+a = Licznik(10)
+b = Licznik(20)
+print(Licznik.licznik_instancji)   # 2
+print(a.licznik_instancji)         # 2 — ta sama zmienna klasowa</code></pre>
+            </div>
+            <h3 id="funkcja-replace-tworzenie-kopii-z-modyfikacją">Funkcja <code>replace()</code> — tworzenie kopii z modyfikacją</h3>
+            <p><code>dataclasses.replace()</code> tworzy nową instancję klasy danych będącą kopią oryginału z wybranymi zmienionymi polami. Szczególnie przydatna dla <code>frozen=True</code>:</p>
+            <div>
+                <pre><code class="language-python">from dataclasses import dataclass, replace
+
+@dataclass(frozen=True)
+class Konfiguracja:
+    host: str = "localhost"
+    port: int = 8080
+    debug: bool = False
+
+bazowa = Konfiguracja()
+produkcyjna = replace(bazowa, host="example.com", port=443, debug=False)
+dev = replace(bazowa, debug=True)
+
+print(bazowa)      # Konfiguracja(host='localhost', port=8080, debug=False)
+print(produkcyjna) # Konfiguracja(host='example.com', port=443, debug=False)
+print(dev)         # Konfiguracja(host='localhost', port=8080, debug=True)</code></pre>
+            </div>
+            <h3 id="dziedziczenie-klas-danych">Dziedziczenie klas danych</h3>
+            <p>Klasy danych obsługują dziedziczenie. Klasa potomna może dodawać nowe pola:</p>
+            <div>
+                <pre><code class="language-python">from dataclasses import dataclass
+
+@dataclass
+class Zwierze:
+    imie: str
+    wiek: int
+
+@dataclass
+class Pies(Zwierze):
+    rasa: str
+    wytresowany: bool = False
+
+    def __post_init__(self):
+        if self.wiek &lt; 0:
+            raise ValueError("Wiek nie może być ujemny")
+
+burek = Pies("Burek", 3, "Labrador")
+print(burek)  # Pies(imie='Burek', wiek=3, rasa='Labrador', wytresowany=False)
+print(burek.imie)   # Burek — dziedziczone pole</code></pre>
+            </div>
+            <blockquote>
+                <p><strong>Uwaga</strong>: W Pythonie &lt; 3.10 pola z wartościami domyślnymi w klasie bazowej nie mogą być poprzedzone przez pola bez wartości domyślnych w klasie potomnej (TypeError). W Python 3.10+ dodano <code>KW_ONLY</code> aby to obejść.</p>
+            </blockquote>
         </article-section>
     </div>
     <footer>

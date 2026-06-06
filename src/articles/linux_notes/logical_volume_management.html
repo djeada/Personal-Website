@@ -5,8 +5,8 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>Disk Partitions and Volumes</title>
-    <meta content="Think of data storage devices, such as DVDs, USB flash drives, and hard drives (HDDs or SSDs), as an entire cake." name="description" />
+    <title>Disk Partitions, Volumes, and LVM</title>
+    <meta content="Storage devices such as HDDs, SSDs, USB drives, and virtual disks provide raw space." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -23,7 +23,7 @@
         {
             "@context": "https://schema.org",
             "@type": "Article",
-            "headline": "Disk Partitions and Volumes",
+            "headline": "Disk Partitions, Volumes, and LVM",
             "author": {
                 "@type": "Person",
                 "name": "Adam Djellouli"
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/linux_notes/logical_volume_management"
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/logical_volume_management",
-            "description": "Think of data storage devices, such as DVDs, USB flash drives, and hard drives (HDDs or SSDs), as an entire cake.",
-            "dateModified": "2017-04-29"
+            "description": "Storage devices such as HDDs, SSDs, USB drives, and virtual disks provide raw space.",
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -77,20 +77,107 @@
         <aside id="article-sidebar">
             <div id="table-of-contents">
                 <h2>Table of Contents</h2>
-                <ol>
-                    <li><a href="#disk-partitions-and-volumes">Disk Partitions and Volumes</a></li>
-                    <li><a href="#logical-volume-manager-lvm-">Logical Volume Manager (LVM)</a></li>
-                    <li><a href="#understanding-the-components-of-the-logical-volume-manager-lvm-">Understanding the Components of the Logical Volume Manager (LVM)</a></li>
-                    <li><a href="#creating-and-managing-lvm-volumes">Creating and Managing LVM Volumes</a></li>
-                    <li><a href="#extending-a-logical-volume">Extending a Logical Volume</a></li>
-                    <li><a href="#reducing-a-logical-volume">Reducing a Logical Volume</a></li>
-                    <li><a href="#deleting-a-logical-volume">Deleting a Logical Volume</a></li>
-                    <li><a href="#backup-and-recovery-of-lvm-configurations">Backup and Recovery of LVM Configurations</a>
-                        <ol>
-                            <li><a href="#partition-types-comparison">Partition Types Comparison</a></li>
-                            <li><a href="#challenges">Challenges</a></li>
-                        </ol>
-                    </li>
+                <ol><a href="#disk-partitions-volumes-and-lvm">Disk Partitions, Volumes, and LVM</a>
+                    <ol>
+                        <li><a href="#partitions">Partitions</a></li>
+                        <li><a href="#partition-tables">Partition Tables</a></li>
+                        <li><a href="#mbr-partitions">MBR Partitions</a></li>
+                        <li><a href="#gpt-partitions">GPT Partitions</a></li>
+                        <li><a href="#volumes">Volumes</a></li>
+                        <li><a href="#partition-vs-volume">Partition vs Volume</a></li>
+                        <li><a href="#why-use-lvm-">Why Use LVM?</a></li>
+                        <li><a href="#lvm-big-picture">LVM Big Picture</a></li>
+                        <li><a href="#physical-volumes">Physical Volumes</a></li>
+                        <li><a href="#volume-groups">Volume Groups</a></li>
+                        <li><a href="#logical-volumes">Logical Volumes</a></li>
+                        <li><a href="#filesystems-on-logical-volumes">Filesystems on Logical Volumes</a></li>
+                        <li><a href="#lvm-naming">LVM Naming</a></li>
+                        <li><a href="#basic-lvm-creation-workflow">Basic LVM Creation Workflow</a></li>
+                        <li><a href="#extending-a-logical-volume">Extending a Logical Volume</a></li>
+                        <li><a href="#reducing-a-logical-volume">Reducing a Logical Volume</a></li>
+                        <li><a href="#deleting-a-logical-volume">Deleting a Logical Volume</a></li>
+                        <li><a href="#lvm-snapshots">LVM Snapshots</a></li>
+                        <li><a href="#restoring-from-a-snapshot">Restoring from a Snapshot</a></li>
+                        <li><a href="#persistent-mounting-with-etc-fstab">Persistent Mounting with /etc/fstab</a></li>
+                        <li><a href="#partition-types-compared">Partition Types Compared</a></li>
+                        <li><a href="#when-to-use-partitions-vs-lvm">When to Use Partitions vs LVM</a></li>
+                        <li><a href="#useful-lvm-commands">Useful LVM Commands</a></li>
+                        <li><a href="#safe-lvm-lab-setup-using-loopback-disks">Safe LVM Lab Setup Using Loopback Disks</a></li>
+                        <li><a href="#scenario-1-create-a-complete-lvm-setup-in-a-lab">Scenario 1: Create a Complete LVM Setup in a Lab</a>
+                            <ol>
+                                <li><a href="#step-1-create-test-disk-files">Step 1: Create Test Disk Files</a></li>
+                                <li><a href="#step-2-attach-files-as-loop-devices">Step 2: Attach Files as Loop Devices</a></li>
+                                <li><a href="#step-3-create-physical-volumes">Step 3: Create Physical Volumes</a></li>
+                                <li><a href="#step-4-create-a-volume-group">Step 4: Create a Volume Group</a></li>
+                                <li><a href="#step-5-create-a-logical-volume">Step 5: Create a Logical Volume</a></li>
+                                <li><a href="#step-6-create-a-filesystem">Step 6: Create a Filesystem</a></li>
+                                <li><a href="#step-7-mount-the-logical-volume">Step 7: Mount the Logical Volume</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-2-simulate-a-full-filesystem-and-fix-it-with-lvm">Scenario 2: Simulate a Full Filesystem and Fix It with LVM</a>
+                            <ol>
+                                <li><a href="#step-1-fill-the-filesystem">Step 1: Fill the Filesystem</a></li>
+                                <li><a href="#step-2-check-whether-the-volume-group-has-free-space">Step 2: Check Whether the Volume Group Has Free Space</a></li>
+                                <li><a href="#step-3-extend-the-logical-volume-and-filesystem">Step 3: Extend the Logical Volume and Filesystem</a></li>
+                                <li><a href="#step-4-verify-the-result">Step 4: Verify the Result</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-3-simulate-no-space-left-in-volume-group-">Scenario 3: Simulate “No Space Left in Volume Group”</a>
+                            <ol>
+                                <li><a href="#step-1-try-to-extend-too-much">Step 1: Try to Extend Too Much</a></li>
+                                <li><a href="#step-2-confirm-with-vgs">Step 2: Confirm with vgs</a></li>
+                                <li><a href="#step-3-add-another-physical-volume">Step 3: Add Another Physical Volume</a></li>
+                                <li><a href="#step-4-extend-again">Step 4: Extend Again</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-4-simulate-and-inspect-lvm-layers">Scenario 4: Simulate and Inspect LVM Layers</a>
+                            <ol>
+                                <li><a href="#check-block-devices">Check Block Devices</a></li>
+                                <li><a href="#check-physical-volumes">Check Physical Volumes</a></li>
+                                <li><a href="#check-volume-group">Check Volume Group</a></li>
+                                <li><a href="#check-logical-volume">Check Logical Volume</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-5-create-a-snapshot-before-a-risky-change">Scenario 5: Create a Snapshot Before a Risky Change</a>
+                            <ol>
+                                <li><a href="#step-1-create-a-test-file">Step 1: Create a Test File</a></li>
+                                <li><a href="#step-2-create-a-snapshot">Step 2: Create a Snapshot</a></li>
+                                <li><a href="#step-3-make-a-risky-change">Step 3: Make a Risky Change</a></li>
+                                <li><a href="#step-4-inspect-snapshot-usage">Step 4: Inspect Snapshot Usage</a></li>
+                                <li><a href="#step-5-restore-by-merging-the-snapshot">Step 5: Restore by Merging the Snapshot</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-6-simulate-snapshot-space-exhaustion">Scenario 6: Simulate Snapshot Space Exhaustion</a>
+                            <ol>
+                                <li><a href="#step-1-create-a-small-snapshot">Step 1: Create a Small Snapshot</a></li>
+                                <li><a href="#step-2-write-enough-data-to-the-original-lv">Step 2: Write Enough Data to the Original LV</a></li>
+                                <li><a href="#step-3-check-snapshot-usage">Step 3: Check Snapshot Usage</a></li>
+                                <li><a href="#lesson">Lesson</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-7-clean-up-the-lvm-lab">Scenario 7: Clean Up the LVM Lab</a>
+                            <ol>
+                                <li><a href="#step-1-unmount">Step 1: Unmount</a></li>
+                                <li><a href="#step-2-remove-snapshots-if-any-remain">Step 2: Remove Snapshots if Any Remain</a></li>
+                                <li><a href="#step-3-remove-the-logical-volume">Step 3: Remove the Logical Volume</a></li>
+                                <li><a href="#step-4-remove-the-volume-group">Step 4: Remove the Volume Group</a></li>
+                                <li><a href="#step-5-remove-physical-volume-labels">Step 5: Remove Physical Volume Labels</a></li>
+                                <li><a href="#step-6-detach-loop-devices">Step 6: Detach Loop Devices</a></li>
+                                <li><a href="#step-7-delete-test-files">Step 7: Delete Test Files</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#common-lvm-troubleshooting">Common LVM Troubleshooting</a>
+                            <ol>
+                                <li><a href="#problem-filesystem-is-full">Problem: Filesystem Is Full</a></li>
+                                <li><a href="#problem-volume-group-has-no-free-space">Problem: Volume Group Has No Free Space</a></li>
+                                <li><a href="#problem-logical-volume-exists-but-is-not-mounted">Problem: Logical Volume Exists but Is Not Mounted</a></li>
+                                <li><a href="#problem-lvm-devices-not-active">Problem: LVM Devices Not Active</a></li>
+                                <li><a href="#problem-snapshot-is-full">Problem: Snapshot Is Full</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#lvm-safety-rules">LVM Safety Rules</a></li>
+                        <li><a href="#challenges">Challenges</a></li>
+                    </ol>
                 </ol>
             </div>
             <div id="related-articles">
@@ -163,197 +250,1313 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: April 29, 2017</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
-            <h2 id="disk-partitions-and-volumes">Disk Partitions and Volumes</h2>
-            <p>Think of data storage devices, such as DVDs, USB flash drives, and hard drives (HDDs or SSDs), as an entire cake. This cake can be cut into smaller slices or 'partitions'. These partitions are essentially divisions or sections within the storage device, helping to categorize or organize the storage for diverse uses. For instance, you can segregate different file types or even run multiple operating systems in separate partitions. The structure and arrangement of these partitions resemble a table, which you'd use to keep track of everything.</p>
-            <p>Just as a cake is divided into partitions, a bookshelf is divided into sections known as 'volumes'. A volume is analogous to a book genre section on a bookshelf, each having its own file system or a method of organizing files. While a partition is limited to a single disk (although that disk can have multiple partitions), a volume has the capability to span across several disks. This is similar to joining several bookshelves to create more space for your books. For instance, you might have a hard drive partitioned into three parts: one for your operating system, one for your personal documents, and a third for your multimedia files. However, if you need extra space for larger files, such as videos, you can create a volume that spans multiple devices to distribute the storage.</p>
-            <h2 id="logical-volume-manager-lvm-">Logical Volume Manager (LVM)</h2>
-            <p>The Logical Volume Manager (LVM) is a robust tool for managing disk storage on Linux-based systems. It allows the creation of 'logical volumes' that can be readily resized, relocated, and expanded. This introduces a level of flexibility as it facilitates the addition of storage space to your system without the need for additional physical disks. Furthermore, LVM allows for the creation of 'volume snapshots', which are extremely valuable for creating backups of your data.</p>
-            <p>Despite its advantages, using LVM can make the system setup process more complex, as it requires additional support from the kernel. In certain circumstances, repair images might not be compatible with LVM-based systems. This means it is essential to consider the potential complexity and support issues before deciding to use LVM in a Linux environment.</p>
-            <h2 id="understanding-the-components-of-the-logical-volume-manager-lvm-">Understanding the Components of the Logical Volume Manager (LVM)</h2>
-            <p>LVM comprises several fundamental components, which include:</p>
-            <ul>
-                <li><strong>Physical Volumes (PV)</strong>: These are your actual storage devices, such as hard disk drives (HDDs) or solid-state drives (SSDs).</li>
-                <li><strong>Volume Groups (VG)</strong>: These are collections of physical volumes that can be managed as a single entity.</li>
-                <li><strong>Logical Volumes (LV)</strong>: These are the storage sections within volume groups. A logical volume can be assigned a file system and mounted for use.</li>
-            </ul>
-            <p>Let's understand these components with an analogy. Think of a physical volume as a book, a volume group as a bookshelf containing several books, and a logical volume as a chapter in a book.</p>
+            <h2 id="disk-partitions-volumes-and-lvm">Disk Partitions, Volumes, and LVM</h2>
+            <p>Storage devices such as HDDs, SSDs, USB drives, and virtual disks provide raw space. Before that space can be used conveniently, it usually needs to be divided, organized, formatted, and mounted.</p>
+            <p>Linux storage can be understood in layers.</p>
             <div>
-                <pre><code class="language-shell">|-----------------|     |-----------------|     |-----------------|
-|  Physical       |     |  Physical       |     |  Physical       |
-|  Volume (PV)    |     |  Volume (PV)    |     |  Volume (PV)    |
-|  /dev/sdb       |     |  /dev/sdc       |     |  /dev/sdd       |
-|  Size: 50G      |     |  Size: 100G     |     |  Size: 150G     |
+                <pre><code class="language-text">Physical disk
+    |
+    v
+Partition
+    |
+    v
+Filesystem
+    |
+    v
+Mount point
+    |
+    v
+Usable files and directories</code></pre>
+            </div>
+            <p>With LVM, there are extra layers that make storage more flexible.</p>
+            <div>
+                <pre><code class="language-text">Physical disk or partition
+    |
+    v
+Physical Volume, PV
+    |
+    v
+Volume Group, VG
+    |
+    v
+Logical Volume, LV
+    |
+    v
+Filesystem
+    |
+    v
+Mount point</code></pre>
+            </div>
+            <p>The main idea is that normal partitions are relatively fixed, while LVM gives you a flexible storage pool that can be expanded, resized, and organized more easily.</p>
+            <h3 id="partitions">Partitions</h3>
+            <p>A partition is a section of a storage device.</p>
+            <p>A physical disk can be divided into multiple partitions. Each partition can be used for a different purpose.</p>
+            <p>For example, a disk might contain:</p>
+            <div>
+                <pre><code class="language-text">/boot       boot files
+/           root filesystem
+/home       user files
+swap        swap space</code></pre>
+            </div>
+            <p>A simple partition layout might look like this:</p>
+            <div>
+                <pre><code class="language-text">Disk: /dev/sda
++-------------+----------------+----------------+
+| /dev/sda1   | /dev/sda2      | /dev/sda3      |
+| /boot       | /              | /home          |
+| 1G          | 40G            | 200G           |
++-------------+----------------+----------------+</code></pre>
+            </div>
+            <p>Partitions are useful because they separate storage into independent regions. This can help with organization, booting, security, backups, and system recovery.</p>
+            <h3 id="partition-tables">Partition Tables</h3>
+            <p>A partition table describes how a disk is divided into partitions.</p>
+            <p>The two most common partition table types are:</p>
+            <div>
+                <pre><code class="language-text">MBR
+GPT</code></pre>
+            </div>
+            <p>MBR is older. GPT is newer and more common on modern systems.</p>
+            <h3 id="mbr-partitions">MBR Partitions</h3>
+            <p>MBR stands for Master Boot Record.</p>
+            <p>MBR has an important limitation: it supports only four primary partitions.</p>
+            <p>To work around this, MBR uses extended and logical partitions.</p>
+            <div>
+                <pre><code class="language-text">MBR Disk
++-------------+-------------+-------------------------------+
+| Primary 1   | Primary 2   | Extended Partition            |
+|             |             | +----------+ +-------------+  |
+|             |             | | Logical  | | Logical     |  |
+|             |             | | Part 1   | | Part 2      |  |
+|             |             | +----------+ +-------------+  |
++-------------+-------------+-------------------------------+</code></pre>
+            </div>
+            <p>The extended partition is a container. It does not directly hold a filesystem in the normal way. Instead, it contains logical partitions.</p>
+            <p>Important point:</p>
+            <div>
+                <pre><code class="language-text">Primary, extended, and logical partitions are mainly MBR concepts.</code></pre>
+            </div>
+            <h3 id="gpt-partitions">GPT Partitions</h3>
+            <p>GPT stands for GUID Partition Table.</p>
+            <p>GPT is the modern partitioning scheme. It avoids many MBR limitations.</p>
+            <p>With GPT:</p>
+            <ul>
+                <li>No need for extended partitions</li>
+                <li>No need for logical partitions</li>
+                <li>Supports many partitions</li>
+                <li>Better support for large disks</li>
+                <li>More robust partition metadata</li>
+            </ul>
+            <p>A GPT disk looks simpler conceptually:</p>
+            <div>
+                <pre><code class="language-text">GPT Disk
++-------------+-------------+-------------+-------------+
+| Partition 1 | Partition 2 | Partition 3 | Partition 4 |
++-------------+-------------+-------------+-------------+</code></pre>
+            </div>
+            <p>On modern Linux systems, GPT is usually preferred unless there is a specific compatibility reason to use MBR.</p>
+            <h3 id="volumes">Volumes</h3>
+            <p>A volume is a usable storage area that can contain a filesystem.</p>
+            <p>A volume may be a simple partition, such as:</p>
+            <div>
+                <pre><code class="language-text">/dev/sda1</code></pre>
+            </div>
+            <p>or it may be a logical volume created by LVM, such as:</p>
+            <div>
+                <pre><code class="language-text">/dev/vg_data/lv_home</code></pre>
+            </div>
+            <p>The important difference is that a partition is tied directly to a section of one disk, while a logical volume can be created from a flexible storage pool.</p>
+            <h3 id="partition-vs-volume">Partition vs Volume</h3>
+            <p>A partition is a physical division of a disk.</p>
+            <p>A volume is a usable storage unit that usually contains a filesystem.</p>
+            <p>A simple partition-based setup looks like this:</p>
+            <div>
+                <pre><code class="language-text">Disk
+ |
+ +--&gt; Partition
+        |
+        +--&gt; Filesystem
+               |
+               +--&gt; Mount point</code></pre>
+            </div>
+            <p>An LVM-based setup looks like this:</p>
+            <div>
+                <pre><code class="language-text">Disk or partition
+ |
+ +--&gt; Physical Volume
+        |
+        +--&gt; Volume Group
+               |
+               +--&gt; Logical Volume
+                      |
+                      +--&gt; Filesystem
+                             |
+                             +--&gt; Mount point</code></pre>
+            </div>
+            <p>In everyday use, both a partition and a logical volume can be formatted and mounted.</p>
+            <p>The difference is in how flexible they are to manage.</p>
+            <h3 id="why-use-lvm-">Why Use LVM?</h3>
+            <p>LVM stands for Logical Volume Manager.</p>
+            <p>LVM allows Linux systems to manage storage more flexibly than traditional partitions.</p>
+            <p>With LVM, you can:</p>
+            <ul>
+                <li>Combine multiple disks into one storage pool</li>
+                <li>Create logical volumes from that pool</li>
+                <li>Extend logical volumes when more space is needed</li>
+                <li>Reduce some logical volumes carefully</li>
+                <li>Move data between disks</li>
+                <li>Create snapshots</li>
+                <li>Add new disks to existing storage</li>
+                <li>Manage storage using meaningful names</li>
+            </ul>
+            <p>For example, instead of being locked into a fixed <code>/home</code> partition size, you could create a logical volume for <code>/home</code> and expand it later if users need more space.</p>
+            <h3 id="lvm-big-picture">LVM Big Picture</h3>
+            <p>LVM has three main layers:</p>
+            <div>
+                <pre><code class="language-text">Physical Volume, PV
+Volume Group, VG
+Logical Volume, LV</code></pre>
+            </div>
+            <p>A physical volume is a disk or partition prepared for LVM.</p>
+            <p>A volume group is a pool of storage made from one or more physical volumes.</p>
+            <p>A logical volume is a usable storage unit created inside a volume group.</p>
+            <div>
+                <pre><code class="language-text">|-----------------|     |-----------------|     |-----------------|
+| Physical Volume |     | Physical Volume |     | Physical Volume |
+| PV: /dev/sdb    |     | PV: /dev/sdc    |     | PV: /dev/sdd    |
+| Size: 50G       |     | Size: 100G      |     | Size: 150G      |
 |-----------------|     |-----------------|     |-----------------|
-        |                      |                       |
-        |                      |                       |
-        ------------------------                       |
-                           |                           |
-                           ----------------------------
-                                       |
-                                       |
+        |                       |                       |
+        +-----------------------+-----------------------+
+                                |
+                                v
 |------------------------------------------------------------------|
-|                         Volume Group (VG)                        |
-|                              TEST                                |
-|                           Total Size: 300G                       |
+|                      Volume Group: TEST                          |
+|                        Total Size: 300G                          |
 |                                                                  |
 |  |------------------|     |------------------|                   |
-|  | Logical Volume   |     | Logical Volume   |                   |
-|  | (LV)             |     | (LV)             |     Unallocated   |
-|  | vol_name_1       |     | vol_name_2       |     Space         |
-|  | Size: 180G       |     | Size: 90G        |     Size: 30G     |
+|  | Logical Volume   |     | Logical Volume   |   Free Space      |
+|  | vol_name_1       |     | vol_name_2       |   30G             |
+|  | Size: 180G       |     | Size: 90G        |                   |
 |  |------------------|     |------------------|                   |
 |                                                                  |
 |------------------------------------------------------------------|</code></pre>
             </div>
-            <p>This diagram illustrates that:</p>
+            <p>This means:</p>
             <ul>
-                <li>Logical Volume Management (LVM) provides a flexible way to manage disk storage by abstracting physical storage into logical volumes.</li>
-                <li>A physical volume (PV) refers to a physical disk or partition that is used in an LVM setup, allowing for the aggregation of multiple storage devices.</li>
-                <li>In the given example, there are three physical volumes, each with different sizes: <strong>/dev/sdb is 50GB</strong>, <strong>/dev/sdc is 100GB</strong>, and <strong>/dev/sdd is 150GB</strong>.</li>
-                <li>These physical volumes are combined into a single volume group (VG), named <strong>TEST</strong>, which aggregates their total storage capacity.</li>
-                <li>The total size of the volume group <strong>TEST</strong> is <strong>300GB</strong>, which is the sum of the capacities of the physical volumes.</li>
-                <li>Logical volumes (LVs) are created within the volume group, representing virtual partitions that can be resized independently of the underlying physical storage.</li>
-                <li>In this scenario, two logical volumes are created within the volume group <strong>TEST</strong>: <strong>vol_name_1</strong>, which has a size of <strong>180GB</strong>, and <strong>vol_name_2</strong>, which has a size of <strong>90GB</strong>.</li>
-                <li>The logical volumes are flexible and can be resized or moved across different physical volumes within the volume group, offering ease of management and scalability.</li>
-                <li>Unallocated space within the volume group refers to the portion of the total storage capacity that has not been assigned to any logical volume.</li>
-                <li>There is <strong>30GB</strong> of unallocated space in the volume group <strong>TEST</strong>, which can be used to extend existing logical volumes or create new ones.</li>
+                <li><code>/dev/sdb</code>, <code>/dev/sdc</code>, and <code>/dev/sdd</code> are physical volumes</li>
+                <li>They are combined into a volume group named <code>TEST</code></li>
+                <li>Logical volumes are created from space inside <code>TEST</code></li>
+                <li>Unused space remains available for future expansion</li>
             </ul>
-            <h2 id="creating-and-managing-lvm-volumes">Creating and Managing LVM Volumes</h2>
-            <p>Creating and managing LVM volumes involve a series of steps that utilize different commands. Here is a brief walkthrough:</p>
-            <p>I. Creating Physical Volumes</p>
-            <p>This is the initial step, where you use the <code>pvcreate</code> command to set up physical volumes on your disks. This command turns the entire disk into a single LVM physical volume. Here's an example using three devices (<code>/dev/sdb</code>, <code>/dev/sdc</code>, and <code>/dev/sdd</code>):</p>
+            <h3 id="physical-volumes">Physical Volumes</h3>
+            <p>A physical volume, or PV, is a disk or partition initialized for use by LVM.</p>
+            <p>Examples:</p>
             <div>
-                <pre><code class="language-bash">pvcreate /dev/sdb
-pvcreate /dev/sdc
-pvcreate /dev/sdd</code></pre>
+                <pre><code class="language-text">/dev/sdb
+/dev/sdc1
+/dev/nvme1n1p3</code></pre>
             </div>
-            <p>II. Defining Volume Groups</p>
-            <p>Next, you create a volume group using the vgcreate command and add your physical volumes to it. The volume group allows you to manage multiple physical volumes as one. Here's an example of creating a volume group named TEST and extending it with additional physical volumes:</p>
+            <p>A PV is not normally mounted directly. Instead, it becomes part of a volume group.</p>
+            <p>To create a physical volume:</p>
             <div>
-                <pre><code class="language-bash">vgcreate TEST /dev/sdb
-vgextend TEST /dev/sdc /dev/sdd</code></pre>
+                <pre><code class="language-bash">sudo pvcreate /dev/sdb</code></pre>
             </div>
-            <p>III. Creating Logical Volumes</p>
-            <p>After your volume group is set, you can create logical volumes within this group using the <code>lvcreate</code> command. These logical volumes will be your actual storage areas. In this example, two logical volumes (<code>vol_name_1</code> and <code>vol_name_2</code>) of sizes 20GB and 12GB respectively, are created within the TEST volume group:</p>
+            <p>To view physical volumes:</p>
             <div>
-                <pre><code class="language-bash">lvcreate -L 20G -n vol_name_1 TEST
-lvcreate -L 12G -n vol_name_2 TEST</code></pre>
+                <pre><code class="language-bash">sudo pvs</code></pre>
             </div>
-            <p>IV. Creating a File System on the Logical Volume</p>
-            <p>Before you can start storing data, you need to create a file system on the logical volume. You can do this using the mkfs command. In this example, an ext4 file system is created on <code>vol_name_1</code>:</p>
+            <p>Example output:</p>
             <div>
-                <pre><code class="language-bash">mkfs -t ext4 /dev/TEST/vol_name_1</code></pre>
+                <pre><code class="language-text">PV         VG      Fmt  Attr PSize   PFree
+/dev/sdb   TEST    lvm2 a--   50.00g  0
+/dev/sdc   TEST    lvm2 a--  100.00g 10.00g
+/dev/sdd   TEST    lvm2 a--  150.00g 20.00g</code></pre>
             </div>
-            <p>V. Mounting the Logical Volume</p>
-            <p>Finally, you mount the logical volume to a designated mounting point using the mount command. This allows you to start storing and accessing data. In this example, <code>vol_name_1</code> is mounted at <code>/mounting_point</code>:</p>
-            <div>
-                <pre><code class="language-bash">mount -t ext4 /dev/TEST/vol_name_1 /mounting_point</code></pre>
-            </div>
-            <h2 id="extending-a-logical-volume">Extending a Logical Volume</h2>
-            <p>If you have available space in a volume group, you can extend a logical volume to use that space. This is done using the <code>lvextend</code> command:</p>
-            <div>
-                <pre><code class="language-bash">lvextend -L +10G /dev/TEST/vol_name_1</code></pre>
-            </div>
-            <p>This command extends <code>vol_name_1</code> by an additional 10GB. The file system on this volume needs to be resized to recognize the additional space:</p>
-            <div>
-                <pre><code class="language-bash">resize2fs /dev/TEST/vol_name_1</code></pre>
-            </div>
-            <h2 id="reducing-a-logical-volume">Reducing a Logical Volume</h2>
-            <p>To reduce the size of a logical volume, ensure that the volume has enough free space to avoid losing data. First, unmount the logical volume and check it for errors:</p>
-            <div>
-                <pre><code class="language-bash">umount /dev/TEST/vol_name_1
-e2fsck -f /dev/TEST/vol_name_1</code></pre>
-            </div>
-            <p>Then, reduce the file system size before reducing the logical volume:</p>
-            <div>
-                <pre><code class="language-bash">resize2fs /dev/TEST/vol_name_1 15G
-lvreduce -L 15G /dev/TEST/vol_name_1</code></pre>
-            </div>
-            <h2 id="deleting-a-logical-volume">Deleting a Logical Volume</h2>
-            <p>You might need to delete a logical volume to free up space in your volume group. Unmount the logical volume and then use the <code>lvremove</code> command:</p>
-            <div>
-                <pre><code class="language-bash">umount /dev/TEST/vol_name_1
-lvremove /dev/TEST/vol_name_1</code></pre>
-            </div>
-            <h2 id="backup-and-recovery-of-lvm-configurations">Backup and Recovery of LVM Configurations</h2>
-            <p>Taking regular snapshots of logical volumes can be an effective backup strategy. A snapshot is a copy of the logical volume at a certain point in time. It's created using the <code>lvcreate</code> command:</p>
-            <div>
-                <pre><code class="language-bash">lvcreate -L 1G -s -n snap_vol_name_1 /dev/TEST/vol_name_1</code></pre>
-            </div>
-            <p>This command creates a 1GB snapshot named <code>snap_vol_name_1</code> of <code>vol_name_1</code>. If a restore is needed, you can revert the logical volume to the snapshot state using the <code>lvconvert</code> command:</p>
-            <div>
-                <pre><code class="language-bash">lvconvert --merge /dev/TEST/snap_vol_name_1</code></pre>
-            </div>
-            <h3 id="partition-types-comparison">Partition Types Comparison</h3>
+            <p>Interpretation:</p>
             <p>
             <table>
                 <tr>
-                    <td>Feature</td>
-                    <td>Primary Partition</td>
-                    <td>Extended Partition</td>
-                    <td>Logical Partition</td>
-                    <td>Logical Volume (LVM)</td>
+                    <td>Field</td>
+                    <td>Description</td>
                 </tr>
                 <tr>
-                    <td><strong>Definition</strong></td>
-                    <td>A partition that can contain a file system or be used for booting an OS.</td>
-                    <td>A container for logical partitions, not used for direct data storage.</td>
-                    <td>Partitions created within an extended partition.</td>
-                    <td>A virtual partition created using Logical Volume Manager (LVM) for flexible disk management.</td>
+                    <td><strong>PV</strong></td>
+                    <td>Physical volume device</td>
                 </tr>
                 <tr>
-                    <td><strong>Maximum Count</strong></td>
-                    <td>Up to 4 primary partitions per disk.</td>
-                    <td>1 extended partition per disk (occupies one primary slot).</td>
-                    <td>The number of logical partitions is limited by the space in the extended partition and system limitations (up to 128 logical partitions).</td>
-                    <td>Limited by system resources and configuration, practically very high (can easily handle hundreds of volumes).</td>
+                    <td><strong>VG</strong></td>
+                    <td>Volume group the PV belongs to</td>
                 </tr>
                 <tr>
-                    <td><strong>Bootability</strong></td>
-                    <td>Can be marked as active to boot an OS.</td>
-                    <td>Cannot be used for booting directly.</td>
-                    <td>Cannot be used for booting.</td>
-                    <td>Can be bootable with a dedicated boot partition or specific configurations.</td>
+                    <td><strong>PSize</strong></td>
+                    <td>Total size of the PV</td>
                 </tr>
                 <tr>
-                    <td><strong>Storage Capability</strong></td>
-                    <td>Directly stores data or OS.</td>
-                    <td>Does not store data directly; only serves as a container for logical partitions.</td>
-                    <td>Directly stores data, can have file systems.</td>
-                    <td>Can aggregate multiple physical volumes into a single logical volume, allows complex configurations.</td>
-                </tr>
-                <tr>
-                    <td><strong>Resizing</strong></td>
-                    <td>Limited; generally requires repartitioning.</td>
-                    <td>Cannot be resized independently; resizing affects contained logical partitions.</td>
-                    <td>Can be resized by adjusting the size of the extended partition.</td>
-                    <td>Easily resizable; logical volumes can be expanded or reduced dynamically.</td>
-                </tr>
-                <tr>
-                    <td><strong>File System Support</strong></td>
-                    <td>Supports all file systems.</td>
-                    <td>Not applicable as it does not hold data.</td>
-                    <td>Supports all file systems within the extended partition.</td>
-                    <td>Supports multiple file systems, can have different file systems on different volumes.</td>
-                </tr>
-                <tr>
-                    <td><strong>Management Tools</strong></td>
-                    <td>Managed by standard disk utilities (e.g., fdisk, Disk Management in Windows).</td>
-                    <td>Managed by standard disk utilities alongside primary partitions.</td>
-                    <td>Managed within the extended partition by standard disk utilities.</td>
-                    <td>Managed using LVM tools (e.g., <code>lvcreate</code>, <code>lvextend</code>, <code>lvreduce</code>).</td>
-                </tr>
-                <tr>
-                    <td><strong>Use Cases</strong></td>
-                    <td>Typically used for OS installation, critical system data.</td>
-                    <td>Used when more than 4 partitions are needed on a disk.</td>
-                    <td>Used for separating data, organizing storage without using additional primary partitions.</td>
-                    <td>Used for flexible storage management, creating dynamic and scalable storage environments, advanced features like snapshots and mirroring.</td>
+                    <td><strong>PFree</strong></td>
+                    <td>Unused space on that PV</td>
                 </tr>
             </table>
             </p>
+            <h3 id="volume-groups">Volume Groups</h3>
+            <p>A volume group, or VG, is a storage pool made from one or more physical volumes.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">TEST</code></pre>
+            </div>
+            <p>A VG combines the capacity of all physical volumes assigned to it.</p>
+            <p>To create a volume group:</p>
+            <div>
+                <pre><code class="language-bash">sudo vgcreate TEST /dev/sdb</code></pre>
+            </div>
+            <p>To add more physical volumes to an existing volume group:</p>
+            <div>
+                <pre><code class="language-bash">sudo vgextend TEST /dev/sdc /dev/sdd</code></pre>
+            </div>
+            <p>To view volume groups:</p>
+            <div>
+                <pre><code class="language-bash">sudo vgs</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">VG     #PV #LV #SN Attr   VSize    VFree
+TEST     3   2   0 wz--n- 300.00g  30.00g</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Field</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td><strong>#PV</strong></td>
+                    <td>Number of physical volumes in the group</td>
+                </tr>
+                <tr>
+                    <td><strong>#LV</strong></td>
+                    <td>Number of logical volumes in the group</td>
+                </tr>
+                <tr>
+                    <td><strong>VSize</strong></td>
+                    <td>Total size of the volume group</td>
+                </tr>
+                <tr>
+                    <td><strong>VFree</strong></td>
+                    <td>Unused space still available</td>
+                </tr>
+            </table>
+            </p>
+            <p>The <code>VFree</code> value is important. It tells you how much space is available for new logical volumes or for extending existing ones.</p>
+            <h3 id="logical-volumes">Logical Volumes</h3>
+            <p>A logical volume, or LV, is the usable storage area created inside a volume group.</p>
+            <p>It behaves much like a partition. You can format it, mount it, and store files on it.</p>
+            <p>Examples:</p>
+            <div>
+                <pre><code class="language-text">/dev/TEST/vol_name_1
+/dev/mapper/TEST-vol_name_1</code></pre>
+            </div>
+            <p>Both paths usually refer to the same logical volume.</p>
+            <p>To create a logical volume:</p>
+            <div>
+                <pre><code class="language-bash">sudo lvcreate -L 20G -n vol_name_1 TEST</code></pre>
+            </div>
+            <p>This creates a 20 GB logical volume named <code>vol_name_1</code> inside the volume group <code>TEST</code>.</p>
+            <p>To view logical volumes:</p>
+            <div>
+                <pre><code class="language-bash">sudo lvs</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">LV          VG    Attr       LSize   Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert
+vol_name_1  TEST  -wi-a----- 180.00g
+vol_name_2  TEST  -wi-a-----  90.00g</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Field</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td><strong>LV</strong></td>
+                    <td>Logical volume name</td>
+                </tr>
+                <tr>
+                    <td><strong>VG</strong></td>
+                    <td>Volume group name</td>
+                </tr>
+                <tr>
+                    <td><strong>LSize</strong></td>
+                    <td>Logical volume size</td>
+                </tr>
+                <tr>
+                    <td><strong>Attr</strong></td>
+                    <td>Volume attributes</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="filesystems-on-logical-volumes">Filesystems on Logical Volumes</h3>
+            <p>A logical volume is not ready for normal file storage until it has a filesystem.</p>
+            <p>For example, to create an ext4 filesystem:</p>
+            <div>
+                <pre><code class="language-bash">sudo mkfs.ext4 /dev/TEST/vol_name_1</code></pre>
+            </div>
+            <p>Then create a mount point:</p>
+            <div>
+                <pre><code class="language-bash">sudo mkdir -p /mnt/mydata</code></pre>
+            </div>
+            <p>Mount it:</p>
+            <div>
+                <pre><code class="language-bash">sudo mount /dev/TEST/vol_name_1 /mnt/mydata</code></pre>
+            </div>
+            <p>Check it:</p>
+            <div>
+                <pre><code class="language-bash">df -h /mnt/mydata</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Filesystem                    Size  Used Avail Use% Mounted on
+/dev/mapper/TEST-vol_name_1    20G   24K   19G   1% /mnt/mydata</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The logical volume is formatted, mounted, and usable.
+Files written to /mnt/mydata are stored on the LV.</code></pre>
+            </div>
+            <h3 id="lvm-naming">LVM Naming</h3>
+            <p>LVM names usually follow this pattern:</p>
+            <div>
+                <pre><code class="language-text">/dev/VOLUME_GROUP/LOGICAL_VOLUME</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">/dev/TEST/vol_name_1</code></pre>
+            </div>
+            <p>Linux may also show the same LV under <code>/dev/mapper</code>:</p>
+            <div>
+                <pre><code class="language-text">/dev/mapper/TEST-vol_name_1</code></pre>
+            </div>
+            <p>Both refer to the same logical volume.</p>
+            <h3 id="basic-lvm-creation-workflow">Basic LVM Creation Workflow</h3>
+            <p>A full LVM setup usually follows this order:</p>
+            <ol>
+                <li>Identify disks or partitions</li>
+                <li>Create physical volumes</li>
+                <li>Create a volume group</li>
+                <li>Create logical volumes</li>
+                <li>Create filesystems</li>
+                <li>Create mount points</li>
+                <li>Mount logical volumes</li>
+                <li>Optionally configure /etc/fstab</li>
+            </ol>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">sudo pvcreate /dev/sdb /dev/sdc /dev/sdd
+sudo vgcreate TEST /dev/sdb
+sudo vgextend TEST /dev/sdc /dev/sdd
+
+sudo lvcreate -L 20G -n vol_name_1 TEST
+sudo lvcreate -L 12G -n vol_name_2 TEST
+
+sudo mkfs.ext4 /dev/TEST/vol_name_1
+sudo mkdir -p /mnt/vol1
+sudo mount /dev/TEST/vol_name_1 /mnt/vol1</code></pre>
+            </div>
+            <h3 id="extending-a-logical-volume">Extending a Logical Volume</h3>
+            <p>One of the biggest advantages of LVM is that logical volumes can be extended.</p>
+            <p>If the volume group has free space, you can increase an LV size.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">sudo lvextend -L +10G /dev/TEST/vol_name_1</code></pre>
+            </div>
+            <p>This adds 10 GB to the logical volume.</p>
+            <p>However, the filesystem also needs to be expanded.</p>
+            <p>For ext4:</p>
+            <div>
+                <pre><code class="language-bash">sudo resize2fs /dev/TEST/vol_name_1</code></pre>
+            </div>
+            <p>A more convenient method is to use <code>-r</code>, which resizes the filesystem automatically:</p>
+            <div>
+                <pre><code class="language-bash">sudo lvextend -r -L +10G /dev/TEST/vol_name_1</code></pre>
+            </div>
+            <p>This is often safer and simpler because it handles both steps:</p>
+            <div>
+                <pre><code class="language-text">extend LV
+resize filesystem</code></pre>
+            </div>
+            <h3 id="reducing-a-logical-volume">Reducing a Logical Volume</h3>
+            <p>Reducing a logical volume is more dangerous than extending it.</p>
+            <p>If done incorrectly, it can destroy data.</p>
+            <p>The safe order for ext4 is:</p>
+            <ol>
+                <li>Back up important data</li>
+                <li>Unmount the filesystem</li>
+                <li>Check the filesystem</li>
+                <li>Shrink the filesystem</li>
+                <li>Shrink the logical volume</li>
+                <li>Mount again</li>
+                <li>Verify data</li>
+            </ol>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">sudo umount /dev/TEST/vol_name_1
+sudo e2fsck -f /dev/TEST/vol_name_1
+sudo resize2fs /dev/TEST/vol_name_1 15G
+sudo lvreduce -L 15G /dev/TEST/vol_name_1
+sudo mount /dev/TEST/vol_name_1 /mnt/vol1</code></pre>
+            </div>
+            <p>Important warning:</p>
+            <div>
+                <pre><code class="language-text">Do not reduce an LV before reducing the filesystem.
+The filesystem must fit inside the smaller LV.</code></pre>
+            </div>
+            <p>For some filesystems, such as XFS, shrinking is not supported. XFS can be grown online but not shrunk in place.</p>
+            <h3 id="deleting-a-logical-volume">Deleting a Logical Volume</h3>
+            <p>To delete a logical volume, first unmount it.</p>
+            <div>
+                <pre><code class="language-bash">sudo umount /mnt/vol1</code></pre>
+            </div>
+            <p>Then remove it:</p>
+            <div>
+                <pre><code class="language-bash">sudo lvremove /dev/TEST/vol_name_1</code></pre>
+            </div>
+            <p>LVM will ask for confirmation.</p>
+            <p>After removal, the space returns to the volume group as free space.</p>
+            <p>Check with:</p>
+            <div>
+                <pre><code class="language-bash">sudo vgs</code></pre>
+            </div>
+            <h3 id="lvm-snapshots">LVM Snapshots</h3>
+            <p>An LVM snapshot captures the state of a logical volume at a point in time.</p>
+            <p>Snapshots are useful for:</p>
+            <ul>
+                <li>Temporary backups</li>
+                <li>Consistent backup windows</li>
+                <li>Testing risky changes</li>
+                <li>Rollback scenarios</li>
+                <li>Capturing a filesystem state before updates</li>
+            </ul>
+            <p>A snapshot does not immediately copy all data. Instead, it uses copy-on-write behavior. When data changes on the original LV, the snapshot keeps the old blocks so it can preserve the earlier state.</p>
+            <div>
+                <pre><code class="language-text">Original LV before snapshot
+        |
+        v
+Snapshot created
+        |
+        v
+Changes happen on original LV
+        |
+        v
+Snapshot preserves old data blocks</code></pre>
+            </div>
+            <p>Create a snapshot:</p>
+            <div>
+                <pre><code class="language-bash">sudo lvcreate -L 1G -s -n snap_vol_name_1 /dev/TEST/vol_name_1</code></pre>
+            </div>
+            <p>This creates a 1 GB snapshot named <code>snap_vol_name_1</code>.</p>
+            <p>View snapshots:</p>
+            <div>
+                <pre><code class="language-bash">sudo lvs</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">LV               VG    Attr       LSize  Origin      Data%
+snap_vol_name_1  TEST  swi-a-s---  1.00g vol_name_1  12.00
+vol_name_1       TEST  owi-a-s--- 20.00g</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li><code>snap_vol_name_1</code> is a snapshot of <code>vol_name_1</code></li>
+                <li><code>Data%</code> shows how much of the snapshot space is used</li>
+                <li>If <code>Data%</code> reaches <code>100%</code>, the snapshot becomes invalid</li>
+            </ul>
+            <h3 id="restoring-from-a-snapshot">Restoring from a Snapshot</h3>
+            <p>To merge a snapshot back into the original logical volume:</p>
+            <div>
+                <pre><code class="language-bash">sudo lvconvert --merge /dev/TEST/snap_vol_name_1</code></pre>
+            </div>
+            <p>The merge may happen immediately or at the next activation, depending on whether the origin volume is active.</p>
+            <p>A common safe workflow is:</p>
+            <ul>
+                <li>Create snapshot</li>
+                <li>Make changes</li>
+                <li>If changes are bad, unmount original LV</li>
+                <li>Merge snapshot</li>
+                <li>Reactivate LV</li>
+                <li>Mount again</li>
+            </ul>
+            <p>Snapshots are useful, but they are not a full backup replacement. If the disk fails, snapshots on the same disk may be lost too.</p>
+            <h3 id="persistent-mounting-with-etc-fstab">Persistent Mounting with <code>/etc/fstab</code></h3>
+            <p>If you want an LV mounted automatically at boot, add it to <code>/etc/fstab</code>.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">/dev/TEST/vol_name_1   /mnt/vol1   ext4   defaults   0   2</code></pre>
+            </div>
+            <p>A more robust option is to use a UUID.</p>
+            <p>Find the UUID:</p>
+            <div>
+                <pre><code class="language-bash">sudo blkid /dev/TEST/vol_name_1</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">/dev/TEST/vol_name_1: UUID="1111-2222" TYPE="ext4"</code></pre>
+            </div>
+            <p>Then use:</p>
+            <div>
+                <pre><code class="language-text">UUID=1111-2222   /mnt/vol1   ext4   defaults   0   2</code></pre>
+            </div>
+            <p>Test <code>/etc/fstab</code> before rebooting:</p>
+            <div>
+                <pre><code class="language-bash">sudo mount -a</code></pre>
+            </div>
+            <h3 id="partition-types-compared">Partition Types Compared</h3>
+            <p>Primary partition:</p>
+            <ul>
+                <li>traditional partition type, especially on MBR disks</li>
+                <li>can contain a filesystem or bootable OS files</li>
+                <li>MBR supports up to 4 primary partitions</li>
+            </ul>
+            <p>Extended partition:</p>
+            <ul>
+                <li>MBR-only container used to work around the 4-partition limit</li>
+                <li>does not directly store normal data</li>
+                <li>contains logical partitions</li>
+            </ul>
+            <p>Logical partition:</p>
+            <ul>
+                <li>created inside an extended partition on MBR disks</li>
+                <li>can contain a filesystem</li>
+                <li>used when more than 4 partitions are needed</li>
+            </ul>
+            <p>LVM logical volume:</p>
+            <ul>
+                <li>flexible virtual storage unit created inside a volume group</li>
+                <li>can be resized more easily</li>
+                <li>can span multiple disks through the volume group</li>
+                <li>supports snapshots and advanced management</li>
+            </ul>
+            <p>Modern note:</p>
+            <div>
+                <pre><code class="language-text">On GPT disks, primary/extended/logical partition limits are mostly not relevant.
+GPT supports many normal partitions without extended partitions.</code></pre>
+            </div>
+            <h3 id="when-to-use-partitions-vs-lvm">When to Use Partitions vs LVM</h3>
+            <p>Use normal partitions when:</p>
+            <ul>
+                <li>The layout is simple</li>
+                <li>The system is small</li>
+                <li>You do not need resizing flexibility</li>
+                <li>You want easier recovery with minimal layers</li>
+                <li>You are creating simple boot or EFI partitions</li>
+            </ul>
+            <p>Use LVM when:</p>
+            <ul>
+                <li>Storage may grow later</li>
+                <li>You need flexible resizing</li>
+                <li>You want to combine disks into a pool</li>
+                <li>You want snapshots</li>
+                <li>You manage servers or virtual machines</li>
+                <li>You want meaningful volume names</li>
+            </ul>
+            <p>A common Linux server layout might use both:</p>
+            <div>
+                <pre><code class="language-text">/boot      normal partition
+/boot/efi  EFI system partition
+/          LVM logical volume
+/home      LVM logical volume
+/var       LVM logical volume</code></pre>
+            </div>
+            <h3 id="useful-lvm-commands">Useful LVM Commands</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Command</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td><code>pvs</code></td>
+                    <td>Show physical volumes</td>
+                </tr>
+                <tr>
+                    <td><code>pvdisplay</code></td>
+                    <td>Detailed physical volume info</td>
+                </tr>
+                <tr>
+                    <td><code>vgs</code></td>
+                    <td>Show volume groups</td>
+                </tr>
+                <tr>
+                    <td><code>vgdisplay</code></td>
+                    <td>Detailed volume group info</td>
+                </tr>
+                <tr>
+                    <td><code>lvs</code></td>
+                    <td>Show logical volumes</td>
+                </tr>
+                <tr>
+                    <td><code>lvdisplay</code></td>
+                    <td>Detailed logical volume info</td>
+                </tr>
+                <tr>
+                    <td><code>lsblk</code></td>
+                    <td>Show block devices and mount points</td>
+                </tr>
+                <tr>
+                    <td><code>lsblk -f</code></td>
+                    <td>Show filesystems and UUIDs</td>
+                </tr>
+                <tr>
+                    <td><code>df -h</code></td>
+                    <td>Show mounted filesystem usage</td>
+                </tr>
+                <tr>
+                    <td><code>blkid</code></td>
+                    <td>Show UUID and filesystem type</td>
+                </tr>
+            </table>
+            </p>
+            <p>Creation commands:</p>
+            <ul>
+                <li><code>pvcreate /dev/sdb</code></li>
+                <li><code>vgcreate TEST /dev/sdb</code></li>
+                <li><code>vgextend TEST /dev/sdc</code></li>
+                <li><code>lvcreate -L 20G -n vol_name_1 TEST</code></li>
+                <li><code>mkfs.ext4 /dev/TEST/vol_name_1</code></li>
+                <li><code>mount /dev/TEST/vol_name_1 /mnt/vol1</code></li>
+            </ul>
+            <p>Resize commands:</p>
+            <div>
+                <pre><code class="language-bash">lvextend -r -L +10G /dev/TEST/vol_name_1
+resize2fs /dev/TEST/vol_name_1
+lvreduce -L 15G /dev/TEST/vol_name_1</code></pre>
+            </div>
+            <p>Snapshot commands:</p>
+            <div>
+                <pre><code class="language-bash">lvcreate -L 1G -s -n snap_vol_name_1 /dev/TEST/vol_name_1
+lvconvert --merge /dev/TEST/snap_vol_name_1</code></pre>
+            </div>
+            <p>Removal commands:</p>
+            <div>
+                <pre><code class="language-bash">umount /mnt/vol1
+lvremove /dev/TEST/vol_name_1
+vgremove TEST
+pvremove /dev/sdb</code></pre>
+            </div>
+            <h3 id="safe-lvm-lab-setup-using-loopback-disks">Safe LVM Lab Setup Using Loopback Disks</h3>
+            <p>The following lab simulates disks using regular files.</p>
+            <p>This is safer than practicing on real disks because it avoids accidentally destroying real data.</p>
+            <p>Important warning:</p>
+            <ul>
+                <li>These commands still use <code>sudo</code> and create block devices</li>
+                <li>Run them only on a test machine or lab VM</li>
+                <li>Carefully copy device names</li>
+                <li>Do not use real disks such as <code>/dev/sda</code> unless you intend to erase them</li>
+            </ul>
+            <h3 id="scenario-1-create-a-complete-lvm-setup-in-a-lab">Scenario 1: Create a Complete LVM Setup in a Lab</h3>
+            <p>Simulate three disks, create LVM physical volumes, combine them into one volume group, create a logical volume, format it, mount it, and verify that it works.</p>
+            <h4 id="step-1-create-test-disk-files">Step 1: Create Test Disk Files</h4>
+            <div>
+                <pre><code class="language-bash">mkdir -p ~/lvm-lab
+
+truncate -s 1G ~/lvm-lab/disk1.img
+truncate -s 1G ~/lvm-lab/disk2.img
+truncate -s 1G ~/lvm-lab/disk3.img</code></pre>
+            </div>
+            <p>These files act like fake disks.</p>
+            <h4 id="step-2-attach-files-as-loop-devices">Step 2: Attach Files as Loop Devices</h4>
+            <div>
+                <pre><code class="language-bash">sudo losetup --find --show ~/lvm-lab/disk1.img
+sudo losetup --find --show ~/lvm-lab/disk2.img
+sudo losetup --find --show ~/lvm-lab/disk3.img</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">/dev/loop10
+/dev/loop11
+/dev/loop12</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The files are now visible as block devices</li>
+                <li>In this example, the fake disks are <code>/dev/loop10</code>, <code>/dev/loop11</code>, and <code>/dev/loop12</code></li>
+                <li>Your device numbers may be different</li>
+            </ul>
+            <h4 id="step-3-create-physical-volumes">Step 3: Create Physical Volumes</h4>
+            <div>
+                <pre><code class="language-bash">sudo pvcreate /dev/loop10 /dev/loop11 /dev/loop12</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Physical volume "/dev/loop10" successfully created.
+Physical volume "/dev/loop11" successfully created.
+Physical volume "/dev/loop12" successfully created.</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">sudo pvs</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">PV           VG  Fmt  Attr PSize    PFree
+/dev/loop10      lvm2 ---  1024.00m 1024.00m
+/dev/loop11      lvm2 ---  1024.00m 1024.00m
+/dev/loop12      lvm2 ---  1024.00m 1024.00m</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The loop devices are prepared for LVM.
+They are not yet part of a volume group.</code></pre>
+            </div>
+            <h4 id="step-4-create-a-volume-group">Step 4: Create a Volume Group</h4>
+            <div>
+                <pre><code class="language-bash">sudo vgcreate lab_vg /dev/loop10 /dev/loop11</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Volume group "lab_vg" successfully created</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">sudo vgs</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">VG      #PV #LV #SN Attr   VSize  VFree
+lab_vg    2   0   0 wz--n- 1.99g  1.99g</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">Two 1 GB loop disks are combined into one volume group.
+The volume group has about 2 GB of usable space.</code></pre>
+            </div>
+            <h4 id="step-5-create-a-logical-volume">Step 5: Create a Logical Volume</h4>
+            <div>
+                <pre><code class="language-bash">sudo lvcreate -L 1G -n data lab_vg</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Logical volume "data" created.</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">sudo lvs</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">LV    VG      Attr       LSize Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert
+data  lab_vg  -wi-a----- 1.00g</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">A 1 GB logical volume named data now exists inside lab_vg.</code></pre>
+            </div>
+            <h4 id="step-6-create-a-filesystem">Step 6: Create a Filesystem</h4>
+            <div>
+                <pre><code class="language-bash">sudo mkfs.ext4 /dev/lab_vg/data</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Creating filesystem with 262144 4k blocks and 65536 inodes
+Filesystem UUID: 12345678-abcd-1234-abcd-123456789abc</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The logical volume now contains an ext4 filesystem.
+It can be mounted and used for files.</code></pre>
+            </div>
+            <h4 id="step-7-mount-the-logical-volume">Step 7: Mount the Logical Volume</h4>
+            <div>
+                <pre><code class="language-bash">sudo mkdir -p /mnt/lvmlab
+sudo mount /dev/lab_vg/data /mnt/lvmlab</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">df -h /mnt/lvmlab</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Filesystem               Size  Used Avail Use% Mounted on
+/dev/mapper/lab_vg-data  974M   24K  907M   1% /mnt/lvmlab</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The logical volume is mounted and usable.
+Files placed in /mnt/lvmlab are stored on the LVM logical volume.</code></pre>
+            </div>
+            <h3 id="scenario-2-simulate-a-full-filesystem-and-fix-it-with-lvm">Scenario 2: Simulate a Full Filesystem and Fix It with LVM</h3>
+            <p>Simulate a common storage bottleneck: a mounted filesystem is almost full, but the volume group still has free space.</p>
+            <p>This is one of the best practical use cases for LVM.</p>
+            <h4 id="step-1-fill-the-filesystem">Step 1: Fill the Filesystem</h4>
+            <div>
+                <pre><code class="language-bash">sudo fallocate -l 850M /mnt/lvmlab/bigfile</code></pre>
+            </div>
+            <p>Check usage:</p>
+            <div>
+                <pre><code class="language-bash">df -h /mnt/lvmlab</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Filesystem               Size  Used Avail Use% Mounted on
+/dev/mapper/lab_vg-data  974M  851M   58M  94% /mnt/lvmlab</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The filesystem is almost full.
+Applications writing to /mnt/lvmlab may fail soon.</code></pre>
+            </div>
+            <h4 id="step-2-check-whether-the-volume-group-has-free-space">Step 2: Check Whether the Volume Group Has Free Space</h4>
+            <div>
+                <pre><code class="language-bash">sudo vgs</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">VG      #PV #LV #SN Attr   VSize  VFree
+lab_vg    2   1   0 wz--n- 1.99g  1016.00m</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The filesystem is almost full, but the volume group has about 1 GB free</li>
+                <li>This means the logical volume can be extended</li>
+            </ul>
+            <h4 id="step-3-extend-the-logical-volume-and-filesystem">Step 3: Extend the Logical Volume and Filesystem</h4>
+            <p>Use <code>-r</code> to resize the filesystem at the same time:</p>
+            <div>
+                <pre><code class="language-bash">sudo lvextend -r -L +500M /dev/lab_vg/data</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Size of logical volume lab_vg/data changed from 1.00 GiB to 1.49 GiB.
+Logical volume lab_vg/data successfully resized.
+resize2fs 1.46.5
+The filesystem is now 390144 blocks long.</code></pre>
+            </div>
+            <h4 id="step-4-verify-the-result">Step 4: Verify the Result</h4>
+            <div>
+                <pre><code class="language-bash">df -h /mnt/lvmlab</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Filesystem               Size  Used Avail Use% Mounted on
+/dev/mapper/lab_vg-data  1.5G  851M  542M  62% /mnt/lvmlab</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The logical volume grew</li>
+                <li>The filesystem grew</li>
+                <li>The mount point now has more free space</li>
+                <li>The capacity bottleneck is resolved</li>
+            </ul>
+            <h3 id="scenario-3-simulate-no-space-left-in-volume-group-">Scenario 3: Simulate “No Space Left in Volume Group”</h3>
+            <p>Show what happens when the filesystem needs more space but the volume group does not have enough free space.</p>
+            <h4 id="step-1-try-to-extend-too-much">Step 1: Try to Extend Too Much</h4>
+            <div>
+                <pre><code class="language-bash">sudo lvextend -r -L +5G /dev/lab_vg/data</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Insufficient free space: 1280 extents needed, but only 129 available</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The logical volume cannot be extended because the volume group does not have enough free space</li>
+                <li>This is not a filesystem problem</li>
+                <li>This is a volume group capacity problem</li>
+            </ul>
+            <h4 id="step-2-confirm-with-vgs">Step 2: Confirm with <code>vgs</code></h4>
+            <div>
+                <pre><code class="language-bash">sudo vgs</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">VG      #PV #LV #SN Attr   VSize  VFree
+lab_vg    2   1   0 wz--n- 1.99g  516.00m</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">Only about 516 MB is free in the volume group.
+A 5 GB extension is impossible without adding more storage.</code></pre>
+            </div>
+            <h4 id="step-3-add-another-physical-volume">Step 3: Add Another Physical Volume</h4>
+            <p>Earlier, <code>/dev/loop12</code> was prepared as a PV but not added to the VG.</p>
+            <p>Add it now:</p>
+            <div>
+                <pre><code class="language-bash">sudo vgextend lab_vg /dev/loop12</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Volume group "lab_vg" successfully extended</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">sudo vgs</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">VG      #PV #LV #SN Attr   VSize  VFree
+lab_vg    3   1   0 wz--n- 2.99g  1.51g</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The volume group now includes another physical volume</li>
+                <li>Free space increased</li>
+                <li>The LV can now be extended further</li>
+            </ul>
+            <h4 id="step-4-extend-again">Step 4: Extend Again</h4>
+            <div>
+                <pre><code class="language-bash">sudo lvextend -r -L +1G /dev/lab_vg/data</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">df -h /mnt/lvmlab</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Filesystem               Size  Used Avail Use% Mounted on
+/dev/mapper/lab_vg-data  2.5G  851M  1.6G  35% /mnt/lvmlab</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>Adding a PV increased VG capacity</li>
+                <li>The LV and filesystem were extended</li>
+                <li>The filesystem now has enough free space</li>
+            </ul>
+            <h3 id="scenario-4-simulate-and-inspect-lvm-layers">Scenario 4: Simulate and Inspect LVM Layers</h3>
+            <p>Use LVM tools to understand the relationship between PVs, VGs, LVs, filesystems, and mount points.</p>
+            <h4 id="check-block-devices">Check Block Devices</h4>
+            <div>
+                <pre><code class="language-bash">lsblk</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">NAME              SIZE TYPE MOUNTPOINT
+loop10              1G loop
+└─lab_vg-data     2.5G lvm  /mnt/lvmlab
+loop11              1G loop
+└─lab_vg-data     2.5G lvm  /mnt/lvmlab
+loop12              1G loop
+└─lab_vg-data     2.5G lvm  /mnt/lvmlab</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The logical volume data is built from space in the volume group</li>
+                <li>The volume group is backed by multiple loop devices</li>
+                <li>The logical volume is mounted at <code>/mnt/lvmlab</code></li>
+            </ul>
+            <h4 id="check-physical-volumes">Check Physical Volumes</h4>
+            <div>
+                <pre><code class="language-bash">sudo pvs</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">PV           VG      Fmt  Attr PSize    PFree
+/dev/loop10  lab_vg  lvm2 a--  1020.00m    0
+/dev/loop11  lab_vg  lvm2 a--  1020.00m    0
+/dev/loop12  lab_vg  lvm2 a--  1020.00m  500.00m</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">All three loop devices are physical volumes.
+Some free space remains on /dev/loop12.</code></pre>
+            </div>
+            <h4 id="check-volume-group">Check Volume Group</h4>
+            <div>
+                <pre><code class="language-bash">sudo vgs</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">VG      #PV #LV #SN Attr   VSize  VFree
+lab_vg    3   1   0 wz--n- 2.99g 500.00m</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The volume group contains 3 PVs and 1 LV</li>
+                <li>It still has 500 MB free</li>
+            </ul>
+            <h4 id="check-logical-volume">Check Logical Volume</h4>
+            <div>
+                <pre><code class="language-bash">sudo lvs</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">LV    VG      Attr       LSize Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert
+data  lab_vg  -wi-ao---- 2.50g</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The data LV is 2.5 GB</li>
+                <li>The <code>o</code> attribute indicates it is open, meaning it is active and mounted or in use</li>
+            </ul>
+            <h3 id="scenario-5-create-a-snapshot-before-a-risky-change">Scenario 5: Create a Snapshot Before a Risky Change</h3>
+            <p>Create a snapshot, make a risky change, and understand how the snapshot protects the earlier state.</p>
+            <h4 id="step-1-create-a-test-file">Step 1: Create a Test File</h4>
+            <div>
+                <pre><code class="language-bash">echo "original version" | sudo tee /mnt/lvmlab/example.txt
+cat /mnt/lvmlab/example.txt</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">original version</code></pre>
+            </div>
+            <h4 id="step-2-create-a-snapshot">Step 2: Create a Snapshot</h4>
+            <div>
+                <pre><code class="language-bash">sudo lvcreate -L 200M -s -n data_snap /dev/lab_vg/data</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Logical volume "data_snap" created.</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">sudo lvs</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">LV        VG      Attr       LSize   Origin Data%
+data      lab_vg  owi-aos---   2.50g
+data_snap lab_vg  swi-a-s--- 200.00m data   0.01</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li><code>data_snap</code> is a snapshot of <code>data</code></li>
+                <li>It preserves the original state at the time the snapshot was created</li>
+            </ul>
+            <h4 id="step-3-make-a-risky-change">Step 3: Make a Risky Change</h4>
+            <div>
+                <pre><code class="language-bash">echo "bad change" | sudo tee /mnt/lvmlab/example.txt
+cat /mnt/lvmlab/example.txt</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">bad change</code></pre>
+            </div>
+            <h4 id="step-4-inspect-snapshot-usage">Step 4: Inspect Snapshot Usage</h4>
+            <div>
+                <pre><code class="language-bash">sudo lvs</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">LV        VG      Attr       LSize   Origin Data%
+data      lab_vg  owi-aos---   2.50g
+data_snap lab_vg  swi-a-s--- 200.00m data   1.25</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The snapshot is using some space because the original LV changed after the snapshot was created</li>
+                <li>If <code>Data%</code> reaches <code>100%</code>, the snapshot becomes invalid</li>
+            </ul>
+            <h4 id="step-5-restore-by-merging-the-snapshot">Step 5: Restore by Merging the Snapshot</h4>
+            <p>Unmount the filesystem first:</p>
+            <div>
+                <pre><code class="language-bash">cd ~
+sudo umount /mnt/lvmlab</code></pre>
+            </div>
+            <p>Merge the snapshot:</p>
+            <div>
+                <pre><code class="language-bash">sudo lvconvert --merge /dev/lab_vg/data_snap</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Merging of volume lab_vg/data_snap started.
+lab_vg/data: Merged: 100.00%</code></pre>
+            </div>
+            <p>Reactivate if needed:</p>
+            <div>
+                <pre><code class="language-bash">sudo lvchange -ay /dev/lab_vg/data</code></pre>
+            </div>
+            <p>Mount again:</p>
+            <div>
+                <pre><code class="language-bash">sudo mount /dev/lab_vg/data /mnt/lvmlab
+cat /mnt/lvmlab/example.txt</code></pre>
+            </div>
+            <p>Expected output:</p>
+            <div>
+                <pre><code class="language-text">original version</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The snapshot merge restored the LV to the earlier state</li>
+                <li>The risky change was undone</li>
+            </ul>
+            <h3 id="scenario-6-simulate-snapshot-space-exhaustion">Scenario 6: Simulate Snapshot Space Exhaustion</h3>
+            <p>Show why snapshot size matters.</p>
+            <p>Snapshots need enough space to store changed blocks. If too much changes after the snapshot is created, the snapshot can fill up and become unusable.</p>
+            <h4 id="step-1-create-a-small-snapshot">Step 1: Create a Small Snapshot</h4>
+            <div>
+                <pre><code class="language-bash">sudo lvcreate -L 50M -s -n small_snap /dev/lab_vg/data</code></pre>
+            </div>
+            <h4 id="step-2-write-enough-data-to-the-original-lv">Step 2: Write Enough Data to the Original LV</h4>
+            <div>
+                <pre><code class="language-bash">sudo fallocate -l 200M /mnt/lvmlab/change-after-snapshot.bin</code></pre>
+            </div>
+            <h4 id="step-3-check-snapshot-usage">Step 3: Check Snapshot Usage</h4>
+            <div>
+                <pre><code class="language-bash">sudo lvs</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">LV          VG      Attr       LSize  Origin Data%
+data        lab_vg  owi-aos--- 2.50g
+small_snap  lab_vg  swi-a-s--- 50.00m data   100.00</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The snapshot is full</li>
+                <li>A full snapshot may become invalid</li>
+                <li>This means the snapshot can no longer reliably represent the original point-in-time state</li>
+            </ul>
+            <h4 id="lesson">Lesson</h4>
+            <ul>
+                <li>Snapshot size must be chosen based on how much data may change while the snapshot exists</li>
+                <li>Snapshots should usually be temporary</li>
+            </ul>
+            <h3 id="scenario-7-clean-up-the-lvm-lab">Scenario 7: Clean Up the LVM Lab</h3>
+            <p>Remove the test LVM setup safely.</p>
+            <h4 id="step-1-unmount">Step 1: Unmount</h4>
+            <div>
+                <pre><code class="language-bash">cd ~
+sudo umount /mnt/lvmlab</code></pre>
+            </div>
+            <h4 id="step-2-remove-snapshots-if-any-remain">Step 2: Remove Snapshots if Any Remain</h4>
+            <div>
+                <pre><code class="language-bash">sudo lvs
+sudo lvremove /dev/lab_vg/small_snap</code></pre>
+            </div>
+            <p>Only remove snapshots that exist.</p>
+            <h4 id="step-3-remove-the-logical-volume">Step 3: Remove the Logical Volume</h4>
+            <div>
+                <pre><code class="language-bash">sudo lvremove /dev/lab_vg/data</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Do you really want to remove active logical volume lab_vg/data? [y/n]: y
+Logical volume "data" successfully removed.</code></pre>
+            </div>
+            <h4 id="step-4-remove-the-volume-group">Step 4: Remove the Volume Group</h4>
+            <div>
+                <pre><code class="language-bash">sudo vgremove lab_vg</code></pre>
+            </div>
+            <h4 id="step-5-remove-physical-volume-labels">Step 5: Remove Physical Volume Labels</h4>
+            <div>
+                <pre><code class="language-bash">sudo pvremove /dev/loop10 /dev/loop11 /dev/loop12</code></pre>
+            </div>
+            <h4 id="step-6-detach-loop-devices">Step 6: Detach Loop Devices</h4>
+            <div>
+                <pre><code class="language-bash">sudo losetup -d /dev/loop10
+sudo losetup -d /dev/loop11
+sudo losetup -d /dev/loop12</code></pre>
+            </div>
+            <h4 id="step-7-delete-test-files">Step 7: Delete Test Files</h4>
+            <div>
+                <pre><code class="language-bash">rm -rf ~/lvm-lab
+sudo rmdir /mnt/lvmlab</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">lsblk</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The test loop devices, LVM objects, mount point, and files have been removed.
+The lab environment is cleaned up.</code></pre>
+            </div>
+            <h3 id="common-lvm-troubleshooting">Common LVM Troubleshooting</h3>
+            <h4 id="problem-filesystem-is-full">Problem: Filesystem Is Full</h4>
+            <p>Symptoms:</p>
+            <div>
+                <pre><code class="language-text">applications cannot write files
+df -h shows 100% usage
+"No space left on device"</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">df -h
+sudo vgs
+sudo lvs</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>If <code>df</code> is full but <code>VFree</code> exists in <code>vgs</code>, extend the LV</li>
+                <li>If <code>df</code> is full and <code>VFree</code> is <code>0</code>, add storage or delete/move data</li>
+            </ul>
+            <p>Fix if VG has free space:</p>
+            <div>
+                <pre><code class="language-bash">sudo lvextend -r -L +10G /dev/VG_NAME/LV_NAME</code></pre>
+            </div>
+            <h4 id="problem-volume-group-has-no-free-space">Problem: Volume Group Has No Free Space</h4>
+            <p>Symptoms:</p>
+            <div>
+                <pre><code class="language-text">lvextend fails
+error mentions insufficient free extents
+vgs shows VFree as 0</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">sudo vgs
+sudo pvs</code></pre>
+            </div>
+            <p>Fix:</p>
+            <div>
+                <pre><code class="language-bash">sudo pvcreate /dev/newdisk
+sudo vgextend VG_NAME /dev/newdisk
+sudo lvextend -r -L +10G /dev/VG_NAME/LV_NAME</code></pre>
+            </div>
+            <h4 id="problem-logical-volume-exists-but-is-not-mounted">Problem: Logical Volume Exists but Is Not Mounted</h4>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">sudo lvs
+lsblk
+findmnt</code></pre>
+            </div>
+            <p>If the LV exists but is not mounted, mount it:</p>
+            <div>
+                <pre><code class="language-bash">sudo mkdir -p /mnt/data
+sudo mount /dev/VG_NAME/LV_NAME /mnt/data</code></pre>
+            </div>
+            <h4 id="problem-lvm-devices-not-active">Problem: LVM Devices Not Active</h4>
+            <p>Sometimes LVM volumes exist but are inactive.</p>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">sudo lvs</code></pre>
+            </div>
+            <p>Activate all volume groups:</p>
+            <div>
+                <pre><code class="language-bash">sudo vgchange -ay</code></pre>
+            </div>
+            <p>Then check again:</p>
+            <div>
+                <pre><code class="language-bash">lsblk</code></pre>
+            </div>
+            <h4 id="problem-snapshot-is-full">Problem: Snapshot Is Full</h4>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">sudo lvs</code></pre>
+            </div>
+            <p>If snapshot <code>Data%</code> is near 100%, it is at risk.</p>
+            <p>Fix options:</p>
+            <ul>
+                <li>Remove the snapshot if no longer needed</li>
+                <li>Extend the snapshot if possible</li>
+                <li>Merge it if rollback is needed</li>
+                <li>Avoid keeping snapshots too long</li>
+            </ul>
+            <p>Remove snapshot:</p>
+            <div>
+                <pre><code class="language-bash">sudo lvremove /dev/VG_NAME/SNAPSHOT_NAME</code></pre>
+            </div>
+            <h3 id="lvm-safety-rules">LVM Safety Rules</h3>
+            <ul>
+                <li>Always back up important data before resizing</li>
+                <li>Extending is usually safer than reducing</li>
+                <li>Do not reduce an LV before shrinking the filesystem</li>
+                <li>Use <code>lvextend -r</code> when possible</li>
+                <li>Check <code>df -h</code>, <code>lvs</code>, <code>vgs</code>, and <code>pvs</code> before making changes</li>
+                <li>Do not run <code>pvcreate</code> on a disk containing data you want to keep</li>
+                <li>Snapshots are useful, but they are not full backups</li>
+                <li>Test <code>/etc/fstab</code> changes with <code>mount -a</code> before rebooting</li>
+            </ul>
             <h3 id="challenges">Challenges</h3>
             <ol>
                 <li>Describe the process of reducing the size of an LVM partition. Explain the precautions to take, such as ensuring adequate free space and backing up any critical data on the partition. Outline the commands you would use, including how to first resize the filesystem before reducing the logical volume itself.</li>

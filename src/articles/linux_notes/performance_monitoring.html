@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Performance Monitoring</title>
-    <meta content="Performance monitoring helps you identify bottlenecks or issues that may be affecting your system's performance." name="description" />
+    <meta content="Performance monitoring is the process of observing how a system uses its resources." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/linux_notes/performance_monitoring"
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/performance_monitoring",
-            "description": "Performance monitoring helps you identify bottlenecks or issues that may be affecting your system's performance.",
-            "dateModified": "2026-03-23"
+            "description": "Performance monitoring is the process of observing how a system uses its resources.",
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -79,19 +79,121 @@
                 <h2>Table of Contents</h2>
                 <ol><a href="#performance-monitoring">Performance Monitoring</a>
                     <ol>
-                        <li><a href="#understanding-usage-statistics">Understanding Usage Statistics</a></li>
-                        <li><a href="#top">Top</a></li>
-                        <li><a href="#htop">Htop</a></li>
-                        <li><a href="#swap-space">Swap space</a></li>
-                        <li><a href="#monitor-ram-usage">Monitor RAM usage</a>
+                        <li><a href="#basic-performance-model">Basic Performance Model</a></li>
+                        <li><a href="#important-usage-statistics">Important Usage Statistics</a></li>
+                        <li><a href="#cpu-usage">CPU Usage</a></li>
+                        <li><a href="#ram-usage">RAM Usage</a></li>
+                        <li><a href="#swap-usage">Swap Usage</a></li>
+                        <li><a href="#disk-usage-vs-disk-i-o">Disk Usage vs Disk I/O</a></li>
+                        <li><a href="#load-average">Load Average</a></li>
+                        <li><a href="#monitoring-workflow">Monitoring Workflow</a></li>
+                        <li><a href="#top">top</a></li>
+                        <li><a href="#example-top-output">Example top Output</a></li>
+                        <li><a href="#understanding-the-top-summary">Understanding the Top Summary</a></li>
+                        <li><a href="#understanding-cpu-fields-in-top">Understanding CPU Fields in top</a></li>
+                        <li><a href="#understanding-process-columns-in-top">Understanding Process Columns in top</a></li>
+                        <li><a href="#useful-top-keys">Useful top Keys</a></li>
+                        <li><a href="#htop">htop</a></li>
+                        <li><a href="#example-htop-view">Example htop View</a></li>
+                        <li><a href="#free">free</a></li>
+                        <li><a href="#understanding-free-h">Understanding free -h</a></li>
+                        <li><a href="#rss-and-vsz">RSS and VSZ</a></li>
+                        <li><a href="#rss">RSS</a></li>
+                        <li><a href="#vsz">VSZ</a></li>
+                        <li><a href="#example-rss-and-vsz-calculation">Example RSS and VSZ Calculation</a></li>
+                        <li><a href="#finding-top-memory-processes">Finding Top Memory Processes</a></li>
+                        <li><a href="#checking-memory-for-a-specific-process">Checking Memory for a Specific Process</a></li>
+                        <li><a href="#vmstat">vmstat</a></li>
+                        <li><a href="#example-vmstat-output">Example vmstat Output</a></li>
+                        <li><a href="#uptime">uptime</a></li>
+                        <li><a href="#iostat">iostat</a></li>
+                        <li><a href="#iotop">iotop</a></li>
+                        <li><a href="#df-and-du">df and du</a></li>
+                        <li><a href="#scenario-1-simulate-a-cpu-bottleneck">Scenario 1: Simulate a CPU Bottleneck</a>
                             <ol>
-                                <li><a href="#example-calculating-rss-and-vsz">Example: Calculating RSS and VSZ</a></li>
-                                <li><a href="#identifying-top-memory-consuming-processes">Identifying Top Memory-Consuming Processes</a></li>
-                                <li><a href="#finding-ram-usage-of-a-specific-process">Finding RAM Usage of a Specific Process</a></li>
+                                <li><a href="#simulate-the-bottleneck">Simulate the Bottleneck</a></li>
+                                <li><a href="#check-with-top">Check with top</a></li>
+                                <li><a href="#check-with-vmstat">Check with vmstat</a></li>
+                                <li><a href="#possible-fixes">Possible Fixes</a></li>
                             </ol>
                         </li>
-                        <li><a href="#vmstat">Vmstat</a></li>
-                        <li><a href="#challenges">Challenges</a></li>
+                        <li><a href="#scenario-2-simulate-memory-pressure">Scenario 2: Simulate Memory Pressure</a>
+                            <ol>
+                                <li><a href="#simulate-the-bottleneck">Simulate the Bottleneck</a></li>
+                                <li><a href="#check-with-free">Check with free</a></li>
+                                <li><a href="#check-with-vmstat">Check with vmstat</a></li>
+                                <li><a href="#possible-fixes">Possible Fixes</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-3-simulate-swap-thrashing">Scenario 3: Simulate Swap Thrashing</a>
+                            <ol>
+                                <li><a href="#simulate-carefully">Simulate Carefully</a></li>
+                                <li><a href="#check-with-vmstat">Check with vmstat</a></li>
+                                <li><a href="#possible-fixes">Possible Fixes</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-4-simulate-disk-i-o-bottleneck">Scenario 4: Simulate Disk I/O Bottleneck</a>
+                            <ol>
+                                <li><a href="#simulate-the-bottleneck">Simulate the Bottleneck</a></li>
+                                <li><a href="#check-with-iostat">Check with iostat</a></li>
+                                <li><a href="#check-with-iotop">Check with iotop</a></li>
+                                <li><a href="#possible-fixes">Possible Fixes</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-5-simulate-high-disk-space-usage">Scenario 5: Simulate High Disk Space Usage</a>
+                            <ol>
+                                <li><a href="#simulate-the-problem">Simulate the Problem</a></li>
+                                <li><a href="#find-large-directories">Find Large Directories</a></li>
+                                <li><a href="#clean-up">Clean Up</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-6-simulate-high-load-average-from-cpu">Scenario 6: Simulate High Load Average from CPU</a>
+                            <ol>
+                                <li><a href="#simulate">Simulate</a></li>
+                                <li><a href="#check-load">Check Load</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-7-simulate-high-load-average-from-disk-wait">Scenario 7: Simulate High Load Average from Disk Wait</a>
+                            <ol>
+                                <li><a href="#simulate">Simulate</a></li>
+                                <li><a href="#check">Check</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-8-identify-a-memory-heavy-process">Scenario 8: Identify a Memory-Heavy Process</a>
+                            <ol>
+                                <li><a href="#simulate">Simulate</a></li>
+                                <li><a href="#check-with-ps">Check with ps</a></li>
+                                <li><a href="#check-specific-process">Check Specific Process</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-9-simulate-a-zombie-process">Scenario 9: Simulate a Zombie Process</a>
+                            <ol>
+                                <li><a href="#simulate-with-a-small-script">Simulate with a Small Script</a></li>
+                                <li><a href="#fix">Fix</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-10-script-an-alert-for-disk-usage-above-80-">Scenario 10: Script an Alert for Disk Usage Above 80%</a>
+                            <ol>
+                                <li><a href="#script">Script</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-11-gather-hourly-performance-logs">Scenario 11: Gather Hourly Performance Logs</a>
+                            <ol>
+                                <li><a href="#create-a-script">Create a Script</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#performance-troubleshooting-decision-guide">Performance Troubleshooting Decision Guide</a>
+                            <ol>
+                                <li><a href="#pattern-high-cpu-low-i-o-wait">Pattern: High CPU, Low I/O Wait</a></li>
+                                <li><a href="#pattern-high-i-o-wait">Pattern: High I/O Wait</a></li>
+                                <li><a href="#pattern-low-available-memory-and-swap-activity">Pattern: Low Available Memory and Swap Activity</a></li>
+                                <li><a href="#pattern-high-load-but-cpu-idle">Pattern: High Load but CPU Idle</a></li>
+                                <li><a href="#pattern-disk-almost-full">Pattern: Disk Almost Full</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#useful-command-summary">Useful Command Summary</a></li>
+                        <li><a href="#safe-lab-rules">Safe Lab Rules</a></li>
+                        <li><a href="#practical-challenges">Practical Challenges</a></li>
                     </ol>
                 </ol>
             </div>
@@ -165,168 +267,296 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="performance-monitoring">Performance Monitoring</h2>
-            <p>Performance monitoring helps you identify bottlenecks or issues that may be affecting your system's performance. We'll now explore some tools and techniques available for monitoring performance and explain some usage statistics, such as CPU and RAM usage.</p>
-            <h3 id="understanding-usage-statistics">Understanding Usage Statistics</h3>
-            <p>Usage statistics provide insights into how your system resources are being utilized. These statistics include CPU usage, RAM usage, and disk usage. An increase in these statistics may be due to various factors, such as running resource-intensive applications, insufficient system resources, or a misconfiguration in your system settings.</p>
+            <p>Performance monitoring is the process of observing how a system uses its resources.</p>
+            <p>The goal is to understand whether the system is healthy, overloaded, or waiting on a specific bottleneck.</p>
+            <p>A bottleneck is the resource that limits performance.</p>
+            <p>Common bottlenecks include:</p>
             <ul>
-                <li><strong>CPU Usage</strong> indicates how much processing power is being utilized by your system. When CPU usage is high, applications may become sluggish, and the system can become unresponsive.</li>
-                <li><strong>RAM Usage</strong> shows how much of your system's memory is currently in use. If the system runs out of RAM, it starts using swap space, which can significantly slow down performance.</li>
-                <li><strong>Disk Usage</strong> displays how much of your system's storage is being consumed. High disk usage can negatively affect overall system performance and responsiveness.</li>
+                <li>CPU</li>
+                <li>RAM</li>
+                <li>swap</li>
+                <li>disk I/O</li>
+                <li>disk space</li>
+                <li>network</li>
+                <li>process limits</li>
+                <li>misbehaving applications</li>
             </ul>
-            <h3 id="top">Top</h3>
-            <p>The <code>top</code> command is a fundamental tool for real-time system monitoring. It offers a dynamic view of the system's running processes, allowing you to see which processes are consuming the most resources. <code>top</code> is particularly useful for diagnosing load and performance issues on a server or a local machine.</p>
-            <p>To start <code>top</code>, simply enter the following in the terminal:</p>
+            <p>A system may feel slow for many reasons. Performance monitoring helps avoid guessing.</p>
+            <p>Instead of saying:</p>
+            <div>
+                <pre><code class="language-text">The server is slow.</code></pre>
+            </div>
+            <p>we want to answer:</p>
+            <ul>
+                <li>Is the CPU saturated?</li>
+                <li>Is memory exhausted?</li>
+                <li>Is the system swapping?</li>
+                <li>Is disk I/O slow?</li>
+                <li>Is the disk full?</li>
+                <li>Which process is responsible?</li>
+                <li>When did the problem start?</li>
+            </ul>
+            <h3 id="basic-performance-model">Basic Performance Model</h3>
+            <p>A Linux system runs many processes. Those processes compete for CPU, memory, disk, and network resources.</p>
+            <div>
+                <pre><code class="language-text">+-------------------+
+| Applications      |
+| nginx, database,  |
+| browser, scripts  |
++---------+---------+
+          |
+          v
++-------------------+
+| Linux Kernel      |
+| scheduler, memory |
+| filesystem, I/O   |
++---------+---------+
+          |
+          v
++-------------------+
+| Hardware          |
+| CPU, RAM, disk,   |
+| network card      |
++-------------------+</code></pre>
+            </div>
+            <p>Monitoring tools observe these layers and show how busy they are.</p>
+            <h3 id="important-usage-statistics">Important Usage Statistics</h3>
+            <p>The most common system usage statistics are:</p>
+            <ul>
+                <li>CPU usage</li>
+                <li>RAM usage</li>
+                <li>swap usage</li>
+                <li>disk usage</li>
+                <li>disk I/O</li>
+                <li>load average</li>
+                <li>process states</li>
+            </ul>
+            <p>Each statistic tells a different part of the story.</p>
+            <h3 id="cpu-usage">CPU Usage</h3>
+            <p>CPU usage shows how much processing work the system is doing.</p>
+            <p>High CPU usage can mean:</p>
+            <ul>
+                <li>an application is doing heavy computation</li>
+                <li>too many processes are running</li>
+                <li>a process is stuck in a loop</li>
+                <li>encryption or compression is active</li>
+                <li>the system is under legitimate load</li>
+            </ul>
+            <p>CPU usage is not automatically bad. A busy CPU may be normal if the system is doing useful work.</p>
+            <p>The important question is:</p>
+            <div>
+                <pre><code class="language-text">Is the CPU busy because of expected work,
+or is one process consuming CPU unexpectedly?</code></pre>
+            </div>
+            <h3 id="ram-usage">RAM Usage</h3>
+            <p>RAM is fast working memory.</p>
+            <p>Linux uses RAM for:</p>
+            <ul>
+                <li>running programs</li>
+                <li>kernel data</li>
+                <li>file cache</li>
+                <li>buffers</li>
+                <li>shared libraries</li>
+                <li>temporary files</li>
+            </ul>
+            <p>Linux often uses available RAM for cache. This is usually good.</p>
+            <p>A system can show little “free” memory and still be healthy because cached memory can be reclaimed when applications need it.</p>
+            <p>The better field to watch is usually:</p>
+            <div>
+                <pre><code class="language-text">available memory</code></pre>
+            </div>
+            <p>not just:</p>
+            <div>
+                <pre><code class="language-text">free memory</code></pre>
+            </div>
+            <h3 id="swap-usage">Swap Usage</h3>
+            <p>Swap is disk space used as overflow memory.</p>
+            <p>Swap helps prevent immediate crashes when RAM is full, but it is much slower than RAM.</p>
+            <p>Heavy swap usage can make a system feel extremely slow.</p>
+            <div>
+                <pre><code class="language-text">RAM is fast.
+Swap is much slower because it uses disk.</code></pre>
+            </div>
+            <p>Some swap usage is not always a problem. Continuous swap-in and swap-out activity is a problem.</p>
+            <h3 id="disk-usage-vs-disk-i-o">Disk Usage vs Disk I/O</h3>
+            <p>Disk usage and disk I/O are different.</p>
+            <p>Disk usage means how much storage space is filled.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">The filesystem is 95% full.</code></pre>
+            </div>
+            <p>Disk I/O means how actively the disk is reading and writing.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">The disk is writing 300 MB/s and is 100% busy.</code></pre>
+            </div>
+            <p>A disk can be almost full but not busy.</p>
+            <p>A disk can have plenty of free space but still be overloaded with reads and writes.</p>
+            <h3 id="load-average">Load Average</h3>
+            <p>Load average shows how many processes are running or waiting to run.</p>
+            <p>It is shown over three time periods:</p>
+            <ul>
+                <li>1 minute</li>
+                <li>5 minutes</li>
+                <li>15 minutes</li>
+            </ul>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">load average: 0.42, 0.35, 0.30</code></pre>
+            </div>
+            <p>On a single-core system, a load of <code>1.00</code> roughly means the CPU is fully occupied.</p>
+            <p>On a four-core system, a load of <code>4.00</code> may be normal under full CPU use.</p>
+            <p>However, load average can also increase when processes are waiting on disk I/O, not just CPU.</p>
+            <p>So high load means:</p>
+            <div>
+                <pre><code class="language-text">There is work waiting.</code></pre>
+            </div>
+            <p>It does not always mean:</p>
+            <div>
+                <pre><code class="language-text">The CPU is the bottleneck.</code></pre>
+            </div>
+            <h3 id="monitoring-workflow">Monitoring Workflow</h3>
+            <p>A good performance investigation follows a structured path.</p>
+            <ol>
+                <li>Check load average</li>
+                <li>Check CPU usage</li>
+                <li>Check memory and swap</li>
+                <li>Check disk I/O</li>
+                <li>Check disk space</li>
+                <li>Identify the responsible process</li>
+                <li>Check logs for errors</li>
+                <li>Decide whether the load is expected or abnormal</li>
+            </ol>
+            <p>Useful starting commands:</p>
+            <div>
+                <pre><code class="language-bash">uptime
+top
+free -h
+vmstat 1
+iostat -xz 1
+df -h
+ps aux --sort=-%cpu | head
+ps aux --sort=-%mem | head</code></pre>
+            </div>
+            <h3 id="top"><code>top</code></h3>
+            <p>The <code>top</code> command provides a live view of system activity.</p>
+            <p>Run:</p>
             <div>
                 <pre><code class="language-bash">top</code></pre>
             </div>
-            <p>This command opens the top interface, which refreshes every few seconds to provide an up-to-date view of the system's state.</p>
-            <p>When you run top, the output is divided into two sections:</p>
+            <p>It shows two main sections:</p>
             <ul>
-                <li><strong>System Summary</strong> is displayed at the top, showing key metrics such as CPU usage, memory usage, swap usage, load average, and system uptime.</li>
-                <li><strong>Process List</strong> appears below the summary, listing individual processes, typically sorted by CPU usage, with the most resource-intensive processes displayed at the top by default.</li>
+                <li>system summary</li>
+                <li>process list</li>
             </ul>
-            <p>Main idea:</p>
-            <ul>
-                <li><strong>Dynamic Update</strong> ensures that the display refreshes in real-time, providing an up-to-date snapshot of system performance.</li>
-                <li><strong>Sorting Options</strong> allow processes to be sorted by CPU usage by default, but pressing Shift + M enables sorting by memory usage instead.</li>
-                <li><strong>Process Monitoring</strong> can be done by using the -p flag followed by the process ID (PID), allowing you to monitor a specific process closely.</li>
-            </ul>
+            <p>The system summary shows CPU, memory, swap, load average, task count, and uptime.</p>
+            <p>The process list shows running processes, usually sorted by CPU usage.</p>
+            <h3 id="example-top-output">Example <code>top</code> Output</h3>
             <div>
-                <pre><code class="language-bash">top -p 1234</code></pre>
-            </div>
-            <p>An example of top output might look like this:</p>
-            <div>
-                <pre><code class="language-shell">top - 15:00:02 up 1 day,  4:03,  2 users,  load average: 0.42, 0.35, 0.30
+                <pre><code class="language-text">top - 15:00:02 up 1 day,  4:03,  2 users,  load average: 0.42, 0.35, 0.30
 Tasks: 180 total,   2 running, 178 sleeping,   0 stopped,   0 zombie
 %Cpu(s):  5.1 us,  2.2 sy,  0.0 ni, 92.1 id,  0.4 wa,  0.0 hi,  0.2 si,  0.0 st
 KiB Mem :  8026792 total,  123456 free,  2345678 used,  5460658 buff/cache
-KiB Swap:  2048000 total,  1755000 free,   293000 used,  1234567 avail Mem 
+KiB Swap:  2048000 total,  1755000 free,   293000 used,  1234567 avail Mem
 
   PID USER      PR  NI    VIRT    RES    SHR S  %CPU %MEM     TIME+ COMMAND
 1234 user1     20   0  162956   2212   1124 R  25.0  0.3   0:15.03 my_process
 5678 user2     20   0  161256   2024   1028 S  12.5  0.2   1:20.03 another_process</code></pre>
             </div>
-            <p>Understanding the output:</p>
+            <h3 id="understanding-the-top-summary">Understanding the Top Summary</h3>
             <ul>
-                <li>The current time is 15:00:02.</li>
-                <li>The system has been running for 1 day and 4 hours.</li>
-                <li>There are 2 users logged in.</li>
-                <li>The load average for the past 1 minute is 0.42, for the past 5 minutes is 0.35, and for the past 15 minutes is 0.30.</li>
-                <li>There are 180 total tasks.</li>
-                <li>2 tasks are currently running.</li>
-                <li>178 tasks are sleeping.</li>
-                <li>0 tasks are stopped.</li>
-                <li>0 tasks are zombie processes.</li>
-                <li>The CPU is 5.1% in user mode, 2.2% in system mode, 0.0% nice processes, 92.1% idle, 0.4% waiting for I/O, 0.0% servicing hardware interrupts, 0.2% servicing software interrupts, and 0.0% stolen by virtual machines.</li>
-                <li>The total memory is 8026792 KiB.</li>
-                <li>123456 KiB of memory is free.</li>
-                <li>2345678 KiB of memory is used.</li>
-                <li>5460658 KiB of memory is used for buffers and cache.</li>
-                <li>The total swap memory is 2048000 KiB.</li>
-                <li>1755000 KiB of swap is free.</li>
-                <li>293000 KiB of swap is used.</li>
-                <li>1234567 KiB of memory is available.</li>
-                <li>Process with PID 1234 is run by user1 and is using 25% of the CPU and 0.3% of memory.</li>
-                <li>Process with PID 5678 is run by user2 and is using 12.5% of the CPU and 0.2% of memory.</li>
+                <li>15:00:02 current time</li>
+                <li>up 1 day, 4:03 system uptime</li>
+                <li>2 users logged-in users</li>
+                <li>load average average runnable/waiting work</li>
+                <li>Tasks process summary</li>
+                <li>%Cpu(s) CPU time breakdown</li>
+                <li>KiB Mem physical memory summary</li>
+                <li>KiB Swap swap summary</li>
             </ul>
-            <p>Bottom Section lists individual processes with the following columns:</p>
-            <p>
-            <table>
-                <tr>
-                    <td><strong>Field</strong></td>
-                    <td><strong>Description</strong></td>
-                </tr>
-                <tr>
-                    <td><strong>PID</strong></td>
-                    <td>Process ID.</td>
-                </tr>
-                <tr>
-                    <td><strong>USER</strong></td>
-                    <td>User running the process.</td>
-                </tr>
-                <tr>
-                    <td><strong>PR</strong></td>
-                    <td>Priority of the process.</td>
-                </tr>
-                <tr>
-                    <td><strong>NI</strong></td>
-                    <td>Nice value - a user-space concept to tune the scheduling priority.</td>
-                </tr>
-                <tr>
-                    <td><strong>VIRT</strong></td>
-                    <td>Virtual memory size of the process.</td>
-                </tr>
-                <tr>
-                    <td><strong>RES</strong></td>
-                    <td>Resident size - the non-swapped physical memory the process is using.</td>
-                </tr>
-                <tr>
-                    <td><strong>SHR</strong></td>
-                    <td>Shared memory size.</td>
-                </tr>
-                <tr>
-                    <td><strong>S</strong></td>
-                    <td>Process status (e.g., running, sleeping).</td>
-                </tr>
-                <tr>
-                    <td><strong>%CPU</strong></td>
-                    <td>Percentage of the CPU used by this process.</td>
-                </tr>
-                <tr>
-                    <td><strong>%MEM</strong></td>
-                    <td>Percentage of physical memory used.</td>
-                </tr>
-                <tr>
-                    <td><strong>TIME+</strong></td>
-                    <td>Total CPU time used since the process started.</td>
-                </tr>
-                <tr>
-                    <td><strong>COMMAND</strong></td>
-                    <td>Command that started this process.</td>
-                </tr>
-            </table>
-            </p>
-            <p>Tips for using <code>top</code>:</p>
+            <h3 id="understanding-cpu-fields-in-top">Understanding CPU Fields in <code>top</code></h3>
             <ul>
-                <li>By default, processes are sorted by CPU usage. Press <code>Shift + M</code> to sort by memory usage.</li>
-                <li>Press <code>k</code> followed by the PID to kill a process.</li>
-                <li>Press <code>r</code> to change the priority (nice value) of a process.</li>
-                <li>The display updates automatically. Press <code>q</code> to quit <code>top</code>.</li>
+                <li>us user CPU time</li>
+                <li>sy system/kernel CPU time</li>
+                <li>ni nice-priority process CPU time</li>
+                <li>id idle CPU time</li>
+                <li>wa I/O wait time</li>
+                <li>hi hardware interrupt time</li>
+                <li>si software interrupt time</li>
+                <li>st stolen time in virtual machines</li>
             </ul>
-            <h3 id="htop">Htop</h3>
-            <p><code>htop</code> is an interactive system-monitor process viewer for Linux. It is a more advanced and user-friendly alternative to the traditional <code>top</code> command. <code>htop</code> provides a colorful and visually appealing interface, along with various features that enhance process management and system monitoring.</p>
-            <p><code>htop</code> is not pre-installed on most Linux distributions, but it can be easily installed through package managers.</p>
-            <p>I. Debian/Ubuntu:</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">%Cpu(s): 5.1 us, 2.2 sy, 92.1 id, 0.4 wa</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The CPU is mostly idle.</li>
+                <li>There is very little I/O wait.</li>
+                <li>The system is not CPU-bound in this sample.</li>
+            </ul>
+            <h3 id="understanding-process-columns-in-top">Understanding Process Columns in <code>top</code></h3>
+            <ul>
+                <li>PID process ID</li>
+                <li>USER user running the process</li>
+                <li>PR kernel scheduling priority</li>
+                <li>NI nice value</li>
+                <li>VIRT virtual memory size</li>
+                <li>RES resident memory in physical RAM</li>
+                <li>SHR shared memory</li>
+                <li>S process state</li>
+                <li>%CPU CPU percentage used by process</li>
+                <li>%MEM physical RAM percentage used</li>
+                <li>TIME+ total CPU time consumed</li>
+                <li>COMMAND command or process name</li>
+            </ul>
+            <p>Important process states:</p>
+            <ul>
+                <li>R running or runnable</li>
+                <li>S sleeping</li>
+                <li>D uninterruptible sleep, often I/O wait</li>
+                <li>T stopped</li>
+                <li>Z zombie</li>
+            </ul>
+            <h3 id="useful-top-keys">Useful <code>top</code> Keys</h3>
+            <ul>
+                <li>Shift + M sort by memory usage</li>
+                <li>Shift + P sort by CPU usage</li>
+                <li>k kill a process</li>
+                <li>r renice a process</li>
+                <li>1 show per-core CPU usage</li>
+                <li>q quit</li>
+            </ul>
+            <p>To monitor one process:</p>
+            <div>
+                <pre><code class="language-bash">top -p 1234</code></pre>
+            </div>
+            <h3 id="htop"><code>htop</code></h3>
+            <p><code>htop</code> is an interactive and more user-friendly alternative to <code>top</code>.</p>
+            <p>It shows CPU bars, memory bars, process lists, searching, filtering, tree view, and easier process management.</p>
+            <p>Install it on Debian or Ubuntu:</p>
             <div>
                 <pre><code class="language-bash">sudo apt install htop</code></pre>
             </div>
-            <p>II. CentOS/RHEL:</p>
+            <p>On Red Hat or CentOS:</p>
             <div>
                 <pre><code class="language-bash">sudo yum install htop</code></pre>
             </div>
-            <p>III. Fedora:</p>
+            <p>On Fedora:</p>
             <div>
                 <pre><code class="language-bash">sudo dnf install htop</code></pre>
             </div>
-            <p>To start htop, simply type:</p>
+            <p>Run:</p>
             <div>
                 <pre><code class="language-bash">htop</code></pre>
             </div>
-            <p>Main idea:</p>
-            <ul>
-                <li>Displays all running processes. Unlike top, it updates in real-time and uses color to provide additional information.</li>
-                <li>Shows CPU, memory, and swap usage along with load average.</li>
-                <li>Allows filtering processes by user or text and searching for specific processes.</li>
-                <li>Tree View An optional tree view to see parent-child relationships among processes.</li>
-                <li>You can interact with processes (e.g., kill, renice) directly in the interface.</li>
-            </ul>
-            <p>An example output of htop might look like this:</p>
+            <h3 id="example-htop-view">Example <code>htop</code> View</h3>
             <div>
-                <pre><code class="language-shell">1  [||||||||||| 34.5%]   Tasks: 65, 132 thr; 2 running
-2  [||||||||||  28.7%]   Load average: 1.23 0.97 0.88 
+                <pre><code class="language-text">1  [||||||||||| 34.5%]   Tasks: 65, 132 thr; 2 running
+2  [||||||||||  28.7%]   Load average: 1.23 0.97 0.88
 Mem[|||||||||||||||1.45G/3.84G]
 Swp[|             0K/512M]
 
@@ -334,317 +564,916 @@ Swp[|             0K/512M]
 1287 root       20   0  256M  4980  3192 R 28.6  0.1  0:03.41 /usr/bin/Xorg
 2905 user1      20   0  517M  3720  2012 S 14.0  0.1  1:13.69 gnome-terminal</code></pre>
             </div>
-            <p>Understanding the output:</p>
+            <p>Interpretation:</p>
             <ul>
-                <li>CPU 1 is using 34.5% of its capacity.</li>
-                <li>There are 65 tasks and 132 threads in total.</li>
-                <li>2 tasks are running.</li>
-                <li>CPU 2 is using 28.7% of its capacity.</li>
-                <li>The load average over the last 1 minute is 1.23, over 5 minutes is 0.97, and over 15 minutes is 0.88.</li>
-                <li>1.45 GB of the 3.84 GB of memory is being used.</li>
-                <li>0 KB of the 512 MB of swap space is being used.</li>
-                <li>Process with PID 1287, run by root, is using 28.6% of the CPU and 0.1% of the memory. It is running <code>/usr/bin/Xorg</code>.</li>
-                <li>Process with PID 2905, run by user1, is using 14.0% of the CPU and 0.1% of the memory. It is running <code>gnome-terminal</code>.</li>
+                <li>CPU core 1 is using 34.5%.</li>
+                <li>CPU core 2 is using 28.7%.</li>
+                <li>Memory usage is 1.45 GB out of 3.84 GB.</li>
+                <li>Swap is not being used.</li>
+                <li>Xorg is the most CPU-heavy process in this sample.</li>
             </ul>
-            <h3 id="swap-space">Swap space</h3>
-            <p>Swap space is an area on your hard drive used as virtual memory when your system runs out of physical RAM. It allows your system to continue running even when it has exhausted all available RAM, but it can negatively impact performance, as accessing data from the hard drive is slower than accessing it from RAM.</p>
-            <p>To view the amount of swap space available on your system, use the <code>free</code> command:</p>
+            <p><code>htop</code> is useful when you want to interactively inspect and manage processes.</p>
+            <h3 id="free"><code>free</code></h3>
+            <p>The <code>free</code> command shows memory and swap usage.</p>
+            <p>Run:</p>
             <div>
-                <pre><code class="language-shell">free -h</code></pre>
+                <pre><code class="language-bash">free -h</code></pre>
             </div>
-            <p>Here's an example of what the output might look like:</p>
+            <p>The <code>-h</code> option shows human-readable units.</p>
+            <p>Example output:</p>
             <div>
-                <pre><code class="language-shell">total        used        free      shared  buff/cache   available
+                <pre><code class="language-text">total        used        free      shared  buff/cache   available
 Mem:            8G         3.2G        2.1G       101M      2.7G        4.4G
 Swap:           2G         1.2G        800M</code></pre>
             </div>
-            <p>Understanding the output:</p>
+            <h3 id="understanding-free-h">Understanding <code>free -h</code></h3>
+            <p>Important memory fields:</p>
             <ul>
-                <li>The system has 8 GB of total RAM, out of which 3.2 GB is currently in use.</li>
-                <li>A significant portion of RAM (2.7 GB) is dedicated to buffer/cache, which helps in speeding up processes by holding data in RAM for quick access.</li>
-                <li>The swap space is relatively small compared to the total RAM, and a significant portion (1.2 GB) is in use, which could indicate heavy memory usage or potential memory pressure on the system.</li>
-                <li>The 'available' memory (4.4 GB) is a more relevant indicator than 'free' memory for understanding how much memory is readily available for new applications. This is because Linux tends to use free memory for buffers and cache.</li>
+                <li>total total physical RAM</li>
+                <li>used memory currently used</li>
+                <li>free completely unused memory</li>
+                <li>shared memory used mainly by tmpfs and shared mappings</li>
+                <li>buff/cache memory used for buffers and filesystem cache</li>
+                <li>available estimated memory available for new applications</li>
             </ul>
-            <p>I. Mem (Memory) Section</p>
-            <p>
-            <table>
-                <tr>
-                    <td><strong>Field</strong></td>
-                    <td><strong>Description</strong></td>
-                </tr>
-                <tr>
-                    <td><code>total</code></td>
-                    <td>Total physical RAM in the system. In this example, it's 8 gigabytes.</td>
-                </tr>
-                <tr>
-                    <td><code>used</code></td>
-                    <td>Amount of RAM currently being used. Here, 3.2 gigabytes are in use.</td>
-                </tr>
-                <tr>
-                    <td><code>free</code></td>
-                    <td>Amount of RAM that is not being used. This example shows 2.1 gigabytes of free memory.</td>
-                </tr>
-                <tr>
-                    <td><code>shared</code></td>
-                    <td>Memory used (mostly) by tmpfs (temporary file storage) and interprocess communication. In the example, it's 101 megabytes.</td>
-                </tr>
-                <tr>
-                    <td><code>buff/cache</code></td>
-                    <td>Memory used by the kernel for buffers and caching. In this case, it's 2.7 gigabytes.</td>
-                </tr>
-                <tr>
-                    <td><code>available</code></td>
-                    <td>An estimate of how much memory is available for starting new applications, without swapping. Here, it's about 4.4 gigabytes.</td>
-                </tr>
-            </table>
-            </p>
-            <p>II. Swap Section</p>
-            <p>
-            <table>
-                <tr>
-                    <td><strong>Field</strong></td>
-                    <td><strong>Description</strong></td>
-                </tr>
-                <tr>
-                    <td><code>total</code></td>
-                    <td>Total swap space available. In this example, it's 2 gigabytes.</td>
-                </tr>
-                <tr>
-                    <td><code>used</code></td>
-                    <td>Amount of swap space currently in use. This example shows 1.2 gigabytes being used.</td>
-                </tr>
-                <tr>
-                    <td><code>free</code></td>
-                    <td>Amount of swap space not currently in use. In this case, it's 800 megabytes.</td>
-                </tr>
-            </table>
-            </p>
-            <h3 id="monitor-ram-usage">Monitor RAM usage</h3>
-            <p>Monitoring RAM usage is essential for managing system resources efficiently. To do this on Linux systems, the <code>free -h</code> command is commonly used. It provides information on the total amount of RAM, along with how much is used and free. If the used memory approaches the total amount of RAM, this could signal a need for more RAM or optimization of current usage.</p>
-            <p>I. Resident Set Size (RSS)</p>
+            <p>Important swap fields:</p>
             <ul>
-                <li>RSS indicates the current memory usage of a process.</li>
-                <li>It excludes swap memory but includes all stack and heap memory.</li>
-                <li>Memory from shared libraries is counted, but only if the pages are physically present in memory.</li>
-                <li>Some memory can be shared among applications, so the sum of RSS values can exceed the actual RAM.</li>
+                <li>total total swap space</li>
+                <li>used swap currently used</li>
+                <li>free unused swap</li>
             </ul>
-            <p>II. Virtual Set Size (VSZ)</p>
+            <p>Interpretation of the example:</p>
             <ul>
-                <li>VSZ represents the total memory allocated to a process at its initiation.</li>
-                <li>It encompasses memory that might be swapped out, unused, or shared from libraries.</li>
-                <li>This is a broader measure of a process's memory footprint.</li>
+                <li>The system has 8 GB RAM.</li>
+                <li>3.2 GB is used by processes and system activity.</li>
+                <li>2.7 GB is used for buffers/cache.</li>
+                <li>4.4 GB is available for new programs.</li>
+                <li>1.2 GB of swap is used.</li>
             </ul>
-            <h4 id="example-calculating-rss-and-vsz">Example: Calculating RSS and VSZ</h4>
-            <p>Consider a process with these details:</p>
-            <ul>
-                <li>Current usage: 450K (binary code), 800K (shared libraries), 120K (stack and heap).</li>
-                <li>Initial allocation: 600K (binary code), 2200K (shared libraries), 150K (stack and heap).</li>
-            </ul>
-            <p>Calculations:</p>
-            <p>I. <strong>RSS:</strong> Total physical memory usage.</p>
-            <ul>
-                <li>RSS = Binary Code + Shared Libraries + Stack/Heap</li>
-                <li>RSS = 450K + 800K + 120K = 1370K</li>
-            </ul>
-            <p>II. <strong>VSZ:</strong> Total memory allocation at start.</p>
-            <ul>
-                <li>VSZ = Initial Binary Code + Initial Shared Libraries + Initial Stack/Heap</li>
-                <li>VSZ = 600K + 2200K + 150K = 2950K</li>
-            </ul>
-            <h4 id="identifying-top-memory-consuming-processes">Identifying Top Memory-Consuming Processes</h4>
-            <p>To list the 10 processes consuming the most RAM, you can use the command:</p>
+            <p>The most important field for practical memory pressure is usually:</p>
             <div>
-                <pre><code class="language-bash">ps -e -o pid,vsz,comm= | sort -n -k 2 -r | head -n 10</code></pre>
+                <pre><code class="language-text">available</code></pre>
             </div>
-            <p>Example Output of Command:</p>
-            <div>
-                <pre><code class="language-shell">PID     VSZ  COMMAND
- 1234  2048000  java
- 5678  1800000  mysqld
- 9101  1600000  apache2
- 1213  1500000  postgres
- 3141  1400000  python
- 2718  1300000  node
- 1928  1200000  nginx
- 2930  1100000  redis-server
- 3435  1000000  sshd
- 4756   900000  systemd</code></pre>
-            </div>
-            <p>Understanding the output:</p>
+            <p>If <code>available</code> is low and swap activity is high, the system may be under memory pressure.</p>
+            <h3 id="rss-and-vsz">RSS and VSZ</h3>
+            <p>Linux process memory can be confusing because there are multiple memory measurements.</p>
+            <p>Two important fields are:</p>
             <ul>
-                <li>The output displays the top 10 processes sorted by virtual memory size (VSZ) in descending order.</li>
-                <li>PID is the process identifier.</li>
-                <li>VSZ shows the virtual memory size in kilobytes (KB) used by each process.</li>
-                <li>COMMAND represents the name of the command or process that is running.</li>
+                <li>RSS</li>
+                <li>VSZ</li>
             </ul>
-            <h4 id="finding-ram-usage-of-a-specific-process">Finding RAM Usage of a Specific Process</h4>
-            <p>In addition to monitoring overall RAM usage, it's often necessary to track the memory usage of a specific process. </p>
-            <p>For example to check the memory usage of a process named <code>nginx</code>:</p>
+            <h3 id="rss">RSS</h3>
+            <p>RSS means Resident Set Size.</p>
+            <p>It is the amount of physical RAM currently used by the process.</p>
+            <p>RSS is usually more useful than VSZ when asking:</p>
             <div>
-                <pre><code class="language-bash">ps -o %mem,rss,vsize,cmd -C nginx</code></pre>
+                <pre><code class="language-text">How much real RAM is this process using right now?</code></pre>
             </div>
-            <p>Example Output of Command:</p>
+            <p>However, RSS includes shared memory pages, so adding RSS values for many processes can overcount total RAM.</p>
+            <h3 id="vsz">VSZ</h3>
+            <p>VSZ means Virtual Set Size, or virtual memory size.</p>
+            <p>It includes memory that may be:</p>
+            <ul>
+                <li>actually in RAM</li>
+                <li>mapped but unused</li>
+                <li>shared libraries</li>
+                <li>memory-mapped files</li>
+                <li>swapped out</li>
+                <li>reserved address space</li>
+            </ul>
+            <p>VSZ can look large even when actual RAM use is modest.</p>
+            <p>A common mistake is to treat VSZ as real RAM usage. For physical RAM pressure, check RSS and <code>%MEM</code>.</p>
+            <h3 id="example-rss-and-vsz-calculation">Example RSS and VSZ Calculation</h3>
+            <p>Suppose a process currently uses:</p>
+            <ul>
+                <li>450K binary code in RAM</li>
+                <li>800K shared libraries in RAM</li>
+                <li>120K stack and heap in RAM</li>
+            </ul>
+            <p>RSS is:</p>
             <div>
-                <pre><code class="language-shell">%MEM   RSS     VSZ     CMD
+                <pre><code class="language-text">450K + 800K + 120K = 1370K</code></pre>
+            </div>
+            <p>Suppose the process has virtually allocated:</p>
+            <ul>
+                <li>600K binary code</li>
+                <li>2200K shared libraries</li>
+                <li>150K stack and heap</li>
+            </ul>
+            <p>VSZ is:</p>
+            <div>
+                <pre><code class="language-text">600K + 2200K + 150K = 2950K</code></pre>
+            </div>
+            <p>The process has a larger virtual memory footprint than physical resident memory.</p>
+            <h3 id="finding-top-memory-processes">Finding Top Memory Processes</h3>
+            <p>To show processes sorted by real physical memory percentage:</p>
+            <div>
+                <pre><code class="language-bash">ps aux --sort=-%mem | head -n 10</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+mysql     5678 12.0 18.5 2540000 1500000 ?     Sl   10:00   3:20 mysqld
+java      1234 25.0 15.0 4096000 1210000 ?     Sl   09:50   8:10 java
+postgres  1213  5.0  8.0 1500000  650000 ?     Sl   09:55   2:30 postgres</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>mysqld is using the most physical RAM.</li>
+                <li>RSS shows actual resident memory.</li>
+                <li>VSZ is larger because it includes virtual address space.</li>
+            </ul>
+            <p>To sort by VSZ instead:</p>
+            <div>
+                <pre><code class="language-bash">ps -e -o pid,vsz,rss,comm --sort=-vsz | head -n 10</code></pre>
+            </div>
+            <p>Important note:</p>
+            <ul>
+                <li>Sorting by VSZ shows largest virtual memory allocations.</li>
+                <li>Sorting by RSS or %MEM is usually better for real RAM pressure.</li>
+            </ul>
+            <h3 id="checking-memory-for-a-specific-process">Checking Memory for a Specific Process</h3>
+            <p>Example for <code>nginx</code>:</p>
+            <div>
+                <pre><code class="language-bash">ps -o %mem,rss,vsz,cmd -C nginx</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">%MEM   RSS     VSZ     CMD
  2.3   12000   250000  nginx: master process /usr/sbin/nginx
  1.2    6000   150000  nginx: worker process
  1.2    6000   150000  nginx: worker process</code></pre>
             </div>
-            <p>Understanding the output:</p>
+            <p>Interpretation:</p>
             <ul>
-                <li>The first process listed is the nginx master process, while the others are worker processes.</li>
-                <li>The master <code>nginx</code> process uses 2.3% of the system memory, while each worker process uses 1.2%.</li>
-                <li>The <code>nginx</code> master process is using 12000 KB of RAM, while each worker process is using 6000 KB.</li>
-                <li>The <code>nginx</code> master process is using 250000 KB of virtual memory, while each worker process is using 150000 KB.</li>
+                <li>The master process uses 12 MB of resident RAM.</li>
+                <li>Each worker uses about 6 MB of resident RAM.</li>
+                <li>VSZ is larger than RSS because it includes virtual mappings.</li>
             </ul>
-            <p>The output constists of following columns:</p>
-            <p>
-            <table>
-                <tr>
-                    <td><strong>Field</strong></td>
-                    <td><strong>Description</strong></td>
-                </tr>
-                <tr>
-                    <td><code>%MEM</code></td>
-                    <td>The percentage of the system's physical memory (RAM) used by the process.</td>
-                </tr>
-                <tr>
-                    <td><code>RSS</code></td>
-                    <td>The resident set size, which is the amount of physical memory (in kilobytes) the process is currently using.</td>
-                </tr>
-                <tr>
-                    <td><code>VSZ</code></td>
-                    <td>The virtual memory size (in kilobytes) allocated to the process.</td>
-                </tr>
-                <tr>
-                    <td><code>CMD</code></td>
-                    <td>The command that started the process, along with any arguments (e.g., the nginx processes).</td>
-                </tr>
-            </table>
-            </p>
-            <h3 id="vmstat">Vmstat</h3>
-            <p><code>vmstat</code> displays information about system memory, swap, and CPU usage. It provides a snapshot of the current state of the system, as well as the average statistics over a period of time.</p>
-            <p>To view the current state of the system, use vmstat without any arguments. To view the average statistics over a period of time, use <code>vmstat [interval] [count]</code>, where interval is the time in seconds between each snapshot and count is the number of snapshots to take.</p>
+            <h3 id="vmstat"><code>vmstat</code></h3>
+            <p><code>vmstat</code> shows process, memory, swap, disk I/O, system, and CPU statistics.</p>
+            <p>Run a single snapshot:</p>
             <div>
-                <pre><code class="language-shell">vmstat 5 3</code></pre>
+                <pre><code class="language-bash">vmstat</code></pre>
             </div>
-            <p>This command will display 3 snapshots at 5-second intervals.</p>
-            <p>Example output:</p>
+            <p>Run updates every second:</p>
             <div>
-                <pre><code class="language-shell">$ vmstat 5 3
-procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+                <pre><code class="language-bash">vmstat 1</code></pre>
+            </div>
+            <p>Run three samples five seconds apart:</p>
+            <div>
+                <pre><code class="language-bash">vmstat 5 3</code></pre>
+            </div>
+            <h3 id="example-vmstat-output">Example <code>vmstat</code> Output</h3>
+            <div>
+                <pre><code class="language-text">procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
  r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
  1  0      0 2723288 844288 5670316    0    0    14    42   49   39  7  5 88  0  0
  2  0      0 2729716 844296 5670332    0    0     0   387 8888 12065  3  6 90  0  0
  1  0      0 2735688 844304 5670364    0    0     0   436 9379 13069  4  6 90  0  0</code></pre>
             </div>
-            <p>Understanding the output:</p>
+            <p>Important fields:</p>
             <ul>
-                <li>1 process is running, 0 processes are blocked in the first sample.</li>
-                <li>No swap is in use (swpd = 0 KB).</li>
-                <li>2723288 KB of memory is free.</li>
-                <li>844288 KB of memory is used for buffers.</li>
-                <li>5670316 KB of memory is used for cache.</li>
-                <li>There is no swap-in (si = 0) or swap-out (so = 0) activity.</li>
-                <li>14 blocks were read from disk per second (bi).</li>
-                <li>42 blocks were written to disk per second (bo).</li>
-                <li>49 interrupts occurred per second (in).</li>
-                <li>39 context switches occurred per second (cs).</li>
-                <li>7% of CPU time was spent in user mode.</li>
-                <li>5% of CPU time was spent in system mode.</li>
-                <li>88% of CPU time was idle.</li>
-                <li>0% of CPU time was waiting for I/O (wa).</li>
-                <li>0% of CPU time was stolen by the hypervisor (st).</li>
+                <li>r runnable processes</li>
+                <li>b blocked processes</li>
+                <li>swpd swap used</li>
+                <li>free free memory</li>
+                <li>buff buffer memory</li>
+                <li>cache cache memory</li>
+                <li>si swap in</li>
+                <li>so swap out</li>
+                <li>bi blocks read from disk</li>
+                <li>bo blocks written to disk</li>
+                <li>in interrupts per second</li>
+                <li>cs context switches per second</li>
+                <li>us user CPU</li>
+                <li>sy system CPU</li>
+                <li>id idle CPU</li>
+                <li>wa I/O wait</li>
+                <li>st stolen CPU time in virtual machines</li>
             </ul>
-            <p>The output constists of following columns:</p>
-            <p>
-            <table>
-                <tr>
-                    <td><strong>Field</strong></td>
-                    <td><strong>Description</strong></td>
-                </tr>
-                <tr>
-                    <td><code>r</code></td>
-                    <td>Number of processes waiting for runtime (running or runnable).</td>
-                </tr>
-                <tr>
-                    <td><code>b</code></td>
-                    <td>Number of processes in uninterruptible sleep (blocked).</td>
-                </tr>
-                <tr>
-                    <td><code>swpd</code></td>
-                    <td>Amount of virtual memory used (swap space) in kilobytes.</td>
-                </tr>
-                <tr>
-                    <td><code>free</code></td>
-                    <td>Amount of idle/free memory in kilobytes.</td>
-                </tr>
-                <tr>
-                    <td><code>buff</code></td>
-                    <td>Amount of memory used for buffers in kilobytes.</td>
-                </tr>
-                <tr>
-                    <td><code>cache</code></td>
-                    <td>Amount of memory used as cache in kilobytes.</td>
-                </tr>
-                <tr>
-                    <td><code>si</code></td>
-                    <td>Amount of memory swapped in from disk (swap in) per second in kilobytes.</td>
-                </tr>
-                <tr>
-                    <td><code>so</code></td>
-                    <td>Amount of memory swapped out to disk (swap out) per second in kilobytes.</td>
-                </tr>
-                <tr>
-                    <td><code>bi</code></td>
-                    <td>Blocks received from a block device (blocks in) per second.</td>
-                </tr>
-                <tr>
-                    <td><code>bo</code></td>
-                    <td>Blocks sent to a block device (blocks out) per second.</td>
-                </tr>
-                <tr>
-                    <td><code>in</code></td>
-                    <td>Number of interrupts per second.</td>
-                </tr>
-                <tr>
-                    <td><code>cs</code></td>
-                    <td>Number of context switches per second.</td>
-                </tr>
-                <tr>
-                    <td><code>us</code></td>
-                    <td>Percentage of CPU time spent in user mode.</td>
-                </tr>
-                <tr>
-                    <td><code>sy</code></td>
-                    <td>Percentage of CPU time spent in system (kernel) mode.</td>
-                </tr>
-                <tr>
-                    <td><code>id</code></td>
-                    <td>Percentage of CPU time spent idle.</td>
-                </tr>
-                <tr>
-                    <td><code>wa</code></td>
-                    <td>Percentage of CPU time spent waiting for I/O.</td>
-                </tr>
-                <tr>
-                    <td><code>st</code></td>
-                    <td>Percentage of CPU time stolen from the VM by the hypervisor (in virtualized environments).</td>
-                </tr>
-            </table>
-            </p>
-            <h3 id="challenges">Challenges</h3>
+            <p>Interpretation of this example:</p>
+            <ul>
+                <li>The system is mostly idle.</li>
+                <li>There is no swap activity.</li>
+                <li>There are no blocked processes.</li>
+                <li>Disk I/O is light.</li>
+                <li>I/O wait is 0.</li>
+            </ul>
+            <h3 id="uptime"><code>uptime</code></h3>
+            <p><code>uptime</code> is a quick way to check how long the system has been running and what the load average is.</p>
+            <p>Run:</p>
+            <div>
+                <pre><code class="language-bash">uptime</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">15:00:02 up 1 day, 4:03, 2 users, load average: 0.42, 0.35, 0.30</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The system has been running for 1 day and 4 hours.</li>
+                <li>There are 2 logged-in users.</li>
+                <li>Load average is low.</li>
+            </ul>
+            <h3 id="iostat"><code>iostat</code></h3>
+            <p><code>iostat</code> reports CPU and disk I/O statistics.</p>
+            <p>Install it through <code>sysstat</code> if needed:</p>
+            <div>
+                <pre><code class="language-bash">sudo apt install sysstat</code></pre>
+            </div>
+            <p>Run:</p>
+            <div>
+                <pre><code class="language-bash">iostat -xz 1</code></pre>
+            </div>
+            <p>Important disk fields:</p>
+            <ul>
+                <li>r/s reads per second</li>
+                <li>w/s writes per second</li>
+                <li>rkB/s kilobytes read per second</li>
+                <li>wkB/s kilobytes written per second</li>
+                <li>await average wait time for I/O requests</li>
+                <li>aqu-sz average queue size</li>
+                <li>%util how busy the device is</li>
+            </ul>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Device            r/s     w/s     rkB/s     wkB/s   await  aqu-sz  %util
+sda              1.00    2.00     50.00    100.00    2.20    0.01   0.15</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The disk is barely busy.</li>
+                <li>Read and write rates are low.</li>
+                <li>Wait time is low.</li>
+                <li>There is no disk I/O bottleneck in this sample.</li>
+            </ul>
+            <h3 id="iotop"><code>iotop</code></h3>
+            <p><code>iotop</code> shows disk I/O by process.</p>
+            <p>Install:</p>
+            <div>
+                <pre><code class="language-bash">sudo apt install iotop</code></pre>
+            </div>
+            <p>Run:</p>
+            <div>
+                <pre><code class="language-bash">sudo iotop -o</code></pre>
+            </div>
+            <p>The <code>-o</code> option shows only processes currently doing I/O.</p>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Total DISK READ: 100.00 K/s | Total DISK WRITE: 50.00 K/s
+PID  PRIO  USER     DISK READ  DISK WRITE  SWAPIN     IO&gt;    COMMAND
+7890 be/4  user      50.00 K/s   25.00 K/s  0.00 %  10.00 %  process_a
+5678 be/4  user      50.00 K/s   25.00 K/s  0.00 %   5.00 %  process_b</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>process_a and process_b are doing disk I/O.</li>
+                <li>process_a has higher I/O wait impact.</li>
+            </ul>
+            <p><code>iotop</code> is useful when you know the disk is busy and want to know which process is responsible.</p>
+            <h3 id="df-and-du"><code>df</code> and <code>du</code></h3>
+            <p><code>df</code> shows filesystem space usage.</p>
+            <p>Run:</p>
+            <div>
+                <pre><code class="language-bash">df -h</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">Filesystem      Size  Used Avail Use% Mounted on
+/dev/sda3       100G   92G  8.0G  92% /</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The root filesystem is 92% full.</li>
+                <li>This may become a problem soon.</li>
+            </ul>
+            <p><code>du</code> shows directory usage.</p>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">sudo du -h --max-depth=1 /var | sort -h</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">100M    /var/tmp
+2.0G    /var/log
+12G     /var/lib
+15G     /var</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>/var/lib is using most of the space under /var.</li>
+                <li>Investigate that directory next.</li>
+            </ul>
+            <h3 id="scenario-1-simulate-a-cpu-bottleneck">Scenario 1: Simulate a CPU Bottleneck</h3>
+            <p>Create high CPU usage and verify it with <code>top</code>, <code>htop</code>, and <code>vmstat</code>.</p>
+            <h4 id="simulate-the-bottleneck">Simulate the Bottleneck</h4>
+            <p>Install <code>stress-ng</code> if needed:</p>
+            <div>
+                <pre><code class="language-bash">sudo apt install stress-ng</code></pre>
+            </div>
+            <p>Run a CPU stress test:</p>
+            <div>
+                <pre><code class="language-bash">stress-ng --cpu 4 --timeout 60s</code></pre>
+            </div>
+            <p>This starts four CPU workers for 60 seconds.</p>
+            <h4 id="check-with-top">Check with <code>top</code></h4>
+            <div>
+                <pre><code class="language-bash">top</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">%Cpu(s): 96.0 us,  3.0 sy,  0.0 ni,  1.0 id,  0.0 wa
+
+PID USER      PR  NI    VIRT    RES    SHR S  %CPU %MEM COMMAND
+4321 user      20   0   50000   8000   2000 R 399.0  0.1 stress-ng-cpu</code></pre>
+            </div>
+            <p>Interpretation:
+                - CPU user time is very high.
+                - Idle time is almost zero.
+                - stress-ng is using about four CPU cores.
+                - I/O wait is zero, so this is not a disk bottleneck.</p>
+            <h4 id="check-with-vmstat">Check with <code>vmstat</code></h4>
+            <div>
+                <pre><code class="language-bash">vmstat 1</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">r  b   swpd   free   buff  cache   si   so    bi    bo   in    cs us sy id wa st
+5  0      0 800000  20000 500000    0    0     0     1 3000  6000 95  4  1  0  0</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>r is high because processes are waiting for CPU time.</li>
+                <li>us is high.</li>
+                <li>wa is zero.</li>
+                <li>This confirms CPU saturation.</li>
+            </ul>
+            <h4 id="possible-fixes">Possible Fixes</h4>
+            <ul>
+                <li>stop or optimize the CPU-heavy process</li>
+                <li>reduce worker count</li>
+                <li>schedule the job for off-peak hours</li>
+                <li>add CPU capacity</li>
+                <li>use nice to lower priority</li>
+            </ul>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">nice -n 10 command</code></pre>
+            </div>
+            <h3 id="scenario-2-simulate-memory-pressure">Scenario 2: Simulate Memory Pressure</h3>
+            <p>Create memory pressure and observe it with <code>free</code>, <code>top</code>, and <code>vmstat</code>.</p>
+            <h4 id="simulate-the-bottleneck">Simulate the Bottleneck</h4>
+            <p>Run:</p>
+            <div>
+                <pre><code class="language-bash">stress-ng --vm 2 --vm-bytes 70% --timeout 60s</code></pre>
+            </div>
+            <p>This starts memory workers that allocate memory.</p>
+            <h4 id="check-with-free">Check with <code>free</code></h4>
+            <div>
+                <pre><code class="language-bash">free -h</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">total        used        free      shared  buff/cache   available
+Mem:            8.0G        6.9G        250M       120M        850M        600M
+Swap:           2.0G        100M        1.9G</code></pre>
+            </div>
+            <p>Interpretation:
+                - Used memory is high.
+                - Available memory is low.
+                - Swap has started to be used.
+                - The system is under memory pressure.</p>
+            <h4 id="check-with-vmstat">Check with <code>vmstat</code></h4>
+            <div>
+                <pre><code class="language-bash">vmstat 1</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+2  1 200000 100000  12000 200000  100  300  800  1500 2500 7000 30 15 45 10  0</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>si and so are nonzero, so swap activity is happening.</li>
+                <li>wa is elevated because swap uses disk.</li>
+                <li>The root issue is memory pressure.</li>
+            </ul>
+            <h4 id="possible-fixes">Possible Fixes</h4>
+            <ul>
+                <li>stop memory-heavy processes</li>
+                <li>reduce application memory limits</li>
+                <li>add RAM</li>
+                <li>fix memory leaks</li>
+                <li>tune caches or worker counts</li>
+                <li>avoid running too many memory-heavy jobs together</li>
+            </ul>
+            <h3 id="scenario-3-simulate-swap-thrashing">Scenario 3: Simulate Swap Thrashing</h3>
+            <p>Show how heavy swap activity can slow a system.</p>
+            <h4 id="simulate-carefully">Simulate Carefully</h4>
+            <p>Use a stronger memory test only on a lab system:</p>
+            <div>
+                <pre><code class="language-bash">stress-ng --vm 4 --vm-bytes 90% --timeout 60s</code></pre>
+            </div>
+            <h4 id="check-with-vmstat">Check with <code>vmstat</code></h4>
+            <div>
+                <pre><code class="language-bash">vmstat 1</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">r  b   swpd    free   buff  cache    si    so     bi     bo   in    cs us sy id wa st
+3  6 1500000  50000  8000  90000  5000  7000  12000  18000 5000 15000 15 20 20 45  0</code></pre>
+            </div>
+            <p>Interpretation:
+                - swpd is high.
+                - si and so are very high.
+                - b is high, meaning blocked processes.
+                - wa is high, meaning the CPU waits on disk.
+                - This is swap thrashing.</p>
+            <p>The system may feel frozen because it is constantly moving memory pages between RAM and disk.</p>
+            <h4 id="possible-fixes">Possible Fixes</h4>
+            <ul>
+                <li>reduce memory load immediately</li>
+                <li>stop the offending process</li>
+                <li>add RAM</li>
+                <li>reduce application concurrency</li>
+                <li>investigate memory leaks</li>
+                <li>review swap configuration</li>
+            </ul>
+            <h3 id="scenario-4-simulate-disk-i-o-bottleneck">Scenario 4: Simulate Disk I/O Bottleneck</h3>
+            <p>Create heavy disk writes and verify them with <code>iostat</code>, <code>iotop</code>, and <code>vmstat</code>.</p>
+            <h4 id="simulate-the-bottleneck">Simulate the Bottleneck</h4>
+            <p>Install tools:</p>
+            <div>
+                <pre><code class="language-bash">sudo apt install fio sysstat iotop</code></pre>
+            </div>
+            <p>Run a safe file-based write test:</p>
+            <div>
+                <pre><code class="language-bash">mkdir -p ~/perf-lab
+
+fio --name=write-test \
+    --directory=~/perf-lab \
+    --size=1G \
+    --rw=write \
+    --bs=1M \
+    --direct=1 \
+    --runtime=60 \
+    --time_based</code></pre>
+            </div>
+            <h4 id="check-with-iostat">Check with <code>iostat</code></h4>
+            <div>
+                <pre><code class="language-bash">iostat -xz 1</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Device            r/s     w/s     rkB/s     wkB/s   await  aqu-sz  %util
+sda              0.00  350.00      0.00  350000.0   32.50   10.20  99.60</code></pre>
+            </div>
+            <p>Interpretation:
+                - w/s and wkB/s are high.
+                - await is elevated.
+                - aqu-sz shows queueing.
+                - %util is close to 100%.
+                - The disk is saturated by writes.</p>
+            <h4 id="check-with-iotop">Check with <code>iotop</code></h4>
+            <div>
+                <pre><code class="language-bash">sudo iotop -o</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Total DISK WRITE: 340.00 M/s
+TID  PRIO USER DISK READ DISK WRITE IO&gt; COMMAND
+5221 be/4 user 0.00 B/s  338.00 M/s 92% fio --name=write-test</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>fio is the process generating disk pressure.</li>
+                <li>The bottleneck is disk write I/O.</li>
+            </ul>
+            <h4 id="possible-fixes">Possible Fixes</h4>
+            <ul>
+                <li>move heavy writes to off-peak hours</li>
+                <li>use ionice for background jobs</li>
+                <li>move workload to faster storage</li>
+                <li>separate logs, databases, and backups onto different disks</li>
+                <li>reduce unnecessary writes</li>
+            </ul>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">ionice -c3 backup-command</code></pre>
+            </div>
+            <h3 id="scenario-5-simulate-high-disk-space-usage">Scenario 5: Simulate High Disk Space Usage</h3>
+            <p>Create a nearly full filesystem in a safe test directory and diagnose it.</p>
+            <h4 id="simulate-the-problem">Simulate the Problem</h4>
+            <p>Create a large test file:</p>
+            <div>
+                <pre><code class="language-bash">mkdir -p ~/perf-lab
+fallocate -l 1G ~/perf-lab/bigfile.img</code></pre>
+            </div>
+            <p>Check disk usage:</p>
+            <div>
+                <pre><code class="language-bash">du -sh ~/perf-lab</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">1.1G    /home/user/perf-lab</code></pre>
+            </div>
+            <p>Check filesystem space:</p>
+            <div>
+                <pre><code class="language-bash">df -h ~</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Filesystem      Size  Used Avail Use% Mounted on
+/dev/sda3       20G   18G  2.0G  90% /</code></pre>
+            </div>
+            <p>Interpretation:
+                - The filesystem is 90% full.
+                - The test directory contributes about 1.1 GB.
+                - If this were production, the system could soon fail writes or logs.</p>
+            <h4 id="find-large-directories">Find Large Directories</h4>
+            <div>
+                <pre><code class="language-bash">du -h --max-depth=1 ~ | sort -h</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">100M    /home/user/Documents
+500M    /home/user/Downloads
+1.1G    /home/user/perf-lab
+2.0G    /home/user</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">perf-lab is one of the largest directories under the home directory.</code></pre>
+            </div>
+            <h4 id="clean-up">Clean Up</h4>
+            <div>
+                <pre><code class="language-bash">rm -rf ~/perf-lab</code></pre>
+            </div>
+            <h3 id="scenario-6-simulate-high-load-average-from-cpu">Scenario 6: Simulate High Load Average from CPU</h3>
+            <p>Understand load average when CPU is the bottleneck.</p>
+            <h4 id="simulate">Simulate</h4>
+            <div>
+                <pre><code class="language-bash">stress-ng --cpu 4 --timeout 120s</code></pre>
+            </div>
+            <h4 id="check-load">Check Load</h4>
+            <div>
+                <pre><code class="language-bash">uptime</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">15:30:00 up 2 days,  1 user,  load average: 4.20, 2.10, 1.00</code></pre>
+            </div>
+            <p>Check CPU count:</p>
+            <div>
+                <pre><code class="language-bash">nproc</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">4</code></pre>
+            </div>
+            <p>Interpretation:
+                - The 1-minute load is about 4.20.
+                - The system has 4 CPUs.
+                - This indicates the CPU is near full utilization.</p>
+            <p>Confirm with <code>top</code>:</p>
+            <div>
+                <pre><code class="language-text">High us, low id, low wa = CPU-bound load.</code></pre>
+            </div>
+            <h3 id="scenario-7-simulate-high-load-average-from-disk-wait">Scenario 7: Simulate High Load Average from Disk Wait</h3>
+            <p>Show that high load can come from I/O wait, not just CPU work.</p>
+            <h4 id="simulate">Simulate</h4>
+            <p>Run a disk-heavy workload:</p>
+            <div>
+                <pre><code class="language-bash">fio --name=randwrite-test \
+    --directory=~/perf-lab \
+    --size=1G \
+    --rw=randwrite \
+    --bs=4k \
+    --numjobs=4 \
+    --iodepth=32 \
+    --direct=1 \
+    --runtime=60 \
+    --time_based</code></pre>
+            </div>
+            <h4 id="check">Check</h4>
+            <div>
+                <pre><code class="language-bash">uptime
+vmstat 1
+iostat -xz 1</code></pre>
+            </div>
+            <p>Example <code>vmstat</code> output:</p>
+            <div>
+                <pre><code class="language-text">r  b   swpd   free   buff  cache   si   so    bi    bo   in    cs us sy id wa st
+1  8      0 500000  20000 700000    0    0     0 75000 3000 9000  5  8 15 72  0</code></pre>
+            </div>
+            <p>Example <code>iostat</code> output:</p>
+            <div>
+                <pre><code class="language-text">Device            r/s     w/s    rkB/s    wkB/s   await  aqu-sz  %util
+sda              0.00  5200.00   0.00  20800.0   48.30   25.60  99.90</code></pre>
+            </div>
+            <p>Interpretation:
+                - b is high, meaning blocked processes.
+                - wa is high, meaning CPU is waiting for I/O.
+                - Disk %util is near 100%.
+                - This high load is caused by disk I/O wait, not CPU computation.</p>
+            <h3 id="scenario-8-identify-a-memory-heavy-process">Scenario 8: Identify a Memory-Heavy Process</h3>
+            <p>Find which process is consuming RAM.</p>
+            <h4 id="simulate">Simulate</h4>
+            <p>Start a memory workload:</p>
+            <div>
+                <pre><code class="language-bash">stress-ng --vm 1 --vm-bytes 1G --timeout 120s</code></pre>
+            </div>
+            <h4 id="check-with-ps">Check with <code>ps</code></h4>
+            <div>
+                <pre><code class="language-bash">ps aux --sort=-%mem | head -n 10</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">USER       PID %CPU %MEM    VSZ     RSS COMMAND
+user      7001 80.0 12.5 1200000 1024000 stress-ng-vm
+mysql     5678 10.0  8.0 2500000  650000 mysqld</code></pre>
+            </div>
+            <p>Interpretation:
+                - stress-ng-vm is using the most physical RAM.
+                - RSS is about 1 GB.
+                - This process is responsible for memory pressure.</p>
+            <h4 id="check-specific-process">Check Specific Process</h4>
+            <div>
+                <pre><code class="language-bash">ps -o pid,%mem,rss,vsz,cmd -p 7001</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">PID  %MEM     RSS     VSZ CMD
+7001 12.5 1024000 1200000 stress-ng-vm</code></pre>
+            </div>
+            <h3 id="scenario-9-simulate-a-zombie-process">Scenario 9: Simulate a Zombie Process</h3>
+            <p>Understand zombie processes and how to identify them.</p>
+            <p>A zombie process has finished running but still has an entry in the process table because its parent has not collected its exit status.</p>
+            <h4 id="simulate-with-a-small-script">Simulate with a Small Script</h4>
+            <p>Create a file:</p>
+            <div>
+                <pre><code class="language-bash">cat &gt; /tmp/make-zombie.py &lt;&lt;'EOF'
+import os
+import time
+
+pid = os.fork()
+if pid == 0:
+    os._exit(0)
+else:
+    time.sleep(60)
+EOF</code></pre>
+            </div>
+            <p>Run it:</p>
+            <div>
+                <pre><code class="language-bash">python3 /tmp/make-zombie.py</code></pre>
+            </div>
+            <p>In another terminal:</p>
+            <div>
+                <pre><code class="language-bash">ps -eo pid,ppid,state,cmd | grep ' Z '</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">8123  8122 Z [python3] &lt;defunct&gt;</code></pre>
+            </div>
+            <p>Interpretation:
+                - State Z means zombie.
+                - The child process exited.
+                - The parent process has not collected it yet.
+                - A few short-lived zombies are usually harmless.
+                - Many zombies may indicate a broken parent process.</p>
+            <h4 id="fix">Fix</h4>
+            <p>Usually fix or restart the parent process.</p>
+            <p>In this simulation, wait 60 seconds or stop the parent script.</p>
+            <h3 id="scenario-10-script-an-alert-for-disk-usage-above-80-">Scenario 10: Script an Alert for Disk Usage Above 80%</h3>
+            <p>Create a simple script that warns when a filesystem is too full and lists the largest directories.</p>
+            <h4 id="script">Script</h4>
+            <div>
+                <pre><code class="language-bash">cat &gt; ~/check-disk-usage.sh &lt;&lt;'EOF'
+#!/bin/bash
+
+THRESHOLD=80
+TARGET="/"
+
+USAGE=$(df -P "$TARGET" | awk 'NR==2 {gsub("%","",$5); print $5}')
+
+if [ "$USAGE" -ge "$THRESHOLD" ]; then
+    echo "WARNING: $TARGET is ${USAGE}% full"
+    echo
+    echo "Top directories under /:"
+    sudo du -xhd1 / 2&gt;/dev/null | sort -h | tail -n 5
+else
+    echo "OK: $TARGET is ${USAGE}% full"
+fi
+EOF
+
+chmod +x ~/check-disk-usage.sh</code></pre>
+            </div>
+            <p>Run:</p>
+            <div>
+                <pre><code class="language-bash">~/check-disk-usage.sh</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">WARNING: / is 87% full
+
+Top directories under /:
+1.2G    /opt
+2.5G    /home
+4.0G    /var
+8.0G    /usr
+18G     /</code></pre>
+            </div>
+            <p>Interpretation:
+                - The root filesystem is above the threshold.
+                - The largest top-level directories are listed.
+                - Investigate /var, /usr, or /home depending on what is unexpectedly large.</p>
+            <h3 id="scenario-11-gather-hourly-performance-logs">Scenario 11: Gather Hourly Performance Logs</h3>
+            <p>Collect simple performance statistics over time.</p>
+            <h4 id="create-a-script">Create a Script</h4>
+            <div>
+                <pre><code class="language-bash">cat &gt; ~/perf-snapshot.sh &lt;&lt;'EOF'
+#!/bin/bash
+
+LOG="$HOME/perf-history.log"
+
+{
+    echo "===== $(date) ====="
+    echo "--- uptime ---"
+    uptime
+    echo "--- memory ---"
+    free -h
+    echo "--- disk space ---"
+    df -h /
+    echo "--- top CPU processes ---"
+    ps aux --sort=-%cpu | head -n 6
+    echo "--- top memory processes ---"
+    ps aux --sort=-%mem | head -n 6
+    echo
+} &gt;&gt; "$LOG"
+EOF
+
+chmod +x ~/perf-snapshot.sh</code></pre>
+            </div>
+            <p>Run manually:</p>
+            <div>
+                <pre><code class="language-bash">~/perf-snapshot.sh</code></pre>
+            </div>
+            <p>Add to cron:</p>
+            <div>
+                <pre><code class="language-bash">crontab -e</code></pre>
+            </div>
+            <p>Add:</p>
+            <div>
+                <pre><code class="language-text">0 * * * * /home/user/perf-snapshot.sh</code></pre>
+            </div>
+            <p>Interpretation:
+                - The script records a basic hourly snapshot.
+                - After several days, compare timestamps to identify peak usage times.</p>
+            <h3 id="performance-troubleshooting-decision-guide">Performance Troubleshooting Decision Guide</h3>
+            <p>Use this guide to interpret common patterns.</p>
+            <h4 id="pattern-high-cpu-low-i-o-wait">Pattern: High CPU, Low I/O Wait</h4>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">top: us = 95%, id = 1%, wa = 0%</code></pre>
+            </div>
+            <p>Likely cause:</p>
+            <div>
+                <pre><code class="language-text">CPU-bound workload</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">ps aux --sort=-%cpu | head</code></pre>
+            </div>
+            <h4 id="pattern-high-i-o-wait">Pattern: High I/O Wait</h4>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">top: wa = 70%
+vmstat: b is high
+iostat: %util is 99%</code></pre>
+            </div>
+            <p>Likely cause:</p>
+            <div>
+                <pre><code class="language-text">disk I/O bottleneck</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">iostat -xz 1
+sudo iotop -o</code></pre>
+            </div>
+            <h4 id="pattern-low-available-memory-and-swap-activity">Pattern: Low Available Memory and Swap Activity</h4>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">free: available memory is low
+vmstat: si and so are high</code></pre>
+            </div>
+            <p>Likely cause:</p>
+            <div>
+                <pre><code class="language-text">memory pressure or memory leak</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">ps aux --sort=-%mem | head</code></pre>
+            </div>
+            <h4 id="pattern-high-load-but-cpu-idle">Pattern: High Load but CPU Idle</h4>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">uptime: load average high
+top: CPU mostly idle
+vmstat: b high, wa high</code></pre>
+            </div>
+            <p>Likely cause:</p>
+            <div>
+                <pre><code class="language-text">processes blocked on I/O</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">vmstat 1
+iostat -xz 1
+ps -eo pid,stat,cmd | awk '$2 ~ /D/ {print}'</code></pre>
+            </div>
+            <h4 id="pattern-disk-almost-full">Pattern: Disk Almost Full</h4>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">df -h: Use% above 90%</code></pre>
+            </div>
+            <p>Likely cause:</p>
+            <div>
+                <pre><code class="language-text">logs, cache, backups, database files, or user data consuming space</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">sudo du -xhd1 / | sort -h</code></pre>
+            </div>
+            <h3 id="useful-command-summary">Useful Command Summary</h3>
+            <p>General:</p>
+            <div>
+                <pre><code class="language-bash">uptime
+top
+htop
+vmstat 1
+free -h</code></pre>
+            </div>
+            <p>CPU:</p>
+            <div>
+                <pre><code class="language-bash">ps aux --sort=-%cpu | head
+top -p PID</code></pre>
+            </div>
+            <p>Memory:</p>
+            <div>
+                <pre><code class="language-bash">free -h
+ps aux --sort=-%mem | head
+ps -o pid,%mem,rss,vsz,cmd -p PID</code></pre>
+            </div>
+            <p>Disk space:</p>
+            <div>
+                <pre><code class="language-bash">df -h
+du -h --max-depth=1 DIRECTORY | sort -h</code></pre>
+            </div>
+            <p>Disk I/O:</p>
+            <div>
+                <pre><code class="language-bash">iostat -xz 1
+sudo iotop -o
+vmstat 1</code></pre>
+            </div>
+            <p>Process states:</p>
+            <div>
+                <pre><code class="language-bash">ps -eo pid,ppid,state,cmd
+ps -eo pid,stat,cmd | awk '$2 ~ /D/ {print}'</code></pre>
+            </div>
+            <p>Stress testing in labs:</p>
+            <div>
+                <pre><code class="language-bash">stress-ng --cpu 4 --timeout 60s
+stress-ng --vm 2 --vm-bytes 70% --timeout 60s
+fio --name=write-test --directory=~/perf-lab --size=1G --rw=write --bs=1M --direct=1 --runtime=60 --time_based</code></pre>
+            </div>
+            <h3 id="safe-lab-rules">Safe Lab Rules</h3>
+            <p>Before simulating bottlenecks:</p>
+            <ul>
+                <li>Do not run heavy tests on production systems.</li>
+                <li>Use a virtual machine or lab machine.</li>
+                <li>Watch temperatures during CPU stress tests.</li>
+                <li>Check disk space before fio tests.</li>
+                <li>Avoid filling important filesystems.</li>
+                <li>Stop tests if the system becomes unstable.</li>
+                <li>Clean up test files afterward.</li>
+            </ul>
+            <p>Clean up test data:</p>
+            <div>
+                <pre><code class="language-bash">rm -rf ~/perf-lab</code></pre>
+            </div>
+            <h3 id="practical-challenges">Practical Challenges</h3>
             <ol>
-                <li>Run <code>top</code> during peak load times and identify any processes consistently using over 50% CPU. Document these processes and research ways to optimize or replace them for better performance.</li>
-                <li>Use <code>iotop</code> to monitor disk I/O. Select an application you suspect is causing high I/O, run it, and document its I/O usage pattern. Determine if the usage is justifiable or if it needs optimization.</li>
-                <li>Identify a running service or application suspected of a memory leak. Use <code>valgrind</code> or similar tools to trace its memory usage over time. Provide a report with findings and potential solutions.</li>
-                <li>Monitor a specific service using <code>nethogs</code> for real-time network bandwidth usage. Analyze its traffic patterns and propose optimizations to reduce unnecessary network load.</li>
-                <li>Write a bash script that alerts when disk usage goes beyond 80%. The script should identify the top five directories contributing to disk usage.</li>
-                <li>When system load average exceeds 1.0, use a combination of <code>uptime</code>, <code>vmstat</code>, and <code>dmesg</code> to diagnose the root cause. Document the methodology and findings.</li>
-                <li>Create a cron job script to gather CPU, memory, and disk usage statistics every hour. Store this data in a log file for a week and analyze it to identify any patterns or anomalies.</li>
-                <li>Set up Nagios to monitor a server. Configure it to send an email alert for critical conditions like CPU usage &gt; 90%, disk space &lt; 10%, and RAM usage &gt; 90%.</li>
-                <li>Use <code>sar</code> (from the <code>sysstat</code> package) to collect and report system activity over a 24-hour period. Analyze the report to identify peak usage times for CPU, memory, and I/O, and recommend scheduling strategies for resource-intensive tasks based on your findings.</li>
-                <li>Compare the resource usage of two different applications that serve a similar purpose (for example, two web servers or two text editors). Use tools like <code>top</code>, <code>vmstat</code>, and <code>iostat</code> to benchmark CPU, memory, and disk usage under similar workloads. Present your findings in a summary table and recommend which application is more resource-efficient.</li>
+                <li>Run <code>top</code> during normal system use. Identify the top CPU-consuming process and explain whether its usage is expected.</li>
+                <li>Run <code>htop</code> and sort by memory usage. Compare the top memory process with the output of <code>ps aux --sort=-%mem</code>.</li>
+                <li>Use <code>free -h</code> to record total, used, free, buff/cache, available, and swap usage. Explain why <code>available</code> is more useful than <code>free</code>.</li>
+                <li>Run <code>vmstat 1</code> during normal use and during a CPU stress test. Compare <code>r</code>, <code>us</code>, <code>sy</code>, <code>id</code>, and <code>wa</code>.</li>
+                <li>Simulate memory pressure with <code>stress-ng</code> and observe <code>free -h</code> and <code>vmstat 1</code>.</li>
+                <li>Simulate disk I/O pressure with <code>fio</code> and observe <code>iostat -xz 1</code> and <code>iotop</code>.</li>
+                <li>Use <code>df -h</code> and <code>du</code> to identify the largest directories on a test filesystem.</li>
+                <li>Create a disk usage alert script that warns when <code>/</code> is above 80% usage.</li>
+                <li>Create a cron job that records uptime, memory, disk space, and top processes every hour.</li>
+                <li>Write a short performance report for one simulated bottleneck. Include the command used to simulate it, tool output, interpretation, and recommended fix.</li>
             </ol>
         </article-section>
     </div>

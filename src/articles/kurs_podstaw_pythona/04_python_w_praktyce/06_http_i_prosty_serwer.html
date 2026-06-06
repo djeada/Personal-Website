@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/kurs_podstaw_pythona/04_python_w_praktyce/06_http_i_prosty_serwer",
             "description": "HTTP (Hypertext Transfer Protocol) to protok\u00f3\u0142 warstwy aplikacji w modelu OSI, u\u017cywany g\u0142\u00f3wnie do przesy\u0142ania danych mi\u0119dzy klientem (zwykle przegl\u0105dark\u0105 internetow\u0105) a serwerem.",
-            "dateModified": "2019-11-08"
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -92,6 +92,18 @@
                                 <li><a href="#wady-prostego-serwera">Wady prostego serwera</a></li>
                             </ol>
                         </li>
+                        <li><a href="#zaawansowane-użycie-modułu-requests">Zaawansowane użycie modułu requests</a>
+                            <ol>
+                                <li><a href="#post-put-delete-i-obsługa-danych-json">POST, PUT, DELETE i obsługa danych JSON</a></li>
+                                <li><a href="#obsługa-błędów-i-timeouty">Obsługa błędów i timeouty</a></li>
+                                <li><a href="#sesje-wielokrotne-żądania-z-tymi-samymi-parametrami">Sesje — wielokrotne żądania z tymi samymi parametrami</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#moduł-urllib-standardowa-biblioteka">Moduł urllib — standardowa biblioteka</a></li>
+                        <li><a href="#nagłówki-i-uwierzytelnianie">Nagłówki i uwierzytelnianie</a></li>
+                        <li><a href="#kody-statusu-http-najważniejsze-grupy">Kody statusu HTTP — najważniejsze grupy</a></li>
+                        <li><a href="#obsługa-błędów-i-retry">Obsługa błędów i retry</a></li>
+                        <li><a href="#porównanie-requests-vs-httpx-vs-urllib-vs-aiohttp">Porównanie: requests vs httpx vs urllib vs aiohttp</a></li>
                     </ol>
                 </ol>
             </div>
@@ -184,7 +196,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: November 08, 2019</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="http-i-prosty-serwer">HTTP i prosty serwer</h2>
             <p>HTTP (Hypertext Transfer Protocol) to <strong>protokół warstwy aplikacji</strong> w modelu OSI, używany głównie do przesyłania danych między klientem (zwykle przeglądarką internetową) a serwerem. Protokół ten opiera się na modelu <strong>żądanie-odpowiedź</strong>, gdzie klient wysyła zapytanie HTTP, a serwer zwraca odpowiedź. HTTP jest <strong>protokółem bezstanowym</strong>, co oznacza, że każde żądanie jest niezależne i serwer nie utrzymuje informacji o poprzednich żądaniach.</p>
@@ -342,6 +354,218 @@ with socketserver.TCPServer(("", PORT), CustomHTTPRequestHandler) as httpd:
                 <li>Prosty serwer nie radzi sobie z większą liczbą jednoczesnych połączeń.</li>
                 <li>Domyślnie serwer działa w trybie jednoprocesowym, co oznacza, że każde żądanie jest obsługiwane sekwencyjnie.</li>
             </ul>
+            <h3 id="zaawansowane-użycie-modułu-requests">Zaawansowane użycie modułu <code>requests</code></h3>
+            <h4 id="post-put-delete-i-obsługa-danych-json">POST, PUT, DELETE i obsługa danych JSON</h4>
+            <div>
+                <pre><code class="language-python">import requests
+
+base_url = "https://jsonplaceholder.typicode.com"
+
+# POST — tworzenie nowego zasobu
+nowy_post = {
+    "title": "Nowy post",
+    "body": "Treść posta",
+    "userId": 1
+}
+odpowiedz = requests.post(f"{base_url}/posts", json=nowy_post)
+print(odpowiedz.status_code)   # 201 Created
+print(odpowiedz.json())
+
+# PUT — aktualizacja zasobu
+aktualizacja = {"title": "Zmieniony tytuł", "body": "Nowa treść", "userId": 1}
+odpowiedz = requests.put(f"{base_url}/posts/1", json=aktualizacja)
+print(odpowiedz.status_code)   # 200 OK
+
+# DELETE — usunięcie zasobu
+odpowiedz = requests.delete(f"{base_url}/posts/1")
+print(odpowiedz.status_code)   # 200 OK</code></pre>
+            </div>
+            <h4 id="obsługa-błędów-i-timeouty">Obsługa błędów i timeouty</h4>
+            <div>
+                <pre><code class="language-python">import requests
+from requests.exceptions import Timeout, ConnectionError, HTTPError
+
+try:
+    odpowiedz = requests.get("https://example.com/api/data", timeout=5)
+    odpowiedz.raise_for_status()   # Rzuca HTTPError dla 4xx i 5xx
+    print(odpowiedz.json())
+except Timeout:
+    print("Żądanie przekroczyło limit czasu")
+except ConnectionError:
+    print("Błąd połączenia — brak internetu lub błędny host")
+except HTTPError as e:
+    print(f"Błąd HTTP: {e.response.status_code}")</code></pre>
+            </div>
+            <h4 id="sesje-wielokrotne-żądania-z-tymi-samymi-parametrami">Sesje — wielokrotne żądania z tymi samymi parametrami</h4>
+            <p>Sesja (<code>Session</code>) zachowuje cookies i nagłówki między żądaniami:</p>
+            <div>
+                <pre><code class="language-python">import requests
+
+with requests.Session() as sesja:
+    # Ustawienie wspólnych nagłówków dla wszystkich żądań w sesji
+    sesja.headers.update({
+        "Authorization": "Bearer moj-token",
+        "Accept": "application/json"
+    })
+
+    # Pierwsze żądanie — logowanie
+    odpowiedz = sesja.post("https://api.example.com/login",
+                           json={"user": "jan", "password": "tajne"})
+
+    # Kolejne żądania używają tych samych cookies i nagłówków
+    profil = sesja.get("https://api.example.com/profile")
+    print(profil.json())</code></pre>
+            </div>
+            <h3 id="moduł-urllib-standardowa-biblioteka">Moduł <code>urllib</code> — standardowa biblioteka</h3>
+            <p>Dla prostych przypadków nie potrzebujemy <code>requests</code> — wystarczy wbudowany <code>urllib.request</code>:</p>
+            <div>
+                <pre><code class="language-python">import urllib.request
+import urllib.parse
+import json
+
+# GET
+with urllib.request.urlopen("https://jsonplaceholder.typicode.com/posts/1") as resp:
+    dane = json.loads(resp.read().decode())
+    print(dane["title"])
+
+# POST
+dane_post = json.dumps({"title": "test", "body": "treść", "userId": 1}).encode()
+req = urllib.request.Request(
+    "https://jsonplaceholder.typicode.com/posts",
+    data=dane_post,
+    headers={"Content-Type": "application/json"},
+    method="POST"
+)
+with urllib.request.urlopen(req) as resp:
+    print(resp.status)   # 201</code></pre>
+            </div>
+            <h3 id="nagłówki-i-uwierzytelnianie">Nagłówki i uwierzytelnianie</h3>
+            <div>
+                <pre><code class="language-python">import requests
+from requests.auth import HTTPBasicAuth, HTTPDigestAuth
+
+# Basic Auth
+odpowiedz = requests.get("https://httpbin.org/basic-auth/user/pass",
+                         auth=HTTPBasicAuth("user", "pass"))
+print(odpowiedz.status_code)   # 200
+
+# Token Bearer (JWT)
+headers = {"Authorization": "Bearer eyJhbGci..."}
+odpowiedz = requests.get("https://api.example.com/secure", headers=headers)
+
+# API Key w parametrach zapytania
+odpowiedz = requests.get("https://api.example.com/data",
+                         params={"api_key": "moj-klucz-api"})</code></pre>
+            </div>
+            <h3 id="kody-statusu-http-najważniejsze-grupy">Kody statusu HTTP — najważniejsze grupy</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Zakres</td>
+                    <td>Kategoria</td>
+                    <td>Najczęstsze kody</td>
+                </tr>
+                <tr>
+                    <td>1xx</td>
+                    <td>Informacyjne</td>
+                    <td>100 Continue, 101 Switching Protocols</td>
+                </tr>
+                <tr>
+                    <td>2xx</td>
+                    <td>Sukces</td>
+                    <td>200 OK, 201 Created, 204 No Content</td>
+                </tr>
+                <tr>
+                    <td>3xx</td>
+                    <td>Przekierowanie</td>
+                    <td>301 Moved Permanently, 302 Found, 304 Not Modified</td>
+                </tr>
+                <tr>
+                    <td>4xx</td>
+                    <td>Błąd klienta</td>
+                    <td>400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found</td>
+                </tr>
+                <tr>
+                    <td>5xx</td>
+                    <td>Błąd serwera</td>
+                    <td>500 Internal Server Error, 502 Bad Gateway, 503 Service Unavailable</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="obsługa-błędów-i-retry">Obsługa błędów i retry</h3>
+            <div>
+                <pre><code class="language-python">import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+# Konfiguracja automatycznego ponowienia prób
+session = requests.Session()
+retry = Retry(
+    total=3,              # maksymalnie 3 próby
+    backoff_factor=0.5,   # opóźnienie: 0.5s, 1s, 2s
+    status_forcelist=[500, 502, 503, 504]  # ponawiaj dla tych kodów
+)
+adapter = HTTPAdapter(max_retries=retry)
+session.mount("http://", adapter)
+session.mount("https://", adapter)
+
+# Użycie sesji z retry
+try:
+    odpowiedz = session.get("https://api.example.com/data", timeout=10)
+    odpowiedz.raise_for_status()   # Rzuci wyjątek dla kodów 4xx/5xx
+    dane = odpowiedz.json()
+except requests.exceptions.Timeout:
+    print("Przekroczono limit czasu!")
+except requests.exceptions.HTTPError as e:
+    print(f"Błąd HTTP: {e.response.status_code}")
+except requests.exceptions.ConnectionError:
+    print("Brak połączenia z serwerem!")</code></pre>
+            </div>
+            <h3 id="porównanie-requests-vs-httpx-vs-urllib-vs-aiohttp">Porównanie: requests vs httpx vs urllib vs aiohttp</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Biblioteka</td>
+                    <td>Synchroniczna</td>
+                    <td>Asynchroniczna</td>
+                    <td>HTTP/2</td>
+                    <td>Wbudowana?</td>
+                    <td>Kiedy używać</td>
+                </tr>
+                <tr>
+                    <td><code>urllib</code></td>
+                    <td>Tak</td>
+                    <td>Nie</td>
+                    <td>Nie</td>
+                    <td>Tak</td>
+                    <td>Proste skrypty bez zależności</td>
+                </tr>
+                <tr>
+                    <td><code>requests</code></td>
+                    <td>Tak</td>
+                    <td>Nie</td>
+                    <td>Nie</td>
+                    <td>Nie</td>
+                    <td>Większość aplikacji (standard)</td>
+                </tr>
+                <tr>
+                    <td><code>httpx</code></td>
+                    <td>Tak</td>
+                    <td>Tak</td>
+                    <td>Tak</td>
+                    <td>Nie</td>
+                    <td>Nowoczesne API, async+sync</td>
+                </tr>
+                <tr>
+                    <td><code>aiohttp</code></td>
+                    <td>Nie</td>
+                    <td>Tak</td>
+                    <td>Nie</td>
+                    <td>Nie</td>
+                    <td>Wysokowydajne async aplikacje</td>
+                </tr>
+            </table>
+            </p>
         </article-section>
     </div>
     <footer>

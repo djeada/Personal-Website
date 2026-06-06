@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>1. The big idea</title>
+    <meta content='How a creature in Standard of Iron goes from "this unit is attacking" to moving
+                    geometry on screen — and why it is fast enough to do for thousands of units at once.' name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/standard_of_iron/animation_architecture" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "1. The big idea",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/standard_of_iron/animation_architecture"
+            },
+            "url": "https://adamdjellouli.com/articles/standard_of_iron/animation_architecture",
+            "description": "How a creature in Standard of Iron goes from \"this unit is attacking\" to moving\n                    geometry on screen \u2014 and why it is fast enough to do for thousands of units at once.",
+            "dateModified": "2026-06-06"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#1-the-big-idea">1. The big idea</a></li>
+                    <li><a href="#2-the-runtime-pipeline-layer-by-layer">2. The runtime pipeline, layer by layer</a>
+                        <ol>
+                            <li><a href="#stage-1-input-bridge-render-gl-humanoid-animation-animation_inputs-cpp-">Stage 1 — Input bridge (render/gl/humanoid/animation/animation_inputs.cpp)</a></li>
+                            <li><a href="#stage-2-intent-selection-render-creature-pose_intent-combat_visual_state-">Stage 2 — Intent / selection (render/creature/pose_intent.*, combat_visual_state.*)</a></li>
+                            <li><a href="#stage-3-clip-resolution-render-creature-pipeline-">Stage 3 — Clip resolution (render/creature/pipeline/)</a></li>
+                            <li><a href="#stage-4-pose-production-two-routes-">Stage 4 — Pose production (two routes)</a></li>
+                            <li><a href="#stage-5-skinning-gpu-">Stage 5 — Skinning (GPU)</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#3-the-bake-pipeline-offline-">3. The bake pipeline (offline)</a></li>
+                    <li><a href="#4-humanoid-locomotion-realism-the-procedural-shaper-">4. Humanoid locomotion realism (the procedural shaper)</a></li>
+                    <li><a href="#5-combat-visual-state-machine-marker-driven-damage">5. Combat: visual state machine + marker-driven damage</a></li>
+                    <li><a href="#6-quadrupeds-one-shared-gait-evaluator">6. Quadrupeds: one shared gait evaluator</a></li>
+                    <li><a href="#7-performance-notes">7. Performance notes</a></li>
+                    <li><a href="#8-where-to-look">8. Where to look</a></li>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ai_architecture.html">Ai Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/animation_architecture.html">Animation Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/audio_wishlist.html">Audio Wishlist</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/combat_system.html">Combat System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/creature_bpat_format.html">Creature Bpat Format</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/macos_signing.html">Macos Signing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_framework.html">Mission Framework</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/pathfinding_architecture.html">Pathfinding Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture.html">Rendering Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/save_load_system.html">Save Load System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/victory_system.html">Victory System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/windows_code_signing.html">Windows Code Signing</a></li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <header>Animation &amp; Pose Architecture</header>
+            <p>How a creature in Standard of Iron goes from <em>"this unit is attacking"</em> to <em>moving
+                    geometry on screen</em> — and why it is fast enough to do for thousands of units at once.</p>
+            <p>This document is the conceptual map. For the binary file format see
+                <a href="CREATURE_BPAT_FORMAT.md"><code>CREATURE_BPAT_FORMAT.md</code></a>; for the wider render thread see
+                <a href="RENDERING_ARCHITECTURE.md"><code>RENDERING_ARCHITECTURE.md</code></a>.
+            </p>
+            <hr />
+            <h2 id="1-the-big-idea">1. The big idea</h2>
+            <p>Animation is split into two worlds that meet at a thin, cheap seam:</p>
+            <ul>
+                <li><strong>Offline (bake time):</strong> the expensive skeletal work — posing every joint of every
+                    frame of every move — is done once by a tool and packed into a <strong>BPAT</strong> file per
+                    species (a "motion book").</li>
+                <li><strong>Online (per frame):</strong> the game only answers <em>which move</em> and <em>how far through it</em>,
+                    then either samples the baked book or runs a light procedural shaper. The GPU does the
+                    final skinning.</li>
+            </ul>
+            <div>
+                <pre><code class="language-shell">OFFLINE (once, at build)                ONLINE (every frame)
+            ┌─────────────────────────────────────┐   ┌────────────────────────────────────┐
+            │  SpeciesManifest ──► bpat_baker ──►  │   │  game state ─► intent ─► clip+phase  │
+            │  *.bpat  (+ *.bpsm snapshot mesh)    │   │           │                          │
+            └─────────────────────────────────────┘   │           ▼                          │
+                              │                        │   sample baked pose / shape pose     │
+                              └────────  loaded  ──────┼──►        │                          │
+                                                       │           ▼                          │
+                                                       │   bone palette ─► GPU skinning ─►███ │
+                                                       └────────────────────────────────────┘</code></pre>
+            </div>
+            <p>The seam is deliberately tiny: at runtime, <em>intent</em> is essentially <code>(clip_id, phase)</code>.
+                That is what keeps large battles cheap.</p>
+            <hr />
+            <h2 id="2-the-runtime-pipeline-layer-by-layer">2. The runtime pipeline, layer by layer</h2>
+            <p>Every creature passes through the same five stages each frame. Boxes are the data that
+                flows; the labels under them are the files that own each step.</p>
+            <div>
+                <pre><code class="language-shell">ECS components                AnimationInputs              PoseIntent / AnimationStateId
+ (AttackComponent,        ┌─────────────────────┐          ┌──────────────────────────┐
+  CombatStateComponent,   │  1. INPUT BRIDGE     │          │  2. INTENT / SELECTION    │
+  HoldModeComponent,  ───►│  sample_anim_state() ├─────────►│  resolve_pose()           │
+  Transform, Stamina,     │  render/gl/humanoid/ │          │  render/creature/         │
+  Formation, ...)         │  animation/          │          │   pose_intent.{h,cpp}     │
+                          │  animation_inputs.cpp│          │  + combat_visual_state    │
+                          └─────────────────────┘          └────────────┬─────────────┘
+                                                                         │ clip_id, phase,
+                                                                         │ clip_variant
+                                                                         ▼
+   ███ GPU                 bone palette[]            ResolvedClipPlayback / HumanoidPose
+ ┌───────────────┐      ┌────────────────────┐      ┌───────────────────────────────────┐
+ │ 5. SKINNING   │◄─────│ 4. POSE PRODUCTION  │◄─────│  3. CLIP RESOLUTION                │
+ │ palette texture│     │  • sample baked     │      │  ArchetypeRegistry.bpat_clip[state]│
+ │ + vertex      │      │    BPAT frames      │      │  resolve_bpat_clip(variant)        │
+ │ shader        │      │  • OR procedural    │      │  resolve_bpat_playback(clip,phase) │
+ │ render/gl/... │      │    poser/pose_ctrl  │      │  render/creature/pipeline/         │
+ └───────────────┘      └────────────────────┘      └───────────────────────────────────┘</code></pre>
+            </div>
+            <h3 id="stage-1-input-bridge-render-gl-humanoid-animation-animation_inputs-cpp-">Stage 1 — Input bridge (<code>render/gl/humanoid/animation/animation_inputs.cpp</code>)</h3>
+            <p><code>sample_anim_state()</code> reads the ECS and produces one <code>AnimationInputs</code> snapshot per
+                entity per frame (is it attacking? dying? guarding? kneeling? how fast is it moving?).
+                Per-entity <em>persistent</em> animation memory (filtered speed/turn, locomotion phase
+                accumulator, guard/hold progress, combat visual state) lives in
+                <code>HumanoidAnimationStateComponent</code> (<code>render/creature/animation_state_components.h</code>).
+            </p>
+            <h3 id="stage-2-intent-selection-render-creature-pose_intent-combat_visual_state-">Stage 2 — Intent / selection (<code>render/creature/pose_intent.*</code>, <code>combat_visual_state.*</code>)</h3>
+            <p><code>resolve_pose()</code> collapses all the booleans into a single <code>PoseIntent</code> in strict priority
+                order (dying &gt; dead &gt; hit-react &gt; attacking &gt; … &gt; walk &gt; idle). This replaced the old
+                scattered if/else chains: <strong>one</strong> resolution per entity per frame. Combat additionally
+                runs through a small transactional state machine (below).</p>
+            <h3 id="stage-3-clip-resolution-render-creature-pipeline-">Stage 3 — Clip resolution (<code>render/creature/pipeline/</code>)</h3>
+            <p>The intent becomes an <code>AnimationStateId</code>, which indexes a <strong>precomputed</strong> per-archetype
+                table to get a <code>clip_id</code> — this is O(1), no string lookups on the hot path:</p>
+            <div>
+                <pre><code class="language-shell">PoseIntent ─► AnimationStateId ─► ArchetypeRegistry::bpat_clip[state]  (array index)
+                                       │
+                                       ▼  + clip_variant (seed / equipment)
+                              resolve_bpat_clip()  ─►  uint16 clip_id</code></pre>
+            </div>
+            <p><code>BpatRegistry::find_clip(name)</code> (the by-<em>name</em> utility) is backed by an O(1) per-blob hash
+                map (<code>BpatBlob::clip_index</code>), but it is only used off the hot path; runtime selection uses
+                the precomputed index above.</p>
+            <h3 id="stage-4-pose-production-two-routes-">Stage 4 — Pose production (two routes)</h3>
+            <ul>
+                <li><strong>Baked route (default for shipping creatures):</strong> <code>resolve_bpat_playback(clip, phase)</code>
+                    turns a normalized phase into a frame index + interpolation weight; the bone palette is
+                    read straight from the BPAT blob. No skeleton is solved at runtime.</li>
+                <li><strong>Procedural route (humanoid locomotion / combat shaping):</strong> <code>poser.cpp</code>
+                    (<code>compute_locomotion_pose</code>) and <code>pose_controller.cpp</code> shape a <code>HumanoidPose</code>
+                    analytically. This is where the <em>felt</em> realism lives — see §4.</li>
+            </ul>
+            <h3 id="stage-5-skinning-gpu-">Stage 5 — Skinning (GPU)</h3>
+            <p>The bone palette (one matrix per bone) is uploaded as a texture and the vertex shader
+                transforms each vertex by its bone matrices. Thousands of units skin in parallel on the
+                GPU. See <code>RENDERING_ARCHITECTURE.md</code>.</p>
+            <hr />
+            <h2 id="3-the-bake-pipeline-offline-">3. The bake pipeline (offline)</h2>
+            <div>
+                <pre><code class="language-shell">render/&lt;species&gt;/&lt;species&gt;_manifest.cpp
+        │   SpeciesManifest { topology, mesh graph, clip descriptors, bake_clip_palette }
+        ▼
+ tools/bpat_baker  ──► for each clip, for each frame: solve skeleton ► pack bone palette
+        │
+        ├──►  assets/creatures/&lt;species&gt;.bpat          (animation palettes + markers)
+        └──►  assets/creatures/&lt;species&gt;_minimal.bpsm  (snapshot mesh for far LOD; horse/elephant)</code></pre>
+            </div>
+            <p><code>*.bpat</code> files are <strong>generated artifacts</strong> (git-ignored). Regenerate with:</p>
+            <div>
+                <pre><code class="language-bash">make bake-bpat          # or: ./build/bin/bpat_baker assets/creatures</code></pre>
+            </div>
+            <p>Six species ship today: <code>humanoid</code>, <code>horse</code>, <code>elephant</code>, <code>humanoid_sword</code>,
+                <code>humanoid_spear</code>, <code>humanoid_skeleton</code> (ids 0–5).
+            </p>
+            <hr />
+            <h2 id="4-humanoid-locomotion-realism-the-procedural-shaper-">4. Humanoid locomotion realism (the procedural shaper)</h2>
+            <p>Walk/run/turn quality is produced by <code>poser.cpp::compute_locomotion_pose</code>, driven by a
+                <strong>velocity-blended, phase-continuous</strong> gait state built in <code>prepare_animation.cpp</code>.
+            </p>
+            <div>
+                <pre><code class="language-shell">ground speed ─► build_locomotion_targets()         (target speed/blend/run/turn/cadence)
+                       │
+                       ▼   smooth_towards(prev, target, dt, tau)   ← exponential smoothing
+        ┌──────────────┴───────────────────────────────────────────┐
+        │ filtered_speed   locomotion_blend   run_blend   turn   cadence  │
+        └──────────────┬───────────────────────────────────────────┘
+                       ▼
+       compute_locomotion_pose():  walk_profile ──blend(run_blend)──► run_profile
+                       │
+        ┌──────────────┼───────────────────────────────────────────┐
+        │ stride scaled by speed (anti-slide)   foot plant/toe-off    │
+        │ turn lean + torso twist + stride bias  arm swing + counter  │
+        │ vertical bob + head stabilization      pelvis weight shift  │
+        └───────────────────────────────────────────────────────────┘</code></pre>
+            </div>
+            <p>Key properties that keep it smooth (Phase 6):</p>
+            <ul>
+                <li><strong>Eased/spring blends (6.2):</strong> every locomotion channel is exponentially smoothed
+                    (<code>smooth_towards</code>, per-channel <code>tau</code>). Combat phases use authored ease curves; guard and
+                    hold/kneel transitions both ease with the same smoothstep so there is no pop at the ends.</li>
+                <li><strong>Velocity-driven blend (6.3):</strong> stride length, step height, cadence and arm swing scale
+                    with filtered ground speed; walk↔run is a continuous blend, not a hard switch.</li>
+                <li><strong>Phase continuity:</strong> the locomotion phase is <em>integrated</em> (<code>phase += dt / cycle_time</code>),
+                    never reset on a state change, so feet never teleport between cycles.</li>
+                <li><strong>Anti-slide (6.1):</strong> stride length is coupled to real ground speed via
+                    <code>stride_distance_scale()</code>, so planted feet track displacement. (A full world-space IK
+                    foot-lock is a documented future refinement; it needs in-engine visual tuning.)
+                </li>
+                <li><strong>Turn (6.4):</strong> a signed turn amount drives lean, torso twist, stride bias and
+                    inside/outside foot asymmetry.</li>
+            </ul>
+            <hr />
+            <h2 id="5-combat-visual-state-machine-marker-driven-damage">5. Combat: visual state machine + marker-driven damage</h2>
+            <p>Melee combat is animated by a small per-swing state machine and, crucially, the <strong>HP hit
+                    lands when the blade visually connects</strong> — not on the trigger frame.</p>
+            <div>
+                <pre><code class="language-shell">Advance ─► WindUp ─► Strike ─► Impact ─► Recover ─► Reposition ─► Idle
+    │          │         │
+    │          │         └── BPAT marker: contact  ───────────────┐
+    │          └────────────  marker: weapon_release              │ phase where the
+    └───────────────────────  marker: anticipation_start          │ weapon connects
+                                                                   ▼
+                              ┌──────────────────────────────────────────────┐
+                              │ Deferred-melee-strike (DPS-neutral)            │
+                              │ At swing start: snapshot damage+target onto    │
+                              │ AttackComponent (pending_melee_*), reset       │
+                              │ cooldown. When elapsed ≥ contact_time, apply    │
+                              │ the snapshotted hit (revalidated: alive/enemy/  │
+                              │ in range), else cancel.                        │
+                              │ contact_time = k_melee_contact_fraction*cooldown│
+                              │ game/systems/combat_system/attack_processor.cpp │
+                              └──────────────────────────────────────────────┘</code></pre>
+            </div>
+            <ul>
+                <li><strong>Authored markers (BPAT v2):</strong> each clip carries 5 normalized-phase markers —
+                    <code>anticipation_start</code>, <code>weapon_release</code>, <code>contact</code>, <code>recover_unlocked</code>, <code>exit_safe</code> —
+                    baked by the tool and read directly (no runtime name-substring guessing).
+                </li>
+                <li><strong>DPS-neutral:</strong> cooldown is still reset at swing start, so steady-state damage output is
+                    unchanged; only the <em>moment</em> of application moves to mid-swing.</li>
+                <li><strong>Deterministic:</strong> the pending-strike fields are serialized, so saves/replays reproduce
+                    the same hit timing.</li>
+                <li>Ranged, special projectiles and the first-person/RPG-commander hook are unchanged.</li>
+            </ul>
+            <p>The visual side (<code>combat_visual_state.cpp</code>) eases each phase (<code>eased_combat_phase_progress</code>)
+                and applies a lane-driven weight curve (<code>emphasis_scale</code> × finisher/amplified multipliers).</p>
+            <hr />
+            <h2 id="6-quadrupeds-one-shared-gait-evaluator">6. Quadrupeds: one shared gait evaluator</h2>
+            <p>Horse and elephant share a single parametric gait core instead of each carrying its own
+                copy of the phase/bob/leg math (Phase 7).</p>
+            <div>
+                <pre><code class="language-shell">render/creature/quadruped/gait.{h,cpp}
+        ┌───────────────────────────────────────────────┐
+        │  Quadruped::evaluate_cycle_motion(dims, gait,   │
+        │     MotionConfig, SwayConfig, time, motion)     │
+        │   • phase = wrap(time/cycle_time + offset)      │
+        │   • bob   = Σ harmonics × amplitude × scale     │
+        │   • per-leg swing_target / default_foot_position│
+        │   • body_sway, swing_ease, swing_arc            │
+        └───────────────┬─────────────────┬──────────────┘
+                        │                  │
+         HorseGait : Gait                ElephantGait : Gait
+         (MotionConfig knobs)            (MotionConfig knobs)
+         render/horse/horse_motion.cpp   render/elephant/elephant_motion.cpp
+         + rider phase selection         + trunk/ears/howdah extras</code></pre>
+            </div>
+            <p>The shared evaluator gained <strong>behaviour-exact config knobs</strong> (bob harmonic
+                weights/frequencies, bob base/intensity scale, cycle-time floor, optional unclamped
+                swing ease/arc, optional non-mirrored swing target) so each species reproduces its prior
+                output numerically — the consolidation deleted duplicate math without changing the gait
+                feel. Mount/howdah attachment frames remain per-species (their anchor geometry differs).</p>
+            <hr />
+            <h2 id="7-performance-notes">7. Performance notes</h2>
+            <ul>
+                <li><strong>No per-frame skeleton solves</strong> on the baked route — just a frame lookup + lerp.</li>
+                <li><strong>No per-frame heap allocations</strong> in submission: bone palettes use a pooled, thread-local
+                    allocator.</li>
+                <li><strong>O(1) clip resolution</strong> on the hot path (precomputed <code>bpat_clip[state]</code> index); the
+                    by-name registry lookup is an O(1) hash map for off-hot-path use.</li>
+                <li><strong>Eager palette decode:</strong> BPAT palettes are decoded to matrices once at load
+                    (<code>bpat_reader.cpp</code>) to make per-frame reads branch-free; this is intentional (lazy decode
+                    would add mutable state + thread-safety risk for marginal memory savings).</li>
+                <li><strong>One intent resolution per entity per frame</strong> — no redundant re-resolution downstream.</li>
+            </ul>
+            <hr />
+            <h2 id="8-where-to-look">8. Where to look</h2>
+            <p>
+            <table>
+                <tr>
+                    <td>Concern</td>
+                    <td>File(s)</td>
+                </tr>
+                <tr>
+                    <td>ECS → animation inputs</td>
+                    <td><code>render/gl/humanoid/animation/animation_inputs.cpp</code></td>
+                </tr>
+                <tr>
+                    <td>Intent resolution</td>
+                    <td><code>render/creature/pose_intent.{h,cpp}</code></td>
+                </tr>
+                <tr>
+                    <td>Combat visual state</td>
+                    <td><code>render/creature/combat_visual_state.{h,cpp}</code></td>
+                </tr>
+                <tr>
+                    <td>Clip selection</td>
+                    <td><code>render/creature/archetype_registry.cpp</code>, <code>pipeline/humanoid_animation_selection.cpp</code></td>
+                </tr>
+                <tr>
+                    <td>BPAT playback</td>
+                    <td><code>render/creature/pipeline/bpat_playback.cpp</code></td>
+                </tr>
+                <tr>
+                    <td>BPAT blob/registry</td>
+                    <td><code>render/creature/bpat/bpat_reader.cpp</code>, <code>bpat_registry.cpp</code></td>
+                </tr>
+                <tr>
+                    <td>Humanoid locomotion</td>
+                    <td><code>render/humanoid/poser.cpp</code>, <code>prepare_animation.cpp</code></td>
+                </tr>
+                <tr>
+                    <td>Humanoid combat poses</td>
+                    <td><code>render/humanoid/pose_controller.cpp</code></td>
+                </tr>
+                <tr>
+                    <td>Quadruped shared gait</td>
+                    <td><code>render/creature/quadruped/gait.{h,cpp}</code></td>
+                </tr>
+                <tr>
+                    <td>Horse / elephant motion</td>
+                    <td><code>render/horse/horse_motion.cpp</code>, <code>render/elephant/elephant_motion.cpp</code></td>
+                </tr>
+                <tr>
+                    <td>Melee damage sync</td>
+                    <td><code>game/systems/combat_system/attack_processor.cpp</code></td>
+                </tr>
+                <tr>
+                    <td>Bake tool</td>
+                    <td><code>tools/bpat_baker/</code>, <code>render/&lt;species&gt;/&lt;species&gt;_manifest.cpp</code></td>
+                </tr>
+            </table>
+            </p>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

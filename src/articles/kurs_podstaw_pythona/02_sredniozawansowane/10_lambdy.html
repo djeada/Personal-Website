@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/kurs_podstaw_pythona/02_sredniozawansowane/10_lambdy",
             "description": "Funkcje lambda, zwane r\u00f3wnie\u017c funkcjami anonimowymi, s\u0105 narz\u0119dziem szeroko stosowanym w programowaniu funkcyjnym.",
-            "dateModified": "2024-05-29"
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -105,6 +105,10 @@
                                 <li><a href="#obsługa-danych-w-analizie">Obsługa danych w analizie</a></li>
                             </ol>
                         </li>
+                        <li><a href="#moduł-operator-jako-alternatywa-dla-prostych-lambd">Moduł operator jako alternatywa dla prostych lambd</a></li>
+                        <li><a href="#functools-partial-częściowe-zastosowanie-funkcji">functools.partial — częściowe zastosowanie funkcji</a></li>
+                        <li><a href="#lambda-vs-def-kiedy-co-stosować-">Lambda vs. def — kiedy co stosować?</a></li>
+                        <li><a href="#lambdy-jako-fabryki-funkcji">Lambdy jako fabryki funkcji</a></li>
                     </ol>
                 </ol>
             </div>
@@ -197,7 +201,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: May 29, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="funkcje-lambda">Funkcje Lambda</h2>
             <p>Funkcje <strong>lambda</strong>, zwane również funkcjami anonimowymi, są narzędziem szeroko stosowanym w programowaniu funkcyjnym. Są to krótkie, jedno-wierszowe funkcje, które nie posiadają przypisanej nazwy i są używane tam, gdzie zdefiniowanie pełnoprawnej funkcji byłoby nadmiarowe lub zbędne. W Pythonie i wielu innych językach programowania funkcje lambda odgrywają istotną rolę, zwłaszcza przy manipulacji danymi i implementacji algorytmów funkcyjnych.</p>
@@ -333,6 +337,128 @@ print(df)</code></pre>
 0  1  10  11
 1  2  20  22
 2  3  30  33</code></pre>
+            </div>
+            <h3 id="moduł-operator-jako-alternatywa-dla-prostych-lambd">Moduł <code>operator</code> jako alternatywa dla prostych lambd</h3>
+            <p>Dla podstawowych operacji arytmetycznych i logicznych moduł <code>operator</code> dostarcza gotowych funkcji, które są czytelniejsze i szybsze niż lambdy:</p>
+            <div>
+                <pre><code class="language-python">from operator import add, mul, itemgetter, attrgetter
+
+# Zamiast: lambda a, b: a + b
+print(add(3, 4))   # 7
+
+# Zamiast: lambda a, b: a * b
+print(mul(3, 4))   # 12
+
+# Sortowanie list słowników
+studenci = [
+    {"imie": "Jan", "wiek": 23},
+    {"imie": "Anna", "wiek": 21},
+    {"imie": "Piotr", "wiek": 25},
+]
+# Zamiast: sorted(studenci, key=lambda x: x["wiek"])
+posortowani = sorted(studenci, key=itemgetter("wiek"))
+print(posortowani)
+# [{'imie': 'Anna', 'wiek': 21}, {'imie': 'Jan', 'wiek': 23}, ...]
+
+# Sortowanie obiektów po atrybucie
+from collections import namedtuple
+Osoba = namedtuple("Osoba", ["imie", "wiek"])
+osoby = [Osoba("Jan", 23), Osoba("Anna", 21)]
+# Zamiast: sorted(osoby, key=lambda x: x.wiek)
+posortowani2 = sorted(osoby, key=attrgetter("wiek"))</code></pre>
+            </div>
+            <h3 id="functools-partial-częściowe-zastosowanie-funkcji"><code>functools.partial</code> — częściowe zastosowanie funkcji</h3>
+            <p><code>functools.partial</code> pozwala "zamrozić" niektóre argumenty funkcji, tworząc nową funkcję z mniejszą liczbą parametrów. Jest to elegancka alternatywa dla lambdy, gdy chcemy utrwalić jeden z argumentów:</p>
+            <div>
+                <pre><code class="language-python">from functools import partial
+
+def potega(podstawa, wykladnik):
+    return podstawa ** wykladnik
+
+# Zamiast: lambda x: potega(x, 2)
+kwadrat = partial(potega, wykladnik=2)
+szescian = partial(potega, wykladnik=3)
+
+print(kwadrat(5))   # 25
+print(szescian(3))  # 27
+
+# Przykład z print
+print_sep = partial(print, sep=" | ")
+print_sep("A", "B", "C")  # A | B | C
+
+# Przykład z mnożeniem
+from operator import mul
+podwoj = partial(mul, 2)
+print(list(map(podwoj, range(5))))  # [0, 2, 4, 6, 8]</code></pre>
+            </div>
+            <h3 id="lambda-vs-def-kiedy-co-stosować-">Lambda vs. <code>def</code> — kiedy co stosować?</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Sytuacja</td>
+                    <td>Zalecane podejście</td>
+                </tr>
+                <tr>
+                    <td>Prosta jednorazowa funkcja jako argument</td>
+                    <td><code>lambda</code></td>
+                </tr>
+                <tr>
+                    <td>Funkcja wielokrotnego użytku</td>
+                    <td><code>def</code></td>
+                </tr>
+                <tr>
+                    <td>Funkcja z wieloma operacjami / warunkami</td>
+                    <td><code>def</code></td>
+                </tr>
+                <tr>
+                    <td>Potrzebne docstringi lub adnotacje typów</td>
+                    <td><code>def</code></td>
+                </tr>
+                <tr>
+                    <td>Sortowanie po prostym kluczu</td>
+                    <td><code>lambda</code> lub <code>operator</code></td>
+                </tr>
+                <tr>
+                    <td>Przekazanie do <code>map()</code>, <code>filter()</code></td>
+                    <td><code>lambda</code> lub wyrażenie listowe</td>
+                </tr>
+            </table>
+            </p>
+            <div>
+                <pre><code class="language-python"># Kiedy lambda jest czytelna
+liczby = [1, -3, 5, -2, 4]
+posortowane = sorted(liczby, key=lambda x: abs(x))
+print(posortowane)  # [1, -2, -3, 4, 5]
+
+# Kiedy def jest czytelniejsze
+def kryterium_sortowania(x):
+    """Sortuje po wartości bezwzględnej, a przy remisie — malejąco."""
+    return (abs(x), -x)
+
+posortowane2 = sorted(liczby, key=kryterium_sortowania)</code></pre>
+            </div>
+            <h3 id="lambdy-jako-fabryki-funkcji">Lambdy jako fabryki funkcji</h3>
+            <p>Lambda może być zwracana z funkcji, tworząc tzw. <strong>fabrykę funkcji</strong>:</p>
+            <div>
+                <pre><code class="language-python">def mnoznik(n):
+    return lambda x: x * n
+
+podwoj = mnoznik(2)
+potroil = mnoznik(3)
+
+print(list(map(podwoj, [1, 2, 3, 4])))   # [2, 4, 6, 8]
+print(list(map(potroil, [1, 2, 3, 4])))  # [3, 6, 9, 12]
+
+# Fabryka walidatorów
+def zakres(minimum, maksimum):
+    return lambda x: minimum &lt;= x &lt;= maksimum
+
+czy_dorosly = zakres(18, 120)
+czy_dziecko = zakres(0, 17)
+
+print(czy_dorosly(25))   # True
+print(czy_dziecko(10))   # True
+print(czy_dorosly(15))   # False</code></pre>
             </div>
         </article-section>
     </div>

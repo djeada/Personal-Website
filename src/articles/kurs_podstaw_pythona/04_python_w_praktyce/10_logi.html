@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/kurs_podstaw_pythona/04_python_w_praktyce/10_logi",
             "description": "W wi\u0119kszych aplikacjach, zw\u0142aszcza tych uruchamianych w \u015brodowiskach produkcyjnych lub dzia\u0142aj\u0105cych przez d\u0142ugi czas, kluczowe znaczenie ma logowanie.",
-            "dateModified": "2019-04-10"
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -92,8 +92,13 @@
                                 <li><a href="#logowanie-do-konsoli-i-pliku-jednocześnie">Logowanie do konsoli i pliku jednocześnie</a></li>
                                 <li><a href="#używanie-różnych-loggerów-w-jednej-aplikacji">Używanie różnych loggerów w jednej aplikacji</a></li>
                                 <li><a href="#rzeczywisty-przypadek-logowania-rotacyjnego">Rzeczywisty przypadek logowania rotacyjnego</a></li>
+                                <li><a href="#timedrotatingfilehandler-rotacja-czasowa">TimedRotatingFileHandler — rotacja czasowa</a></li>
                             </ol>
                         </li>
+                        <li><a href="#konfiguracja-przez-słownik-dictconfig-">Konfiguracja przez słownik (dictConfig)</a></li>
+                        <li><a href="#dodawanie-kontekstu-do-logów-extra-i-loggeradapter-">Dodawanie kontekstu do logów (extra i LoggerAdapter)</a></li>
+                        <li><a href="#propagacja-logów-i-hierarchia-loggerów">Propagacja logów i hierarchia loggerów</a></li>
+                        <li><a href="#dobre-praktyki-logowania">Dobre praktyki logowania</a></li>
                     </ol>
                 </ol>
             </div>
@@ -186,7 +191,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: April 10, 2019</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="logowanie">Logowanie</h2>
             <p>W większych aplikacjach, zwłaszcza tych uruchamianych w środowiskach produkcyjnych lub działających przez długi czas, kluczowe znaczenie ma <strong>logowanie</strong>. Monitorowanie aplikacji za pomocą logów pozwala na analizę jej działania, identyfikację błędów, przewidywanie potencjalnych problemów oraz ocenę wydajności. Moduł <code>logging</code> w Pythonie zapewnia rozbudowane mechanizmy logowania, oferując precyzyjną kontrolę nad tym, jakie informacje są rejestrowane i gdzie są przechowywane.</p>
@@ -363,6 +368,154 @@ for i in range(100):
                 <li><strong>maxBytes</strong> to maksymalny rozmiar pojedynczego pliku logu w bajtach (tutaj 1024 bajty).</li>
                 <li><strong>backupCount</strong> to liczba zapasowych plików, które zostaną zachowane (tutaj 3 pliki).</li>
                 <li>Po przekroczeniu rozmiaru pliku nowy log jest zapisywany w nowym pliku, a najstarszy plik jest usuwany.</li>
+            </ol>
+            <h4 id="timedrotatingfilehandler-rotacja-czasowa"><code>TimedRotatingFileHandler</code> — rotacja czasowa</h4>
+            <p>Gdy chcemy tworzyć nowe pliki logów w regularnych odstępach czasu (np. co dzień), używamy <code>TimedRotatingFileHandler</code>:</p>
+            <div>
+                <pre><code class="language-python">import logging
+from logging.handlers import TimedRotatingFileHandler
+
+logger = logging.getLogger("czasowy_logger")
+logger.setLevel(logging.INFO)
+
+handler = TimedRotatingFileHandler(
+    "aplikacja.log",
+    when="midnight",   # Rotacja o północy
+    interval=1,        # Co 1 dzień
+    backupCount=7      # Zachowaj 7 dni historii
+)
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
+logger.info("Aplikacja uruchomiona")</code></pre>
+            </div>
+            <p>Dostępne opcje <code>when</code>: <code>"S"</code> (sekundy), <code>"M"</code> (minuty), <code>"H"</code> (godziny), <code>"D"</code> (dni), <code>"midnight"</code>, <code>"W0"–"W6"</code> (dni tygodnia).</p>
+            <h3 id="konfiguracja-przez-słownik-dictconfig-">Konfiguracja przez słownik (<code>dictConfig</code>)</h3>
+            <p>Zamiast konfigurować logger w kodzie, można przekazać konfigurację jako słownik. To podejście jest wygodniejsze w większych aplikacjach, bo konfigurację można też wczytać z pliku YAML lub JSON:</p>
+            <div>
+                <pre><code class="language-python">import logging
+import logging.config
+
+LOGGING_CONFIG = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "standardowy": {
+            "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+        },
+        "szczegolowy": {
+            "format": "%(asctime)s [%(levelname)s] %(name)s:%(lineno)d: %(message)s"
+        }
+    },
+    "handlers": {
+        "konsola": {
+            "class": "logging.StreamHandler",
+            "level": "DEBUG",
+            "formatter": "standardowy",
+            "stream": "ext://sys.stdout"
+        },
+        "plik": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "level": "ERROR",
+            "formatter": "szczegolowy",
+            "filename": "bledy.log",
+            "maxBytes": 10485760,   # 10 MB
+            "backupCount": 5
+        }
+    },
+    "loggers": {
+        "modul_api": {
+            "level": "DEBUG",
+            "handlers": ["konsola", "plik"],
+            "propagate": False
+        }
+    },
+    "root": {
+        "level": "WARNING",
+        "handlers": ["konsola"]
+    }
+}
+
+logging.config.dictConfig(LOGGING_CONFIG)
+
+logger = logging.getLogger("modul_api")
+logger.debug("Żądanie do API")
+logger.error("Błąd połączenia z bazą danych")</code></pre>
+            </div>
+            <h3 id="dodawanie-kontekstu-do-logów-extra-i-loggeradapter-">Dodawanie kontekstu do logów (<code>extra</code> i <code>LoggerAdapter</code>)</h3>
+            <p>Często chcemy dodać do każdego logu dodatkowy kontekst, np. ID użytkownika lub ID żądania:</p>
+            <div>
+                <pre><code class="language-python">import logging
+
+# Sposób 1 — extra dict
+logger = logging.getLogger("aplikacja")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(user_id)s] %(levelname)s: %(message)s"
+)
+
+logger.info("Zalogowano", extra={"user_id": "USR-42"})
+
+# Sposób 2 — LoggerAdapter (wygodniejszy)
+class KontekstowyLogger(logging.LoggerAdapter):
+    def process(self, msg, kwargs):
+        return f"[{self.extra['request_id']}] {msg}", kwargs
+
+logger_bazowy = logging.getLogger("api")
+logger = KontekstowyLogger(logger_bazowy, {"request_id": "REQ-001"})
+logger.info("Przetwarzanie żądania")
+# INFO: [REQ-001] Przetwarzanie żądania</code></pre>
+            </div>
+            <h3 id="propagacja-logów-i-hierarchia-loggerów">Propagacja logów i hierarchia loggerów</h3>
+            <p>Loggery w Pythonie są zorganizowane w hierarchii według nazw rozdzielonych kropkami:</p>
+            <div>
+                <pre><code class="language-root">├── modul_a
+ │    └── modul_a.podmodul
+ └── modul_b</code></pre>
+            </div>
+            <p>Domyślnie logi propagują się w górę hierarchii (<code>propagate=True</code>):</p>
+            <div>
+                <pre><code class="language-python">import logging
+
+# Logger nadrzędny
+logger_glowny = logging.getLogger("app")
+logger_glowny.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+logger_glowny.addHandler(handler)
+
+# Logger podrzędny — logi propagują się do logger_glowny
+logger_db = logging.getLogger("app.database")
+logger_db.info("Połączono z bazą")   # Obsłuży to logger_glowny
+
+# Wyłączenie propagacji
+logger_noise = logging.getLogger("app.verbose")
+logger_noise.propagate = False   # Logi NIE dotrą do logger_glowny</code></pre>
+            </div>
+            <h3 id="dobre-praktyki-logowania">Dobre praktyki logowania</h3>
+            <ol>
+                <li><strong>Używaj <code>__name__</code> jako nazwy loggera</strong> — to automatycznie tworzy hierarchię zgodną z modułami:</li>
+            </ol>
+            <div>
+                <pre><code class="language-python">logger = logging.getLogger(__name__)   # np. "modul.podmodul"</code></pre>
+            </div>
+            <ol>
+                <li><strong>Nie używaj <code>f-stringów</code> w logach</strong> — formatowanie wykonuje się tylko gdy log jest naprawdę zapisywany:</li>
+            </ol>
+            <div>
+                <pre><code class="language-python"># Źle — formatowanie zawsze się wykonuje
+logger.debug(f"Dane: {oblicz_duze_dane()}")
+
+# Dobrze — formatowanie tylko gdy poziom DEBUG jest aktywny
+logger.debug("Dane: %s", oblicz_duze_dane())</code></pre>
+            </div>
+            <ol>
+                <li><strong>Loguj na odpowiednim poziomie:</strong></li>
+                <li><code>DEBUG</code> — szczegóły deweloperskie (pętle, wartości zmiennych)</li>
+                <li><code>INFO</code> — kluczowe zdarzenia biznesowe (uruchomienie, zamknięcie, ważne operacje)</li>
+                <li><code>WARNING</code> — sytuacje nieoczekiwane, ale program nadal działa</li>
+                <li><code>ERROR</code> — błędy wymagające uwagi</li>
+                <li><code>CRITICAL</code> — błędy krytyczne zagrażające działaniu aplikacji</li>
             </ol>
         </article-section>
     </div>

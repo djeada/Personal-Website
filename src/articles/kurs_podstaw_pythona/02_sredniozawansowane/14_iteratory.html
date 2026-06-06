@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/kurs_podstaw_pythona/02_sredniozawansowane/14_iteratory",
             "description": "Iteratory to fundamentalny koncept w j\u0119zyku Python, szczeg\u00f3lnie w kontek\u015bcie p\u0119tli i struktur iterowalnych, takich jak listy, krotki czy zbiory.",
-            "dateModified": "2020-01-23"
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -92,6 +92,21 @@
                         <li><a href="#wyjątek-stopiteration-w-praktyce">Wyjątek StopIteration w praktyce</a></li>
                         <li><a href="#korzyści-z-używania-iteratorów">Korzyści z używania iteratorów</a></li>
                         <li><a href="#złożone-generatory-i-przepływ-danych">Złożone generatory i przepływ danych</a></li>
+                        <li><a href="#wbudowane-funkcje-iteratorowe">Wbudowane funkcje iteratorowe</a>
+                            <ol>
+                                <li><a href="#enumerate-iterable-start-0-">enumerate(iterable, start=0)</a></li>
+                                <li><a href="#zip-iterables-">zip(*iterables)</a></li>
+                                <li><a href="#reversed-sequence-">reversed(sequence)</a></li>
+                                <li><a href="#map-function-iterable-">map(function, iterable)</a></li>
+                                <li><a href="#filter-function-iterable-">filter(function, iterable)</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#moduł-itertools-zaawansowane-iteratory">Moduł itertools — zaawansowane iteratory</a></li>
+                        <li><a href="#nieskończony-iterator">Nieskończony iterator</a></li>
+                        <li><a href="#porównanie-iterator-vs-generator-vs-lista">Porównanie: iterator vs generator vs lista</a></li>
+                        <li><a href="#protokół-iteratora-podsumowanie">Protokół iteratora — podsumowanie</a></li>
+                        <li><a href="#tworzenie-iterowalnych-klas-z-oddzielnym-iteratorem">Tworzenie iterowalnych klas z oddzielnym iteratorem</a></li>
+                        <li><a href="#przydatne-wzorce-z-iteratorami">Przydatne wzorce z iteratorami</a></li>
                     </ol>
                 </ol>
             </div>
@@ -184,7 +199,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 23, 2020</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="iteratory">Iteratory</h2>
             <p>Iteratory to fundamentalny koncept w języku Python, szczególnie w kontekście pętli i struktur iterowalnych, takich jak listy, krotki czy zbiory. Python traktuje iteratory jako narzędzie do sukcesywnego uzyskiwania kolejnych elementów z kolekcji danych w sposób zorganizowany, z możliwością zatrzymania i wznowienia procesu iteracji. W tej rozbudowanej wersji omówimy, jak działają iteratory, jak je tworzyć, oraz jak są wykorzystywane przez różne mechanizmy Pythonowe, takie jak pętla <code>for</code> oraz generatory.</p>
@@ -284,9 +299,7 @@ while True:
             <p>Generatory można również łączyć, tworząc bardziej złożone strumienie danych. Na przykład, można stworzyć generator, który pobiera dane z innego generatora, przetwarza je i zwraca przetworzony wynik.</p>
             <div>
                 <pre><code class="language-python">def podwoj_wartosci(generator):
-    for
-
- wartosc in generator:
+    for wartosc in generator:
         yield wartosc * 2
 
 generator_liczb = (i for i in range(5))
@@ -296,6 +309,274 @@ for wartosc in podwojony_generator:
     print(wartosc)</code></pre>
             </div>
             <p>Powyższy przykład pokazuje, jak można tworzyć złożone przepływy danych, gdzie generatory są używane do transformacji danych w sposób płynny i leniwy.</p>
+            <h3 id="wbudowane-funkcje-iteratorowe">Wbudowane funkcje iteratorowe</h3>
+            <p>Python dostarcza kilku wbudowanych funkcji, które zwracają iteratory i znacznie ułatwiają pracę z kolekcjami.</p>
+            <h4 id="enumerate-iterable-start-0-"><code>enumerate(iterable, start=0)</code></h4>
+            <p>Tworzy iterator par <code>(indeks, element)</code>. Przydatny gdy potrzebujemy indeksu elementu w pętli:</p>
+            <div>
+                <pre><code class="language-python">owoce = ["jabłko", "banan", "gruszka"]
+
+# Bez enumerate — ręczne zarządzanie indeksem
+indeks = 0
+for owoc in owoce:
+    print(f"{indeks}: {owoc}")
+    indeks += 1
+
+# Z enumerate — czytelniej
+for indeks, owoc in enumerate(owoce):
+    print(f"{indeks}: {owoc}")
+
+# Numerowanie od 1
+for nr, owoc in enumerate(owoce, start=1):
+    print(f"{nr}. {owoc}")</code></pre>
+            </div>
+            <h4 id="zip-iterables-"><code>zip(*iterables)</code></h4>
+            <p>Łączy elementy z kilku kolekcji w pary (krotki). Zatrzymuje się, gdy krótsza kolekcja zostanie wyczerpana:</p>
+            <div>
+                <pre><code class="language-python">imiona = ["Jan", "Anna", "Piotr"]
+oceny = [5, 4, 3]
+
+for imie, ocena in zip(imiona, oceny):
+    print(f"{imie}: {ocena}")
+
+# Tworzenie słownika ze zip
+slownik = dict(zip(imiona, oceny))
+print(slownik)  # {'Jan': 5, 'Anna': 4, 'Piotr': 3}
+
+# Rozpakowywanie zip (transpozycja)
+pary = [(1, 'a'), (2, 'b'), (3, 'c')]
+liczby, litery = zip(*pary)
+print(list(liczby))   # [1, 2, 3]
+print(list(litery))   # ['a', 'b', 'c']</code></pre>
+            </div>
+            <p>Python 3.10 dodał <code>zip(..., strict=True)</code>, które zgłasza błąd jeśli kolekcje mają różne długości.</p>
+            <h4 id="reversed-sequence-"><code>reversed(sequence)</code></h4>
+            <p>Zwraca iterator przechodzący przez sekwencję od końca:</p>
+            <div>
+                <pre><code class="language-python">lista = [1, 2, 3, 4, 5]
+for el in reversed(lista):
+    print(el)  # 5, 4, 3, 2, 1
+
+print(list(reversed("Python")))  # ['n', 'o', 'h', 't', 'y', 'P']</code></pre>
+            </div>
+            <h4 id="map-function-iterable-"><code>map(function, iterable)</code></h4>
+            <p>Stosuje funkcję do każdego elementu iterowalnego i zwraca iterator:</p>
+            <div>
+                <pre><code class="language-python">liczby = [1, 2, 3, 4, 5]
+kwadraty = map(lambda x: x**2, liczby)
+print(list(kwadraty))   # [1, 4, 9, 16, 25]
+
+# Z wieloma kolekcjami
+a = [1, 2, 3]
+b = [10, 20, 30]
+print(list(map(lambda x, y: x + y, a, b)))  # [11, 22, 33]</code></pre>
+            </div>
+            <h4 id="filter-function-iterable-"><code>filter(function, iterable)</code></h4>
+            <p>Filtruje elementy iterowalnego — zachowuje tylko te, dla których funkcja zwraca <code>True</code>:</p>
+            <div>
+                <pre><code class="language-python">liczby = range(-5, 6)
+dodatnie = filter(lambda x: x &gt; 0, liczby)
+print(list(dodatnie))   # [1, 2, 3, 4, 5]
+
+# Usuwanie wartości falsy
+lista = [0, 1, "", "tekst", None, [], [1]]
+print(list(filter(None, lista)))  # [1, 'tekst', [1]]</code></pre>
+            </div>
+            <h3 id="moduł-itertools-zaawansowane-iteratory">Moduł <code>itertools</code> — zaawansowane iteratory</h3>
+            <p>Moduł <code>itertools</code> dostarcza wydajnych narzędzi do tworzenia złożonych iteratorów:</p>
+            <div>
+                <pre><code class="language-python">import itertools
+
+# chain — łączenie kilku iterowalnych
+print(list(itertools.chain([1, 2], [3, 4], [5])))
+# [1, 2, 3, 4, 5]
+
+# islice — wycinek z iteratora (jak slice dla list)
+print(list(itertools.islice(range(100), 5, 15, 2)))
+# [5, 7, 9, 11, 13]
+
+# groupby — grupowanie sąsiednich elementów według klucza
+dane = [("A", 1), ("A", 2), ("B", 3), ("B", 4), ("A", 5)]
+for klucz, grupa in itertools.groupby(dane, key=lambda x: x[0]):
+    print(klucz, list(grupa))
+# A [('A', 1), ('A', 2)]
+# B [('B', 3), ('B', 4)]
+# A [('A', 5)]
+
+# accumulate — narastające sumy/iloczyny
+print(list(itertools.accumulate([1, 2, 3, 4, 5])))
+# [1, 3, 6, 10, 15]
+
+import operator
+print(list(itertools.accumulate([1, 2, 3, 4, 5], operator.mul)))
+# [1, 2, 6, 24, 120]  — silnia!</code></pre>
+            </div>
+            <h3 id="nieskończony-iterator">Nieskończony iterator</h3>
+            <p>Możemy napisać własny iterator generujący nieskończoną sekwencję:</p>
+            <div>
+                <pre><code class="language-python">class FibonacciIter:
+    """Iterator generujący nieskończony ciąg Fibonacciego."""
+    def __init__(self):
+        self.a, self.b = 0, 1
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        wynik = self.a
+        self.a, self.b = self.b, self.a + self.b
+        return wynik
+
+fib = FibonacciIter()
+pierwsze_10 = [next(fib) for _ in range(10)]
+print(pierwsze_10)  # [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]</code></pre>
+            </div>
+            <h3 id="porównanie-iterator-vs-generator-vs-lista">Porównanie: iterator vs generator vs lista</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Cecha</td>
+                    <td>Klasa iteratora</td>
+                    <td>Funkcja generatora</td>
+                    <td>Lista</td>
+                </tr>
+                <tr>
+                    <td>Definicja</td>
+                    <td>Klasa z <code>__iter__</code>/<code>__next__</code></td>
+                    <td>Funkcja z <code>yield</code></td>
+                    <td><code>[...]</code> lub <code>list()</code></td>
+                </tr>
+                <tr>
+                    <td>Stan wewnętrzny</td>
+                    <td>Explicite (atrybuty)</td>
+                    <td>Implicite (frame)</td>
+                    <td>Brak — cała w pamięci</td>
+                </tr>
+                <tr>
+                    <td>Wielokrotna iteracja</td>
+                    <td>Jeśli <code>__iter__</code> resetuje</td>
+                    <td>Nie (jednorazowy)</td>
+                    <td>Tak</td>
+                </tr>
+                <tr>
+                    <td>Leniwa ewaluacja</td>
+                    <td>Tak</td>
+                    <td>Tak</td>
+                    <td>Nie</td>
+                </tr>
+                <tr>
+                    <td>Złożoność kodu</td>
+                    <td>Duża</td>
+                    <td>Mała</td>
+                    <td>Minimalna</td>
+                </tr>
+                <tr>
+                    <td>Nieskończone sekwencje</td>
+                    <td>Tak</td>
+                    <td>Tak</td>
+                    <td>Nie</td>
+                </tr>
+                <tr>
+                    <td>Kiedy używać</td>
+                    <td>Potrzeba złożonej logiki stanu</td>
+                    <td>Większość przypadków</td>
+                    <td>Małe, skończone dane</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="protokół-iteratora-podsumowanie">Protokół iteratora — podsumowanie</h3>
+            <div>
+                <pre><code class="language-shell">┌─────────────────────────────────────────────────────────────────┐
+│                    Obiekt iterowalny (Iterable)                  │
+│                                                                 │
+│    Implementuje:  __iter__()  → zwraca Iterator                 │
+│    Przykłady:     list, tuple, dict, set, str, range, file      │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │ iter(obiekt)
+                               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        Iterator                                  │
+│                                                                 │
+│    Implementuje:  __iter__()  → zwraca self                     │
+│                   __next__()  → zwraca kolejny element           │
+│                               → rzuca StopIteration na końcu    │
+│    Przykłady:     obiekt generatora, map(), filter(), zip()     │
+└─────────────────────────────────────────────────────────────────┘</code></pre>
+            </div>
+            <h3 id="tworzenie-iterowalnych-klas-z-oddzielnym-iteratorem">Tworzenie iterowalnych klas z oddzielnym iteratorem</h3>
+            <p>Dobra praktyka polega na oddzieleniu obiektu iterowalnego od iteratora — pozwala to na wielokrotną iterację:</p>
+            <div>
+                <pre><code class="language-python">class Zakres:
+    """Klasa iterowalna — pozwala na wielokrotną iterację."""
+    def __init__(self, start, stop):
+        self.start = start
+        self.stop = stop
+
+    def __iter__(self):
+        # Za każdym razem tworzy NOWY iterator
+        return ZakresIterator(self.start, self.stop)
+
+class ZakresIterator:
+    """Iterator — jednorazowy przebieg."""
+    def __init__(self, biezacy, stop):
+        self.biezacy = biezacy
+        self.stop = stop
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.biezacy &gt;= self.stop:
+            raise StopIteration
+        wartosc = self.biezacy
+        self.biezacy += 1
+        return wartosc
+
+# Wielokrotna iteracja działa poprawnie
+z = Zakres(1, 4)
+print(list(z))  # [1, 2, 3]
+print(list(z))  # [1, 2, 3]  ← działa ponownie</code></pre>
+            </div>
+            <h3 id="przydatne-wzorce-z-iteratorami">Przydatne wzorce z iteratorami</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Wzorzec</td>
+                    <td>Kod</td>
+                    <td>Zastosowanie</td>
+                </tr>
+                <tr>
+                    <td>Pobranie n pierwszych</td>
+                    <td><code>list(itertools.islice(it, n))</code></td>
+                    <td>Ograniczenie nieskończonych</td>
+                </tr>
+                <tr>
+                    <td>Łączenie iteratorów</td>
+                    <td><code>itertools.chain(it1, it2)</code></td>
+                    <td>Sekwencyjne przetwarzanie</td>
+                </tr>
+                <tr>
+                    <td>Równoległy przebieg</td>
+                    <td><code>zip(it1, it2)</code></td>
+                    <td>Pary z dwóch kolekcji</td>
+                </tr>
+                <tr>
+                    <td>Grupowanie sąsiadów</td>
+                    <td><code>itertools.groupby(it, key)</code></td>
+                    <td>Agregacja danych</td>
+                </tr>
+                <tr>
+                    <td>Buforowanie podglądu</td>
+                    <td><code>itertools.tee(it, n)</code></td>
+                    <td>Wielokrotne odczytanie strumienia</td>
+                </tr>
+                <tr>
+                    <td>Filtrowanie z predykatem</td>
+                    <td><code>filter(pred, it)</code> / <code>itertools.filterfalse</code></td>
+                    <td>Selekcja elementów</td>
+                </tr>
+            </table>
+            </p>
         </article-section>
     </div>
     <footer>

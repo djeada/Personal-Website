@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/kurs_podstaw_pythona/02_sredniozawansowane/03_czyste_funkcje_i_skutki_uboczne",
             "description": "Czyste funkcje i niemutowalne obiekty pomagaj\u0105 tworzy\u0107 bardziej przewidywalne, \u0142atwe do testowania i debugowania oprogramowanie, co redukuje ryzyko b\u0142\u0119d\u00f3w i u\u0142atwia utrzymanie kodu.",
-            "dateModified": "2022-10-18"
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -97,6 +97,12 @@
                                 <li><a href="#podsumowanie">Podsumowanie</a></li>
                             </ol>
                         </li>
+                        <li><a href="#identyczność-a-równość-obiektów">Identyczność a równość obiektów</a></li>
+                        <li><a href="#skutki-uboczne-a-testowalność">Skutki uboczne a testowalność</a></li>
+                        <li><a href="#wzorzec-odizoluj-efekty-uboczne-">Wzorzec "Odizoluj efekty uboczne"</a></li>
+                        <li><a href="#podsumowanie-czysta-funkcja-vs-funkcja-z-efektami-ubocznymi">Podsumowanie — czysta funkcja vs funkcja z efektami ubocznymi</a></li>
+                        <li><a href="#lista-typowych-efektów-ubocznych">Lista typowych efektów ubocznych</a></li>
+                        <li><a href="#zasada-functional-core-imperative-shell-">Zasada: "Functional Core, Imperative Shell"</a></li>
                     </ol>
                 </ol>
             </div>
@@ -189,7 +195,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: October 18, 2022</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="czyste-i-nieczyste-funkcje-oraz-mutowalne-i-niemutowalne-obiekty">Czyste i Nieczyste Funkcje oraz Mutowalne i Niemutowalne Obiekty</h2>
             <p>Czyste funkcje i niemutowalne obiekty pomagają tworzyć bardziej przewidywalne, łatwe do testowania i debugowania oprogramowanie, co redukuje ryzyko błędów i ułatwia utrzymanie kodu. Zrozumienie efektów ubocznych pozwala programistom unikać nieprzewidzianych problemów, które mogą wynikać z niezamierzonych zmian stanu. Natomiast wiedza o mutowalnych i niemutowalnych obiektach pomaga zarządzać danymi w sposób efektywny i bezpieczny, szczególnie w kontekście programowania wielowątkowego i współbieżności.</p>
@@ -219,7 +225,7 @@
             <div>
                 <pre><code class="language-python">def iloczyn_listy(lista):
     wynik = 1
-    for element w lista:
+    for element in lista:
         wynik *= element
     return wynik</code></pre>
             </div>
@@ -231,12 +237,12 @@
             <p>IV. Funkcja generująca nową listę zawierającą tylko liczby parzyste z danej listy.</p>
             <div>
                 <pre><code class="language-python">def filtruj_parzyste(lista):
-    return [element for element w lista jeśli element % 2 == 0]</code></pre>
+    return [element for element in lista if element % 2 == 0]</code></pre>
             </div>
             <p>V. Funkcja tworząca nowy słownik z wybranymi kluczami z oryginalnego słownika.</p>
             <div>
                 <pre><code class="language-python">def filtruj_slownik(slownik, klucze):
-    return {klucz: slownik[klucz] for klucz w klucze jeśli klucz w slownik}</code></pre>
+    return {klucz: slownik[klucz] for klucz in klucze if klucz in slownik}</code></pre>
             </div>
             <p>VI. Funkcja konwertująca ciąg znaków na wielkie litery.</p>
             <div>
@@ -410,6 +416,206 @@ krotka = (1, 2, 3)
                 </tr>
             </table>
             </p>
+            <h3 id="identyczność-a-równość-obiektów">Identyczność a równość obiektów</h3>
+            <p>W Pythonie warto rozróżniać dwa typy porównań:</p>
+            <ul>
+                <li><code>==</code> sprawdza, czy wartości są <strong>równe</strong></li>
+                <li><code>is</code> sprawdza, czy obiekty mają <strong>ten sam adres w pamięci</strong> (są tym samym obiektem)</li>
+            </ul>
+            <div>
+                <pre><code class="language-python">a = [1, 2, 3]
+b = [1, 2, 3]
+c = a
+
+print(a == b)   # True  — mają tę samą wartość
+print(a is b)   # False — to dwa różne obiekty w pamięci
+print(a is c)   # True  — c i a wskazują na ten sam obiekt
+
+# Interning (buforowanie) małych liczb i napisów
+x = 256
+y = 256
+print(x is y)   # True  — Python buforuje małe int
+x = 1000
+y = 1000
+print(x is y)   # Może być False — poza zakresem buforowania
+
+# Zawsze używaj == dla porównania wartości, is tylko dla None/True/False
+print(None is None)    # True — poprawny idiom</code></pre>
+            </div>
+            <h3 id="skutki-uboczne-a-testowalność">Skutki uboczne a testowalność</h3>
+            <p>Czyste funkcje znacznie ułatwiają pisanie testów — nie potrzebują mockowania ani konfiguracji zewnętrznych zależności:</p>
+            <div>
+                <pre><code class="language-python">import unittest
+
+# Czysta funkcja — łatwa do testowania
+def oblicz_podatek(kwota: float, stawka: float) -&gt; float:
+    if kwota &lt; 0:
+        raise ValueError("Kwota nie może być ujemna")
+    return round(kwota * stawka, 2)
+
+class TestObliczPodatek(unittest.TestCase):
+    def test_podstawowy(self):
+        self.assertEqual(oblicz_podatek(100.0, 0.23), 23.0)
+
+    def test_zero(self):
+        self.assertEqual(oblicz_podatek(0.0, 0.23), 0.0)
+
+    def test_ujemna_kwota(self):
+        with self.assertRaises(ValueError):
+            oblicz_podatek(-100.0, 0.23)
+
+# Nieczysta funkcja — wymaga mockowania
+import datetime
+
+def pobierz_rok_urodzenia(wiek: int) -&gt; int:
+    return datetime.date.today().year - wiek   # Zależy od aktualnej daty!
+# Trudna do testowania — wynik zmienia się każdego roku</code></pre>
+            </div>
+            <h3 id="wzorzec-odizoluj-efekty-uboczne-">Wzorzec "Odizoluj efekty uboczne"</h3>
+            <p>Dobra praktyka: izoluj efekty uboczne od logiki obliczeniowej:</p>
+            <div>
+                <pre><code class="language-python"># Źle — logika wymieszana z I/O
+def przetworz_plik(sciezka):
+    with open(sciezka) as f:
+        dane = f.read().split()
+    suma = sum(int(x) for x in dane)   # logika
+    print(f"Suma: {suma}")              # efekt uboczny
+    return suma
+
+# Dobrze — separacja odpowiedzialności
+def oblicz_sume(liczby: list) -&gt; int:
+    return sum(liczby)   # czysta funkcja, łatwa do testowania
+
+def wczytaj_liczby(sciezka: str) -&gt; list:
+    with open(sciezka) as f:
+        return [int(x) for x in f.read().split()]   # I/O odizolowane
+
+def wyswietl_wynik(suma: int) -&gt; None:
+    print(f"Suma: {suma}")   # I/O odizolowane
+
+# Użycie:
+# liczby = wczytaj_liczby("dane.txt")
+# suma = oblicz_sume(liczby)   # Ta funkcja jest testowalna bez pliku!
+# wyswietl_wynik(suma)</code></pre>
+            </div>
+            <h3 id="podsumowanie-czysta-funkcja-vs-funkcja-z-efektami-ubocznymi">Podsumowanie — czysta funkcja vs funkcja z efektami ubocznymi</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Cecha</td>
+                    <td>Czysta funkcja</td>
+                    <td>Funkcja z efektami ubocznymi</td>
+                </tr>
+                <tr>
+                    <td>Wynik zależy od</td>
+                    <td>Tylko od argumentów wejściowych</td>
+                    <td>Argumentów + stanu zewnętrznego</td>
+                </tr>
+                <tr>
+                    <td>Modyfikuje stan zewnętrzny</td>
+                    <td>Nie</td>
+                    <td>Tak (pliki, zmienne globalne, I/O)</td>
+                </tr>
+                <tr>
+                    <td>Deterministyczna</td>
+                    <td>Tak — ten sam wynik dla tych samych argumentów</td>
+                    <td>Nie koniecznie</td>
+                </tr>
+                <tr>
+                    <td>Testowalność</td>
+                    <td>Łatwa — wystarczy sprawdzić wynik</td>
+                    <td>Trudna — wymaga mocków i setupu</td>
+                </tr>
+                <tr>
+                    <td>Cacheowalność (memoizacja)</td>
+                    <td>Tak — bezpiecznie</td>
+                    <td>Nie — wynik może być nieaktualny</td>
+                </tr>
+                <tr>
+                    <td>Równoległość</td>
+                    <td>Bezpieczna — brak współdzielonego stanu</td>
+                    <td>Wymaga synchronizacji</td>
+                </tr>
+                <tr>
+                    <td>Debugowanie</td>
+                    <td>Proste — wynik = f(wejście)</td>
+                    <td>Trudne — zależy od kolejności wywołań</td>
+                </tr>
+                <tr>
+                    <td>Composability (łączenie)</td>
+                    <td>Wysoka — łatwo łączyć w pipeline</td>
+                    <td>Niska — zależności od stanu</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="lista-typowych-efektów-ubocznych">Lista typowych efektów ubocznych</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Efekt uboczny</td>
+                    <td>Przykład</td>
+                    <td>Jak zizolować?</td>
+                </tr>
+                <tr>
+                    <td>Zapis do pliku / dysku</td>
+                    <td><code>open("f.txt", "w").write(...)</code></td>
+                    <td>Przekaż strumień jako argument</td>
+                </tr>
+                <tr>
+                    <td>Wypisywanie na konsolę</td>
+                    <td><code>print(...)</code>, <code>logging.info(...)</code></td>
+                    <td>Zwróć wartość, niech caller wypisze</td>
+                </tr>
+                <tr>
+                    <td>Modyfikacja zmiennej globalnej</td>
+                    <td><code>global x; x += 1</code></td>
+                    <td>Przekaż i zwróć nową wartość</td>
+                </tr>
+                <tr>
+                    <td>Zapytanie sieciowe</td>
+                    <td><code>requests.get(url)</code></td>
+                    <td>Injekcja zależności / adapter</td>
+                </tr>
+                <tr>
+                    <td>Modyfikacja argumentu (mutacja)</td>
+                    <td><code>lista.append(x)</code></td>
+                    <td>Zwróć nową listę zamiast modyfikować</td>
+                </tr>
+                <tr>
+                    <td>Odczyt aktualnego czasu</td>
+                    <td><code>datetime.now()</code></td>
+                    <td>Przekaż czas jako parametr</td>
+                </tr>
+                <tr>
+                    <td>Losowość</td>
+                    <td><code>random.randint(1, 10)</code></td>
+                    <td>Przekaż generator jako parametr</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="zasada-functional-core-imperative-shell-">Zasada: "Functional Core, Imperative Shell"</h3>
+            <p>Popularny wzorzec architektoniczny dzieli aplikację na:</p>
+            <div>
+                <pre><code class="language-shell">┌─────────────────────────────────────────────────┐
+│            Imperative Shell                      │
+│  (obsługa I/O, parsowanie, wyświetlanie)        │
+│                                                 │
+│    ┌─────────────────────────────────────────┐  │
+│    │          Functional Core                │  │
+│    │  (czysta logika biznesowa)              │  │
+│    │  - obliczenia                           │  │
+│    │  - transformacje danych                 │  │
+│    │  - reguły biznesowe                     │  │
+│    │  - walidacja                            │  │
+│    └─────────────────────────────────────────┘  │
+│                                                 │
+│  wczytaj dane → [CORE] → wyświetl/zapisz       │
+└─────────────────────────────────────────────────┘</code></pre>
+            </div>
+            <p>Zalety tego podejścia:
+                - <strong>Functional Core</strong> jest łatwy do testowania (unit testy bez mocków).
+                - <strong>Imperative Shell</strong> jest cienki i zawiera jedynie "klej" łączący I/O z logiką.
+                - Łatwiejsze refaktoryzowanie, bo logika nie jest związana z infrastrukturą.</p>
         </article-section>
     </div>
     <footer>

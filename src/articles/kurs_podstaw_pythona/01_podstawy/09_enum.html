@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/kurs_podstaw_pythona/01_podstawy/09_enum",
             "description": "Enum (od angielskiego s\u0142owa \"enumerate\" - numerowa\u0107) to specjalny typ danych w Pythonie, kt\u00f3ry pozwala na definiowanie uporz\u0105dkowanych zestaw\u00f3w nazwanych warto\u015bci.",
-            "dateModified": "2023-11-18"
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -89,6 +89,12 @@
                                 <li><a href="#przykład-zastosowania-enum-w-programie">Przykład zastosowania Enum w programie</a></li>
                             </ol>
                         </li>
+                        <li><a href="#konwersja-między-enum-a-wartościami">Konwersja między Enum a wartościami</a></li>
+                        <li><a href="#intenum-enum-zachowujący-się-jak-liczba-całkowita">IntEnum — Enum zachowujący się jak liczba całkowita</a></li>
+                        <li><a href="#flag-flagi-bitowe">Flag — flagi bitowe</a></li>
+                        <li><a href="#enum-w-instrukcji-match-python-3-10-">Enum w instrukcji match (Python 3.10+)</a></li>
+                        <li><a href="#alias-i-unikalne-wartości">Alias i unikalne wartości</a></li>
+                        <li><a href="#podsumowanie-typów-enum">Podsumowanie typów Enum</a></li>
                     </ol>
                 </ol>
             </div>
@@ -181,7 +187,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: November 18, 2023</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="enum-w-pythonie">Enum w Pythonie</h2>
             <p><code>Enum</code> (od angielskiego słowa "enumerate" - numerować) to specjalny typ danych w Pythonie, który pozwala na definiowanie uporządkowanych zestawów nazwanych wartości. Wartości te są unikalne i niemodyfikowalne, co czyni je idealnymi do reprezentowania stałych w kodzie.</p>
@@ -286,6 +292,174 @@ print(f"Użytkownik {uzytkownik.imie} ma rangę: {ranga.name}")</code></pre>
             <div>
                 <pre><code class="language-shell">Użytkownik Anna ma rangę: SREDNIOZAAWANSOWANY</code></pre>
             </div>
+            <h3 id="konwersja-między-enum-a-wartościami">Konwersja między Enum a wartościami</h3>
+            <p>Możemy konwertować wartości na <code>Enum</code> i z powrotem:</p>
+            <div>
+                <pre><code class="language-python">from enum import Enum
+
+class Status(Enum):
+    AKTYWNY = 1
+    NIEAKTYWNY = 0
+    ZAWIESZONY = -1
+
+# int → Enum
+s = Status(1)
+print(s)           # Status.AKTYWNY
+print(s.name)      # AKTYWNY
+print(s.value)     # 1
+
+# str → Enum (przez nazwę)
+s2 = Status["ZAWIESZONY"]
+print(s2)          # Status.ZAWIESZONY
+
+# Enum → int
+print(s.value)     # 1
+print(int(s.value))  # 1
+
+# Sprawdzenie przynależności
+print(Status(0) in Status)        # True
+print(1 in [e.value for e in Status])  # True</code></pre>
+            </div>
+            <h3 id="intenum-enum-zachowujący-się-jak-liczba-całkowita">IntEnum — Enum zachowujący się jak liczba całkowita</h3>
+            <p><code>IntEnum</code> łączy cechy <code>Enum</code> z <code>int</code>: wartości mogą być bezpośrednio porównywane z liczbami:</p>
+            <div>
+                <pre><code class="language-python">from enum import IntEnum
+
+class Priorytet(IntEnum):
+    NISKI = 1
+    SREDNI = 2
+    WYSOKI = 3
+
+print(Priorytet.WYSOKI &gt; Priorytet.NISKI)   # True
+print(Priorytet.SREDNI == 2)                 # True
+print(Priorytet.WYSOKI + 1)                  # 4 (zwykła liczba int)
+
+# Sortowanie z IntEnum
+zadania = [
+    ("raport", Priorytet.NISKI),
+    ("aktualizacja", Priorytet.WYSOKI),
+    ("backup", Priorytet.SREDNI),
+]
+posortowane = sorted(zadania, key=lambda x: x[1], reverse=True)
+for nazwa, p in posortowane:
+    print(f"{nazwa}: {p.name}")
+# aktualizacja: WYSOKI
+# backup: SREDNI
+# raport: NISKI</code></pre>
+            </div>
+            <h3 id="flag-flagi-bitowe">Flag — flagi bitowe</h3>
+            <p><code>Flag</code> (i <code>IntFlag</code>) służą do definiowania flag bitowych, które można łączyć operatorami bitowymi (<code>|</code>, <code>&amp;</code>, <code>^</code>, <code>~</code>):</p>
+            <div>
+                <pre><code class="language-python">from enum import Flag, auto
+
+class Uprawnienia(Flag):
+    ODCZYT   = auto()  # 1
+    ZAPIS    = auto()  # 2
+    WYKONANIE = auto() # 4
+
+# Kombinowanie flag
+uzytkownik = Uprawnienia.ODCZYT | Uprawnienia.ZAPIS
+print(uzytkownik)                               # Uprawnienia.ODCZYT|ZAPIS
+print(Uprawnienia.ODCZYT in uzytkownik)         # True
+print(Uprawnienia.WYKONANIE in uzytkownik)      # False
+
+# Dodawanie i usuwanie flag
+uzytkownik |= Uprawnienia.WYKONANIE
+print(Uprawnienia.WYKONANIE in uzytkownik)      # True
+
+uzytkownik &amp;= ~Uprawnienia.ZAPIS
+print(Uprawnienia.ZAPIS in uzytkownik)          # False</code></pre>
+            </div>
+            <h3 id="enum-w-instrukcji-match-python-3-10-">Enum w instrukcji match (Python 3.10+)</h3>
+            <p>Enum świetnie współpracuje z <code>match</code>:</p>
+            <div>
+                <pre><code class="language-python">from enum import Enum
+
+class Kolor(Enum):
+    CZERWONY = 1
+    ZIELONY = 2
+    NIEBIESKI = 3
+
+def opis_koloru(kolor):
+    match kolor:
+        case Kolor.CZERWONY:
+            return "Kolor czerwony — stop"
+        case Kolor.ZIELONY:
+            return "Kolor zielony — jedź"
+        case Kolor.NIEBIESKI:
+            return "Kolor niebieski — spokój"
+
+print(opis_koloru(Kolor.ZIELONY))  # Kolor zielony — jedź</code></pre>
+            </div>
+            <h3 id="alias-i-unikalne-wartości">Alias i unikalne wartości</h3>
+            <p>Domyślnie, jeśli dwa elementy <code>Enum</code> mają tę samą wartość, drugi staje się <strong>aliasem</strong> pierwszego:</p>
+            <div>
+                <pre><code class="language-python">from enum import Enum, unique
+
+class Kierunek(Enum):
+    POLNOC = 1
+    N = 1       # alias — wskazuje na POLNOC
+
+print(Kierunek.N is Kierunek.POLNOC)  # True
+print(list(Kierunek))  # [&lt;Kierunek.POLNOC: 1&gt;]  — alias nie pojawia się w iteracji</code></pre>
+            </div>
+            <p>Dekorator <code>@unique</code> wymusza, aby każda wartość była unikalna (błąd przy duplikatach):</p>
+            <div>
+                <pre><code class="language-python">from enum import Enum, unique
+
+@unique
+class Status(Enum):
+    AKTYWNY = 1
+    NIEAKTYWNY = 2
+    # ZAWIESZONY = 1  # ValueError: duplicate values found in &lt;enum 'Status'&gt;: ZAWIESZONY -&gt; AKTYWNY</code></pre>
+            </div>
+            <h3 id="podsumowanie-typów-enum">Podsumowanie typów Enum</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Typ</td>
+                    <td>Dziedziczy po</td>
+                    <td>Porównanie z liczbą</td>
+                    <td>Flagi bitowe</td>
+                    <td>Zastosowanie</td>
+                </tr>
+                <tr>
+                    <td><code>Enum</code></td>
+                    <td><code>object</code></td>
+                    <td>Nie</td>
+                    <td>Nie</td>
+                    <td>Ogólny zestaw stałych</td>
+                </tr>
+                <tr>
+                    <td><code>IntEnum</code></td>
+                    <td><code>int</code>, <code>Enum</code></td>
+                    <td>Tak</td>
+                    <td>Nie</td>
+                    <td>Gdy potrzebujemy wartości liczbowej</td>
+                </tr>
+                <tr>
+                    <td><code>Flag</code></td>
+                    <td><code>Enum</code></td>
+                    <td>Nie</td>
+                    <td>Tak</td>
+                    <td>Flagi bitowe (czyste)</td>
+                </tr>
+                <tr>
+                    <td><code>IntFlag</code></td>
+                    <td><code>int</code>, <code>Flag</code></td>
+                    <td>Tak</td>
+                    <td>Tak</td>
+                    <td>Flagi bitowe + porównanie z int</td>
+                </tr>
+                <tr>
+                    <td><code>StrEnum</code></td>
+                    <td><code>str</code>, <code>Enum</code></td>
+                    <td>Tak (str)</td>
+                    <td>Nie</td>
+                    <td>Enum tekstowy (Python 3.11+)</td>
+                </tr>
+            </table>
+            </p>
         </article-section>
     </div>
     <footer>

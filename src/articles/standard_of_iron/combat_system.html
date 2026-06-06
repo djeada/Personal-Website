@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
+    <meta charset="utf-8" />
+    <title>Overview</title>
+    <meta content="This document describes the RTS combat system in Standard of Iron, including:" name="description" />
+    <meta content="Adam Djellouli" name="author" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <link crossorigin="" href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.5.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/icon.ico" rel="icon" />
+    <link href="../../resources/style.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://adamdjellouli.com/articles/standard_of_iron/combat_system" rel="canonical" />
+    <script id="structured-data" type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": "Overview",
+            "author": {
+                "@type": "Person",
+                "name": "Adam Djellouli"
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://adamdjellouli.com/articles/standard_of_iron/combat_system"
+            },
+            "url": "https://adamdjellouli.com/articles/standard_of_iron/combat_system",
+            "description": "This document describes the RTS combat system in Standard of Iron, including:",
+            "dateModified": "2026-06-06"
+        }
+    </script>
+</head>
+
+<body>
+    <nav aria-label="Main navigation">
+        <a class="logo" href="../../index.html">
+            <img alt="Adam Djellouli - Home Page Logo" id="logo-image" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/logo.PNG" />
+        </a>
+        <input aria-label="Toggle navigation menu" id="navbar-toggle" type="checkbox" />
+        <ul aria-labelledby="navbar-toggle" role="menu">
+            <li role="menuitem">
+                <a href="../../index.html" title="Go to Home Page"> Home </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/blog.html" title="Read Adam Djellouli Blog on Programming and Technology"> Blog </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/tools.html" title="Discover Tools Created by Adam Djellouli"> Tools </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/projects.html" title="Explore Projects Developed by Adam Djellouli"> Projects </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/courses.html" title="Browse Courses by Adam Djellouli"> Courses </a>
+            </li>
+            <li role="menuitem">
+                <a href="../../core/resume.html" title="View Adam Djellouli Professional Resume"> Resume </a>
+            </li>
+            <li>
+                <script async="" src="https://cse.google.com/cse.js?cx=8160ef9bb935f4f68"></script>
+                <div class="gcse-search"></div>
+            </li>
+            <li>
+                <button aria-label="Toggle dark mode" id="dark-mode-button"></button>
+            </li>
+        </ul>
+    </nav>
+    <div id="article-wrapper">
+        <aside id="article-sidebar">
+            <div id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <ol>
+                    <li><a href="#overview">Overview</a></li>
+                    <li><a href="#per-frame-update-pipeline">Per-Frame Update Pipeline</a></li>
+                    <li><a href="#shared-combat-query-context">Shared Combat Query Context</a>
+                        <ol>
+                            <li><a href="#contents">Contents</a></li>
+                            <li><a href="#why-it-matters">Why It Matters</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#target-validation">Target Validation</a></li>
+                    <li><a href="#normal-attacks">Normal Attacks</a>
+                        <ol>
+                            <li><a href="#applying-damage">Applying Damage</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#siege-weapons-and-defense-towers">Siege Weapons and Defense Towers</a>
+                        <ol>
+                            <li><a href="#siege-loading-state">Siege Loading State</a></li>
+                            <li><a href="#defense-tower-targeting">Defense Tower Targeting</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#elephant-combat-behavior">Elephant Combat Behavior</a>
+                        <ol>
+                            <li><a href="#panic-state">Panic State</a></li>
+                            <li><a href="#trample-damage">Trample Damage</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#auto-engagement">Auto-Engagement</a></li>
+                    <li><a href="#combat-state-and-visual-feedback">Combat State and Visual Feedback</a></li>
+                    <li><a href="#deterministic-visual-variation">Deterministic Visual Variation</a></li>
+                    <li><a href="#adding-new-combat-behavior">Adding New Combat Behavior</a></li>
+                    <li><a href="#known-boundaries">Known Boundaries</a>
+                        <ol>
+                            <li><a href="#rpg-commander-combat">RPG Commander Combat</a></li>
+                            <li><a href="#projectile-and-arrow-systems">Projectile and Arrow Systems</a></li>
+                        </ol>
+                    </li>
+                </ol>
+            </div>
+            <div id="related-articles">
+                <h2>Related Articles</h2>
+                <ol>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ai_architecture.html">Ai Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/animation_architecture.html">Animation Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/audio_wishlist.html">Audio Wishlist</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/combat_system.html">Combat System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/creature_bpat_format.html">Creature Bpat Format</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/macos_signing.html">Macos Signing</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_framework.html">Mission Framework</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/pathfinding_architecture.html">Pathfinding Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture.html">Rendering Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/save_load_system.html">Save Load System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/victory_system.html">Victory System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/windows_code_signing.html">Windows Code Signing</a></li>
+                </ol>
+            </div>
+        </aside><article-section id="article-body">
+            <div class="article-action-buttons"><button class="btn-suggest-edit" title="Suggest Edit">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M4 21h4l11-11-4-4L4 17v4z" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button><button class="btn-create-issue" title="Create Issue">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                        <line stroke="currentColor" stroke-width="2" x1="12" x2="12" y1="8" y2="12"></line>
+                        <circle cx="12" cy="16" fill="currentColor" r="1"></circle>
+                    </svg>
+                </button><button class="btn-download" title="Download">
+                    <svg fill="none" height="20" viewbox="0 0 24 24" width="20">
+                        <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                </button></div>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
+            <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
+            <header>Combat System</header>
+            <p>This document describes the RTS combat system in <strong>Standard of Iron</strong>, including:</p>
+            <ul>
+                <li>the per-frame update pipeline;</li>
+                <li>shared target lookup and validation;</li>
+                <li>normal, siege, tower, and elephant attacks;</li>
+                <li>combat animation and visual feedback;</li>
+                <li>the recommended approach for adding new combat behavior.</li>
+            </ul>
+            <h2 id="overview">Overview</h2>
+            <p>RTS combat is coordinated by <code>Game::Systems::CombatSystem</code>, implemented in:</p>
+            <div>
+                <pre><code class="language-text">game/systems/combat_system.cpp</code></pre>
+            </div>
+            <p>Combat-related side effects should flow through this system whenever possible. Normal unit attacks, siege and tower attacks, elephant trample damage, target selection, and auto-engagement all rely on the same combat query context and enemy-validation rules.</p>
+            <p>This shared path helps keep combat behavior consistent and prevents individual processors from implementing conflicting targeting or damage logic.</p>
+            <h2 id="per-frame-update-pipeline">Per-Frame Update Pipeline</h2>
+            <p>Each frame, <code>CombatSystem::update()</code> runs the following pipeline:</p>
+            <div>
+                <pre><code class="language-text">CombatSystem::update
+  |
+  |-- rebuild_combat_query_context
+  |-- process_hit_feedback
+  |-- process_combat_state
+  |-- process_attacks
+  |-- process_siege_specials
+  |-- process_elephant_specials
+  |-- AutoEngagement::process</code></pre>
+            </div>
+            <p>The order matters:</p>
+            <ol>
+                <li>The shared query context is rebuilt.</li>
+                <li>Temporary hit feedback and combat animation state are updated.</li>
+                <li>Normal attacks are resolved.</li>
+                <li>Special siege and elephant behaviors are processed.</li>
+                <li>Eligible idle units may automatically acquire nearby enemies.</li>
+            </ol>
+            <h2 id="shared-combat-query-context">Shared Combat Query Context</h2>
+            <p><code>CombatQueryContext</code> is defined in:</p>
+            <div>
+                <pre><code class="language-text">combat_utils.h</code></pre>
+            </div>
+            <p>It is rebuilt once at the beginning of each combat update and provides shared lookup data for combat processors.</p>
+            <h3 id="contents">Contents</h3>
+            <p>The context contains:</p>
+            <ul>
+                <li><code>units</code>: alive unit entities that are not pending removal;</li>
+                <li><code>entities_by_id</code>: fast lookup of entities by target ID;</li>
+                <li><code>unit_grid</code>: spatial lookup for nearby non-building units;</li>
+                <li><code>nearby_unit_ids</code>: reusable scratch storage for range queries.</li>
+            </ul>
+            <h3 id="why-it-matters">Why It Matters</h3>
+            <p>Combat processors should receive and reuse this context instead of repeatedly calling:</p>
+            <div>
+                <pre><code class="language-clike">World::get_entities_with&lt;UnitComponent&gt;()</code></pre>
+            </div>
+            <p>Using the shared context:</p>
+            <ul>
+                <li>keeps target selection consistent across combat behaviors;</li>
+                <li>avoids rebuilding the same view of the world in multiple processors;</li>
+                <li>reduces unnecessary entity queries during each frame.</li>
+            </ul>
+            <h2 id="target-validation">Target Validation</h2>
+            <p>All combat behaviors that select or damage targets should use the shared validation helper:</p>
+            <div>
+                <pre><code class="language-clike">Combat::is_valid_enemy_unit(attacker_unit, target, allow_buildings)</code></pre>
+            </div>
+            <p>This helper rejects targets that are:</p>
+            <ul>
+                <li>null;</li>
+                <li>pending removal;</li>
+                <li>dead or missing a <code>UnitComponent</code>;</li>
+                <li>owned by the attacker;</li>
+                <li>owned by an allied player according to <code>OwnerRegistry</code>;</li>
+                <li>buildings when <code>allow_buildings == false</code>.</li>
+            </ul>
+            <p>Avoid implementing direct owner checks in individual combat processors. Team and alliance rules are easy to handle incorrectly when duplicated.</p>
+            <h2 id="normal-attacks">Normal Attacks</h2>
+            <p>Normal attacks are processed by:</p>
+            <div>
+                <pre><code class="language-text">combat_system/attack_processor.cpp</code></pre>
+            </div>
+            <p>The <code>process_attacks()</code> processor handles:</p>
+            <ul>
+                <li>target resolution;</li>
+                <li>melee and ranged attack behavior;</li>
+                <li>attack cooldowns;</li>
+                <li>melee lock behavior;</li>
+                <li>tactical damage multipliers;</li>
+                <li>ranged arrow visuals;</li>
+                <li>projectile-based attacks configured through <code>SpecialAttackComponent</code>;</li>
+                <li>combat animation triggers.</li>
+            </ul>
+            <h3 id="applying-damage">Applying Damage</h3>
+            <p>Resolved attacks should apply damage through:</p>
+            <div>
+                <pre><code class="language-clike">Combat::deal_damage(world, target, damage, attacker_id)</code></pre>
+            </div>
+            <p>This is the preferred damage entry point because it centralizes:</p>
+            <ul>
+                <li>health reduction and death handling;</li>
+                <li>retaliation behavior;</li>
+                <li>hit feedback;</li>
+                <li>blood and fire status side effects;</li>
+                <li>combat event publication.</li>
+            </ul>
+            <p>New attack behaviors should avoid modifying health directly unless there is a strong architectural reason to bypass the standard combat flow.</p>
+            <h2 id="siege-weapons-and-defense-towers">Siege Weapons and Defense Towers</h2>
+            <p>Siege weapons and defensive-building combat are handled by:</p>
+            <div>
+                <pre><code class="language-text">combat_system/siege_special_processor.cpp</code></pre>
+            </div>
+            <p>This processor owns:</p>
+            <ul>
+                <li>catapult loading, firing, and stone projectile spawning;</li>
+                <li>ballista loading, firing, bolt visuals, and delayed hit checks;</li>
+                <li>defense tower target selection, arrow volleys, and damage application.</li>
+            </ul>
+            <h3 id="siege-loading-state">Siege Loading State</h3>
+            <p>Catapults and ballistas share <code>CatapultLoadingComponent</code> for their loading state.</p>
+            <p>Their state machine is:</p>
+            <div>
+                <pre><code class="language-text">Idle -&gt; Loading -&gt; ReadyToFire -&gt; Firing -&gt; Idle</code></pre>
+            </div>
+            <p>If a siege unit begins moving while loading or firing, its loading state is reset. This prevents the unit from firing at a previously locked target after changing position.</p>
+            <h3 id="defense-tower-targeting">Defense Tower Targeting</h3>
+            <p>Defense towers select the nearest valid enemy within range.</p>
+            <p>They may attack:</p>
+            <ul>
+                <li>enemy units;</li>
+                <li>enemy defense towers.</li>
+            </ul>
+            <p>They ignore ordinary buildings.</p>
+            <p>Tower arrow spread is generated deterministically from entity IDs, ensuring that repeated runs produce stable visual results.</p>
+            <h2 id="elephant-combat-behavior">Elephant Combat Behavior</h2>
+            <p>Elephant-specific combat behavior is handled by:</p>
+            <div>
+                <pre><code class="language-text">combat_system/elephant_special_processor.cpp</code></pre>
+            </div>
+            <p>This processor owns:</p>
+            <ul>
+                <li>low-health panic checks;</li>
+                <li>charge state transitions;</li>
+                <li>trample damage;</li>
+                <li>stomp-impact records used by visual effects.</li>
+            </ul>
+            <h3 id="panic-state">Panic State</h3>
+            <p>Panic state is stored in:</p>
+            <div>
+                <pre><code class="language-clike">ElephantPanicComponent</code></pre>
+            </div>
+            <p><code>ElephantComponent</code> remains focused on combat statistics and charge/trample state.</p>
+            <p>Panic behavior does not create hidden movement targets. Instead, it influences the elephant's combat decisions directly.</p>
+            <h3 id="trample-damage">Trample Damage</h3>
+            <p>Trample damage applies only to valid enemies.</p>
+            <p>Friendly and allied troops are rejected through:</p>
+            <div>
+                <pre><code class="language-clike">Combat::is_valid_enemy_unit()</code></pre>
+            </div>
+            <p>As a result, even a panicked elephant cannot damage units on its own side.</p>
+            <h2 id="auto-engagement">Auto-Engagement</h2>
+            <p><code>AutoEngagement</code> runs after explicit attacks and special combat processors.</p>
+            <p>Its purpose is to allow eligible idle units to acquire nearby enemies without requiring a direct attack command.</p>
+            <p>Auto-engagement uses:</p>
+            <ul>
+                <li>the shared <code>CombatQueryContext</code>;</li>
+                <li>the common enemy-validation helpers.</li>
+            </ul>
+            <p>A unit is not considered freely idle when it has:</p>
+            <ul>
+                <li>suppressing player intent;</li>
+                <li>hold or guard constraints;</li>
+                <li>an active patrol;</li>
+                <li>an active attack target.</li>
+            </ul>
+            <h2 id="combat-state-and-visual-feedback">Combat State and Visual Feedback</h2>
+            <p>Combat animation state is stored in:</p>
+            <div>
+                <pre><code class="language-clike">CombatStateComponent</code></pre>
+            </div>
+            <p>It is advanced by:</p>
+            <div>
+                <pre><code class="language-clike">process_combat_state()</code></pre>
+            </div>
+            <p>Transient hit feedback, such as hit flashes, is handled by:</p>
+            <div>
+                <pre><code class="language-clike">process_hit_feedback()</code></pre>
+            </div>
+            <p>Combat processors may spawn projectile, arrow, or impact visuals. However, final damage resolution should still go through:</p>
+            <div>
+                <pre><code class="language-clike">Combat::deal_damage()</code></pre>
+            </div>
+            <p>when the attack connects.</p>
+            <h2 id="deterministic-visual-variation">Deterministic Visual Variation</h2>
+            <p>Combat visuals may appear random, but their variation should remain deterministic.</p>
+            <p>The current combat code uses hash-based values derived from entity IDs and target IDs for effects such as:</p>
+            <ul>
+                <li>attack animation offsets;</li>
+                <li>arrow counts;</li>
+                <li>arrow spread.</li>
+            </ul>
+            <p>Avoid introducing:</p>
+            <div>
+                <pre><code class="language-clike">std::random_device</code></pre>
+            </div>
+            <p>or global:</p>
+            <div>
+                <pre><code class="language-clike">std::rand()</code></pre>
+            </div>
+            <p>into combat code. Non-deterministic randomness makes combat tests, debugging, and replay behavior harder to reason about.</p>
+            <h2 id="adding-new-combat-behavior">Adding New Combat Behavior</h2>
+            <p>Use the following approach when introducing new combat functionality:</p>
+            <p>I. Add a dedicated component when the behavior requires persistent state.</p>
+            <p>II. Add a processor under:</p>
+            <div>
+                <pre><code class="language-text">game/systems/combat_system/</code></pre>
+            </div>
+            <p>III. Call the processor from <code>CombatSystem::update()</code>:</p>
+            <ul>
+                <li>after normal attacks when it applies special damage;</li>
+                <li>before normal attacks when it changes attack eligibility.</li>
+            </ul>
+            <p>IV. Use <code>CombatQueryContext</code> for entity lookup and range scanning.</p>
+            <p>V. Use <code>Combat::is_valid_enemy_unit()</code> for target validation.</p>
+            <p>VI. Use <code>Combat::deal_damage()</code> for damage application.</p>
+            <p>VII. Add focused tests under:</p>
+            <div>
+                <pre><code class="language-text">tests/systems/</code></pre>
+            </div>
+            <p>Avoid creating a new top-level <code>System</code> for combat damage unless the behavior is genuinely outside the combat simulation. Separate damage systems tend to develop inconsistent targeting, validation, and damage rules.</p>
+            <h2 id="known-boundaries">Known Boundaries</h2>
+            <h3 id="rpg-commander-combat">RPG Commander Combat</h3>
+            <p>The RPG commander combat resolver has its own implementation under:</p>
+            <div>
+                <pre><code class="language-text">game/systems/rpg_combat_system/</code></pre>
+            </div>
+            <p>Although it is related to combat, it represents a different abstraction from RTS unit combat and does not share the same processing path.</p>
+            <h3 id="projectile-and-arrow-systems">Projectile and Arrow Systems</h3>
+            <p>Projectile movement remains the responsibility of:</p>
+            <div>
+                <pre><code class="language-text">ProjectileSystem</code></pre>
+            </div>
+            <p>Arrow trail visuals remain the responsibility of:</p>
+            <div>
+                <pre><code class="language-text">ArrowSystem</code></pre>
+            </div>
+            <p>The combat system decides when these effects are created. The projectile and arrow systems own their subsequent simulation and rendering-facing data.</p>
+        </article-section>
+    </div>
+    <footer>
+        <div class="footer-columns">
+            <div class="footer-column footer-about">
+                <h2>About</h2>
+                <p class="footer-message">Thanks for stopping by. This site is free to use; please be respectful and avoid misuse. For questions or collaboration, reach me on <a href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" title="LinkedIn Profile">LinkedIn</a> or <a href="https://github.com/djeada" title="GitHub Profile">GitHub</a>.</p>
+                <p class="footer-signature">Built with care in Berlin (UTC+1).</p>
+            </div>
+            <div class="footer-column footer-links">
+                <h2>Quick Links</h2>
+                <ul class="footer-links-list">
+                    <li><a href="https://adamdjellouli.com/index.html" title="Home">Home</a></li>
+                    <li><a href="https://adamdjellouli.com/core/projects.html" title="Projects">Projects</a></li>
+                    <li><a href="https://adamdjellouli.com/core/tools.html" title="Tools">Tools</a></li>
+                    <li><a href="https://adamdjellouli.com/core/courses.html" title="Courses">Courses</a></li>
+                    <li><a href="https://adamdjellouli.com/core/resume.html" title="Resume">Resume</a></li>
+                    <li><a href="https://adamdjellouli.com/core/privacy_policy.html" title="Privacy Policy">Privacy Policy</a></li>
+                    <li><a href="https://adamdjellouli.com/sitemap.xml" title="Sitemap">Sitemap</a></li>
+                </ul>
+            </div>
+            <div class="footer-column footer-social">
+                <h2>Follow</h2>
+                <ul class="social-media">
+                    <li>
+                        <a aria-label="YouTube" class="fa fa-youtube" href="https://www.youtube.com/channel/UCGPoHTVjMN77wcGknXPHl1Q" rel="noopener" target="_blank" title="YouTube"></a>
+                        <span class="social-label">YouTube</span>
+                    </li>
+                    <li>
+                        <a aria-label="LinkedIn" class="fa fa-linkedin" href="https://www.linkedin.com/in/adam-djellouli-1bb54619a/" rel="noopener" target="_blank" title="LinkedIn"></a>
+                        <span class="social-label">LinkedIn</span>
+                    </li>
+                    <li>
+                        <a aria-label="Instagram" class="fa fa-instagram" href="https://www.instagram.com/linuxchallenges/" rel="noopener" target="_blank" title="Instagram"></a>
+                        <span class="social-label">Instagram</span>
+                    </li>
+                    <li>
+                        <a aria-label="GitHub" class="fa fa-github" href="https://github.com/djeada" title="GitHub"></a>
+                        <span class="social-label">GitHub</span>
+                    </li>
+                </ul>
+                <img alt="" aria-hidden="true" class="footer-mark" src="https://raw.githubusercontent.com/djeada/Personal-Website/master/images/symbol.png" />
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p id="copyright">
+                © Adam Djellouli. All rights reserved.
+            </p>
+        </div>
+        <script>
+            document.getElementById("copyright").innerHTML = "&copy; " + new Date().getFullYear() + " Adam Djellouli. All rights reserved.";
+        </script>
+        <script src="/app.js"></script>
+    </footer>
+    <div id="pdf-spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+jax: ["input/TeX", "output/HTML-CSS"],
+extensions: ["tex2jax.js"],
+"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] },
+tex2jax: { inlineMath: [ ["$", "$"] ], displayMath: [ ["$$","$$"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno" },
+TeX: { noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } } },
+messageStyle: "none"
+});
+</script>
+<script async="" id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript"></script>
+
+</html>

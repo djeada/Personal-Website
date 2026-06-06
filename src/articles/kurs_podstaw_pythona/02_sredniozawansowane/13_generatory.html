@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/kurs_podstaw_pythona/02_sredniozawansowane/13_generatory",
             "description": "Generator to specjalny rodzaj funkcji w Pythonie, kt\u00f3ry umo\u017cliwia zwracanie warto\u015bci pojedynczo zamiast wszystkich naraz, tak jak w przypadku listy lub innego iterowalnego obiektu.",
-            "dateModified": "2024-04-20"
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -91,6 +91,31 @@
                             </ol>
                         </li>
                         <li><a href="#zastosowania-i-korzyści-z-używania-generatorów">Zastosowania i korzyści z używania generatorów</a></li>
+                        <li><a href="#metody-send-throw-i-close-">Metody send(), throw() i close()</a>
+                            <ol>
+                                <li><a href="#send-value-wysłanie-wartości-do-generatora">send(value) — wysłanie wartości do generatora</a></li>
+                                <li><a href="#throw-type-wysłanie-wyjątku-do-generatora">throw(type) — wysłanie wyjątku do generatora</a></li>
+                                <li><a href="#close-zamknięcie-generatora">close() — zamknięcie generatora</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#nieskończone-generatory">Nieskończone generatory</a></li>
+                        <li><a href="#moduł-itertools-gotowe-generatory">Moduł itertools — gotowe generatory</a>
+                            <ol>
+                                <li><a href="#nieskończone-iteratory">Nieskończone iteratory</a></li>
+                                <li><a href="#kończące-iteratory">Kończące iteratory</a></li>
+                                <li><a href="#kombinatoryczne-iteratory">Kombinatoryczne iteratory</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#potok-generatorów-pipeline-">Potok generatorów (pipeline)</a></li>
+                        <li><a href="#porównanie-lista-vs-generator">Porównanie: lista vs generator</a></li>
+                        <li><a href="#porównanie-pamięci-praktyczny-benchmark">Porównanie pamięci — praktyczny benchmark</a></li>
+                        <li><a href="#kiedy-używać-generatorów-">Kiedy używać generatorów?</a></li>
+                        <li><a href="#typowe-pułapki-z-generatorami">Typowe pułapki z generatorami</a>
+                            <ol>
+                                <li><a href="#wyczerpany-generator">Wyczerpany generator</a></li>
+                                <li><a href="#generator-w-warunku-if">Generator w warunku if</a></li>
+                            </ol>
+                        </li>
                     </ol>
                 </ol>
             </div>
@@ -183,7 +208,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: April 20, 2024</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="generatory">Generatory</h2>
             <p>Generator to specjalny rodzaj funkcji w Pythonie, który umożliwia zwracanie wartości pojedynczo zamiast wszystkich naraz, tak jak w przypadku listy lub innego iterowalnego obiektu. Dzięki temu generatory są bardziej wydajne pod względem zużycia pamięci, ponieważ nie muszą przechowywać całej kolekcji wartości w pamięci od razu. Zamiast tego, generują one wartości na bieżąco w miarę ich potrzeby. To sprawia, że są one idealne do przetwarzania dużych zbiorów danych, które nie mieszczą się w pamięci operacyjnej.</p>
@@ -275,7 +300,7 @@ for val in gen:
         yield from iterable
 
 gen1 = range(3)
-gen2 = simple_generator()
+gen2 = foo()
 
 for val in chain_generators(gen1, gen2):
     print(val)</code></pre>
@@ -295,6 +320,270 @@ for val in chain_generators(gen1, gen2):
                 <li>Można łatwo tworzyć potoki przetwarzania danych, łącząc kilka generatorów razem.</li>
             </ul>
             <p>W praktyce, generatory są niezbędnym narzędziem dla programistów Pythona, umożliwiając tworzenie kodu bardziej wydajnego i zwięzłego.</p>
+            <h3 id="metody-send-throw-i-close-">Metody <code>send()</code>, <code>throw()</code> i <code>close()</code></h3>
+            <p>Generator to nie tylko prosta sekwencja — to pełnoprawny współprogramu (ang. <em>coroutine</em>). Poniżej opisano trzy metody sterowania generatorem:</p>
+            <h4 id="send-value-wysłanie-wartości-do-generatora"><code>send(value)</code> — wysłanie wartości do generatora</h4>
+            <p><code>send()</code> wznawia generator i przekazuje do niego wartość jako wynik wyrażenia <code>yield</code>:</p>
+            <div>
+                <pre><code class="language-python">def akumulator():
+    suma = 0
+    while True:
+        wartosc = yield suma   # yield zwraca sumę, przyjmuje nową wartość
+        if wartosc is None:
+            break
+        suma += wartosc
+
+gen = akumulator()
+next(gen)          # Uruchomienie generatora (do pierwszego yield)
+print(gen.send(10))  # 10
+print(gen.send(5))   # 15
+print(gen.send(20))  # 35
+gen.close()</code></pre>
+            </div>
+            <h4 id="throw-type-wysłanie-wyjątku-do-generatora"><code>throw(type)</code> — wysłanie wyjątku do generatora</h4>
+            <div>
+                <pre><code class="language-python">def generator_z_obsluga():
+    try:
+        while True:
+            yield "pracuję"
+    except ValueError as e:
+        print(f"Generator otrzymał wyjątek: {e}")
+        yield "zakończono bezpiecznie"
+
+gen = generator_z_obsluga()
+print(next(gen))                    # pracuję
+print(next(gen))                    # pracuję
+print(gen.throw(ValueError, "stop")) # Generator otrzymał wyjątek: stop
+                                     # zakończono bezpiecznie</code></pre>
+            </div>
+            <h4 id="close-zamknięcie-generatora"><code>close()</code> — zamknięcie generatora</h4>
+            <p><code>close()</code> wysyła do generatora wyjątek <code>GeneratorExit</code>, co pozwala na sprzątanie zasobów:</p>
+            <div>
+                <pre><code class="language-python">def generator_z_zamknieciem():
+    try:
+        while True:
+            yield "dane"
+    except GeneratorExit:
+        print("Generator zamknięty — sprzątam zasoby")
+
+gen = generator_z_zamknieciem()
+next(gen)
+gen.close()   # Generator zamknięty — sprzątam zasoby</code></pre>
+            </div>
+            <h3 id="nieskończone-generatory">Nieskończone generatory</h3>
+            <p>Generatory mogą produkować nieskończone sekwencje — istotne jest tylko, żeby pobierać z nich elementy za pomocą <code>next()</code> lub ograniczać iterację:</p>
+            <div>
+                <pre><code class="language-python">def liczby_naturalne():
+    n = 1
+    while True:
+        yield n
+        n += 1
+
+gen = liczby_naturalne()
+print([next(gen) for _ in range(5)])  # [1, 2, 3, 4, 5]
+
+# Bezpieczne pobranie pierwszych 10
+import itertools
+print(list(itertools.islice(liczby_naturalne(), 10)))  # [1, 2, ..., 10]</code></pre>
+            </div>
+            <h3 id="moduł-itertools-gotowe-generatory">Moduł <code>itertools</code> — gotowe generatory</h3>
+            <p>Moduł <code>itertools</code> dostarcza wysoko wydajnych generatorów do typowych zadań:</p>
+            <h4 id="nieskończone-iteratory">Nieskończone iteratory</h4>
+            <div>
+                <pre><code class="language-python">import itertools
+
+# count(start, step) — nieograniczona sekwencja liczb
+for i in itertools.islice(itertools.count(5, 2), 5):
+    print(i)   # 5, 7, 9, 11, 13
+
+# cycle(iterable) — nieskończone powtarzanie sekwencji
+kolory = itertools.cycle(["czerwony", "zielony", "niebieski"])
+for _, kolor in zip(range(7), kolory):
+    print(kolor)   # czerwony, zielony, niebieski, czerwony, ...
+
+# repeat(value, n) — powtórz wartość n razy (lub nieskończenie)
+print(list(itertools.repeat("echo", 3)))   # ['echo', 'echo', 'echo']</code></pre>
+            </div>
+            <h4 id="kończące-iteratory">Kończące iteratory</h4>
+            <div>
+                <pre><code class="language-python">import itertools
+
+# chain — łączenie kilku iterowalnych w jeden strumień
+print(list(itertools.chain([1, 2], [3, 4], [5])))  # [1, 2, 3, 4, 5]
+
+# islice — wycinek iteratora
+print(list(itertools.islice(range(100), 2, 10, 2)))  # [2, 4, 6, 8]
+
+# takewhile / dropwhile — pobieraj/pomijaj dopóki warunek prawdziwy
+dane = [1, 3, 5, 2, 7, 4]
+print(list(itertools.takewhile(lambda x: x &lt; 4, dane)))   # [1, 3]
+print(list(itertools.dropwhile(lambda x: x &lt; 4, dane)))   # [2, 7, 4]
+
+# compress — filtrowanie elementów przez maskę
+print(list(itertools.compress("ABCDE", [1, 0, 1, 0, 1])))  # ['A', 'C', 'E']</code></pre>
+            </div>
+            <h4 id="kombinatoryczne-iteratory">Kombinatoryczne iteratory</h4>
+            <div>
+                <pre><code class="language-python">import itertools
+
+# product — iloczyn kartezjański
+print(list(itertools.product("AB", [1, 2])))
+# [('A', 1), ('A', 2), ('B', 1), ('B', 2)]
+
+# permutations — permutacje bez powtórzeń
+print(list(itertools.permutations([1, 2, 3], 2)))
+# [(1, 2), (1, 3), (2, 1), (2, 3), (3, 1), (3, 2)]
+
+# combinations — kombinacje bez powtórzeń
+print(list(itertools.combinations([1, 2, 3, 4], 2)))
+# [(1, 2), (1, 3), (1, 4), (2, 3), (2, 4), (3, 4)]</code></pre>
+            </div>
+            <h3 id="potok-generatorów-pipeline-">Potok generatorów (pipeline)</h3>
+            <p>Generatory można łączyć w łańcuchy — każdy generator przetwarza dane wyjściowe poprzedniego, tworząc wydajny potok:</p>
+            <div>
+                <pre><code class="language-python">def czytaj_linie(plik):
+    with open(plik) as f:
+        yield from f
+
+def filtruj_puste(linie):
+    for linia in linie:
+        if linia.strip():
+            yield linia
+
+def zamien_na_wielkie(linie):
+    for linia in linie:
+        yield linia.upper()
+
+# Budowanie potoku (lazy — żadne dane nie są ładowane do pamięci)
+# linie = czytaj_linie("plik.txt")
+# niepuste = filtruj_puste(linie)
+# wielkie = zamien_na_wielkie(niepuste)
+# for linia in wielkie:
+#     print(linia)</code></pre>
+            </div>
+            <p>Potok generatorów jest szczególnie wydajny przy przetwarzaniu dużych plików, bo każda linia jest przetwarzana jeden raz, bez wczytywania całego pliku do pamięci.</p>
+            <h3 id="porównanie-lista-vs-generator">Porównanie: lista vs generator</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Cecha</td>
+                    <td>Lista</td>
+                    <td>Generator</td>
+                </tr>
+                <tr>
+                    <td>Składnia</td>
+                    <td><code>[x for x in it]</code></td>
+                    <td><code>(x for x in it)</code></td>
+                </tr>
+                <tr>
+                    <td>Przechowywanie</td>
+                    <td>Cała kolekcja w pamięci</td>
+                    <td>Jeden element naraz</td>
+                </tr>
+                <tr>
+                    <td>Wielokrotna iteracja</td>
+                    <td>Tak</td>
+                    <td>Nie (jednorazowy)</td>
+                </tr>
+                <tr>
+                    <td>Długość (<code>len()</code>)</td>
+                    <td>Tak</td>
+                    <td>Nie</td>
+                </tr>
+                <tr>
+                    <td>Indeksowanie (<code>[i]</code>)</td>
+                    <td>Tak</td>
+                    <td>Nie</td>
+                </tr>
+                <tr>
+                    <td>Pamięć dla 10⁶ elementów</td>
+                    <td>~8 MB (int)</td>
+                    <td>~120 bajtów (stały)</td>
+                </tr>
+                <tr>
+                    <td>Szybkość tworzenia</td>
+                    <td>Cała lista od razu</td>
+                    <td>Brak kosztu tworzenia</td>
+                </tr>
+                <tr>
+                    <td>Najlepsze dla</td>
+                    <td>Małe dane, wielokrotny dostęp</td>
+                    <td>Duże dane, jednorazowe przetwarzanie</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="porównanie-pamięci-praktyczny-benchmark">Porównanie pamięci — praktyczny benchmark</h3>
+            <div>
+                <pre><code class="language-python">import sys
+
+# Lista 1 miliona elementów
+lista = [i ** 2 for i in range(1_000_000)]
+print(f"Lista: {sys.getsizeof(lista):,} bajtów")  # ~8,448,728 bajtów
+
+# Generator — stały rozmiar niezależnie od danych
+gen = (i ** 2 for i in range(1_000_000))
+print(f"Generator: {sys.getsizeof(gen)} bajtów")   # ~200 bajtów</code></pre>
+            </div>
+            <h3 id="kiedy-używać-generatorów-">Kiedy używać generatorów?</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Scenariusz</td>
+                    <td>Użyj generatora?</td>
+                    <td>Powód</td>
+                </tr>
+                <tr>
+                    <td>Przetwarzanie dużego pliku linia po linii</td>
+                    <td>Tak</td>
+                    <td>Plik nie mieści się w pamięci</td>
+                </tr>
+                <tr>
+                    <td>Nieskończona sekwencja (np. Fibonacci)</td>
+                    <td>Tak</td>
+                    <td>Lista nie może być nieskończona</td>
+                </tr>
+                <tr>
+                    <td>Potok transformacji danych</td>
+                    <td>Tak</td>
+                    <td>Leniwa ewaluacja — efektywna pamięciowo</td>
+                </tr>
+                <tr>
+                    <td>Mały zbiór danych (&lt; 1000 elementów)</td>
+                    <td>Nie (lista)</td>
+                    <td>Brak korzyści, lista jest wygodniejsza</td>
+                </tr>
+                <tr>
+                    <td>Potrzeba wielokrotnej iteracji</td>
+                    <td>Nie (lista)</td>
+                    <td>Generator wyczerpuje się po jednym przejściu</td>
+                </tr>
+                <tr>
+                    <td>Potrzeba losowego dostępu <code>[i]</code></td>
+                    <td>Nie (lista)</td>
+                    <td>Generator nie wspiera indeksowania</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="typowe-pułapki-z-generatorami">Typowe pułapki z generatorami</h3>
+            <h4 id="wyczerpany-generator">Wyczerpany generator</h4>
+            <div>
+                <pre><code class="language-python">gen = (x for x in range(3))
+print(list(gen))  # [0, 1, 2]
+print(list(gen))  # [] — generator jest już wyczerpany!</code></pre>
+            </div>
+            <h4 id="generator-w-warunku-if">Generator w warunku <code>if</code></h4>
+            <div>
+                <pre><code class="language-python">gen = (x for x in range(0))  # pusty generator
+# ❌ Generator jest zawsze "truthy" nawet jeśli jest pusty!
+if gen:
+    print("To się zawsze wyświetli!")
+
+# ✓ Sprawdź pobierając element
+gen = (x for x in range(0))
+pierwszy = next(gen, None)
+if pierwszy is not None:
+    print(f"Pierwszy element: {pierwszy}")</code></pre>
+            </div>
         </article-section>
     </div>
     <footer>

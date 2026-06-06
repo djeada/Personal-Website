@@ -5,8 +5,8 @@
 <head>
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
-    <title>What we'll cover</title>
-    <meta content="Imagine you're playing against four AI opponents, each controlling hundreds of units." name="description" />
+    <title>Current state</title>
+    <meta content="This document describes the current enemy AI in Standard of Iron: what it already does well, how it is configured, where mission JSON plugs into it, and which expansions still remain before it reaches a fuller professional RTS standard." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -23,7 +23,7 @@
         {
             "@context": "https://schema.org",
             "@type": "Article",
-            "headline": "What we'll cover",
+            "headline": "Current state",
             "author": {
                 "@type": "Person",
                 "name": "Adam Djellouli"
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/standard_of_iron/ai_architecture"
             },
             "url": "https://adamdjellouli.com/articles/standard_of_iron/ai_architecture",
-            "description": "Imagine you're playing against four AI opponents, each controlling hundreds of units.",
-            "dateModified": "2026-01-24"
+            "description": "This document describes the current enemy AI in Standard of Iron: what it already does well, how it is configured, where mission JSON plugs into it, and which expansions still remain before it reaches a fuller professional RTS standard.",
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -78,34 +78,67 @@
             <div id="table-of-contents">
                 <h2>Table of Contents</h2>
                 <ol>
-                    <li><a href="#what-we-ll-cover">What we'll cover</a></li>
-                    <li><a href="#the-core-insight-think-less-think-smarter">The core insight: think less, think smarter</a></li>
-                    <li><a href="#the-architecture-in-pieces">The architecture in pieces</a></li>
-                    <li><a href="#data-structures-what-the-ai-knows">Data structures: what the AI knows</a></li>
-                    <li><a href="#the-state-machine-strategic-phases">The state machine: strategic phases</a></li>
-                    <li><a href="#behaviors-who-does-what">Behaviors: who does what</a></li>
-                    <li><a href="#inside-a-behavior-attackbehavior">Inside a behavior: AttackBehavior</a></li>
-                    <li><a href="#strategies-ai-personality">Strategies: AI personality</a></li>
-                    <li><a href="#the-threading-model">The threading model</a></li>
-                    <li><a href="#deadlock-prevention">Deadlock prevention</a></li>
-                    <li><a href="#command-filtering">Command filtering</a></li>
-                    <li><a href="#performance-characteristics">Performance characteristics</a></li>
-                    <li><a href="#debugging">Debugging</a></li>
-                    <li><a href="#adding-a-new-behavior">Adding a new behavior</a></li>
-                    <li><a href="#future-improvements">Future improvements</a></li>
-                    <li><a href="#finding-your-way-around">Finding your way around</a></li>
+                    <li><a href="#current-state">Current state</a></li>
+                    <li><a href="#design-goals">Design goals</a></li>
+                    <li><a href="#high-level-update-loop">High-level update loop</a></li>
+                    <li><a href="#main-files">Main files</a></li>
+                    <li><a href="#what-the-ai-knows">What the AI knows</a>
+                        <ol>
+                            <li><a href="#snapshot">Snapshot</a></li>
+                            <li><a href="#context">Context</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#state-machine">State machine</a></li>
+                    <li><a href="#behaviors-and-priorities">Behaviors and priorities</a></li>
+                    <li><a href="#force-organization">Force organization</a>
+                        <ol>
+                            <li><a href="#main-army">Main army</a></li>
+                            <li><a href="#reserve-force">Reserve force</a></li>
+                            <li><a href="#harass-force">Harass force</a></li>
+                            <li><a href="#commanders">Commanders</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#macro-and-building-logic">Macro and building logic</a></li>
+                    <li><a href="#expansion-logic">Expansion logic</a>
+                        <ol>
+                            <li><a href="#what-it-currently-does">What it currently does</a></li>
+                            <li><a href="#what-it-does-not-do-yet">What it does not do yet</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#style-personality-and-difficulty">Style, personality, and difficulty</a>
+                        <ol>
+                            <li><a href="#strategy-preset">Strategy preset</a></li>
+                            <li><a href="#personality-inputs">Personality inputs</a></li>
+                            <li><a href="#difficulty-tuning">Difficulty tuning</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#mission-json-usage">Mission JSON usage</a>
+                        <ol>
+                            <li><a href="#example-balanced-frontline-opponent">Example: balanced frontline opponent</a></li>
+                            <li><a href="#example-forward-pressure-harasser">Example: forward pressure harasser</a></li>
+                            <li><a href="#notes-for-authors">Notes for authors</a></li>
+                        </ol>
+                    </li>
+                    <li><a href="#debugging-and-validation">Debugging and validation</a></li>
+                    <li><a href="#what-is-already-strong">What is already strong</a></li>
+                    <li><a href="#biggest-remaining-gaps">Biggest remaining gaps</a></li>
+                    <li><a href="#recommended-next-expansion-order">Recommended next expansion order</a></li>
                 </ol>
             </div>
             <div id="related-articles">
                 <h2>Related Articles</h2>
                 <ol>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/ai_architecture.html">Ai Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/animation_architecture.html">Animation Architecture</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/audio_wishlist.html">Audio Wishlist</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/combat_system.html">Combat System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/creature_bpat_format.html">Creature Bpat Format</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/macos_signing.html">Macos Signing</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/mission_framework.html">Mission Framework</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/pathfinding_architecture.html">Pathfinding Architecture</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/rendering_architecture.html">Rendering Architecture</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/save_load_system.html">Save Load System</a></li>
+                    <li><a href="https://adamdjellouli.com/articles/standard_of_iron/victory_system.html">Victory System</a></li>
                     <li><a href="https://adamdjellouli.com/articles/standard_of_iron/windows_code_signing.html">Windows Code Signing</a></li>
                 </ol>
             </div>
@@ -125,547 +158,538 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 24, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
-            <header>How the AI System Actually Works</header>
-            <p>Imagine you're playing against four AI opponents, each controlling hundreds of units. They need to decide when to attack, when to defend, when to retreat, and when to expand—all while the player is actively trying to destroy them. And they need to do this without lagging the game, even on modest hardware.</p>
-            <p>This is the story of how Standard of Iron's AI thinks, decides, and acts. We'll follow an AI player through a complete decision cycle, from observing the battlefield to issuing commands to its troops.</p>
-            <h2 id="what-we-ll-cover">What we'll cover</h2>
-            <p>We'll start with the philosophy behind the design: why centralized decisions, why throttled updates, why background threads. Then we'll trace the data flow from world state to AI commands. We'll look at how behaviors compete for control, how strategies shape personality, and how the whole thing avoids getting stuck in deadlocks. Finally, we'll cover debugging and tuning.</p>
-            <h2 id="the-core-insight-think-less-think-smarter">The core insight: think less, think smarter</h2>
-            <p>Most game AI tutorials start with per-unit decision making. Each soldier has a behavior tree, each runs every frame. This works fine for 20 units. At 500 units per player times 4 AI players, you're running 2000 behavior trees every frame. That's not going to fly.</p>
-            <p>Our solution is centralized decision making. One AI brain per player, not per unit. The brain observes all its units, makes strategic decisions, and issues commands. Units don't think—they follow orders.</p>
-            <p>But even one brain per player can be expensive if it runs every frame. The AI needs to evaluate threats, calculate distances, consider production queues, and weigh priorities. At 60 FPS, that's 16ms per frame shared between rendering, physics, gameplay, and AI. There's no room.</p>
-            <p>So we throttle. Each AI updates roughly every 300ms—about 3 times per second. That's enough to react to tactical situations without burning CPU. And we run the thinking on background threads, so even if an AI takes 50ms to decide, the main game loop doesn't stutter.</p>
-            <p>Here's the basic flow:</p>
+            <header>AI Architecture</header>
+            <p>This document describes the <strong>current</strong> enemy AI in Standard of Iron: what it already does well, how it is configured, where mission JSON plugs into it, and which expansions still remain before it reaches a fuller professional RTS standard.</p>
+            <h2 id="current-state">Current state</h2>
+            <p>The AI is no longer a passive "units occasionally wander" layer. It now has a cheap centralized planner that can:</p>
+            <ul>
+                <li>gather a main army before proactive attacks</li>
+                <li>keep a <strong>reserve</strong> near home for local defense</li>
+                <li>run a separate <strong>harass detachment</strong></li>
+                <li>defend based on <strong>local threat memory</strong> instead of global omniscience</li>
+                <li>push toward hidden <strong>strategic objectives</strong> even when tactical contacts are gone</li>
+                <li>build a base using shared macro targets</li>
+                <li>plan and escort a first <strong>forward outpost</strong></li>
+                <li>separate <strong>style/personality</strong> from <strong>difficulty/execution tuning</strong></li>
+            </ul>
+            <p>It is still intentionally lightweight: one AI brain per player, throttled updates, immutable snapshots, small force-role heuristics, and behavior modules instead of expensive per-unit thinking.</p>
+            <h2 id="design-goals">Design goals</h2>
+            <p>The system optimizes for four things:</p>
+            <ol>
+                <li><strong>Cheap execution</strong>: one planner per AI player, not one behavior tree per unit.</li>
+                <li><strong>Visible activity</strong>: the AI should keep producing, gathering, defending, harassing, attacking, and expanding instead of stalling in idle loops.</li>
+                <li><strong>Authorable variation</strong>: missions can shape AI with JSON through strategy, personality, and difficulty.</li>
+                <li><strong>Extensibility</strong>: reserve, harass, and outpost logic are foundations for future siege groups, multi-base roles, difficulty ladders, and personality packs.</li>
+            </ol>
+            <h2 id="high-level-update-loop">High-level update loop</h2>
+            <p>The AI runs in a snapshot -&gt; reason -&gt; execute -&gt; apply pipeline.</p>
             <div>
-                <pre><code class="language-shell">┌────────────────────────────────────────────────────────────────────────────┐
-│                         AI UPDATE CYCLE                                    │
-│                                                                            │
-│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐                │
-│  │   SNAPSHOT   │────▶│    REASON    │────▶│   EXECUTE    │                │
-│  │              │     │              │     │              │                │
-│  │  Read world  │     │ Update state │     │ Run behaviors│                │
-│  │  state into  │     │ machine,     │     │ that match   │                │
-│  │  immutable   │     │ detect       │     │ current      │                │
-│  │  data        │     │ threats      │     │ situation    │                │
-│  └──────────────┘     └──────────────┘     └──────────────┘                │
-│         │                    │                    │                        │
-│         │                    │                    ▼                        │
-│         │                    │           ┌──────────────┐                  │
-│         │                    │           │   COMMANDS   │                  │
-│         │                    │           │              │                  │
-│         │                    │           │ Move units,  │                  │
-│         │                    │           │ attack,      │                  │
-│         │                    │           │ produce      │                  │
-│         │                    │           └──────────────┘                  │
-│         │                    │                    │                        │
-│         ▼                    ▼                    ▼                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                    BACKGROUND THREAD                                │   │
-│  │                                                                     │   │
-│  │  Main thread hands off a "job" and continues.                       │   │
-│  │  Worker thread computes. Main thread picks up results next frame.   │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                            │
-└────────────────────────────────────────────────────────────────────────────┘</code></pre>
+                <pre><code class="language-text">world state
+   |
+   v
+AISnapshotBuilder
+   |
+   v
+AISnapshot (immutable, thread-safe)
+   |
+   v
+AIReasoner
+  - updates persistent context
+  - refreshes force roles
+  - advances state machine
+   |
+   v
+AIExecutor
+  - runs eligible behaviors by priority
+  - emits AICommand list
+   |
+   v
+AICommandFilter / AICommandApplier
+   |
+   v
+game world</code></pre>
             </div>
-            <p>The snapshot is the key insight. We copy the world state into an immutable struct, hand it to a background thread, and let that thread think as long as it needs. The main thread continues rendering and handling input. When the worker finishes, the main thread picks up the commands on the next update and applies them.</p>
-            <h2 id="the-architecture-in-pieces">The architecture in pieces</h2>
-            <p>Let's look at the files involved. Everything lives in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/ai_system">game/systems/ai_system</a>:</p>
-            <div>
-                <pre><code class="language-shell">ai_system/
-├── ai_types.h              # Core data structures: snapshot, context, commands
-├── ai_snapshot_builder.cpp # Reads world state into AISnapshot
-├── ai_reasoner.cpp         # Updates context, runs state machine
-├── ai_executor.cpp         # Runs behaviors, produces commands
-├── ai_worker.cpp           # Background thread wrapper
-├── ai_command_applier.cpp  # Applies commands back to world
-├── ai_command_filter.cpp   # Prevents command spam
-├── ai_strategy.cpp         # Strategy presets (aggressive, defensive, etc.)
-├── ai_behavior.h           # Base class for behaviors
-├── ai_tactical.cpp         # Utility functions for combat math
-└── behaviors/              # Individual behavior implementations
-    ├── attack_behavior.cpp
-    ├── defend_behavior.cpp
-    ├── retreat_behavior.cpp
-    ├── production_behavior.cpp
-    ├── gather_behavior.cpp
-    ├── expand_behavior.cpp
-    └── builder_behavior.cpp</code></pre>
-            </div>
-            <p>The main coordinator is <a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/ai_system.cpp">ai_system.cpp</a> in the parent folder. It owns all the AI instances and orchestrates the update loop.</p>
-            <h2 id="data-structures-what-the-ai-knows">Data structures: what the AI knows</h2>
-            <p>The AI works with three core data structures: the snapshot (what it sees), the context (what it remembers), and commands (what it decides).</p>
-            <p>The snapshot is defined in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/ai_system/ai_types.h">ai_types.h</a>. It's an immutable copy of the world state, safe to read on a background thread:</p>
-            <div>
-                <pre><code class="language-clike">struct AISnapshot {
-  int player_id = 0;
-  std::vector&lt;EntitySnapshot&gt; friendly_units;
-  std::vector&lt;ContactSnapshot&gt; visible_enemies;
-  float game_time = 0.0F;
-};</code></pre>
-            </div>
-            <p>Each entity gets serialized into an EntitySnapshot with everything the AI might need: position, health, whether it's a building, what it's producing, whether it has a movement target. The snapshot builder in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/ai_system/ai_snapshot_builder.cpp">ai_snapshot_builder.cpp</a> walks through the world and copies this data.</p>
-            <p>The context persists between updates. It tracks things like which state the AI is in, how long it's been in that state, which units are assigned to which tasks, and metrics like average health and unit counts:</p>
-            <div>
-                <pre><code class="language-clike">struct AIContext {
-  int player_id = 0;
-  AIState state = AIState::Idle;
-  float state_timer = 0.0F;
-  
-  std::vector&lt;EntityID&gt; military_units;
-  std::vector&lt;EntityID&gt; buildings;
-  EntityID primary_barracks = 0;
-  
-  int total_units = 0;
-  int idle_units = 0;
-  float average_health = 1.0F;
-  bool barracks_under_threat = false;
-  
-  // Tracks which units are assigned to which behavior
-  std::unordered_map&lt;EntityID, UnitAssignment&gt; assigned_units;
-  
-  // Deadlock detection
-  int consecutive_no_progress_cycles = 0;
-  float last_meaningful_action_time = 0.0F;
-  
-  // Strategy modifiers
-  AIStrategyConfig strategy_config;
-};</code></pre>
-            </div>
-            <p>Commands are simple orders: move these units here, attack this target, start producing this unit type:</p>
-            <div>
-                <pre><code class="language-clike">enum class AICommandType {
-  MoveUnits,
-  AttackTarget,
-  StartProduction,
-  StartBuilderConstruction
-};</code></pre>
-            </div>
-            <h2 id="the-state-machine-strategic-phases">The state machine: strategic phases</h2>
-            <p>The AI operates in one of six states: Idle, Gathering, Attacking, Defending, Retreating, and Expanding. The state machine in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/ai_system/ai_reasoner.cpp">ai_reasoner.cpp</a> decides when to transition:</p>
-            <div>
-                <pre><code class="language-shell">┌─────────────┐
-                              │    IDLE     │
-                              │             │
-                              │  Waiting    │
-                              │  for units  │
-                              └──────┬──────┘
-                                     │ have units
-                                     ▼
-                              ┌─────────────┐
-         base threatened ────▶│  GATHERING  │◀──── enough force
-                              │             │
-                              │  Rally at   │
-                              │  barracks   │
-                              └──────┬──────┘
-                                     │ enemies visible
-                    ┌────────────────┴────────────────┐
-                    ▼                                 ▼
-             ┌─────────────┐                   ┌─────────────┐
-             │  DEFENDING  │                   │  ATTACKING  │
-             │             │                   │             │
-             │  Protect    │                   │  Push       │
-             │  base       │                   │  enemy      │
-             └──────┬──────┘                   └──────┬──────┘
-                    │ threat cleared                  │ heavy losses
-                    │                                 │
-                    ▼                                 ▼
-             ┌─────────────┐                   ┌─────────────┐
-             │  GATHERING  │                   │  RETREATING │
-             │             │                   │             │
-             │  Regroup    │                   │  Fall back  │
-             └─────────────┘                   └─────────────┘
-                                                      │ safe
-                                                      ▼
-                                               ┌─────────────┐
-                                               │  GATHERING  │
-                                               └─────────────┘</code></pre>
-            </div>
-            <p>The transitions aren't just time-based. The reasoner looks at actual game state: is the barracks under threat? How many enemies are visible? What's the average health of our units? Are we making progress?</p>
-            <p>From <a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/ai_system/ai_reasoner.cpp">ai_reasoner.cpp</a>:</p>
-            <div>
-                <pre><code class="language-clike">if ((ctx.barracks_under_threat || !ctx.buildings_under_attack.empty()) &amp;&amp;
-    ctx.state != AIState::Defending) {
-  ctx.state = AIState::Defending;
-}
-else if (ctx.visible_enemy_count &gt; 0 &amp;&amp; ctx.average_enemy_distance &lt; 50.0F &amp;&amp;
-         (ctx.state == AIState::Gathering || ctx.state == AIState::Idle)) {
-  ctx.state = AIState::Defending;
-}</code></pre>
-            </div>
-            <p>The state influences which behaviors are allowed to run. Defending state enables DefendBehavior. Attacking state enables AttackBehavior. But some behaviors like ProductionBehavior run in any state.</p>
-            <h2 id="behaviors-who-does-what">Behaviors: who does what</h2>
-            <p>Behaviors are modular pieces of AI logic. Each behavior knows how to do one thing: attack enemies, defend the base, retreat when damaged, produce units, and so on.</p>
-            <p>The base class in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/ai_system/ai_behavior.h">ai_behavior.h</a> is simple:</p>
-            <div>
-                <pre><code class="language-clike">class AIBehavior {
-public:
-  virtual void execute(const AISnapshot &amp;snapshot, AIContext &amp;context,
-                       float delta_time,
-                       std::vector&lt;AICommand&gt; &amp;outCommands) = 0;
-
-  virtual auto should_execute(const AISnapshot &amp;snapshot,
-                              const AIContext &amp;context) const -&gt; bool = 0;
-
-  virtual auto get_priority() const -&gt; BehaviorPriority = 0;
-
-  virtual auto can_run_concurrently() const -&gt; bool { return false; }
-};</code></pre>
-            </div>
-            <p>Each update cycle, the executor checks which behaviors should run (based on state and situation), sorts them by priority, and executes them. Some behaviors are exclusive—only one can run. Others are concurrent—ProductionBehavior can queue units while AttackBehavior is moving troops.</p>
-            <p>Here are the behaviors and their priorities:</p>
+            <p>The expensive part is the thinking, so it is throttled and handed to a worker thread. The snapshot is immutable specifically so AI code can reason off-thread without touching live world state.</p>
+            <h2 id="main-files">Main files</h2>
+            <p>Most AI code lives in <code>game/systems/ai_system/</code>.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>File</td>
+                    <td>Responsibility</td>
+                </tr>
+                <tr>
+                    <td><code>ai_types.h</code></td>
+                    <td>Snapshot, context, strategy config, commands</td>
+                </tr>
+                <tr>
+                    <td><code>ai_snapshot_builder.cpp</code></td>
+                    <td>Reads visible world state into <code>AISnapshot</code></td>
+                </tr>
+                <tr>
+                    <td><code>ai_reasoner.cpp</code></td>
+                    <td>Updates persistent AI context and state</td>
+                </tr>
+                <tr>
+                    <td><code>ai_executor.cpp</code></td>
+                    <td>Runs behaviors and collects commands</td>
+                </tr>
+                <tr>
+                    <td><code>ai_worker.cpp</code></td>
+                    <td>Background worker wrapper</td>
+                </tr>
+                <tr>
+                    <td><code>ai_command_filter.cpp</code></td>
+                    <td>Prevents duplicate/spammy commands</td>
+                </tr>
+                <tr>
+                    <td><code>ai_command_applier.cpp</code></td>
+                    <td>Applies AI commands back to the game</td>
+                </tr>
+                <tr>
+                    <td><code>ai_strategy.cpp</code></td>
+                    <td>Strategy presets, personality shaping, difficulty tuning</td>
+                </tr>
+                <tr>
+                    <td><code>ai_utils.h</code></td>
+                    <td>Assignment cleanup and force-role helper functions</td>
+                </tr>
+                <tr>
+                    <td><code>behaviors/*.cpp</code></td>
+                    <td>Tactical and macro behavior implementations</td>
+                </tr>
+                <tr>
+                    <td><code>game/systems/ai_system.cpp</code></td>
+                    <td>Owns AI instances and update cadence</td>
+                </tr>
+            </table>
+            </p>
+            <h2 id="what-the-ai-knows">What the AI knows</h2>
+            <p>The AI uses two data models:</p>
+            <ul>
+                <li><strong><code>AISnapshot</code></strong>: what is true <strong>right now</strong></li>
+                <li><strong><code>AIContext</code></strong>: what the AI <strong>remembers</strong></li>
+            </ul>
+            <h3 id="snapshot">Snapshot</h3>
+            <p><code>AISnapshot</code> is intentionally compact:</p>
+            <ul>
+                <li><code>friendly_units</code></li>
+                <li><code>visible_enemies</code></li>
+                <li><code>strategic_objectives</code></li>
+                <li><code>game_time</code></li>
+            </ul>
+            <p>The important change is <code>strategic_objectives</code>: the AI keeps enemy structures and commanders as long-range objectives even when they are outside tactical vision. That prevents the classic RTS failure mode where the army stops doing anything just because no enemy is currently visible.</p>
+            <h3 id="context">Context</h3>
+            <p><code>AIContext</code> is where most of the AI’s current strength lives. In addition to basic unit counts and state, it tracks:</p>
+            <ul>
+                <li>a <strong>sticky primary barracks</strong> used as the main base anchor</li>
+                <li>rally and base positions</li>
+                <li><strong>local threat memory</strong> (<code>last_local_threat_time</code>)</li>
+                <li><strong>reserve unit IDs</strong></li>
+                <li><strong>harass unit IDs</strong></li>
+                <li><strong>assembled unit count</strong></li>
+                <li>shared <strong>macro targets</strong></li>
+                <li>outpost planning data:</li>
+                <li><code>has_expansion_site</code></li>
+                <li><code>expansion_site_x/z</code></li>
+                <li><code>outpost_barracks_count</code></li>
+                <li><code>outpost_home_count</code></li>
+                <li><code>expansion_construction_pending</code></li>
+                <li><code>last_expansion_order_time</code></li>
+            </ul>
+            <p>This is still heuristic AI, not a heavyweight planner, but the persistent context makes it feel much more intentional.</p>
+            <h2 id="state-machine">State machine</h2>
+            <p>The AI operates in these strategic states:</p>
+            <ul>
+                <li><code>Idle</code></li>
+                <li><code>Gathering</code></li>
+                <li><code>Attacking</code></li>
+                <li><code>Defending</code></li>
+                <li><code>Retreating</code></li>
+                <li><code>Expanding</code></li>
+            </ul>
+            <p>The transitions are driven by cheap battlefield signals:</p>
+            <ul>
+                <li>nearby or remembered local threats -&gt; <code>Defending</code></li>
+                <li>low health / unfavorable posture -&gt; <code>Retreating</code></li>
+                <li>enough committed force -&gt; <code>Attacking</code></li>
+                <li>need to capture a neutral barracks or establish an outpost -&gt; <code>Expanding</code></li>
+                <li>otherwise regroup / assemble -&gt; <code>Gathering</code></li>
+            </ul>
+            <p>The important modern behavior is that <strong>Defending is no longer sticky forever</strong>. It decays from local threat memory instead of global enemy visibility, so the AI can leave defense mode once the base area has actually calmed down.</p>
+            <h2 id="behaviors-and-priorities">Behaviors and priorities</h2>
+            <p>Behaviors are modular and ordered by priority.</p>
             <p>
             <table>
                 <tr>
                     <td>Behavior</td>
                     <td>Priority</td>
                     <td>Concurrent?</td>
-                    <td>What it does</td>
+                    <td>Current job</td>
                 </tr>
                 <tr>
-                    <td>RetreatBehavior</td>
+                    <td><code>RetreatBehavior</code></td>
                     <td>Critical</td>
                     <td>No</td>
-                    <td>Fall back when health is low</td>
+                    <td>Pull damaged armies back to safety</td>
                 </tr>
                 <tr>
-                    <td>DefendBehavior</td>
+                    <td><code>DefendBehavior</code></td>
                     <td>Critical</td>
                     <td>No</td>
-                    <td>Protect base from threats</td>
+                    <td>React to local threats, prefer reserve first</td>
                 </tr>
                 <tr>
-                    <td>ProductionBehavior</td>
+                    <td><code>ProductionBehavior</code></td>
                     <td>High</td>
                     <td>Yes</td>
-                    <td>Keep barracks producing</td>
+                    <td>Keep barracks producing from style-aware targets</td>
                 </tr>
                 <tr>
-                    <td>BuilderBehavior</td>
+                    <td><code>BuilderBehavior</code></td>
                     <td>High</td>
                     <td>Yes</td>
-                    <td>Construct new buildings</td>
+                    <td>Build homes, barracks, towers, catapults, and outposts</td>
                 </tr>
                 <tr>
-                    <td>ExpandBehavior</td>
+                    <td><code>CommanderBehavior</code></td>
+                    <td>High</td>
+                    <td>Yes</td>
+                    <td>Move commanders and trigger rally ability</td>
+                </tr>
+                <tr>
+                    <td><code>ExpandBehavior</code></td>
+                    <td>High</td>
+                    <td>No</td>
+                    <td>Capture neutral barracks or escort the main force to an outpost site</td>
+                </tr>
+                <tr>
+                    <td><code>AttackBehavior</code></td>
                     <td>Normal</td>
                     <td>No</td>
-                    <td>Capture neutral buildings</td>
+                    <td>Main-army pushes, target chasing, blind marches to strategic objectives</td>
                 </tr>
                 <tr>
-                    <td>AttackBehavior</td>
-                    <td>Normal</td>
-                    <td>No</td>
-                    <td>Push into enemy territory</td>
+                    <td><code>HarassBehavior</code></td>
+                    <td>Low</td>
+                    <td>Yes</td>
+                    <td>Raider detachment against isolated or strategic targets</td>
                 </tr>
                 <tr>
-                    <td>GatherBehavior</td>
+                    <td><code>GatherBehavior</code></td>
                     <td>Low</td>
                     <td>No</td>
-                    <td>Rally scattered units</td>
+                    <td>Assemble the main army around the rally area</td>
                 </tr>
             </table>
             </p>
-            <p>The behaviors are registered in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/ai_system.cpp">ai_system.cpp</a> at startup:</p>
-            <div>
-                <pre><code class="language-clike">AISystem::AISystem() {
-  m_behaviorRegistry.register_behavior(std::make_unique&lt;AI::RetreatBehavior&gt;());
-  m_behaviorRegistry.register_behavior(std::make_unique&lt;AI::DefendBehavior&gt;());
-  m_behaviorRegistry.register_behavior(std::make_unique&lt;AI::ProductionBehavior&gt;());
-  m_behaviorRegistry.register_behavior(std::make_unique&lt;AI::BuilderBehavior&gt;());
-  m_behaviorRegistry.register_behavior(std::make_unique&lt;AI::ExpandBehavior&gt;());
-  m_behaviorRegistry.register_behavior(std::make_unique&lt;AI::AttackBehavior&gt;());
-  m_behaviorRegistry.register_behavior(std::make_unique&lt;AI::GatherBehavior&gt;());
-}</code></pre>
-            </div>
-            <h2 id="inside-a-behavior-attackbehavior">Inside a behavior: AttackBehavior</h2>
-            <p>Let's look at how a specific behavior works. AttackBehavior in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/ai_system/behaviors/attack_behavior.cpp">attack_behavior.cpp</a> handles offensive operations.</p>
-            <p>First, it splits friendly units into two groups: units already engaged in combat, and units ready for new orders:</p>
-            <div>
-                <pre><code class="language-clike">for (const auto &amp;entity : snapshot.friendly_units) {
-  if (entity.is_building) continue;
-  if (entity.spawn_type == Game::Units::SpawnType::Builder) continue;
-
-  if (isEntityEngaged(entity, snapshot.visible_enemies)) {
-    engaged_units.push_back(&amp;entity);
-  } else {
-    ready_units.push_back(&amp;entity);
-  }
-}</code></pre>
-            </div>
-            <p>If there are no ready units, there's nothing to command. If there are no visible enemies, the behavior switches to scouting mode—sending units in different directions to find targets.</p>
-            <p>When enemies are visible, the behavior picks a target (usually the closest enemy or the most valuable one), calculates a formation position, and issues move/attack commands:</p>
-            <div>
-                <pre><code class="language-clike">AICommand cmd;
-cmd.type = AICommandType::AttackTarget;
-cmd.target_id = best_target.id;
-cmd.unit_ids = units_to_attack;
-outCommands.push_back(cmd);</code></pre>
-            </div>
-            <p>The behavior has internal timers to prevent spamming commands. It only issues new orders every 1.5 seconds or so, giving units time to actually move before being redirected.</p>
-            <h2 id="strategies-ai-personality">Strategies: AI personality</h2>
-            <p>Different AI opponents should feel different. An aggressive AI should attack early with small forces. A defensive AI should turtle up and build a large army before engaging. A rusher should go all-in immediately.</p>
-            <p>Strategies are configured in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/ai_system/ai_strategy.cpp">ai_strategy.cpp</a>. Each strategy is a set of multipliers that modify behavior thresholds:</p>
-            <div>
-                <pre><code class="language-clike">case AIStrategy::Aggressive:
-  config.aggression_modifier = 1.5F;    // Attack more often
-  config.defense_modifier = 0.7F;       // Care less about defense
-  config.expansion_priority = 0.8F;     // Less interested in expansion
-  config.production_rate_modifier = 1.2F;  // Produce slightly faster
-  config.min_attack_force = 0.6F;       // Attack with fewer units (60% of normal)
-  config.retreat_threshold = 0.15F;     // Retreat only at 15% health
-  break;
-
-case AIStrategy::Defensive:
-  config.aggression_modifier = 0.5F;    // Attack less often
-  config.defense_modifier = 1.8F;       // Very defensive
-  config.expansion_priority = 0.5F;     // Stay close to base
-  config.production_rate_modifier = 1.3F;  // Build up forces
-  config.min_attack_force = 1.5F;       // Need 150% normal force to attack
-  config.retreat_threshold = 0.40F;     // Retreat at 40% health
-  break;</code></pre>
-            </div>
-            <p>The behaviors read these modifiers and adjust their logic. For example, AttackBehavior checks min_attack_force to decide when to engage:</p>
-            <div>
-                <pre><code class="language-clike">int min_units_for_attack = static_cast&lt;int&gt;(4.0F * strategy.min_attack_force);
-// Aggressive: 4 * 0.6 = 2.4 → needs ~3 units
-// Defensive: 4 * 1.5 = 6 → needs 6 units</code></pre>
-            </div>
-            <p>Strategies can be set per player in mission files:</p>
+            <p>Three concurrency rules matter:</p>
+            <ol>
+                <li><strong>Production</strong>, <strong>builder</strong>, and <strong>commander</strong> logic keep running during attacks and defenses.</li>
+                <li><strong>HarassBehavior</strong> can run alongside the main strategic behavior.</li>
+                <li>Exclusive force behaviors still rely on unit claiming so they do not fight each other for the same troops.</li>
+            </ol>
+            <h2 id="force-organization">Force organization</h2>
+            <p>This is the current force model.</p>
+            <h3 id="main-army">Main army</h3>
+            <p>The main army is the attack-capable pool after excluding:</p>
+            <ul>
+                <li>builders</li>
+                <li>reserve units</li>
+                <li>harass units</li>
+            </ul>
+            <p><code>GatherBehavior</code> organizes this force near the rally point, and <code>AttackBehavior</code> uses it for proactive attacks and objective marches.</p>
+            <h3 id="reserve-force">Reserve force</h3>
+            <p>The reserve is a stable home-defense group stored in <code>reserve_unit_ids</code>.</p>
+            <p>Current rules:</p>
+            <ul>
+                <li>reserve membership is sticky across updates</li>
+                <li>reserve size is clamped so the AI does not starve its reactive attack floor</li>
+                <li><code>DefendBehavior</code> prefers reserve first</li>
+                <li><code>GatherBehavior</code> keeps reserve near base</li>
+                <li><code>AttackBehavior</code> never sends reserve units forward</li>
+            </ul>
+            <p>This is the first real "do not commit everything" rule in the AI.</p>
+            <h3 id="harass-force">Harass force</h3>
+            <p>The harass force is a separate detachment stored in <code>harass_unit_ids</code>.</p>
+            <p>Current rules:</p>
+            <ul>
+                <li>harass size is style-driven</li>
+                <li>harass is clamped against reserve and defense needs</li>
+                <li>harass units are excluded from main-army readiness</li>
+                <li>harass shuts off while retreating or when the home area is threatened</li>
+            </ul>
+            <p>This gives the AI a second offensive layer without making the main planner much heavier.</p>
+            <h3 id="commanders">Commanders</h3>
+            <p>Commanders are handled separately:</p>
+            <ul>
+                <li>they are not treated as generic line units</li>
+                <li>they reposition behind the army centroid</li>
+                <li>they periodically trigger the rally ability</li>
+            </ul>
+            <h2 id="macro-and-building-logic">Macro and building logic</h2>
+            <p>The AI now uses shared macro targets instead of scattered hardcoded thresholds.</p>
+            <p><code>AIStrategyConfig</code> feeds these targets into context:</p>
+            <ul>
+                <li>builder count</li>
+                <li>home count</li>
+                <li>barracks count</li>
+                <li>defense tower count</li>
+                <li>catapult count</li>
+                <li>desired assembly size</li>
+                <li>assembly radius</li>
+                <li>gather spacing</li>
+            </ul>
+            <p><code>BuilderBehavior</code> then builds toward the largest deficit while preserving important early priorities like homes and the first barracks.</p>
+            <p><code>ProductionBehavior</code> also reads from the same config, so unit production and structure growth are at least pulling in the same strategic direction.</p>
+            <h2 id="expansion-logic">Expansion logic</h2>
+            <p>The AI now has a <strong>first outpost planner</strong>.</p>
+            <h3 id="what-it-currently-does">What it currently does</h3>
+            <ul>
+                <li>keeps the original main-base barracks sticky instead of letting the anchor drift</li>
+                <li>chooses an expansion site from <strong>real enemy strategic objectives</strong></li>
+                <li>ignores neutral barracks when deciding outpost direction</li>
+                <li>tracks pending construction at the chosen site</li>
+                <li>builds an outpost barracks first, then an outpost home</li>
+                <li>sends only the main attack force to escort the outpost</li>
+            </ul>
+            <h3 id="what-it-does-not-do-yet">What it does not do yet</h3>
+            <ul>
+                <li>manage several active bases with distinct production roles</li>
+                <li>abandon and retarget failed outposts with richer policies</li>
+                <li>shift strategic center-of-gravity from main base to forward base</li>
+            </ul>
+            <p>So this is a real step beyond passive single-base AI, but it is not yet a full multi-base RTS economy.</p>
+            <h2 id="style-personality-and-difficulty">Style, personality, and difficulty</h2>
+            <p>The system now deliberately separates <strong>what the AI wants</strong> from <strong>how efficiently it executes</strong>.</p>
+            <h3 id="strategy-preset">Strategy preset</h3>
+            <p>The strategy preset is the coarse style template:</p>
+            <ul>
+                <li><code>balanced</code></li>
+                <li><code>aggressive</code></li>
+                <li><code>defensive</code></li>
+                <li><code>expansionist</code></li>
+                <li><code>economic</code></li>
+                <li><code>harasser</code> / <code>harassment</code></li>
+                <li><code>rusher</code> / <code>rush</code></li>
+            </ul>
+            <p>These presets set the default shape of the AI:</p>
+            <ul>
+                <li>how many builders it wants</li>
+                <li>how many barracks/towers/catapults it prefers</li>
+                <li>how large an army it assembles before attacking</li>
+                <li>how much reserve it keeps</li>
+                <li>how many harassers it sends</li>
+                <li>whether it wants an outpost and how far forward it should be</li>
+            </ul>
+            <h3 id="personality-inputs">Personality inputs</h3>
+            <p>Mission JSON can then nudge a preset using three normalized floats:</p>
+            <ul>
+                <li><code>aggression</code></li>
+                <li><code>defense</code></li>
+                <li><code>harassment</code></li>
+            </ul>
+            <p>These values tune things like:</p>
+            <ul>
+                <li>attack thresholds</li>
+                <li>reserve size</li>
+                <li>tower count</li>
+                <li>harass detachment size</li>
+                <li>scouting distance</li>
+                <li>outpost ambition</li>
+            </ul>
+            <h3 id="difficulty-tuning">Difficulty tuning</h3>
+            <p>Difficulty now affects execution efficiency, not strategic identity.</p>
+            <p>Supported values:</p>
+            <ul>
+                <li><code>easy</code></li>
+                <li><code>hard</code></li>
+                <li><code>very_hard</code></li>
+                <li><code>medium</code> currently falls back to <code>normal</code></li>
+                <li>anything else / omitted -&gt; <code>normal</code></li>
+            </ul>
+            <p>Difficulty currently changes:</p>
+            <ul>
+                <li>AI update interval</li>
+                <li>production speed multiplier</li>
+                <li>scouting reach multiplier</li>
+            </ul>
+            <p>That means a defensive AI on <code>hard</code> is still defensive; it just reacts and scales more efficiently.</p>
+            <h2 id="mission-json-usage">Mission JSON usage</h2>
+            <p>Mission files are the current authoring surface for AI setup. The loader reads <code>strategy</code>, <code>personality</code>, <code>difficulty</code>, <code>team_id</code>, starting spawns, and optional mission waves from <code>ai_setups</code>.</p>
+            <h3 id="example-balanced-frontline-opponent">Example: balanced frontline opponent</h3>
             <div>
                 <pre><code class="language-json">{
-  "ai_setups": [
+  "id": "roman_legion_alpha",
+  "nation": "roman_republic",
+  "faction": "roman",
+  "color": "red",
+  "team_id": 1,
+  "difficulty": "hard",
+  "strategy": "balanced",
+  "personality": {
+    "aggression": 0.62,
+    "defense": 0.55,
+    "harassment": 0.30
+  },
+  "starting_buildings": [
     {
-      "id": "aggressive_enemy",
-      "nation": "roman_republic",
-      "strategy": "aggressive",
-      "personality": {
-        "aggression": 0.9,
-        "defense": 0.3,
-        "harassment": 0.2
-      }
+      "type": "barracks",
+      "position": { "x": 132, "z": 84 },
+      "max_population": 180
+    }
+  ],
+  "starting_units": [
+    {
+      "type": "spearman",
+      "count": 8,
+      "position": { "x": 128, "z": 86 }
+    },
+    {
+      "type": "builder",
+      "count": 2,
+      "position": { "x": 134, "z": 82 }
+    }
+  ],
+  "commander_troop": "roman_field_commander"
+}</code></pre>
+            </div>
+            <p>Resulting feel:</p>
+            <ul>
+                <li>maintains a moderate reserve</li>
+                <li>assembles before larger attacks</li>
+                <li>grows the base steadily</li>
+                <li>pushes harder than <code>easy</code> because the execution cadence is faster</li>
+            </ul>
+            <h3 id="example-forward-pressure-harasser">Example: forward pressure harasser</h3>
+            <div>
+                <pre><code class="language-json">{
+  "id": "numidian_raiders",
+  "nation": "carthage",
+  "faction": "carthaginian",
+  "color": "yellow",
+  "difficulty": "medium",
+  "strategy": "harasser",
+  "personality": {
+    "aggression": 0.74,
+    "defense": 0.28,
+    "harassment": 0.84
+  },
+  "starting_units": [
+    {
+      "type": "horse_swordsman",
+      "count": 5,
+      "position": { "x": 18, "z": 80 }
+    },
+    {
+      "type": "builder",
+      "count": 1,
+      "position": { "x": 16, "z": 82 }
+    }
+  ],
+  "starting_buildings": [
+    {
+      "type": "barracks",
+      "position": { "x": 14, "z": 80 },
+      "max_population": 120
     }
   ]
 }</code></pre>
             </div>
-            <h2 id="the-threading-model">The threading model</h2>
-            <p>Each AI player has a dedicated worker thread managed by <a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/ai_system/ai_worker.cpp">ai_worker.cpp</a>. The main thread never blocks waiting for AI—it just checks if results are ready.</p>
-            <p>The worker class looks like this:</p>
+            <p>Resulting feel:</p>
+            <ul>
+                <li>smaller main-army thresholds</li>
+                <li>real raider detachment</li>
+                <li>lower reserve</li>
+                <li>more forward scouting and earlier pressure</li>
+            </ul>
+            <h3 id="notes-for-authors">Notes for authors</h3>
+            <ul>
+                <li><code>strategy</code> is optional; omitted means <code>balanced</code></li>
+                <li><code>personality</code> fields default to <code>0.5</code></li>
+                <li><code>difficulty</code> can be omitted; the AI falls back to normal execution tuning</li>
+                <li><code>team_id</code> is optional; omitted AIs are auto-assigned separate enemy teams</li>
+                <li><code>waves</code> add scripted reinforcements on top of the normal AI economy/behavior layer</li>
+            </ul>
+            <h2 id="debugging-and-validation">Debugging and validation</h2>
+            <p>The main regression coverage lives in <code>tests/systems/ai_system_test.cpp</code>.</p>
+            <p>Current AI test coverage includes:</p>
+            <ul>
+                <li>assignment lifecycle cleanup</li>
+                <li>command filtering</li>
+                <li>vision-filtered perception</li>
+                <li>state transitions</li>
+                <li>macro targets</li>
+                <li>strategic objective marching</li>
+                <li>reserve and harass role separation</li>
+                <li>outpost planning and duplicate-order suppression</li>
+            </ul>
+            <p>For repo validation, the reliable test binary is:</p>
             <div>
-                <pre><code class="language-clike">class AIWorker {
-public:
-  auto try_submit(AIJob &amp;&amp;job) -&gt; bool;  // Main thread calls this
-  void drain_results(std::queue&lt;AIResult&gt; &amp;out);  // Main thread picks up results
-  auto busy() const noexcept -&gt; bool;  // Check if still computing
-  
-private:
-  void worker_loop();  // Runs on background thread
-  
-  std::thread m_thread;
-  std::atomic&lt;bool&gt; m_shouldStop{false};
-  std::atomic&lt;bool&gt; m_workerBusy{false};
-  
-  std::mutex m_jobMutex;
-  std::condition_variable m_jobCondition;
-  AIJob m_pendingJob;
-  
-  std::mutex m_resultMutex;
-  std::queue&lt;AIResult&gt; m_results;
-};</code></pre>
+                <pre><code class="language-bash">./build/bin/standard_of_iron_tests --gtest_color=no --gtest_brief=1</code></pre>
             </div>
-            <p>The main update loop in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/ai_system.cpp">ai_system.cpp</a> orchestrates everything:</p>
-            <div>
-                <pre><code class="language-clike">void AISystem::update(Engine::Core::World *world, float delta_time) {
-  m_total_game_time += delta_time;
-  
-  // Pick up finished results from all workers
-  process_results(*world);
-
-  for (auto &amp;ai : m_aiInstances) {
-    ai.update_timer += delta_time;
-
-    // Not time to update yet
-    if (ai.update_timer &lt; m_update_interval) continue;
-
-    // Worker still busy with previous job
-    if (ai.worker-&gt;busy()) continue;
-
-    // Build snapshot and submit new job
-    AISnapshot snapshot = AISnapshotBuilder::build(*world, ai.context.player_id);
-    snapshot.game_time = m_total_game_time;
-
-    AIJob job;
-    job.snapshot = std::move(snapshot);
-    job.context = ai.context;
-    job.delta_time = ai.update_timer;
-
-    if (ai.worker-&gt;try_submit(std::move(job))) {
-      ai.update_timer = 0.0F;
-    }
-  }
-}</code></pre>
-            </div>
-            <p>This design means AI thinking time doesn't affect frame rate. If an AI takes 50ms to decide, the game keeps running. The next frame picks up the result.</p>
-            <h2 id="deadlock-prevention">Deadlock prevention</h2>
-            <p>AI can get stuck. The state machine might oscillate. Units might be assigned to behaviors that never release them. The AI might get into a state where it has idle units but never issues commands.</p>
-            <p>We have several safety mechanisms:</p>
-            <p>Time-based deadlock detection: if the AI stays in the same state for 60 seconds without meaningful action, force a transition:</p>
-            <div>
-                <pre><code class="language-clike">if (ctx.state_timer &gt; ctx.max_state_duration) {
-  deadlock_detected = true;
-}</code></pre>
-            </div>
-            <p>Progress-based detection: if we have idle units but haven't issued commands in a while, something's wrong:</p>
-            <div>
-                <pre><code class="language-clike">float time_since_progress = snapshot.game_time - ctx.last_meaningful_action_time;
-if (time_since_progress &gt;= max_no_progress_duration &amp;&amp; ctx.idle_units &gt; 0) {
-  deadlock_detected = true;
-}</code></pre>
-            </div>
-            <p>Retreat timeout: retreating behavior can't last forever. After 12 seconds, it ends automatically:</p>
-            <div>
-                <pre><code class="language-clike">if (m_retreatDuration &gt; 12.0F) {
-  context.state = AIState::Gathering;
-  m_retreatDuration = 0.0F;
-}</code></pre>
-            </div>
-            <p>Unit assignment cleanup: when behaviors finish, they release their unit assignments. If a unit stays assigned to a defunct task for too long, it gets freed.</p>
-            <h2 id="command-filtering">Command filtering</h2>
-            <p>Without filtering, the AI might spam the same command every update cycle. "Move unit 42 to position X" repeated 3 times per second creates a lot of noise and can cause units to stutter.</p>
-            <p>The command filter in <a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/ai_system/ai_command_filter.cpp">ai_command_filter.cpp</a> tracks recent commands and deduplicates. If we issued a move command to the same unit within the last second, skip the duplicate.</p>
-            <p>From <a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/ai_system.cpp">ai_system.cpp</a>:</p>
-            <div>
-                <pre><code class="language-clike">auto filtered_commands = m_commandFilter.filter(result.commands, m_total_game_time);
-AICommandApplier::apply(world, ai.context.player_id, filtered_commands);</code></pre>
-            </div>
-            <h2 id="performance-characteristics">Performance characteristics</h2>
-            <p>Some numbers to keep in mind:</p>
-            <p>
-            <table>
-                <tr>
-                    <td>Metric</td>
-                    <td>Value</td>
-                </tr>
-                <tr>
-                    <td>Update frequency</td>
-                    <td>300ms per AI (configurable)</td>
-                </tr>
-                <tr>
-                    <td>Thread count</td>
-                    <td>1 per AI player</td>
-                </tr>
-                <tr>
-                    <td>Snapshot size</td>
-                    <td>~200 bytes per entity</td>
-                </tr>
-                <tr>
-                    <td>CPU scaling</td>
-                    <td>Linear with unit count</td>
-                </tr>
-                <tr>
-                    <td>Memory per AI</td>
-                    <td>Context + snapshot (few KB typical)</td>
-                </tr>
-            </table>
-            </p>
-            <p>The system handles 500+ units per player without problems. At that scale, the bottleneck is usually rendering, not AI.</p>
-            <p>You can tune the update interval at runtime:</p>
-            <div>
-                <pre><code class="language-clike">ai_system.set_update_interval(0.5F);  // Slower updates (2 Hz) for weak CPUs
-ai_system.set_update_interval(0.2F);  // Faster updates (5 Hz) for snappier AI</code></pre>
-            </div>
-            <h2 id="debugging">Debugging</h2>
-            <p>The AIContext has a debug_info struct that tracks metrics:</p>
-            <div>
-                <pre><code class="language-clike">struct DebugInfo {
-  int total_decisions_made = 0;
-  int total_commands_issued = 0;
-  int state_transitions = 0;
-  int deadlock_recoveries = 0;
-  float last_update_time = 0.0F;
-  float total_cpu_time = 0.0F;
-};</code></pre>
-            </div>
-            <p>Common issues and where to look:</p>
-            <p>When the AI does nothing, check if the worker is busy (stuck computation), if the snapshot has any units (maybe all dead), or if the command filter is too aggressive. Add logging to AIExecutor::run to see which behaviors are executing.</p>
-            <p>When the AI acts erratically, check state transitions in the reasoner. Log ctx.state changes. An AI flipping rapidly between Attacking and Retreating suggests the thresholds are wrong.</p>
-            <p>When units ignore commands, the command applier might be failing silently. Check that entity IDs in commands are still valid (units might have died between snapshot and application).</p>
-            <p>When performance is bad, profile the worker thread. The reasoner's update_context walks through all entities—if there are thousands, this can take time. Consider sampling only a subset of enemy units for the snapshot.</p>
-            <h2 id="adding-a-new-behavior">Adding a new behavior</h2>
-            <p>Say you want to add a ScoutBehavior that sends lone units to explore the map.</p>
-            <p>First, create the files:</p>
-            <div>
-                <pre><code class="language-clike">// behaviors/scout_behavior.h
-class ScoutBehavior : public AIBehavior {
-public:
-  void execute(const AISnapshot &amp;snapshot, AIContext &amp;context,
-               float delta_time, std::vector&lt;AICommand&gt; &amp;outCommands) override;
-  
-  auto should_execute(const AISnapshot &amp;snapshot,
-                      const AIContext &amp;context) const -&gt; bool override;
-  
-  auto get_priority() const -&gt; BehaviorPriority override {
-    return BehaviorPriority::Low;
-  }
-  
-  auto can_run_concurrently() const -&gt; bool override { return true; }
-};</code></pre>
-            </div>
-            <p>Implement should_execute to check if scouting makes sense (early game, no visible enemies, have spare units). Implement execute to pick a unit, pick a direction, and issue a move command.</p>
-            <p>Register it in AISystem::AISystem():</p>
-            <div>
-                <pre><code class="language-clike">m_behaviorRegistry.register_behavior(std::make_unique&lt;AI::ScoutBehavior&gt;());</code></pre>
-            </div>
-            <p>The behavior will automatically run when its conditions are met.</p>
-            <h2 id="future-improvements">Future improvements</h2>
-            <p>The current system is solid for RTS basics but has room to grow:</p>
-            <p>Hierarchical planning could set high-level goals ("control the north side of the map") and let behaviors figure out details. Right now the state machine is flat.</p>
-            <p>Adaptive learning could adjust strategy based on what's working. If aggressive attacks keep failing, become more defensive.</p>
-            <p>Better scouting would maintain a mental map of explored areas and send units to unexplored regions.</p>
-            <p>Team coordination for allied AI players would let them focus different objectives instead of all doing the same thing.</p>
-            <p>Dynamic strategy switching could change from Aggressive to Defensive mid-game based on relative strength.</p>
-            <p>The architecture supports all of these—behaviors are modular, strategies are data-driven, and the threading model can handle more computation. It's a matter of implementation time.</p>
-            <h2 id="finding-your-way-around">Finding your way around</h2>
-            <p>
-            <table>
-                <tr>
-                    <td>What you want to do</td>
-                    <td>Where to look</td>
-                </tr>
-                <tr>
-                    <td>Adjust AI update rate</td>
-                    <td><a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/ai_system.cpp">ai_system.cpp</a> - set_update_interval()</td>
-                </tr>
-                <tr>
-                    <td>Add a new strategy</td>
-                    <td><a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/ai_system/ai_strategy.cpp">ai_strategy.cpp</a> - add case in create_config()</td>
-                </tr>
-                <tr>
-                    <td>Create a new behavior</td>
-                    <td><a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/ai_system/behaviors">behaviors/</a> - create new file, register in ai_system.cpp</td>
-                </tr>
-                <tr>
-                    <td>Tune attack timing</td>
-                    <td><a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/ai_system/behaviors/attack_behavior.cpp">attack_behavior.cpp</a> - m_attackTimer threshold</td>
-                </tr>
-                <tr>
-                    <td>Debug state transitions</td>
-                    <td><a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/ai_system/ai_reasoner.cpp">ai_reasoner.cpp</a> - update_state_machine()</td>
-                </tr>
-                <tr>
-                    <td>Understand what AI sees</td>
-                    <td><a href="https://github.com/djeada/Standard-of-Iron/blob/main/game/systems/ai_system/ai_snapshot_builder.cpp">ai_snapshot_builder.cpp</a> - build()</td>
-                </tr>
-                <tr>
-                    <td>Configure AI per mission</td>
-                    <td>Mission JSON files - ai_setups section</td>
-                </tr>
-            </table>
-            </p>
-            <p>The code follows snake_case for variables and functions, PascalCase for types. All background thread access goes through mutexes or atomics. The snapshot is immutable once built. Commands are queued and applied on the main thread only.</p>
-            <p>When in doubt, start with the AISystem::update() method and follow the data flow: snapshot → worker → result → apply. That covers 90% of what the AI does.</p>
+            <h2 id="what-is-already-strong">What is already strong</h2>
+            <p>Relative to the original passive AI, the current system is much better at:</p>
+            <ul>
+                <li>staying active</li>
+                <li>not deadlocking force ownership</li>
+                <li>not freezing when enemies leave vision</li>
+                <li>keeping a home guard</li>
+                <li>creating distinct playstyles cheaply</li>
+                <li>laying real foundations for expansion</li>
+            </ul>
+            <h2 id="biggest-remaining-gaps">Biggest remaining gaps</h2>
+            <p>The AI is improved, but it is not yet "finished RTS AI." The most important remaining gaps are:</p>
+            <ol>
+                <li><strong>True multi-base planning</strong></li>
+                <li>multiple active bases</li>
+                <li>per-base rally points</li>
+                <li>per-base production roles</li>
+                <li>
+                    <p>better outpost abandonment / retarget logic</p>
+                </li>
+                <li>
+                    <p><strong>Richer force planner</strong></p>
+                </li>
+                <li>siege groups</li>
+                <li>flankers</li>
+                <li>synchronized attack waves</li>
+                <li>
+                    <p>regroup / reform logic after failed pushes</p>
+                </li>
+                <li>
+                    <p><strong>Data-driven profiles</strong></p>
+                </li>
+                <li>move strategy presets out of code into assets/data</li>
+                <li>
+                    <p>let designers tune AI personalities without recompiling</p>
+                </li>
+                <li>
+                    <p><strong>Stronger strategic economy awareness</strong></p>
+                </li>
+                <li>more explicit resource pressure</li>
+                <li>better builder safety / routing</li>
+                <li>
+                    <p>broader structure placement logic</p>
+                </li>
+                <li>
+                    <p><strong>Team and campaign coordination</strong></p>
+                </li>
+                <li>allied AI timing</li>
+                <li>shared fronts</li>
+                <li>mission-aware operational goals</li>
+            </ol>
+            <h2 id="recommended-next-expansion-order">Recommended next expansion order</h2>
+            <p>If you want the next biggest gains per engineering effort, the recommended order is:</p>
+            <ol>
+                <li><strong>Data-driven AI profiles</strong> so design can iterate quickly</li>
+                <li><strong>True multi-base roles</strong> built on the current outpost foundation</li>
+                <li><strong>Richer force planner</strong> for siege / flank / regroup behavior</li>
+                <li><strong>Coordinated allied AI</strong> for campaign-scale scenarios</li>
+            </ol>
+            <p>That sequence builds on the current architecture instead of fighting it.</p>
         </article-section>
     </div>
     <footer>

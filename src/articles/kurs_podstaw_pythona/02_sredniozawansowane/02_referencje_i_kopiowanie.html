@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/kurs_podstaw_pythona/02_sredniozawansowane/02_referencje_i_kopiowanie",
             "description": "W Pythonie rozr\u00f3\u017cniamy dwa kluczowe poj\u0119cia: \"referencj\u0119\" oraz \"kopiowanie\".",
-            "dateModified": "2021-01-27"
+            "dateModified": "2026-06-06"
         }
     </script>
 </head>
@@ -99,6 +99,16 @@
                         <li><a href="#kopiowanie-a-dziedziczenie-wprowadzenie">Kopiowanie a dziedziczenie – wprowadzenie</a></li>
                         <li><a href="#kluczowe-różnice-między-kopiowaniem-płytkim-a-głębokim-w-dziedziczeniu">Kluczowe różnice między kopiowaniem płytkim a głębokim w dziedziczeniu</a></li>
                         <li><a href="#wnioski-i-dobre-praktyki">Wnioski i dobre praktyki</a></li>
+                        <li><a href="#tabela-porównawcza-przypisanie-vs-kopiowanie-płytkie-vs-kopiowanie-głębokie">Tabela porównawcza: przypisanie vs kopiowanie płytkie vs kopiowanie głębokie</a></li>
+                        <li><a href="#wizualizacja-działania-w-pamięci">Wizualizacja działania w pamięci</a></li>
+                        <li><a href="#szybkie-metody-kopiowania-płytkiego">Szybkie metody kopiowania płytkiego</a></li>
+                        <li><a href="#identyczność-vs-równość">Identyczność vs równość</a></li>
+                        <li><a href="#typowe-pułapki-z-referencjami">Typowe pułapki z referencjami</a>
+                            <ol>
+                                <li><a href="#mutowalny-argument-domyślny">Mutowalny argument domyślny</a></li>
+                                <li><a href="#mnożenie-list-z-mutowalnymi-elementami">Mnożenie list z mutowalnymi elementami</a></li>
+                            </ol>
+                        </li>
                     </ol>
                 </ol>
             </div>
@@ -191,7 +201,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: January 27, 2021</i></p>
+            <p style="text-align: right;"><i>Last modified: June 06, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇵🇱</i></p>
             <h2 id="referencje-i-kopiowanie">Referencje i kopiowanie</h2>
             <p>W Pythonie rozróżniamy dwa kluczowe pojęcia: "referencję" oraz "kopiowanie".</p>
@@ -404,6 +414,142 @@ print(original_obj.derived_attr)  # 2 - bez zmian</code></pre>
                 <li><strong>Testuj wpływ modyfikacji kopii na oryginalny obiekt.</strong> Zrozumienie, jak zmiany wprowadzane w kopii wpływają na oryginał, pozwala na lepsze projektowanie kodu.</li>
                 <li><strong>Używaj modułu <code>copy</code>, który dostarcza zarówno <code>copy()</code> (kopiowanie płytkie), jak i <code>deepcopy()</code> (kopiowanie głębokie), do obsługi kopiowania w Pythonie.</strong></li>
             </ol>
+            <h3 id="tabela-porównawcza-przypisanie-vs-kopiowanie-płytkie-vs-kopiowanie-głębokie">Tabela porównawcza: przypisanie vs kopiowanie płytkie vs kopiowanie głębokie</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Operacja</td>
+                    <td>Składnia</td>
+                    <td>Nowy obiekt najwyższego poziomu?</td>
+                    <td>Kopie zagnieżdżonych obiektów?</td>
+                    <td>Niezależność od oryginału</td>
+                </tr>
+                <tr>
+                    <td>Przypisanie</td>
+                    <td><code>b = a</code></td>
+                    <td>Nie (ta sama referencja)</td>
+                    <td>Nie</td>
+                    <td>Brak — to ten sam obiekt</td>
+                </tr>
+                <tr>
+                    <td>Kopiowanie płytkie</td>
+                    <td><code>copy.copy(a)</code> / <code>a[:]</code> / <code>list(a)</code></td>
+                    <td>Tak</td>
+                    <td>Nie (współdzielone)</td>
+                    <td>Częściowa — pierwszy poziom</td>
+                </tr>
+                <tr>
+                    <td>Kopiowanie głębokie</td>
+                    <td><code>copy.deepcopy(a)</code></td>
+                    <td>Tak</td>
+                    <td>Tak (rekurencyjne)</td>
+                    <td>Pełna niezależność</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="wizualizacja-działania-w-pamięci">Wizualizacja działania w pamięci</h3>
+            <div>
+                <pre><code class="language-shell">PRZYPISANIE:  b = a
+┌────────┐       ┌──────────────────┐
+│ a ─────┼──────▶│  [1, [2, 3], 4]  │
+│ b ─────┼──────▶│                  │
+└────────┘       └──────────────────┘
+Jeden obiekt, dwie nazwy.
+
+KOPIOWANIE PŁYTKIE:  b = copy.copy(a)
+┌────────┐       ┌──────────────────┐
+│ a ─────┼──────▶│  [1, ───┐, 4]   │
+└────────┘       └─────────┼────────┘
+                           ▼
+┌────────┐       ┌─────────┼────────┐
+│ b ─────┼──────▶│  [1, ───┘, 4]   │  ← nowa lista, ale wewnętrzna [2,3]
+└────────┘       └──────────────────┘    jest współdzielona
+
+KOPIOWANIE GŁĘBOKIE:  b = copy.deepcopy(a)
+┌────────┐       ┌──────────────────┐
+│ a ─────┼──────▶│  [1, [2, 3], 4]  │  ← osobna kopia [2,3]
+└────────┘       └──────────────────┘
+┌────────┐       ┌──────────────────┐
+│ b ─────┼──────▶│  [1, [2, 3], 4]  │  ← osobna kopia [2,3]
+└────────┘       └──────────────────┘
+Dwa w pełni niezależne obiekty.</code></pre>
+            </div>
+            <h3 id="szybkie-metody-kopiowania-płytkiego">Szybkie metody kopiowania płytkiego</h3>
+            <p>
+            <table>
+                <tr>
+                    <td>Typ danych</td>
+                    <td>Metody kopiowania płytkiego</td>
+                </tr>
+                <tr>
+                    <td>Lista</td>
+                    <td><code>lista[:]</code>, <code>list(lista)</code>, <code>lista.copy()</code></td>
+                </tr>
+                <tr>
+                    <td>Słownik</td>
+                    <td><code>dict(slownik)</code>, <code>slownik.copy()</code></td>
+                </tr>
+                <tr>
+                    <td>Zbiór</td>
+                    <td><code>set(zbior)</code>, <code>zbior.copy()</code></td>
+                </tr>
+                <tr>
+                    <td>Dowolny</td>
+                    <td><code>copy.copy(obiekt)</code></td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="identyczność-vs-równość">Identyczność vs równość</h3>
+            <p>Rozróżniaj operator <code>is</code> (identyczność — ten sam obiekt w pamięci) od <code>==</code> (równość wartości):</p>
+            <div>
+                <pre><code class="language-python">import copy
+
+a = [1, 2, [3, 4]]
+b = a
+c = copy.copy(a)
+d = copy.deepcopy(a)
+
+print(a == b == c == d)   # True — te same wartości
+print(a is b)             # True — ta sama referencja
+print(a is c)             # False — różne obiekty
+print(a[2] is c[2])       # True — shallow copy współdzieli wewnętrzne
+print(a[2] is d[2])       # False — deepcopy tworzy nowe kopie</code></pre>
+            </div>
+            <p>Funkcja <code>id()</code> zwraca unikalny identyfikator obiektu (adres w pamięci CPython):</p>
+            <div>
+                <pre><code class="language-python">print(id(a) == id(b))     # True
+print(id(a) == id(c))     # False</code></pre>
+            </div>
+            <h3 id="typowe-pułapki-z-referencjami">Typowe pułapki z referencjami</h3>
+            <h4 id="mutowalny-argument-domyślny">Mutowalny argument domyślny</h4>
+            <div>
+                <pre><code class="language-python"># ❌ BŁĄD: lista jest współdzielona między wywołaniami!
+def dodaj_element(element, lista=[]):
+    lista.append(element)
+    return lista
+
+print(dodaj_element(1))  # [1]
+print(dodaj_element(2))  # [1, 2] — niespodziewane!
+
+# ✓ POPRAWNIE: użyj None jako wartości domyślnej
+def dodaj_element(element, lista=None):
+    if lista is None:
+        lista = []
+    lista.append(element)
+    return lista</code></pre>
+            </div>
+            <h4 id="mnożenie-list-z-mutowalnymi-elementami">Mnożenie list z mutowalnymi elementami</h4>
+            <div>
+                <pre><code class="language-python"># ❌ Wszystkie wiersze to ta sama lista!
+macierz = [[0] * 3] * 3
+macierz[0][0] = 1
+print(macierz)  # [[1, 0, 0], [1, 0, 0], [1, 0, 0]]
+
+# ✓ Każdy wiersz to nowy obiekt
+macierz = [[0] * 3 for _ in range(3)]
+macierz[0][0] = 1
+print(macierz)  # [[1, 0, 0], [0, 0, 0], [0, 0, 0]]</code></pre>
+            </div>
         </article-section>
     </div>
     <footer>
