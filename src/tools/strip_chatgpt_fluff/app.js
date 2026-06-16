@@ -576,224 +576,141 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
     function correctLines() {
-
         if (!lineCorrectionCheckbox.checked) return;
+
         const beforeText = editorText.value;
+        const lines = editorText.value.split("\n");
+        const result = [];
+        let removedSeparatorLines = 0;
+        let inFence = false;
+        let fenceMarker = null;
 
-
-        let lines = editorText.value.split("\n");
-
-
-
-
-
-        function isListItem(line) {
-
-            return /^\s*[-*]\s+/.test(line);
+        function isBlank(line) {
+            return line.trim() === "";
         }
 
-        function isRomanHeading(line) {
+        function isFenceStart(line) {
+            const match = line.trim().match(/^(`{3,}|~{3,})/);
+            return match ? match[1][0] : null;
+        }
 
+        function isFenceEnd(line, marker) {
+            if (!marker) return false;
+            const pattern = marker === "`" ? /^`{3,}\s*$/ : /^~{3,}\s*$/;
+            return pattern.test(line.trim());
+        }
 
-            return /^[IVXLCDM]+\.\s/.test(line.trim());
+        function isMathFence(line) {
+            return line.trim() === "$$";
+        }
+
+        function isSeparator(line) {
+            return /^-{3,}$/.test(line.trim());
+        }
+
+        function isHeading(line) {
+            return /^#{1,6}\s+/.test(line.trim()) || /^[IVXLCDM]+\.\s+/.test(line.trim());
+        }
+
+        function isListItem(line) {
+            return /^\s*(?:[-*+] |\d+\.\s+)/.test(line);
         }
 
         function isTableLine(line) {
-
-
-            let t = line.trim();
-            return t.startsWith("|") && t.endsWith("|");
+            const trimmed = line.trim();
+            return trimmed.startsWith("|") && trimmed.endsWith("|");
         }
 
-
-
-
-        let pass0 = [];
-        for (let line of lines) {
-            let t = line.trim();
-
-            if (/^-+$/.test(t)) {
-                continue;
-            }
-            pass0.push(line);
-        }
-
-
-
-
-
-        let pass1 = [];
-        let inBlock = false;
-        let blockMarker = null;
-
-        function pushBlankLineIfNeeded(arr) {
-
-            if (arr.length && arr[arr.length - 1].trim() !== "") {
-                arr.push("");
+        function trimTrailingBlanks() {
+            while (result.length && isBlank(result[result.length - 1])) {
+                result.pop();
             }
         }
 
-        for (let i = 0; i < pass0.length; i++) {
-            let line = pass0[i];
-            let t = line.trim();
+        function ensureOneBlankBefore() {
+            trimTrailingBlanks();
+            if (result.length) result.push("");
+        }
 
+        function pushBlockLine(line) {
+            result.push(line.replace(/[ \t]+$/g, ""));
+        }
 
+        for (let index = 0; index < lines.length; index++) {
+            const line = lines[index];
+            const trimmed = line.trim();
 
-            if (!inBlock) {
-                if (t === "```" || t === "$$") {
-
-                    pushBlankLineIfNeeded(pass1);
-                    pass1.push(line);
-                    inBlock = true;
-                    blockMarker = t;
+            if (inFence) {
+                const nextLine = index + 1 < lines.length ? lines[index + 1] : "";
+                const nextClosesFence = fenceMarker === "$$" ? isMathFence(nextLine) : isFenceEnd(nextLine, fenceMarker);
+                if (isBlank(line) && nextClosesFence) {
                     continue;
                 }
-            } else {
 
-                pass1.push(line);
-
-                if (t === blockMarker) {
-                    inBlock = false;
-                    blockMarker = null;
-
-                    pushBlankLineIfNeeded(pass1);
+                pushBlockLine(line);
+                if (fenceMarker === "$$" ? isMathFence(line) : isFenceEnd(line, fenceMarker)) {
+                    inFence = false;
+                    fenceMarker = null;
+                    trimTrailingBlanks();
+                    if (index < lines.length - 1) result.push("");
                 }
                 continue;
             }
 
+            if (isSeparator(line)) {
+                removedSeparatorLines++;
+                continue;
+            }
 
+            const fenceStart = isFenceStart(line);
+            if (fenceStart || isMathFence(line)) {
+                ensureOneBlankBefore();
+                pushBlockLine(line);
+                inFence = true;
+                fenceMarker = fenceStart || "$$";
+                continue;
+            }
+
+            if (isHeading(line)) {
+                ensureOneBlankBefore();
+                pushBlockLine(line);
+                if (index < lines.length - 1) result.push("");
+                continue;
+            }
 
             if (isTableLine(line)) {
-
-                pushBlankLineIfNeeded(pass1);
-                pass1.push(line);
-
-
-                while (i + 1 < pass0.length) {
-                    let nextT = pass0[i + 1].trim();
-                    if (nextT.startsWith("|") && nextT.endsWith("|")) {
-                        i++;
-                        pass1.push(pass0[i]);
-                    } else {
-                        break;
-                    }
+                ensureOneBlankBefore();
+                pushBlockLine(line);
+                while (index + 1 < lines.length && isTableLine(lines[index + 1])) {
+                    index++;
+                    pushBlockLine(lines[index]);
                 }
-
-
-                pushBlankLineIfNeeded(pass1);
-            } else if (/^#+\s/.test(t) || isRomanHeading(line)) {
-
-                pushBlankLineIfNeeded(pass1);
-                pass1.push(line);
-                pass1.push("");
-            } else if (isListItem(line)) {
-
-                pushBlankLineIfNeeded(pass1);
-                pass1.push(line);
-            } else {
-
-                pass1.push(line);
+                if (index < lines.length - 1) result.push("");
+                continue;
             }
-        }
 
-
-
-
-
-        let pass2 = [];
-        inBlock = false;
-        blockMarker = null;
-        let lastWasBlank = false;
-
-        for (let i = 0; i < pass1.length; i++) {
-            let line = pass1[i];
-            let t = line.trim();
-            let tableCheck = isTableLine(line);
-
-            if (!inBlock && !tableCheck) {
-
-                if (t === "```" || t === "$$") {
-                    pass2.push(line);
-                    inBlock = true;
-                    blockMarker = t;
-                    lastWasBlank = false;
-                } else if (t === "") {
-
-                    if (!lastWasBlank) {
-                        pass2.push("");
-                        lastWasBlank = true;
-                    }
-                } else {
-
-                    pass2.push(line);
-                    lastWasBlank = false;
+            if (isBlank(line)) {
+                if (result.length && !isBlank(result[result.length - 1])) {
+                    result.push("");
                 }
-            } else {
-
-                pass2.push(line);
-
-
-                if (!tableCheck && t === blockMarker) {
-                    inBlock = false;
-                    blockMarker = null;
-                }
-                lastWasBlank = false;
+                continue;
             }
-        }
 
-
-
-
-
-        let pass3 = [];
-        inBlock = false;
-        blockMarker = null;
-
-        for (let i = 0; i < pass2.length; i++) {
-            let line = pass2[i];
-            let t = line.trim();
-            let tableCheck = isTableLine(line);
-
-            if (!inBlock && !tableCheck) {
-
-                if (t === "```" || t === "$$") {
-                    pass3.push(line);
-                    inBlock = true;
-                    blockMarker = t;
-                } else if (t === "" && i + 1 < pass2.length) {
-                    let nextLine = pass2[i + 1];
-                    if (
-                        pass3.length > 0 &&
-                        isListItem(pass3[pass3.length - 1]) &&
-                        isListItem(nextLine)
-                    ) {
-
-                        continue;
-                    }
-                    pass3.push(line);
-                } else {
-                    pass3.push(line);
-                }
-            } else {
-
-                pass3.push(line);
-                if (!tableCheck && t === blockMarker) {
-                    inBlock = false;
-                    blockMarker = null;
-                }
+            if (isListItem(line) && result.length && isListItem(result[result.length - 1])) {
+                pushBlockLine(line);
+                continue;
             }
+
+            pushBlockLine(line);
         }
 
+        trimTrailingBlanks();
+        editorText.value = result.join("\n");
 
-        if (pass3.length && pass3[pass3.length - 1].trim() !== "") {
-            pass3.push("");
-        }
-
-
-        editorText.value = pass3.join("\n");
-        const afterLineCount = editorText.value.split('\n').length;
-        const beforeLineCount = beforeText.split('\n').length;
+        const afterLineCount = editorText.value.split("\n").length;
+        const beforeLineCount = beforeText.split("\n").length;
         const diff = beforeLineCount - afterLineCount;
+        if (removedSeparatorLines > 0) trackChange("separator lines removed", removedSeparatorLines);
         if (diff > 0) trackChange("blank lines normalized", diff);
         if (diff < 0) trackChange("structural blank lines added", Math.abs(diff));
     }
