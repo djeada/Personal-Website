@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", function() {
 
     const editorText = document.getElementById("editor-text");
+    const outputText = document.getElementById("output-text");
     const processButton = document.getElementById("process");
     const clearButton = document.getElementById("clear");
     const copyButton = document.getElementById("copy");
@@ -54,10 +55,10 @@ document.addEventListener("DOMContentLoaded", function() {
         toast.className = `toast ${type}`;
 
         const icons = {
-            success: "✅",
-            error: "❌",
-            info: "ℹ️",
-            warning: "⚠️"
+            success: "OK",
+            error: "ERR",
+            info: "INFO",
+            warning: "WARN"
         };
 
         toast.innerHTML = `
@@ -73,8 +74,12 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
 
+    function getResultText() {
+        return outputText.value || editorText.value;
+    }
+
     function updateStats() {
-        const text = editorText.value;
+        const text = getResultText();
         const chars = text.length;
         const words = text.trim() ? text.trim().split(/\s+/).length : 0;
         const lines = text ? text.split("\n").length : 0;
@@ -99,6 +104,31 @@ document.addEventListener("DOMContentLoaded", function() {
         if (count <= 0) return;
         if (!changeReport[category]) changeReport[category] = 0;
         changeReport[category] += count;
+    }
+
+    function countMatches(text, pattern) {
+        const matches = text.match(pattern);
+        return matches ? matches.length : 0;
+    }
+
+    function escapeRegExp(text) {
+        return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function preserveProtectedBlocks(text, transform) {
+        const blockPattern = /(```[\s\S]*?```|\$\$[\s\S]*?\$\$|\$[^$\n]+\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\))/g;
+        let result = "";
+        let cursor = 0;
+        let match;
+
+        while ((match = blockPattern.exec(text)) !== null) {
+            result += transform(text.slice(cursor, match.index));
+            result += match[0];
+            cursor = match.index + match[0].length;
+        }
+
+        result += transform(text.slice(cursor));
+        return result;
     }
 
     function showChangeReport() {
@@ -154,6 +184,8 @@ document.addEventListener("DOMContentLoaded", function() {
         const diffEl = document.getElementById("diff-preview");
         const contentEl = document.getElementById("diff-content");
         contentEl.innerHTML = computeSimpleDiff(original, modified);
+        diffEl.classList.add("collapsed");
+        document.getElementById("close-diff").textContent = "Show";
         diffEl.style.display = "block";
     }
 
@@ -165,7 +197,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         const state = {
-            text: editorText.value,
+            text: outputText.value,
             timestamp: new Date()
         };
 
@@ -217,7 +249,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (idx >= 0 && idx < history.length) {
             isUndoRedo = true;
             historyIndex = idx;
-            editorText.value = history[idx].text;
+            outputText.value = history[idx].text;
             updateHistoryPanel();
             updateStats();
             isUndoRedo = false;
@@ -229,7 +261,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (historyIndex > 0) {
             isUndoRedo = true;
             historyIndex--;
-            editorText.value = history[historyIndex].text;
+            outputText.value = history[historyIndex].text;
             updateHistoryPanel();
             updateStats();
             isUndoRedo = false;
@@ -241,7 +273,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (historyIndex < history.length - 1) {
             isUndoRedo = true;
             historyIndex++;
-            editorText.value = history[historyIndex].text;
+            outputText.value = history[historyIndex].text;
             updateHistoryPanel();
             updateStats();
             isUndoRedo = false;
@@ -254,7 +286,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
     editorText.addEventListener("input", () => {
-        saveState();
+        updateStats();
     });
 
 
@@ -368,7 +400,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     toggleHistory.addEventListener("click", () => {
         historyContent.classList.toggle("collapsed");
-        toggleHistory.textContent = historyContent.classList.contains("collapsed") ? "▶" : "▼";
+        toggleHistory.textContent = historyContent.classList.contains("collapsed") ? "Show" : "Hide";
     });
 
 
@@ -387,7 +419,8 @@ document.addEventListener("DOMContentLoaded", function() {
         const reader = new FileReader();
         reader.onload = (e) => {
             editorText.value = e.target.result;
-            saveState();
+            outputText.value = "";
+            updateStats();
             showToast(`File "${file.name}" loaded`, "success");
         };
         reader.onerror = () => {
@@ -401,7 +434,8 @@ document.addEventListener("DOMContentLoaded", function() {
         try {
             const text = await navigator.clipboard.readText();
             editorText.value = text;
-            saveState();
+            outputText.value = "";
+            updateStats();
             showToast("Text pasted from clipboard", "success");
         } catch (err) {
             showToast("Unable to paste from clipboard", "error");
@@ -462,8 +496,6 @@ document.addEventListener("DOMContentLoaded", function() {
     function correctLists() {
         if (!listCorrectionCheckbox.checked) return;
 
-        saveState();
-
         let lines = editorText.value.split("\n");
         let newLines = [];
         let inList = false;
@@ -494,8 +526,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function replaceNumericalListsWithRoman() {
         if (!romanListCheckbox.checked) return;
-
-        saveState();
 
         let lines = editorText.value.split("\n");
         let newLines = [];
@@ -548,7 +578,6 @@ document.addEventListener("DOMContentLoaded", function() {
     function correctLines() {
 
         if (!lineCorrectionCheckbox.checked) return;
-        saveState();
         const beforeText = editorText.value;
 
 
@@ -772,8 +801,6 @@ document.addEventListener("DOMContentLoaded", function() {
     function removeTabIndent() {
         if (!tabCorrectionCheckbox.checked) return;
 
-        saveState();
-
         let lines = editorText.value.split("\n");
         let newLines = [];
         let removedCount = 0;
@@ -796,7 +823,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function correctLatex() {
         if (!latexCorrectionCheckbox.checked) return;
-        saveState();
         const beforeText = editorText.value;
 
         const text = editorText.value;
@@ -857,6 +883,12 @@ document.addEventListener("DOMContentLoaded", function() {
             return null;
         }
 
+        function looksLikeMath(content) {
+            const value = content.trim();
+            if (!value) return false;
+            return /\\[a-zA-Z]+|[\^_=]|[+\-*/]=?|\\[{}]|[a-zA-Z]\s*\(|\d\s*[a-zA-Z]|[a-zA-Z]\s*\d|\n/.test(value);
+        }
+
 
 
 
@@ -915,6 +947,19 @@ document.addEventListener("DOMContentLoaded", function() {
                     result += text[i];
                     i++;
                 }
+            } else if (text[i] === '[' && !isEscaped(text, i)) {
+                const found = getMathContent(text, i + 1, ']');
+                const isMarkdownLink = found && text[found.endIndex] === '(';
+
+                if (found && !isMarkdownLink && looksLikeMath(found.content)) {
+                    const corrected = applyCorrections(found.content);
+                    result += '$$' + corrected + '$$';
+                    i = found.endIndex;
+                    continue;
+                }
+
+                result += text[i];
+                i++;
             } else {
                 result += text[i];
                 i++;
@@ -932,8 +977,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function trimListItemsBeforeColon() {
         if (!trimListsCheckbox.checked) return;
-
-        saveState();
 
         let lines = editorText.value.split("\n");
         let newLines = [];
@@ -1030,25 +1073,30 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function processText() {
-        if (!confirmStep.checked && !removeAllStars.checked) {
-            return;
-        }
-
-        saveState();
-
         let text = editorText.value;
 
         if (removeAllStars.checked) {
-            const boldCountBefore = (text.match(/\*\*/g) || []).length / 2;
-            if (removeBetween.checked) {
-                const removedCount = (text.match(/\*\*[^*]*\*\*[^ ]*\s*/g) || []).length;
-                text = text.replace(/\*\*[^*]*\*\*[^ ]*\s*/g, '');
+            let removedCount = 0;
+            let remainingBold = 0;
+
+            text = preserveProtectedBlocks(text, segment => {
+                let nextSegment = segment;
+
+                if (removeBetween.checked) {
+                    removedCount += countMatches(nextSegment, /\*\*[^*\n][\s\S]*?\*\*/g);
+                    nextSegment = nextSegment.replace(/\*\*[^*\n][\s\S]*?\*\*/g, '');
+                }
+
+                remainingBold += countMatches(nextSegment, /\*\*/g) / 2;
+                return nextSegment.replace(/\*\*/g, '');
+            });
+
+            if (removedCount > 0) {
                 trackChange("bold sections removed (with content)", removedCount);
             }
-
-            const remainingBold = (text.match(/\*\*/g) || []).length / 2;
-            text = text.replace(/\*\*/g, '');
-            if (remainingBold > 0) trackChange("bold markers removed", Math.floor(remainingBold));
+            if (remainingBold > 0) {
+                trackChange("bold markers removed", Math.floor(remainingBold));
+            }
         } else if (confirmStep.checked) {
             let matches = [];
             let regex = /\*\*(.*?)\*\*/gs;
@@ -1093,582 +1141,128 @@ document.addEventListener("DOMContentLoaded", function() {
         editorText.value = text;
     }
 
-    function simplifyText() {
-
-        if (!simplifyTextCheckbox.checked) return;
-
-        saveState();
+    function normalizeTextArtifacts() {
         const beforeText = editorText.value;
 
-        let text = editorText.value;
-        let result = '';
-        let i = 0;
+        editorText.value = preserveProtectedBlocks(editorText.value, segment => segment
+            .replace(/[\u200B-\u200D\uFEFF]/g, "")
+            .replace(/\u00A0/g, " ")
+            .replace(/[“”]/g, '"')
+            .replace(/[‘’]/g, "'")
+            .replace(/\s+([,.;:!?])/g, "$1")
+            .replace(/([,.;:!?])([^\s\n)\]}])/g, "$1 $2")
+            .replace(/[ \t]+$/gm, "")
+            .replace(/[ \t]{2,}/g, " ")
+        );
 
-
-        function isEscaped(text, index) {
-            let backslashCount = 0;
-            index--;
-            while (index >= 0 && text[index] === '\\') {
-                backslashCount++;
-                index--;
-            }
-            return backslashCount % 2 === 1;
-        }
-
-
-        function applySimplifications(content) {
-
-            const replacements = {
-                "work": "function",
-                "works": "functions",
-                "worked": "functioned",
-                "working": "functioning",
-                "employ": "use",
-                "employs": "uses",
-                "employed": "used",
-                "employing": "using",
-                "ensure": "make sure",
-                "ensures": "makes sure",
-                "ensured": "made sure",
-                "ensuring": "making sure",
-                "facilitate": "help",
-                "facilitates": "helps",
-                "facilitated": "helped",
-                "facilitating": "helping",
-                "hinder": "block",
-                "hinders": "blocks",
-                "hindered": "blocked",
-                "hindering": "blocking",
-                "implement": "carry out",
-                "implements": "carries out",
-                "implemented": "carried out",
-                "implementing": "carrying out",
-                "navigate": "find your way through",
-                "navigates": "finds your way through",
-                "navigated": "found your way through",
-                "navigating": "finding your way through",
-                "signify": "indicate",
-                "signifies": "indicates",
-                "signified": "indicated",
-                "signifying": "indicating",
-                "establish": "set up",
-                "establishes": "sets up",
-                "established": "set up",
-                "establishing": "setting up",
-                "ascertain": "find out",
-                "ascertains": "finds out",
-                "ascertained": "found out",
-                "ascertaining": "finding out",
-                "disseminate": "spread",
-                "disseminates": "spreads",
-                "disseminated": "spread",
-                "disseminating": "spreading",
-                "endeavor": "try",
-                "endeavors": "tries",
-                "endeavored": "tried",
-                "endeavoring": "trying",
-                "exacerbate": "worsen",
-                "exacerbates": "worsens",
-                "exacerbated": "worsened",
-                "exacerbating": "worsening",
-                "leverage": "use",
-                "leverages": "uses",
-                "leveraged": "used",
-                "leveraging": "using",
-                "reiterate": "repeat",
-                "reiterates": "repeats",
-                "reiterated": "repeated",
-                "reiterating": "repeating",
-                "substantiate": "prove",
-                "substantiates": "proves",
-                "substantiated": "proved",
-                "substantiating": "proving",
-                "vacillate": "waver",
-                "vacillates": "wavers",
-                "vacillated": "wavered",
-                "vacillating": "wavering",
-                "wane": "decrease",
-                "wanes": "decreases",
-                "waned": "decreased",
-                "waning": "decreasing",
-                "yoke": "join",
-                "yokes": "joins",
-                "yoked": "joined",
-                "yoking": "joining",
-                "yearn": "long for",
-                "yearns": "longs for",
-                "yearned": "longed for",
-                "yearning": "longing for",
-                "bifurcate": "split",
-                "bifurcates": "splits",
-                "bifurcated": "split",
-                "bifurcating": "splitting",
-                "cajole": "persuade",
-                "cajoles": "persuades",
-                "cajoled": "persuaded",
-                "cajoling": "persuading",
-                "censure": "criticize",
-                "censures": "criticizes",
-                "censured": "criticized",
-                "censuring": "criticizing",
-                "elucidate": "explain",
-                "elucidates": "explains",
-                "elucidated": "explained",
-                "elucidating": "explaining",
-                "garner": "gather",
-                "garners": "gathers",
-                "garnered": "gathered",
-                "garnering": "gathering",
-                "juxtapose": "place side by side",
-                "juxtaposes": "places side by side",
-                "juxtaposed": "placed side by side",
-                "juxtaposing": "placing side by side",
-                "obfuscate": "confuse",
-                "obfuscates": "confuses",
-                "obfuscated": "confused",
-                "obfuscating": "confusing",
-                "ostracize": "exclude",
-                "ostracizes": "excludes",
-                "ostracized": "excluded",
-                "ostracizing": "excluding",
-                "palliate": "lessen",
-                "palliates": "lessens",
-                "palliated": "lessened",
-                "palliating": "lessening",
-                "placate": "calm",
-                "placates": "calms",
-                "placated": "calmed",
-                "placating": "calming",
-                "quell": "suppress",
-                "quells": "suppresses",
-                "quelled": "suppressed",
-                "quelling": "suppressing",
-                "rescind": "cancel",
-                "rescinds": "cancels",
-                "rescinded": "canceled",
-                "rescinding": "canceling",
-                "crucial": "important",
-                "critical": "important",
-                "fundamental": "important",
-                "employ": "use",
-                "ensure": "make sure",
-                "essential": "necessary",
-                "pivotal": "important",
-                "signifies": "indicates",
-                "established": "set up",
-                "navigate": "find your way through",
-                "paramount": "important",
-                "ultimately": "finally",
-                "esteemed": "respected",
-                "myriad": "many",
-                "tapestry": "fabric",
-                "meticulous": "careful",
-                "intricate": "complex",
-                "facilitating": "helping",
-                "commendable": "praiseworthy",
-                "robust": "strong",
-                "seamless": "smooth",
-                "multi-faceted": "many-sided",
-                "complex": "complicated",
-                "ample": "enough",
-                "ascertain": "find out",
-                "benevolent": "kind",
-                "cognizant": "aware",
-                "disseminate": "spread",
-                "endeavor": "effort",
-                "exacerbate": "worsen",
-                "facilitate": "help",
-                "gregarious": "sociable",
-                "hinder": "block",
-                "implement": "carry out",
-                "juxtapose": "place side by side",
-                "magnanimous": "generous",
-                "negligible": "insignificant",
-                "obfuscate": "confuse",
-                "perfunctory": "done without care",
-                "quintessential": "perfect example",
-                "reiterate": "repeat",
-                "substantiate": "prove",
-                "transient": "temporary",
-                "ubiquitous": "everywhere",
-                "vacillate": "waver",
-                "wane": "decrease",
-                "xenophobia": "fear of foreigners",
-                "yoke": "join",
-                "zealous": "enthusiastic",
-                "ameliorate": "improve",
-                "belligerent": "hostile",
-                "capricious": "unpredictable",
-                "deleterious": "harmful",
-                "efficacious": "effective",
-                "fortuitous": "accidental",
-                "gratuitous": "unnecessary",
-                "hapless": "unfortunate",
-                "idiosyncratic": "unique",
-                "jargon": "specialized language",
-                "knack": "skill",
-                "laconic": "brief",
-                "mellifluous": "pleasant sounding",
-                "nonchalant": "casual",
-                "ostracize": "exclude",
-                "pragmatic": "practical",
-                "quandary": "dilemma",
-                "rampant": "widespread",
-                "sagacious": "wise",
-                "taciturn": "quiet",
-                "untenable": "unsustainable",
-                "venerable": "respected",
-                "whimsical": "playful",
-                "xenial": "hospitable",
-                "yonder": "over there",
-                "zephyr": "breeze",
-                "aesthetic": "beautiful",
-                "bucolic": "rustic",
-                "cajole": "persuade",
-                "daunting": "intimidating",
-                "ephemeral": "short-lived",
-                "flamboyant": "showy",
-                "gregarious": "sociable",
-                "heinous": "horrible",
-                "immutable": "unchanging",
-                "jubilant": "joyful",
-                "kinetic": "relating to motion",
-                "lucid": "clear",
-                "mundane": "ordinary",
-                "noxious": "harmful",
-                "ostentatious": "showy",
-                "placate": "calm",
-                "quell": "suppress",
-                "resilient": "strong",
-                "stoic": "unemotional",
-                "tangible": "real",
-                "umbrage": "offense",
-                "vapid": "dull",
-                "wane": "decrease",
-                "xylem": "plant tissue",
-                "yielding": "flexible",
-                "zenith": "peak",
-                "alacrity": "eagerness",
-                "blatant": "obvious",
-                "candid": "honest",
-                "deference": "respect",
-                "elucidate": "explain",
-                "fallacious": "incorrect",
-                "garish": "bright and showy",
-                "harbinger": "forerunner",
-                "iconoclast": "rebel",
-                "juxtaposition": "comparison",
-                "kudos": "praise",
-                "languid": "slow",
-                "munificent": "generous",
-                "nonplussed": "confused",
-                "obdurate": "stubborn",
-                "palpable": "clear",
-                "querulous": "complaining",
-                "reticent": "quiet",
-                "sanguine": "optimistic",
-                "tirade": "rant",
-                "ubiquity": "everywhere",
-                "vociferous": "loud",
-                "winsome": "charming",
-                "yawning": "wide",
-                "zealot": "enthusiast",
-                "aberration": "deviation",
-                "bombastic": "overblown",
-                "camaraderie": "friendship",
-                "deleterious": "harmful",
-                "enigma": "mystery",
-                "fallacy": "mistake",
-                "garrulous": "talkative",
-                "hubris": "arrogance",
-                "insidious": "sneaky",
-                "jocular": "funny",
-                "lachrymose": "tearful",
-                "malaise": "unease",
-                "nefarious": "wicked",
-                "obsequious": "overly obedient",
-                "paradigm": "model",
-                "quixotic": "unrealistic",
-                "recalcitrant": "stubborn",
-                "soporific": "sleep-inducing",
-                "tantamount": "equivalent",
-                "unilateral": "one-sided",
-                "voracious": "hungry",
-                "winsome": "charming",
-                "xenial": "hospitable",
-                "yearn": "long for",
-                "zeal": "enthusiasm",
-                "ameliorate": "improve",
-                "bifurcate": "split",
-                "cogent": "persuasive",
-                "dichotomy": "division",
-                "ebb": "decline",
-                "facade": "front",
-                "garner": "gather",
-                "hinder": "block",
-                "immutable": "unchanging",
-                "juxtapose": "place side by side",
-                "knell": "bell sound indicating death",
-                "lucid": "clear",
-                "maudlin": "sentimental",
-                "nonchalant": "casual",
-                "opulent": "rich",
-                "palliate": "lessen",
-                "quagmire": "difficult situation",
-                "rapacious": "greedy",
-                "sagacity": "wisdom",
-                "tacit": "unspoken",
-                "umbrage": "offense",
-                "vicarious": "experienced through others",
-                "wane": "decrease",
-                "xenophobia": "fear of foreigners",
-                "yearn": "long for",
-                "zealous": "enthusiastic",
-                "ambivalent": "uncertain",
-                "bellicose": "aggressive",
-                "censure": "criticize",
-                "deleterious": "harmful",
-                "elaborate": "detailed",
-                "fortitude": "courage",
-                "gratuitous": "unnecessary",
-                "hubris": "arrogance",
-                "impervious": "unaffected",
-                "jovial": "cheerful",
-                "lucid": "clear",
-                "misanthrope": "people-hater",
-                "nonpareil": "unmatched",
-                "oblique": "indirect",
-                "precocious": "advanced",
-                "quandary": "dilemma",
-                "rescind": "cancel",
-                "stoic": "unemotional",
-                "truculent": "aggressive",
-                "vacillate": "waver",
-                "wanton": "uncontrolled",
-                "xenial": "hospitable",
-                "yoke": "join",
-                "zenith": "peak",
-                "apathy": "indifference",
-                "blandishment": "flattery",
-                "circumspect": "cautious",
-                "demure": "reserved",
-                "ephemeral": "short-lived",
-                "fallacious": "incorrect",
-                "grandiose": "impressive",
-                "hapless": "unfortunate",
-                "impecunious": "poor",
-                "jingoism": "extreme nationalism",
-                "knavery": "dishonesty",
-                "loquacious": "talkative",
-                "munificent": "generous",
-                "negligent": "careless",
-                "obfuscate": "confuse",
-                "palpable": "clear",
-                "quiescent": "inactive",
-                "ravenous": "hungry",
-                "sagacious": "wise",
-                "tirade": "rant",
-                "umbrageous": "offensive",
-                "vapid": "dull",
-                "winsome": "charming",
-                "xenophobia": "fear of foreigners",
-                "yawning": "wide",
-                "zephyr": "breeze",
-                "ambiguous": "unclear",
-                "bombastic": "overblown",
-                "candid": "honest",
-                "deleterious": "harmful",
-                "enigmatic": "mysterious",
-                "fallacious": "incorrect",
-                "gregarious": "sociable",
-                "haughty": "arrogant",
-                "immutable": "unchanging",
-                "juxtaposition": "comparison",
-                "kinetic": "relating to motion",
-                "lucid": "clear",
-                "malevolent": "evil",
-                "nefarious": "wicked",
-                "obstinate": "stubborn",
-                "placate": "calm",
-                "quandary": "dilemma",
-                "resilient": "strong",
-                "stoic": "unemotional",
-                "tangible": "real",
-                "umbrage": "offense",
-                "venerable": "respected",
-                "winsome": "charming",
-                "yonder": "over there",
-                "zealous": "enthusiastic"
-            };
-
-
-
-
-            const pattern = new RegExp(`\\b(${Object.keys(replacements).join('|')})\\b`, 'gi');
-
-
-            content = content.replace(pattern, function(match) {
-
-                const lowerMatch = match.toLowerCase();
-                let replacement = replacements[lowerMatch];
-
-                if (!replacement) return match;
-
-
-                if (match[0] === match[0].toUpperCase()) {
-
-                    replacement = replacement.charAt(0).toUpperCase() + replacement.slice(1);
-                }
-
-                return replacement;
-            });
-
-            return content;
-        }
-
-        while (i < text.length) {
-
-            if (text[i] === '\\' && (text[i + 1] === '[' || text[i + 1] === '(') && !isEscaped(text, i)) {
-                const startDelimiter = text.substr(i, 2);
-                const endDelimiter = startDelimiter === '\\[' ? '\\]' : '\\)';
-                const replacementDelimiter = startDelimiter === '\\[' ? '$$' : '$';
-                let j = i + 2;
-
-
-                if (startDelimiter === '\\[') {
-                    while (j < text.length && /\s/.test(text[j])) {
-                        j++;
-                    }
-                } else if (startDelimiter === '\\(') {
-                    while (j < text.length && text[j] === ' ') {
-                        j++;
-                    }
-                }
-
-                let contentStart = j;
-
-
-                let contentEnd = null;
-                let k;
-                while (j < text.length) {
-                    k = j;
-
-
-                    if (endDelimiter === '\\]') {
-                        while (k < text.length && /\s/.test(text[k])) {
-                            k++;
-                        }
-                    } else if (endDelimiter === '\\)') {
-                        while (k < text.length && text[k] === ' ') {
-                            k++;
-                        }
-                    }
-
-
-                    if (text.substr(k, endDelimiter.length) === endDelimiter && !isEscaped(text, k)) {
-                        contentEnd = j;
-                        break;
-                    } else {
-                        j++;
-                    }
-                }
-
-                if (contentEnd !== null) {
-
-                    let content = text.substring(contentStart, contentEnd);
-
-
-                    result += replacementDelimiter + content + replacementDelimiter;
-
-                    i = k + endDelimiter.length;
-                } else {
-
-                    result += text[i];
-                    i++;
-                }
-            } else if (text[i] === '$') {
-
-                let delimiter = '$';
-                if (text[i + 1] === '$') {
-                    delimiter = '$$';
-                }
-                let startDelimiter = delimiter;
-                let endDelimiter = delimiter;
-                let j = i + delimiter.length;
-
-                let contentStart = j;
-
-
-                let contentEnd = text.indexOf(endDelimiter, j);
-                while (contentEnd !== -1 && isEscaped(text, contentEnd)) {
-
-                    contentEnd = text.indexOf(endDelimiter, contentEnd + endDelimiter.length);
-                }
-
-                if (contentEnd !== -1) {
-
-                    let content = text.substring(contentStart, contentEnd);
-
-
-                    result += startDelimiter + content + endDelimiter;
-                    i = contentEnd + endDelimiter.length;
-                } else {
-
-                    result += text[i];
-                    i++;
-                }
-            } else {
-
-
-                let nextDelimiterIndex = text.indexOf('\\[', i);
-                let nextDelimiterIndex2 = text.indexOf('\\(', i);
-                let nextDelimiterIndex3 = text.indexOf('$', i);
-                let nextIndices = [nextDelimiterIndex, nextDelimiterIndex2, nextDelimiterIndex3].filter(index => index !== -1);
-                let nextIndex = nextIndices.length > 0 ? Math.min(...nextIndices) : text.length;
-
-
-                let textBlock = text.substring(i, nextIndex);
-
-
-                textBlock = applySimplifications(textBlock);
-
-                result += textBlock;
-                i = nextIndex;
-            }
-        }
-
-
-        editorText.value = result;
         if (editorText.value !== beforeText) {
-            const origWords = beforeText.split(/\s+/);
-            const newWords = editorText.value.split(/\s+/);
-            let wordChanges = 0;
-            const maxLen = Math.max(origWords.length, newWords.length);
-            for (let wordIndex = 0; wordIndex < maxLen; wordIndex++) {
-                const originalWord = wordIndex < origWords.length ? origWords[wordIndex] : '';
-                const newWord = wordIndex < newWords.length ? newWords[wordIndex] : '';
-                if (originalWord !== newWord) wordChanges++;
+            trackChange("spacing and punctuation artifacts normalized", 1);
+        }
+    }
+
+    function removeAiBoilerplate() {
+        const beforeText = editorText.value;
+        const phraseRules = [
+            /\b(certainly|sure|absolutely|of course)[,!]?\s+(here(?:'s| is)|below is|i can help with)\b[:\s-]*/gi,
+            /\bhere(?:'s| is)\s+(?:a|an|the)\s+(?:cleaned|revised|polished|improved|updated)\s+(?:version|draft)\b[:\s-]*/gi,
+            /\bbelow is\s+(?:a|an|the)\s+(?:cleaned|revised|polished|improved|updated)\s+(?:version|draft)\b[:\s-]*/gi,
+            /\b(?:i hope this helps|hope this helps)[.!]?\s*/gi,
+            /\b(?:let me know if you(?:'d| would)? like(?: me)? to make any further changes|let me know if you need anything else)[.!]?\s*/gi,
+            /\b(?:as an ai language model|as an ai|i don't have personal opinions)\b[,.]?\s*/gi,
+            /\b(?:it is important to note that|it is worth noting that|in conclusion,?)\s+/gi
+        ];
+
+        editorText.value = preserveProtectedBlocks(editorText.value, segment => {
+            let text = segment;
+            phraseRules.forEach(rule => {
+                text = text.replace(rule, "");
+            });
+            return text.replace(/^\s*[-–—]*\s*$/gm, "");
+        });
+
+        if (editorText.value !== beforeText) {
+            trackChange("AI boilerplate phrases removed", 1);
+        }
+    }
+
+    function simplifyText() {
+        if (!simplifyTextCheckbox.checked) return;
+
+        const beforeText = editorText.value;
+        const replacements = {
+            utilize: "use",
+            utilizes: "uses",
+            utilized: "used",
+            utilizing: "using",
+            leverage: "use",
+            leverages: "uses",
+            leveraged: "used",
+            leveraging: "using",
+            facilitate: "help",
+            facilitates: "helps",
+            facilitated: "helped",
+            facilitating: "helping",
+            endeavor: "try",
+            endeavors: "tries",
+            endeavored: "tried",
+            robust: "solid",
+            seamless: "smooth",
+            paramount: "important",
+            pivotal: "important",
+            crucial: "important",
+            myriad: "many",
+            delve: "examine",
+            delves: "examines",
+            delved: "examined",
+            delving: "examining",
+            realm: "area",
+            showcase: "show",
+            showcases: "shows",
+            showcased: "showed",
+            showcasing: "showing"
+        };
+        const pattern = new RegExp(`\\b(${Object.keys(replacements).map(escapeRegExp).join("|")})\\b`, "gi");
+        let replacementCount = 0;
+
+        editorText.value = preserveProtectedBlocks(editorText.value, segment => segment.replace(pattern, match => {
+            let replacement = replacements[match.toLowerCase()];
+            if (!replacement) return match;
+            replacementCount++;
+
+            if (match === match.toUpperCase()) {
+                return replacement.toUpperCase();
             }
-            trackChange("vocabulary simplifications applied", Math.max(wordChanges, 1));
+
+            if (match[0] === match[0].toUpperCase()) {
+                return replacement.charAt(0).toUpperCase() + replacement.slice(1);
+            }
+
+            return replacement;
+        }));
+
+        if (editorText.value !== beforeText) {
+            trackChange("vocabulary simplifications applied", replacementCount);
         }
     }
 
     function replaceTextFunction() {
         const searchValue = searchText.value;
         const replaceValue = replaceTextInput.value;
+        const targetText = outputText.value ? outputText : editorText;
 
         if (searchValue === "") {
             showToast("Please enter text to search for", "warning");
             return;
         }
 
-        saveState();
+        const regex = new RegExp(escapeRegExp(searchValue), "g");
+        const originalText = targetText.value;
+        targetText.value = targetText.value.replace(regex, replaceValue);
 
-        const regex = new RegExp(searchValue, "g");
-        const originalLength = editorText.value.length;
-        editorText.value = editorText.value.replace(regex, replaceValue);
-
-        if (editorText.value.length !== originalLength) {
+        if (targetText.value !== originalText) {
+            if (targetText === outputText) {
+                saveState();
+            }
             showToast("Text replaced successfully", "success");
         } else {
             showToast("No matches found", "info");
@@ -1678,9 +1272,17 @@ document.addEventListener("DOMContentLoaded", function() {
 
     processButton.addEventListener("click", () => {
         const originalText = editorText.value;
+        if (!originalText.trim()) {
+            showToast("Paste text before processing", "warning");
+            return;
+        }
+
         preProcessText = originalText;
         resetChangeReport();
 
+        editorText.value = originalText;
+        normalizeTextArtifacts();
+        removeAiBoilerplate();
         processText();
         replaceNumericalListsWithRoman();
         trimListItemsBeforeColon();
@@ -1690,12 +1292,16 @@ document.addEventListener("DOMContentLoaded", function() {
         correctLines();
         simplifyText();
 
+        const processedText = editorText.value;
+        editorText.value = originalText;
+        outputText.value = processedText;
         updateStats();
 
-        if (editorText.value !== originalText) {
-            showToast("Text processed successfully! ✨", "success");
+        if (processedText !== originalText) {
+            saveState();
+            showToast("Text processed successfully", "success");
             showChangeReport();
-            showDiffPreview(originalText, editorText.value);
+            showDiffPreview(originalText, processedText);
         } else {
             showToast("No changes were made", "info");
         }
@@ -1705,24 +1311,26 @@ document.addEventListener("DOMContentLoaded", function() {
     redoButton.addEventListener("click", redo);
 
     clearButton.addEventListener("click", () => {
-        if (editorText.value.trim()) {
-            saveState();
+        if (editorText.value.trim() || outputText.value.trim()) {
             editorText.value = "";
+            outputText.value = "";
+            saveState();
             updateStats();
             showToast("Text cleared", "info");
         }
     });
 
     copyButton.addEventListener("click", () => {
-        if (!editorText.value.trim()) {
+        const textToCopy = getResultText();
+        if (!textToCopy.trim()) {
             showToast("Nothing to copy", "warning");
             return;
         }
 
         navigator.clipboard
-            .writeText(editorText.value)
+            .writeText(textToCopy)
             .then(() => {
-                showToast("Copied to clipboard! 📋", "success");
+                showToast("Copied to clipboard", "success");
             })
             .catch(() => {
                 showToast("Failed to copy", "error");
@@ -1730,19 +1338,20 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     downloadButton.addEventListener("click", () => {
-        if (!editorText.value.trim()) {
+        const textToDownload = getResultText();
+        if (!textToDownload.trim()) {
             showToast("Nothing to download", "warning");
             return;
         }
 
-        const blob = new Blob([editorText.value], {
+        const blob = new Blob([textToDownload], {
             type: "text/plain",
         });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
         link.download = "processed_text.txt";
         link.click();
-        showToast("File downloaded! 💾", "success");
+        showToast("File downloaded", "success");
     });
 
 
@@ -1751,17 +1360,18 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     document.getElementById("close-diff").addEventListener("click", () => {
-        document.getElementById("diff-preview").style.display = "none";
+        const diffPreview = document.getElementById("diff-preview");
+        const diffCollapsed = diffPreview.classList.toggle("collapsed");
+        document.getElementById("close-diff").textContent = diffCollapsed ? "Show" : "Hide";
     });
 
     document.getElementById("revert-all").addEventListener("click", () => {
         if (preProcessText !== null) {
+            outputText.value = preProcessText;
             saveState();
-            editorText.value = preProcessText;
             preProcessText = null;
             updateStats();
             document.getElementById("change-report").style.display = "none";
-            document.getElementById("diff-preview").style.display = "none";
             showToast("All changes reverted", "success");
         }
     });
