@@ -658,6 +658,9 @@ document.addEventListener("DOMContentLoaded", function() {
                     inFence = false;
                     fenceMarker = null;
                     trimTrailingBlanks();
+                    while (index + 1 < lines.length && isBlank(lines[index + 1])) {
+                        index++;
+                    }
                     if (index < lines.length - 1) result.push("");
                 }
                 continue;
@@ -674,6 +677,11 @@ document.addEventListener("DOMContentLoaded", function() {
                 pushBlockLine(line);
                 inFence = true;
                 fenceMarker = fenceStart || "$$";
+                if (fenceMarker === "$$") {
+                    while (index + 1 < lines.length && isBlank(lines[index + 1])) {
+                        index++;
+                    }
+                }
                 continue;
             }
 
@@ -849,7 +857,11 @@ document.addEventListener("DOMContentLoaded", function() {
                     const rawMath = found.content;
                     const corrected = applyCorrections(rawMath);
 
-                    result += replacement + corrected + replacement;
+                    if (twoChar === '\\[') {
+                        result += "$$\n" + corrected + "\n$$";
+                    } else {
+                        result += replacement + corrected + replacement;
+                    }
                     i = found.endIndex;
                     continue;
                 } else {
@@ -961,7 +973,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
             if (inMathBlock) {
                 const nextLine = index + 1 < lines.length ? lines[index + 1] : "";
-                if (isBlank(line) && isMathFence(nextLine)) {
+                const previousLine = result.length ? result[result.length - 1] : "";
+                if (isBlank(line) && (isMathFence(previousLine) || isMathFence(nextLine))) {
                     continue;
                 }
 
@@ -969,9 +982,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (isMathFence(line)) {
                     inMathBlock = false;
                     trimTrailingBlanks();
-                    if (index < lines.length - 1 && !isBlank(lines[index + 1])) {
-                        result.push("");
+                    while (index + 1 < lines.length && isBlank(lines[index + 1])) {
+                        index++;
                     }
+                    if (index < lines.length - 1) result.push("");
                 }
                 continue;
             }
