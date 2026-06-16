@@ -116,18 +116,20 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function preserveProtectedBlocks(text, transform) {
-        const blockPattern = /(```[\s\S]*?```|\$\$[\s\S]*?\$\$|\$[^$\n]+\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\))/g;
-        let result = "";
-        let cursor = 0;
-        let match;
+        const blockPattern = /(```[\s\S]*?```|\$\$[\s\S]*?\$\$|\$[^$\n]+\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|!?\[[^\]\n]*\]\([^) \n]+(?:\s+"[^"\n]*")?\)|https?:\/\/[^\s)]+)/g;
+        const protectedBlocks = [];
+        const placeholderPrefix = "@@PROTECTED_BLOCK_";
+        const placeholderSuffix = "@@";
+        const maskedText = text.replace(blockPattern, match => {
+            const placeholder = `${placeholderPrefix}${protectedBlocks.length}${placeholderSuffix}`;
+            protectedBlocks.push(match);
+            return placeholder;
+        });
 
-        while ((match = blockPattern.exec(text)) !== null) {
-            result += transform(text.slice(cursor, match.index));
-            result += match[0];
-            cursor = match.index + match[0].length;
-        }
-
-        result += transform(text.slice(cursor));
+        let result = transform(maskedText);
+        protectedBlocks.forEach((block, index) => {
+            result = result.split(`${placeholderPrefix}${index}${placeholderSuffix}`).join(block);
+        });
         return result;
     }
 
@@ -756,7 +758,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (!latexCorrectionCheckbox.checked) return;
         const beforeText = editorText.value;
 
-        const text = editorText.value;
+        const text = convertBareBracketDisplayMath(editorText.value);
         let result = '';
         let i = 0;
 
@@ -812,23 +814,6 @@ document.addEventListener("DOMContentLoaded", function() {
             }
             return null;
         }
-
-        function looksLikeMath(content) {
-            const value = content.trim();
-            if (!value) return false;
-            return /\\[a-zA-Z]+|[\^_=]|[+\-*/]=?|\\[{}]|[a-zA-Z]\s*\(|\d\s*[a-zA-Z]|[a-zA-Z]\s*\d|\n/.test(value);
-        }
-
-        function wrapDisplayMath(content) {
-            const corrected = applyCorrections(content);
-            if (content.includes("\n")) {
-                return "$$\n" + corrected + "\n$$";
-            }
-            return "$$" + corrected + "$$";
-        }
-
-
-
 
         while (i < text.length) {
 
@@ -893,18 +878,6 @@ document.addEventListener("DOMContentLoaded", function() {
                     result += text[i];
                     i++;
                 }
-            } else if (text[i] === '[' && !isEscaped(text, i)) {
-                const found = getMathContent(text, i + 1, ']');
-                const isMarkdownLink = found && text[found.endIndex] === '(';
-
-                if (found && !isMarkdownLink && looksLikeMath(found.content)) {
-                    result += wrapDisplayMath(found.content);
-                    i = found.endIndex;
-                    continue;
-                }
-
-                result += text[i];
-                i++;
             } else {
                 result += text[i];
                 i++;
@@ -917,6 +890,93 @@ document.addEventListener("DOMContentLoaded", function() {
             const changes = (beforeText.match(/\\\[|\\\(|\\;|\\,|\\\./g) || []).length;
             trackChange("LaTeX delimiters/formatting fixed", Math.max(changes, 1));
         }
+    }
+
+    function convertBareBracketDisplayMath(text) {
+        const lines = text.split("\n");
+        const result = [];
+        let inCodeFence = false;
+        let codeFenceMarker = null;
+
+        function isCodeFenceStart(line) {
+            const match = line.trim().match(/^(`{3,}|~{3,})/);
+            return match ? match[1][0] : null;
+        }
+
+        function isCodeFenceEnd(line, marker) {
+            if (!marker) return false;
+            const pattern = marker === "`" ? /^`{3,}\s*$/ : /^~{3,}\s*$/;
+            return pattern.test(line.trim());
+        }
+
+        function trimBlankEdges(blockLines) {
+            const trimmed = blockLines.slice();
+            while (trimmed.length && trimmed[0].trim() === "") {
+                trimmed.shift();
+            }
+            while (trimmed.length && trimmed[trimmed.length - 1].trim() === "") {
+                trimmed.pop();
+            }
+            return trimmed;
+        }
+
+        function isBareBracketOpener(line) {
+            return line.trim() === "[";
+        }
+
+        function isBareBracketCloser(line) {
+            return line.trim() === "]";
+        }
+
+        for (let index = 0; index < lines.length; index++) {
+            const line = lines[index];
+
+            if (inCodeFence) {
+                result.push(line);
+                if (isCodeFenceEnd(line, codeFenceMarker)) {
+                    inCodeFence = false;
+                    codeFenceMarker = null;
+                }
+                continue;
+            }
+
+            const codeFenceStart = isCodeFenceStart(line);
+            if (codeFenceStart) {
+                result.push(line);
+                inCodeFence = true;
+                codeFenceMarker = codeFenceStart;
+                continue;
+            }
+
+            if (!isBareBracketOpener(line)) {
+                result.push(line);
+                continue;
+            }
+
+            const blockLines = [];
+            let closeIndex = -1;
+
+            for (let scanIndex = index + 1; scanIndex < lines.length; scanIndex++) {
+                if (isBareBracketCloser(lines[scanIndex])) {
+                    closeIndex = scanIndex;
+                    break;
+                }
+                blockLines.push(lines[scanIndex]);
+            }
+
+            if (closeIndex === -1) {
+                result.push(line);
+                continue;
+            }
+
+            const mathLines = trimBlankEdges(blockLines);
+            result.push("$$");
+            result.push(...mathLines);
+            result.push("$$");
+            index = closeIndex;
+        }
+
+        return result.join("\n");
     }
 
     function normalizeDisplayMathBlockText(text) {
