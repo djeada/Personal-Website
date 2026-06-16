@@ -907,6 +907,99 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
+    function normalizeDisplayMathBlocks() {
+        const beforeText = editorText.value;
+        const lines = editorText.value.split("\n");
+        const result = [];
+        let inCodeFence = false;
+        let codeFenceMarker = null;
+        let inMathBlock = false;
+
+        function isBlank(line) {
+            return line.trim() === "";
+        }
+
+        function isCodeFenceStart(line) {
+            const match = line.trim().match(/^(`{3,}|~{3,})/);
+            return match ? match[1][0] : null;
+        }
+
+        function isCodeFenceEnd(line, marker) {
+            if (!marker) return false;
+            const pattern = marker === "`" ? /^`{3,}\s*$/ : /^~{3,}\s*$/;
+            return pattern.test(line.trim());
+        }
+
+        function isMathFence(line) {
+            return line.trim() === "$$";
+        }
+
+        function trimTrailingBlanks() {
+            while (result.length && isBlank(result[result.length - 1])) {
+                result.pop();
+            }
+        }
+
+        for (let index = 0; index < lines.length; index++) {
+            const line = lines[index].replace(/[ \t]+$/g, "");
+
+            if (inCodeFence) {
+                result.push(line);
+                if (isCodeFenceEnd(line, codeFenceMarker)) {
+                    inCodeFence = false;
+                    codeFenceMarker = null;
+                }
+                continue;
+            }
+
+            const codeFenceStart = isCodeFenceStart(line);
+            if (codeFenceStart) {
+                result.push(line);
+                inCodeFence = true;
+                codeFenceMarker = codeFenceStart;
+                continue;
+            }
+
+            if (inMathBlock) {
+                const nextLine = index + 1 < lines.length ? lines[index + 1] : "";
+                if (isBlank(line) && isMathFence(nextLine)) {
+                    continue;
+                }
+
+                result.push(line);
+                if (isMathFence(line)) {
+                    inMathBlock = false;
+                    trimTrailingBlanks();
+                    if (index < lines.length - 1 && !isBlank(lines[index + 1])) {
+                        result.push("");
+                    }
+                }
+                continue;
+            }
+
+            if (isMathFence(line)) {
+                trimTrailingBlanks();
+                if (result.length) result.push("");
+                result.push("$$");
+                inMathBlock = true;
+
+                while (index + 1 < lines.length && isBlank(lines[index + 1])) {
+                    index++;
+                }
+                continue;
+            }
+
+            result.push(line);
+        }
+
+        trimTrailingBlanks();
+        editorText.value = result.join("\n");
+
+        if (editorText.value !== beforeText) {
+            trackChange("math block spacing normalized", 1);
+        }
+    }
+
 
     function trimListItemsBeforeColon() {
         if (!trimListsCheckbox.checked) return;
@@ -1222,6 +1315,7 @@ document.addEventListener("DOMContentLoaded", function() {
         correctLists();
         removeTabIndent();
         correctLatex();
+        normalizeDisplayMathBlocks();
         correctLines();
         simplifyText();
 
