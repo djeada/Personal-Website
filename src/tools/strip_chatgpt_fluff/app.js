@@ -907,9 +907,8 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    function normalizeDisplayMathBlocks() {
-        const beforeText = editorText.value;
-        const lines = editorText.value.split("\n");
+    function normalizeDisplayMathBlockText(text) {
+        const lines = text.split("\n");
         const result = [];
         let inCodeFence = false;
         let codeFenceMarker = null;
@@ -993,7 +992,12 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         trimTrailingBlanks();
-        editorText.value = result.join("\n");
+        return result.join("\n");
+    }
+
+    function normalizeDisplayMathBlocks() {
+        const beforeText = editorText.value;
+        editorText.value = normalizeDisplayMathBlockText(editorText.value);
 
         if (editorText.value !== beforeText) {
             trackChange("math block spacing normalized", 1);
@@ -1319,7 +1323,7 @@ document.addEventListener("DOMContentLoaded", function() {
         correctLines();
         simplifyText();
 
-        const processedText = editorText.value;
+        const processedText = normalizeDisplayMathBlockText(editorText.value);
         editorText.value = originalText;
         outputText.value = processedText;
         updateStats();
