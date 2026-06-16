@@ -1330,7 +1330,12 @@ document.addEventListener("DOMContentLoaded", function() {
 
         if (processedText !== originalText) {
             saveState();
-            showToast("Text processed successfully", "success");
+            outputText.focus();
+            outputText.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+            });
+            showToast("Cleaned text written to Output", "success");
             showChangeReport();
             showDiffPreview(originalText, processedText);
         } else {
