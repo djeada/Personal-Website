@@ -636,14 +636,20 @@ document.addEventListener("DOMContentLoaded", function() {
             result.push(line.replace(/[ \t]+$/g, ""));
         }
 
+        function isOpeningFenceLine(line, marker) {
+            if (!marker) return false;
+            return marker === "$$" ? isMathFence(line) : isFenceStart(line) === marker;
+        }
+
         for (let index = 0; index < lines.length; index++) {
             const line = lines[index];
-            const trimmed = line.trim();
 
             if (inFence) {
                 const nextLine = index + 1 < lines.length ? lines[index + 1] : "";
                 const nextClosesFence = fenceMarker === "$$" ? isMathFence(nextLine) : isFenceEnd(nextLine, fenceMarker);
-                if (isBlank(line) && nextClosesFence) {
+                const previousLine = result.length ? result[result.length - 1] : "";
+                const previousOpensFence = isOpeningFenceLine(previousLine, fenceMarker);
+                if (isBlank(line) && (previousOpensFence || nextClosesFence)) {
                     continue;
                 }
 
@@ -863,7 +869,11 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (found) {
                     const rawMath = found.content;
                     const corrected = applyCorrections(rawMath);
-                    result += delimiter + corrected + delimiter;
+                    if (delimiter === '$$' && rawMath.includes('\n')) {
+                        result += '$$\n' + corrected + '\n$$';
+                    } else {
+                        result += delimiter + corrected + delimiter;
+                    }
                     i = found.endIndex;
                     continue;
                 } else {
