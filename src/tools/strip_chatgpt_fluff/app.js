@@ -985,6 +985,7 @@ document.addEventListener("DOMContentLoaded", function() {
         let inCodeFence = false;
         let codeFenceMarker = null;
         let inMathBlock = false;
+        let mathBlockLines = [];
 
         function isBlank(line) {
             return line.trim() === "";
@@ -1011,6 +1012,64 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         }
 
+        function normalizeMathBlockLines(blockLines) {
+            const normalized = blockLines.map(line => line.replace(/[ \t]+$/g, ""));
+
+            while (normalized.length && isBlank(normalized[0])) {
+                normalized.shift();
+            }
+            while (normalized.length && isBlank(normalized[normalized.length - 1])) {
+                normalized.pop();
+            }
+
+            const joined = [];
+
+            function nextNonBlankIndex(startIndex) {
+                for (let scanIndex = startIndex; scanIndex < normalized.length; scanIndex++) {
+                    if (!isBlank(normalized[scanIndex])) return scanIndex;
+                }
+                return -1;
+            }
+
+            for (let lineIndex = 0; lineIndex < normalized.length; lineIndex++) {
+                const line = normalized[lineIndex];
+                const trimmed = line.trim();
+
+                if (isBlank(line)) {
+                    if (joined.length && !isBlank(joined[joined.length - 1])) {
+                        joined.push("");
+                    }
+                    continue;
+                }
+
+                if (/^=+$/.test(trimmed) && joined.length) {
+                    const nextIndex = nextNonBlankIndex(lineIndex + 1);
+                    if (nextIndex !== -1) {
+                        joined[joined.length - 1] = `${joined[joined.length - 1].trimEnd()} = ${normalized[nextIndex].trim()}`;
+                        lineIndex = nextIndex;
+                        continue;
+                    }
+                }
+
+                if (/=\s*$/.test(line)) {
+                    const nextIndex = nextNonBlankIndex(lineIndex + 1);
+                    if (nextIndex !== -1) {
+                        joined.push(`${line.trimEnd()} ${normalized[nextIndex].trim()}`);
+                        lineIndex = nextIndex;
+                        continue;
+                    }
+                }
+
+                joined.push(line);
+            }
+
+            while (joined.length && isBlank(joined[joined.length - 1])) {
+                joined.pop();
+            }
+
+            return joined;
+        }
+
         for (let index = 0; index < lines.length; index++) {
             const line = lines[index].replace(/[ \t]+$/g, "");
 
@@ -1032,20 +1091,18 @@ document.addEventListener("DOMContentLoaded", function() {
             }
 
             if (inMathBlock) {
-                const nextLine = index + 1 < lines.length ? lines[index + 1] : "";
-                const previousLine = result.length ? result[result.length - 1] : "";
-                if (isBlank(line) && (isMathFence(previousLine) || isMathFence(nextLine))) {
-                    continue;
-                }
-
-                result.push(line);
                 if (isMathFence(line)) {
+                    result.push(...normalizeMathBlockLines(mathBlockLines));
+                    result.push("$$");
                     inMathBlock = false;
+                    mathBlockLines = [];
                     trimTrailingBlanks();
                     while (index + 1 < lines.length && isBlank(lines[index + 1])) {
                         index++;
                     }
                     if (index < lines.length - 1) result.push("");
+                } else {
+                    mathBlockLines.push(line);
                 }
                 continue;
             }
@@ -1055,6 +1112,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (result.length) result.push("");
                 result.push("$$");
                 inMathBlock = true;
+                mathBlockLines = [];
 
                 while (index + 1 < lines.length && isBlank(lines[index + 1])) {
                     index++;
