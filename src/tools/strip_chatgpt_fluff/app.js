@@ -312,7 +312,7 @@ document.addEventListener("DOMContentLoaded", function() {
             listCorrection: false,
             romanListConversion: false,
             tabCorrection: false,
-            latexCorrection: false,
+            latexCorrection: true,
             simplifyText: false,
             trimListsBeforeColon: false
         },
@@ -770,7 +770,6 @@ document.addEventListener("DOMContentLoaded", function() {
             content = content.replace(/\\;/g, '');
             content = content.replace(/\\,/g, ',');
             content = content.replace(/\\\./g, '.');
-            content = content.replace(/\\d/g, 'd');
             content = content.replace(/([.,;:!?])(\s*)(\${1,2})(?!\$)/g, '$2$3');
             content = content.replace(/([,\.])d/g, 'd');
             content = content.replace(/([.,;:!?])\s*$/, '');
@@ -804,6 +803,14 @@ document.addEventListener("DOMContentLoaded", function() {
             const value = content.trim();
             if (!value) return false;
             return /\\[a-zA-Z]+|[\^_=]|[+\-*/]=?|\\[{}]|[a-zA-Z]\s*\(|\d\s*[a-zA-Z]|[a-zA-Z]\s*\d|\n/.test(value);
+        }
+
+        function wrapDisplayMath(content) {
+            const corrected = applyCorrections(content);
+            if (content.includes("\n")) {
+                return "$$\n" + corrected + "\n$$";
+            }
+            return "$$" + corrected + "$$";
         }
 
 
@@ -869,8 +876,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 const isMarkdownLink = found && text[found.endIndex] === '(';
 
                 if (found && !isMarkdownLink && looksLikeMath(found.content)) {
-                    const corrected = applyCorrections(found.content);
-                    result += '$$' + corrected + '$$';
+                    result += wrapDisplayMath(found.content);
                     i = found.endIndex;
                     continue;
                 }
