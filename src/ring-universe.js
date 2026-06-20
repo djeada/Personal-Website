@@ -423,6 +423,9 @@
       shard.castShadow = quality.shadows;
       shard.userData.interactive = 'shard';
       shard.userData.home = shard.position.clone();
+      shard.userData.baseRotationX = shard.rotation.x;
+      shard.userData.baseRotationY = shard.rotation.y;
+      shard.userData.baseRotationZ = shard.rotation.z;
       shard.userData.angle = angle;
       shard.userData.phase = rand(0, TAU);
       group.add(shard);
@@ -565,14 +568,14 @@
     const rune = new THREE.Color(colors.rune);
 
     for (let i = 0; i < count; i++) {
-      const radius = rand(1.8, 10.8);
+      const radius = rand(2.4, 9.4);
       const angle = Math.random() * TAU;
-      const y = rand(-3.4, 3.5);
+      const y = rand(-2.85, 3.0);
       const offset = i * 3;
       positions[offset] = Math.cos(angle) * radius;
       positions[offset + 1] = y;
       positions[offset + 2] = Math.sin(angle) * radius;
-      setColorAttribute(particleColors, i, pick([portal, portal, ember, ghost, rune]), rand(0.5, 1.34));
+      setColorAttribute(particleColors, i, pick([portal, portal, ember, ghost, rune]), rand(0.34, 0.98));
       data.push({
         angle,
         radius,
@@ -588,11 +591,11 @@
     geometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
     const material = new THREE.PointsMaterial({
       map: texture,
-      size: 2.55,
+      size: 1.95,
       sizeAttenuation: true,
       vertexColors: true,
       transparent: true,
-      opacity: 0.74,
+      opacity: 0.48,
       blending: THREE.AdditiveBlending,
       depthWrite: false
     });
@@ -681,40 +684,42 @@
       roughness: 0.92,
       metalness: 0.08,
       emissive: colors.nebulaViolet,
-      emissiveIntensity: 0.035
+      emissiveIntensity: 0.012,
+      transparent: true,
+      opacity: 0.58
     });
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(220, 220, 32, 32), groundMaterial);
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(180, 180, 24, 24), groundMaterial);
     ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -7.5;
+    ground.position.y = -9.6;
     ground.receiveShadow = quality.shadows;
     scene.add(ground);
 
     const circleMaterial = new THREE.MeshBasicMaterial({
       color: colors.portal,
       transparent: true,
-      opacity: 0.1,
+      opacity: 0.055,
       side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending,
       depthWrite: false
     });
-    const circle = new THREE.Mesh(new THREE.RingGeometry(5.6, 33, quality.isMobile ? 128 : 256), circleMaterial);
+    const circle = new THREE.Mesh(new THREE.RingGeometry(6.8, 25, quality.isMobile ? 128 : 220), circleMaterial);
     circle.rotation.x = -Math.PI / 2;
-    circle.position.y = -7.34;
+    circle.position.y = -9.42;
     scene.add(circle);
 
     const sigilMaterial = new THREE.MeshBasicMaterial({
       color: colors.rune,
       transparent: true,
-      opacity: 0.08,
+      opacity: 0.04,
       side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending,
       depthWrite: false
     });
     const sigil = new THREE.Group();
     for (let i = 0; i < 5; i++) {
-      const ring = new THREE.Mesh(new THREE.RingGeometry(8 + i * 3.8, 8.05 + i * 3.8, 160), sigilMaterial);
+      const ring = new THREE.Mesh(new THREE.RingGeometry(8 + i * 3.1, 8.05 + i * 3.1, 144), sigilMaterial);
       ring.rotation.x = -Math.PI / 2;
-      ring.position.y = -7.31 + i * 0.004;
+      ring.position.y = -9.39 + i * 0.004;
       sigil.add(ring);
     }
     scene.add(sigil);
@@ -737,18 +742,18 @@
       opacity: 0.44,
       blending: THREE.AdditiveBlending
     });
-    const count = quality.isMobile ? 15 : 30;
+    const count = quality.isMobile ? 8 : 16;
     const obelisks = [];
 
     for (let i = 0; i < count; i++) {
       const angle = (i / count) * TAU + rand(-0.08, 0.08);
-      const radius = rand(18, 48);
-      const height = rand(5, 20);
+      const radius = rand(24, 58);
+      const height = rand(4, 13);
       const group = new THREE.Group();
-      group.position.set(Math.cos(angle) * radius, -7.45, Math.sin(angle) * radius - 8);
+      group.position.set(Math.cos(angle) * radius, -9.55, -24 - Math.abs(Math.sin(angle)) * radius * 0.58);
       group.rotation.y = -angle + rand(-0.45, 0.45);
 
-      const body = new THREE.Mesh(new THREE.ConeGeometry(rand(0.48, 1.15), height, 5), material);
+      const body = new THREE.Mesh(new THREE.ConeGeometry(rand(0.28, 0.72), height, 5), material);
       body.position.y = height * 0.5;
       body.castShadow = quality.shadows;
       body.userData.interactive = 'obelisk';
@@ -947,8 +952,8 @@
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(colors.fog, isMobile ? 0.0135 : 0.0074);
 
-    const camera = new THREE.PerspectiveCamera(isMobile ? 75 : 64, 1, 0.1, 1600);
-    camera.position.set(0, 7, isMobile ? 31 : 40);
+    const camera = new THREE.PerspectiveCamera(isMobile ? 68 : 56, 1, 0.1, 1600);
+    camera.position.set(0, isMobile ? 4.8 : 5.8, isMobile ? 26 : 30);
 
     const renderer = new THREE.WebGLRenderer({
       alpha: true,
@@ -975,7 +980,7 @@
     const hud = document.createElement('div');
     hud.className = 'ring-universe-hud';
     hud.innerHTML = `
-      <div class="ring-universe-hud__panel">${isMobile ? 'Tap pulse Â· drag orbit Â· pinch depth Â· two-finger charge' : 'Hold to charge Â· release shockwave Â· drag orbit Â· wheel depth Â· Shift+drag draw sigils Â· WASD/QE fly Â· Space pulse Â· C cinematic Â· M meteors Â· R reset'}</div>
+      <div class="ring-universe-hud__panel">${isMobile ? 'Tap pulse | drag orbit | pinch depth | two-finger charge' : 'Hold to charge | release shockwave | drag orbit | wheel depth | Shift+drag draw sigils | WASD/QE fly | Space pulse | C cinematic | M meteors | R reset'}</div>
       <div class="ring-universe-hud__status">Charge <span class="ring-universe-charge"><i></i></span></div>
     `;
     container.appendChild(vignette);
@@ -1012,7 +1017,7 @@
 
     const interactiveTargets = [];
     const ring = createRingGroup(colors, quality, interactiveTargets);
-    ring.group.position.set(0, 1.25, 0);
+    ring.group.position.set(0, 2.05, 0);
     ring.group.rotation.x = -0.1;
     scene.add(ring.group);
 
@@ -1052,8 +1057,8 @@
     const pointerPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
     const pointerWorld = new THREE.Vector3();
     const pointerTargetWorld = new THREE.Vector3();
-    const cameraTarget = new THREE.Vector3(0, 0.15, 0);
-    const cameraTargetTarget = new THREE.Vector3(0, 0.15, 0);
+    const cameraTarget = new THREE.Vector3(0, 1.65, 0);
+    const cameraTargetTarget = new THREE.Vector3(0, 1.65, 0);
     const tempVector = new THREE.Vector3();
     const tempVector2 = new THREE.Vector3();
 
@@ -1067,12 +1072,12 @@
       dragDistance: 0,
       targetYaw: -0.15,
       yaw: -0.15,
-      pitch: 0.18,
-      targetPitch: 0.18,
+      pitch: 0.08,
+      targetPitch: 0.08,
       roll: 0,
       targetRoll: 0,
-      distance: isMobile ? 31 : 40,
-      targetDistance: isMobile ? 31 : 40,
+      distance: isMobile ? 26 : 30,
+      targetDistance: isMobile ? 26 : 30,
       pulse: 0,
       charge: 0,
       charging: false,
@@ -1188,10 +1193,10 @@
 
     function resetView() {
       state.targetYaw = -0.15;
-      state.targetPitch = 0.18;
+      state.targetPitch = 0.08;
       state.targetRoll = 0;
-      state.targetDistance = isMobile ? 31 : 40;
-      cameraTargetTarget.set(0, 0.15, 0);
+      state.targetDistance = isMobile ? 26 : 30;
+      cameraTargetTarget.set(0, 1.65, 0);
       state.cinematic = false;
       state.portalOpen = false;
       state.portalOpenProgress = 0;
@@ -1214,7 +1219,7 @@
         state.pinch.chargeStart = state.charge;
       }
       const scale = state.pinch.startDistance / distance;
-      state.targetDistance = clamp(state.pinch.startCameraDistance * scale, isMobile ? 17 : 19, 78);
+      state.targetDistance = clamp(state.pinch.startCameraDistance * scale, isMobile ? 19 : 22, 58);
       state.charging = true;
       state.charge = clamp(state.pinch.chargeStart + Math.abs(1 - scale) * 1.35, 0, 1.7);
     }
@@ -1308,7 +1313,7 @@
 
     function onWheel(event) {
       event.preventDefault();
-      state.targetDistance = clamp(state.targetDistance + event.deltaY * 0.036, isMobile ? 17 : 19, 78);
+      state.targetDistance = clamp(state.targetDistance + event.deltaY * 0.036, isMobile ? 19 : 22, 58);
       state.pointerInfluence = Math.max(state.pointerInfluence, 0.45);
     }
 
@@ -1438,16 +1443,16 @@
 
       if (state.keys.KeyA) state.targetYaw -= dt * 1.0;
       if (state.keys.KeyD) state.targetYaw += dt * 1.0;
-      if (state.keys.KeyW) state.targetDistance = clamp(state.targetDistance - dt * 18, isMobile ? 17 : 19, 78);
-      if (state.keys.KeyS) state.targetDistance = clamp(state.targetDistance + dt * 18, isMobile ? 17 : 19, 78);
+      if (state.keys.KeyW) state.targetDistance = clamp(state.targetDistance - dt * 18, isMobile ? 19 : 22, 58);
+      if (state.keys.KeyS) state.targetDistance = clamp(state.targetDistance + dt * 18, isMobile ? 19 : 22, 58);
       if (state.keys.KeyQ) state.targetRoll = clamp(state.targetRoll - dt * 0.7, -0.32, 0.32);
       if (state.keys.KeyE) state.targetRoll = clamp(state.targetRoll + dt * 0.7, -0.32, 0.32);
       if (!state.keys.KeyQ && !state.keys.KeyE) state.targetRoll *= 0.94;
 
       if (state.cinematic && !state.pointerDown) {
         state.targetYaw += dt * 0.09;
-        state.targetPitch = 0.16 + Math.sin(t * 0.19) * 0.14;
-        state.targetDistance = (isMobile ? 31 : 40) + Math.sin(t * 0.23) * 7.5;
+        state.targetPitch = 0.08 + Math.sin(t * 0.19) * 0.09;
+        state.targetDistance = (isMobile ? 26 : 30) + Math.sin(t * 0.23) * 4.5;
       } else if (!state.pointerDown && !state.pinch.active) {
         state.targetYaw += dt * 0.045;
       }
@@ -1475,8 +1480,9 @@
         shard.position.x += (home.x * outward - shard.position.x) * 0.045;
         shard.position.y += (home.y * outward - shard.position.y) * 0.045;
         shard.position.z += (-0.22 + Math.sin(t * 1.35 + shard.userData.phase) * 0.18 + pulse * 0.22 + charge * 0.12 - shard.position.z) * 0.05;
-        shard.rotation.x += dt * (0.035 + (i % 3) * 0.012 + charge * 0.05);
-        shard.rotation.y += dt * (state.hover === shard ? 0.18 : 0.02);
+        shard.rotation.x = shard.userData.baseRotationX + Math.sin(t * 1.15 + shard.userData.phase) * (0.045 + charge * 0.025);
+        shard.rotation.y = shard.userData.baseRotationY + (state.hover === shard ? Math.sin(t * 4.2) * 0.08 : 0);
+        shard.rotation.z = shard.userData.baseRotationZ;
       }
 
       const motePositions = motes.positions;
@@ -1495,7 +1501,7 @@
       }
       motes.geometry.attributes.position.needsUpdate = true;
       motes.points.rotation.y = t * 0.078;
-      motes.material.opacity = 0.58 + pulse * 0.24 + charge * 0.14;
+      motes.material.opacity = 0.38 + pulse * 0.16 + charge * 0.1;
 
       if (state.drawing || state.charging) {
         trails.emit(pointerWorld, state.drawing ? (isMobile ? 1 : 2) : 1, false);
@@ -1534,12 +1540,12 @@
 
       ground.circle.rotation.z -= dt * (0.062 + pulse * 0.16 + charge * 0.07);
       ground.sigil.rotation.y += dt * 0.014;
-      ground.materials.circleMaterial.opacity = 0.075 + slowBreath * 0.052 + pulse * 0.15 + charge * 0.06;
-      ground.materials.sigilMaterial.opacity = 0.05 + pulse * 0.08 + charge * 0.08;
+      ground.materials.circleMaterial.opacity = 0.04 + slowBreath * 0.03 + pulse * 0.08 + charge * 0.04;
+      ground.materials.sigilMaterial.opacity = 0.025 + pulse * 0.045 + charge * 0.045;
 
       for (let i = 0; i < obelisks.obelisks.length; i++) {
         const item = obelisks.obelisks[i];
-        item.group.position.y += (-7.45 + Math.sin(t * 0.68 + item.phase) * 0.12 - item.group.position.y) * 0.045;
+        item.group.position.y += (-9.55 + Math.sin(t * 0.68 + item.phase) * 0.1 - item.group.position.y) * 0.045;
         item.ember.scale.setScalar(1 + Math.sin(t * 2.55 + item.phase) * 0.32 + pulse * 0.55 + charge * 0.22);
         item.group.rotation.y += Math.sin(t * 0.26 + item.phase) * 0.0009;
       }
@@ -1563,14 +1569,14 @@
       state.distance += (state.targetDistance - state.distance) * 0.08;
       state.roll += (state.targetRoll - state.roll) * 0.08;
       cameraTarget.lerp(cameraTargetTarget, 0.05);
-      cameraTargetTarget.lerp(new THREE.Vector3(0, 0.15, 0), 0.006);
+      cameraTargetTarget.lerp(tempVector2.set(0, 1.65, 0), 0.006);
 
       const shake = state.screenShake;
       const shakeX = shake ? Math.sin(t * 39.7) * shake : 0;
       const shakeY = shake ? Math.cos(t * 31.1) * shake * 0.55 : 0;
-      const height = 7 + state.pitch * 13 + Math.sin(t * 0.3) * 1.35 + shakeY;
+      const height = 4.8 + state.pitch * 8 + Math.sin(t * 0.3) * 0.75 + shakeY;
       camera.position.x = Math.sin(state.yaw) * state.distance + shakeX;
-      camera.position.z = Math.cos(state.yaw) * state.distance + 8;
+      camera.position.z = Math.cos(state.yaw) * state.distance + 5.5;
       camera.position.y = height;
       camera.rotation.z = state.roll;
       camera.lookAt(cameraTarget);
