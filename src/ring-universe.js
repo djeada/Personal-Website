@@ -2,6 +2,13 @@
   'use strict';
 
   const TAU = Math.PI * 2;
+  const DESTINATIONS = [
+    { label: 'Projects', href: 'core/projects.html', color: 0x8ef6ff, angle: -0.95 },
+    { label: 'Tools', href: 'core/tools.html', color: 0xffb36a, angle: -0.42 },
+    { label: 'Blog', href: 'core/blog.html', color: 0xd5b4ff, angle: 0.1 },
+    { label: 'Courses', href: 'core/courses.html', color: 0xa7f3d0, angle: 0.62 },
+    { label: 'Resume', href: 'core/resume.html', color: 0xff8fb3, angle: 1.12 }
+  ];
 
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
@@ -179,6 +186,40 @@
       [0.62, 'rgba(120,80,255,.12)'],
       [1.00, 'rgba(0,0,0,0)']
     ]);
+  }
+
+  function createLabelTexture(text, color) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 384;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    const hex = `#${color.toString(16).padStart(6, '0')}`;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.shadowColor = hex;
+    ctx.shadowBlur = 22;
+    ctx.strokeStyle = 'rgba(255,255,255,.34)';
+    ctx.lineWidth = 2;
+    ctx.fillStyle = 'rgba(4,6,18,.58)';
+    if (ctx.roundRect) {
+      ctx.roundRect(22, 26, 340, 76, 14);
+    } else {
+      ctx.rect(22, 26, 340, 76);
+    }
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = hex;
+    ctx.font = '700 38px Inter, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 192, 64);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    return texture;
   }
 
   function makePortalMaterial(colors) {
@@ -776,6 +817,69 @@
     };
   }
 
+  function createDestinationNodes() {
+    const group = new THREE.Group();
+    group.visible = false;
+    const nodes = DESTINATIONS.map((item) => {
+      const node = new THREE.Group();
+      const texture = createLabelTexture(item.label, item.color);
+      const label = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false
+      }));
+      label.scale.set(5.4, 1.8, 1);
+      label.userData.interactive = 'destination';
+      label.userData.href = item.href;
+      label.userData.label = item.label;
+
+      const glow = new THREE.Mesh(
+        new THREE.SphereGeometry(0.18, 18, 12),
+        new THREE.MeshBasicMaterial({
+          color: item.color,
+          transparent: true,
+          opacity: 0,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+
+      node.add(glow, label);
+      node.userData.angle = item.angle;
+      node.userData.radius = 9.6;
+      group.add(node);
+      return { group: node, label, glow, texture };
+    });
+
+    return {
+      group,
+      nodes,
+      update(t, openProgress, hovered) {
+        group.visible = openProgress > 0.01;
+        nodes.forEach((node, index) => {
+          const reveal = clamp(openProgress * 1.35 - index * 0.12, 0, 1);
+          const angle = node.group.userData.angle + Math.sin(t * 0.35 + index) * 0.04;
+          const radius = node.group.userData.radius;
+          const hoverBoost = hovered === node.label ? 1.12 : 1;
+          node.group.position.set(Math.sin(angle) * radius, 2.4 + Math.cos(index * 1.7 + t * 0.5) * 0.38, Math.cos(angle) * 2.2 - 1.8);
+          node.group.scale.setScalar(hoverBoost);
+          node.label.material.opacity = reveal;
+          node.glow.material.opacity = reveal * (0.58 + Math.sin(t * 2 + index) * 0.16);
+          node.glow.scale.setScalar(1 + reveal * (4 + Math.sin(t * 2.4 + index) * 0.6));
+        });
+      },
+      dispose() {
+        nodes.forEach((node) => {
+          node.texture.dispose();
+          node.label.material.dispose();
+          node.glow.geometry.dispose();
+          node.glow.material.dispose();
+        });
+      }
+    };
+  }
+
   function createSimulation(container, options) {
     options = options || {};
     if (!window.THREE || !container) return null;
@@ -938,6 +1042,9 @@
     const ground = createGround(scene, colors, quality);
     const obelisks = createObelisks(scene, colors, quality, interactiveTargets);
     const meteors = Array.from({ length: quality.meteors }, () => createMeteor(scene, colors, quality));
+    const destinations = createDestinationNodes();
+    scene.add(destinations.group);
+    destinations.nodes.forEach((node) => interactiveTargets.push(node.label));
 
     const raycaster = new THREE.Raycaster();
     const pointerNdc = new THREE.Vector2(0, 0);
@@ -981,6 +1088,8 @@
       screenShake: 0,
       pointerInfluence: 0,
       drawing: false,
+      portalOpen: false,
+      portalOpenProgress: 0,
       nextMeteor: rand(4, 9),
       keys: Object.create(null),
       hudHidden: false,
@@ -1063,6 +1172,10 @@
 
     function focusObject(object) {
       if (!object) return;
+      if (object.userData.interactive === 'destination' && object.userData.href) {
+        window.location.href = object.userData.href;
+        return;
+      }
       object.getWorldPosition(tempVector);
       cameraTargetTarget.lerp(tempVector, 0.28);
       state.selected = object;
@@ -1080,6 +1193,8 @@
       state.targetDistance = isMobile ? 31 : 40;
       cameraTargetTarget.set(0, 0.15, 0);
       state.cinematic = false;
+      state.portalOpen = false;
+      state.portalOpenProgress = 0;
       launchPulse(1.15);
     }
 
@@ -1163,6 +1278,10 @@
       if (state.pointerId === event.pointerId || state.pointerDown) {
         const wasTap = state.dragDistance < 9;
         const strength = wasTap ? Math.max(1, 0.65 + state.charge * 1.2) : Math.max(0.65, state.charge * 1.35);
+        if (state.charge > 1.5) {
+          state.portalOpen = true;
+          hud.classList.remove('is-muted');
+        }
         if (state.hover && wasTap) focusObject(state.hover);
         else launchPulse(strength);
       }
@@ -1290,6 +1409,7 @@
       state.pointerInfluence = Math.max(0, state.pointerInfluence - dt * 0.9);
       state.selectedBoost = Math.max(0, state.selectedBoost - dt * 0.9);
       state.hoverBoost = Math.max(0, state.hoverBoost - dt * 2.2);
+      state.portalOpenProgress += ((state.portalOpen ? 1 : 0) - state.portalOpenProgress) * 0.07;
 
       const pulse = state.pulse;
       const charge = state.charge;
@@ -1431,8 +1551,9 @@
         state.nextMeteor = rand(isMobile ? 9 : 5, isMobile ? 18 : 12);
       }
       meteors.forEach((meteor) => meteor.update(dt));
+      destinations.update(t, state.portalOpenProgress, state.hover);
 
-      portalLight.intensity += ((4.85 + breathing * 1.75 + pulse * 8.2 + charge * 3.0 + state.hoverBoost * 0.8) - portalLight.intensity) * 0.08;
+      portalLight.intensity += ((4.85 + breathing * 1.75 + pulse * 8.2 + charge * 3.0 + state.portalOpenProgress * 4.2 + state.hoverBoost * 0.8) - portalLight.intensity) * 0.08;
       portalLight.position.set(Math.sin(t * 0.8) * 1.45, 1.45 + Math.sin(t * 1.1) * 0.82, Math.cos(t * 0.7) * 1.45);
       emberLight.intensity = 1.45 + slowBreath * 1.25 + pulse * 3.2 + charge * 0.9;
       emberLight.position.set(Math.sin(t * 0.43) * 19, -2 + Math.sin(t * 0.7) * 2, Math.cos(t * 0.37) * 19);
@@ -1492,6 +1613,7 @@
           meteor.geometry.dispose();
           meteor.material.dispose();
         });
+        destinations.dispose();
 
         [pointTexture, smokeTexture, strokeTexture].forEach((texture) => texture.dispose());
         [stars.geometry, clouds.geometry, motes.geometry, trails.geometry].forEach((geometry) => geometry.dispose());
@@ -1515,4 +1637,3 @@
 
   window.createRingUniverseSimulation = createSimulation;
 })();
-
