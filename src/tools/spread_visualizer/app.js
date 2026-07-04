@@ -32,16 +32,16 @@ const SERIES = [
 ];
 
 const CHART = {
-    left: 104,
-    right: 34,
+    left: 92,
+    right: 30,
     top: 44,
-    plotHeight: 230,
-    spreadTop: 326,
-    boxTop: 520,
-    boxHeight: 150,
-    dotTop: 760,
-    dotHeight: 82,
-    bottom: 44
+    plotHeight: 220,
+    spreadTop: 0,
+    boxTop: 330,
+    dotTop: 560,
+    dotHeight: 84,
+    bottom: 40,
+    narrow: false
 };
 
 let activeMessage = "";
@@ -197,11 +197,47 @@ function generateFromControls() {
     draw();
 }
 
-function resizeCanvas() {
+function configureChart(width, activeCount, showIqr, showStd, showPoints) {
+    const narrow = width < 560;
+    const showSpread = showIqr || showStd;
+    const top = narrow ? 38 : 44;
+    const plotHeight = narrow ? 168 : 220;
+    const left = narrow ? 58 : 92;
+    const right = narrow ? 14 : 30;
+    const distributionBottom = top + plotHeight;
+    const spreadTop = distributionBottom + (narrow ? 56 : 64);
+    const spreadRows = showStd ? (showIqr ? 4 : 3) : (showIqr ? 1 : 0);
+    const spreadRowGap = narrow ? 17 : 19;
+    const spreadHeight = showSpread ? 34 + activeCount * (spreadRows * spreadRowGap + (narrow ? 22 : 28)) : 0;
+    const boxTop = showSpread ? spreadTop + spreadHeight + (narrow ? 26 : 34) : distributionBottom + (narrow ? 78 : 92);
+    const boxRowGap = narrow ? 66 : 76;
+    const boxSectionHeight = 48 + activeCount * boxRowGap;
+    const dotTop = boxTop + boxSectionHeight + (narrow ? 40 : 48);
+    const dotHeight = showPoints ? 18 + activeCount * (narrow ? 30 : 34) : 0;
+    const bottom = narrow ? 30 : 40;
+    const height = showPoints ? dotTop + dotHeight + bottom : boxTop + boxSectionHeight + bottom;
+
+    Object.assign(CHART, {
+        left,
+        right,
+        top,
+        plotHeight,
+        spreadTop,
+        boxTop,
+        dotTop,
+        dotHeight,
+        bottom,
+        narrow
+    });
+
+    return Math.ceil(height);
+}
+
+function resizeCanvas(activeCount, showIqr, showStd, showPoints) {
     const canvas = document.getElementById("canvas");
     const container = canvas.parentElement;
     const width = Math.max(320, Math.min(container.clientWidth, 860));
-    const height = width < 560 ? 900 : 880;
+    const height = configureChart(width, activeCount, showIqr, showStd, showPoints);
     const dpr = window.devicePixelRatio || 1;
 
     canvas.width = Math.floor(width * dpr);
@@ -221,19 +257,21 @@ function getColor(light, dark) {
 
 function draw() {
     const canvas = document.getElementById("canvas");
-    const dimensions = resizeCanvas();
-    const ctx = canvas.getContext("2d");
     const valuesA = parseValues(document.getElementById("dataset-a").value);
     const valuesB = parseValues(document.getElementById("dataset-b").value);
     const message = document.getElementById("input-message");
-
-    ctx.clearRect(0, 0, dimensions.width, dimensions.height);
-
     const activeSeries = visibleSeries();
+    const showIqr = document.getElementById("show-iqr").checked;
+    const showStd = document.getElementById("show-std").checked;
+    const showPoints = document.getElementById("show-points").checked;
+    const dimensions = resizeCanvas(Math.max(1, activeSeries.length), showIqr, showStd, showPoints);
+    const ctx = canvas.getContext("2d");
     const activeValues = {
         a: valuesA,
         b: valuesB
     };
+
+    ctx.clearRect(0, 0, dimensions.width, dimensions.height);
 
     if (activeSeries.length === 0) {
         message.textContent = "Choose at least one dataset to display.";
@@ -291,7 +329,7 @@ function drawVisualization(ctx, dimensions, summaries, activeSeries) {
 
     drawBackground(ctx, dimensions);
     drawAxes(ctx, dimensions, xRange, densityMax, x);
-    drawSectionLabel(ctx, "Distribution with mean and median markers", CHART.left, 28);
+    drawSectionLabel(ctx, CHART.narrow ? "Distribution" : "Distribution with mean and median markers", CHART.left, CHART.top - 16);
 
     activeSeries.forEach(series => {
         const summary = summaries[series.key];
@@ -302,7 +340,7 @@ function drawVisualization(ctx, dimensions, summaries, activeSeries) {
         drawVerticalMarker(ctx, x(summary.median), CHART.top, CHART.top + CHART.plotHeight, getColor("#111827", "#f8fafc"), true);
     });
 
-    drawSpreadArrows(ctx, dimensions, summaries, x, activeSeries, showIqr, showStd);
+    if (showIqr || showStd) drawSpreadArrows(ctx, dimensions, summaries, x, activeSeries, showIqr, showStd);
     drawBoxPlotArea(ctx, dimensions, summaries, x, activeSeries);
     if (showPoints) drawDotPlotArea(ctx, dimensions, summaries, x, activeSeries);
     renderLegend(activeSeries, showStd, showIqr, showNormal);
@@ -322,7 +360,9 @@ function drawAxes(ctx, dimensions, xRange, densityMax, x) {
     const textColor = getColor("#536174", "#cbd5e1");
     const bottom = CHART.top + CHART.plotHeight;
     const plotRight = dimensions.width - CHART.right;
-    const tickStep = niceStep((xRange.max - xRange.min) / 8);
+    const tickStep = niceStep((xRange.max - xRange.min) / (CHART.narrow ? 4 : 8));
+    const yTickCount = CHART.narrow ? 3 : 4;
+    const gridBottom = dimensions.height - CHART.bottom;
 
     ctx.strokeStyle = gridColor;
     ctx.lineWidth = 1;
@@ -330,12 +370,12 @@ function drawAxes(ctx, dimensions, xRange, densityMax, x) {
         const px = x(value);
         ctx.beginPath();
         ctx.moveTo(px, CHART.top);
-        ctx.lineTo(px, CHART.dotTop + CHART.dotHeight + 10);
+        ctx.lineTo(px, gridBottom);
         ctx.stroke();
     }
 
-    for (let i = 0; i <= 4; i++) {
-        const py = CHART.top + CHART.plotHeight - (i / 4) * CHART.plotHeight;
+    for (let i = 0; i <= yTickCount; i++) {
+        const py = CHART.top + CHART.plotHeight - (i / yTickCount) * CHART.plotHeight;
         ctx.beginPath();
         ctx.moveTo(CHART.left, py);
         ctx.lineTo(plotRight, py);
@@ -360,18 +400,20 @@ function drawAxes(ctx, dimensions, xRange, densityMax, x) {
 
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
-    for (let i = 0; i <= 4; i++) {
-        const density = (densityMax / 1.2) * (i / 4);
-        const py = CHART.top + CHART.plotHeight - (i / 4) * CHART.plotHeight;
-        ctx.fillText(density.toFixed(2), CHART.left - 8, py);
+    for (let i = 0; i <= yTickCount; i++) {
+        const density = (densityMax / 1.2) * (i / yTickCount);
+        const py = CHART.top + CHART.plotHeight - (i / yTickCount) * CHART.plotHeight;
+        ctx.fillText(CHART.narrow ? density.toFixed(1) : density.toFixed(2), CHART.left - 8, py);
     }
 
-    ctx.save();
-    ctx.translate(18, CHART.top + CHART.plotHeight / 2);
-    ctx.rotate(-Math.PI / 2);
-    ctx.textAlign = "center";
-    ctx.fillText("Relative frequency / density", 0, 0);
-    ctx.restore();
+    if (!CHART.narrow) {
+        ctx.save();
+        ctx.translate(18, CHART.top + CHART.plotHeight / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.textAlign = "center";
+        ctx.fillText("Relative frequency / density", 0, 0);
+        ctx.restore();
+    }
 }
 
 function histogram(values, xRange) {
@@ -442,8 +484,8 @@ function drawVerticalMarker(ctx, px, top, bottom, color, dashed) {
 }
 
 function drawSpreadArrows(ctx, dimensions, summaries, x, activeSeries, showIqr, showStd) {
-    drawDivider(ctx, dimensions, CHART.spreadTop - 28);
-    drawSectionLabel(ctx, "Spread intervals", CHART.left, CHART.spreadTop - 42);
+    drawDivider(ctx, dimensions, CHART.spreadTop - 24);
+    drawSectionLabel(ctx, "Spread intervals", CHART.left, CHART.spreadTop - 38);
 
     if (!showIqr && !showStd) {
         const muted = getColor("#64748b", "#94a3b8");
@@ -457,29 +499,33 @@ function drawSpreadArrows(ctx, dimensions, summaries, x, activeSeries, showIqr, 
 
     activeSeries.forEach((series, seriesIndex) => {
         const summary = summaries[series.key];
-        const baseY = CHART.spreadTop + 12 + seriesIndex * 84;
+        const rowGap = CHART.narrow ? 17 : 19;
+        const rows = showStd ? (showIqr ? 4 : 3) : 1;
+        const seriesGap = rows * rowGap + (CHART.narrow ? 22 : 28);
+        const baseY = CHART.spreadTop + 10 + seriesIndex * seriesGap;
 
         ctx.fillStyle = getColor("#475467", "#dbe4ef");
-        ctx.font = "12px Arial";
+        ctx.font = CHART.narrow ? "11px Arial" : "12px Arial";
         ctx.textAlign = "right";
         ctx.textBaseline = "middle";
-        ctx.fillText(series.label, CHART.left - 14, baseY + (showStd ? 32 : 0));
+        ctx.fillText(series.key.toUpperCase(), CHART.left - 10, baseY + (showStd ? rowGap * 1.5 : 0));
 
         if (showIqr) {
             drawDoubleArrow(ctx, x(summary.q1), x(summary.q3), baseY, series.color, `IQR ${formatNumber(summary.iqr)}`);
         }
 
         if (showStd) {
-            const firstSigmaY = showIqr ? baseY + 24 : baseY;
-            for (let level = 1; level <= 3; level++) {
-                const sigmaY = firstSigmaY + (level - 1) * 18;
+            const firstSigmaY = showIqr ? baseY + rowGap + 6 : baseY;
+            const maxLevel = CHART.narrow ? 2 : 3;
+            for (let level = 1; level <= maxLevel; level++) {
+                const sigmaY = firstSigmaY + (level - 1) * rowGap;
                 drawDoubleArrow(
                     ctx,
                     x(summary.mean - level * summary.std),
                     x(summary.mean + level * summary.std),
                     sigmaY,
                     series.color,
-                    `mu +/- ${level}σ`,
+                    CHART.narrow ? `+/-${level}σ` : `mean +/- ${level}σ`,
                     true,
                     0.95 - (level - 1) * 0.22
                 );
@@ -491,13 +537,14 @@ function drawSpreadArrows(ctx, dimensions, summaries, x, activeSeries, showIqr, 
 function drawDoubleArrow(ctx, left, right, y, color, label, dashed, alpha) {
     const start = Math.min(left, right);
     const end = Math.max(left, right);
-    const head = 7;
+    const head = CHART.narrow ? 5 : 7;
+    const span = end - start;
 
     ctx.save();
     ctx.globalAlpha = alpha || 1;
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
-    ctx.lineWidth = dashed ? 1.6 : 2;
+    ctx.lineWidth = dashed ? 1.4 : 2;
     if (dashed) ctx.setLineDash([5, 6]);
 
     ctx.beginPath();
@@ -509,10 +556,10 @@ function drawDoubleArrow(ctx, left, right, y, color, label, dashed, alpha) {
     drawArrowHead(ctx, start, y, 1, head);
     drawArrowHead(ctx, end, y, -1, head);
 
-    ctx.font = "12px Arial";
+    ctx.font = CHART.narrow ? "10px Arial" : "12px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
-    ctx.fillText(label, (start + end) / 2, y - 5);
+    if (span > (CHART.narrow ? 36 : 52)) ctx.fillText(label, (start + end) / 2, y - 5);
     ctx.restore();
 }
 
@@ -527,13 +574,13 @@ function drawArrowHead(ctx, xPos, yPos, direction, size) {
 
 function drawBoxPlotArea(ctx, dimensions, summaries, x, activeSeries) {
     const textColor = getColor("#475467", "#dbe4ef");
-    drawDivider(ctx, dimensions, CHART.boxTop - 30);
-    drawSectionLabel(ctx, "Box plots: whiskers, quartiles, median", CHART.left, CHART.boxTop - 44);
+    drawDivider(ctx, dimensions, CHART.boxTop - 24);
+    drawSectionLabel(ctx, CHART.narrow ? "Box plots" : "Box plots: whiskers, quartiles, median", CHART.left, CHART.boxTop - 38);
 
     activeSeries.forEach((series, index) => {
         const summary = summaries[series.key];
-        const yCenter = CHART.boxTop + 44 + index * 82;
-        const boxHeight = 26;
+        const yCenter = CHART.boxTop + 38 + index * (CHART.narrow ? 66 : 76);
+        const boxHeight = CHART.narrow ? 22 : 26;
 
         ctx.strokeStyle = series.color;
         ctx.fillStyle = series.fill;
@@ -563,10 +610,10 @@ function drawBoxPlotArea(ctx, dimensions, summaries, x, activeSeries) {
         summary.outliers.forEach(value => drawCircle(ctx, x(value), yCenter, 4, false));
 
         ctx.fillStyle = textColor;
-        ctx.font = "12px Arial";
+        ctx.font = CHART.narrow ? "11px Arial" : "12px Arial";
         ctx.textAlign = "right";
         ctx.textBaseline = "middle";
-        ctx.fillText(series.label, CHART.left - 14, yCenter);
+        ctx.fillText(CHART.narrow ? series.key.toUpperCase() : series.label, CHART.left - 10, yCenter);
 
     });
 }
@@ -574,7 +621,11 @@ function drawBoxPlotArea(ctx, dimensions, summaries, x, activeSeries) {
 function drawBoxLabels(ctx, summary, series, x, yCenter, boxHeight, dimensions) {
     const labelColor = getColor("#344054", "#e5e7eb");
     const guideColor = getColor("rgba(71, 84, 103, 0.28)", "rgba(226, 232, 240, 0.35)");
-    const labels = [
+    const labels = CHART.narrow ? [
+        { text: "Q1", value: summary.q1, y: yCenter - boxHeight / 2 - 17 },
+        { text: "Median", value: summary.median, y: yCenter + boxHeight / 2 + 17, color: series.color },
+        { text: "Q3", value: summary.q3, y: yCenter - boxHeight / 2 - 17 }
+    ] : [
         { text: "Low", value: summary.lowerWhisker, y: yCenter + boxHeight / 2 + 20 },
         { text: "Q1", value: summary.q1, y: yCenter - boxHeight / 2 - 20 },
         { text: "Median", value: summary.median, y: yCenter - boxHeight / 2 - 38, color: series.color },
@@ -582,18 +633,19 @@ function drawBoxLabels(ctx, summary, series, x, yCenter, boxHeight, dimensions) 
         { text: "High", value: summary.upperWhisker, y: yCenter + boxHeight / 2 + 20 }
     ];
 
-    ctx.font = "12px Arial";
-    labels.forEach((item, index) => {
-        const minLabelSpacing = 24;
+    ctx.font = CHART.narrow ? "10px Arial" : "12px Arial";
+    const placedByRow = {};
+    labels.forEach(item => {
+        const minLabelSpacing = CHART.narrow ? 18 : 24;
         let px = Math.max(CHART.left + 12, Math.min(dimensions.width - CHART.right - 12, x(item.value)));
-        if (index > 0) {
-            const previous = labels[index - 1];
-            const previousX = Math.max(CHART.left + 12, Math.min(dimensions.width - CHART.right - 12, x(previous.value)));
-            if (Math.abs(px - previousX) < minLabelSpacing && item.y === previous.y) {
-                px += px >= previousX ? minLabelSpacing / 2 : -minLabelSpacing / 2;
-                px = Math.max(CHART.left + 12, Math.min(dimensions.width - CHART.right - 12, px));
-            }
+        const rowKey = String(Math.round(item.y));
+        const previousX = placedByRow[rowKey];
+        if (Number.isFinite(previousX) && Math.abs(px - previousX) < minLabelSpacing) {
+            px += px >= previousX ? minLabelSpacing / 2 : -minLabelSpacing / 2;
+            px = Math.max(CHART.left + 12, Math.min(dimensions.width - CHART.right - 12, px));
         }
+        placedByRow[rowKey] = px;
+
         ctx.strokeStyle = guideColor;
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -610,28 +662,30 @@ function drawBoxLabels(ctx, summary, series, x, yCenter, boxHeight, dimensions) 
     ctx.fillStyle = series.color;
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-    ctx.fillText(`IQR ${formatNumber(summary.iqr)}`, Math.min(dimensions.width - CHART.right - 60, x(summary.q3) + 10), yCenter);
+    if (!CHART.narrow) {
+        ctx.fillText(`IQR ${formatNumber(summary.iqr)}`, Math.min(dimensions.width - CHART.right - 60, x(summary.q3) + 10), yCenter);
+    }
 }
 
 function drawDotPlotArea(ctx, dimensions, summaries, x, activeSeries) {
     const textColor = getColor("#475467", "#dbe4ef");
-    drawDivider(ctx, dimensions, CHART.dotTop - 30);
-    drawSectionLabel(ctx, "Dot plots", CHART.left, CHART.dotTop - 44);
+    drawDivider(ctx, dimensions, CHART.dotTop - 24);
+    drawSectionLabel(ctx, "Dot plots", CHART.left, CHART.dotTop - 38);
 
     activeSeries.forEach((series, index) => {
-        const yCenter = CHART.dotTop + 24 + index * 34;
+        const yCenter = CHART.dotTop + 20 + index * (CHART.narrow ? 30 : 34);
         const counts = {};
         summaries[series.key].sorted.forEach(value => {
             const bucket = value.toFixed(2);
             counts[bucket] = (counts[bucket] || 0) + 1;
-            drawCircle(ctx, x(value), yCenter - (counts[bucket] - 1) * 7, 4, true, series.color);
+            drawCircle(ctx, x(value), yCenter - (counts[bucket] - 1) * (CHART.narrow ? 6 : 7), CHART.narrow ? 3.5 : 4, true, series.color);
         });
 
         ctx.fillStyle = textColor;
-        ctx.font = "12px Arial";
+        ctx.font = CHART.narrow ? "11px Arial" : "12px Arial";
         ctx.textAlign = "right";
         ctx.textBaseline = "middle";
-        ctx.fillText(series.label, CHART.left - 14, yCenter);
+        ctx.fillText(CHART.narrow ? series.key.toUpperCase() : series.label, CHART.left - 10, yCenter);
     });
 }
 
@@ -661,7 +715,7 @@ function drawDivider(ctx, dimensions, y) {
 
 function drawSectionLabel(ctx, label, x, y) {
     ctx.fillStyle = getColor("#111827", "#e5e7eb");
-    ctx.font = "700 13px Arial";
+    ctx.font = CHART.narrow ? "700 12px Arial" : "700 13px Arial";
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
     ctx.fillText(label, x, y);
