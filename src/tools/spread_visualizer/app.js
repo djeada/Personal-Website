@@ -862,7 +862,7 @@ function renderStats(summaries, activeSeries) {
                         <tr><th>Mean</th><td>${formatNumber(s.mean)}</td><th>σ</th><td>${formatNumber(s.std)}</td></tr>
                         <tr><th>Q1</th><td>${formatNumber(s.q1)}</td><th>Q2 median</th><td>${formatNumber(s.median)}</td></tr>
                         <tr><th>Q3</th><td>${formatNumber(s.q3)}</td><th>IQR</th><td>${formatNumber(s.iqr)}</td></tr>
-                        <tr><th>Whisker low</th><td>${formatNumber(s.lowerWhisker)}</td><th>Whisker high</th><td>${formatNumber(s.upperWhisker)}</td></tr>
+                        <tr><th>Mean - σ</th><td>${formatNumber(s.mean - s.std)}</td><th>Mean + σ</th><td>${formatNumber(s.mean + s.std)}</td></tr>
                         <tr><th>Outliers</th><td class="outlier-cell" colspan="3">${formatOutliers(s.outliers)}</td></tr>
                     </tbody>
                 </table>
