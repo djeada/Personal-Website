@@ -338,36 +338,23 @@ function drawVisualization(ctx, dimensions, summaries, activeSeries) {
     const showPoints = document.getElementById("show-points").checked;
     const showIqr = document.getElementById("show-iqr").checked;
     const showStd = document.getElementById("show-std").checked;
-    const allValues = activeSeries.flatMap(series => {
-        const summary = summaries[series.key];
-        const sigmaValues = showStd && summary.std > 0
-            ? SIGMA_MARKERS.map(marker => summary.mean + marker.multiplier * summary.std)
-            : [];
-        return summary.values.concat(sigmaValues);
-    });
-    const min = Math.min(...allValues);
-    const max = Math.max(...allValues);
-    const spread = Math.max(max - min, 1);
-    const xRange = {
-        min: min - spread * 0.09,
-        max: max + spread * 0.09
-    };
-    const x = value => CHART.left + ((value - xRange.min) / (xRange.max - xRange.min)) * (dimensions.width - CHART.left - CHART.right);
+    const xScale = createXScale(dimensions, summaries, activeSeries, showStd);
+    const x = value => mapX(xScale, value);
     const densityMax = Math.max(
-        ...activeSeries.map(series => histogram(summaries[series.key].values, xRange).maxDensity),
+        ...activeSeries.map(series => histogram(summaries[series.key].values, xScale).maxDensity),
         ...activeSeries.map(series => summaries[series.key].std > 0 ? gaussian(summaries[series.key].mean, summaries[series.key].mean, summaries[series.key].std) : 0)
     ) * 1.2 || 1;
     const y = density => CHART.top + CHART.plotHeight - (density / densityMax) * CHART.plotHeight;
 
     drawBackground(ctx, dimensions);
-    drawAxes(ctx, dimensions, xRange, densityMax, x);
+    drawAxes(ctx, dimensions, xScale, densityMax, x);
     drawSectionLabel(ctx, CHART.narrow ? "Distribution" : "Distribution with mean and median markers", CHART.left, CHART.top - 16);
 
     activeSeries.forEach(series => {
         const summary = summaries[series.key];
-        const hist = histogram(summary.values, xRange);
+        const hist = histogram(summary.values, xScale);
         drawHistogram(ctx, hist, series, x, y, CHART.top + CHART.plotHeight);
-        if (showNormal && summary.std > 0) drawNormalCurve(ctx, summary, series, xRange, x, y);
+        if (showNormal && summary.std > 0) drawNormalCurve(ctx, summary, series, xScale, x, y);
         drawVerticalMarker(ctx, x(summary.mean), CHART.top, CHART.top + CHART.plotHeight, series.color, false);
         drawVerticalMarker(ctx, x(summary.median), CHART.top, CHART.top + CHART.plotHeight, getColor("#111827", "#f8fafc"), true);
     });
@@ -378,6 +365,88 @@ function drawVisualization(ctx, dimensions, summaries, activeSeries) {
     renderLegend(activeSeries, showStd, showIqr, showNormal);
 }
 
+function createXScale(dimensions, summaries, activeSeries, showStd) {
+    const fullValues = [];
+    const focusValues = [];
+
+    activeSeries.forEach(series => {
+        const summary = summaries[series.key];
+        const nonOutliers = summary.sorted.filter(value => value >= summary.lowFence && value <= summary.highFence);
+        const sigmaValues = showStd && summary.std > 0
+            ? SIGMA_MARKERS.map(marker => summary.mean + marker.multiplier * summary.std)
+            : [];
+
+        fullValues.push(...summary.values, ...sigmaValues);
+        focusValues.push(
+            ...(nonOutliers.length ? nonOutliers : summary.sorted),
+            summary.mean,
+            summary.median,
+            summary.q1,
+            summary.q3,
+            summary.lowerWhisker,
+            summary.upperWhisker
+        );
+    });
+
+    const rawMin = Math.min(...fullValues);
+    const rawMax = Math.max(...fullValues);
+    const rawSpread = Math.max(rawMax - rawMin, 1);
+    const min = rawMin - rawSpread * 0.06;
+    const max = rawMax + rawSpread * 0.06;
+
+    let focusMin = Math.min(...focusValues);
+    let focusMax = Math.max(...focusValues);
+    const focusSpread = Math.max(focusMax - focusMin, rawSpread * 0.05, 1);
+    const focusPadding = focusSpread * 0.22;
+    focusMin = Math.max(min, focusMin - focusPadding);
+    focusMax = Math.min(max, focusMax + focusPadding);
+
+    const paddedFocusSpread = Math.max(focusMax - focusMin, 1);
+    const hasLeftTail = min < focusMin;
+    const hasRightTail = max > focusMax;
+    const compressed = rawSpread / paddedFocusSpread > 3.8 && (hasLeftTail || hasRightTail);
+    const plotLeft = CHART.left;
+    const plotRight = dimensions.width - CHART.right;
+    const plotWidth = Math.max(plotRight - plotLeft, 1);
+    const tailRatio = CHART.narrow ? 0.17 : 0.15;
+    const leftTailWidth = compressed && hasLeftTail ? plotWidth * tailRatio : 0;
+    const rightTailWidth = compressed && hasRightTail ? plotWidth * tailRatio : 0;
+
+    return {
+        min,
+        max,
+        focusMin,
+        focusMax,
+        compressed,
+        plotLeft,
+        plotRight,
+        plotWidth,
+        leftTailWidth,
+        rightTailWidth,
+        focusLeft: plotLeft + leftTailWidth,
+        focusRight: plotRight - rightTailWidth
+    };
+}
+
+function mapX(scale, value) {
+    if (!scale.compressed) {
+        return scale.plotLeft + ((value - scale.min) / (scale.max - scale.min)) * scale.plotWidth;
+    }
+
+    if (value < scale.focusMin && scale.leftTailWidth > 0) {
+        const tailSpan = Math.max(scale.focusMin - scale.min, 1);
+        return scale.plotLeft + ((value - scale.min) / tailSpan) * scale.leftTailWidth;
+    }
+
+    if (value > scale.focusMax && scale.rightTailWidth > 0) {
+        const tailSpan = Math.max(scale.max - scale.focusMax, 1);
+        return scale.focusRight + ((value - scale.focusMax) / tailSpan) * scale.rightTailWidth;
+    }
+
+    const focusSpan = Math.max(scale.focusMax - scale.focusMin, 1);
+    return scale.focusLeft + ((value - scale.focusMin) / focusSpan) * (scale.focusRight - scale.focusLeft);
+}
+
 function drawBackground(ctx, dimensions) {
     ctx.fillStyle = getColor("#fbfcfe", "#171717");
     ctx.fillRect(0, 0, dimensions.width, dimensions.height);
@@ -386,25 +455,25 @@ function drawBackground(ctx, dimensions) {
     ctx.strokeRect(0.5, 0.5, dimensions.width - 1, dimensions.height - 1);
 }
 
-function drawAxes(ctx, dimensions, xRange, densityMax, x) {
+function drawAxes(ctx, dimensions, xScale, densityMax, x) {
     const axisColor = getColor("#667085", "#cbd5e1");
     const gridColor = getColor("rgba(148, 163, 184, 0.24)", "rgba(148, 163, 184, 0.18)");
     const textColor = getColor("#536174", "#cbd5e1");
     const bottom = CHART.top + CHART.plotHeight;
     const plotRight = dimensions.width - CHART.right;
-    const tickStep = niceStep((xRange.max - xRange.min) / (CHART.narrow ? 4 : 8));
+    const xTicks = axisTicks(xScale);
     const yTickCount = CHART.narrow ? 3 : 4;
     const gridBottom = dimensions.height - CHART.bottom;
 
     ctx.strokeStyle = gridColor;
     ctx.lineWidth = 1;
-    for (let value = Math.ceil(xRange.min / tickStep) * tickStep; value <= xRange.max; value += tickStep) {
-        const px = x(value);
+    xTicks.forEach(tick => {
+        const px = x(tick.value);
         ctx.beginPath();
         ctx.moveTo(px, CHART.top);
         ctx.lineTo(px, gridBottom);
         ctx.stroke();
-    }
+    });
 
     for (let i = 0; i <= yTickCount; i++) {
         const py = CHART.top + CHART.plotHeight - (i / yTickCount) * CHART.plotHeight;
@@ -426,9 +495,11 @@ function drawAxes(ctx, dimensions, xRange, densityMax, x) {
     ctx.font = "12px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    for (let value = Math.ceil(xRange.min / tickStep) * tickStep; value <= xRange.max; value += tickStep) {
-        ctx.fillText(formatTick(value), x(value), bottom + 9);
-    }
+    xTicks.forEach(tick => {
+        ctx.fillText(formatTick(tick.value), x(tick.value), bottom + 9);
+    });
+
+    if (xScale.compressed) drawAxisBreaks(ctx, xScale, bottom);
 
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
@@ -446,6 +517,47 @@ function drawAxes(ctx, dimensions, xRange, densityMax, x) {
         ctx.fillText("Relative frequency / density", 0, 0);
         ctx.restore();
     }
+}
+
+function axisTicks(xScale) {
+    const targetCount = CHART.narrow ? 4 : 7;
+    const min = xScale.compressed ? xScale.focusMin : xScale.min;
+    const max = xScale.compressed ? xScale.focusMax : xScale.max;
+    const tickStep = niceStep((max - min) / targetCount);
+    const ticks = [];
+
+    for (let value = Math.ceil(min / tickStep) * tickStep; value <= max; value += tickStep) {
+        ticks.push({ value });
+    }
+
+    if (xScale.compressed) {
+        const endpoints = [xScale.min, xScale.max]
+            .filter(value => value < xScale.focusMin || value > xScale.focusMax)
+            .map(value => ({ value }));
+        return endpoints.concat(ticks).filter((tick, index, allTicks) => {
+            const px = mapX(xScale, tick.value);
+            return allTicks.findIndex(other => Math.abs(mapX(xScale, other.value) - px) < 28) === index;
+        });
+    }
+
+    return ticks;
+}
+
+function drawAxisBreaks(ctx, xScale, bottom) {
+    const breakColor = getColor("#667085", "#cbd5e1");
+    ctx.save();
+    ctx.strokeStyle = breakColor;
+    ctx.lineWidth = 1.2;
+    [xScale.focusLeft, xScale.focusRight].forEach(px => {
+        if (px <= xScale.plotLeft + 2 || px >= xScale.plotRight - 2) return;
+        ctx.beginPath();
+        ctx.moveTo(px - 5, bottom + 5);
+        ctx.lineTo(px - 1, bottom - 5);
+        ctx.moveTo(px + 1, bottom + 5);
+        ctx.lineTo(px + 5, bottom - 5);
+        ctx.stroke();
+    });
+    ctx.restore();
 }
 
 function histogram(values, xRange) {
