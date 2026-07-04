@@ -31,6 +31,15 @@ const SERIES = [
     { key: "b", label: "Dataset B", color: "#e11d48", fill: "rgba(225, 29, 72, 0.12)" }
 ];
 
+const SIGMA_MARKERS = [
+    { multiplier: -3, label: "-3σ" },
+    { multiplier: -2, label: "-2σ" },
+    { multiplier: -1, label: "-σ" },
+    { multiplier: 1, label: "+σ" },
+    { multiplier: 2, label: "+2σ" },
+    { multiplier: 3, label: "+3σ" }
+];
+
 const CHART = {
     left: 92,
     right: 30,
@@ -331,7 +340,9 @@ function drawVisualization(ctx, dimensions, summaries, activeSeries) {
     const showStd = document.getElementById("show-std").checked;
     const allValues = activeSeries.flatMap(series => {
         const summary = summaries[series.key];
-        const sigmaValues = showStd ? [summary.mean - summary.std, summary.mean + summary.std] : [];
+        const sigmaValues = showStd && summary.std > 0
+            ? SIGMA_MARKERS.map(marker => summary.mean + marker.multiplier * summary.std)
+            : [];
         return summary.values.concat(sigmaValues);
     });
     const min = Math.min(...allValues);
@@ -527,7 +538,7 @@ function drawSpreadArrows(ctx, dimensions, summaries, x, activeSeries, showIqr, 
         ctx.font = CHART.narrow ? "11px Arial" : "12px Arial";
         ctx.textAlign = "right";
         ctx.textBaseline = "middle";
-        ctx.fillText(series.key.toUpperCase(), CHART.left - 10, baseY + (showStd ? rowGap * 1.5 : 0));
+        ctx.fillText(series.key.toUpperCase(), CHART.left - 10, baseY + (showIqr && showStd ? rowGap * 1.5 : 0));
 
         if (showIqr) {
             drawDoubleArrow(ctx, x(summary.q1), x(summary.q3), baseY, series.color, `IQR ${formatNumber(summary.iqr)}`);
@@ -535,18 +546,69 @@ function drawSpreadArrows(ctx, dimensions, summaries, x, activeSeries, showIqr, 
 
         if (showStd) {
             const firstSigmaY = showIqr ? baseY + rowGap + 6 : baseY;
-            drawDoubleArrow(
-                ctx,
-                x(summary.mean - summary.std),
-                x(summary.mean + summary.std),
-                firstSigmaY,
-                series.color,
-                CHART.narrow ? "+/-1σ" : "mean +/- 1σ",
-                true,
-                0.82
-            );
+            drawSigmaMarkers(ctx, dimensions, summary, x, firstSigmaY, series.color);
         }
     });
+}
+
+function drawSigmaMarkers(ctx, dimensions, summary, x, y, color) {
+    if (summary.std <= 0) {
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.font = CHART.narrow ? "10px Arial" : "12px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("σ = 0", x(summary.mean), y);
+        ctx.restore();
+        return;
+    }
+
+    const minX = CHART.left + 10;
+    const maxX = dimensions.width - CHART.right - 10;
+    const markers = SIGMA_MARKERS.map(marker => ({
+        ...marker,
+        targetX: x(summary.mean + marker.multiplier * summary.std)
+    }));
+    const labels = distributeLabels(markers, CHART.narrow ? 24 : 34, minX, maxX);
+    const start = markers[0].targetX;
+    const end = markers[markers.length - 1].targetX;
+    const tickHeight = CHART.narrow ? 8 : 10;
+    const labelY = y - (CHART.narrow ? 7 : 8);
+
+    ctx.save();
+    ctx.globalAlpha = 0.86;
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 1.4;
+    ctx.setLineDash([5, 6]);
+    ctx.beginPath();
+    ctx.moveTo(start, y);
+    ctx.lineTo(end, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    markers.forEach(marker => {
+        ctx.beginPath();
+        ctx.moveTo(marker.targetX, y - tickHeight / 2);
+        ctx.lineTo(marker.targetX, y + tickHeight / 2);
+        ctx.stroke();
+    });
+
+    ctx.font = CHART.narrow ? "10px Arial" : "11px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    labels.forEach(label => {
+        if (Math.abs(label.labelX - label.targetX) > 1) {
+            ctx.globalAlpha = 0.42;
+            ctx.beginPath();
+            ctx.moveTo(label.targetX, y - tickHeight / 2);
+            ctx.lineTo(label.labelX, labelY + 2);
+            ctx.stroke();
+            ctx.globalAlpha = 0.86;
+        }
+        ctx.fillText(label.label, label.labelX, labelY);
+    });
+    ctx.restore();
 }
 
 function drawDoubleArrow(ctx, left, right, y, color, label, dashed, alpha) {
@@ -767,7 +829,7 @@ function renderLegend(activeSeries, showStd, showIqr, showNormal) {
             ${series.label}
         </span>
     `).join("");
-    const stdItem = showStd ? '<span class="legend-item"><span class="legend-line std-line"></span>Std interval: mean +/- 1σ</span>' : "";
+    const stdItem = showStd ? '<span class="legend-item"><span class="legend-line std-line"></span>Sigma markers: -σ +σ -2σ +2σ -3σ +3σ</span>' : "";
     const iqrItem = showIqr ? '<span class="legend-item"><span class="legend-line iqr-line"></span>IQR arrow: Q1 to Q3</span>' : "";
     const normalItem = showNormal ? '<span class="legend-item"><span class="legend-line normal-line"></span>Normal curve fit</span>' : "";
 
