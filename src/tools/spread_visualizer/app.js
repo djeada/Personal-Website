@@ -32,13 +32,13 @@ const SERIES = [
 ];
 
 const CHART = {
-    left: 58,
-    right: 24,
-    top: 28,
-    plotHeight: 300,
-    boxTop: 378,
+    left: 96,
+    right: 32,
+    top: 42,
+    plotHeight: 250,
+    boxTop: 386,
     boxHeight: 128,
-    dotTop: 542,
+    dotTop: 578,
     dotHeight: 86,
     bottom: 54
 };
@@ -129,7 +129,7 @@ function resizeCanvas() {
     const canvas = document.getElementById("canvas");
     const container = canvas.parentElement;
     const width = Math.max(320, Math.min(container.clientWidth, 820));
-    const height = width < 560 ? 660 : 680;
+    const height = width < 560 ? 720 : 740;
     const dpr = window.devicePixelRatio || 1;
 
     canvas.width = Math.floor(width * dpr);
@@ -196,16 +196,16 @@ function drawVisualization(ctx, dimensions, summaries) {
 
     drawBackground(ctx, dimensions);
     drawAxes(ctx, dimensions, xRange, densityMax, x);
-    drawSectionLabel(ctx, "Distribution, mean, median, quartiles, and IQR", CHART.left, 18);
+    drawSectionLabel(ctx, "Distribution with IQR bands", CHART.left, 28);
 
     SERIES.forEach(series => {
         const summary = summaries[series.key];
         const hist = histogram(summary.values, xRange);
-        drawHistogram(ctx, hist, series, x, y, CHART.top + CHART.plotHeight);
         if (showIqr) drawIqrBand(ctx, summary, series, x);
+        drawHistogram(ctx, hist, series, x, y, CHART.top + CHART.plotHeight);
         if (showNormal && summary.std > 0) drawNormalCurve(ctx, summary, series, xRange, x, y);
-        drawVerticalMarker(ctx, x(summary.mean), CHART.top, CHART.top + CHART.plotHeight, series.color, `mean ${formatNumber(summary.mean)}`, 0);
-        drawVerticalMarker(ctx, x(summary.median), CHART.top, CHART.top + CHART.plotHeight, getColor("#111827", "#f8fafc"), `median ${formatNumber(summary.median)}`, 16);
+        drawVerticalMarker(ctx, x(summary.mean), CHART.top, CHART.top + CHART.plotHeight, series.color, false);
+        drawVerticalMarker(ctx, x(summary.median), CHART.top, CHART.top + CHART.plotHeight, getColor("#111827", "#f8fafc"), true);
     });
 
     drawLegend(ctx, dimensions);
@@ -235,7 +235,7 @@ function drawAxes(ctx, dimensions, xRange, densityMax, x) {
         const px = x(value);
         ctx.beginPath();
         ctx.moveTo(px, CHART.top);
-        ctx.lineTo(px, CHART.dotTop + CHART.dotHeight);
+        ctx.lineTo(px, CHART.dotTop + CHART.dotHeight + 10);
         ctx.stroke();
     }
 
@@ -344,29 +344,23 @@ function drawNormalCurve(ctx, summary, series, xRange, x, y) {
     ctx.lineWidth = 1;
 }
 
-function drawVerticalMarker(ctx, px, top, bottom, color, label, labelOffset) {
+function drawVerticalMarker(ctx, px, top, bottom, color, dashed) {
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
-    ctx.setLineDash(labelOffset ? [3, 4] : [6, 4]);
+    ctx.lineWidth = dashed ? 1.5 : 1.25;
+    ctx.setLineDash(dashed ? [3, 5] : []);
     ctx.beginPath();
     ctx.moveTo(px, top);
     ctx.lineTo(px, bottom);
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.save();
-    ctx.translate(px + 4 + labelOffset, top + 6);
-    ctx.rotate(-Math.PI / 2);
-    ctx.font = "11px Arial";
-    ctx.textAlign = "right";
-    ctx.textBaseline = "middle";
-    ctx.fillText(label, 0, 0);
-    ctx.restore();
+    ctx.lineWidth = 1;
 }
 
 function drawBoxPlotArea(ctx, dimensions, summaries, x) {
     const textColor = getColor("#334155", "#dbe4ef");
-    drawDivider(ctx, dimensions, CHART.boxTop - 24);
-    drawSectionLabel(ctx, "Box plots: Q1, median, Q3, IQR, whiskers, and outliers", CHART.left, CHART.boxTop - 34);
+    drawDivider(ctx, dimensions, CHART.boxTop - 34);
+    drawSectionLabel(ctx, "Box plots", CHART.left, CHART.boxTop - 48);
 
     SERIES.forEach((series, index) => {
         const summary = summaries[series.key];
@@ -402,17 +396,17 @@ function drawBoxPlotArea(ctx, dimensions, summaries, x) {
         ctx.font = "12px Arial";
         ctx.textAlign = "right";
         ctx.textBaseline = "middle";
-        ctx.fillText(series.label, CHART.left - 10, yCenter);
+        ctx.fillText(series.label, CHART.left - 14, yCenter);
 
         ctx.textAlign = "left";
-        ctx.fillText(`IQR = ${formatNumber(summary.iqr)}`, x(summary.q3) + 8, yCenter);
+        ctx.fillText(`IQR ${formatNumber(summary.iqr)}`, Math.min(x(summary.q3) + 8, dimensions.width - 92), yCenter);
     });
 }
 
 function drawDotPlotArea(ctx, dimensions, summaries, x) {
     const textColor = getColor("#334155", "#dbe4ef");
-    drawDivider(ctx, dimensions, CHART.dotTop - 24);
-    drawSectionLabel(ctx, "Dot plots: every value in the datasets", CHART.left, CHART.dotTop - 34);
+    drawDivider(ctx, dimensions, CHART.dotTop - 34);
+    drawSectionLabel(ctx, "Dot plots", CHART.left, CHART.dotTop - 48);
 
     SERIES.forEach((series, index) => {
         const yCenter = CHART.dotTop + 24 + index * 34;
@@ -427,7 +421,7 @@ function drawDotPlotArea(ctx, dimensions, summaries, x) {
         ctx.font = "12px Arial";
         ctx.textAlign = "right";
         ctx.textBaseline = "middle";
-        ctx.fillText(series.label, CHART.left - 10, yCenter);
+        ctx.fillText(series.label, CHART.left - 14, yCenter);
     });
 }
 
@@ -465,12 +459,12 @@ function drawSectionLabel(ctx, label, x, y) {
 
 function drawLegend(ctx, dimensions) {
     const xStart = dimensions.width - 210;
-    const yStart = 24;
+    const yStart = 54;
     const textColor = getColor("#1f2937", "#e5e7eb");
     ctx.fillStyle = getColor("rgba(255,255,255,0.88)", "rgba(31,31,31,0.88)");
     ctx.strokeStyle = getColor("#d7dde5", "#555");
-    ctx.fillRect(xStart, yStart, 178, 72);
-    ctx.strokeRect(xStart, yStart, 178, 72);
+    ctx.fillRect(xStart, yStart, 178, 90);
+    ctx.strokeRect(xStart, yStart, 178, 90);
 
     SERIES.forEach((series, index) => {
         const y = yStart + 20 + index * 24;
@@ -483,8 +477,8 @@ function drawLegend(ctx, dimensions) {
         ctx.fillText(series.label, xStart + 32, y - 3);
     });
 
-    ctx.strokeStyle = textColor;
-    ctx.setLineDash([3, 4]);
+    ctx.strokeStyle = getColor("#111827", "#f8fafc");
+    ctx.setLineDash([3, 5]);
     ctx.beginPath();
     ctx.moveTo(xStart + 12, yStart + 58);
     ctx.lineTo(xStart + 24, yStart + 58);
@@ -492,6 +486,14 @@ function drawLegend(ctx, dimensions) {
     ctx.setLineDash([]);
     ctx.fillStyle = textColor;
     ctx.fillText("Median marker", xStart + 32, yStart + 58);
+
+    ctx.strokeStyle = SERIES[0].color;
+    ctx.beginPath();
+    ctx.moveTo(xStart + 12, yStart + 78);
+    ctx.lineTo(xStart + 24, yStart + 78);
+    ctx.stroke();
+    ctx.fillStyle = textColor;
+    ctx.fillText("Mean marker", xStart + 32, yStart + 78);
 }
 
 function drawMessage(ctx, dimensions, message) {
