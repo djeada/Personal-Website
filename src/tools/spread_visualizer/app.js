@@ -206,7 +206,7 @@ function configureChart(width, activeCount, showIqr, showStd, showPoints) {
     const right = narrow ? 14 : 30;
     const distributionBottom = top + plotHeight;
     const spreadTop = distributionBottom + (narrow ? 56 : 64);
-    const spreadRows = showStd ? (showIqr ? 4 : 3) : (showIqr ? 1 : 0);
+    const spreadRows = showStd ? (showIqr ? 2 : 1) : (showIqr ? 1 : 0);
     const spreadRowGap = narrow ? 17 : 19;
     const spreadHeight = showSpread ? 34 + activeCount * (spreadRows * spreadRowGap + (narrow ? 22 : 28)) : 0;
     const boxTop = showSpread ? spreadTop + spreadHeight + (narrow ? 26 : 34) : distributionBottom + (narrow ? 78 : 92);
@@ -500,7 +500,7 @@ function drawSpreadArrows(ctx, dimensions, summaries, x, activeSeries, showIqr, 
     activeSeries.forEach((series, seriesIndex) => {
         const summary = summaries[series.key];
         const rowGap = CHART.narrow ? 17 : 19;
-        const rows = showStd ? (showIqr ? 4 : 3) : 1;
+        const rows = showStd ? (showIqr ? 2 : 1) : 1;
         const seriesGap = rows * rowGap + (CHART.narrow ? 22 : 28);
         const baseY = CHART.spreadTop + 10 + seriesIndex * seriesGap;
 
@@ -516,20 +516,16 @@ function drawSpreadArrows(ctx, dimensions, summaries, x, activeSeries, showIqr, 
 
         if (showStd) {
             const firstSigmaY = showIqr ? baseY + rowGap + 6 : baseY;
-            const maxLevel = CHART.narrow ? 2 : 3;
-            for (let level = 1; level <= maxLevel; level++) {
-                const sigmaY = firstSigmaY + (level - 1) * rowGap;
-                drawDoubleArrow(
-                    ctx,
-                    x(summary.mean - level * summary.std),
-                    x(summary.mean + level * summary.std),
-                    sigmaY,
-                    series.color,
-                    CHART.narrow ? `+/-${level}σ` : `mean +/- ${level}σ`,
-                    true,
-                    0.95 - (level - 1) * 0.22
-                );
-            }
+            drawDoubleArrow(
+                ctx,
+                x(summary.mean - summary.std),
+                x(summary.mean + summary.std),
+                firstSigmaY,
+                series.color,
+                CHART.narrow ? "+/-1σ" : "mean +/- 1σ",
+                true,
+                0.82
+            );
         }
     });
 }
@@ -739,7 +735,7 @@ function renderLegend(activeSeries, showStd, showIqr, showNormal) {
             ${series.label}
         </span>
     `).join("");
-    const stdItem = showStd ? '<span class="legend-item"><span class="legend-line std-line"></span>Sigma arrows: mu +/- 1σ, 2σ, 3σ</span>' : "";
+    const stdItem = showStd ? '<span class="legend-item"><span class="legend-line std-line"></span>Std interval: mean +/- 1σ</span>' : "";
     const iqrItem = showIqr ? '<span class="legend-item"><span class="legend-line iqr-line"></span>IQR arrow: Q1 to Q3</span>' : "";
     const normalItem = showNormal ? '<span class="legend-item"><span class="legend-line normal-line"></span>Normal curve fit</span>' : "";
 
