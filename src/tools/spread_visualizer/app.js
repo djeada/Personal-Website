@@ -218,6 +218,14 @@ function getColor(light, dark) {
     return darkModeValue && darkModeValue.toLowerCase() === "true" ? dark : light;
 }
 
+function hexToRgba(hex, alpha) {
+    const value = hex.replace("#", "");
+    const red = parseInt(value.slice(0, 2), 16);
+    const green = parseInt(value.slice(2, 4), 16);
+    const blue = parseInt(value.slice(4, 6), 16);
+    return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
 function draw() {
     const canvas = document.getElementById("canvas");
     const dimensions = resizeCanvas();
@@ -239,6 +247,7 @@ function draw() {
         message.classList.add("error");
         drawMessage(ctx, dimensions, "Choose at least one dataset to display.");
         renderStats({});
+        renderLegend([], false, false, false);
         return;
     }
 
@@ -248,6 +257,7 @@ function draw() {
         message.classList.add("error");
         drawMessage(ctx, dimensions, `${invalidSeries.label} needs at least two numeric values.`);
         renderStats({});
+        renderLegend([], false, false, false);
         return;
     }
 
@@ -275,6 +285,7 @@ function drawVisualization(ctx, dimensions, summaries, activeSeries) {
     const showNormal = document.getElementById("show-normal").checked;
     const showPoints = document.getElementById("show-points").checked;
     const showIqr = document.getElementById("show-iqr").checked;
+    const showStd = document.getElementById("show-std").checked;
     const densityMax = Math.max(
         ...activeSeries.map(series => histogram(summaries[series.key].values, xRange).maxDensity),
         ...activeSeries.map(series => summaries[series.key].std > 0 ? gaussian(summaries[series.key].mean, summaries[series.key].mean, summaries[series.key].std) : 0)
@@ -288,6 +299,7 @@ function drawVisualization(ctx, dimensions, summaries, activeSeries) {
     activeSeries.forEach(series => {
         const summary = summaries[series.key];
         const hist = histogram(summary.values, xRange);
+        if (showStd) drawStdBand(ctx, summary, series, x);
         if (showIqr) drawIqrBand(ctx, summary, series, x);
         drawHistogram(ctx, hist, series, x, y, CHART.top + CHART.plotHeight);
         if (showNormal && summary.std > 0) drawNormalCurve(ctx, summary, series, xRange, x, y);
@@ -295,9 +307,9 @@ function drawVisualization(ctx, dimensions, summaries, activeSeries) {
         drawVerticalMarker(ctx, x(summary.median), CHART.top, CHART.top + CHART.plotHeight, getColor("#111827", "#f8fafc"), true);
     });
 
-    drawLegend(ctx, dimensions, activeSeries);
     drawBoxPlotArea(ctx, dimensions, summaries, x, activeSeries);
     if (showPoints) drawDotPlotArea(ctx, dimensions, summaries, x, activeSeries);
+    renderLegend(activeSeries, showStd, showIqr, showNormal);
 }
 
 function drawBackground(ctx, dimensions) {
@@ -412,6 +424,25 @@ function drawIqrBand(ctx, summary, series, x) {
     ctx.strokeStyle = series.color;
     ctx.setLineDash([4, 4]);
     ctx.strokeRect(left, CHART.top, Math.max(1, right - left), CHART.plotHeight);
+    ctx.setLineDash([]);
+}
+
+function drawStdBand(ctx, summary, series, x) {
+    if (summary.std <= 0) return;
+    const left = x(summary.mean - summary.std);
+    const right = x(summary.mean + summary.std);
+    const width = Math.max(1, right - left);
+    ctx.fillStyle = hexToRgba(series.color, 0.08);
+    ctx.fillRect(left, CHART.top, width, CHART.plotHeight);
+    ctx.strokeStyle = series.color;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 6]);
+    ctx.beginPath();
+    ctx.moveTo(left, CHART.top);
+    ctx.lineTo(left, CHART.top + CHART.plotHeight);
+    ctx.moveTo(right, CHART.top);
+    ctx.lineTo(right, CHART.top + CHART.plotHeight);
+    ctx.stroke();
     ctx.setLineDash([]);
 }
 
@@ -572,53 +603,36 @@ function drawSectionLabel(ctx, label, x, y) {
     ctx.fillText(label, x, y);
 }
 
-function drawLegend(ctx, dimensions, activeSeries) {
-    const xStart = dimensions.width - 210;
-    const yStart = 54;
-    const legendHeight = 42 + activeSeries.length * 24;
-    const textColor = getColor("#1f2937", "#e5e7eb");
-    ctx.fillStyle = getColor("rgba(255,255,255,0.88)", "rgba(31,31,31,0.88)");
-    ctx.strokeStyle = getColor("#d7dde5", "#555");
-    ctx.fillRect(xStart, yStart, 178, legendHeight);
-    ctx.strokeRect(xStart, yStart, 178, legendHeight);
-
-    activeSeries.forEach((series, index) => {
-        const y = yStart + 20 + index * 24;
-        ctx.fillStyle = series.color;
-        ctx.fillRect(xStart + 12, y - 9, 12, 12);
-        ctx.fillStyle = textColor;
-        ctx.font = "12px Arial";
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        ctx.fillText(series.label, xStart + 32, y - 3);
-    });
-
-    const markerY = yStart + 20 + activeSeries.length * 24;
-    ctx.strokeStyle = getColor("#111827", "#f8fafc");
-    ctx.setLineDash([3, 5]);
-    ctx.beginPath();
-    ctx.moveTo(xStart + 12, markerY);
-    ctx.lineTo(xStart + 24, markerY);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = textColor;
-    ctx.fillText("Median marker", xStart + 32, markerY);
-
-    ctx.strokeStyle = activeSeries[0].color;
-    ctx.beginPath();
-    ctx.moveTo(xStart + 12, markerY + 20);
-    ctx.lineTo(xStart + 24, markerY + 20);
-    ctx.stroke();
-    ctx.fillStyle = textColor;
-    ctx.fillText("Mean marker", xStart + 32, markerY + 20);
-}
-
 function drawMessage(ctx, dimensions, message) {
     ctx.fillStyle = getColor("#333", "#eee");
     ctx.font = "16px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(message, dimensions.width / 2, dimensions.height / 2);
+}
+
+function renderLegend(activeSeries, showStd, showIqr, showNormal) {
+    const legend = document.getElementById("plot-legend");
+    if (!legend) return;
+
+    const datasetItems = activeSeries.map(series => `
+        <span class="legend-item">
+            <span class="legend-swatch" style="background:${series.color}"></span>
+            ${series.label}
+        </span>
+    `).join("");
+    const stdItem = showStd ? '<span class="legend-item"><span class="legend-line std-line"></span>Mean +/- 1 std dev</span>' : "";
+    const iqrItem = showIqr ? '<span class="legend-item"><span class="legend-band"></span>IQR: Q1 to Q3</span>' : "";
+    const normalItem = showNormal ? '<span class="legend-item"><span class="legend-line normal-line"></span>Normal curve fit</span>' : "";
+
+    legend.innerHTML = `
+        ${datasetItems}
+        <span class="legend-item"><span class="legend-line mean-line"></span>Mean</span>
+        <span class="legend-item"><span class="legend-line median-line"></span>Q2 median</span>
+        ${stdItem}
+        ${iqrItem}
+        ${normalItem}
+    `;
 }
 
 function renderStats(summaries, activeSeries) {
