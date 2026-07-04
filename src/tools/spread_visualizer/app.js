@@ -600,7 +600,7 @@ function drawBoxPlotArea(ctx, dimensions, summaries, x, activeSeries) {
         ctx.lineTo(x(summary.median), yCenter + boxHeight / 2 + 4);
         ctx.stroke();
 
-        drawBoxLabels(ctx, summary, series, x, yCenter, boxHeight, dimensions);
+        drawBoxLabels(ctx, summary, series, x, yCenter, boxHeight, dimensions, index);
 
         ctx.fillStyle = series.color;
         summary.outliers.forEach(value => drawCircle(ctx, x(value), yCenter, 4, false));
@@ -614,19 +614,17 @@ function drawBoxPlotArea(ctx, dimensions, summaries, x, activeSeries) {
     });
 }
 
-function drawBoxLabels(ctx, summary, series, x, yCenter, boxHeight, dimensions) {
+function drawBoxLabels(ctx, summary, series, x, yCenter, boxHeight, dimensions, seriesIndex) {
     const labelColor = getColor("#344054", "#e5e7eb");
     const guideColor = getColor("rgba(71, 84, 103, 0.28)", "rgba(226, 232, 240, 0.35)");
-    const labels = CHART.narrow ? [
-        { text: "Q1", value: summary.q1, y: yCenter - boxHeight / 2 - 17 },
-        { text: "Median", value: summary.median, y: yCenter + boxHeight / 2 + 17, color: series.color },
-        { text: "Q3", value: summary.q3, y: yCenter - boxHeight / 2 - 17 }
-    ] : [
-        { text: "Low", value: summary.lowerWhisker, y: yCenter + boxHeight / 2 + 20 },
-        { text: "Q1", value: summary.q1, y: yCenter - boxHeight / 2 - 20 },
-        { text: "Median", value: summary.median, y: yCenter - boxHeight / 2 - 38, color: series.color },
-        { text: "Q3", value: summary.q3, y: yCenter - boxHeight / 2 - 20 },
-        { text: "High", value: summary.upperWhisker, y: yCenter + boxHeight / 2 + 20 }
+    const labelOffset = CHART.narrow ? 17 : 20;
+    const labelDirection = seriesIndex % 2 === 0 ? -1 : 1;
+    const labelY = yCenter + labelDirection * (boxHeight / 2 + labelOffset);
+    const guideEndY = yCenter + labelDirection * (boxHeight / 2 + 5);
+    const labels = [
+        { text: "Q1", value: summary.q1, y: labelY },
+        { text: "Med", value: summary.median, y: labelY, color: series.color },
+        { text: "Q3", value: summary.q3, y: labelY }
     ];
 
     ctx.font = CHART.narrow ? "10px Arial" : "12px Arial";
@@ -645,8 +643,8 @@ function drawBoxLabels(ctx, summary, series, x, yCenter, boxHeight, dimensions) 
         ctx.strokeStyle = guideColor;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(px, yCenter - boxHeight / 2);
-        ctx.lineTo(px, item.y > yCenter ? yCenter + boxHeight / 2 + 5 : yCenter - boxHeight / 2 - 5);
+        ctx.moveTo(px, yCenter + labelDirection * boxHeight / 2);
+        ctx.lineTo(px, guideEndY);
         ctx.stroke();
 
         ctx.fillStyle = item.color || labelColor;
@@ -654,13 +652,6 @@ function drawBoxLabels(ctx, summary, series, x, yCenter, boxHeight, dimensions) 
         ctx.textBaseline = "middle";
         ctx.fillText(item.text, px, item.y);
     });
-
-    ctx.fillStyle = series.color;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    if (!CHART.narrow) {
-        ctx.fillText(`IQR ${formatNumber(summary.iqr)}`, Math.min(dimensions.width - CHART.right - 60, x(summary.q3) + 10), yCenter);
-    }
 }
 
 function drawDotPlotArea(ctx, dimensions, summaries, x, activeSeries) {
