@@ -338,8 +338,8 @@ function drawVisualization(ctx, dimensions, summaries, activeSeries) {
     const showPoints = document.getElementById("show-points").checked;
     const showIqr = document.getElementById("show-iqr").checked;
     const showStd = document.getElementById("show-std").checked;
-    const xScale = createXScale(dimensions, summaries, activeSeries, showStd);
-    const x = value => mapX(xScale, value);
+    const xScale = createXScale(dimensions, summaries, activeSeries);
+    const x = value => clampToPlot(mapX(xScale, value), xScale);
     const densityMax = Math.max(
         ...activeSeries.map(series => histogram(summaries[series.key].values, xScale).maxDensity),
         ...activeSeries.map(series => summaries[series.key].std > 0 ? gaussian(summaries[series.key].mean, summaries[series.key].mean, summaries[series.key].std) : 0)
@@ -365,18 +365,15 @@ function drawVisualization(ctx, dimensions, summaries, activeSeries) {
     renderLegend(activeSeries, showStd, showIqr, showNormal);
 }
 
-function createXScale(dimensions, summaries, activeSeries, showStd) {
+function createXScale(dimensions, summaries, activeSeries) {
     const fullValues = [];
     const focusValues = [];
 
     activeSeries.forEach(series => {
         const summary = summaries[series.key];
         const nonOutliers = summary.sorted.filter(value => value >= summary.lowFence && value <= summary.highFence);
-        const sigmaValues = showStd && summary.std > 0
-            ? SIGMA_MARKERS.map(marker => summary.mean + marker.multiplier * summary.std)
-            : [];
 
-        fullValues.push(...summary.values, ...sigmaValues);
+        fullValues.push(...summary.values);
         focusValues.push(
             ...(nonOutliers.length ? nonOutliers : summary.sorted),
             summary.mean,
@@ -445,6 +442,10 @@ function mapX(scale, value) {
 
     const focusSpan = Math.max(scale.focusMax - scale.focusMin, 1);
     return scale.focusLeft + ((value - scale.focusMin) / focusSpan) * (scale.focusRight - scale.focusLeft);
+}
+
+function clampToPlot(px, scale) {
+    return Math.max(scale.plotLeft, Math.min(scale.plotRight, px));
 }
 
 function drawBackground(ctx, dimensions) {
