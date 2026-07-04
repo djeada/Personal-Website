@@ -135,6 +135,11 @@ function formatNumber(value) {
     return Math.abs(value) >= 100 ? value.toFixed(1) : value.toFixed(2);
 }
 
+function formatOutliers(values) {
+    if (!values.length) return "None";
+    return values.map(formatNumber).join(", ");
+}
+
 function randomNormal() {
     const u1 = Math.max(Math.random(), Number.EPSILON);
     const u2 = Math.random();
@@ -571,7 +576,7 @@ function drawArrowHead(ctx, xPos, yPos, direction, size) {
 function drawBoxPlotArea(ctx, dimensions, summaries, x, activeSeries) {
     const textColor = getColor("#475467", "#dbe4ef");
     drawDivider(ctx, dimensions, CHART.boxTop - 24);
-    drawSectionLabel(ctx, CHART.narrow ? "Box plots" : "Box plots: whiskers, quartiles, median", CHART.left, CHART.boxTop - 38);
+    drawSectionLabel(ctx, CHART.narrow ? "Tukey box plots" : "Tukey box plots: whiskers exclude outliers", CHART.left, CHART.boxTop - 38);
 
     activeSeries.forEach((series, index) => {
         const summary = summaries[series.key];
@@ -759,6 +764,8 @@ function renderStats(summaries, activeSeries) {
                         <tr><th>Mean</th><td>${formatNumber(s.mean)}</td><th>σ</th><td>${formatNumber(s.std)}</td></tr>
                         <tr><th>Q1</th><td>${formatNumber(s.q1)}</td><th>Q2 median</th><td>${formatNumber(s.median)}</td></tr>
                         <tr><th>Q3</th><td>${formatNumber(s.q3)}</td><th>IQR</th><td>${formatNumber(s.iqr)}</td></tr>
+                        <tr><th>Whisker low</th><td>${formatNumber(s.lowerWhisker)}</td><th>Whisker high</th><td>${formatNumber(s.upperWhisker)}</td></tr>
+                        <tr><th>Outliers</th><td class="outlier-cell" colspan="3">${formatOutliers(s.outliers)}</td></tr>
                     </tbody>
                 </table>
             </article>
