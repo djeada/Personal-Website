@@ -43,6 +43,8 @@ const CHART = {
     bottom: 54
 };
 
+let activeMessage = "";
+
 function mean(values) {
     return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
@@ -107,6 +109,13 @@ function summarize(values) {
     };
 }
 
+function visibleSeries() {
+    return SERIES.filter(series => {
+        const checkbox = document.getElementById(`show-dataset-${series.key}`);
+        return !checkbox || checkbox.checked;
+    });
+}
+
 function parseValues(raw) {
     return raw
         .split(/[\s,;]+/)
@@ -123,6 +132,68 @@ function formatValues(values) {
 function formatNumber(value) {
     if (!Number.isFinite(value)) return "-";
     return Math.abs(value) >= 100 ? value.toFixed(1) : value.toFixed(2);
+}
+
+function randomNormal() {
+    const u1 = Math.max(Math.random(), Number.EPSILON);
+    const u2 = Math.random();
+    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+function clampNumber(value, min, max, fallback) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.min(max, Math.max(min, parsed));
+}
+
+function generateDataset(shape, count, center, spread, outlierCount) {
+    const values = [];
+    const baseCount = shape === "outlier" ? Math.max(2, count - outlierCount) : count;
+
+    for (let i = 0; i < baseCount; i++) {
+        let value;
+        if (shape === "uniform") {
+            value = center + (Math.random() * 2 - 1) * spread;
+        } else if (shape === "right-skewed") {
+            value = center - spread * 0.6 + Math.pow(Math.random(), 2) * spread * 2.2;
+        } else if (shape === "left-skewed") {
+            value = center + spread * 0.6 - Math.pow(Math.random(), 2) * spread * 2.2;
+        } else if (shape === "bimodal") {
+            const side = i % 2 === 0 ? -1 : 1;
+            value = center + side * spread * 0.75 + randomNormal() * spread * 0.22;
+        } else {
+            value = center + randomNormal() * spread * 0.35;
+        }
+        values.push(value);
+    }
+
+    if (shape === "outlier") {
+        for (let i = 0; i < outlierCount; i++) {
+            const side = i % 2 === 0 ? 1 : -1;
+            values.push(center + side * spread * (2.2 + Math.random() * 1.3));
+        }
+    }
+
+    return values
+        .slice(0, count)
+        .sort((a, b) => a - b)
+        .map(value => Math.round(value * 10) / 10);
+}
+
+function generateFromControls() {
+    const target = document.getElementById("generate-target").value;
+    const shape = document.getElementById("generate-shape").value;
+    const count = Math.round(clampNumber(document.getElementById("generate-count").value, 3, 80, 15));
+    const center = clampNumber(document.getElementById("generate-center").value, -200, 200, 50);
+    const spread = clampNumber(document.getElementById("generate-spread").value, 1, 80, 10);
+    const outliers = Math.round(clampNumber(document.getElementById("generate-outliers").value, 0, 6, 1));
+    const values = generateDataset(shape, count, center, spread, outliers);
+    const textarea = document.getElementById(`dataset-${target}`);
+
+    textarea.value = formatValues(values);
+    document.getElementById(`show-dataset-${target}`).checked = true;
+    activeMessage = `Generated ${shape.replace("-", " ")} values for Dataset ${target.toUpperCase()}.`;
+    draw();
 }
 
 function resizeCanvas() {
@@ -157,26 +228,42 @@ function draw() {
 
     ctx.clearRect(0, 0, dimensions.width, dimensions.height);
 
-    if (valuesA.length < 2 || valuesB.length < 2) {
-        message.textContent = "Each dataset needs at least two numeric values.";
+    const activeSeries = visibleSeries();
+    const activeValues = {
+        a: valuesA,
+        b: valuesB
+    };
+
+    if (activeSeries.length === 0) {
+        message.textContent = "Choose at least one dataset to display.";
         message.classList.add("error");
-        drawMessage(ctx, dimensions, "Each dataset needs at least two numeric values.");
+        drawMessage(ctx, dimensions, "Choose at least one dataset to display.");
+        renderStats({});
+        return;
+    }
+
+    const invalidSeries = activeSeries.find(series => activeValues[series.key].length < 2);
+    if (invalidSeries) {
+        message.textContent = `${invalidSeries.label} needs at least two numeric values.`;
+        message.classList.add("error");
+        drawMessage(ctx, dimensions, `${invalidSeries.label} needs at least two numeric values.`);
+        renderStats({});
         return;
     }
 
     const summaries = {
-        a: summarize(valuesA),
-        b: summarize(valuesB)
+        a: valuesA.length >= 2 ? summarize(valuesA) : null,
+        b: valuesB.length >= 2 ? summarize(valuesB) : null
     };
 
     message.textContent = currentPresetNote();
     message.classList.remove("error");
-    drawVisualization(ctx, dimensions, summaries);
-    renderStats(summaries);
+    drawVisualization(ctx, dimensions, summaries, activeSeries);
+    renderStats(summaries, activeSeries);
 }
 
-function drawVisualization(ctx, dimensions, summaries) {
-    const allValues = SERIES.flatMap(series => summaries[series.key].values);
+function drawVisualization(ctx, dimensions, summaries, activeSeries) {
+    const allValues = activeSeries.flatMap(series => summaries[series.key].values);
     const min = Math.min(...allValues);
     const max = Math.max(...allValues);
     const spread = Math.max(max - min, 1);
@@ -189,8 +276,8 @@ function drawVisualization(ctx, dimensions, summaries) {
     const showPoints = document.getElementById("show-points").checked;
     const showIqr = document.getElementById("show-iqr").checked;
     const densityMax = Math.max(
-        ...SERIES.map(series => histogram(summaries[series.key].values, xRange).maxDensity),
-        ...SERIES.map(series => summaries[series.key].std > 0 ? gaussian(summaries[series.key].mean, summaries[series.key].mean, summaries[series.key].std) : 0)
+        ...activeSeries.map(series => histogram(summaries[series.key].values, xRange).maxDensity),
+        ...activeSeries.map(series => summaries[series.key].std > 0 ? gaussian(summaries[series.key].mean, summaries[series.key].mean, summaries[series.key].std) : 0)
     ) * 1.2 || 1;
     const y = density => CHART.top + CHART.plotHeight - (density / densityMax) * CHART.plotHeight;
 
@@ -198,7 +285,7 @@ function drawVisualization(ctx, dimensions, summaries) {
     drawAxes(ctx, dimensions, xRange, densityMax, x);
     drawSectionLabel(ctx, "Distribution with IQR bands", CHART.left, 28);
 
-    SERIES.forEach(series => {
+    activeSeries.forEach(series => {
         const summary = summaries[series.key];
         const hist = histogram(summary.values, xRange);
         if (showIqr) drawIqrBand(ctx, summary, series, x);
@@ -208,9 +295,9 @@ function drawVisualization(ctx, dimensions, summaries) {
         drawVerticalMarker(ctx, x(summary.median), CHART.top, CHART.top + CHART.plotHeight, getColor("#111827", "#f8fafc"), true);
     });
 
-    drawLegend(ctx, dimensions);
-    drawBoxPlotArea(ctx, dimensions, summaries, x);
-    if (showPoints) drawDotPlotArea(ctx, dimensions, summaries, x);
+    drawLegend(ctx, dimensions, activeSeries);
+    drawBoxPlotArea(ctx, dimensions, summaries, x, activeSeries);
+    if (showPoints) drawDotPlotArea(ctx, dimensions, summaries, x, activeSeries);
 }
 
 function drawBackground(ctx, dimensions) {
@@ -357,14 +444,14 @@ function drawVerticalMarker(ctx, px, top, bottom, color, dashed) {
     ctx.lineWidth = 1;
 }
 
-function drawBoxPlotArea(ctx, dimensions, summaries, x) {
+function drawBoxPlotArea(ctx, dimensions, summaries, x, activeSeries) {
     const textColor = getColor("#334155", "#dbe4ef");
     drawDivider(ctx, dimensions, CHART.boxTop - 34);
-    drawSectionLabel(ctx, "Box plots", CHART.left, CHART.boxTop - 48);
+    drawSectionLabel(ctx, "Box plots: low whisker, Q1, Q2 median, Q3, high whisker", CHART.left, CHART.boxTop - 48);
 
-    SERIES.forEach((series, index) => {
+    activeSeries.forEach((series, index) => {
         const summary = summaries[series.key];
-        const yCenter = CHART.boxTop + 36 + index * 50;
+        const yCenter = CHART.boxTop + 40 + index * 72;
         const boxHeight = 24;
 
         ctx.strokeStyle = series.color;
@@ -389,6 +476,8 @@ function drawBoxPlotArea(ctx, dimensions, summaries, x) {
         ctx.lineTo(x(summary.median), yCenter + boxHeight / 2 + 4);
         ctx.stroke();
 
+        drawBoxLabels(ctx, summary, series, x, yCenter, boxHeight, dimensions);
+
         ctx.fillStyle = series.color;
         summary.outliers.forEach(value => drawCircle(ctx, x(value), yCenter, 4, false));
 
@@ -403,12 +492,40 @@ function drawBoxPlotArea(ctx, dimensions, summaries, x) {
     });
 }
 
-function drawDotPlotArea(ctx, dimensions, summaries, x) {
+function drawBoxLabels(ctx, summary, series, x, yCenter, boxHeight, dimensions) {
+    const labelColor = getColor("#1f2937", "#e5e7eb");
+    const guideColor = getColor("rgba(51, 65, 85, 0.5)", "rgba(226, 232, 240, 0.45)");
+    const labels = [
+        { text: "Low", value: summary.lowerWhisker, y: yCenter + boxHeight / 2 + 18, align: "center" },
+        { text: "Q1", value: summary.q1, y: yCenter - boxHeight / 2 - 18, align: "right" },
+        { text: "Q2 median", value: summary.median, y: yCenter - boxHeight / 2 - 32, align: "center" },
+        { text: "Q3", value: summary.q3, y: yCenter - boxHeight / 2 - 18, align: "left" },
+        { text: "High", value: summary.upperWhisker, y: yCenter + boxHeight / 2 + 18, align: "center" }
+    ];
+
+    ctx.font = "11px Arial";
+    labels.forEach(item => {
+        const px = Math.max(CHART.left + 12, Math.min(dimensions.width - CHART.right - 12, x(item.value)));
+        ctx.strokeStyle = guideColor;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(px, yCenter - boxHeight / 2);
+        ctx.lineTo(px, item.y > yCenter ? yCenter + boxHeight / 2 + 5 : yCenter - boxHeight / 2 - 5);
+        ctx.stroke();
+
+        ctx.fillStyle = item.text === "Q2 median" ? series.color : labelColor;
+        ctx.textAlign = item.align;
+        ctx.textBaseline = "middle";
+        ctx.fillText(item.text, px, item.y);
+    });
+}
+
+function drawDotPlotArea(ctx, dimensions, summaries, x, activeSeries) {
     const textColor = getColor("#334155", "#dbe4ef");
     drawDivider(ctx, dimensions, CHART.dotTop - 34);
     drawSectionLabel(ctx, "Dot plots", CHART.left, CHART.dotTop - 48);
 
-    SERIES.forEach((series, index) => {
+    activeSeries.forEach((series, index) => {
         const yCenter = CHART.dotTop + 24 + index * 34;
         const counts = {};
         summaries[series.key].sorted.forEach(value => {
@@ -457,16 +574,17 @@ function drawSectionLabel(ctx, label, x, y) {
     ctx.fillText(label, x, y);
 }
 
-function drawLegend(ctx, dimensions) {
+function drawLegend(ctx, dimensions, activeSeries) {
     const xStart = dimensions.width - 210;
     const yStart = 54;
+    const legendHeight = 42 + activeSeries.length * 24;
     const textColor = getColor("#1f2937", "#e5e7eb");
     ctx.fillStyle = getColor("rgba(255,255,255,0.88)", "rgba(31,31,31,0.88)");
     ctx.strokeStyle = getColor("#d7dde5", "#555");
-    ctx.fillRect(xStart, yStart, 178, 90);
-    ctx.strokeRect(xStart, yStart, 178, 90);
+    ctx.fillRect(xStart, yStart, 178, legendHeight);
+    ctx.strokeRect(xStart, yStart, 178, legendHeight);
 
-    SERIES.forEach((series, index) => {
+    activeSeries.forEach((series, index) => {
         const y = yStart + 20 + index * 24;
         ctx.fillStyle = series.color;
         ctx.fillRect(xStart + 12, y - 9, 12, 12);
@@ -477,23 +595,24 @@ function drawLegend(ctx, dimensions) {
         ctx.fillText(series.label, xStart + 32, y - 3);
     });
 
+    const markerY = yStart + 20 + activeSeries.length * 24;
     ctx.strokeStyle = getColor("#111827", "#f8fafc");
     ctx.setLineDash([3, 5]);
     ctx.beginPath();
-    ctx.moveTo(xStart + 12, yStart + 58);
-    ctx.lineTo(xStart + 24, yStart + 58);
+    ctx.moveTo(xStart + 12, markerY);
+    ctx.lineTo(xStart + 24, markerY);
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = textColor;
-    ctx.fillText("Median marker", xStart + 32, yStart + 58);
+    ctx.fillText("Median marker", xStart + 32, markerY);
 
-    ctx.strokeStyle = SERIES[0].color;
+    ctx.strokeStyle = activeSeries[0].color;
     ctx.beginPath();
-    ctx.moveTo(xStart + 12, yStart + 78);
-    ctx.lineTo(xStart + 24, yStart + 78);
+    ctx.moveTo(xStart + 12, markerY + 20);
+    ctx.lineTo(xStart + 24, markerY + 20);
     ctx.stroke();
     ctx.fillStyle = textColor;
-    ctx.fillText("Mean marker", xStart + 32, yStart + 78);
+    ctx.fillText("Mean marker", xStart + 32, markerY + 20);
 }
 
 function drawMessage(ctx, dimensions, message) {
@@ -504,9 +623,14 @@ function drawMessage(ctx, dimensions, message) {
     ctx.fillText(message, dimensions.width / 2, dimensions.height / 2);
 }
 
-function renderStats(summaries) {
+function renderStats(summaries, activeSeries) {
     const grid = document.getElementById("stats-grid");
-    grid.innerHTML = SERIES.map(series => {
+    if (!activeSeries || activeSeries.length === 0) {
+        grid.innerHTML = "";
+        return;
+    }
+
+    grid.innerHTML = activeSeries.map(series => {
         const s = summaries[series.key];
         return `
             <article class="stat-card">
@@ -514,8 +638,9 @@ function renderStats(summaries) {
                 <table class="stat-table">
                     <tbody>
                         <tr><th>n</th><td>${s.n}</td><th>Range</th><td>${formatNumber(s.max - s.min)}</td></tr>
+                        <tr><th>Min</th><td>${formatNumber(s.min)}</td><th>Max</th><td>${formatNumber(s.max)}</td></tr>
                         <tr><th>Mean</th><td>${formatNumber(s.mean)}</td><th>Std dev</th><td>${formatNumber(s.std)}</td></tr>
-                        <tr><th>Q1</th><td>${formatNumber(s.q1)}</td><th>Median</th><td>${formatNumber(s.median)}</td></tr>
+                        <tr><th>Q1</th><td>${formatNumber(s.q1)}</td><th>Q2 median</th><td>${formatNumber(s.median)}</td></tr>
                         <tr><th>Q3</th><td>${formatNumber(s.q3)}</td><th>IQR</th><td>${formatNumber(s.iqr)}</td></tr>
                     </tbody>
                 </table>
@@ -539,6 +664,7 @@ function formatTick(value) {
 }
 
 function currentPresetNote() {
+    if (activeMessage) return activeMessage;
     const preset = document.getElementById("preset-select").value;
     return DATASETS[preset] ? DATASETS[preset].note : "Enter numbers separated by commas, spaces, or new lines.";
 }
@@ -548,6 +674,7 @@ function applyPreset(key) {
     if (!preset) return;
     document.getElementById("dataset-a").value = formatValues(preset.a);
     document.getElementById("dataset-b").value = formatValues(preset.b);
+    activeMessage = "";
     draw();
 }
 
@@ -562,12 +689,17 @@ function getCookie(name) {
 
 document.addEventListener("DOMContentLoaded", function() {
     const drawButton = document.querySelector(".draw-button");
+    const generateButton = document.getElementById("generate-button");
     const presetSelect = document.getElementById("preset-select");
     const inputs = document.querySelectorAll("textarea, input[type='checkbox']");
     const toggleButton = document.querySelector(".toggle-dark-mode, #dark-mode-button");
 
     if (drawButton) {
         drawButton.addEventListener("click", draw);
+    }
+
+    if (generateButton) {
+        generateButton.addEventListener("click", generateFromControls);
     }
 
     if (presetSelect) {
@@ -578,6 +710,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     inputs.forEach(function(input) {
         input.addEventListener("input", function() {
+            if (input.tagName === "TEXTAREA") activeMessage = "";
             clearTimeout(input.drawTimeout);
             input.drawTimeout = setTimeout(draw, 120);
         });
