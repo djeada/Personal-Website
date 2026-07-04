@@ -36,9 +36,10 @@ const CHART = {
     right: 32,
     top: 42,
     plotHeight: 250,
-    boxTop: 386,
+    spreadTop: 326,
+    boxTop: 472,
     boxHeight: 128,
-    dotTop: 666,
+    dotTop: 752,
     dotHeight: 86,
     bottom: 54
 };
@@ -200,7 +201,7 @@ function resizeCanvas() {
     const canvas = document.getElementById("canvas");
     const container = canvas.parentElement;
     const width = Math.max(320, Math.min(container.clientWidth, 820));
-    const height = width < 560 ? 800 : 820;
+    const height = width < 560 ? 890 : 910;
     const dpr = window.devicePixelRatio || 1;
 
     canvas.width = Math.floor(width * dpr);
@@ -216,14 +217,6 @@ function resizeCanvas() {
 function getColor(light, dark) {
     const darkModeValue = getCookie("darkMode");
     return darkModeValue && darkModeValue.toLowerCase() === "true" ? dark : light;
-}
-
-function hexToRgba(hex, alpha) {
-    const value = hex.replace("#", "");
-    const red = parseInt(value.slice(0, 2), 16);
-    const green = parseInt(value.slice(2, 4), 16);
-    const blue = parseInt(value.slice(4, 6), 16);
-    return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
 function draw() {
@@ -294,19 +287,18 @@ function drawVisualization(ctx, dimensions, summaries, activeSeries) {
 
     drawBackground(ctx, dimensions);
     drawAxes(ctx, dimensions, xRange, densityMax, x);
-    drawSectionLabel(ctx, "Distribution with IQR bands", CHART.left, 28);
+    drawSectionLabel(ctx, "Distribution", CHART.left, 28);
 
     activeSeries.forEach(series => {
         const summary = summaries[series.key];
         const hist = histogram(summary.values, xRange);
-        if (showStd) drawStdBand(ctx, summary, series, x);
-        if (showIqr) drawIqrBand(ctx, summary, series, x);
         drawHistogram(ctx, hist, series, x, y, CHART.top + CHART.plotHeight);
         if (showNormal && summary.std > 0) drawNormalCurve(ctx, summary, series, xRange, x, y);
         drawVerticalMarker(ctx, x(summary.mean), CHART.top, CHART.top + CHART.plotHeight, series.color, false);
         drawVerticalMarker(ctx, x(summary.median), CHART.top, CHART.top + CHART.plotHeight, getColor("#111827", "#f8fafc"), true);
     });
 
+    drawSpreadArrows(ctx, dimensions, summaries, x, activeSeries, showIqr, showStd);
     drawBoxPlotArea(ctx, dimensions, summaries, x, activeSeries);
     if (showPoints) drawDotPlotArea(ctx, dimensions, summaries, x, activeSeries);
     renderLegend(activeSeries, showStd, showIqr, showNormal);
@@ -416,36 +408,6 @@ function drawHistogram(ctx, hist, series, x, y, baseline) {
     });
 }
 
-function drawIqrBand(ctx, summary, series, x) {
-    const left = x(summary.q1);
-    const right = x(summary.q3);
-    ctx.fillStyle = series.fill;
-    ctx.fillRect(left, CHART.top, Math.max(1, right - left), CHART.plotHeight);
-    ctx.strokeStyle = series.color;
-    ctx.setLineDash([4, 4]);
-    ctx.strokeRect(left, CHART.top, Math.max(1, right - left), CHART.plotHeight);
-    ctx.setLineDash([]);
-}
-
-function drawStdBand(ctx, summary, series, x) {
-    if (summary.std <= 0) return;
-    const left = x(summary.mean - summary.std);
-    const right = x(summary.mean + summary.std);
-    const width = Math.max(1, right - left);
-    ctx.fillStyle = hexToRgba(series.color, 0.08);
-    ctx.fillRect(left, CHART.top, width, CHART.plotHeight);
-    ctx.strokeStyle = series.color;
-    ctx.lineWidth = 1;
-    ctx.setLineDash([2, 6]);
-    ctx.beginPath();
-    ctx.moveTo(left, CHART.top);
-    ctx.lineTo(left, CHART.top + CHART.plotHeight);
-    ctx.moveTo(right, CHART.top);
-    ctx.lineTo(right, CHART.top + CHART.plotHeight);
-    ctx.stroke();
-    ctx.setLineDash([]);
-}
-
 function drawNormalCurve(ctx, summary, series, xRange, x, y) {
     ctx.beginPath();
     ctx.strokeStyle = series.color;
@@ -473,6 +435,77 @@ function drawVerticalMarker(ctx, px, top, bottom, color, dashed) {
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.lineWidth = 1;
+}
+
+function drawSpreadArrows(ctx, dimensions, summaries, x, activeSeries, showIqr, showStd) {
+    drawDivider(ctx, dimensions, CHART.spreadTop - 22);
+    drawSectionLabel(ctx, "Spread arrows below x-axis", CHART.left, CHART.spreadTop - 36);
+
+    if (!showIqr && !showStd) {
+        const muted = getColor("#64748b", "#94a3b8");
+        ctx.fillStyle = muted;
+        ctx.font = "12px Arial";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText("Turn on IQR arrow or Std dev arrow to compare spread lengths.", CHART.left, CHART.spreadTop + 18);
+        return;
+    }
+
+    activeSeries.forEach((series, seriesIndex) => {
+        const summary = summaries[series.key];
+        const baseY = CHART.spreadTop + 20 + seriesIndex * 54;
+
+        ctx.fillStyle = getColor("#334155", "#dbe4ef");
+        ctx.font = "12px Arial";
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        ctx.fillText(series.label, CHART.left - 14, baseY + (showIqr && showStd ? 10 : 0));
+
+        if (showIqr) {
+            drawDoubleArrow(ctx, x(summary.q1), x(summary.q3), baseY, series.color, `IQR ${formatNumber(summary.iqr)}`);
+        }
+
+        if (showStd) {
+            const stdY = showIqr ? baseY + 22 : baseY;
+            drawDoubleArrow(ctx, x(summary.mean - summary.std), x(summary.mean + summary.std), stdY, series.color, `mean +/- 1 std (${formatNumber(summary.std)})`, true);
+        }
+    });
+}
+
+function drawDoubleArrow(ctx, left, right, y, color, label, dashed) {
+    const start = Math.min(left, right);
+    const end = Math.max(left, right);
+    const head = 7;
+
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 2;
+    if (dashed) ctx.setLineDash([5, 5]);
+
+    ctx.beginPath();
+    ctx.moveTo(start, y);
+    ctx.lineTo(end, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    drawArrowHead(ctx, start, y, 1, head);
+    drawArrowHead(ctx, end, y, -1, head);
+
+    ctx.font = "12px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillText(label, (start + end) / 2, y - 5);
+    ctx.restore();
+}
+
+function drawArrowHead(ctx, xPos, yPos, direction, size) {
+    ctx.beginPath();
+    ctx.moveTo(xPos, yPos);
+    ctx.lineTo(xPos + direction * size, yPos - size * 0.55);
+    ctx.lineTo(xPos + direction * size, yPos + size * 0.55);
+    ctx.closePath();
+    ctx.fill();
 }
 
 function drawBoxPlotArea(ctx, dimensions, summaries, x, activeSeries) {
@@ -621,8 +654,8 @@ function renderLegend(activeSeries, showStd, showIqr, showNormal) {
             ${series.label}
         </span>
     `).join("");
-    const stdItem = showStd ? '<span class="legend-item"><span class="legend-line std-line"></span>Mean +/- 1 std dev</span>' : "";
-    const iqrItem = showIqr ? '<span class="legend-item"><span class="legend-band"></span>IQR: Q1 to Q3</span>' : "";
+    const stdItem = showStd ? '<span class="legend-item"><span class="legend-line std-line"></span>Std dev arrow: mean +/- 1 std</span>' : "";
+    const iqrItem = showIqr ? '<span class="legend-item"><span class="legend-line iqr-line"></span>IQR arrow: Q1 to Q3</span>' : "";
     const normalItem = showNormal ? '<span class="legend-item"><span class="legend-line normal-line"></span>Normal curve fit</span>' : "";
 
     legend.innerHTML = `
