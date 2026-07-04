@@ -38,7 +38,7 @@ const CHART = {
     plotHeight: 250,
     boxTop: 386,
     boxHeight: 128,
-    dotTop: 578,
+    dotTop: 666,
     dotHeight: 86,
     bottom: 54
 };
@@ -200,7 +200,7 @@ function resizeCanvas() {
     const canvas = document.getElementById("canvas");
     const container = canvas.parentElement;
     const width = Math.max(320, Math.min(container.clientWidth, 820));
-    const height = width < 560 ? 720 : 740;
+    const height = width < 560 ? 800 : 820;
     const dpr = window.devicePixelRatio || 1;
 
     canvas.width = Math.floor(width * dpr);
@@ -447,11 +447,11 @@ function drawVerticalMarker(ctx, px, top, bottom, color, dashed) {
 function drawBoxPlotArea(ctx, dimensions, summaries, x, activeSeries) {
     const textColor = getColor("#334155", "#dbe4ef");
     drawDivider(ctx, dimensions, CHART.boxTop - 34);
-    drawSectionLabel(ctx, "Box plots: low whisker, Q1, Q2 median, Q3, high whisker", CHART.left, CHART.boxTop - 48);
+    drawSectionLabel(ctx, "Box plots", CHART.left, CHART.boxTop - 48);
 
     activeSeries.forEach((series, index) => {
         const summary = summaries[series.key];
-        const yCenter = CHART.boxTop + 40 + index * 72;
+        const yCenter = CHART.boxTop + 48 + index * 96;
         const boxHeight = 24;
 
         ctx.strokeStyle = series.color;
@@ -487,8 +487,6 @@ function drawBoxPlotArea(ctx, dimensions, summaries, x, activeSeries) {
         ctx.textBaseline = "middle";
         ctx.fillText(series.label, CHART.left - 14, yCenter);
 
-        ctx.textAlign = "left";
-        ctx.fillText(`IQR ${formatNumber(summary.iqr)}`, Math.min(x(summary.q3) + 8, dimensions.width - 92), yCenter);
     });
 }
 
@@ -496,14 +494,14 @@ function drawBoxLabels(ctx, summary, series, x, yCenter, boxHeight, dimensions) 
     const labelColor = getColor("#1f2937", "#e5e7eb");
     const guideColor = getColor("rgba(51, 65, 85, 0.5)", "rgba(226, 232, 240, 0.45)");
     const labels = [
-        { text: "Low", value: summary.lowerWhisker, y: yCenter + boxHeight / 2 + 18, align: "center" },
-        { text: "Q1", value: summary.q1, y: yCenter - boxHeight / 2 - 18, align: "right" },
-        { text: "Q2 median", value: summary.median, y: yCenter - boxHeight / 2 - 32, align: "center" },
-        { text: "Q3", value: summary.q3, y: yCenter - boxHeight / 2 - 18, align: "left" },
-        { text: "High", value: summary.upperWhisker, y: yCenter + boxHeight / 2 + 18, align: "center" }
+        { text: "Low", value: summary.lowerWhisker, y: yCenter + boxHeight / 2 + 22 },
+        { text: "Q1", value: summary.q1, y: yCenter - boxHeight / 2 - 22 },
+        { text: "Q2", value: summary.median, y: yCenter - boxHeight / 2 - 40 },
+        { text: "Q3", value: summary.q3, y: yCenter - boxHeight / 2 - 22 },
+        { text: "High", value: summary.upperWhisker, y: yCenter + boxHeight / 2 + 22 }
     ];
 
-    ctx.font = "11px Arial";
+    ctx.font = "12px Arial";
     labels.forEach(item => {
         const px = Math.max(CHART.left + 12, Math.min(dimensions.width - CHART.right - 12, x(item.value)));
         ctx.strokeStyle = guideColor;
@@ -513,8 +511,8 @@ function drawBoxLabels(ctx, summary, series, x, yCenter, boxHeight, dimensions) 
         ctx.lineTo(px, item.y > yCenter ? yCenter + boxHeight / 2 + 5 : yCenter - boxHeight / 2 - 5);
         ctx.stroke();
 
-        ctx.fillStyle = item.text === "Q2 median" ? series.color : labelColor;
-        ctx.textAlign = item.align;
+        ctx.fillStyle = item.text === "Q2" ? series.color : labelColor;
+        ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(item.text, px, item.y);
     });
