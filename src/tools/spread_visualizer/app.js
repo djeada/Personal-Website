@@ -37,9 +37,15 @@ const CHART = {
     top: 44,
     plotHeight: 220,
     spreadTop: 0,
+    spreadRowGap: 19,
+    spreadSeriesGap: 66,
     boxTop: 330,
+    boxRowGap: 68,
+    boxOffset: 38,
     dotTop: 560,
     dotHeight: 84,
+    dotRowGap: 32,
+    dotOffset: 18,
     bottom: 40,
     narrow: false
 };
@@ -206,20 +212,24 @@ function configureChart(width, activeCount, showIqr, showStd, showPoints) {
     const narrow = width < 560;
     const showSpread = showIqr || showStd;
     const top = narrow ? 38 : 44;
-    const plotHeight = narrow ? 168 : 220;
+    const plotHeight = narrow ? 168 : 190;
     const left = narrow ? 58 : 92;
     const right = narrow ? 14 : 30;
     const distributionBottom = top + plotHeight;
-    const spreadTop = distributionBottom + (narrow ? 56 : 64);
+    const spreadTop = distributionBottom + (narrow ? 72 : 68);
     const spreadRows = showStd ? (showIqr ? 2 : 1) : (showIqr ? 1 : 0);
-    const spreadRowGap = narrow ? 17 : 19;
-    const spreadHeight = showSpread ? 34 + activeCount * (spreadRows * spreadRowGap + (narrow ? 22 : 28)) : 0;
-    const boxTop = showSpread ? spreadTop + spreadHeight + (narrow ? 26 : 34) : distributionBottom + (narrow ? 78 : 92);
-    const boxRowGap = narrow ? 66 : 76;
-    const boxSectionHeight = 48 + activeCount * boxRowGap;
-    const dotTop = boxTop + boxSectionHeight + (narrow ? 40 : 48);
-    const dotHeight = showPoints ? 18 + activeCount * (narrow ? 30 : 34) : 0;
-    const bottom = narrow ? 30 : 40;
+    const spreadRowGap = narrow ? 18 : 19;
+    const spreadSeriesGap = spreadRows * spreadRowGap + (narrow ? 26 : 28);
+    const spreadHeight = showSpread ? 22 + activeCount * spreadSeriesGap : 0;
+    const boxTop = showSpread ? spreadTop + spreadHeight + (narrow ? 22 : 28) : distributionBottom + (narrow ? 84 : 92);
+    const boxRowGap = narrow ? 60 : 68;
+    const boxOffset = narrow ? 34 : 38;
+    const boxSectionHeight = 42 + activeCount * boxRowGap;
+    const dotTop = boxTop + boxSectionHeight + (narrow ? 34 : 42);
+    const dotRowGap = narrow ? 28 : 32;
+    const dotOffset = narrow ? 18 : 18;
+    const dotHeight = showPoints ? 16 + activeCount * dotRowGap : 0;
+    const bottom = narrow ? 28 : 34;
     const height = showPoints ? dotTop + dotHeight + bottom : boxTop + boxSectionHeight + bottom;
 
     Object.assign(CHART, {
@@ -228,9 +238,15 @@ function configureChart(width, activeCount, showIqr, showStd, showPoints) {
         top,
         plotHeight,
         spreadTop,
+        spreadRowGap,
+        spreadSeriesGap,
         boxTop,
+        boxRowGap,
+        boxOffset,
         dotTop,
         dotHeight,
+        dotRowGap,
+        dotOffset,
         bottom,
         narrow
     });
@@ -315,7 +331,7 @@ function drawVisualization(ctx, dimensions, summaries, activeSeries) {
     const showStd = document.getElementById("show-std").checked;
     const allValues = activeSeries.flatMap(series => {
         const summary = summaries[series.key];
-        const sigmaValues = showStd ? [summary.mean - 3 * summary.std, summary.mean + 3 * summary.std] : [];
+        const sigmaValues = showStd ? [summary.mean - summary.std, summary.mean + summary.std] : [];
         return summary.values.concat(sigmaValues);
     });
     const min = Math.min(...allValues);
@@ -408,7 +424,7 @@ function drawAxes(ctx, dimensions, xRange, densityMax, x) {
     for (let i = 0; i <= yTickCount; i++) {
         const density = (densityMax / 1.2) * (i / yTickCount);
         const py = CHART.top + CHART.plotHeight - (i / yTickCount) * CHART.plotHeight;
-        ctx.fillText(CHART.narrow ? density.toFixed(1) : density.toFixed(2), CHART.left - 8, py);
+        ctx.fillText(formatDensityTick(density), CHART.left - 8, py);
     }
 
     if (!CHART.narrow) {
@@ -422,7 +438,7 @@ function drawAxes(ctx, dimensions, xRange, densityMax, x) {
 }
 
 function histogram(values, xRange) {
-    const binCount = Math.max(6, Math.min(12, Math.ceil(Math.sqrt(values.length) + 3)));
+    const binCount = Math.max(8, Math.min(18, Math.ceil(Math.sqrt(values.length) * 3)));
     const binWidth = (xRange.max - xRange.min) / binCount;
     const bins = Array.from({ length: binCount }, (_, index) => ({
         start: xRange.min + index * binWidth,
@@ -504,10 +520,8 @@ function drawSpreadArrows(ctx, dimensions, summaries, x, activeSeries, showIqr, 
 
     activeSeries.forEach((series, seriesIndex) => {
         const summary = summaries[series.key];
-        const rowGap = CHART.narrow ? 17 : 19;
-        const rows = showStd ? (showIqr ? 2 : 1) : 1;
-        const seriesGap = rows * rowGap + (CHART.narrow ? 22 : 28);
-        const baseY = CHART.spreadTop + 10 + seriesIndex * seriesGap;
+        const rowGap = CHART.spreadRowGap;
+        const baseY = CHART.spreadTop + 10 + seriesIndex * CHART.spreadSeriesGap;
 
         ctx.fillStyle = getColor("#475467", "#dbe4ef");
         ctx.font = CHART.narrow ? "11px Arial" : "12px Arial";
@@ -580,7 +594,7 @@ function drawBoxPlotArea(ctx, dimensions, summaries, x, activeSeries) {
 
     activeSeries.forEach((series, index) => {
         const summary = summaries[series.key];
-        const yCenter = CHART.boxTop + 38 + index * (CHART.narrow ? 66 : 76);
+        const yCenter = CHART.boxTop + CHART.boxOffset + index * CHART.boxRowGap;
         const boxHeight = CHART.narrow ? 22 : 26;
 
         ctx.strokeStyle = series.color;
@@ -626,37 +640,59 @@ function drawBoxLabels(ctx, summary, series, x, yCenter, boxHeight, dimensions, 
     const labelDirection = seriesIndex % 2 === 0 ? -1 : 1;
     const labelY = yCenter + labelDirection * (boxHeight / 2 + labelOffset);
     const guideEndY = yCenter + labelDirection * (boxHeight / 2 + 5);
-    const labels = [
+    const labels = distributeLabels([
         { text: "Q1", value: summary.q1, y: labelY },
         { text: "Med", value: summary.median, y: labelY, color: series.color },
         { text: "Q3", value: summary.q3, y: labelY }
-    ];
+    ].map(item => ({
+        ...item,
+        targetX: x(item.value)
+    })), CHART.narrow ? 20 : 28, CHART.left + 14, dimensions.width - CHART.right - 14);
 
     ctx.font = CHART.narrow ? "10px Arial" : "12px Arial";
-    const placedByRow = {};
     labels.forEach(item => {
-        const minLabelSpacing = CHART.narrow ? 18 : 24;
-        let px = Math.max(CHART.left + 12, Math.min(dimensions.width - CHART.right - 12, x(item.value)));
-        const rowKey = String(Math.round(item.y));
-        const previousX = placedByRow[rowKey];
-        if (Number.isFinite(previousX) && Math.abs(px - previousX) < minLabelSpacing) {
-            px += px >= previousX ? minLabelSpacing / 2 : -minLabelSpacing / 2;
-            px = Math.max(CHART.left + 12, Math.min(dimensions.width - CHART.right - 12, px));
-        }
-        placedByRow[rowKey] = px;
-
         ctx.strokeStyle = guideColor;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(px, yCenter + labelDirection * boxHeight / 2);
-        ctx.lineTo(px, guideEndY);
+        ctx.moveTo(item.targetX, yCenter + labelDirection * boxHeight / 2);
+        ctx.lineTo(item.labelX, guideEndY);
         ctx.stroke();
 
         ctx.fillStyle = item.color || labelColor;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(item.text, px, item.y);
+        ctx.fillText(item.text, item.labelX, item.y);
     });
+}
+
+function distributeLabels(labels, minSpacing, minX, maxX) {
+    const ordered = labels
+        .map((label, index) => ({
+            ...label,
+            index,
+            labelX: Math.max(minX, Math.min(maxX, label.targetX))
+        }))
+        .sort((a, b) => a.labelX - b.labelX);
+
+    for (let i = 1; i < ordered.length; i++) {
+        ordered[i].labelX = Math.max(ordered[i].labelX, ordered[i - 1].labelX + minSpacing);
+    }
+
+    for (let i = ordered.length - 2; i >= 0; i--) {
+        if (ordered[ordered.length - 1].labelX > maxX) {
+            ordered[ordered.length - 1].labelX = maxX;
+        }
+        ordered[i].labelX = Math.min(ordered[i].labelX, ordered[i + 1].labelX - minSpacing);
+    }
+
+    if (ordered[0].labelX < minX) {
+        ordered[0].labelX = minX;
+        for (let i = 1; i < ordered.length; i++) {
+            ordered[i].labelX = Math.max(ordered[i].labelX, ordered[i - 1].labelX + minSpacing);
+        }
+    }
+
+    return ordered.sort((a, b) => a.index - b.index);
 }
 
 function drawDotPlotArea(ctx, dimensions, summaries, x, activeSeries) {
@@ -665,7 +701,7 @@ function drawDotPlotArea(ctx, dimensions, summaries, x, activeSeries) {
     drawSectionLabel(ctx, "Dot plots", CHART.left, CHART.dotTop - 38);
 
     activeSeries.forEach((series, index) => {
-        const yCenter = CHART.dotTop + 20 + index * (CHART.narrow ? 30 : 34);
+        const yCenter = CHART.dotTop + CHART.dotOffset + index * CHART.dotRowGap;
         const counts = {};
         summaries[series.key].sorted.forEach(value => {
             const bucket = value.toFixed(2);
@@ -784,6 +820,12 @@ function niceStep(rawStep) {
 
 function formatTick(value) {
     if (Math.abs(value) >= 10) return value.toFixed(0);
+    return value.toFixed(1);
+}
+
+function formatDensityTick(value) {
+    if (Math.abs(value) < 0.005) return "0";
+    if (Math.abs(value) < 1) return value.toFixed(2);
     return value.toFixed(1);
 }
 
