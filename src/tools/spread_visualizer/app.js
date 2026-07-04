@@ -37,9 +37,9 @@ const CHART = {
     top: 42,
     plotHeight: 250,
     spreadTop: 326,
-    boxTop: 472,
+    boxTop: 560,
     boxHeight: 128,
-    dotTop: 752,
+    dotTop: 840,
     dotHeight: 86,
     bottom: 54
 };
@@ -201,7 +201,7 @@ function resizeCanvas() {
     const canvas = document.getElementById("canvas");
     const container = canvas.parentElement;
     const width = Math.max(320, Math.min(container.clientWidth, 820));
-    const height = width < 560 ? 890 : 910;
+    const height = width < 560 ? 980 : 1000;
     const dpr = window.devicePixelRatio || 1;
 
     canvas.width = Math.floor(width * dpr);
@@ -266,7 +266,15 @@ function draw() {
 }
 
 function drawVisualization(ctx, dimensions, summaries, activeSeries) {
-    const allValues = activeSeries.flatMap(series => summaries[series.key].values);
+    const showNormal = document.getElementById("show-normal").checked;
+    const showPoints = document.getElementById("show-points").checked;
+    const showIqr = document.getElementById("show-iqr").checked;
+    const showStd = document.getElementById("show-std").checked;
+    const allValues = activeSeries.flatMap(series => {
+        const summary = summaries[series.key];
+        const sigmaValues = showStd ? [summary.mean - 3 * summary.std, summary.mean + 3 * summary.std] : [];
+        return summary.values.concat(sigmaValues);
+    });
     const min = Math.min(...allValues);
     const max = Math.max(...allValues);
     const spread = Math.max(max - min, 1);
@@ -275,10 +283,6 @@ function drawVisualization(ctx, dimensions, summaries, activeSeries) {
         max: max + spread * 0.09
     };
     const x = value => CHART.left + ((value - xRange.min) / (xRange.max - xRange.min)) * (dimensions.width - CHART.left - CHART.right);
-    const showNormal = document.getElementById("show-normal").checked;
-    const showPoints = document.getElementById("show-points").checked;
-    const showIqr = document.getElementById("show-iqr").checked;
-    const showStd = document.getElementById("show-std").checked;
     const densityMax = Math.max(
         ...activeSeries.map(series => histogram(summaries[series.key].values, xRange).maxDensity),
         ...activeSeries.map(series => summaries[series.key].std > 0 ? gaussian(summaries[series.key].mean, summaries[series.key].mean, summaries[series.key].std) : 0)
@@ -447,37 +451,50 @@ function drawSpreadArrows(ctx, dimensions, summaries, x, activeSeries, showIqr, 
         ctx.font = "12px Arial";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
-        ctx.fillText("Turn on IQR arrow or Std dev arrow to compare spread lengths.", CHART.left, CHART.spreadTop + 18);
+        ctx.fillText("Turn on IQR arrow or Sigma arrows to compare spread lengths.", CHART.left, CHART.spreadTop + 18);
         return;
     }
 
     activeSeries.forEach((series, seriesIndex) => {
         const summary = summaries[series.key];
-        const baseY = CHART.spreadTop + 20 + seriesIndex * 54;
+        const baseY = CHART.spreadTop + 18 + seriesIndex * 96;
 
         ctx.fillStyle = getColor("#334155", "#dbe4ef");
         ctx.font = "12px Arial";
         ctx.textAlign = "right";
         ctx.textBaseline = "middle";
-        ctx.fillText(series.label, CHART.left - 14, baseY + (showIqr && showStd ? 10 : 0));
+        ctx.fillText(series.label, CHART.left - 14, baseY + (showStd ? 32 : 0));
 
         if (showIqr) {
             drawDoubleArrow(ctx, x(summary.q1), x(summary.q3), baseY, series.color, `IQR ${formatNumber(summary.iqr)}`);
         }
 
         if (showStd) {
-            const stdY = showIqr ? baseY + 22 : baseY;
-            drawDoubleArrow(ctx, x(summary.mean - summary.std), x(summary.mean + summary.std), stdY, series.color, `mean +/- 1 std (${formatNumber(summary.std)})`, true);
+            const firstSigmaY = showIqr ? baseY + 24 : baseY;
+            for (let level = 1; level <= 3; level++) {
+                const sigmaY = firstSigmaY + (level - 1) * 20;
+                drawDoubleArrow(
+                    ctx,
+                    x(summary.mean - level * summary.std),
+                    x(summary.mean + level * summary.std),
+                    sigmaY,
+                    series.color,
+                    `mu +/- ${level}σ`,
+                    true,
+                    0.95 - (level - 1) * 0.22
+                );
+            }
         }
     });
 }
 
-function drawDoubleArrow(ctx, left, right, y, color, label, dashed) {
+function drawDoubleArrow(ctx, left, right, y, color, label, dashed, alpha) {
     const start = Math.min(left, right);
     const end = Math.max(left, right);
     const head = 7;
 
     ctx.save();
+    ctx.globalAlpha = alpha || 1;
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
     ctx.lineWidth = 2;
@@ -654,7 +671,7 @@ function renderLegend(activeSeries, showStd, showIqr, showNormal) {
             ${series.label}
         </span>
     `).join("");
-    const stdItem = showStd ? '<span class="legend-item"><span class="legend-line std-line"></span>Std dev arrow: mean +/- 1 std</span>' : "";
+    const stdItem = showStd ? '<span class="legend-item"><span class="legend-line std-line"></span>Sigma arrows: mu +/- 1σ, 2σ, 3σ</span>' : "";
     const iqrItem = showIqr ? '<span class="legend-item"><span class="legend-line iqr-line"></span>IQR arrow: Q1 to Q3</span>' : "";
     const normalItem = showNormal ? '<span class="legend-item"><span class="legend-line normal-line"></span>Normal curve fit</span>' : "";
 
@@ -684,7 +701,7 @@ function renderStats(summaries, activeSeries) {
                     <tbody>
                         <tr><th>n</th><td>${s.n}</td><th>Range</th><td>${formatNumber(s.max - s.min)}</td></tr>
                         <tr><th>Min</th><td>${formatNumber(s.min)}</td><th>Max</th><td>${formatNumber(s.max)}</td></tr>
-                        <tr><th>Mean</th><td>${formatNumber(s.mean)}</td><th>Std dev</th><td>${formatNumber(s.std)}</td></tr>
+                        <tr><th>Mean</th><td>${formatNumber(s.mean)}</td><th>σ</th><td>${formatNumber(s.std)}</td></tr>
                         <tr><th>Q1</th><td>${formatNumber(s.q1)}</td><th>Q2 median</th><td>${formatNumber(s.median)}</td></tr>
                         <tr><th>Q3</th><td>${formatNumber(s.q3)}</td><th>IQR</th><td>${formatNumber(s.iqr)}</td></tr>
                     </tbody>
