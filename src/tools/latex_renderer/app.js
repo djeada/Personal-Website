@@ -231,9 +231,10 @@ class LatexRenderer {
         documentEl.className = 'rendered-document';
 
         this.getRenderBlocks(source).forEach((block) => {
-            const element = document.createElement(this.isDisplayBlock(block) ? 'div' : 'p');
-            element.className = this.isDisplayBlock(block) ? 'display-math-block' : 'text-math-block';
-            element.textContent = block;
+            const previewSource = this.prepareMathJaxSource(block);
+            const element = document.createElement(this.isDisplayBlock(previewSource) ? 'div' : 'p');
+            element.className = this.isDisplayBlock(previewSource) ? 'display-math-block' : 'text-math-block';
+            element.textContent = previewSource;
             documentEl.appendChild(element);
         });
 
@@ -281,8 +282,78 @@ class LatexRenderer {
     }
 
     isDisplayBlock(block) {
-        return /(^|\n)\s*(\$\$|\\\[|\\begin\{(?:align|align\*|equation|equation\*|gather|gather\*|multline|multline\*|split|aligned|cases|matrix|pmatrix|bmatrix|vmatrix|array)\})/.test(block) ||
+        return /(^|\n)\s*(\$\$|\\\[|\\begin\{(?:align|align\*|equation|equation\*|gather|gather\*|multline|multline\*|split|aligned|cases|matrix|pmatrix|bmatrix|vmatrix|array|tabular)\})/.test(block) ||
             /\$\$|\\\[|\\\]/.test(block);
+    }
+
+    prepareMathJaxSource(source) {
+        const converted = this.convertTabularToArray(source);
+        if (converted === source || this.hasMathDelimiters(converted)) {
+            return converted;
+        }
+
+        return `\\[\n${converted}\n\\]`;
+    }
+
+    hasMathDelimiters(source) {
+        return /\$\$|\\\[|\\\]|(^|[^\\])\$/.test(source);
+    }
+
+    convertTabularToArray(source) {
+        return source.replace(/\\begin\{tabular\}(?:\s*\{([^}]*)\})?([\s\S]*?)\\end\{tabular\}/g, (_match, columnSpec, body) => {
+            const arraySpec = this.normalizeArrayColumnSpec(columnSpec, body);
+            const arrayBody = body.trim() ? body : '\\phantom{}';
+            return `\\begin{array}{${arraySpec}}${arrayBody}\\end{array}`;
+        });
+    }
+
+    normalizeArrayColumnSpec(columnSpec, body) {
+        if (columnSpec) {
+            const cleaned = columnSpec
+                .replace(/[@!<>]\{[^{}]*\}/g, '')
+                .replace(/[pmb]\{[^{}]*\}/g, 'c')
+                .replace(/X/g, 'c')
+                .replace(/[^lcr|]/g, '');
+
+            if (/[lcr]/.test(cleaned)) {
+                return cleaned;
+            }
+        }
+
+        return 'c'.repeat(this.inferTabularColumnCount(body));
+    }
+
+    inferTabularColumnCount(body) {
+        const rows = this.splitLatexRows(body).map((row) => row.trim()).filter(Boolean);
+        if (!rows.length) return 1;
+
+        return Math.max(...rows.map((row) => this.countUnescapedAmpersands(row) + 1), 1);
+    }
+
+    splitLatexRows(body) {
+        const rows = [];
+        let rowStart = 0;
+
+        for (let index = 0; index < body.length - 1; index++) {
+            if (body[index] === '\\' && body[index + 1] === '\\' && !this.isEscaped(body, index)) {
+                rows.push(body.slice(rowStart, index));
+                rowStart = index + 2;
+                index++;
+            }
+        }
+
+        rows.push(body.slice(rowStart));
+        return rows;
+    }
+
+    countUnescapedAmpersands(text) {
+        let count = 0;
+        for (let index = 0; index < text.length; index++) {
+            if (text[index] === '&' && !this.isEscaped(text, index)) {
+                count++;
+            }
+        }
+        return count;
     }
 
     clearTypeset() {
