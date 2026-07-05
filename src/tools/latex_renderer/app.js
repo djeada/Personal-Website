@@ -1,6 +1,5 @@
 class LatexRenderer {
     constructor() {
-
         this.input = document.getElementById('latex-input');
         this.output = document.getElementById('latex-output');
         this.charCount = document.getElementById('char-count');
@@ -9,7 +8,7 @@ class LatexRenderer {
         this.srStatus = document.getElementById('sr-status');
         this.diagnosticsEl = document.getElementById('diagnostics');
 
-
+        this.renderBtn = document.getElementById('render-btn');
         this.clearBtn = document.getElementById('clear-btn');
         this.exampleBtn = document.getElementById('example-btn');
         this.copyBtn = document.getElementById('copy-btn');
@@ -23,24 +22,25 @@ class LatexRenderer {
         this.penBtn = document.getElementById('pen-btn');
         this.highlightBtn = document.getElementById('highlight-btn');
         this.eraserBtn = document.getElementById('eraser-btn');
+        this.clearDrawingBtn = document.getElementById('clear-drawing-btn');
         this.drawColorInput = document.getElementById('draw-color');
 
         this.quickRefFilter = document.getElementById('quick-ref-filter');
         this.quickRefList = document.getElementById('quick-ref-list');
         this.quickRefCount = document.getElementById('quick-ref-count');
 
-
         this.splitContainer = document.getElementById('split-container');
         this.editorPanel = document.getElementById('editor-panel');
         this.previewPanel = document.getElementById('preview-panel');
         this.divider = document.getElementById('divider');
 
-
-        this.isRendering = false;
         this.renderTimeout = null;
         this.saveTimeout = null;
-        this.storageKey = 'latex_renderer_content_v1';
-        this.initializedFromURL = false;
+        this.renderVersion = 0;
+        this.mathJaxLoadPromise = null;
+        this.storageKey = 'latex_renderer_content_v2';
+        this.legacyStorageKey = 'latex_renderer_content_v1';
+        this.splitRatio = 0.5;
 
         this.init();
     }
@@ -51,32 +51,20 @@ class LatexRenderer {
         this.updateCharCount();
         this.updateLineNumbers();
         this.setStatus('Ready', 'ready');
-        if (this.input.value.trim() === '') this.showPlaceholder();
-        else this.renderLatex();
+
+        if (this.input.value.trim() === '') {
+            this.showPlaceholder();
+        } else {
+            this.renderLatex();
+        }
     }
 
     setupEventListeners() {
+        this.input.addEventListener('input', () => this.handleInputChange());
+        this.input.addEventListener('scroll', () => this.syncScroll());
+        this.input.addEventListener('keydown', (event) => this.handleKeyboardShortcuts(event));
 
-        this.input.addEventListener('input', () => {
-            this.updateCharCount();
-            this.updateLineNumbers();
-            this.debounceRender();
-            this.debounceSave();
-        });
-        this.input.addEventListener('paste', () => setTimeout(() => {
-            this.updateCharCount();
-            this.updateLineNumbers();
-            this.debounceRender();
-            this.debounceSave();
-        }, 10));
-        this.input.addEventListener('scroll', () => {
-            this.syncScroll();
-        });
-
-
-        this.input.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
-
-
+        this.renderBtn?.addEventListener('click', () => this.renderLatex());
         this.clearBtn.addEventListener('click', () => this.clearContent());
         this.exampleBtn.addEventListener('click', () => this.loadExample());
         this.copyBtn.addEventListener('click', () => this.copyToClipboard());
@@ -85,260 +73,507 @@ class LatexRenderer {
         this.shareBtn.addEventListener('click', () => this.generateShareLink());
         this.wrapInlineBtn.addEventListener('click', () => this.wrapSelection('$', '$'));
         this.wrapDisplayBtn.addEventListener('click', () => this.wrapSelection('$$\n', '\n$$'));
+
         this.snippetSelect.addEventListener('change', () => {
             if (this.snippetSelect.value) {
-                this.insertAtCursor(this.snippetSelect.value);
+                this.insertSnippet(this.snippetSelect.value);
                 this.snippetSelect.selectedIndex = 0;
-                this.debounceRender();
             }
         });
 
-
-        if (this.penBtn) this.penBtn.addEventListener('click', () => this.toggleDrawingMode('pen'));
-        if (this.highlightBtn) this.highlightBtn.addEventListener('click', () => this.toggleDrawingMode('highlight'));
-        if (this.eraserBtn) this.eraserBtn.addEventListener('click', () => this.toggleDrawingMode('eraser'));
-
+        this.penBtn?.addEventListener('click', () => this.toggleDrawingMode('pen'));
+        this.highlightBtn?.addEventListener('click', () => this.toggleDrawingMode('highlight'));
+        this.eraserBtn?.addEventListener('click', () => this.toggleDrawingMode('eraser'));
+        this.clearDrawingBtn?.addEventListener('click', () => this.clearDrawing(false));
+        this.drawColorInput?.addEventListener('input', () => this.renderHighlightTint());
 
         this.initResizing();
         this.initQuickReference();
         this.initDrawingLayer();
     }
 
+    handleInputChange() {
+        this.updateCharCount();
+        this.updateLineNumbers();
+        this.debounceRender();
+        this.debounceSave();
+    }
+
     syncScroll() {
-        if (!this.lineNumbers) return;
-        this.lineNumbers.scrollTop = this.input.scrollTop;
+        if (this.lineNumbers) {
+            this.lineNumbers.scrollTop = this.input.scrollTop;
+        }
     }
 
     debounceRender() {
         clearTimeout(this.renderTimeout);
-        this.renderTimeout = setTimeout(() => this.renderLatex(), 250);
+        this.renderTimeout = setTimeout(() => this.renderLatex(), 180);
     }
+
     debounceSave() {
         clearTimeout(this.saveTimeout);
-        this.saveTimeout = setTimeout(() => this.saveState(), 500);
+        this.saveTimeout = setTimeout(() => this.saveState(), 350);
     }
 
     renderLatex() {
-        const inputText = this.input.value.trim();
-        if (!inputText) {
+        const source = this.input.value.trim();
+        const renderId = ++this.renderVersion;
+
+        if (!source) {
+            this.clearDiagnostics();
             this.showPlaceholder();
             return;
         }
 
-        this.clearDiagnostics();
-        this.setStatus('Rendering...', 'rendering');
-        this.isRendering = true;
-
         const issues = this.validateLatex(this.input.value);
         this.renderDiagnostics(issues);
-        this.output.innerHTML = this.processLatexContent(inputText);
+        this.renderSourceContent(source);
+        this.setStatus('Rendering...', 'rendering');
+        this.output.setAttribute('aria-busy', 'true');
 
-        if (this.drawingWrapper) {
-            this.output.appendChild(this.drawingWrapper);
-            this.resizeDrawingCanvas();
+        this.waitForMathJax()
+            .then(() => {
+                if (renderId !== this.renderVersion) return null;
+                if (!window.MathJax || typeof window.MathJax.typesetPromise !== 'function') {
+                    throw new Error('MathJax is not available');
+                }
+                return window.MathJax.typesetPromise([this.output]);
+            })
+            .then(() => {
+                if (renderId !== this.renderVersion) return;
+
+                const errorCount = issues.filter((issue) => issue.severity === 'error').length;
+                const warningCount = issues.filter((issue) => issue.severity === 'warning').length;
+                if (errorCount) {
+                    this.setStatus(`${errorCount} issue${errorCount === 1 ? '' : 's'}`, 'error');
+                } else if (warningCount) {
+                    this.setStatus(`${warningCount} warning${warningCount === 1 ? '' : 's'}`, 'warning');
+                } else {
+                    this.setStatus('Rendered', 'success');
+                }
+            })
+            .catch((error) => {
+                if (renderId !== this.renderVersion) return;
+                const message = this.formatMathJaxError(error);
+                this.renderDiagnostics([...issues, {
+                    severity: 'error',
+                    line: '-',
+                    message
+                }]);
+                this.setStatus('Rendering error', 'error');
+            })
+            .finally(() => {
+                if (renderId !== this.renderVersion) return;
+                this.output.removeAttribute('aria-busy');
+                this.resizeDrawingCanvas?.();
+            });
+    }
+
+    waitForMathJax() {
+        if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+            return Promise.resolve();
         }
-        this.updateURLState(inputText);
-        if (window.MathJax && window.MathJax.typesetPromise) {
-            window.MathJax.typesetPromise([this.output])
-                .then(() => {
-                    this.setStatus('Rendered successfully', 'success');
-                    this.isRendering = false;
-                })
-                .catch(err => {
-                    console.error(err);
-                    this.setStatus('Rendering error', 'error');
-                    this.isRendering = false;
-                });
-        } else {
-            setTimeout(() => {
-                this.setStatus('Rendered (MathJax not loaded)', 'error');
-                this.isRendering = false;
-            }, 100);
+        if (this.mathJaxLoadPromise) {
+            return this.mathJaxLoadPromise;
+        }
+
+        const script = document.getElementById('MathJax-script');
+        this.mathJaxLoadPromise = new Promise((resolve, reject) => {
+            let settled = false;
+            let pollId = null;
+            let timeoutId = null;
+
+            const finish = (callback, value) => {
+                if (settled) return;
+                settled = true;
+                clearInterval(pollId);
+                clearTimeout(timeoutId);
+                callback(value);
+            };
+
+            const tryReady = () => {
+                if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+                    finish(resolve);
+                    return true;
+                }
+
+                const startupPromise = window.MathJax?.startup?.promise;
+                if (startupPromise && typeof startupPromise.then === 'function') {
+                    startupPromise.then(() => finish(resolve)).catch((error) => finish(reject, error));
+                    return true;
+                }
+
+                return false;
+            };
+
+            if (tryReady()) return;
+
+            pollId = setInterval(tryReady, 50);
+            timeoutId = setTimeout(() => {
+                finish(reject, new Error('MathJax loading timed out'));
+            }, 10000);
+
+            if (script) {
+                script.addEventListener('load', tryReady, { once: true });
+                script.addEventListener('error', () => {
+                    finish(reject, new Error('MathJax failed to load'));
+                }, { once: true });
+            }
+        });
+
+        return this.mathJaxLoadPromise;
+    }
+
+    renderSourceContent(source) {
+        this.clearTypeset();
+
+        const documentEl = document.createElement('div');
+        documentEl.className = 'rendered-document';
+
+        this.getRenderBlocks(source).forEach((block) => {
+            const element = document.createElement(this.isDisplayBlock(block) ? 'div' : 'p');
+            element.className = this.isDisplayBlock(block) ? 'display-math-block' : 'text-math-block';
+            element.textContent = block;
+            documentEl.appendChild(element);
+        });
+
+        this.output.replaceChildren(documentEl);
+        this.attachDrawingLayer();
+    }
+
+    getRenderBlocks(source) {
+        const lines = source.replace(/\r\n?/g, '\n').split('\n');
+        const blocks = [];
+        let current = [];
+        let inDisplay = false;
+
+        const pushCurrent = () => {
+            const block = current.join('\n').trim();
+            if (block) blocks.push(block);
+            current = [];
+        };
+
+        lines.forEach((line) => {
+            const isBlank = line.trim() === '';
+            const displayToggles = this.countUnescapedToken(line, '$$');
+            const bracketOpen = this.countUnescapedToken(line, '\\[');
+            const bracketClose = this.countUnescapedToken(line, '\\]');
+
+            if (!inDisplay && isBlank) {
+                pushCurrent();
+                return;
+            }
+
+            current.push(line);
+
+            if (displayToggles % 2 === 1) {
+                inDisplay = !inDisplay;
+            }
+            if (bracketOpen > bracketClose) {
+                inDisplay = true;
+            } else if (bracketClose > bracketOpen) {
+                inDisplay = false;
+            }
+        });
+
+        pushCurrent();
+        return blocks.length ? blocks : [source];
+    }
+
+    isDisplayBlock(block) {
+        return /(^|\n)\s*(\$\$|\\\[|\\begin\{(?:align|align\*|equation|equation\*|gather|gather\*|multline|multline\*|split|aligned|cases|matrix|pmatrix|bmatrix|vmatrix|array)\})/.test(block) ||
+            /\$\$|\\\[|\\\]/.test(block);
+    }
+
+    clearTypeset() {
+        try {
+            if (window.MathJax && typeof window.MathJax.typesetClear === 'function') {
+                window.MathJax.typesetClear([this.output]);
+            }
+        } catch (_) {
+            // MathJax cleanup is best-effort before replacing the preview DOM.
         }
     }
 
-    processLatexContent(content) {
-
-        const squashed = content.replace(/\$\$([\s\S]*?)\$\$/g, (m, inner) => {
-
-            const cleaned = inner.replace(/\r?\n+/g, ' ').trim();
-            return `$$${cleaned}$$`;
-        });
-
-        return squashed.split('\n').map(line => {
-            if (!line.trim()) return '<br>';
-            if (line.includes('$$')) return `<div class="display-math">${line}</div>`;
-            if (this.isLatexEnvironment(line)) return `<div class="latex-environment">${line}</div>`;
-            return `<p>${line}</p>`;
-        }).join('\n');
+    formatMathJaxError(error) {
+        const raw = error?.message || String(error || 'Unknown MathJax error');
+        return raw.replace(/\s+/g, ' ').trim();
     }
 
     validateLatex(text) {
         const issues = [];
-        const lines = text.split('\n');
-        const stack = [];
-        const envRegex = /\\(begin|end)\{([^}]+)\}/g;
+        const lines = text.replace(/\r\n?/g, '\n').split('\n');
+        const envStack = [];
+        const braceStack = [];
         const braceMap = {
             '(': ')',
             '[': ']',
             '{': '}'
         };
-        const openers = new Set(Object.keys(braceMap));
+        const closers = new Set(Object.values(braceMap));
+        const envRegex = /\\(begin|end)\{([^}]+)\}/g;
 
-        lines.forEach((rawLine, idx) => {
-            const line = rawLine;
+        lines.forEach((rawLine, lineIndex) => {
+            const lineNumber = lineIndex + 1;
+            const line = this.stripLatexComment(rawLine);
 
-            if (line.trim().startsWith('%')) return;
+            for (let index = 0; index < line.length; index++) {
+                const char = line[index];
+                if (this.isEscaped(line, index)) continue;
 
-
-            const stackChars = [];
-            for (let i = 0; i < line.length; i++) {
-                const ch = line[i];
-                if (openers.has(ch)) stackChars.push(ch);
-                else if (Object.values(braceMap).includes(ch)) {
-                    const last = stackChars.pop();
-                    if (!last || braceMap[last] !== ch) {
+                if (braceMap[char]) {
+                    braceStack.push({ char, line: lineNumber });
+                } else if (closers.has(char)) {
+                    const last = braceStack.pop();
+                    if (!last || braceMap[last.char] !== char) {
                         issues.push({
                             severity: 'error',
-                            line: idx + 1,
-                            message: `Mismatched '${ch}'`
+                            line: lineNumber,
+                            message: `Unexpected '${char}'`
                         });
                     }
                 }
             }
-            if (stackChars.length) {
-                stackChars.forEach(o => issues.push({
-                    severity: 'warning',
-                    line: idx + 1,
-                    message: `Unclosed '${o}' on this line`
-                }));
-            }
-
 
             envRegex.lastIndex = 0;
-            let m;
-            while ((m = envRegex.exec(line))) {
-                const type = m[1];
-                const env = m[2];
-                if (type === 'begin') stack.push({
-                    env,
-                    line: idx + 1
-                });
-                else {
-                    const last = stack.pop();
-                    if (!last || last.env !== env) {
-                        issues.push({
-                            severity: 'error',
-                            line: idx + 1,
-                            message: `Unexpected \\end{${env}}`
-                        });
-                    }
+            let match;
+            while ((match = envRegex.exec(line))) {
+                const type = match[1];
+                const env = match[2];
+
+                if (type === 'begin') {
+                    envStack.push({ env, line: lineNumber });
+                    continue;
                 }
-            }
 
-
-            const sanitized = line.replace(/\\\$/g, '');
-            const doubleRemoved = sanitized.replace(/\$\$[^$]*\$\$/g, '');
-            const singles = (doubleRemoved.match(/\$/g) || []).length;
-            if (singles % 2 !== 0) {
-                issues.push({
-                    severity: 'warning',
-                    line: idx + 1,
-                    message: 'Unpaired $ delimiter'
-                });
+                const last = envStack.pop();
+                if (!last) {
+                    issues.push({
+                        severity: 'error',
+                        line: lineNumber,
+                        message: `Unexpected \\end{${env}}`
+                    });
+                } else if (last.env !== env) {
+                    issues.push({
+                        severity: 'error',
+                        line: lineNumber,
+                        message: `Expected \\end{${last.env}}, found \\end{${env}}`
+                    });
+                }
             }
         });
 
+        braceStack.slice(-12).forEach((entry) => {
+            issues.push({
+                severity: 'warning',
+                line: entry.line,
+                message: `Unclosed '${entry.char}'`
+            });
+        });
 
-        stack.reverse().forEach(fr => issues.push({
-            severity: 'warning',
-            line: fr.line,
-            message: `Environment '${fr.env}' opened here not closed`
-        }));
+        envStack.reverse().forEach((entry) => {
+            issues.push({
+                severity: 'warning',
+                line: entry.line,
+                message: `Environment '${entry.env}' is not closed`
+            });
+        });
 
-
-        const allDouble = (text.replace(/\\\$/g, '').match(/\$\$/g) || []).length;
-        if (allDouble % 2 !== 0) {
+        const mathCounts = this.countMathDelimiters(text);
+        if (mathCounts.display % 2 !== 0) {
             issues.push({
                 severity: 'error',
                 line: '-',
                 message: 'Unpaired $$ display math delimiter'
             });
         }
+        if (mathCounts.inline % 2 !== 0) {
+            issues.push({
+                severity: 'warning',
+                line: '-',
+                message: 'Unpaired $ inline math delimiter'
+            });
+        }
 
-        return issues;
+        const displayOpen = this.countUnescapedToken(text, '\\[');
+        const displayClose = this.countUnescapedToken(text, '\\]');
+        if (displayOpen !== displayClose) {
+            issues.push({
+                severity: 'error',
+                line: '-',
+                message: 'Unpaired \\[ display math delimiter'
+            });
+        }
+
+        return this.uniqueIssues(issues);
+    }
+
+    stripLatexComment(line) {
+        for (let index = 0; index < line.length; index++) {
+            if (line[index] === '%' && !this.isEscaped(line, index)) {
+                return line.slice(0, index);
+            }
+        }
+        return line;
+    }
+
+    countMathDelimiters(text) {
+        let inline = 0;
+        let display = 0;
+
+        for (let index = 0; index < text.length; index++) {
+            if (text[index] !== '$' || this.isEscaped(text, index)) continue;
+
+            if (text[index + 1] === '$') {
+                display++;
+                index++;
+            } else {
+                inline++;
+            }
+        }
+
+        return { inline, display };
+    }
+
+    countUnescapedToken(text, token) {
+        let count = 0;
+        let index = text.indexOf(token);
+
+        while (index !== -1) {
+            if (!this.isEscaped(text, index)) {
+                count++;
+            }
+            index = text.indexOf(token, index + token.length);
+        }
+
+        return count;
+    }
+
+    isEscaped(text, index) {
+        let backslashes = 0;
+        for (let cursor = index - 1; cursor >= 0 && text[cursor] === '\\'; cursor--) {
+            backslashes++;
+        }
+        return backslashes % 2 === 1;
+    }
+
+    uniqueIssues(issues) {
+        const seen = new Set();
+        return issues.filter((issue) => {
+            const key = `${issue.severity}|${issue.line}|${issue.message}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
     }
 
     renderDiagnostics(issues) {
         if (!this.diagnosticsEl) return;
 
-        const seen = new Set();
-        const unique = [];
-        for (const i of issues) {
-            const key = `${i.line}|${i.message}`;
-            if (!seen.has(key)) {
-                seen.add(key);
-                unique.push(i);
-            }
-        }
-        if (!unique.length) {
-            this.clearDiagnostics();
-            return;
-        }
-        this.diagnosticsEl.classList.remove('empty');
-        const items = unique.map(i => `<li class="${i.severity}"><span class="badge">${i.severity.toUpperCase()}</span><span>Line ${i.line}: ${i.message}</span></li>`).join('');
-        this.diagnosticsEl.innerHTML = `<ul>${items}</ul>`;
-        const mostSevere = issues.find(i => i.severity === 'error') || issues[0];
-        this.announce(`${issues.length} issues detected. First: ${mostSevere.message}`);
+        this.diagnosticsEl.replaceChildren();
+        this.diagnosticsEl.className = 'diagnostics empty';
+
+        if (!issues.length) return;
+
+        const hasError = issues.some((issue) => issue.severity === 'error');
+        this.diagnosticsEl.className = `diagnostics ${hasError ? 'has-error' : 'has-warning'}`;
+
+        const list = document.createElement('ul');
+        issues.forEach((issue) => {
+            const item = document.createElement('li');
+            item.className = issue.severity;
+
+            const badge = document.createElement('span');
+            badge.className = 'badge';
+            badge.textContent = issue.severity.toUpperCase();
+
+            const text = document.createElement('span');
+            text.textContent = `Line ${issue.line}: ${issue.message}`;
+
+            item.append(badge, text);
+            list.appendChild(item);
+        });
+
+        this.diagnosticsEl.appendChild(list);
+        const first = issues.find((issue) => issue.severity === 'error') || issues[0];
+        this.announce(`${issues.length} diagnostic${issues.length === 1 ? '' : 's'}. First: ${first.message}`);
     }
 
     clearDiagnostics() {
         if (!this.diagnosticsEl) return;
-        this.diagnosticsEl.innerHTML = '';
-        this.diagnosticsEl.classList.add('empty');
-    }
-
-    isLatexEnvironment(line) {
-        return ['\\begin{', '\\end{', '\\[', '\\]', '\\align', '\\equation', '\\matrix', '\\pmatrix', '\\bmatrix', '\\vmatrix', '\\cases']
-            .some(env => line.trim().startsWith(env));
+        this.diagnosticsEl.replaceChildren();
+        this.diagnosticsEl.className = 'diagnostics empty';
     }
 
     showPlaceholder() {
-        this.output.innerHTML = `<div class="placeholder"><i class="fa fa-code"></i><p>Your rendered LaTeX will appear here</p></div>`;
+        this.clearTypeset();
+
+        const placeholder = document.createElement('div');
+        placeholder.className = 'placeholder';
+
+        const icon = document.createElement('i');
+        icon.className = 'fa fa-code';
+        icon.setAttribute('aria-hidden', 'true');
+
+        const text = document.createElement('p');
+        text.textContent = 'Your rendered LaTeX will appear here';
+
+        placeholder.append(icon, text);
+        this.output.replaceChildren(placeholder);
+        this.attachDrawingLayer();
         this.setStatus('Ready', 'ready');
+        this.output.removeAttribute('aria-busy');
     }
+
     updateCharCount() {
-        const c = this.input.value.length;
-        this.charCount.textContent = `${c} character${c !== 1 ? 's' : ''}`;
+        const count = this.input.value.length;
+        const lines = this.input.value.split('\n').length;
+        this.charCount.textContent = `${count} character${count === 1 ? '' : 's'} · ${lines} line${lines === 1 ? '' : 's'}`;
     }
+
     updateLineNumbers() {
         if (!this.lineNumbers) return;
-        const lines = this.input.value.split('\n').length;
-        this.lineNumbers.innerHTML = Array.from({
-            length: lines
-        }, () => '<div></div>').join('');
+
+        const fragment = document.createDocumentFragment();
+        const lines = Math.max(1, this.input.value.split('\n').length);
+        for (let index = 1; index <= lines; index++) {
+            const line = document.createElement('div');
+            line.textContent = index;
+            fragment.appendChild(line);
+        }
+
+        this.lineNumbers.replaceChildren(fragment);
         this.syncScroll();
     }
-    setStatus(msg, type = 'ready') {
-        this.status.textContent = msg;
+
+    setStatus(message, type = 'ready') {
         this.status.className = `status ${type}`;
-        if (type === 'rendering') this.status.innerHTML = `<span class="loading"></span> ${msg}`;
+        this.status.replaceChildren();
+
+        if (type === 'rendering') {
+            const spinner = document.createElement('span');
+            spinner.className = 'loading';
+            spinner.setAttribute('aria-hidden', 'true');
+            this.status.append(spinner, document.createTextNode(` ${message}`));
+            return;
+        }
+
+        this.status.textContent = message;
     }
 
     clearContent() {
-        if (confirm('Clear all content (including drawings)?')) {
-            this.input.value = '';
-            this.updateCharCount();
-            this.updateLineNumbers();
-            this.showPlaceholder();
+        if (!confirm('Clear the editor and drawings?')) return;
 
-            this.removeURLContentParam();
-
-            this.initializedFromURL = false;
-            this.saveState();
-            this.clearDrawing(true);
-            this.announce('Cleared content, drawings, and URL parameter');
-        }
+        this.input.value = '';
+        this.updateCharCount();
+        this.updateLineNumbers();
+        this.clearDiagnostics();
+        this.showPlaceholder();
+        this.removeURLContentParam();
+        this.saveState();
+        this.clearDrawing(true);
+        this.announce('Cleared content and drawings');
+        this.input.focus();
     }
 
     removeURLContentParam() {
@@ -349,303 +584,386 @@ class LatexRenderer {
                 history.replaceState(null, '', url.toString());
             }
         } catch (_) {
-
+            // No URL state to clean up.
         }
     }
 
     loadExample() {
         const examples = [
             `Welcome to LaTeX Renderer!\n\nInline math: The famous equation is $E = mc^2$.\n\nDisplay math:\n$$\\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}$$\n\nFractions and powers:\n$$\\frac{a^2 + b^2}{c^2} = \\frac{\\sqrt{x + y}}{\\log(z)}$$`,
-            `Advanced Mathematics\n\nGreek letters: $\\alpha, \\beta, \\gamma, \\delta, \\epsilon$\n\nSummation and limits:\n$$\\sum_{n=1}^{\\infty} \\frac{1}{n^2} = \\frac{\\pi^2}{6}$$\n\nMatrix example:\n$$\\begin{pmatrix} \na & b \\\\ \nc & d \n\\end{pmatrix}\n\\begin{pmatrix} \nx \\\\ \ny \n\\end{pmatrix} = \n\\begin{pmatrix} \nax + by \\\\ \ncx + dy \n\\end{pmatrix}$$`,
+            `Advanced Mathematics\n\nGreek letters: $\\alpha, \\beta, \\gamma, \\delta, \\epsilon$\n\nSummation and limits:\n$$\\sum_{n=1}^{\\infty} \\frac{1}{n^2} = \\frac{\\pi^2}{6}$$\n\nMatrix example:\n$$\\begin{pmatrix}\na & b \\\\\nc & d\n\\end{pmatrix}\n\\begin{pmatrix}\nx \\\\\ny\n\\end{pmatrix} =\n\\begin{pmatrix}\nax + by \\\\\ncx + dy\n\\end{pmatrix}$$`,
             `Complex Expressions\n\nDerivatives and integrals:\n$$\\frac{d}{dx}\\int_a^x f(t)dt = f(x)$$\n\nBinomial theorem:\n$$(x + y)^n = \\sum_{k=0}^{n} \\binom{n}{k} x^{n-k} y^k$$\n\nSet theory:\n$$A \\cup B = \\{x : x \\in A \\text{ or } x \\in B\\}$$`
         ];
+
         this.input.value = examples[Math.floor(Math.random() * examples.length)];
-        this.updateCharCount();
-        this.updateLineNumbers();
+        this.handleInputChange();
         this.renderLatex();
         this.input.focus();
-        this.debounceSave();
         this.announce('Loaded example');
     }
 
     copyToClipboard() {
-        navigator.clipboard.writeText(this.input.value).then(() => {
-            const original = this.copyBtn.innerHTML;
-            this.copyBtn.innerHTML = '<i class="fa fa-check"></i> Copied!';
-            this.copyBtn.style.background = '#28a745';
-            setTimeout(() => {
-                this.copyBtn.innerHTML = original;
-                this.copyBtn.style.background = '';
-            }, 2000);
-            this.announce('Copied to clipboard');
-        }).catch(err => {
-            console.error(err);
-            alert('Failed to copy');
-        });
+        this.copyText(this.input.value)
+            .then(() => {
+                this.flashButton(this.copyBtn, 'fa fa-check', 'Copied');
+                this.setStatus('Copied source', 'success');
+                this.announce('Copied to clipboard');
+            })
+            .catch(() => {
+                this.setStatus('Copy failed', 'error');
+                this.announce('Copy failed');
+            });
     }
 
     downloadTex() {
-        const blob = new Blob([this.input.value], {
-            type: 'application/x-tex'
-        });
+        const content = this.input.value;
+        if (!content.trim()) {
+            this.setStatus('Nothing to download', 'warning');
+            return;
+        }
+
+        const blob = new Blob([content], { type: 'application/x-tex' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'document.tex';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'latex-render.tex';
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
         URL.revokeObjectURL(url);
+        this.setStatus('Downloaded .tex', 'success');
         this.announce('Downloaded .tex');
     }
+
     insertAtCursor(text) {
-        const s = this.input.selectionStart,
-            e = this.input.selectionEnd;
-        this.input.setRangeText(text, s, e, 'end');
-        this.updateCharCount();
-        this.updateLineNumbers();
+        const start = this.input.selectionStart;
+        const end = this.input.selectionEnd;
+        this.input.setRangeText(text, start, end, 'end');
+        this.input.focus();
+        this.handleInputChange();
     }
-    wrapSelection(pre, suf) {
-        const s = this.input.selectionStart,
-            e = this.input.selectionEnd;
-        const sel = this.input.value.substring(s, e);
-        this.input.setRangeText(pre + sel + suf, s, e, 'select');
-        this.updateCharCount();
-        this.updateLineNumbers();
-        this.debounceRender();
-        this.announce('Wrapped selection');
+
+    wrapSelection(prefix, suffix) {
+        const start = this.input.selectionStart;
+        const end = this.input.selectionEnd;
+        const selected = this.input.value.substring(start, end);
+        const replacement = `${prefix}${selected}${suffix}`;
+
+        this.input.setRangeText(replacement, start, end, 'end');
+        const selectionStart = start + prefix.length;
+        const selectionEnd = selectionStart + selected.length;
+        this.input.setSelectionRange(selectionStart, selectionEnd);
+        this.input.focus();
+        this.handleInputChange();
+        this.announce(selected ? 'Wrapped selection' : 'Inserted delimiters');
     }
 
     generateShareLink() {
         const content = this.input.value;
         if (!content.trim()) {
-            alert('Nothing to share');
+            this.setStatus('Nothing to share', 'warning');
             return;
         }
-        const compressed = this.compressToBase64(content);
-        const url = `${location.origin}${location.pathname}?c=${compressed}`;
-        navigator.clipboard.writeText(url).then(() => {
-            alert('Shareable link copied');
-            this.announce('Share link copied');
-        });
+
+        const url = new URL(location.href);
+        url.searchParams.set('c', this.encodeContentForURL(content));
+        url.hash = '';
+
+        this.copyText(url.toString())
+            .then(() => {
+                this.flashButton(this.shareBtn, 'fa fa-check', 'Copied');
+                this.setStatus('Share link copied', 'success');
+                this.announce('Share link copied');
+            })
+            .catch(() => {
+                window.prompt('Copy this share link:', url.toString());
+                this.setStatus('Share link ready', 'warning');
+            });
     }
-    compressToBase64(str) {
-        try {
-            if (window.LZString) return btoa(LZString.compressToUTF16(str));
-        } catch (_) {}
-        return btoa(unescape(encodeURIComponent(str)));
+
+    encodeContentForURL(value) {
+        const bytes = new TextEncoder().encode(value);
+        let binary = '';
+        const chunkSize = 0x8000;
+
+        for (let index = 0; index < bytes.length; index += chunkSize) {
+            binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+        }
+
+        return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
     }
-    decompressFromBase64(b64) {
+
+    decodeContentFromURL(value) {
         try {
-            if (window.LZString) return LZString.decompressFromUTF16(atob(b64)) || '';
-        } catch (_) {}
-        try {
-            return decodeURIComponent(escape(atob(b64)));
-        } catch {
-            return '';
+            const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+            const padded = base64.padEnd(base64.length + ((4 - base64.length % 4) % 4), '=');
+            const binary = atob(padded);
+            const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+            return new TextDecoder().decode(bytes);
+        } catch (_) {
+            try {
+                return decodeURIComponent(escape(atob(value)));
+            } catch (__) {
+                return '';
+            }
         }
     }
-    updateURLState(content) {
-        if (!content || this.initializedFromURL) return;
-        try {
-            const compressed = this.compressToBase64(content).substring(0, 1500);
-            const url = new URL(location.href);
-            url.searchParams.set('c', compressed);
-            history.replaceState(null, '', url.toString());
-        } catch (_) {}
+
+    copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+            return navigator.clipboard.writeText(text);
+        }
+
+        return new Promise((resolve, reject) => {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.top = '-1000px';
+            document.body.appendChild(textarea);
+            textarea.select();
+
+            try {
+                document.execCommand('copy') ? resolve() : reject(new Error('execCommand copy failed'));
+            } catch (error) {
+                reject(error);
+            } finally {
+                textarea.remove();
+            }
+        });
     }
+
+    flashButton(button, iconClass, label) {
+        if (!button) return;
+        const originalNodes = [...button.childNodes].map((node) => node.cloneNode(true));
+        const icon = document.createElement('i');
+        icon.className = iconClass;
+        const text = document.createElement('span');
+        text.textContent = label;
+
+        button.replaceChildren(icon, text);
+        button.classList.add('is-success');
+        setTimeout(() => {
+            button.replaceChildren(...originalNodes);
+            button.classList.remove('is-success');
+        }, 1600);
+    }
+
     restoreState() {
         const params = new URLSearchParams(location.search);
-        const c = params.get('c');
-        if (c) {
-            const d = this.decompressFromBase64(c);
-            if (d) {
-                this.input.value = d;
-                this.initializedFromURL = true;
+        const encodedContent = params.get('c');
+        if (encodedContent) {
+            const decoded = this.decodeContentFromURL(encodedContent);
+            if (decoded) {
+                this.input.value = decoded;
                 return;
             }
         }
+
         try {
-            const saved = localStorage.getItem(this.storageKey);
-            if (saved) this.input.value = saved;
-        } catch (_) {}
+            const saved = localStorage.getItem(this.storageKey) || localStorage.getItem(this.legacyStorageKey);
+            if (saved) {
+                this.input.value = saved;
+            }
+        } catch (_) {
+            // Local storage can be unavailable in private browsing contexts.
+        }
     }
+
     saveState() {
         try {
             localStorage.setItem(this.storageKey, this.input.value);
-        } catch (_) {}
+        } catch (_) {
+            // Autosave should not interrupt editing.
+        }
     }
 
     initResizing() {
-        if (!this.divider) return;
-        let dragging = false;
-        const start = e => {
-            dragging = true;
-            e.preventDefault();
-        };
-        const move = e => {
-            if (!dragging) return;
-            const isMobile = window.matchMedia('(max-width: 768px)').matches;
-            const rect = this.splitContainer.getBoundingClientRect();
-            if (isMobile) {
-                const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-                const ratio = Math.min(.85, Math.max(.15, y / rect.height));
-                this.editorPanel.style.order = 0;
-                this.previewPanel.style.order = 2;
-                this.editorPanel.style.flexBasis = `${ratio*100}%`;
-                this.previewPanel.style.flexBasis = `${(1-ratio)*100}%`;
+        if (!this.divider || !this.splitContainer) return;
+
+        const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
+        const applySplit = () => {
+            const first = Math.max(0.2, Math.min(0.8, this.splitRatio));
+            const second = 1 - first;
+            if (isMobile()) {
+                this.splitContainer.style.gridTemplateColumns = '';
+                this.splitContainer.style.gridTemplateRows = `${first}fr 6px ${second}fr`;
             } else {
-                const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-                const ratio = Math.min(.85, Math.max(.15, x / rect.width));
-                this.editorPanel.style.flex = `0 0 ${ratio*100}%`;
-                this.previewPanel.style.flex = `0 0 ${(1-ratio)*100}%`;
+                this.splitContainer.style.gridTemplateRows = '';
+                this.splitContainer.style.gridTemplateColumns = `${first}fr 6px ${second}fr`;
             }
         };
-        const stop = () => {
-            if (dragging) {
-                dragging = false;
-                this.announce('Panels resized');
-            }
+
+        const setRatio = (ratio) => {
+            this.splitRatio = Math.max(0.2, Math.min(0.8, ratio));
+            applySplit();
         };
-        this.divider.addEventListener('mousedown', start);
-        window.addEventListener('mousemove', move);
-        window.addEventListener('mouseup', stop);
-        this.divider.addEventListener('touchstart', start, {
-            passive: true
+
+        let dragging = false;
+        let activePointer = null;
+
+        this.divider.addEventListener('pointerdown', (event) => {
+            dragging = true;
+            activePointer = event.pointerId;
+            this.divider.setPointerCapture?.(event.pointerId);
+            event.preventDefault();
         });
-        window.addEventListener('touchmove', move, {
-            passive: true
+
+        window.addEventListener('pointermove', (event) => {
+            if (!dragging) return;
+            const rect = this.splitContainer.getBoundingClientRect();
+            const ratio = isMobile()
+                ? (event.clientY - rect.top) / rect.height
+                : (event.clientX - rect.left) / rect.width;
+            setRatio(ratio);
         });
-        window.addEventListener('touchend', stop);
-        this.divider.addEventListener('keydown', e => {
-            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-                const delta = e.key === 'ArrowLeft' ? -5 : 5;
-                const current = this.editorPanel.getBoundingClientRect().width / this.splitContainer.getBoundingClientRect().width * 100;
-                const next = Math.min(85, Math.max(15, current + delta));
-                this.editorPanel.style.flex = `0 0 ${next}%`;
-                this.previewPanel.style.flex = `0 0 ${100-next}%`;
-                this.announce('Panels resized');
+
+        window.addEventListener('pointerup', () => {
+            if (!dragging) return;
+            dragging = false;
+            if (activePointer !== null) {
+                this.divider.releasePointerCapture?.(activePointer);
             }
+            activePointer = null;
+            this.announce('Panels resized');
         });
+
+        this.divider.addEventListener('keydown', (event) => {
+            const horizontalKey = event.key === 'ArrowLeft' || event.key === 'ArrowRight';
+            const verticalKey = event.key === 'ArrowUp' || event.key === 'ArrowDown';
+            if (!horizontalKey && !verticalKey && event.key !== 'Home' && event.key !== 'End') return;
+
+            event.preventDefault();
+            if (event.key === 'Home') {
+                setRatio(0.2);
+            } else if (event.key === 'End') {
+                setRatio(0.8);
+            } else {
+                const direction = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -0.05 : 0.05;
+                setRatio(this.splitRatio + direction);
+            }
+            this.announce('Panels resized');
+        });
+
+        this.divider.addEventListener('dblclick', () => {
+            setRatio(0.5);
+            this.announce('Panels reset');
+        });
+
+        window.addEventListener('resize', applySplit);
+        applySplit();
     }
 
-    announce(msg) {
-        if (this.srStatus) this.srStatus.textContent = msg;
+    announce(message) {
+        if (this.srStatus) {
+            this.srStatus.textContent = message;
+        }
     }
 
-    handleKeyboardShortcuts(e) {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-            e.preventDefault();
+    handleKeyboardShortcuts(event) {
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+            event.preventDefault();
             this.renderLatex();
+            return;
         }
-        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-            e.preventDefault();
+
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+            event.preventDefault();
             this.clearContent();
+            return;
         }
-        if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
-            e.preventDefault();
+
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'b') {
+            event.preventDefault();
             this.wrapSelection('$', '$');
+            return;
         }
-        if ((e.ctrlKey || e.metaKey) && e.key === 'm') {
-            e.preventDefault();
+
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'm') {
+            event.preventDefault();
             this.wrapSelection('$$\n', '\n$$');
+            return;
         }
-        if (e.key === 'Tab') {
-            e.preventDefault();
-            const s = this.input.selectionStart;
-            const epos = this.input.selectionEnd;
-            this.input.value = this.input.value.substring(0, s) + '    ' + this.input.value.substring(epos);
-            this.input.selectionStart = this.input.selectionEnd = s + 4;
-            this.updateLineNumbers();
+
+        if (event.key === 'Tab') {
+            event.preventDefault();
+            const start = this.input.selectionStart;
+            const end = this.input.selectionEnd;
+            this.input.setRangeText('    ', start, end, 'end');
+            this.handleInputChange();
         }
     }
 
     initQuickReference() {
         if (!this.quickRefList) return;
 
-        this.quickRefList.querySelectorAll('.latex-snippet').forEach(el => {
-            el.setAttribute('tabindex', '0');
-            el.addEventListener('click', () => {
-                this.insertSnippet(el.dataset.snippet);
-            });
-            el.addEventListener('keydown', e => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    this.insertSnippet(el.dataset.snippet);
+        this.quickRefItems = [...this.quickRefList.querySelectorAll('.latex-snippet')].map((element) => {
+            element.setAttribute('tabindex', '0');
+            element.setAttribute('role', 'button');
+            element.addEventListener('click', () => this.insertSnippet(element.dataset.snippet));
+            element.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    this.insertSnippet(element.dataset.snippet);
                 }
             });
+
+            return {
+                element,
+                row: element.closest('li'),
+                column: element.closest('.help-column'),
+                text: element.textContent.toLowerCase()
+            };
         });
-        if (this.quickRefFilter) {
-            this.quickRefFilter.addEventListener('input', () => this.filterQuickRef());
-        }
+
+        this.quickRefFilter?.addEventListener('input', () => this.filterQuickRef());
         this.updateQuickRefCount();
     }
 
     insertSnippet(snippet) {
         if (!snippet) return;
 
-        snippet = snippet.replace(/&amp;/g, '&');
+        const decoded = snippet.replace(/&amp;/g, '&');
+        const trimmed = decoded.trim();
+        const isEnvironment = /^\\begin\{/.test(trimmed);
+        const isDelimited = /\$|\\\[|\\\]/.test(trimmed);
+        const shouldWrapInline = !isEnvironment && !isDelimited;
+        const finalSnippet = shouldWrapInline ? `$${decoded}$` : decoded;
 
-
-        const LINE_BREAK_TOKEN = '__BR__TOKEN__';
-        snippet = snippet.replace(/\\\\/g, LINE_BREAK_TOKEN);
-        snippet = snippet.replace(/\\{2,}/g, '\\');
-        snippet = snippet.replace(new RegExp(LINE_BREAK_TOKEN, 'g'), '\\\\');
-
-        const needsWrap = !/\\begin\{/.test(snippet) && !/\$/.test(snippet) && !/^\s*$/.test(snippet) && snippet.length < 40 && !/\\(sum|int|prod|lim|begin)/.test(snippet) && !snippet.includes('\\\\');
-        const finalSnippet = needsWrap ? `$${snippet}$` : snippet;
         this.insertAtCursor(finalSnippet);
-        this.debounceRender();
-        this.debounceSave();
         this.announce('Inserted snippet');
-        this.input.focus();
     }
 
     filterQuickRef() {
-        const q = (this.quickRefFilter.value || '').trim().toLowerCase();
-        const cols = [...this.quickRefList.querySelectorAll('.help-column')];
-        let visibleSnippets = 0;
-        cols.forEach(col => {
-            let anyVisible = false;
-            col.querySelectorAll('.latex-snippet').forEach(sn => {
-                const text = sn.textContent.toLowerCase();
-                if (!q || text.includes(q)) {
-                    sn.style.display = 'inline-block';
-                    anyVisible = true;
-                    visibleSnippets++;
+        if (!this.quickRefItems) return;
 
-                    if (q) {
-                        const raw = sn.textContent;
-                        const idx = raw.toLowerCase().indexOf(q);
-                        if (idx !== -1) {
-                            const before = raw.slice(0, idx);
-                            const match = raw.slice(idx, idx + q.length);
-                            const after = raw.slice(idx + q.length);
+        const query = (this.quickRefFilter.value || '').trim().toLowerCase();
+        let visibleCount = 0;
 
-                            sn.innerHTML = sn.innerHTML.replace(/<code>[\s\S]*?<\/code>(.*)/, (m, rest) => {
-                                return m.replace(rest, before + '<mark>' + match + '</mark>' + after);
-                            });
-                        }
-                    } else {
-
-                        sn.innerHTML = sn.innerHTML.replace(/<mark>(.*?)<\/mark>/g, '$1');
-                    }
-                } else {
-                    sn.style.display = 'none';
-                }
-            });
-            col.classList.toggle('hidden', !anyVisible);
+        this.quickRefItems.forEach((item) => {
+            const visible = !query || item.text.includes(query);
+            item.row?.classList.toggle('hidden', !visible);
+            if (visible) visibleCount++;
         });
-        this.updateQuickRefCount(visibleSnippets);
+
+        [...this.quickRefList.querySelectorAll('.help-column')].forEach((column) => {
+            const hasVisibleSnippet = [...column.querySelectorAll('li')].some((row) => !row.classList.contains('hidden'));
+            column.classList.toggle('hidden', !hasVisibleSnippet);
+        });
+
+        this.updateQuickRefCount(visibleCount);
     }
 
     updateQuickRefCount(count) {
         if (!this.quickRefCount) return;
-        if (count === undefined) {
-            count = this.quickRefList.querySelectorAll('.latex-snippet').length;
-        }
-        this.quickRefCount.textContent = `${count} snippet${count===1?'':'s'}${this.quickRefFilter && this.quickRefFilter.value? ' match' : ''}`;
+
+        const total = count === undefined
+            ? this.quickRefList.querySelectorAll('.latex-snippet').length
+            : count;
+        const suffix = this.quickRefFilter?.value ? ' match' : '';
+        this.quickRefCount.textContent = `${total} snippet${total === 1 ? '' : 's'}${suffix}`;
     }
+
     initDrawingLayer() {
         this.drawingMode = null;
         this.isDrawing = false;
@@ -657,137 +975,119 @@ class LatexRenderer {
         this.highlightCanvas.className = 'drawing-canvas highlight-layer';
         this.penCanvas = document.createElement('canvas');
         this.penCanvas.className = 'drawing-canvas pen-layer';
-
         this.highlightMaskCanvas = document.createElement('canvas');
+
         this.highlightMaskCtx = this.highlightMaskCanvas.getContext('2d');
         this.highlightCtx = this.highlightCanvas.getContext('2d');
         this.penCtx = this.penCanvas.getContext('2d');
-        this.drawingWrapper.appendChild(this.highlightCanvas);
-        this.drawingWrapper.appendChild(this.penCanvas);
-        if (this.output) {
-            this.output.appendChild(this.drawingWrapper);
-        }
+
+        this.drawingWrapper.append(this.highlightCanvas, this.penCanvas);
+        this.attachDrawingLayer();
+
         this.resizeDrawingCanvas = () => {
-            if (!(this.highlightCanvas && this.penCanvas && this.output)) return;
+            if (!this.output || !this.highlightCanvas || !this.penCanvas) return;
 
-            const w = this.output.clientWidth;
-            const h = this.output.scrollHeight;
+            const width = Math.max(1, this.output.clientWidth);
+            const height = Math.max(1, this.output.scrollHeight);
+            const previousMask = document.createElement('canvas');
+            previousMask.width = this.highlightMaskCanvas.width;
+            previousMask.height = this.highlightMaskCanvas.height;
 
-            const oldMask = document.createElement('canvas');
-            oldMask.width = this.highlightMaskCanvas.width;
-            oldMask.height = this.highlightMaskCanvas.height;
-            if (oldMask.width && oldMask.height) {
-                oldMask.getContext('2d').drawImage(this.highlightMaskCanvas, 0, 0);
+            if (previousMask.width && previousMask.height) {
+                previousMask.getContext('2d').drawImage(this.highlightMaskCanvas, 0, 0);
             }
-            [this.highlightCanvas, this.penCanvas, this.highlightMaskCanvas].forEach(c => {
-                if (c.width !== w) c.width = w;
-                if (c.height !== h) c.height = h;
-                c.style.width = w + 'px';
-                c.style.height = h + 'px';
+
+            [this.highlightCanvas, this.penCanvas, this.highlightMaskCanvas].forEach((canvas) => {
+                if (canvas.width !== width) canvas.width = width;
+                if (canvas.height !== height) canvas.height = height;
+                canvas.style.width = `${width}px`;
+                canvas.style.height = `${height}px`;
             });
 
-            if (oldMask.width && oldMask.height) {
-                this.highlightMaskCtx.drawImage(oldMask, 0, 0, w, h);
+            if (previousMask.width && previousMask.height) {
+                this.highlightMaskCtx.drawImage(previousMask, 0, 0, width, height);
                 this.renderHighlightTint();
             }
         };
+
         if (window.ResizeObserver) {
             new ResizeObserver(() => this.resizeDrawingCanvas()).observe(this.output);
         }
         window.addEventListener('resize', () => this.resizeDrawingCanvas());
-        this.output.addEventListener('scroll', () => {
 
-        });
-        this.resizeDrawingCanvas();
-        const start = (e) => {
+        const start = (event) => {
             if (!this.drawingMode) return;
             this.isDrawing = true;
-            const {
-                x,
-                y
-            } = this.getPointerPos(e);
+            const { x, y } = this.getPointerPos(event);
+
             if (this.drawingMode === 'eraser') {
                 this.eraserTargets = [this.penCtx, this.highlightMaskCtx];
-                this.eraserTargets.forEach(c => {
-                    c.save();
-                    c.lineCap = 'round';
-                    c.lineJoin = 'round';
-                    c.globalAlpha = 1;
-                    c.strokeStyle = '#000';
-                    c.lineWidth = 30;
-                    c.globalCompositeOperation = 'destination-out';
-                    c.beginPath();
-                    c.moveTo(x, y);
+                this.eraserTargets.forEach((ctx) => {
+                    ctx.save();
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.globalAlpha = 1;
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 30;
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
                 });
-                this.renderHighlightTint();
-                this.activeCtx = this.penCtx;
             } else {
                 const ctx = this.drawingMode === 'highlight' ? this.highlightMaskCtx : this.penCtx;
                 ctx.save();
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
-                const size = 2;
+                ctx.globalCompositeOperation = 'source-over';
+
                 if (this.drawingMode === 'highlight') {
                     ctx.globalAlpha = 1;
                     ctx.strokeStyle = '#000';
-                    ctx.lineWidth = 14;
-                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.lineWidth = 18;
                     ctx.beginPath();
                     ctx.moveTo(x, y);
-                    this.renderHighlightTint();
                 } else {
                     ctx.globalAlpha = 1;
-                    ctx.strokeStyle = this.drawColorInput?.value || '#ff0000';
-                    ctx.lineWidth = size;
-                    ctx.globalCompositeOperation = 'source-over';
-                    this._penPoints = [{
-                        x,
-                        y
-                    }];
+                    ctx.strokeStyle = this.drawColorInput?.value || '#e11d48';
+                    ctx.lineWidth = 2.5;
+                    this.penPoints = [{ x, y }];
                 }
+
                 this.activeCtx = ctx;
             }
-            this.lastDrawPoint = {
-                x,
-                y
-            };
-            e.preventDefault();
+
+            event.preventDefault();
         };
-        const move = (e) => {
+
+        const move = (event) => {
             if (!this.isDrawing) return;
-            const {
-                x,
-                y
-            } = this.getPointerPos(e);
+            const { x, y } = this.getPointerPos(event);
+
             if (this.drawingMode === 'pen') {
-                this._penPoints.push({
-                    x,
-                    y
-                });
-                const pts = this._penPoints;
-                const n = pts.length;
-                if (n === 2) {
+                this.penPoints.push({ x, y });
+                const points = this.penPoints;
+                const count = points.length;
+
+                if (count === 2) {
                     this.penCtx.beginPath();
-                    this.penCtx.moveTo(pts[0].x, pts[0].y);
-                    this.penCtx.lineTo(pts[1].x, pts[1].y);
+                    this.penCtx.moveTo(points[0].x, points[0].y);
+                    this.penCtx.lineTo(points[1].x, points[1].y);
                     this.penCtx.stroke();
-                } else if (n >= 3) {
-                    const p0 = pts[n - 3],
-                        p1 = pts[n - 2],
-                        p2 = pts[n - 1];
-                    const m1x = (p0.x + p1.x) / 2,
-                        m1y = (p0.y + p1.y) / 2,
-                        m2x = (p1.x + p2.x) / 2,
-                        m2y = (p1.y + p2.y) / 2;
+                } else if (count >= 3) {
+                    const p0 = points[count - 3];
+                    const p1 = points[count - 2];
+                    const p2 = points[count - 1];
+                    const mid1 = { x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2 };
+                    const mid2 = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
                     this.penCtx.beginPath();
-                    this.penCtx.moveTo(m1x, m1y);
-                    this.penCtx.quadraticCurveTo(p1.x, p1.y, m2x, m2y);
+                    this.penCtx.moveTo(mid1.x, mid1.y);
+                    this.penCtx.quadraticCurveTo(p1.x, p1.y, mid2.x, mid2.y);
                     this.penCtx.stroke();
                 }
             } else if (this.drawingMode === 'eraser') {
-                (this.eraserTargets || []).forEach(c => {
-                    c.lineTo(x, y);
-                    c.stroke();
+                (this.eraserTargets || []).forEach((ctx) => {
+                    ctx.lineTo(x, y);
+                    ctx.stroke();
                 });
                 this.renderHighlightTint();
             } else if (this.drawingMode === 'highlight') {
@@ -795,129 +1095,137 @@ class LatexRenderer {
                 this.activeCtx.stroke();
                 this.renderHighlightTint();
             }
-            this.lastDrawPoint = {
-                x,
-                y
-            };
-            e.preventDefault();
-        };
-        const end = () => {
-            if (this.isDrawing) {
-                if (this.drawingMode === 'pen' && this._penPoints && this._penPoints.length >= 3) {
-                    const pts = this._penPoints;
-                    const n = pts.length;
-                    const pLast = pts[n - 1];
-                    const pPrev = pts[n - 2];
-                    this.penCtx.beginPath();
-                    this.penCtx.moveTo(pPrev.x, pPrev.y);
-                    this.penCtx.lineTo(pLast.x, pLast.y);
-                    this.penCtx.stroke();
-                } else if (this.drawingMode === 'highlight') {
-                    try {
-                        this.activeCtx.closePath();
-                    } catch (_) {}
-                    this.renderHighlightTint();
-                } else if (this.drawingMode === 'eraser') {
-                    (this.eraserTargets || []).forEach(c => {
-                        try {
-                            c.closePath();
-                            c.restore();
-                        } catch (_) {}
-                    });
-                    this.renderHighlightTint();
-                    this.eraserTargets = null;
-                }
-                if (this.drawingMode !== 'eraser' && this.activeCtx) {
-                    try {
-                        this.activeCtx.restore();
-                    } catch (_) {}
-                };
-                this.isDrawing = false;
-                this.activeCtx = null;
-                this._penPoints = null;
-            }
+
+            event.preventDefault();
         };
 
-        ;
-        [this.highlightCanvas, this.penCanvas].forEach(c => {
-            c.addEventListener('mousedown', start);
-            c.addEventListener('mousemove', move);
-            c.addEventListener('touchstart', start, {
-                passive: false
-            });
-            c.addEventListener('touchmove', move, {
-                passive: false
-            });
-            c.addEventListener('touchend', end);
+        const end = () => {
+            if (!this.isDrawing) return;
+
+            if (this.drawingMode === 'pen' && this.penPoints && this.penPoints.length >= 2) {
+                const points = this.penPoints;
+                const last = points[points.length - 1];
+                const previous = points[points.length - 2];
+                this.penCtx.beginPath();
+                this.penCtx.moveTo(previous.x, previous.y);
+                this.penCtx.lineTo(last.x, last.y);
+                this.penCtx.stroke();
+            }
+
+            if (this.drawingMode === 'eraser') {
+                (this.eraserTargets || []).forEach((ctx) => {
+                    try {
+                        ctx.closePath();
+                        ctx.restore();
+                    } catch (_) {}
+                });
+                this.eraserTargets = null;
+                this.renderHighlightTint();
+            } else if (this.activeCtx) {
+                try {
+                    this.activeCtx.closePath();
+                    this.activeCtx.restore();
+                } catch (_) {}
+                this.renderHighlightTint();
+            }
+
+            this.isDrawing = false;
+            this.activeCtx = null;
+            this.penPoints = null;
+        };
+
+        [this.highlightCanvas, this.penCanvas].forEach((canvas) => {
+            canvas.addEventListener('pointerdown', start);
+            canvas.addEventListener('pointermove', move);
+            canvas.addEventListener('pointerup', end);
+            canvas.addEventListener('pointercancel', end);
+            canvas.addEventListener('pointerleave', end);
         });
-        window.addEventListener('mouseup', end);
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.drawingMode) {
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && this.drawingMode) {
                 this.toggleDrawingMode(null);
             }
         });
+
+        this.resizeDrawingCanvas();
     }
-    getPointerPos(e) {
-        const rect = this.output.getBoundingClientRect();
-        let clientX, clientY;
-        if (e.touches && e.touches[0]) {
-            clientX = e.touches[0].clientX;
-            clientY = e.touches[0].clientY;
-        } else {
-            clientX = e.clientX;
-            clientY = e.clientY;
+
+    attachDrawingLayer() {
+        if (!this.output || !this.drawingWrapper) return;
+        if (this.drawingWrapper.parentNode !== this.output) {
+            this.output.appendChild(this.drawingWrapper);
         }
-        const scrollLeft = this.output.scrollLeft;
-        const scrollTop = this.output.scrollTop;
+        this.resizeDrawingCanvas?.();
+    }
+
+    getPointerPos(event) {
+        const rect = this.output.getBoundingClientRect();
+        const point = event.touches?.[0] || event;
 
         return {
-            x: clientX - rect.left + scrollLeft,
-            y: clientY - rect.top + scrollTop
+            x: point.clientX - rect.left + this.output.scrollLeft,
+            y: point.clientY - rect.top + this.output.scrollTop
         };
     }
+
     toggleDrawingMode(mode) {
-        if (this.drawingMode === mode) mode = null;
+        if (this.drawingMode === mode) {
+            mode = null;
+        }
+
         this.drawingMode = mode;
-        const active = !!mode;
+        const active = Boolean(mode);
         this.output.classList.toggle('drawing-active', active);
         this.output.classList.toggle('drawing-layer-active', active);
-        document.body.classList.toggle('drawing-toolbar-active', active);
-        if (this.penBtn) this.penBtn.classList.toggle('active', this.drawingMode === 'pen');
-        if (this.highlightBtn) this.highlightBtn.classList.toggle('active', this.drawingMode === 'highlight');
-        if (this.eraserBtn) this.eraserBtn.classList.toggle('active', this.drawingMode === 'eraser');
+
+        [
+            [this.penBtn, 'pen'],
+            [this.highlightBtn, 'highlight'],
+            [this.eraserBtn, 'eraser']
+        ].forEach(([button, name]) => {
+            const isActive = this.drawingMode === name;
+            button?.classList.toggle('active', isActive);
+            button?.setAttribute('aria-pressed', String(isActive));
+        });
+
         this.announce(this.drawingMode ? `${this.drawingMode} mode enabled` : 'Drawing mode off');
     }
+
     clearDrawing(silent) {
-        if (!(this.highlightCtx && this.penCtx)) return;
+        if (!this.highlightCtx || !this.penCtx) return;
+
         this.highlightCtx.clearRect(0, 0, this.highlightCanvas.width, this.highlightCanvas.height);
-        if (this.highlightMaskCtx) this.highlightMaskCtx.clearRect(0, 0, this.highlightMaskCanvas.width, this.highlightMaskCanvas.height);
+        this.highlightMaskCtx.clearRect(0, 0, this.highlightMaskCanvas.width, this.highlightMaskCanvas.height);
         this.penCtx.clearRect(0, 0, this.penCanvas.width, this.penCanvas.height);
-        if (!silent) this.announce('Cleared drawings');
+
+        if (!silent) {
+            this.setStatus('Drawing cleared', 'success');
+            this.announce('Cleared drawing layer');
+        }
     }
+
     renderHighlightTint() {
-        if (!(this.highlightCtx && this.highlightMaskCanvas)) return;
-        const w = this.highlightCanvas.width,
-            h = this.highlightCanvas.height;
-        const color = this.drawColorInput?.value || '#ffff00';
+        if (!this.highlightCtx || !this.highlightMaskCanvas) return;
 
-        this.highlightCtx.clearRect(0, 0, w, h);
+        const width = this.highlightCanvas.width;
+        const height = this.highlightCanvas.height;
+        const color = this.drawColorInput?.value || '#f5c542';
 
+        this.highlightCtx.clearRect(0, 0, width, height);
         this.highlightCtx.drawImage(this.highlightMaskCanvas, 0, 0);
-
         this.highlightCtx.globalCompositeOperation = 'source-in';
-        this.highlightCtx.globalAlpha = 0.25;
+        this.highlightCtx.globalAlpha = 0.28;
         this.highlightCtx.fillStyle = color;
-        this.highlightCtx.fillRect(0, 0, w, h);
-
+        this.highlightCtx.fillRect(0, 0, width, height);
         this.highlightCtx.globalCompositeOperation = 'source-over';
         this.highlightCtx.globalAlpha = 1;
     }
 
-
     toggleFullscreen() {
-        const el = this.previewPanel || this.output;
+        const element = this.previewPanel || this.output;
         if (!document.fullscreenElement) {
-            el.requestFullscreen?.();
+            element.requestFullscreen?.();
             this.announce('Entered fullscreen');
         } else {
             document.exitFullscreen?.();
@@ -927,9 +1235,7 @@ class LatexRenderer {
 }
 
 document.addEventListener('DOMContentLoaded', () => new LatexRenderer());
-window.addEventListener('load', () => {
-    if (window.MathJax) {
-        window.MathJax.startup.promise.then(() => console.log('MathJax loaded'));
-    }
-});
-if (typeof module !== 'undefined' && module.exports) module.exports = LatexRenderer;
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = LatexRenderer;
+}
