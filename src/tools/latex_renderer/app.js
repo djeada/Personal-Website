@@ -383,24 +383,23 @@ class LatexRenderer {
         if (mathCounts.display % 2 !== 0) {
             issues.push({
                 severity: 'error',
-                line: '-',
+                line: mathCounts.displayLine || 1,
                 message: 'Unpaired $$ display math delimiter'
             });
         }
         if (mathCounts.inline % 2 !== 0) {
             issues.push({
                 severity: 'warning',
-                line: '-',
+                line: mathCounts.inlineLine || 1,
                 message: 'Unpaired $ inline math delimiter'
             });
         }
 
-        const displayOpen = this.countUnescapedToken(text, '\\[');
-        const displayClose = this.countUnescapedToken(text, '\\]');
-        if (displayOpen !== displayClose) {
+        const bracketDisplay = this.countDelimitedPair(text, '\\[', '\\]');
+        if (bracketDisplay.open !== bracketDisplay.close) {
             issues.push({
                 severity: 'error',
-                line: '-',
+                line: bracketDisplay.line || 1,
                 message: 'Unpaired \\[ display math delimiter'
             });
         }
@@ -420,19 +419,82 @@ class LatexRenderer {
     countMathDelimiters(text) {
         let inline = 0;
         let display = 0;
+        let inlineLine = null;
+        let displayLine = null;
+        const lines = text.replace(/\r\n?/g, '\n').split('\n');
 
-        for (let index = 0; index < text.length; index++) {
-            if (text[index] !== '$' || this.isEscaped(text, index)) continue;
+        lines.forEach((rawLine, lineIndex) => {
+            const line = this.stripLatexComment(rawLine);
+            const lineNumber = lineIndex + 1;
 
-            if (text[index + 1] === '$') {
-                display++;
-                index++;
-            } else {
-                inline++;
+            for (let index = 0; index < line.length; index++) {
+                if (line[index] !== '$' || this.isEscaped(line, index)) continue;
+
+                if (line[index + 1] === '$') {
+                    display++;
+                    displayLine = lineNumber;
+                    index++;
+                } else {
+                    inline++;
+                    inlineLine = lineNumber;
+                }
             }
-        }
+        });
 
-        return { inline, display };
+        return { inline, display, inlineLine, displayLine };
+    }
+
+    countDelimitedPair(text, openToken, closeToken) {
+        let open = 0;
+        let close = 0;
+        let balance = 0;
+        let firstOpenLine = null;
+        let unexpectedCloseLine = null;
+        let lastTokenLine = null;
+        const lines = text.replace(/\r\n?/g, '\n').split('\n');
+
+        lines.forEach((rawLine, lineIndex) => {
+            const line = this.stripLatexComment(rawLine);
+            const lineNumber = lineIndex + 1;
+            let index = 0;
+
+            while (index < line.length) {
+                const nextOpen = line.indexOf(openToken, index);
+                const nextClose = line.indexOf(closeToken, index);
+                const hasOpen = nextOpen !== -1;
+                const hasClose = nextClose !== -1;
+
+                if (!hasOpen && !hasClose) break;
+
+                if (hasOpen && (!hasClose || nextOpen < nextClose)) {
+                    if (!this.isEscaped(line, nextOpen)) {
+                        open++;
+                        balance++;
+                        firstOpenLine ??= lineNumber;
+                        lastTokenLine = lineNumber;
+                    }
+                    index = nextOpen + openToken.length;
+                } else {
+                    if (!this.isEscaped(line, nextClose)) {
+                        close++;
+                        lastTokenLine = lineNumber;
+                        if (balance === 0) {
+                            unexpectedCloseLine ??= lineNumber;
+                        } else {
+                            balance--;
+                            if (balance === 0) firstOpenLine = null;
+                        }
+                    }
+                    index = nextClose + closeToken.length;
+                }
+            }
+        });
+
+        return {
+            open,
+            close,
+            line: unexpectedCloseLine || firstOpenLine || lastTokenLine
+        };
     }
 
     countUnescapedToken(text, token) {
