@@ -282,12 +282,12 @@ class LatexRenderer {
     }
 
     isDisplayBlock(block) {
-        return /(^|\n)\s*(\$\$|\\\[|\\begin\{(?:align|align\*|equation|equation\*|gather|gather\*|multline|multline\*|split|aligned|cases|matrix|pmatrix|bmatrix|vmatrix|array|tabular)\})/.test(block) ||
+        return /(^|\n)\s*(\$\$|\\\[|\\begin\{(?:align|align\*|equation|equation\*|gather|gather\*|multline|multline\*|split|aligned|cases|matrix|pmatrix|bmatrix|vmatrix|array|tabular|itemize)\})/.test(block) ||
             /\$\$|\\\[|\\\]/.test(block);
     }
 
     prepareMathJaxSource(source) {
-        const converted = this.convertTabularToArray(source);
+        const converted = this.convertUnsupportedEnvironments(source);
         if (converted === source || this.hasMathDelimiters(converted)) {
             return converted;
         }
@@ -297,6 +297,10 @@ class LatexRenderer {
 
     hasMathDelimiters(source) {
         return /\$\$|\\\[|\\\]|(^|[^\\])\$/.test(source);
+    }
+
+    convertUnsupportedEnvironments(source) {
+        return this.convertItemizeToArray(this.convertTabularToArray(source));
     }
 
     convertTabularToArray(source) {
@@ -354,6 +358,52 @@ class LatexRenderer {
             }
         }
         return count;
+    }
+
+    convertItemizeToArray(source) {
+        return source.replace(/\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}/g, (_match, body) => {
+            const items = this.parseLatexItems(body);
+            const rows = items.length
+                ? items.map((item) => this.formatItemizeRow(item))
+                : ['\\phantom{}'];
+
+            return `\\begin{array}{l}${rows.join(' \\\\ ')}\\end{array}`;
+        });
+    }
+
+    parseLatexItems(body) {
+        const items = [];
+        const itemRegex = /\\item(?:\s*\[([^\]]*)\])?/g;
+        let match;
+        let activeItem = null;
+
+        while ((match = itemRegex.exec(body))) {
+            if (activeItem) {
+                activeItem.content = body.slice(activeItem.contentStart, match.index).trim();
+                items.push(activeItem);
+            }
+
+            activeItem = {
+                label: match[1] ? match[1].trim() : '',
+                content: '',
+                contentStart: itemRegex.lastIndex
+            };
+        }
+
+        if (activeItem) {
+            activeItem.content = body.slice(activeItem.contentStart).trim();
+            items.push(activeItem);
+            return items.filter((item) => item.content || item.label);
+        }
+
+        const fallback = body.trim();
+        return fallback ? [{ label: '', content: fallback }] : [];
+    }
+
+    formatItemizeRow(item) {
+        const marker = item.label || '\\bullet';
+        const content = item.content || '\\phantom{}';
+        return `${marker}\\ ${content}`;
     }
 
     clearTypeset() {
