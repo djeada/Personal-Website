@@ -3,6 +3,9 @@
 const structureSelect = document.getElementById("structure-select");
 const valueInput = document.getElementById("value-input");
 const secondaryInput = document.getElementById("secondary-input");
+const valueLabel = document.getElementById("value-label");
+const secondaryLabel = document.getElementById("secondary-label");
+const valueTypeSelect = document.getElementById("value-type");
 const specialAction = document.getElementById("special-action");
 const complexityList = document.getElementById("complexity-list");
 const structureName = document.getElementById("structure-name");
@@ -14,6 +17,20 @@ const watchOut = document.getElementById("watch-out");
 const memoryNote = document.getElementById("memory-note");
 const traceList = document.getElementById("trace-list");
 const modelView = document.getElementById("model-view");
+const selectedCard = document.getElementById("selected-card");
+const selectedType = document.getElementById("selected-type");
+const selectedLabel = document.getElementById("selected-label");
+const editValueInput = document.getElementById("edit-value-input");
+const editSecondaryInput = document.getElementById("edit-secondary-input");
+const updateSelectedButton = document.getElementById("update-selected");
+const clearSelectedButton = document.getElementById("clear-selected");
+const operationPlan = document.getElementById("operation-plan");
+const comparisonList = document.getElementById("comparison-list");
+const lastOperation = document.getElementById("last-operation");
+const lastTouched = document.getElementById("last-touched");
+const lastMeasured = document.getElementById("last-measured");
+const lastGrowth = document.getElementById("last-growth");
+const operationBar = document.getElementById("operation-bar");
 const randomizeButton = document.getElementById("randomize");
 const resetButton = document.getElementById("reset");
 const operationButtons = Array.from(document.querySelectorAll("[data-operation]"));
@@ -255,6 +272,14 @@ let activeOperation = null;
 let highlight = {};
 let trace = [];
 let sampleCursor = 0;
+let selectedRef = null;
+let lastMetrics = {
+    label: "Load",
+    touched: 0,
+    measured: 0,
+    growth: "O(1)",
+    plan: ["Choose a structure and run an operation."]
+};
 
 function cloneInitial(value) {
     return JSON.parse(JSON.stringify(value));
@@ -264,8 +289,52 @@ function normalizeValue(value) {
     return String(value || "").trim();
 }
 
+function inferType(value) {
+    if (value === null) return "null";
+    if (typeof value === "object") return "entry";
+    const text = String(value).trim();
+    if (!text) return "empty";
+    if (text === "true" || text === "false") return "boolean";
+    if (!Number.isNaN(Number(text)) && text !== "") return "number";
+    if ((text.startsWith("{") && text.endsWith("}")) || (text.startsWith("[") && text.endsWith("]"))) {
+        try {
+            JSON.parse(text);
+            return "json";
+        } catch (error) {
+            return "string";
+        }
+    }
+    return "string";
+}
+
+function typedInputValue(rawValue) {
+    const value = normalizeValue(rawValue);
+    const type = valueTypeSelect.value;
+    if (type === "number") {
+        const number = Number(value);
+        return Number.isFinite(number) ? String(number) : "0";
+    }
+    if (type === "boolean") {
+        return /^(true|1|yes|y)$/i.test(value) ? "true" : "false";
+    }
+    if (type === "json") {
+        try {
+            return JSON.stringify(JSON.parse(value));
+        } catch (error) {
+            return "{}";
+        }
+    }
+    return value;
+}
+
+function typedOptionalValue(rawValue) {
+    if (!normalizeValue(rawValue)) return "";
+    return typedInputValue(rawValue);
+}
+
 function getPrimaryValue() {
-    return normalizeValue(valueInput.value) || nextSample();
+    const value = normalizeValue(valueInput.value) || nextSample();
+    return typedInputValue(value);
 }
 
 function getSecondaryValue() {
@@ -310,6 +379,64 @@ function addTrace(message) {
     trace = trace.slice(0, 8);
 }
 
+function operationConfig(operation) {
+    return STRUCTURES[currentKey].operations[operation] || STRUCTURES[currentKey].operations.add;
+}
+
+function structureSize() {
+    const config = STRUCTURES[currentKey];
+    return config.kind === "graph" ? state.nodes.length : state.length;
+}
+
+function estimatedTouched(operation, detail = {}) {
+    const n = Math.max(1, structureSize());
+    if (detail.touched !== undefined) return detail.touched;
+    if (["stack", "queue"].includes(currentKey) && operation !== "search") return Math.min(1, n);
+    if (currentKey === "array" && ["add", "special"].includes(operation)) return Math.min(1, n);
+    if (currentKey === "deque" && ["add", "special"].includes(operation)) return Math.min(1, n);
+    if (["hashTable", "set", "map"].includes(currentKey)) return Math.max(1, Math.ceil(n / 4));
+    if (["bst", "heap"].includes(currentKey) && operation !== "search") return Math.max(1, Math.ceil(Math.log2(n + 1)));
+    if (currentKey === "trie") return Math.max(1, String(valueInput.value || "").length || 1);
+    if (currentKey === "graph") return operation === "search" || operation === "remove" ? n : 1;
+    return operation === "add" ? 1 : n;
+}
+
+function planForOperation(operation, primary, secondary) {
+    const config = STRUCTURES[currentKey];
+    const opName = operationConfig(operation)[0];
+    if (config.kind === "graph") {
+        if (operation === "search") return [`Start BFS at ${primary}.`, "Visit each reachable vertex once.", "Follow every relevant adjacency edge."];
+        if (operation === "special") return [`Ensure vertices ${primary} and ${secondary} exist.`, "Check whether the edge already exists.", "Store neighbor references."];
+        if (operation === "remove") return [`Find vertex ${primary}.`, "Delete it from the vertex list.", "Remove all incident edges."];
+    }
+    if (config.kind === "trie") {
+        return [`Read one character at a time from ${primary}.`, "Follow or create one edge per character.", operation === "remove" ? "Unmark terminal and prune unused nodes." : "Stop at the terminal or prefix node."];
+    }
+    if (config.kind === "buckets" || currentKey === "map") {
+        return [`Hash ${primary} to choose a bucket.`, "Scan only the collision chain in that bucket.", `${opName} the matching entry if needed.`];
+    }
+    if (config.kind === "tree") {
+        return [`Compare ${primary} with the current node.`, "Move left or right according to ordering.", `${opName} when the target position is reached.`];
+    }
+    if (config.kind === "heap") {
+        return operation === "special" ? ["Remove the root.", "Move the last item to the root.", "Sink it until heap order is restored."] : [`Locate ${primary}.`, `${opName} the heap array.`, "Bubble or heapify to restore heap order."];
+    }
+    if (currentKey === "array" && operation === "special") return [`Compute address for index ${secondary || primary}.`, "Read the slot directly.", "No scan is needed."];
+    if (currentKey === "linkedList") return ["Start at head.", "Follow next pointers in order.", `${opName} when the target node is reached.`];
+    return [`Use the ${config.name} access rule.`, `${opName} ${primary}.`, "Update the visible model and cost counters."];
+}
+
+function setMetrics(operation, detail = {}) {
+    const op = operationConfig(operation);
+    lastMetrics = {
+        label: op[0],
+        touched: estimatedTouched(operation, detail),
+        measured: detail.measured || 0,
+        growth: op[2],
+        plan: detail.plan || planForOperation(operation, detail.primary || valueInput.value || "value", detail.secondary || secondaryInput.value || "secondary")
+    };
+}
+
 function setHighlight(next) {
     highlight = next;
 }
@@ -326,9 +453,18 @@ function resetState() {
     state = cloneInitial(config.initial);
     trace = [`Loaded ${config.name}.`];
     setHighlight({});
+    selectedRef = null;
+    setOperation(null);
     sampleCursor = 0;
     valueInput.value = config.sampleValues[0] || "";
     secondaryInput.value = "";
+    lastMetrics = {
+        label: "Load",
+        touched: structureSize(),
+        measured: 0,
+        growth: "O(1)",
+        plan: [`Loaded the default ${config.name} model.`]
+    };
     updateStructureUI();
     render();
 }
@@ -355,6 +491,14 @@ function randomizeState() {
     }
     addTrace(`Randomized ${config.name}.`);
     setHighlight({});
+    selectedRef = null;
+    lastMetrics = {
+        label: "Randomize",
+        touched: structureSize(),
+        measured: 0,
+        growth: "O(n)",
+        plan: [`Generated a fresh ${config.name} dataset.`, "Rebuilt the visual model.", "Refreshed type metadata."]
+    };
     render();
 }
 
@@ -367,7 +511,11 @@ function updateStructureUI() {
     memoryNote.textContent = config.memory;
     specialAction.textContent = config.specialLabel;
     secondaryInput.placeholder = config.secondaryLabel;
+    secondaryLabel.textContent = config.secondaryLabel;
+    valueLabel.textContent = config.kind === "map" ? "Key" : config.kind === "graph" ? "Vertex" : config.kind === "trie" ? "Word" : "Value";
     valueInput.placeholder = config.kind === "map" ? "key" : "value";
+    editSecondaryInput.disabled = currentKey !== "map";
+    editSecondaryInput.placeholder = currentKey === "map" ? "map value" : "only used by maps";
     renderComplexity();
 }
 
@@ -389,8 +537,89 @@ function renderComplexity() {
     `).join("");
 }
 
+function complexityWeight(bigO, n) {
+    if (bigO.includes("V + E")) return n * 1.8;
+    if (bigO.includes("k + m")) return Math.max(1, String(valueInput.value || "").length + 2);
+    if (bigO.includes("log")) return Math.log2(n + 1);
+    if (bigO.includes("n")) return n;
+    if (bigO.includes("k")) return Math.max(1, String(valueInput.value || "").length);
+    return 1;
+}
+
+function renderMetrics() {
+    const n = Math.max(1, structureSize());
+    const touched = Math.max(0, lastMetrics.touched);
+    lastOperation.textContent = lastMetrics.label;
+    lastTouched.textContent = `${touched} ${touched === 1 ? "node" : "nodes"}`;
+    lastMeasured.textContent = `${lastMetrics.measured.toFixed(3)} ms`;
+    lastGrowth.textContent = lastMetrics.growth;
+    operationBar.style.width = `${Math.min(100, Math.max(5, (touched / n) * 100))}%`;
+    operationPlan.innerHTML = lastMetrics.plan.map((item) => `<li>${escapeHTML(item)}</li>`).join("");
+}
+
+function renderComparison() {
+    const operation = activeOperation || "search";
+    const n = Math.max(1, structureSize());
+    const rows = Object.entries(STRUCTURES)
+        .filter(([, config]) => config.operations[operation])
+        .map(([key, config]) => {
+            const growth = config.operations[operation][2];
+            return {
+                key,
+                name: config.name,
+                growth,
+                score: complexityWeight(growth, n)
+            };
+        })
+        .sort((a, b) => a.score - b.score)
+        .slice(0, 6);
+    const maxScore = Math.max(...rows.map((row) => row.score), 1);
+    comparisonList.innerHTML = rows.map((row) => `
+        <div class="comparison-row ${row.key === currentKey ? "active" : ""}">
+            <div>
+                <strong>${row.name}</strong>
+                <span>${row.growth}</span>
+            </div>
+            <div class="comparison-track" aria-hidden="true">
+                <span style="width:${Math.max(8, (row.score / maxScore) * 100)}%"></span>
+            </div>
+        </div>
+    `).join("");
+}
+
+function typedModel() {
+    const config = STRUCTURES[currentKey];
+    if (config.kind === "graph") {
+        return {
+            nodes: state.nodes.map((node) => ({
+                value: node,
+                type: "vertex"
+            })),
+            edges: state.edges.map((edge) => ({
+                from: edge[0],
+                to: edge[1],
+                type: "edge"
+            }))
+        };
+    }
+    if (currentKey === "map") {
+        return state.map((entry) => ({
+            key: entry.key,
+            keyType: inferType(entry.key),
+            value: entry.value,
+            valueType: inferType(entry.value)
+        }));
+    }
+    return state.map((value, index) => ({
+        index,
+        value,
+        type: currentKey === "trie" ? "word" : inferType(value)
+    }));
+}
+
 function performOperation(operation) {
     const config = STRUCTURES[currentKey];
+    const started = performance.now();
     setOperation(operation);
 
     if (config.kind === "graph") {
@@ -399,6 +628,8 @@ function performOperation(operation) {
         performTrieOperation(operation);
     } else if (config.kind === "heap") {
         performHeapOperation(operation);
+    } else if (currentKey === "bst") {
+        performBSTOperation(operation);
     } else if (currentKey === "map") {
         performMapOperation(operation);
     } else if (["hashTable", "set"].includes(currentKey)) {
@@ -407,12 +638,80 @@ function performOperation(operation) {
         performLinearOperation(operation);
     }
 
+    lastMetrics.measured = performance.now() - started;
     render();
+}
+
+function bstPath(value) {
+    const target = numericValue(value);
+    const path = [];
+    let node = buildBST(state);
+    while (node) {
+        path.push(String(node.value));
+        if (numericValue(node.value) === target) break;
+        node = target < numericValue(node.value) ? node.left : node.right;
+    }
+    return path;
+}
+
+function performBSTOperation(operation) {
+    const value = getPrimaryValue();
+    const path = bstPath(value);
+    const exists = state.some((item) => String(item) === value);
+
+    if (operation === "add") {
+        if (!exists) state.push(value);
+        addTrace(exists ? `${value} already exists in the tree.` : `Inserted ${value} by following ${path.join(" -> ") || "root"}.`);
+        setHighlight({
+            value,
+            mode: exists ? "hit" : "new",
+            scan: path
+        });
+        setMetrics(operation, {
+            primary: value,
+            touched: Math.max(1, path.length + (exists ? 0 : 1))
+        });
+    } else if (operation === "search") {
+        addTrace(exists ? `Found ${value} along ${path.join(" -> ")}.` : `${value} was not found; stopped after ${path.join(" -> ") || "root"}.`);
+        setHighlight({
+            value,
+            mode: exists ? "hit" : "scan",
+            scan: path
+        });
+        setMetrics(operation, {
+            primary: value,
+            touched: Math.max(1, path.length)
+        });
+    } else if (operation === "remove") {
+        state = state.filter((item) => String(item) !== value);
+        addTrace(exists ? `Deleted ${value}; tree is rebuilt for display.` : `${value} was not present.`);
+        setHighlight({
+            value,
+            mode: "remove",
+            scan: path
+        });
+        setMetrics(operation, {
+            primary: value,
+            touched: Math.max(1, path.length)
+        });
+    } else {
+        const sorted = state.slice().sort((a, b) => numericValue(a) - numericValue(b));
+        addTrace(`In-order traversal: ${sorted.join(", ")}.`);
+        setHighlight({
+            mode: "scan",
+            scan: sorted
+        });
+        setMetrics(operation, {
+            primary: value,
+            touched: state.length
+        });
+    }
 }
 
 function performLinearOperation(operation) {
     const value = getPrimaryValue();
     const config = STRUCTURES[currentKey];
+    const secondary = getSecondaryValue();
 
     if (operation === "add") {
         state.push(value);
@@ -420,6 +719,11 @@ function performLinearOperation(operation) {
         setHighlight({
             value,
             mode: "new"
+        });
+        setMetrics(operation, {
+            primary: value,
+            secondary,
+            touched: currentKey === "linkedList" ? Math.max(1, state.length) : 1
         });
         return;
     }
@@ -432,6 +736,11 @@ function performLinearOperation(operation) {
             mode: index >= 0 ? "hit" : "scan",
             scan: state.map(String)
         });
+        setMetrics(operation, {
+            primary: value,
+            secondary,
+            touched: index >= 0 ? index + 1 : state.length
+        });
         return;
     }
 
@@ -443,6 +752,11 @@ function performLinearOperation(operation) {
                 value: removed,
                 mode: "remove"
             });
+            setMetrics(operation, {
+                primary: removed,
+                secondary,
+                touched: removed === undefined ? 0 : 1
+            });
             return;
         }
         if (currentKey === "queue") {
@@ -451,6 +765,11 @@ function performLinearOperation(operation) {
             setHighlight({
                 value: removed,
                 mode: "remove"
+            });
+            setMetrics(operation, {
+                primary: removed,
+                secondary,
+                touched: removed === undefined ? 0 : 1
             });
             return;
         }
@@ -470,16 +789,26 @@ function performLinearOperation(operation) {
                 scan: state.map(String)
             });
         }
+        setMetrics(operation, {
+            primary: value,
+            secondary,
+            touched: index >= 0 ? index + 1 : state.length
+        });
         return;
     }
 
     if (currentKey === "array") {
-        const index = Number.parseInt(getSecondaryValue() || value, 10);
+        const index = Number.parseInt(secondary || value, 10);
         const safeIndex = Number.isInteger(index) ? Math.max(0, Math.min(index, state.length - 1)) : 0;
         addTrace(state.length ? `Accessed index ${safeIndex}: ${state[safeIndex]}.` : "Array is empty.");
         setHighlight({
             index: safeIndex,
             mode: "hit"
+        });
+        setMetrics(operation, {
+            primary: value,
+            secondary,
+            touched: state.length ? 1 : 0
         });
     } else if (currentKey === "deque") {
         const removed = state.shift();
@@ -488,6 +817,11 @@ function performLinearOperation(operation) {
             value: removed,
             mode: "remove"
         });
+        setMetrics(operation, {
+            primary: removed,
+            secondary,
+            touched: removed === undefined ? 0 : 1
+        });
     } else {
         const item = state[0];
         addTrace(item === undefined ? `${config.name} is empty.` : `${config.specialLabel}: ${item}.`);
@@ -495,12 +829,19 @@ function performLinearOperation(operation) {
             index: 0,
             mode: "hit"
         });
+        setMetrics(operation, {
+            primary: item,
+            secondary,
+            touched: item === undefined ? 0 : 1
+        });
     }
 }
 
 function performHashSetOperation(operation) {
     const value = getPrimaryValue();
     const exists = state.some((item) => String(item) === value);
+    const bucketCount = currentKey === "hashTable" ? 7 : 6;
+    const bucketSize = state.filter((item) => hashValue(entryKey(item), bucketCount) === hashValue(value, bucketCount)).length;
 
     if (operation === "add") {
         if (!exists) {
@@ -513,11 +854,19 @@ function performHashSetOperation(operation) {
             value,
             mode: exists ? "hit" : "new"
         });
+        setMetrics(operation, {
+            primary: value,
+            touched: Math.max(1, bucketSize)
+        });
     } else if (operation === "search") {
         addTrace(exists ? `${value} is present.` : `${value} is absent.`);
         setHighlight({
             value,
             mode: exists ? "hit" : "scan"
+        });
+        setMetrics(operation, {
+            primary: value,
+            touched: Math.max(1, bucketSize)
         });
     } else if (operation === "remove") {
         state = state.filter((item) => String(item) !== value);
@@ -525,6 +874,10 @@ function performHashSetOperation(operation) {
         setHighlight({
             value,
             mode: "remove"
+        });
+        setMetrics(operation, {
+            primary: value,
+            touched: Math.max(1, bucketSize)
         });
     } else if (currentKey === "set") {
         if (exists) {
@@ -542,11 +895,19 @@ function performHashSetOperation(operation) {
                 mode: "new"
             });
         }
+        setMetrics(operation, {
+            primary: value,
+            touched: Math.max(1, bucketSize)
+        });
     } else {
         addTrace(`Rehashed ${state.length} keys into buckets.`);
         setHighlight({
             value,
             mode: "scan"
+        });
+        setMetrics(operation, {
+            primary: value,
+            touched: state.length
         });
     }
 }
@@ -555,6 +916,8 @@ function performMapOperation(operation) {
     const key = getPrimaryValue();
     const value = getSecondaryValue() || String(Math.floor(Math.random() * 90 + 10));
     const index = state.findIndex((entry) => entry.key === key);
+    const bucketCount = 6;
+    const bucketSize = state.filter((entry) => hashValue(entry.key, bucketCount) === hashValue(key, bucketCount)).length;
 
     if (operation === "add") {
         if (index >= 0) {
@@ -571,11 +934,21 @@ function performMapOperation(operation) {
             value: key,
             mode: index >= 0 ? "hit" : "new"
         });
+        setMetrics(operation, {
+            primary: key,
+            secondary: value,
+            touched: Math.max(1, bucketSize)
+        });
     } else if (operation === "search") {
         addTrace(index >= 0 ? `${key} exists.` : `${key} is absent.`);
         setHighlight({
             value: key,
             mode: index >= 0 ? "hit" : "scan"
+        });
+        setMetrics(operation, {
+            primary: key,
+            secondary: value,
+            touched: Math.max(1, bucketSize)
         });
     } else if (operation === "remove") {
         if (index >= 0) {
@@ -588,11 +961,21 @@ function performMapOperation(operation) {
             value: key,
             mode: "remove"
         });
+        setMetrics(operation, {
+            primary: key,
+            secondary: value,
+            touched: Math.max(1, bucketSize)
+        });
     } else {
         addTrace(index >= 0 ? `${key} maps to ${state[index].value}.` : `${key} has no value.`);
         setHighlight({
             value: key,
             mode: index >= 0 ? "hit" : "scan"
+        });
+        setMetrics(operation, {
+            primary: key,
+            secondary: value,
+            touched: Math.max(1, bucketSize)
         });
     }
 }
@@ -607,12 +990,21 @@ function performHeapOperation(operation) {
             value,
             mode: "new"
         });
+        setMetrics(operation, {
+            primary: value,
+            touched: Math.max(1, Math.ceil(Math.log2(state.length + 1)))
+        });
     } else if (operation === "search") {
-        const found = state.some((item) => String(item) === value);
+        const index = state.findIndex((item) => String(item) === value);
+        const found = index >= 0;
         addTrace(found ? `Found ${value}; arbitrary heap search is linear.` : `${value} was not found.`);
         setHighlight({
             value,
             mode: found ? "hit" : "scan"
+        });
+        setMetrics(operation, {
+            primary: value,
+            touched: found ? index + 1 : state.length
         });
     } else if (operation === "remove") {
         const index = state.findIndex((item) => String(item) === value);
@@ -627,6 +1019,10 @@ function performHeapOperation(operation) {
             value,
             mode: "remove"
         });
+        setMetrics(operation, {
+            primary: value,
+            touched: index >= 0 ? index + Math.max(1, Math.ceil(Math.log2(state.length + 2))) : state.length
+        });
     } else {
         const removed = state.shift();
         heapifyState();
@@ -634,6 +1030,10 @@ function performHeapOperation(operation) {
         setHighlight({
             value: removed,
             mode: "remove"
+        });
+        setMetrics(operation, {
+            primary: removed,
+            touched: removed === undefined ? 0 : Math.max(1, Math.ceil(Math.log2(state.length + 2)))
         });
     }
 }
@@ -658,6 +1058,11 @@ function performGraphOperation(operation) {
             value,
             mode: hasNode ? "hit" : "new"
         });
+        setMetrics(operation, {
+            primary: value,
+            secondary,
+            touched: 1
+        });
     } else if (operation === "search") {
         const visited = bfsOrder(value);
         addTrace(hasNode ? `BFS reached ${visited.join(", ")}.` : `${value} is not in the graph.`);
@@ -666,6 +1071,11 @@ function performGraphOperation(operation) {
             mode: hasNode ? "hit" : "scan",
             scan: visited
         });
+        setMetrics(operation, {
+            primary: value,
+            secondary,
+            touched: hasNode ? visited.length + state.edges.length : state.nodes.length
+        });
     } else if (operation === "remove") {
         state.nodes = state.nodes.filter((node) => node !== value);
         state.edges = state.edges.filter((edge) => edge[0] !== value && edge[1] !== value);
@@ -673,6 +1083,11 @@ function performGraphOperation(operation) {
         setHighlight({
             value,
             mode: "remove"
+        });
+        setMetrics(operation, {
+            primary: value,
+            secondary,
+            touched: state.nodes.length + state.edges.length
         });
     } else {
         if (!state.nodes.includes(value)) state.nodes.push(value);
@@ -685,6 +1100,11 @@ function performGraphOperation(operation) {
             value,
             secondary,
             mode: "new"
+        });
+        setMetrics(operation, {
+            primary: value,
+            secondary,
+            touched: 2
         });
     }
 }
@@ -713,6 +1133,7 @@ function bfsOrder(start) {
 function performTrieOperation(operation) {
     const word = getPrimaryValue().toLowerCase();
     const exists = state.includes(word);
+    const lengthCost = Math.max(1, word.length);
 
     if (operation === "add") {
         if (!exists) state.push(word);
@@ -721,11 +1142,19 @@ function performTrieOperation(operation) {
             value: word,
             mode: exists ? "hit" : "new"
         });
+        setMetrics(operation, {
+            primary: word,
+            touched: lengthCost
+        });
     } else if (operation === "search") {
         addTrace(exists ? `Found word ${word}.` : `${word} is not a stored word.`);
         setHighlight({
             value: word,
             mode: exists ? "hit" : "scan"
+        });
+        setMetrics(operation, {
+            primary: word,
+            touched: lengthCost
         });
     } else if (operation === "remove") {
         state = state.filter((item) => item !== word);
@@ -733,6 +1162,10 @@ function performTrieOperation(operation) {
         setHighlight({
             value: word,
             mode: "remove"
+        });
+        setMetrics(operation, {
+            primary: word,
+            touched: lengthCost
         });
     } else {
         const prefix = getSecondaryValue().toLowerCase() || word.slice(0, 2);
@@ -743,6 +1176,57 @@ function performTrieOperation(operation) {
             mode: matches.length ? "hit" : "scan",
             prefix
         });
+        setMetrics(operation, {
+            primary: word,
+            secondary: prefix,
+            touched: prefix.length + matches.length
+        });
+    }
+}
+
+function selectionLabel(ref) {
+    if (!ref) return "Click a node, cell, bucket item, vertex, or trie node to inspect it.";
+    if (ref.kind === "map") return `key "${ref.key}" maps to "${ref.value}"`;
+    if (ref.kind === "graph-edge") return `edge ${ref.a} - ${ref.b}`;
+    if (ref.kind === "trie") return ref.value ? `prefix "${ref.value}"` : "trie root";
+    return `${STRUCTURES[currentKey].name} item ${ref.index}: "${ref.value}"`;
+}
+
+function renderSelection() {
+    if (!selectedRef) {
+        selectedCard.classList.remove("has-selection");
+        selectedType.textContent = "none";
+        selectedLabel.textContent = selectionLabel(null);
+        editValueInput.value = "";
+        editSecondaryInput.value = "";
+        return;
+    }
+    selectedCard.classList.add("has-selection");
+    selectedType.textContent = inferType(selectedRef.kind === "map" ? selectedRef.value : selectedRef.value);
+    selectedLabel.textContent = selectionLabel(selectedRef);
+    editValueInput.value = selectedRef.kind === "map" ? selectedRef.key : selectedRef.value;
+    editSecondaryInput.value = selectedRef.kind === "map" ? selectedRef.value : "";
+}
+
+function refreshSelectedFromState() {
+    if (!selectedRef) return;
+    if (selectedRef.kind === "graph") {
+        if (!state.nodes.includes(selectedRef.value)) selectedRef = null;
+        return;
+    }
+    if (selectedRef.kind === "map") {
+        const entry = state.find((item) => item.key === selectedRef.key);
+        selectedRef = entry ? {
+            kind: "map",
+            key: entry.key,
+            value: entry.value
+        } : null;
+        return;
+    }
+    if (Number.isInteger(selectedRef.index) && selectedRef.index < state.length) {
+        selectedRef.value = typeof state[selectedRef.index] === "object" ? asEntryLabel(state[selectedRef.index]) : state[selectedRef.index];
+    } else if (selectedRef.kind !== "trie") {
+        selectedRef = null;
     }
 }
 
@@ -751,8 +1235,12 @@ function render() {
     const config = STRUCTURES[currentKey];
     const size = config.kind === "graph" ? state.nodes.length : state.length;
     sizePill.textContent = `n = ${size}`;
-    modelView.textContent = JSON.stringify(state, null, 2);
+    modelView.textContent = JSON.stringify(typedModel(), null, 2);
     traceList.innerHTML = trace.map((item) => `<li>${escapeHTML(item)}</li>`).join("");
+    refreshSelectedFromState();
+    renderSelection();
+    renderMetrics();
+    renderComparison();
 
     if (!size) {
         visual.innerHTML = `<div class="empty-state">Empty ${config.name}</div>`;
@@ -773,10 +1261,17 @@ function render() {
 
 function classFor(value, index) {
     const text = String(value);
+    if (selectedRef && selectedRef.kind === "map" && selectedRef.key === text) return "is-selected";
+    if (selectedRef && selectedRef.index === index && selectedRef.kind !== "trie") return "is-selected";
+    if (selectedRef && selectedRef.value !== undefined && String(selectedRef.value) === text) return "is-selected";
     if (highlight.index === index) return `is-${highlight.mode || "hit"}`;
     if (highlight.value !== undefined && String(highlight.value) === text) return `is-${highlight.mode || "hit"}`;
     if (highlight.scan && highlight.scan.map(String).includes(text)) return "is-scan";
     return "";
+}
+
+function typeBadge(value, forcedType) {
+    return `<span class="type-badge">${escapeHTML(forcedType || inferType(value))}</span>`;
 }
 
 function renderArray() {
@@ -784,7 +1279,9 @@ function renderArray() {
         ${state.map((item, index) => `
             <div class="array-item">
                 <div class="index-label">[${index}]</div>
-                <div class="ds-cell ${classFor(item, index)}">${escapeHTML(item)}</div>
+                <button class="ds-cell selectable ${classFor(item, index)}" data-kind="linear" data-index="${index}" data-value="${escapeHTML(item)}" type="button">
+                    <span>${escapeHTML(item)}</span>${typeBadge(item)}
+                </button>
             </div>
         `).join("")}
     </div>`;
@@ -796,7 +1293,9 @@ function renderList(rowClass) {
         ${state.map((item, index) => `
             <div class="array-item">
                 <div class="role-label">${index === 0 ? labels[0] : index === state.length - 1 ? labels[1] : "&nbsp;"}</div>
-                <div class="ds-node ${classFor(item, index)}">${escapeHTML(item)}</div>
+                <button class="ds-node selectable ${classFor(item, index)}" data-kind="linear" data-index="${index}" data-value="${escapeHTML(item)}" type="button">
+                    <span>${escapeHTML(item)}</span>${typeBadge(item)}
+                </button>
             </div>
             ${index < state.length - 1 ? `<span class="arrow">${rowClass === "list-row" ? "->" : "|"}</span>` : ""}
         `).join("")}
@@ -808,7 +1307,9 @@ function renderStack() {
         <div class="stack-column">
             ${state.map((item, index) => `
                 <div class="array-item">
-                    <div class="ds-cell stack-cell ${classFor(item, index)}">${escapeHTML(item)}</div>
+                    <button class="ds-cell stack-cell selectable ${classFor(item, index)}" data-kind="linear" data-index="${index}" data-value="${escapeHTML(item)}" type="button">
+                        <span>${escapeHTML(item)}</span>${typeBadge(item)}
+                    </button>
                     ${index === state.length - 1 ? `<div class="role-label">top</div>` : ""}
                 </div>
             `).join("")}
@@ -831,7 +1332,9 @@ function renderBuckets() {
                 <div class="bucket-label">${index}</div>
                 <div class="bucket-chain">
                     ${bucket.length ? bucket.map((entry) => `
-                        <div class="ds-node ${classFor(entryKey(entry), index)}">${escapeHTML(asEntryLabel(entry))}</div>
+                        <button class="ds-node selectable ${classFor(entryKey(entry), index)}" data-kind="${currentKey === "map" ? "map" : "linear"}" data-index="${state.findIndex((item) => entryKey(item) === entryKey(entry))}" data-key="${escapeHTML(entryKey(entry))}" data-value="${escapeHTML(typeof entry === "object" ? entry.value : entry)}" type="button">
+                            <span>${escapeHTML(asEntryLabel(entry))}</span>${typeBadge(typeof entry === "object" ? entry.value : entry)}
+                        </button>
                     `).join(`<span class="arrow">-></span>`) : `<span class="role-label">empty</span>`}
                 </div>
             </div>
@@ -910,9 +1413,11 @@ function renderTree(root, includeArray) {
             ${links.map((line) => `<line x1="${line[0]}" y1="${line[1] + 21}" x2="${line[2]}" y2="${line[3]}" stroke="var(--primary-color)" stroke-width="2" opacity="0.55" />`).join("")}
         </svg>
         ${positions.map((item, index) => `
-            <div class="tree-node ${classFor(item.node.value, index)}" style="left:${item.x - 26}px; top:${item.y}px">${escapeHTML(item.node.value)}</div>
+            <button class="tree-node selectable ${classFor(item.node.value, state.findIndex((value) => String(value) === String(item.node.value)))}" data-kind="linear" data-index="${state.findIndex((value) => String(value) === String(item.node.value))}" data-value="${escapeHTML(item.node.value)}" style="left:${item.x - 31}px; top:${item.y}px" type="button">
+                <span>${escapeHTML(item.node.value)}</span>${typeBadge(item.node.value)}
+            </button>
         `).join("")}
-        ${includeArray ? `<div class="heap-array">${state.map((item, index) => `<div class="ds-cell ${classFor(item, index)}">${escapeHTML(item)}</div>`).join("")}</div>` : ""}
+        ${includeArray ? `<div class="heap-array">${state.map((item, index) => `<button class="ds-cell selectable ${classFor(item, index)}" data-kind="linear" data-index="${index}" data-value="${escapeHTML(item)}" type="button"><span>${escapeHTML(item)}</span>${typeBadge(item)}</button>`).join("")}</div>` : ""}
     </div>`;
 }
 
@@ -942,7 +1447,7 @@ function renderGraph() {
         </svg>
         ${state.nodes.map((node, index) => {
             const point = positions.get(node);
-            return `<div class="graph-node ${classFor(node, index)}" style="left:${point.x - 26}px; top:${point.y - 26}px">${escapeHTML(node)}</div>`;
+            return `<button class="graph-node selectable ${classFor(node, index)}" data-kind="graph" data-index="${index}" data-value="${escapeHTML(node)}" style="left:${point.x - 33}px; top:${point.y - 29}px" type="button"><span>${escapeHTML(node)}</span>${typeBadge(node, "vertex")}</button>`;
         }).join("")}
     </div>`;
 }
@@ -982,7 +1487,8 @@ function renderTrie() {
         ${positions.map((node, index) => {
             const label = node.root ? "root" : node.terminal ? `${node.char}*` : node.char;
             const active = highlight.prefix ? node.wordPrefix.startsWith(highlight.prefix) || highlight.prefix.startsWith(node.wordPrefix) : false;
-            return `<div class="trie-node ${active ? "is-hit" : classFor(node.wordPrefix, index)}" style="left:${node.x - 23}px; top:${node.y}px">${escapeHTML(label)}</div>`;
+            const selected = selectedRef && selectedRef.kind === "trie" && selectedRef.value === node.wordPrefix;
+            return `<button class="trie-node selectable ${selected ? "is-selected" : active ? "is-hit" : classFor(node.wordPrefix, index)}" data-kind="trie" data-index="${index}" data-value="${escapeHTML(node.wordPrefix)}" style="left:${node.x - 27}px; top:${node.y}px" type="button"><span>${escapeHTML(label)}</span>${typeBadge(node.wordPrefix, node.root ? "root" : node.terminal ? "word" : "prefix")}</button>`;
         }).join("")}
     </div>`;
 }
@@ -1024,6 +1530,98 @@ function escapeHTML(value) {
         .replace(/'/g, "&#39;");
 }
 
+function selectRenderedItem(target) {
+    const item = target.closest(".selectable");
+    if (!item) return;
+    const kind = item.dataset.kind;
+    if (kind === "trie") {
+        selectedRef = {
+            kind: "trie",
+            index: Number(item.dataset.index),
+            value: item.dataset.value
+        };
+    } else if (kind === "graph") {
+        selectedRef = {
+            kind: "graph",
+            index: Number(item.dataset.index),
+            value: item.dataset.value
+        };
+    } else if (kind === "map") {
+        selectedRef = {
+            kind: "map",
+            index: Number(item.dataset.index),
+            key: item.dataset.key,
+            value: item.dataset.value
+        };
+    } else {
+        selectedRef = {
+            kind: "linear",
+            index: Number(item.dataset.index),
+            value: item.dataset.value
+        };
+    }
+    addTrace(`Selected ${selectionLabel(selectedRef)}.`);
+    render();
+}
+
+function updateSelected() {
+    if (!selectedRef) return;
+    const nextValue = typedInputValue(editValueInput.value);
+    const nextSecondary = typedOptionalValue(editSecondaryInput.value);
+
+    if (selectedRef.kind === "graph") {
+        const oldValue = selectedRef.value;
+        const newValue = nextValue.toUpperCase();
+        if (!newValue) return;
+        state.nodes = state.nodes.map((node) => node === oldValue ? newValue : node);
+        state.edges = state.edges.map((edge) => edge.map((node) => node === oldValue ? newValue : node));
+        selectedRef = {
+            kind: "graph",
+            index: state.nodes.indexOf(newValue),
+            value: newValue
+        };
+        addTrace(`Renamed vertex ${oldValue} to ${newValue}.`);
+    } else if (selectedRef.kind === "map") {
+        const entry = state.find((item) => item.key === selectedRef.key);
+        if (!entry) return;
+        entry.key = nextValue;
+        entry.value = nextSecondary || entry.value;
+        selectedRef = {
+            kind: "map",
+            key: entry.key,
+            value: entry.value
+        };
+        addTrace(`Updated map entry ${entry.key}.`);
+    } else if (selectedRef.kind === "trie") {
+        const oldWord = state.find((word) => String(word).startsWith(selectedRef.value));
+        if (!oldWord || !nextValue) return;
+        state = state.map((word) => word === oldWord ? nextValue.toLowerCase() : word);
+        selectedRef = {
+            kind: "trie",
+            value: nextValue.toLowerCase()
+        };
+        addTrace(`Changed trie word ${oldWord} to ${nextValue.toLowerCase()}.`);
+    } else if (Number.isInteger(selectedRef.index) && selectedRef.index >= 0 && selectedRef.index < state.length) {
+        state[selectedRef.index] = nextValue;
+        if (currentKey === "heap") heapifyState();
+        selectedRef.value = nextValue;
+        addTrace(`Changed item ${selectedRef.index} to ${nextValue}.`);
+    }
+
+    setHighlight({
+        value: nextValue,
+        index: selectedRef.index,
+        mode: "hit"
+    });
+    setMetrics("special", {
+        primary: nextValue,
+        secondary: nextSecondary,
+        touched: 1,
+        plan: ["Locate the selected visual element.", "Replace the stored value.", "Re-render the structure and type metadata."]
+    });
+    render();
+}
+
 structureSelect.innerHTML = Object.entries(STRUCTURES).map(([key, config]) => `<option value="${key}">${config.name}</option>`).join("");
 
 structureSelect.addEventListener("change", () => {
@@ -1038,5 +1636,11 @@ operationButtons.forEach((button) => {
 
 randomizeButton.addEventListener("click", randomizeState);
 resetButton.addEventListener("click", resetState);
+visual.addEventListener("click", (event) => selectRenderedItem(event.target));
+updateSelectedButton.addEventListener("click", updateSelected);
+clearSelectedButton.addEventListener("click", () => {
+    selectedRef = null;
+    render();
+});
 
 resetState();
