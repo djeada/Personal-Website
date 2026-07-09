@@ -66,7 +66,7 @@ function getDefaultColor(variableName) {
     return defaults[variableName] || '#94a3b8';
 }
 
-function wavelengthToColor(wl) {
+function wavelengthToRGB(wl) {
     let r, g, b;
     if (wl >= 380 && wl < 440) {
         r = -(wl - 440) / (440 - 380);
@@ -113,7 +113,172 @@ function wavelengthToColor(wl) {
     g = Math.round(255 * Math.pow(g * factor, 0.8));
     b = Math.round(255 * Math.pow(b * factor, 0.8));
 
-    return `rgb(${r}, ${g}, ${b})`;
+    return {
+        r,
+        g,
+        b
+    };
+}
+
+function rgbString(color, alpha) {
+    if (alpha === undefined) {
+        return `rgb(${color.r}, ${color.g}, ${color.b})`;
+    }
+    return `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
+}
+
+function mixRGB(color, target, amount) {
+    return {
+        r: Math.round(color.r * (1 - amount) + target.r * amount),
+        g: Math.round(color.g * (1 - amount) + target.g * amount),
+        b: Math.round(color.b * (1 - amount) + target.b * amount)
+    };
+}
+
+function isDarkMode() {
+    return document.documentElement.classList.contains('dark-mode') ||
+        document.body.classList.contains('dark-mode');
+}
+
+function getVisibleWaveColor(alpha) {
+    const base = wavelengthToRGB(wavelength);
+    const adjusted = isDarkMode() ?
+        mixRGB(base, {
+            r: 255,
+            g: 255,
+            b: 255
+        }, 0.28) :
+        mixRGB(base, {
+            r: 0,
+            g: 0,
+            b: 0
+        }, 0.34);
+    return rgbString(adjusted, alpha);
+}
+
+function getWaveHaloColor(alpha) {
+    return isDarkMode() ? `rgba(15, 23, 42, ${alpha})` : `rgba(255, 255, 255, ${alpha})`;
+}
+
+function getCanvasPalette() {
+    if (isDarkMode()) {
+        return {
+            background: "#111827",
+            sourceZone: "rgba(30, 41, 59, 0.62)",
+            diffractionZone: "rgba(15, 23, 42, 0.34)",
+            grid: "rgba(148, 163, 184, 0.16)",
+            axis: "rgba(203, 213, 225, 0.22)",
+            labelBg: "rgba(15, 23, 42, 0.86)",
+            screen: "rgba(226, 232, 240, 0.74)",
+            screenGlow: "rgba(255, 157, 26, 0.16)"
+        };
+    }
+    return {
+        background: "#f8fafc",
+        sourceZone: "rgba(226, 232, 240, 0.55)",
+        diffractionZone: "rgba(255, 255, 255, 0.72)",
+        grid: "rgba(100, 116, 139, 0.16)",
+        axis: "rgba(100, 116, 139, 0.28)",
+        labelBg: "rgba(255, 255, 255, 0.9)",
+        screen: "rgba(71, 85, 105, 0.82)",
+        screenGlow: "rgba(234, 132, 0, 0.12)"
+    };
+}
+
+function strokeWavePath(pathBuilder, lineWidth, alpha) {
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    ctx.strokeStyle = getWaveHaloColor(Math.min(0.75, alpha + 0.22));
+    ctx.lineWidth = lineWidth + 2.5;
+    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    pathBuilder();
+    ctx.stroke();
+
+    ctx.strokeStyle = getVisibleWaveColor(alpha);
+    ctx.lineWidth = lineWidth;
+    ctx.beginPath();
+    pathBuilder();
+    ctx.stroke();
+    ctx.restore();
+}
+
+function drawRoundRectPath(x, y, width, height, radius) {
+    var r = Math.min(radius, width / 2, height / 2);
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + width - r, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+    ctx.lineTo(x + width, y + height - r);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+    ctx.lineTo(x + r, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+}
+
+function drawLabel(text, x, y, align) {
+    ctx.save();
+    ctx.font = "11px Arial";
+    ctx.textAlign = align || "center";
+    ctx.textBaseline = "middle";
+
+    var paddingX = 6;
+    var width = ctx.measureText(text).width + paddingX * 2;
+    var height = 20;
+    var left = x - width / 2;
+    if (ctx.textAlign === "left") {
+        left = x - paddingX;
+    } else if (ctx.textAlign === "right") {
+        left = x - width + paddingX;
+    }
+
+    ctx.fillStyle = getCanvasPalette().labelBg;
+    ctx.strokeStyle = getCSSColor('--border-color');
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    drawRoundRectPath(left, y - height / 2, width, height, 5);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = getCSSColor('--text-secondary');
+    ctx.fillText(text, x, y + 0.5);
+    ctx.restore();
+}
+
+function drawCanvasStage(barrierX, screenX) {
+    var palette = getCanvasPalette();
+
+    ctx.fillStyle = palette.background;
+    ctx.fillRect(0, 0, cw, ch);
+
+    ctx.fillStyle = palette.sourceZone;
+    ctx.fillRect(0, 0, barrierX, ch);
+    ctx.fillStyle = palette.diffractionZone;
+    ctx.fillRect(barrierX, 0, screenX - barrierX, ch);
+
+    ctx.strokeStyle = palette.grid;
+    ctx.lineWidth = 1;
+    for (var x = 0; x <= cw; x += 50) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, ch);
+        ctx.stroke();
+    }
+    for (var y = 0; y <= ch; y += 50) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(cw, y);
+        ctx.stroke();
+    }
+
+    ctx.strokeStyle = palette.axis;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(0, ch / 2);
+    ctx.lineTo(cw, ch / 2);
+    ctx.stroke();
 }
 
 
@@ -206,13 +371,12 @@ function drawBarrier() {
     slitHeight = Math.max(8, Math.min(slitHeight, 80));
     var cy = ch / 2;
 
-    ctx.fillStyle = getCSSColor('--text-primary');
+    ctx.fillStyle = isDarkMode() ? "#e2e8f0" : "#1e293b";
     ctx.fillRect(barrierX, 0, barrierWidth, cy - slitHeight / 2);
     ctx.fillRect(barrierX, cy + slitHeight / 2, barrierWidth, ch - cy - slitHeight / 2);
 
-
     ctx.strokeStyle = getCSSColor('--primary-color');
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(barrierX + barrierWidth / 2, cy - slitHeight / 2);
     ctx.lineTo(barrierX + barrierWidth / 2, cy + slitHeight / 2);
@@ -221,7 +385,7 @@ function drawBarrier() {
     if (circularApertureCheck.checked) {
 
         ctx.strokeStyle = getCSSColor('--primary-color');
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(barrierX + barrierWidth / 2, cy, slitHeight / 2, 0, 2 * Math.PI);
         ctx.stroke();
@@ -235,28 +399,20 @@ function drawBarrier() {
 }
 
 function drawIncomingWaves(barrierInfo) {
-    var waveColor = wavelengthToColor(wavelength);
     var w = 2 * Math.PI * (frameCounter / samplesPerCycle);
     var waveSpacing = getWaveSpacing();
 
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = waveColor;
-    ctx.globalAlpha = 0.7;
-
     for (var x = (w % (2 * Math.PI)) * waveSpacing / (2 * Math.PI); x < barrierInfo.x - 10; x += waveSpacing) {
-        ctx.beginPath();
-        ctx.moveTo(x, 50);
-        ctx.lineTo(x, ch - 50);
-        ctx.stroke();
+        strokeWavePath(function() {
+            ctx.moveTo(x, 50);
+            ctx.lineTo(x, ch - 50);
+        }, 2.2, 0.9);
     }
-
-    ctx.globalAlpha = 1;
 }
 
 function drawHuygensWavelets(barrierInfo) {
     if (!showWaveletsCheck.checked) return;
 
-    var waveColor = wavelengthToColor(wavelength);
     var w = 2 * Math.PI * (frameCounter / samplesPerCycle);
     var waveSpacing = getWaveSpacing();
     var maxRadius = cw - barrierInfo.x;
@@ -272,34 +428,29 @@ function drawHuygensWavelets(barrierInfo) {
         });
     }
 
-    ctx.lineWidth = 1.2;
-
     for (var s = 0; s < sources.length; s++) {
         var src = sources[s];
         for (var radius = (w % (2 * Math.PI)) * waveSpacing / (2 * Math.PI); radius < maxRadius; radius += waveSpacing) {
-            var alpha = Math.max(0.05, 1 - radius / maxRadius);
-            ctx.strokeStyle = waveColor;
-            ctx.globalAlpha = alpha * 0.35;
-            ctx.beginPath();
-            ctx.arc(src.x, src.y, radius, -Math.PI / 2, Math.PI / 2);
-            ctx.stroke();
+            var alpha = Math.max(0.16, 1 - radius / maxRadius) * 0.68;
+            strokeWavePath(function() {
+                ctx.arc(src.x, src.y, radius, -Math.PI / 2, Math.PI / 2);
+            }, 1.5, alpha);
         }
     }
-
-    ctx.globalAlpha = 1;
 }
 
 function drawScreen() {
     var screenX = cw - 120;
     var screenW = 8;
+    var palette = getCanvasPalette();
 
-    ctx.fillStyle = getCSSColor('--text-secondary');
+    ctx.fillStyle = palette.screenGlow;
+    ctx.fillRect(screenX - 16, 20, 32, ch - 40);
+
+    ctx.fillStyle = palette.screen;
     ctx.fillRect(screenX - screenW / 2, 20, screenW, ch - 40);
 
-    ctx.fillStyle = getCSSColor('--text-muted');
-    ctx.font = "12px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("Screen", screenX, 15);
+    drawLabel("Screen", screenX, 16);
 
     return screenX;
 }
@@ -333,20 +484,18 @@ function getIntensity(yPos, scale) {
 function drawIntensityOnScreen(screenX) {
     var cy = ch / 2;
     var scale = getPatternScale();
-    var waveColor = wavelengthToColor(wavelength);
 
-    ctx.lineWidth = 2;
+    ctx.fillStyle = isDarkMode() ? "rgba(15, 23, 42, 0.42)" : "rgba(255, 255, 255, 0.42)";
+    ctx.fillRect(screenX - 7, 20, 14, ch - 40);
 
     for (var y = 20; y < ch - 20; y++) {
         var yPos = y - cy;
         var intensity = getIntensity(yPos, scale);
+        var width = 4 + intensity * 8;
 
-        ctx.fillStyle = waveColor;
-        ctx.globalAlpha = intensity * 0.9;
-        ctx.fillRect(screenX - 4, y, 8, 1);
+        ctx.fillStyle = getVisibleWaveColor(Math.max(0.08, intensity * 0.95));
+        ctx.fillRect(screenX - width / 2, y, width, 1);
     }
-
-    ctx.globalAlpha = 1;
 }
 
 function drawIntensityPlot() {
@@ -357,18 +506,23 @@ function drawIntensityPlot() {
     var plotHeight = ch - 80;
     var cy = ch / 2;
 
-    ctx.fillStyle = getCSSColor('--surface-color');
-    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = getCanvasPalette().labelBg;
     ctx.fillRect(plotX, 40, plotWidth, plotHeight);
-    ctx.globalAlpha = 1;
     ctx.strokeStyle = getCSSColor('--border-color');
     ctx.lineWidth = 1;
     ctx.strokeRect(plotX, 40, plotWidth, plotHeight);
 
     var scale = getPatternScale();
 
+    ctx.strokeStyle = getCanvasPalette().axis;
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.strokeStyle = getCSSColor('--primary-color');
+    ctx.moveTo(plotX + 6, cy);
+    ctx.lineTo(plotX + plotWidth - 6, cy);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.strokeStyle = getVisibleWaveColor(0.98);
     ctx.lineWidth = 2;
 
     for (var y = 40; y < 40 + plotHeight; y++) {
@@ -383,26 +537,16 @@ function drawIntensityPlot() {
     }
     ctx.stroke();
 
-    ctx.fillStyle = getCSSColor('--text-muted');
-    ctx.font = "10px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("Intensity", plotX + plotWidth / 2, 55);
+    drawLabel("Intensity", plotX + plotWidth / 2, 55);
 }
 
 function drawLabels(barrierInfo, screenX) {
-    ctx.fillStyle = getCSSColor('--text-muted');
-    ctx.font = "11px Arial";
-    ctx.textAlign = "left";
+    drawLabel("Incoming waves", 58, ch - 16);
+    drawLabel("Aperture", barrierInfo.x, ch - 12);
 
-    ctx.fillText("Incoming", 10, ch - 15);
-    ctx.fillText("Waves", 10, ch - 3);
-
-    ctx.textAlign = "center";
-    ctx.fillText("Aperture", barrierInfo.x, ch - 8);
-
-
-    ctx.font = "10px Arial";
     ctx.fillStyle = getCSSColor('--primary-color');
+    ctx.font = "bold 11px Arial";
+    ctx.textAlign = "left";
     ctx.fillText("a", barrierInfo.x + 20, barrierInfo.y);
 
 
@@ -416,15 +560,11 @@ function drawLabels(barrierInfo, screenX) {
     ctx.stroke();
     ctx.setLineDash([]);
 
-
-    ctx.fillStyle = getCSSColor('--text-muted');
-    ctx.font = "10px Arial";
-    ctx.textAlign = "center";
     var midX = (barrierInfo.x + screenX) / 2;
-    ctx.fillText("L = " + screenDistance + " mm", midX, ch - 8);
+    drawLabel("L = " + screenDistance + " mm", midX, ch - 12);
 
     ctx.beginPath();
-    ctx.strokeStyle = getCSSColor('--text-muted');
+    ctx.strokeStyle = getCanvasPalette().axis;
     ctx.setLineDash([4, 4]);
     ctx.moveTo(barrierInfo.x + 10, ch - 20);
     ctx.lineTo(screenX - 10, ch - 20);
@@ -436,13 +576,13 @@ function drawLegend() {
     var legendX = 10;
     var legendY = 10;
 
-    ctx.fillStyle = getCSSColor('--surface-color');
-    ctx.globalAlpha = 0.9;
-    ctx.fillRect(legendX, legendY, 120, 50);
-    ctx.globalAlpha = 1;
+    ctx.fillStyle = getCanvasPalette().labelBg;
     ctx.strokeStyle = getCSSColor('--border-color');
     ctx.lineWidth = 1;
-    ctx.strokeRect(legendX, legendY, 120, 50);
+    ctx.beginPath();
+    drawRoundRectPath(legendX, legendY, 128, 54, 6);
+    ctx.fill();
+    ctx.stroke();
 
     ctx.font = "11px Arial";
     ctx.fillStyle = getCSSColor('--text-primary');
@@ -450,13 +590,10 @@ function drawLegend() {
     var modeLabel = circularApertureCheck.checked ? "Airy Disk" : "Single Slit";
     ctx.fillText(modeLabel, legendX + 5, legendY + 15);
 
-    var waveColor = wavelengthToColor(wavelength);
-    ctx.strokeStyle = waveColor;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(legendX + 5, legendY + 30);
-    ctx.lineTo(legendX + 25, legendY + 30);
-    ctx.stroke();
+    strokeWavePath(function() {
+        ctx.moveTo(legendX + 5, legendY + 30);
+        ctx.lineTo(legendX + 25, legendY + 30);
+    }, 2.2, 0.95);
     ctx.fillStyle = getCSSColor('--text-secondary');
     ctx.fillText("\u03BB = " + wavelength + " nm", legendX + 30, legendY + 33);
 
@@ -468,11 +605,12 @@ function drawLegend() {
 function drawAll() {
     ctx.clearRect(0, 0, cw, ch);
 
-    ctx.fillStyle = getCSSColor('--surface-elevated');
-    ctx.fillRect(0, 0, cw, ch);
+    var barrierX = 125;
+    var screenX = cw - 120;
+    drawCanvasStage(barrierX, screenX);
 
     var barrierInfo = drawBarrier();
-    var screenX = drawScreen();
+    screenX = drawScreen();
 
     drawIncomingWaves(barrierInfo);
     drawHuygensWavelets(barrierInfo);
