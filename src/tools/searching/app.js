@@ -14,7 +14,6 @@ document.addEventListener("DOMContentLoaded", function() {
     const resetButton = document.getElementById("reset");
     const stepButton = document.getElementById("step");
     const resetDefaultsButton = document.getElementById("reset-defaults");
-    const toastContainer = document.getElementById("toast-container");
 
 
     const comparisonsCountEl = document.getElementById("comparisons-count");
@@ -30,37 +29,17 @@ document.addEventListener("DOMContentLoaded", function() {
         "interpolation": "Interpolation"
     };
 
-
-    function showToast(message, type = "info") {
+    const showToast = window.ToolShared ? window.ToolShared.showToast : function(message, type = "info") {
         const toast = document.createElement("div");
         toast.className = `toast ${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    };
 
-        const icons = {
-            success: "✅",
-            error: "❌",
-            info: "ℹ️",
-            warning: "⚠️"
-        };
-
-        toast.innerHTML = `
-            <span class="toast-icon">${icons[type] || icons.info}</span>
-            <span class="toast-message">${message}</span>
-        `;
-
-        toastContainer.appendChild(toast);
-
-        setTimeout(() => {
-            toast.remove();
-        }, 3000);
+    if (window.ToolShared) {
+        window.ToolShared.initCardToggles();
     }
-
-
-    document.querySelectorAll(".card-toggle").forEach(toggle => {
-        toggle.addEventListener("click", () => {
-            const expanded = toggle.getAttribute("aria-expanded") === "true";
-            toggle.setAttribute("aria-expanded", !expanded);
-        });
-    });
 
     function setCanvasSize() {
         const availableWidth = window.innerWidth * 0.95;
