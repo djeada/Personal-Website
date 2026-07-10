@@ -51,6 +51,8 @@ const resultValue = document.getElementById("result-value");
 const comparisonBubble = document.getElementById("comparison-bubble");
 const dockOperation = document.getElementById("dock-operation");
 const dockSummary = document.getElementById("dock-summary");
+const algorithmName = document.getElementById("algorithm-name");
+const algorithmDetail = document.getElementById("algorithm-detail");
 
 let animationRun = 0;
 let lastAnimationTargets = [];
@@ -426,7 +428,7 @@ function planForOperation(operation, primary, secondary) {
     const config = STRUCTURES[currentKey];
     const opName = operationConfig(operation)[0];
     if (config.kind === "graph") {
-        if (operation === "search") return [`Start BFS at ${primary}.`, "Visit each reachable vertex once.", "Follow every relevant adjacency edge."];
+        if (operation === "search") return [`Start BFS at ${state.nodes[0] || "the first vertex"}.`, `Expand the FIFO frontier until ${primary} is reached.`, "Stop immediately when the target is found."];
         if (operation === "special") return [`Ensure vertices ${primary} and ${secondary} exist.`, "Check whether the edge already exists.", "Store neighbor references."];
         if (operation === "remove") return [`Find vertex ${primary}.`, "Delete it from the vertex list.", "Remove all incident edges."];
     }
@@ -571,6 +573,50 @@ function updateCommandUI() {
     const secondary = secondaryInput.value || config.secondaryLabel.toLowerCase();
     const args = needsSecondary ? `${primary}, ${secondary}` : primary;
     commandPreview.innerHTML = `<code>${escapeHTML(op[0].toLowerCase().replace(/\s+/g, "_"))}(${escapeHTML(args)})</code><span>${escapeHTML(op[4])}</span>`;
+    const algorithm = algorithmFor(currentKey, operation);
+    algorithmName.textContent = algorithm.name;
+    algorithmDetail.textContent = algorithm.detail;
+}
+
+function algorithmFor(key, operation) {
+    const config = STRUCTURES[key];
+    if (key === "bst") {
+        const algorithms = {
+            add: ["Ordered leaf insertion", "Compare the key at each node, follow left for smaller or right for larger, then insert at the first empty child."],
+            search: ["Iterative binary-search-tree lookup", "Start at the root and discard one subtree after every comparison: left when smaller, right when larger."],
+            remove: ["Successor-based BST deletion", "Find the key by ordered lookup; for two children, replace it with the smallest key in the right subtree, then delete that successor."],
+            special: ["Recursive in-order traversal", "Visit the left subtree, current node, then right subtree to produce values in sorted order."]
+        };
+        const [name, detail] = algorithms[operation];
+        return { name, detail };
+    }
+    if (config.kind === "graph") {
+        const algorithms = {
+            add: ["Adjacency-list vertex insertion", "Create a vertex and an empty neighbor list in constant time."],
+            search: ["Breadth-first search (BFS)", "Use a FIFO frontier and visit every reachable vertex level by level until the target is found."],
+            remove: ["Adjacency-list vertex deletion", "Remove the vertex, then scan all adjacency lists to remove incident edges."],
+            special: ["Undirected adjacency-list edge insertion", "Add each endpoint to the other endpoint's neighbor list after checking for a duplicate edge."]
+        };
+        const [name, detail] = algorithms[operation];
+        return { name, detail };
+    }
+    if (config.kind === "heap") {
+        const algorithms = {
+            add: ["Min-heap bubble-up", "Append at the end, then swap with the parent while the new key is smaller."],
+            search: ["Linear heap scan", "A heap only orders parents against children, so arbitrary-value search checks the backing array sequentially."],
+            remove: ["Swap, then restore heap order", "Replace the removed slot with the last item, then bubble up or sink down as required."],
+            special: ["Extract-min with sink-down", "Remove the root, move the final item to the root, then swap with the smaller child until ordered."]
+        };
+        const [name, detail] = algorithms[operation];
+        return { name, detail };
+    }
+    if (config.kind === "trie") return { name: operation === "special" ? "Prefix walk with depth-first collection" : "Character-by-character trie walk", detail: "Follow one child edge per character; no unrelated branch is inspected." };
+    if (config.kind === "buckets") return { name: "Polynomial hash with separate chaining", detail: "Compute a bucket index with a base-31 string hash, then scan only that bucket's collision chain." };
+    if (config.kind === "list") return { name: operation === "add" ? "Tail-pointer append" : "Forward pointer traversal", detail: operation === "add" ? "Link the current tail to a new node and move the tail pointer." : "Start at head and follow next pointers until the value is found or the list ends." };
+    if (config.kind === "array") return { name: operation === "special" ? "Direct indexed access" : operation === "add" ? "Dynamic-array append" : "Linear scan", detail: operation === "special" ? "Calculate the slot address directly from its zero-based index." : operation === "add" ? "Write after the final element; resize and copy only when capacity is exhausted." : "Compare values from index 0 onward and stop at the first match." };
+    if (config.kind === "stack") return { name: operation === "search" ? "Linear stack scan" : "LIFO top operation", detail: operation === "search" ? "Inspect items sequentially; stacks provide no fast arbitrary lookup." : "Read, add, or remove only at the top of the stack." };
+    if (["queue", "deque"].includes(config.kind)) return { name: operation === "search" ? "Linear queue scan" : "Constant-time endpoint operation", detail: operation === "search" ? "Inspect queued items from front to back." : "Use the front or back pointer without scanning middle items." };
+    return { name: config.operations[operation][0], detail: config.operations[operation][4] };
 }
 
 function showIdleResult() {
@@ -843,6 +889,30 @@ function bstPath(value) {
     return path;
 }
 
+function deleteBSTNode(node, target) {
+    if (!node) return null;
+    const nodeValue = numericValue(node.value);
+    if (target < nodeValue) node.left = deleteBSTNode(node.left, target);
+    else if (target > nodeValue) node.right = deleteBSTNode(node.right, target);
+    else {
+        if (!node.left) return node.right;
+        if (!node.right) return node.left;
+        let successor = node.right;
+        while (successor.left) successor = successor.left;
+        node.value = successor.value;
+        node.right = deleteBSTNode(node.right, numericValue(successor.value));
+    }
+    return node;
+}
+
+function bstPreorder(node, values = []) {
+    if (!node) return values;
+    values.push(node.value);
+    bstPreorder(node.left, values);
+    bstPreorder(node.right, values);
+    return values;
+}
+
 function performBSTOperation(operation) {
     const value = getPrimaryValue();
     const path = bstPath(value);
@@ -872,8 +942,8 @@ function performBSTOperation(operation) {
             touched: Math.max(1, path.length)
         });
     } else if (operation === "remove") {
-        state = state.filter((item) => String(item) !== value);
-        addTrace(exists ? `Deleted ${value}; tree is rebuilt for display.` : `${value} was not present.`);
+        if (exists) state = bstPreorder(deleteBSTNode(buildBST(state), numericValue(value)));
+        addTrace(exists ? `Deleted ${value} using the in-order successor rule.` : `${value} was not present.`);
         setHighlight({
             value,
             mode: "remove",
@@ -1173,7 +1243,7 @@ function performHeapOperation(operation) {
     const value = getPrimaryValue();
     if (operation === "add") {
         state.push(value);
-        heapifyState();
+        bubbleUp(state.length - 1);
         addTrace(`Inserted ${value} and restored heap order.`);
         setHighlight({
             value,
@@ -1198,9 +1268,12 @@ function performHeapOperation(operation) {
     } else if (operation === "remove") {
         const index = state.findIndex((item) => String(item) === value);
         if (index >= 0) {
-            state.splice(index, 1);
-            heapifyState();
-            addTrace(`Removed ${value} and heapified.`);
+            const last = state.pop();
+            if (index < state.length) {
+                state[index] = last;
+                if (!bubbleUp(index)) sinkDown(index);
+            }
+            addTrace(`Removed ${value} and restored heap order.`);
         } else {
             addTrace(`${value} was not present.`);
         }
@@ -1213,8 +1286,12 @@ function performHeapOperation(operation) {
             touched: index >= 0 ? index + Math.max(1, Math.ceil(Math.log2(state.length + 2))) : state.length
         });
     } else {
-        const removed = state.shift();
-        heapifyState();
+        const removed = state[0];
+        const last = state.pop();
+        if (state.length && last !== undefined) {
+            state[0] = last;
+            sinkDown(0);
+        }
         addTrace(removed === undefined ? "Heap is empty." : `Extracted min ${removed}.`);
         setHighlight({
             value: removed,
@@ -1228,7 +1305,34 @@ function performHeapOperation(operation) {
 }
 
 function heapifyState() {
-    state.sort((a, b) => numericValue(a) - numericValue(b));
+    for (let index = Math.floor(state.length / 2) - 1; index >= 0; index -= 1) sinkDown(index);
+}
+
+function bubbleUp(startIndex) {
+    let index = startIndex;
+    let moved = false;
+    while (index > 0) {
+        const parent = Math.floor((index - 1) / 2);
+        if (numericValue(state[parent]) <= numericValue(state[index])) break;
+        [state[parent], state[index]] = [state[index], state[parent]];
+        index = parent;
+        moved = true;
+    }
+    return moved;
+}
+
+function sinkDown(startIndex) {
+    let index = startIndex;
+    while (true) {
+        const left = index * 2 + 1;
+        const right = left + 1;
+        let smallest = index;
+        if (left < state.length && numericValue(state[left]) < numericValue(state[smallest])) smallest = left;
+        if (right < state.length && numericValue(state[right]) < numericValue(state[smallest])) smallest = right;
+        if (smallest === index) break;
+        [state[index], state[smallest]] = [state[smallest], state[index]];
+        index = smallest;
+    }
 }
 
 function performGraphOperation(operation) {
@@ -1253,17 +1357,18 @@ function performGraphOperation(operation) {
             touched: 1
         });
     } else if (operation === "search") {
-        const visited = bfsOrder(value);
-        addTrace(hasNode ? `BFS reached ${visited.join(", ")}.` : `${value} is not in the graph.`);
+        const visited = bfsOrder(state.nodes[0], value);
+        const reached = visited.includes(value);
+        addTrace(reached ? `BFS visited ${visited.join(", ")} and found ${value}.` : `BFS visited ${visited.join(", ") || "no vertices"}; ${value} was not reached.`);
         setHighlight({
             value,
-            mode: hasNode ? "hit" : "scan",
+            mode: reached ? "hit" : "scan",
             scan: visited
         });
         setMetrics(operation, {
             primary: value,
             secondary,
-            touched: hasNode ? visited.length + state.edges.length : state.nodes.length
+            touched: visited.length
         });
     } else if (operation === "remove") {
         state.nodes = state.nodes.filter((node) => node !== value);
@@ -1302,12 +1407,13 @@ function hasEdge(a, b) {
     return state.edges.some((edge) => (edge[0] === a && edge[1] === b) || (edge[0] === b && edge[1] === a));
 }
 
-function bfsOrder(start) {
+function bfsOrder(start, target) {
     if (!state.nodes.includes(start)) return [];
     const queue = [start];
     const visited = new Set([start]);
     while (queue.length) {
         const node = queue.shift();
+        if (node === target) break;
         state.edges.forEach((edge) => {
             const next = edge[0] === node ? edge[1] : edge[1] === node ? edge[0] : null;
             if (next && !visited.has(next)) {
@@ -1600,7 +1706,7 @@ function renderTree(root, includeArray) {
     const height = Math.max(390, 110 + Math.max(0, ...positions.map((item) => item.y)));
 
     visual.innerHTML = `<div class="tree-canvas" style="height:${height}px">
-        <svg class="link-layer" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+        <svg class="link-layer" style="width:${width}px; height:${height}px" viewBox="0 0 ${width} ${height}">
             ${links.map((line) => `<line x1="${line[0]}" y1="${line[1] + 21}" x2="${line[2]}" y2="${line[3]}" stroke="var(--primary-color)" stroke-width="2" opacity="0.55" />`).join("")}
         </svg>
         ${positions.map((item, index) => `
@@ -1628,7 +1734,7 @@ function renderGraph() {
     });
 
     visual.innerHTML = `<div class="graph-canvas">
-        <svg class="link-layer" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+        <svg class="link-layer" style="width:${width}px; height:${height}px" viewBox="0 0 ${width} ${height}">
             ${state.edges.map((edge) => {
                 const a = positions.get(edge[0]);
                 const b = positions.get(edge[1]);
@@ -1669,7 +1775,7 @@ function renderTrie() {
     const height = Math.max(390, 100 + Math.max(...positions.map((node) => node.y)));
     const canvasWidth = Math.max(width, cursor * 86);
     visual.innerHTML = `<div class="trie-canvas" style="min-width:${canvasWidth}px; height:${height}px">
-        <svg class="link-layer" viewBox="0 0 ${canvasWidth} ${height}" preserveAspectRatio="none">
+        <svg class="link-layer" style="width:${canvasWidth}px; height:${height}px" viewBox="0 0 ${canvasWidth} ${height}">
             ${links.map((line) => `
                 <line x1="${line[0]}" y1="${line[1] + 19}" x2="${line[2]}" y2="${line[3]}" stroke="var(--primary-color)" stroke-width="2" opacity="0.55" />
                 <text x="${(line[0] + line[2]) / 2}" y="${(line[1] + line[3]) / 2}" fill="var(--text-secondary)" font-size="11">${escapeHTML(line[4])}</text>
