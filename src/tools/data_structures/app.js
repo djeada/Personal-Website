@@ -805,7 +805,7 @@ function showCompletedResult(outcome) {
 
 function cancelAnimation() {
     animationRun += 1;
-    visualStage.classList.remove("is-playing");
+    visualStage.classList.remove("is-playing", "is-starting", "is-finishing");
     animationStatus.textContent = "Ready";
     comparisonBubble.hidden = true;
     operationButtons.forEach((button) => { button.disabled = false; });
@@ -841,10 +841,14 @@ async function animateTargets(targets, label) {
     if (!targets.length || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const run = ++animationRun;
     const interval = Number(animationSpeed.value) || 500;
-    visualStage.classList.add("is-playing");
+    visualStage.classList.remove("is-finishing");
+    visualStage.classList.add("is-playing", "is-starting");
     comparisonBubble.hidden = false;
+    comparisonBubble.textContent = `${label} starting`;
     operationButtons.forEach((button) => { button.disabled = true; });
     targets.forEach((node) => node.classList.remove("animation-focus", "animation-done", "animation-result"));
+    await delay(Math.min(420, Math.max(220, interval * 0.55)));
+    visualStage.classList.remove("is-starting");
 
     for (let index = 0; index < targets.length; index += 1) {
         if (run !== animationRun) return;
@@ -865,9 +869,12 @@ async function animateTargets(targets, label) {
     result.classList.remove("animation-focus");
     result.classList.add("animation-result");
     visualStage.classList.remove("is-playing");
+    visualStage.classList.add("is-finishing");
     comparisonBubble.textContent = lastOutcome && lastOutcome.success ? "Match confirmed" : "Traversal complete";
     await delay(Math.min(300, interval));
     comparisonBubble.hidden = true;
+    await delay(420);
+    visualStage.classList.remove("is-finishing");
     animationStatus.textContent = `${label} complete`;
     operationButtons.forEach((button) => { button.disabled = false; });
 }
@@ -1680,7 +1687,7 @@ function renderTree(root, includeArray) {
     const positions = [];
     const links = [];
     const width = 760;
-    const levelHeight = 78;
+    const levelHeight = 132;
 
     function place(node, depth, left, right, parent) {
         if (!node) return;
@@ -1703,14 +1710,14 @@ function renderTree(root, includeArray) {
     }
 
     place(root, 0, 36, width - 36, null);
-    const height = Math.max(390, 110 + Math.max(0, ...positions.map((item) => item.y)));
+    const height = Math.max(470, 110 + Math.max(0, ...positions.map((item) => item.y)) + (includeArray ? 130 : 0));
 
     visual.innerHTML = `<div class="tree-canvas" style="height:${height}px">
         <svg class="link-layer" style="width:${width}px; height:${height}px" viewBox="0 0 ${width} ${height}">
-            ${links.map((line) => `<line x1="${line[0]}" y1="${line[1] + 21}" x2="${line[2]}" y2="${line[3]}" stroke="var(--primary-color)" stroke-width="2" opacity="0.55" />`).join("")}
+            ${links.map((line) => `<line x1="${line[0]}" y1="${line[1] + 50}" x2="${line[2]}" y2="${line[3]}" stroke="var(--primary-color)" stroke-width="2" opacity="0.55" />`).join("")}
         </svg>
         ${positions.map((item, index) => `
-            <button class="tree-node selectable ${classFor(item.node.value, state.findIndex((value) => String(value) === String(item.node.value)))}" data-kind="linear" data-index="${state.findIndex((value) => String(value) === String(item.node.value))}" data-value="${escapeHTML(item.node.value)}" style="left:${item.x - 31}px; top:${item.y}px" type="button">
+            <button class="tree-node selectable ${classFor(item.node.value, state.findIndex((value) => String(value) === String(item.node.value)))}" data-kind="linear" data-index="${state.findIndex((value) => String(value) === String(item.node.value))}" data-value="${escapeHTML(item.node.value)}" style="left:${item.x - 62}px; top:${item.y}px" type="button">
                 <span>${escapeHTML(item.node.value)}</span>${typeBadge(item.node.value)}
             </button>
         `).join("")}
@@ -1720,10 +1727,10 @@ function renderTree(root, includeArray) {
 
 function renderGraph() {
     const width = 760;
-    const height = 390;
+    const height = 470;
     const centerX = width / 2;
     const centerY = height / 2;
-    const radius = 130;
+    const radius = 168;
     const positions = new Map();
     state.nodes.forEach((node, index) => {
         const angle = -Math.PI / 2 + (index / state.nodes.length) * Math.PI * 2;
@@ -1733,7 +1740,7 @@ function renderGraph() {
         });
     });
 
-    visual.innerHTML = `<div class="graph-canvas">
+    visual.innerHTML = `<div class="graph-canvas" style="height:${height}px">
         <svg class="link-layer" style="width:${width}px; height:${height}px" viewBox="0 0 ${width} ${height}">
             ${state.edges.map((edge) => {
                 const a = positions.get(edge[0]);
@@ -1744,7 +1751,7 @@ function renderGraph() {
         </svg>
         ${state.nodes.map((node, index) => {
             const point = positions.get(node);
-            return `<button class="graph-node selectable ${classFor(node, index)}" data-kind="graph" data-index="${index}" data-value="${escapeHTML(node)}" style="left:${point.x - 33}px; top:${point.y - 29}px" type="button"><span>${escapeHTML(node)}</span>${typeBadge(node, "vertex")}</button>`;
+            return `<button class="graph-node selectable ${classFor(node, index)}" data-kind="graph" data-index="${index}" data-value="${escapeHTML(node)}" style="left:${point.x - 60}px; top:${point.y - 54}px" type="button"><span>${escapeHTML(node)}</span>${typeBadge(node, "vertex")}</button>`;
         }).join("")}
     </div>`;
 }
@@ -1755,37 +1762,37 @@ function renderTrie() {
     const links = [];
     let cursor = 0;
     const width = 900;
-    const levelHeight = 72;
+    const levelHeight = 118;
 
     function place(node, depth, parent) {
         const children = Object.values(node.children);
         if (!children.length) {
             cursor += 1;
-            node.x = cursor * 72;
+            node.x = cursor * 118;
         } else {
             children.forEach((child) => place(child, depth + 1, node));
             node.x = children.reduce((sum, child) => sum + child.x, 0) / children.length;
         }
         node.y = 28 + depth * levelHeight;
         positions.push(node);
-        if (parent) links.push([parent.x, parent.y, node.x, node.y, node.char]);
+        if (parent) links.push([parent, node, node.char]);
     }
 
     place(trie, 0, null);
     const height = Math.max(390, 100 + Math.max(...positions.map((node) => node.y)));
-    const canvasWidth = Math.max(width, cursor * 86);
+    const canvasWidth = Math.max(width, cursor * 132);
     visual.innerHTML = `<div class="trie-canvas" style="min-width:${canvasWidth}px; height:${height}px">
         <svg class="link-layer" style="width:${canvasWidth}px; height:${height}px" viewBox="0 0 ${canvasWidth} ${height}">
             ${links.map((line) => `
-                <line x1="${line[0]}" y1="${line[1] + 19}" x2="${line[2]}" y2="${line[3]}" stroke="var(--primary-color)" stroke-width="2" opacity="0.55" />
-                <text x="${(line[0] + line[2]) / 2}" y="${(line[1] + line[3]) / 2}" fill="var(--text-secondary)" font-size="11">${escapeHTML(line[4])}</text>
+                <line x1="${line[0].x}" y1="${line[0].y + 46}" x2="${line[1].x}" y2="${line[1].y}" stroke="var(--primary-color)" stroke-width="2" opacity="0.55" />
+                <text x="${(line[0].x + line[1].x) / 2}" y="${(line[0].y + line[1].y) / 2}" fill="var(--text-secondary)" font-size="11">${escapeHTML(line[2])}</text>
             `).join("")}
         </svg>
         ${positions.map((node, index) => {
             const label = node.root ? "root" : node.terminal ? `${node.char}*` : node.char;
             const active = highlight.prefix ? node.wordPrefix.startsWith(highlight.prefix) || highlight.prefix.startsWith(node.wordPrefix) : false;
             const selected = selectedRef && selectedRef.kind === "trie" && selectedRef.value === node.wordPrefix;
-            return `<button class="trie-node selectable ${selected ? "is-selected" : active ? "is-hit" : classFor(node.wordPrefix, index)}" data-kind="trie" data-index="${index}" data-value="${escapeHTML(node.wordPrefix)}" style="left:${node.x - 27}px; top:${node.y}px" type="button"><span>${escapeHTML(label)}</span>${typeBadge(node.wordPrefix, node.root ? "root" : node.terminal ? "word" : "prefix")}</button>`;
+            return `<button class="trie-node selectable ${selected ? "is-selected" : active ? "is-hit" : classFor(node.wordPrefix, index)}" data-kind="trie" data-index="${index}" data-value="${escapeHTML(node.wordPrefix)}" style="left:${node.x - 54}px; top:${node.y}px" type="button"><span>${escapeHTML(label)}</span>${typeBadge(node.wordPrefix, node.root ? "root" : node.terminal ? "word" : "prefix")}</button>`;
         }).join("")}
     </div>`;
 }
