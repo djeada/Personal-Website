@@ -731,6 +731,8 @@ function typedModel() {
 async function performOperation(operation) {
     cancelAnimation();
     const config = STRUCTURES[currentKey];
+    if (!validateOperationInput(operation)) return;
+    const originalState = cloneInitial(state);
     const beforeSize = structureSize();
     const requestedValue = normalizeValue(valueInput.value) || config.sampleValues[sampleCursor % config.sampleValues.length];
     const started = performance.now();
@@ -754,10 +756,41 @@ async function performOperation(operation) {
 
     lastMetrics.measured = performance.now() - started;
     lastOutcome = buildOutcome(operation, requestedValue, beforeSize);
+    const committedState = cloneInitial(state);
+    const stateChanged = JSON.stringify(originalState) !== JSON.stringify(committedState);
+    if (stateChanged) state = originalState;
     showRunningResult(lastOutcome);
     render();
-    await playOperationAnimation(operation);
+    const completed = await playOperationAnimation(operation);
+    if (!completed) return;
+    if (stateChanged) {
+        state = committedState;
+        render();
+    }
     showCompletedResult(lastOutcome);
+}
+
+function validateOperationInput(operation) {
+    secondaryField.classList.remove("is-invalid");
+    secondaryInput.removeAttribute("aria-invalid");
+    if (currentKey !== "array" || operation !== "special") return true;
+
+    const rawIndex = normalizeValue(secondaryInput.value);
+    const index = Number(rawIndex);
+    const valid = rawIndex !== "" && Number.isInteger(index) && index >= 0 && index < state.length;
+    if (valid) return true;
+
+    secondaryField.classList.add("is-invalid");
+    secondaryInput.setAttribute("aria-invalid", "true");
+    resultBanner.className = "result-banner is-failure";
+    resultState.textContent = "Input required";
+    resultTitle.textContent = rawIndex === "" ? "Enter an index before running access." : `Index ${rawIndex} is outside the array.`;
+    resultDetail.textContent = state.length ? `Use a whole number from 0 to ${state.length - 1}. No fallback index was used.` : "The array is empty, so there is no valid index.";
+    resultSteps.textContent = "0";
+    resultValue.textContent = "not run";
+    animationStatus.textContent = "Waiting for a valid index";
+    secondaryInput.focus();
+    return false;
 }
 
 function buildOutcome(operation, requestedValue, beforeSize) {
@@ -809,6 +842,7 @@ function cancelAnimation() {
     animationStatus.textContent = "Ready";
     comparisonBubble.hidden = true;
     operationButtons.forEach((button) => { button.disabled = false; });
+    executeOperationButton.disabled = false;
 }
 
 function animationTargets() {
@@ -838,7 +872,7 @@ function delay(ms) {
 }
 
 async function animateTargets(targets, label) {
-    if (!targets.length || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!targets.length || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return true;
     const run = ++animationRun;
     const interval = Number(animationSpeed.value) || 500;
     visualStage.classList.remove("is-finishing");
@@ -846,12 +880,13 @@ async function animateTargets(targets, label) {
     comparisonBubble.hidden = false;
     comparisonBubble.textContent = `${label} starting`;
     operationButtons.forEach((button) => { button.disabled = true; });
+    executeOperationButton.disabled = true;
     targets.forEach((node) => node.classList.remove("animation-focus", "animation-done", "animation-result"));
     await delay(Math.min(420, Math.max(220, interval * 0.55)));
     visualStage.classList.remove("is-starting");
 
     for (let index = 0; index < targets.length; index += 1) {
-        if (run !== animationRun) return;
+        if (run !== animationRun) return false;
         if (index > 0) {
             targets[index - 1].classList.remove("animation-focus");
             targets[index - 1].classList.add("animation-done");
@@ -864,7 +899,7 @@ async function animateTargets(targets, label) {
         await delay(interval);
     }
 
-    if (run !== animationRun) return;
+    if (run !== animationRun) return false;
     const result = targets[targets.length - 1];
     result.classList.remove("animation-focus");
     result.classList.add("animation-result");
@@ -877,11 +912,13 @@ async function animateTargets(targets, label) {
     visualStage.classList.remove("is-finishing");
     animationStatus.textContent = `${label} complete`;
     operationButtons.forEach((button) => { button.disabled = false; });
+    executeOperationButton.disabled = false;
+    return true;
 }
 
 async function playOperationAnimation(operation) {
     lastAnimationTargets = animationTargets();
-    await animateTargets(lastAnimationTargets, operationConfig(operation)[0]);
+    return animateTargets(lastAnimationTargets, operationConfig(operation)[0]);
 }
 
 function bstPath(value) {
@@ -1041,11 +1078,13 @@ function performLinearOperation(operation) {
         }
         const index = state.findIndex((item) => String(item) === value);
         if (index >= 0) {
+            const scanned = state.slice(0, index + 1).map(String);
             state.splice(index, 1);
             addTrace(`Removed ${value}.`);
             setHighlight({
                 value,
-                mode: "remove"
+                mode: "remove",
+                scan: scanned
             });
         } else {
             addTrace(`${value} was not present.`);
@@ -1940,7 +1979,11 @@ operationButtons.forEach((button) => {
 
 executeOperationButton.addEventListener("click", () => performOperation(activeOperation || "search"));
 [valueInput, secondaryInput].forEach((input) => {
-    input.addEventListener("input", updateCommandUI);
+    input.addEventListener("input", () => {
+        input.closest("label")?.classList.remove("is-invalid");
+        input.removeAttribute("aria-invalid");
+        updateCommandUI();
+    });
     input.addEventListener("keydown", (event) => {
         if (event.key === "Enter") performOperation(activeOperation || "search");
     });
