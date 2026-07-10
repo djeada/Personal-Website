@@ -38,9 +38,23 @@ const visualStage = document.getElementById("visual-stage");
 const animationStatus = document.getElementById("animation-status");
 const animationSpeed = document.getElementById("animation-speed");
 const replayAnimationButton = document.getElementById("replay-animation");
+const executeOperationButton = document.getElementById("execute-operation");
+const commandPreview = document.getElementById("command-preview");
+const primaryField = document.getElementById("primary-field");
+const secondaryField = document.getElementById("secondary-field");
+const resultBanner = document.getElementById("result-banner");
+const resultState = document.getElementById("result-state");
+const resultTitle = document.getElementById("result-title");
+const resultDetail = document.getElementById("result-detail");
+const resultSteps = document.getElementById("result-steps");
+const resultValue = document.getElementById("result-value");
+const comparisonBubble = document.getElementById("comparison-bubble");
+const dockOperation = document.getElementById("dock-operation");
+const dockSummary = document.getElementById("dock-summary");
 
 let animationRun = 0;
 let lastAnimationTargets = [];
+let lastOutcome = null;
 
 const STRUCTURES = {
     array: {
@@ -452,7 +466,9 @@ function setOperation(operation) {
     activeOperation = operation;
     operationButtons.forEach((button) => {
         button.classList.toggle("active", button.dataset.operation === operation);
+        button.setAttribute("aria-selected", String(button.dataset.operation === operation));
     });
+    if (operation) updateCommandUI();
 }
 
 function resetState() {
@@ -462,7 +478,7 @@ function resetState() {
     trace = [`Loaded ${config.name}.`];
     setHighlight({});
     selectedRef = null;
-    setOperation(null);
+    setOperation("search");
     sampleCursor = 0;
     valueInput.value = config.sampleValues[0] || "";
     secondaryInput.value = "";
@@ -473,6 +489,7 @@ function resetState() {
         growth: "O(1)",
         plan: [`Loaded the default ${config.name} model.`]
     };
+    showIdleResult();
     updateStructureUI();
     render();
 }
@@ -508,6 +525,7 @@ function randomizeState() {
         growth: "O(n)",
         plan: [`Generated a fresh ${config.name} dataset.`, "Rebuilt the visual model.", "Refreshed type metadata."]
     };
+    showIdleResult();
     render();
 }
 
@@ -522,12 +540,48 @@ function updateStructureUI() {
     if (specialLabel) specialLabel.textContent = config.specialLabel;
     else specialAction.textContent = config.specialLabel;
     secondaryInput.placeholder = config.secondaryLabel;
-    secondaryLabel.textContent = config.secondaryLabel;
-    valueLabel.textContent = config.kind === "map" ? "Key" : config.kind === "graph" ? "Vertex" : config.kind === "trie" ? "Word" : "Value";
     valueInput.placeholder = config.kind === "map" ? "key" : "value";
     editSecondaryInput.disabled = currentKey !== "map";
     editSecondaryInput.placeholder = currentKey === "map" ? "map value" : "only used by maps";
+    updateCommandUI();
     renderComplexity();
+}
+
+function updateCommandUI() {
+    const config = STRUCTURES[currentKey];
+    const operation = activeOperation || "search";
+    const op = operationConfig(operation);
+    const subject = config.kind === "map" ? "key" : config.kind === "graph" ? "vertex" : config.kind === "trie" ? "word" : "value";
+    const capitalized = subject[0].toUpperCase() + subject.slice(1);
+    const labels = {
+        add: `${capitalized} to add`,
+        search: `${capitalized} to find`,
+        remove: ["stack", "queue"].includes(currentKey) ? "Value (not required)" : `${capitalized} to remove`,
+        special: currentKey === "array" ? "Fallback value" : capitalized
+    };
+    valueLabel.textContent = labels[operation];
+    secondaryLabel.textContent = currentKey === "array" && operation === "special" ? "Index to access" : currentKey === "graph" && operation === "special" ? "Connect to vertex" : currentKey === "map" && operation === "add" ? "Value to store" : config.secondaryLabel;
+    const needsSecondary = (currentKey === "array" && operation === "special") || (currentKey === "graph" && operation === "special") || (currentKey === "map" && operation === "add");
+    secondaryField.classList.toggle("is-required", needsSecondary);
+    secondaryField.classList.toggle("is-muted", !needsSecondary);
+    primaryField.classList.toggle("is-muted", ["stack", "queue"].includes(currentKey) && ["remove", "special"].includes(operation));
+    executeOperationButton.querySelector("span").textContent = `Run ${op[0].toLowerCase()}`;
+    dockOperation.textContent = op[0];
+    const primary = valueInput.value || "value";
+    const secondary = secondaryInput.value || config.secondaryLabel.toLowerCase();
+    const args = needsSecondary ? `${primary}, ${secondary}` : primary;
+    commandPreview.innerHTML = `<code>${escapeHTML(op[0].toLowerCase().replace(/\s+/g, "_"))}(${escapeHTML(args)})</code><span>${escapeHTML(op[4])}</span>`;
+}
+
+function showIdleResult() {
+    lastOutcome = null;
+    resultBanner.className = "result-banner is-idle";
+    resultState.textContent = "No operation run yet";
+    resultTitle.textContent = "Select an operation and provide its input.";
+    resultDetail.textContent = "The output and cost will appear here.";
+    resultSteps.textContent = "-";
+    resultValue.textContent = "-";
+    dockSummary.textContent = "No comparisons yet";
 }
 
 function renderComplexity() {
@@ -631,6 +685,8 @@ function typedModel() {
 async function performOperation(operation) {
     cancelAnimation();
     const config = STRUCTURES[currentKey];
+    const beforeSize = structureSize();
+    const requestedValue = normalizeValue(valueInput.value) || config.sampleValues[sampleCursor % config.sampleValues.length];
     const started = performance.now();
     setOperation(operation);
 
@@ -651,14 +707,61 @@ async function performOperation(operation) {
     }
 
     lastMetrics.measured = performance.now() - started;
+    lastOutcome = buildOutcome(operation, requestedValue, beforeSize);
+    showRunningResult(lastOutcome);
     render();
     await playOperationAnimation(operation);
+    showCompletedResult(lastOutcome);
+}
+
+function buildOutcome(operation, requestedValue, beforeSize) {
+    const afterSize = structureSize();
+    const found = highlight.mode === "hit";
+    let success = true;
+    let title = trace[0] || `${operationConfig(operation)[0]} completed.`;
+    let returned = "void";
+    if (operation === "search") {
+        success = found;
+        returned = found ? (highlight.value ?? requestedValue) : "not found";
+        title = found ? `Found ${requestedValue}` : `${requestedValue} was not found`;
+    } else if (operation === "add") {
+        success = afterSize > beforeSize || currentKey === "map";
+        returned = success ? (highlight.value ?? requestedValue) : "unchanged";
+    } else if (operation === "remove") {
+        success = afterSize < beforeSize;
+        returned = success ? (highlight.value ?? "removed") : "not found";
+    } else {
+        returned = highlight.value ?? (highlight.index !== undefined ? state[highlight.index] : "complete");
+    }
+    const status = success ? "Operation succeeded" : operation === "add" ? "No change needed" : "Operation finished: no match";
+    return { success, status, title, returned: String(returned ?? "null"), detail: operationConfig(operation)[4], steps: lastMetrics.touched };
+}
+
+function showRunningResult(outcome) {
+    resultBanner.className = "result-banner is-running";
+    resultState.textContent = "Operation running";
+    resultTitle.textContent = outcome.title;
+    resultDetail.textContent = "Follow the highlighted path in the visualization.";
+    resultSteps.textContent = `0 / ${outcome.steps}`;
+    resultValue.textContent = "pending";
+}
+
+function showCompletedResult(outcome) {
+    if (!outcome) return;
+    resultBanner.className = `result-banner ${outcome.success ? "is-success" : "is-failure"}`;
+    resultState.textContent = outcome.status;
+    resultTitle.textContent = outcome.title;
+    resultDetail.textContent = outcome.detail;
+    resultSteps.textContent = String(outcome.steps);
+    resultValue.textContent = outcome.returned;
+    dockSummary.textContent = `${outcome.steps} ${outcome.steps === 1 ? "step" : "steps"} performed`;
 }
 
 function cancelAnimation() {
     animationRun += 1;
     visualStage.classList.remove("is-playing");
     animationStatus.textContent = "Ready";
+    comparisonBubble.hidden = true;
     operationButtons.forEach((button) => { button.disabled = false; });
 }
 
@@ -693,6 +796,7 @@ async function animateTargets(targets, label) {
     const run = ++animationRun;
     const interval = Number(animationSpeed.value) || 500;
     visualStage.classList.add("is-playing");
+    comparisonBubble.hidden = false;
     operationButtons.forEach((button) => { button.disabled = true; });
     targets.forEach((node) => node.classList.remove("animation-focus", "animation-done", "animation-result"));
 
@@ -704,6 +808,8 @@ async function animateTargets(targets, label) {
         }
         targets[index].classList.add("animation-focus");
         animationStatus.textContent = `${label} - step ${index + 1} of ${targets.length}`;
+        comparisonBubble.textContent = `Inspecting ${targets[index].dataset.value || `node ${index + 1}`}`;
+        resultSteps.textContent = `${index + 1} / ${targets.length}`;
         targets[index].scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
         await delay(interval);
     }
@@ -713,6 +819,9 @@ async function animateTargets(targets, label) {
     result.classList.remove("animation-focus");
     result.classList.add("animation-result");
     visualStage.classList.remove("is-playing");
+    comparisonBubble.textContent = lastOutcome && lastOutcome.success ? "Match confirmed" : "Traversal complete";
+    await delay(Math.min(300, interval));
+    comparisonBubble.hidden = true;
     animationStatus.textContent = `${label} complete`;
     operationButtons.forEach((button) => { button.disabled = false; });
 }
@@ -1220,7 +1329,8 @@ function performTrieOperation(operation) {
         addTrace(exists ? `${word} already exists.` : `Inserted ${word}.`);
         setHighlight({
             value: word,
-            mode: exists ? "hit" : "new"
+            mode: exists ? "hit" : "new",
+            prefix: word
         });
         setMetrics(operation, {
             primary: word,
@@ -1230,7 +1340,8 @@ function performTrieOperation(operation) {
         addTrace(exists ? `Found word ${word}.` : `${word} is not a stored word.`);
         setHighlight({
             value: word,
-            mode: exists ? "hit" : "scan"
+            mode: exists ? "hit" : "scan",
+            prefix: word
         });
         setMetrics(operation, {
             primary: word,
@@ -1346,7 +1457,7 @@ function classFor(value, index) {
     if (selectedRef && selectedRef.value !== undefined && String(selectedRef.value) === text) return "is-selected";
     if (highlight.index === index) return `is-${highlight.mode || "hit"}`;
     if (highlight.value !== undefined && String(highlight.value) === text) return `is-${highlight.mode || "hit"}`;
-    if (highlight.scan && highlight.scan.map(String).includes(text)) return "is-scan";
+    if (highlight.scan && highlight.scan.slice(0, Math.max(1, lastMetrics.touched)).map(String).includes(text)) return "is-scan";
     return "";
 }
 
@@ -1711,7 +1822,15 @@ structureSelect.addEventListener("change", () => {
 });
 
 operationButtons.forEach((button) => {
-    button.addEventListener("click", () => performOperation(button.dataset.operation));
+    button.addEventListener("click", () => setOperation(button.dataset.operation));
+});
+
+executeOperationButton.addEventListener("click", () => performOperation(activeOperation || "search"));
+[valueInput, secondaryInput].forEach((input) => {
+    input.addEventListener("input", updateCommandUI);
+    input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") performOperation(activeOperation || "search");
+    });
 });
 
 replayAnimationButton.addEventListener("click", () => {
