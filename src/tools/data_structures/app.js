@@ -34,6 +34,13 @@ const operationBar = document.getElementById("operation-bar");
 const randomizeButton = document.getElementById("randomize");
 const resetButton = document.getElementById("reset");
 const operationButtons = Array.from(document.querySelectorAll("[data-operation]"));
+const visualStage = document.getElementById("visual-stage");
+const animationStatus = document.getElementById("animation-status");
+const animationSpeed = document.getElementById("animation-speed");
+const replayAnimationButton = document.getElementById("replay-animation");
+
+let animationRun = 0;
+let lastAnimationTargets = [];
 
 const STRUCTURES = {
     array: {
@@ -449,6 +456,7 @@ function setOperation(operation) {
 }
 
 function resetState() {
+    cancelAnimation();
     const config = STRUCTURES[currentKey];
     state = cloneInitial(config.initial);
     trace = [`Loaded ${config.name}.`];
@@ -470,6 +478,7 @@ function resetState() {
 }
 
 function randomizeState() {
+    cancelAnimation();
     const config = STRUCTURES[currentKey];
     const pool = config.sampleValues.concat(["11", "22", "33", "44", "55", "K", "M", "P"]);
     if (config.kind === "graph") {
@@ -509,7 +518,9 @@ function updateStructureUI() {
     bestFor.textContent = config.best;
     watchOut.textContent = config.caution;
     memoryNote.textContent = config.memory;
-    specialAction.textContent = config.specialLabel;
+    const specialLabel = specialAction.querySelector("span");
+    if (specialLabel) specialLabel.textContent = config.specialLabel;
+    else specialAction.textContent = config.specialLabel;
     secondaryInput.placeholder = config.secondaryLabel;
     secondaryLabel.textContent = config.secondaryLabel;
     valueLabel.textContent = config.kind === "map" ? "Key" : config.kind === "graph" ? "Vertex" : config.kind === "trie" ? "Word" : "Value";
@@ -617,7 +628,8 @@ function typedModel() {
     }));
 }
 
-function performOperation(operation) {
+async function performOperation(operation) {
+    cancelAnimation();
     const config = STRUCTURES[currentKey];
     const started = performance.now();
     setOperation(operation);
@@ -640,6 +652,74 @@ function performOperation(operation) {
 
     lastMetrics.measured = performance.now() - started;
     render();
+    await playOperationAnimation(operation);
+}
+
+function cancelAnimation() {
+    animationRun += 1;
+    visualStage.classList.remove("is-playing");
+    animationStatus.textContent = "Ready";
+    operationButtons.forEach((button) => { button.disabled = false; });
+}
+
+function animationTargets() {
+    const selectable = Array.from(visual.querySelectorAll(".selectable"));
+    if (highlight.prefix) {
+        return selectable.filter((node) => {
+            const value = node.dataset.value || "";
+            return value && (highlight.prefix.startsWith(value) || value.startsWith(highlight.prefix));
+        }).sort((a, b) => (a.dataset.value || "").length - (b.dataset.value || "").length);
+    }
+    if (highlight.scan && highlight.scan.length) {
+        const remaining = selectable.slice();
+        return highlight.scan.map(String).map((value) => {
+            const index = remaining.findIndex((node) => String(node.dataset.value) === value);
+            return index < 0 ? null : remaining.splice(index, 1)[0];
+        }).filter(Boolean).slice(0, Math.max(1, lastMetrics.touched));
+    }
+    const exact = selectable.filter((node) => {
+        if (highlight.index !== undefined && Number(node.dataset.index) === highlight.index) return true;
+        return highlight.value !== undefined && String(node.dataset.value) === String(highlight.value);
+    });
+    return exact.length ? exact : selectable.slice(0, Math.min(lastMetrics.touched, selectable.length));
+}
+
+function delay(ms) {
+    return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function animateTargets(targets, label) {
+    if (!targets.length || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const run = ++animationRun;
+    const interval = Number(animationSpeed.value) || 500;
+    visualStage.classList.add("is-playing");
+    operationButtons.forEach((button) => { button.disabled = true; });
+    targets.forEach((node) => node.classList.remove("animation-focus", "animation-done", "animation-result"));
+
+    for (let index = 0; index < targets.length; index += 1) {
+        if (run !== animationRun) return;
+        if (index > 0) {
+            targets[index - 1].classList.remove("animation-focus");
+            targets[index - 1].classList.add("animation-done");
+        }
+        targets[index].classList.add("animation-focus");
+        animationStatus.textContent = `${label} - step ${index + 1} of ${targets.length}`;
+        targets[index].scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+        await delay(interval);
+    }
+
+    if (run !== animationRun) return;
+    const result = targets[targets.length - 1];
+    result.classList.remove("animation-focus");
+    result.classList.add("animation-result");
+    visualStage.classList.remove("is-playing");
+    animationStatus.textContent = `${label} complete`;
+    operationButtons.forEach((button) => { button.disabled = false; });
+}
+
+async function playOperationAnimation(operation) {
+    lastAnimationTargets = animationTargets();
+    await animateTargets(lastAnimationTargets, operationConfig(operation)[0]);
 }
 
 function bstPath(value) {
@@ -1632,6 +1712,12 @@ structureSelect.addEventListener("change", () => {
 
 operationButtons.forEach((button) => {
     button.addEventListener("click", () => performOperation(button.dataset.operation));
+});
+
+replayAnimationButton.addEventListener("click", () => {
+    const targets = animationTargets();
+    lastAnimationTargets = targets;
+    animateTargets(targets, lastMetrics.label);
 });
 
 randomizeButton.addEventListener("click", randomizeState);
