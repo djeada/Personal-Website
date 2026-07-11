@@ -80,8 +80,9 @@ function createBuildings() {
     const facade = material(0x151d2a, 0x10152a, .45);
     const towers = new THREE.InstancedMesh(geo, facade, CONFIG.buildings);
     towers.castShadow = towers.receiveShadow = true;
-    windowMaterial = new THREE.MeshBasicMaterial({ color: palette.gold, transparent: true, opacity: .82, blending: THREE.AdditiveBlending, depthWrite: false });
-    const windows = new THREE.InstancedMesh(geo, windowMaterial, CONFIG.buildings * 2);
+    windowMaterial = new THREE.MeshBasicMaterial({ color: palette.gold, transparent: true, opacity: .82 });
+    const windowsPerBuilding = 16;
+    const windows = new THREE.InstancedMesh(geo, windowMaterial, CONFIG.buildings * windowsPerBuilding);
     const dummy = new THREE.Object3D(); let wi = 0;
     for (let i = 0; i < CONFIG.buildings; i++) {
         const gx = (i % 12) - 5.5, gz = Math.floor(i / 12) - 5.5;
@@ -91,9 +92,16 @@ function createBuildings() {
         const w = rand(5, 9), d = rand(5, 9);
         dummy.position.set(x, h / 2, z); dummy.scale.set(w, h, d); dummy.rotation.y = Math.round(rand(0, 4)) * Math.PI / 2; dummy.updateMatrix(); towers.setMatrixAt(i, dummy.matrix);
         const c = new THREE.Color().setHSL(rand(.55, .69), rand(.16, .36), rand(.09, .18)); towers.setColorAt(i, c);
-        for (let face = 0; face < 2; face++) {
-            dummy.position.set(x + (face ? w / 2 + .03 : 0), h * rand(.42, .72), z + (face ? 0 : d / 2 + .03));
-            dummy.scale.set(face ? .035 : w * .7, h * rand(.35, .6), face ? d * .7 : .035); dummy.rotation.y = 0; dummy.updateMatrix(); windows.setMatrixAt(wi++, dummy.matrix);
+        // Small, separated light strips read as windows; building-sized planes
+        // obscured the facades and made the skyline look like broken geometry.
+        for (let row = 0; row < 4; row++) for (let col = 0; col < 2; col++) {
+            const y = h * (.2 + row * .18);
+            const lit = Math.random() > .18 ? 1 : .18;
+            dummy.rotation.y = 0;
+            dummy.position.set(x + (col - .5) * w * .38, y, z + d / 2 + .035);
+            dummy.scale.set(w * .25 * lit, Math.max(.32, h * .035), .05); dummy.updateMatrix(); windows.setMatrixAt(wi++, dummy.matrix);
+            dummy.position.set(x + w / 2 + .035, y, z + (col - .5) * d * .38);
+            dummy.scale.set(.05, Math.max(.32, h * .035), d * .25 * lit); dummy.updateMatrix(); windows.setMatrixAt(wi++, dummy.matrix);
         }
     }
     city.add(towers, windows); $('stat-buildings').textContent = CONFIG.buildings;
