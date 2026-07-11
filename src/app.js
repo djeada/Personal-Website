@@ -419,7 +419,20 @@ function main() {
     initBackToTop();
 
 
-    const navToggle = document.getElementById('navbar-toggle');
+    let navToggle = document.getElementById('navbar-toggle');
+
+    // Older generated pages use a styled checkbox as the hamburger. Pseudo-elements
+    // on form controls are unreliable in mobile Safari, so upgrade it to a button.
+    if (navToggle && navToggle.matches('input[type="checkbox"]')) {
+        const button = document.createElement('button');
+        button.id = navToggle.id;
+        button.type = 'button';
+        button.className = navToggle.className;
+        button.setAttribute('aria-label', navToggle.getAttribute('aria-label') || 'Toggle navigation menu');
+        navToggle.replaceWith(button);
+        navToggle = button;
+    }
+
     const navMenu = navToggle ? navToggle.nextElementSibling : null;
     if (navToggle && navMenu && navMenu.tagName === 'UL') {
 
@@ -436,8 +449,10 @@ function main() {
             document.body.appendChild(overlay);
         }
 
-        const updateOpenState = () => {
-            const open = navToggle.checked;
+        let open = false;
+        const updateOpenState = (nextOpen = open) => {
+            open = nextOpen;
+            navToggle.classList.toggle('is-open', open);
             document.body.classList.toggle('nav-open', open);
             document.body.style.overflow = open ? 'hidden' : '';
             navMenu.setAttribute('aria-hidden', open ? 'false' : 'true');
@@ -453,24 +468,22 @@ function main() {
 
         updateOpenState();
 
-        navToggle.addEventListener('change', updateOpenState);
+        navToggle.addEventListener('click', () => updateOpenState(!open));
         overlay.addEventListener('click', () => {
-            navToggle.checked = false;
-            updateOpenState();
+            updateOpenState(false);
         });
 
 
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && navToggle.checked) {
-                navToggle.checked = false;
-                updateOpenState();
+            if (e.key === 'Escape' && open) {
+                updateOpenState(false);
                 navToggle.focus();
             }
         });
 
 
         document.addEventListener('keydown', (e) => {
-            if (!navToggle.checked || e.key !== 'Tab') return;
+            if (!open || e.key !== 'Tab') return;
             const focusables = navMenu.querySelectorAll('a, button, input, [tabindex]:not([tabindex="-1"])');
             if (!focusables.length) return;
             const first = focusables[0];
@@ -488,8 +501,7 @@ function main() {
         navMenu.addEventListener('click', (e) => {
             const target = e.target;
             if (target && target.closest('a')) {
-                navToggle.checked = false;
-                updateOpenState();
+                updateOpenState(false);
             }
         });
     }

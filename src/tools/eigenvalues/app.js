@@ -359,7 +359,7 @@
                 </header>
                 <div class="vector-row"></div>
             `;
-            card.querySelector(".lambda-pill").textContent = `lambda = ${formatNumber(root)}`;
+            card.querySelector(".lambda-pill").textContent = `\\(\\lambda_${index + 1}=${formatNumber(root)}\\)`;
             const vectorRow = card.querySelector(".vector-row");
             vectors[index].forEach(value => {
                 const cell = document.createElement("span");
@@ -369,6 +369,7 @@
             });
             resultCards.appendChild(card);
         });
+        if (window.MathJax && window.MathJax.typesetPromise) window.MathJax.typesetPromise([resultCards]);
     }
 
     function renderPowerResult(result) {
@@ -382,7 +383,7 @@
             </header>
             <div class="vector-row"></div>
         `;
-        card.querySelector(".lambda-pill").textContent = `lambda ≈ ${formatNumber(result.eigenvalue)}`;
+        card.querySelector(".lambda-pill").textContent = `\\(\\lambda_{\\max}\\approx ${formatNumber(result.eigenvalue)}\\)`;
         const vectorRow = card.querySelector(".vector-row");
         result.eigenvector.forEach(value => {
             const cell = document.createElement("span");
@@ -391,6 +392,7 @@
             vectorRow.appendChild(cell);
         });
         resultCards.appendChild(card);
+        if (window.MathJax && window.MathJax.typesetPromise) window.MathJax.typesetPromise([resultCards]);
     }
 
     function calculateExact() {
@@ -424,7 +426,7 @@
         const vectors = roots.map(root => findEigenvector(matrix, root));
         exactValuesOutput.value = roots.map(formatNumber).join(", ");
         exactVectorsOutput.value = roots.map((root, index) =>
-            `lambda=${formatNumber(root)} => ${formatVector(vectors[index])}`
+            `λ=${formatNumber(root)} → ${formatVector(vectors[index])}`
         ).join("\n");
         renderExactResults(roots, vectors);
         resultSummary.textContent = `${roots.length} real eigenpair${roots.length === 1 ? "" : "s"} found.`;

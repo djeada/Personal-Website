@@ -244,6 +244,7 @@
         resultGrid.innerHTML = "";
         nodes.forEach(node => resultGrid.appendChild(node));
         resultSummary.textContent = summary;
+        if (window.MathJax && window.MathJax.typesetPromise) window.MathJax.typesetPromise([resultGrid]);
     }
 
     function setLegend(items) {
@@ -345,7 +346,7 @@
         }
         ctx.stroke();
         drawVector(result.V[0], "#16a34a", width, height, scale, "v1");
-        drawVector(result.U[0].map(value => value * result.singularValues[0]), "#ea8400", width, height, scale, "sigma1 u1");
+        drawVector(result.U[0].map(value => value * result.singularValues[0]), "#ea8400", width, height, scale, "σ₁u₁");
         setLegend([["#2563eb", "unit circle"], ["#e11d48", "A applied"], ["#16a34a", "input direction"], ["#ea8400", "output axis"]]);
     }
 
@@ -395,7 +396,7 @@
         ctx.stroke();
         if (result.real) {
             result.vectors.forEach((vector, index) => {
-                drawVector(vector.map(value => value * result.values[index]), index === 0 ? "#ea8400" : "#16a34a", width, height, scale, `lambda${index + 1} v${index + 1}`);
+                drawVector(vector.map(value => value * result.values[index]), index === 0 ? "#ea8400" : "#16a34a", width, height, scale, `λ${index === 0 ? "₁" : "₂"}v${index === 0 ? "₁" : "₂"}`);
             });
         }
         setLegend([["#2563eb", "unit square"], ["#e11d48", "A applied"], ["#ea8400", "eigen direction 1"], ["#16a34a", "eigen direction 2"]]);
@@ -406,7 +407,7 @@
         const result = svd2x2(A);
         drawSvd(A, result);
         renderResults([
-            metricsCard("Singular Values", [["sigma1", fmt(result.singularValues[0])], ["sigma2", fmt(result.singularValues[1])]]),
+            metricsCard("Singular Values", [["\\(\\sigma_1\\)", fmt(result.singularValues[0])], ["\\(\\sigma_2\\)", fmt(result.singularValues[1])]]),
             card("U", matrixFmt(transpose(result.U)), true),
             card("V", matrixFmt(transpose(result.V)), true)
         ], "SVD decomposes A into input directions, stretches, and output directions.");
@@ -419,7 +420,7 @@
         const result = pca2d(parseDataset());
         drawPca(result);
         renderResults([
-            metricsCard("Explained Variance", [["PC1", `${fmt(result.explained[0] * 100)}%`], ["PC2", `${fmt(result.explained[1] * 100)}%`]]),
+            metricsCard("Explained Variance", [["\\(\\mathrm{PC}_1\\)", `${fmt(result.explained[0] * 100)}%`], ["\\(\\mathrm{PC}_2\\)", `${fmt(result.explained[1] * 100)}%`]]),
             card("Mean", vectorFmt(result.mean)),
             card("Covariance", matrixFmt(result.covariance), true)
         ], "PCA found the principal axes of the centered dataset.");
@@ -440,7 +441,7 @@
             return;
         }
         renderResults([
-            metricsCard("Eigenvalues", result.values.map((value, index) => [`lambda${index + 1}`, fmt(value)])),
+            metricsCard("Eigenvalues", result.values.map((value, index) => [`\\(\\lambda_${index + 1}\\)`, fmt(value)])),
             card("Eigenvectors", result.vectors.map((vector, index) => `v${index + 1} = ${vectorFmt(vector)}`).join("\n"), true),
             card("Matrix", matrixFmt(A), true)
         ], "EVD found real invariant directions for the transform.");

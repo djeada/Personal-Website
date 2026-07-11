@@ -134,10 +134,10 @@
 
     function updateActiveCells() {
         const { rowsA, inner, colsB } = dims();
-        matrixASize.textContent = `${rowsA} row${rowsA === 1 ? "" : "s"} x ${inner} column${inner === 1 ? "" : "s"}`;
-        matrixBSize.textContent = `${inner} row${inner === 1 ? "" : "s"} x ${colsB} column${colsB === 1 ? "" : "s"}`;
-        resultSize.textContent = `${rowsA} row${rowsA === 1 ? "" : "s"} x ${colsB} column${colsB === 1 ? "" : "s"}`;
-        dimensionEquation.textContent = `A ${rowsA}x${inner} x B ${inner}x${colsB} = C ${rowsA}x${colsB}`;
+        matrixASize.textContent = `${rowsA} row${rowsA === 1 ? "" : "s"} × ${inner} column${inner === 1 ? "" : "s"}`;
+        matrixBSize.textContent = `${inner} row${inner === 1 ? "" : "s"} × ${colsB} column${colsB === 1 ? "" : "s"}`;
+        resultSize.textContent = `${rowsA} row${rowsA === 1 ? "" : "s"} × ${colsB} column${colsB === 1 ? "" : "s"}`;
+        dimensionEquation.textContent = `A ${rowsA}×${inner} · B ${inner}×${colsB} = C ${rowsA}×${colsB}`;
         operationCount.textContent = `${rowsA * inner * colsB} multiply-add term${rowsA * inner * colsB === 1 ? "" : "s"}`;
 
         forEachInput(matrixATable, (input, row, col) => {
@@ -212,7 +212,7 @@
         const selected = resultTable.rows[row]?.cells[col]?.querySelector(".result-cell");
         if (selected) selected.classList.add("is-highlighted");
 
-        const terms = A[row].map((value, index) => `${fmt(value)} x ${fmt(B[index][col])}`);
+        const terms = A[row].map((value, index) => `${fmt(value)} × ${fmt(B[index][col])}`);
         const expression = terms.join(" + ");
         breakdownCard.innerHTML = `
             <strong>C${row + 1}${col + 1} = row ${row + 1} of A dot column ${col + 1} of B</strong>
