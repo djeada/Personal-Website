@@ -102,13 +102,22 @@
         backdrop-filter: blur(10px);
       }
       .ring-universe-hud__status {
-        white-space: nowrap;
+        min-width: 178px;
         padding: 11px 13px;
         border-radius: 999px;
         border: 1px solid rgba(160, 255, 250, .18);
         background: rgba(4, 9, 18, .48);
         box-shadow: inset 0 1px rgba(255,255,255,.08);
       }
+      .ring-universe-hud__metrics {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        margin-top: 6px;
+        color: rgba(205, 224, 255, .56);
+        font-size: 9px;
+      }
+      .ring-universe-hud__metrics b { color: rgba(235, 250, 255, .9); font-weight: 600; }
       .ring-universe-charge {
         display: inline-block;
         width: 72px;
@@ -568,21 +577,24 @@
     const rune = new THREE.Color(colors.rune);
 
     for (let i = 0; i < count; i++) {
-      const radius = rand(2.4, 9.4);
+      const radius = rand(2.6, 10.8);
       const angle = Math.random() * TAU;
-      const y = rand(-2.85, 3.0);
+      const y = rand(-2.4, 2.4);
       const offset = i * 3;
       positions[offset] = Math.cos(angle) * radius;
-      positions[offset + 1] = y;
+      positions[offset + 1] = 2.05 + y;
       positions[offset + 2] = Math.sin(angle) * radius;
       setColorAttribute(particleColors, i, pick([portal, portal, ember, ghost, rune]), rand(0.34, 0.98));
+      const direction = Math.random() < 0.16 ? -1 : 1;
+      const orbitalSpeed = Math.sqrt(12.5 / radius) * direction * rand(0.82, 1.18);
       data.push({
-        angle,
-        radius,
-        y,
-        speed: rand(0.32, 1.58) * (Math.random() < 0.5 ? -1 : 1),
-        wobble: rand(0.5, 2.7),
-        pull: rand(0.02, 0.11)
+        vx: -Math.sin(angle) * orbitalSpeed,
+        vy: rand(-0.18, 0.18),
+        vz: Math.cos(angle) * orbitalSpeed,
+        drag: rand(0.9972, 0.9994),
+        phase: rand(0, TAU),
+        turbulence: rand(0.15, 0.7),
+        pointerPull: rand(0.15, 0.75)
       });
     }
 
@@ -601,6 +613,159 @@
     });
 
     return { points: new THREE.Points(geometry, material), positions, data, geometry, material };
+  }
+
+  function createOrbitalSystem(colors, quality, interactiveTargets) {
+    const group = new THREE.Group();
+    group.position.set(0, 2.05, 0);
+    const orbiters = [];
+    const count = quality.isMobile ? 3 : 6;
+    const hues = [colors.portal, colors.ember, colors.rune, colors.ghost, colors.starWarm, colors.nebulaViolet];
+
+    for (let i = 0; i < count; i++) {
+      const radius = 7.2 + i * 2.25 + rand(-0.35, 0.35);
+      const eccentricity = rand(0.72, 0.96);
+      const tilt = rand(-0.62, 0.62);
+      const phase = rand(0, TAU);
+      const speed = rand(0.075, 0.17) * (i % 4 === 3 ? -1 : 1) / Math.sqrt(radius / 7);
+      const orbitGroup = new THREE.Group();
+      orbitGroup.rotation.x = tilt;
+      orbitGroup.rotation.z = rand(-0.28, 0.28);
+
+      const pathPoints = [];
+      const segments = quality.isMobile ? 72 : 128;
+      for (let s = 0; s < segments; s++) {
+        const a = (s / segments) * TAU;
+        pathPoints.push(new THREE.Vector3(Math.cos(a) * radius, 0, Math.sin(a) * radius * eccentricity));
+      }
+      const pathGeometry = new THREE.BufferGeometry().setFromPoints(pathPoints);
+      const pathMaterial = new THREE.LineBasicMaterial({
+        color: hues[i],
+        transparent: true,
+        opacity: 0.055,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      const path = new THREE.LineLoop(pathGeometry, pathMaterial);
+      orbitGroup.add(path);
+
+      const bodyGroup = new THREE.Group();
+      const size = rand(0.11, 0.28) * (i === 0 ? 1.35 : 1);
+      const bodyMaterial = new THREE.MeshPhysicalMaterial({
+        color: hues[i],
+        emissive: hues[i],
+        emissiveIntensity: 0.7,
+        roughness: 0.35,
+        metalness: 0.25
+      });
+      const body = new THREE.Mesh(new THREE.IcosahedronGeometry(size, quality.isMobile ? 1 : 2), bodyMaterial);
+      body.userData.interactive = 'orbiter';
+      body.userData.orbiterIndex = i;
+      interactiveTargets.push(body);
+
+      const haloMaterial = new THREE.MeshBasicMaterial({
+        color: hues[i],
+        transparent: true,
+        opacity: 0.2,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+      const halo = new THREE.Mesh(new THREE.RingGeometry(size * 1.7, size * 3.5, 40), haloMaterial);
+      bodyGroup.add(body, halo);
+      orbitGroup.add(bodyGroup);
+      group.add(orbitGroup);
+      orbiters.push({ orbitGroup, bodyGroup, body, halo, path, phase, speed, radius, eccentricity, size, pathGeometry, pathMaterial, bodyMaterial, haloMaterial });
+    }
+
+    return {
+      group,
+      orbiters,
+      update(t, dt, pulse, charge, openProgress, hovered) {
+        orbiters.forEach((orbiter, index) => {
+          orbiter.phase += dt * orbiter.speed * (1 + charge * 0.75 + pulse * 1.4);
+          const radialKick = pulse * (0.45 + index * 0.035);
+          orbiter.bodyGroup.position.set(
+            Math.cos(orbiter.phase) * (orbiter.radius + radialKick),
+            Math.sin(orbiter.phase * 2.0 + index) * (0.18 + index * 0.035),
+            Math.sin(orbiter.phase) * (orbiter.radius * orbiter.eccentricity + radialKick)
+          );
+          orbiter.body.rotation.x += dt * (0.7 + index * 0.08);
+          orbiter.body.rotation.y += dt * (1.1 - index * 0.05);
+          orbiter.halo.rotation.z = -orbiter.phase;
+          const hoveredBoost = hovered === orbiter.body ? 1 : 0;
+          orbiter.bodyGroup.scale.setScalar(1 + pulse * 0.12 + hoveredBoost * 0.8);
+          orbiter.haloMaterial.opacity = 0.12 + charge * 0.12 + openProgress * 0.18 + hoveredBoost * 0.3 + Math.sin(t * 2 + index) * 0.025;
+          orbiter.pathMaterial.opacity = 0.035 + charge * 0.08 + openProgress * 0.07;
+        });
+      },
+      dispose() {
+        orbiters.forEach((orbiter) => {
+          orbiter.pathGeometry.dispose();
+          orbiter.pathMaterial.dispose();
+          orbiter.body.geometry.dispose();
+          orbiter.bodyMaterial.dispose();
+          orbiter.halo.geometry.dispose();
+          orbiter.haloMaterial.dispose();
+        });
+      }
+    };
+  }
+
+  function createEnergyFilaments(colors, quality) {
+    const group = new THREE.Group();
+    group.position.set(0, 0, 0.18);
+    const filaments = [];
+    const count = quality.isMobile ? 5 : 11;
+    const pointCount = quality.isMobile ? 14 : 22;
+
+    for (let i = 0; i < count; i++) {
+      const positions = new Float32Array(pointCount * 3);
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      const material = new THREE.LineBasicMaterial({
+        color: i % 4 === 0 ? colors.ember : colors.portal,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      const line = new THREE.Line(geometry, material);
+      group.add(line);
+      filaments.push({ line, geometry, material, positions, pointCount, from: i, to: (i * 7 + 9) % 32, phase: rand(0, TAU) });
+    }
+
+    return {
+      group,
+      filaments,
+      update(t, pulse, charge, openProgress, shardCount) {
+        const energy = clamp(charge * 0.7 + pulse * 0.45 + openProgress * 0.55, 0, 1.4);
+        filaments.forEach((filament, index) => {
+          const startAngle = (filament.from % shardCount) / shardCount * TAU;
+          const endAngle = (filament.to % shardCount) / shardCount * TAU;
+          const flicker = 0.78 + Math.sin(t * 19 + filament.phase) * 0.22;
+          for (let p = 0; p < filament.pointCount; p++) {
+            const progress = p / (filament.pointCount - 1);
+            const x = lerp(Math.cos(startAngle) * 5.05, Math.cos(endAngle) * 5.05, progress);
+            const y = lerp(Math.sin(startAngle) * 5.05, Math.sin(endAngle) * 5.05, progress);
+            const bow = Math.sin(progress * Math.PI) * (0.45 + energy * 0.55);
+            const jitter = Math.sin(progress * 31 + t * 16 + filament.phase) * 0.07 * energy;
+            const offset = p * 3;
+            filament.positions[offset] = x + Math.cos(startAngle + Math.PI / 2) * (bow + jitter);
+            filament.positions[offset + 1] = y + Math.sin(startAngle + Math.PI / 2) * (bow + jitter);
+            filament.positions[offset + 2] = 0.12 + Math.sin(progress * Math.PI) * (0.55 + index * 0.025);
+          }
+          filament.geometry.attributes.position.needsUpdate = true;
+          filament.material.opacity = energy > 0.12 ? energy * 0.34 * flicker : 0;
+        });
+      },
+      dispose() {
+        filaments.forEach((filament) => {
+          filament.geometry.dispose();
+          filament.material.dispose();
+        });
+      }
+    };
   }
 
   function createTrailSystem(maxCount, texture, colors) {
@@ -981,12 +1146,17 @@
     hud.className = 'ring-universe-hud';
     hud.innerHTML = `
       <div class="ring-universe-hud__panel">${isMobile ? 'Tap pulse | drag orbit | pinch depth | two-finger charge' : 'Hold to charge | release shockwave | drag orbit | wheel depth | Shift+drag draw sigils | WASD/QE fly | Space pulse | C cinematic | M meteors | R reset'}</div>
-      <div class="ring-universe-hud__status">Charge <span class="ring-universe-charge"><i></i></span></div>
+      <div class="ring-universe-hud__status">
+        Charge <span class="ring-universe-charge"><i></i></span>
+        <span class="ring-universe-hud__metrics"><span>Stability <b data-stability>100%</b></span><span>Flux <b data-flux>low</b></span></span>
+      </div>
     `;
     container.appendChild(vignette);
     container.appendChild(grain);
     container.appendChild(hud);
     const chargeBar = hud.querySelector('.ring-universe-charge > i');
+    const stabilityReadout = hud.querySelector('[data-stability]');
+    const fluxReadout = hud.querySelector('[data-flux]');
     window.setTimeout(() => hud.classList.add('is-muted'), 8000);
 
     const pointTexture = createPointTexture();
@@ -1040,6 +1210,12 @@
 
     const motes = createOrbitParticles(quality.motes, pointTexture, colors);
     scene.add(motes.points);
+
+    const orbitalSystem = createOrbitalSystem(colors, quality, interactiveTargets);
+    scene.add(orbitalSystem.group);
+
+    const filaments = createEnergyFilaments(colors, quality);
+    ring.group.add(filaments.group);
 
     const trails = createTrailSystem(quality.trails, strokeTexture, colors);
     scene.add(trails.points);
@@ -1095,6 +1271,7 @@
       drawing: false,
       portalOpen: false,
       portalOpenProgress: 0,
+      entropy: 0,
       nextMeteor: rand(4, 9),
       keys: Object.create(null),
       hudHidden: false,
@@ -1173,6 +1350,18 @@
         shard.position.y += Math.sin(angle) * s * 0.075;
         shard.position.z += s * 0.07;
       }
+      for (let i = 0; i < motes.data.length; i++) {
+        const offset = i * 3;
+        const dx = motes.positions[offset];
+        const dy = motes.positions[offset + 1] - 2.05;
+        const dz = motes.positions[offset + 2];
+        const inverseLength = 1 / Math.max(1.2, Math.sqrt(dx * dx + dy * dy + dz * dz));
+        const kick = s * rand(0.55, 1.15);
+        motes.data[i].vx += dx * inverseLength * kick;
+        motes.data[i].vy += dy * inverseLength * kick;
+        motes.data[i].vz += dz * inverseLength * kick;
+      }
+      state.entropy = clamp(state.entropy + s * 0.18, 0, 1);
     }
 
     function focusObject(object) {
@@ -1378,6 +1567,15 @@
       obelisks.topMaterial.color.setHex(colors.ember);
       voidCoreMaterial.color.setHex(colors.background);
       meteors.forEach((meteor) => meteor.material.color.setHex(colors.starWarm));
+      const orbitalHues = [colors.portal, colors.ember, colors.rune, colors.ghost, colors.starWarm, colors.nebulaViolet];
+      orbitalSystem.orbiters.forEach((orbiter, index) => {
+        const color = orbitalHues[index % orbitalHues.length];
+        orbiter.pathMaterial.color.setHex(color);
+        orbiter.bodyMaterial.color.setHex(color);
+        orbiter.bodyMaterial.emissive.setHex(color);
+        orbiter.haloMaterial.color.setHex(color);
+      });
+      filaments.filaments.forEach((filament, index) => filament.material.color.setHex(index % 4 === 0 ? colors.ember : colors.portal));
     }
 
     const clock = new THREE.Clock();
@@ -1414,6 +1612,7 @@
       state.pointerInfluence = Math.max(0, state.pointerInfluence - dt * 0.9);
       state.selectedBoost = Math.max(0, state.selectedBoost - dt * 0.9);
       state.hoverBoost = Math.max(0, state.hoverBoost - dt * 2.2);
+      state.entropy = Math.max(0, state.entropy - dt * 0.075);
       state.portalOpenProgress += ((state.portalOpen ? 1 : 0) - state.portalOpenProgress) * 0.07;
 
       const pulse = state.pulse;
@@ -1472,6 +1671,8 @@
       ring.materials.runeMaterial.opacity = 0.38 + breathing * 0.34 + pulse * 0.22 + charge * 0.18;
       voidCore.scale.setScalar(1 + slowBreath * 0.07 + pulse * 0.12 + charge * 0.08);
       voidCoreMaterial.opacity = 0.54 + pulse * 0.12 + charge * 0.08;
+      filaments.update(t, pulse, charge, state.portalOpenProgress, ring.shards.length);
+      orbitalSystem.update(t, dt, pulse, charge, state.portalOpenProgress, state.hover);
 
       for (let i = 0; i < ring.shards.length; i++) {
         const shard = ring.shards[i];
@@ -1487,21 +1688,69 @@
 
       const motePositions = motes.positions;
       const influence = state.pointerInfluence;
+      const gravity = 12.5 * (1 + charge * 0.72 + state.portalOpenProgress * 0.38);
       for (let i = 0; i < motes.data.length; i++) {
         const mote = motes.data[i];
-        mote.angle += dt * mote.speed * (1 + pulse * 1.35 + charge * 0.65);
-        const radius = mote.radius + Math.sin(t * mote.wobble + i) * 0.24 + pulse * 0.75 + charge * 0.34;
         const offset = i * 3;
-        const targetX = Math.cos(mote.angle) * radius;
-        const targetY = mote.y + Math.sin(t * 1.7 + i) * 0.65;
-        const targetZ = Math.sin(mote.angle) * radius;
-        motePositions[offset] = lerp(targetX, pointerWorld.x * 0.42, influence * mote.pull);
-        motePositions[offset + 1] = lerp(targetY, pointerWorld.y * 0.38, influence * mote.pull);
-        motePositions[offset + 2] = lerp(targetZ, pointerWorld.z * 0.42, influence * mote.pull);
+        let x = motePositions[offset];
+        let y = motePositions[offset + 1];
+        let z = motePositions[offset + 2];
+        const dx = x;
+        const dy = y - 2.05;
+        const dz = z;
+        const radiusSq = dx * dx + dy * dy + dz * dz;
+        const radius = Math.sqrt(radiusSq);
+        const inverseRadius = 1 / Math.max(1.2, radius);
+        const gravityScale = -gravity * inverseRadius * inverseRadius * inverseRadius;
+        const turbulence = Math.sin(t * 1.7 + mote.phase + radius) * mote.turbulence;
+
+        mote.vx += (dx * gravityScale - dz * turbulence * 0.018) * dt;
+        mote.vy += (dy * gravityScale * 0.42 + Math.sin(t * 0.9 + mote.phase) * 0.025) * dt;
+        mote.vz += (dz * gravityScale + dx * turbulence * 0.018) * dt;
+
+        if (influence > 0.02) {
+          const px = pointerWorld.x - x;
+          const py = pointerWorld.y - y;
+          const pz = pointerWorld.z - z;
+          const pointerDistanceSq = px * px + py * py + pz * pz + 3.5;
+          const pointerForce = influence * mote.pointerPull / pointerDistanceSq;
+          mote.vx += px * pointerForce * dt;
+          mote.vy += py * pointerForce * dt;
+          mote.vz += pz * pointerForce * dt;
+        }
+
+        const damping = Math.pow(mote.drag, dt * 60);
+        mote.vx *= damping;
+        mote.vy *= damping;
+        mote.vz *= damping;
+        x += mote.vx * dt;
+        y += mote.vy * dt;
+        z += mote.vz * dt;
+
+        if (radius > 27 || radius < 1.25 || !Number.isFinite(x + y + z)) {
+          const resetAngle = rand(0, TAU);
+          const resetRadius = rand(5.5, 11.5);
+          const resetSpeed = Math.sqrt(12.5 / resetRadius) * (Math.random() < 0.14 ? -1 : 1);
+          x = Math.cos(resetAngle) * resetRadius;
+          y = 2.05 + rand(-1.8, 1.8);
+          z = Math.sin(resetAngle) * resetRadius;
+          mote.vx = -Math.sin(resetAngle) * resetSpeed;
+          mote.vy = rand(-0.12, 0.12);
+          mote.vz = Math.cos(resetAngle) * resetSpeed;
+        }
+
+        motePositions[offset] = x;
+        motePositions[offset + 1] = y;
+        motePositions[offset + 2] = z;
       }
       motes.geometry.attributes.position.needsUpdate = true;
-      motes.points.rotation.y = t * 0.078;
       motes.material.opacity = 0.38 + pulse * 0.16 + charge * 0.1;
+
+      if (frame % 6 === 0) {
+        const instability = clamp(state.entropy * 0.78 + charge * 0.16 + pulse * 0.12, 0, 1);
+        if (stabilityReadout) stabilityReadout.textContent = `${Math.round((1 - instability) * 100)}%`;
+        if (fluxReadout) fluxReadout.textContent = instability > 0.72 ? 'critical' : instability > 0.42 ? 'surging' : instability > 0.16 ? 'active' : 'low';
+      }
 
       if (state.drawing || state.charging) {
         trails.emit(pointerWorld, state.drawing ? (isMobile ? 1 : 2) : 1, false);
@@ -1620,6 +1869,8 @@
           meteor.material.dispose();
         });
         destinations.dispose();
+        orbitalSystem.dispose();
+        filaments.dispose();
 
         [pointTexture, smokeTexture, strokeTexture].forEach((texture) => texture.dispose());
         [stars.geometry, clouds.geometry, motes.geometry, trails.geometry].forEach((geometry) => geometry.dispose());
