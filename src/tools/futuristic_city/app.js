@@ -30,6 +30,7 @@ const animated = {
     traffic: [],
     drones: [],
     patrols: [],
+    lasers: [],
     wisps: [],
     rings: [],
     beacon: []
@@ -327,20 +328,40 @@ function createPatrolCraft() {
 }
 
 function launchPatrol(t) {
-    const heading = rand(0, Math.PI * 2), count = Math.random() < .62 ? 2 : 1;
-    const direction = new THREE.Vector3(Math.cos(heading), rand(-.035, .035), Math.sin(heading)).normalize();
+    const closePass = Math.random() < .38;
+    let direction, start;
+    if (closePass) {
+        const forward = new THREE.Vector3(); camera.getWorldDirection(forward);
+        const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
+        direction = right.multiplyScalar(Math.random() < .5 ? 1 : -1).add(forward.multiplyScalar(.18)).normalize();
+        start = camera.position.clone().addScaledVector(direction, -78).addScaledVector(camera.up, rand(7, 22));
+    } else {
+        const heading = rand(0, Math.PI * 2);
+        direction = new THREE.Vector3(Math.cos(heading), rand(-.035, .035), Math.sin(heading)).normalize();
+        start = direction.clone().multiplyScalar(-165); start.y = rand(58, 92);
+    }
+    const heading = Math.atan2(direction.z, direction.x), count = Math.random() < .62 ? 2 : 1;
     const side = new THREE.Vector3(-direction.z, 0, direction.x);
     for (let i = 0; i < count; i++) {
         const craft = createPatrolCraft();
         const offset = count === 1 ? 0 : (i ? 1 : -1) * 5;
-        craft.position.copy(direction).multiplyScalar(-165).add(side.clone().multiplyScalar(offset));
-        craft.position.y = rand(58, 92) + (i % 2) * 3;
+        craft.position.copy(start).add(side.clone().multiplyScalar(offset));
+        craft.position.y += (i % 2) * 3;
         craft.rotation.y = -heading;
         craft.rotation.z = rand(-.08, .08);
-        craft.userData = { velocity: direction.clone().multiplyScalar(rand(52, 66)), born: t, life: rand(5.2, 6.5), phase: Math.random() * Math.PI * 2 };
+        craft.userData = { velocity: direction.clone().multiplyScalar(closePass ? rand(38, 48) : rand(52, 66)), born: t, life: closePass ? rand(3.8, 5) : rand(5.2, 6.5), phase: Math.random() * Math.PI * 2, rollSpeed: Math.random() < .58 ? rand(2.6, 4.8) * (Math.random() < .5 ? 1 : -1) : 0, shotAt: t + rand(.9, 2.6), fired: false, willFire: Math.random() > .42 };
         scene.add(craft); animated.patrols.push(craft);
     }
     nextPatrolTime = t + rand(10, 22);
+}
+
+function firePatrolLaser(craft, t) {
+    const target = new THREE.Vector3(rand(-72, 72), rand(2, 18), rand(-72, 72));
+    const points = [craft.position.clone(), target];
+    const beam = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), new THREE.LineBasicMaterial({ color: 0xff456f, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false }));
+    const impact = new THREE.Mesh(new THREE.SphereGeometry(1.15, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffb06b, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false }));
+    impact.position.copy(target); scene.add(beam, impact);
+    animated.lasers.push({ beam, impact, born: t, life: .38 });
 }
 
 function createAtmosphere() {
@@ -464,16 +485,33 @@ function animate() {
         const craft = animated.patrols[i], age = t - craft.userData.born;
         craft.position.addScaledVector(craft.userData.velocity, dt);
         craft.position.y += Math.sin(t * 1.8 + craft.userData.phase) * dt * .7;
-        craft.rotation.z = Math.sin(t * .8 + craft.userData.phase) * .12;
+        craft.rotation.x += craft.userData.rollSpeed * dt;
+        craft.rotation.z += Math.sin(t * .8 + craft.userData.phase) * dt * .12;
         const engine = craft.children[2];
         engine.scale.y = .82 + Math.sin(t * 18 + craft.userData.phase) * .18;
-        if (age > craft.userData.life || craft.position.length() > 215) {
+        if (craft.userData.willFire && !craft.userData.fired && t >= craft.userData.shotAt) {
+            firePatrolLaser(craft, t); craft.userData.fired = true;
+        }
+        if (age > craft.userData.life) {
             scene.remove(craft);
             craft.traverse(node => {
                 if (node.geometry) node.geometry.dispose();
                 if (node.material) node.material.dispose();
             });
             animated.patrols.splice(i, 1);
+        }
+    }
+    for (let i = animated.lasers.length - 1; i >= 0; i--) {
+        const laser = animated.lasers[i], progress = (t - laser.born) / laser.life;
+        const opacity = Math.max(0, 1 - progress);
+        laser.beam.material.opacity = opacity;
+        laser.impact.material.opacity = opacity;
+        laser.impact.scale.setScalar(1 + progress * 3.5);
+        if (progress >= 1) {
+            scene.remove(laser.beam, laser.impact);
+            laser.beam.geometry.dispose(); laser.beam.material.dispose();
+            laser.impact.geometry.dispose(); laser.impact.material.dispose();
+            animated.lasers.splice(i, 1);
         }
     }
     animated.rings.forEach((r, i) => {
