@@ -24,10 +24,12 @@ let scene, camera, renderer, controls, clock, sun, ambient, city, windowMaterial
 let currentTime = 20.5,
     animationSpeed = 1,
     fogAmount = 28,
-    running = true;
+    running = true,
+    nextPatrolTime = 4;
 const animated = {
     traffic: [],
     drones: [],
+    patrols: [],
     wisps: [],
     rings: [],
     beacon: []
@@ -306,6 +308,41 @@ function createSkyways() {
     });
 }
 
+function createPatrolCraft() {
+    const craft = new THREE.Group();
+    const hullMaterial = new THREE.MeshStandardMaterial({ color: 0x687b91, emissive: 0x122740, emissiveIntensity: .7, metalness: .9, roughness: .2, flatShading: true });
+    const hull = new THREE.Mesh(new THREE.ConeGeometry(.72, 5.8, 5), hullMaterial);
+    hull.rotation.z = -Math.PI / 2;
+    const wingShape = new THREE.Shape();
+    wingShape.moveTo(-1.6, 0); wingShape.lineTo(.7, 0); wingShape.lineTo(-.9, 4); wingShape.lineTo(-2.1, 3.2); wingShape.closePath();
+    const wings = new THREE.Mesh(new THREE.ShapeGeometry(wingShape), hullMaterial);
+    wings.rotation.x = -Math.PI / 2; wings.position.set(-.4, 0, -2);
+    const engineMaterial = new THREE.MeshBasicMaterial({ color: 0x6fffea, transparent: true, opacity: .85, blending: THREE.AdditiveBlending, depthWrite: false });
+    const engine = new THREE.Mesh(new THREE.ConeGeometry(.34, 5.5, 8, 1, true), engineMaterial);
+    engine.rotation.z = Math.PI / 2; engine.position.x = -4;
+    const beacon = new THREE.Mesh(new THREE.SphereGeometry(.17, 6, 6), new THREE.MeshBasicMaterial({ color: 0xffb55f }));
+    beacon.position.set(.2, .45, 0);
+    craft.add(hull, wings, engine, beacon); craft.scale.setScalar(.72);
+    return craft;
+}
+
+function launchPatrol(t) {
+    const heading = rand(0, Math.PI * 2), count = Math.random() < .62 ? 2 : 1;
+    const direction = new THREE.Vector3(Math.cos(heading), rand(-.035, .035), Math.sin(heading)).normalize();
+    const side = new THREE.Vector3(-direction.z, 0, direction.x);
+    for (let i = 0; i < count; i++) {
+        const craft = createPatrolCraft();
+        const offset = count === 1 ? 0 : (i ? 1 : -1) * 5;
+        craft.position.copy(direction).multiplyScalar(-165).add(side.clone().multiplyScalar(offset));
+        craft.position.y = rand(58, 92) + (i % 2) * 3;
+        craft.rotation.y = -heading;
+        craft.rotation.z = rand(-.08, .08);
+        craft.userData = { velocity: direction.clone().multiplyScalar(rand(52, 66)), born: t, life: rand(5.2, 6.5), phase: Math.random() * Math.PI * 2 };
+        scene.add(craft); animated.patrols.push(craft);
+    }
+    nextPatrolTime = t + rand(10, 22);
+}
+
 function createAtmosphere() {
     const positions = new Float32Array(CONFIG.particles * 3);
     for (let i = 0; i < CONFIG.particles; i++) {
@@ -422,6 +459,23 @@ function animate() {
         v.position[axis] += v.userData.dir * v.userData.speed * dt;
         if (Math.abs(v.position[axis]) > 96) v.position[axis] *= -1;
     });
+    if (animationSpeed > 0 && t >= nextPatrolTime) launchPatrol(t);
+    for (let i = animated.patrols.length - 1; i >= 0; i--) {
+        const craft = animated.patrols[i], age = t - craft.userData.born;
+        craft.position.addScaledVector(craft.userData.velocity, dt);
+        craft.position.y += Math.sin(t * 1.8 + craft.userData.phase) * dt * .7;
+        craft.rotation.z = Math.sin(t * .8 + craft.userData.phase) * .12;
+        const engine = craft.children[2];
+        engine.scale.y = .82 + Math.sin(t * 18 + craft.userData.phase) * .18;
+        if (age > craft.userData.life || craft.position.length() > 215) {
+            scene.remove(craft);
+            craft.traverse(node => {
+                if (node.geometry) node.geometry.dispose();
+                if (node.material) node.material.dispose();
+            });
+            animated.patrols.splice(i, 1);
+        }
+    }
     animated.rings.forEach((r, i) => {
         r.rotation.z += dt * (i % 2 ? .18 : -.13);
         r.position.y += Math.sin(t * .7 + i) * .003;
