@@ -1,1183 +1,175 @@
 import * as THREE from 'three';
-import {
-    OrbitControls
-} from 'three/addons/controls/OrbitControls.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-
-const PERSON_PAUSE_PROBABILITY = 0.001;
-const CAR_COUNT = 30;
-const CAR_SPAWN_RADIUS = 100;
-const PEOPLE_COUNT = 40;
-const HIGHWAY_OFFSETS = [-75, -50, -25, 25, 50, 75];
-const AUTO_ROTATE_SPEED = 0.5;
-
-
-let scene, camera, renderer, controls;
-let buildings = [];
-let highways = [];
-let cars = [];
-let people = [];
-let lights = {
-    sun: null,
-    ambient: null,
-    buildingLights: []
+const CONFIG = { buildings: 144, vehicles: 54, particles: 420, extent: 92 };
+const palette = {
+    void: new THREE.Color(0x05070d), dusk: new THREE.Color(0x17152a), dawn: new THREE.Color(0x806a78),
+    day: new THREE.Color(0x526b79), cyan: new THREE.Color(0x65f2df), violet: new THREE.Color(0x9b7cff),
+    gold: new THREE.Color(0xffc875), stone: new THREE.Color(0x141a25)
 };
-let animationSpeed = 1.0;
-let currentTime = 12.0;
-let isInitialized = false;
 
+let scene, camera, renderer, controls, clock, sun, ambient, city, windowMaterial;
+let currentTime = 20.5, animationSpeed = 1, fogAmount = 28, running = true;
+const animated = { traffic: [], wisps: [], rings: [], beacon: [] };
+const $ = (id) => document.getElementById(id);
+const rand = (a, b) => a + Math.random() * (b - a);
 
-let container, timeSlider, timeDisplay, fogSlider, fogDisplay, speedSlider, speedDisplay, resetBtn;
-let btnSunrise, btnMidday, btnSunset, btnNight, autoRotateCheck, screenshotBtn;
-let statTime, statFog, statSpeed, statBuildings;
-
-
-function initDOMElements() {
-    container = document.getElementById('canvas-container');
-    timeSlider = document.getElementById('time-slider');
-    timeDisplay = document.getElementById('time-display');
-    fogSlider = document.getElementById('fog-slider');
-    fogDisplay = document.getElementById('fog-display');
-    speedSlider = document.getElementById('speed-slider');
-    speedDisplay = document.getElementById('speed-display');
-    resetBtn = document.getElementById('reset-btn');
-
-    btnSunrise = document.getElementById('btnSunrise');
-    btnMidday = document.getElementById('btnMidday');
-    btnSunset = document.getElementById('btnSunset');
-    btnNight = document.getElementById('btnNight');
-    autoRotateCheck = document.getElementById('autoRotate');
-    screenshotBtn = document.getElementById('screenshot-btn');
-
-    statTime = document.getElementById('stat-time');
-    statFog = document.getElementById('stat-fog');
-    statSpeed = document.getElementById('stat-speed');
-    statBuildings = document.getElementById('stat-buildings');
-
-    if (!container) {
-        console.error('Futuristic City: canvas-container element not found');
-        return false;
-    }
-    return true;
+function material(color, emissive = 0x000000, intensity = 0) {
+    return new THREE.MeshStandardMaterial({ color, emissive, emissiveIntensity: intensity, roughness: .48, metalness: .62 });
 }
-
 
 function init() {
-    try {
+    const host = $('canvas-container');
+    if (!host) return;
+    const width = host.clientWidth || 900, height = host.clientHeight || 650;
+    scene = new THREE.Scene();
+    scene.background = palette.void;
+    scene.fog = new THREE.FogExp2(palette.void, .0045);
+    camera = new THREE.PerspectiveCamera(48, width / height, .5, 420);
+    camera.position.set(118, 78, 118);
 
-        if (!initDOMElements()) {
-            return;
-        }
+    renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: true });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 1.6));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    host.replaceChildren(renderer.domElement);
 
-
-        let containerWidth = container.clientWidth;
-        let containerHeight = container.clientHeight;
-
-
-        if (containerWidth === 0) {
-            containerWidth = container.offsetWidth || window.innerWidth * 0.9;
-        }
-        if (containerHeight === 0) {
-            containerHeight = container.offsetHeight || 500;
-        }
-
-
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87ceeb);
-        scene.fog = new THREE.Fog(0x87ceeb, 50, 500);
-
-
-        camera = new THREE.PerspectiveCamera(
-            60,
-            containerWidth / containerHeight,
-            0.1,
-            1000
-        );
-        camera.position.set(80, 60, 80);
-        camera.lookAt(0, 0, 0);
-
-
-        try {
-            renderer = new THREE.WebGLRenderer({
-                antialias: true,
-                alpha: false,
-                powerPreference: 'default'
-            });
-        } catch (webglError) {
-            console.warn('WebGL with antialiasing not available, trying without');
-            try {
-                renderer = new THREE.WebGLRenderer({
-                    antialias: false
-                });
-            } catch (fallbackError) {
-                console.error('Futuristic City: WebGL is not available on this device');
-                container.innerHTML = '<p style="color: white; text-align: center; padding: 20px;">WebGL is not available. Please use a browser that supports WebGL.</p>';
-                return;
-            }
-        }
-
-        renderer.setSize(containerWidth, containerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        renderer.setClearColor(0x87ceeb, 1);
-        container.appendChild(renderer.domElement);
-
-
-        controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-        controls.minDistance = 30;
-        controls.maxDistance = 200;
-        controls.maxPolarAngle = Math.PI / 2.1;
-        controls.target.set(0, 20, 0);
-
-
-        createLights();
-
-
-        createGround();
-        createBuildings();
-        createHighways();
-        createCars();
-        createPeople();
-        createParticles();
-
-
-        setupEventListeners();
-
-
-        updateDayNightCycle(12);
-        updateFog(20);
-        updateSpeed(100);
-        updateStats();
-
-        isInitialized = true;
-
-
-        animate();
-
-        console.log('Futuristic City: Initialized successfully with', buildings.length, 'buildings');
-    } catch (error) {
-        console.error('Futuristic City: Initialization failed', error);
-    }
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; controls.dampingFactor = .045;
+    controls.minDistance = 45; controls.maxDistance = 230; controls.maxPolarAngle = 1.47;
+    controls.target.set(0, 25, 0);
+    clock = new THREE.Clock();
+    city = new THREE.Group(); scene.add(city);
+    createWorld(); bindUI(); updateEnvironment(currentTime); updateFog(fogAmount);
+    new ResizeObserver(resize).observe(host);
+    document.addEventListener('visibilitychange', () => running = !document.hidden);
+    animate();
 }
 
-
-function createLights() {
-
-    lights.ambient = new THREE.AmbientLight(0xffffff, 0.5);
-    scene.add(lights.ambient);
-
-
-    lights.sun = new THREE.DirectionalLight(0xffffff, 1.2);
-    lights.sun.position.set(50, 100, 50);
-    lights.sun.castShadow = true;
-    lights.sun.shadow.camera.left = -100;
-    lights.sun.shadow.camera.right = 100;
-    lights.sun.shadow.camera.top = 100;
-    lights.sun.shadow.camera.bottom = -100;
-    lights.sun.shadow.mapSize.width = 2048;
-    lights.sun.shadow.mapSize.height = 2048;
-    lights.sun.shadow.camera.near = 1;
-    lights.sun.shadow.camera.far = 300;
-    scene.add(lights.sun);
-
-
-    const hemiLight = new THREE.HemisphereLight(0x87ceeb, 0x444444, 0.6);
-    hemiLight.position.set(0, 100, 0);
-    scene.add(hemiLight);
+function createWorld() {
+    ambient = new THREE.HemisphereLight(0x8092c7, 0x080811, .72); scene.add(ambient);
+    sun = new THREE.DirectionalLight(0xffd8ad, 1.6); sun.position.set(-80, 110, 45); sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -105, right: 105, top: 105, bottom: -105, near: 10, far: 270 }); scene.add(sun);
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(138, 64), material(0x090d15));
+    ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; city.add(ground);
+    createRoads(); createBuildings(); createSanctum(); createTraffic(); createAtmosphere();
 }
 
-
-function createGround() {
-    const groundGeometry = new THREE.PlaneGeometry(300, 300);
-    const groundMaterial = new THREE.MeshStandardMaterial({
-        color: 0x1a1a2e,
-        roughness: 0.8,
-        metalness: 0.2
+function createRoads() {
+    const roadMat = new THREE.MeshStandardMaterial({ color: 0x090d14, roughness: .82, metalness: .25 });
+    const glowMat = new THREE.MeshBasicMaterial({ color: palette.cyan, transparent: true, opacity: .38 });
+    [-60, -36, -12, 12, 36, 60].forEach(offset => {
+        [[0, .12, offset, 188, .16, 6], [offset, .12, 0, 6, .16, 188]].forEach(v => {
+            const road = new THREE.Mesh(new THREE.BoxGeometry(v[3], v[4], v[5]), roadMat); road.position.set(v[0], v[1], v[2]); city.add(road);
+        });
+        const h = new THREE.Mesh(new THREE.BoxGeometry(188, .03, .09), glowMat); h.position.set(0, .23, offset); city.add(h);
+        const v = new THREE.Mesh(new THREE.BoxGeometry(.09, .03, 188), glowMat); v.position.set(offset, .23, 0); city.add(v);
     });
-    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
-    scene.add(ground);
-
-
-    const gridHelper = new THREE.GridHelper(300, 60, 0x444444, 0x222222);
-    gridHelper.position.y = 0.1;
-    scene.add(gridHelper);
+    [28, 52, 76].forEach(radius => {
+        const ring = new THREE.Mesh(new THREE.RingGeometry(radius - .12, radius + .12, 128), glowMat.clone());
+        ring.rotation.x = -Math.PI / 2; ring.position.y = .24; city.add(ring);
+    });
 }
-
 
 function createBuildings() {
-    const buildingCount = 50;
-    const cityRadius = 60;
-
-
-    const colorPalettes = [{
-            h: 0.55,
-            s: 0.6,
-            l: 0.4
-        },
-        {
-            h: 0.6,
-            s: 0.5,
-            l: 0.45
-        },
-        {
-            h: 0.58,
-            s: 0.7,
-            l: 0.35
-        },
-        {
-            h: 0.52,
-            s: 0.6,
-            l: 0.4
-        },
-        {
-            h: 0.65,
-            s: 0.4,
-            l: 0.5
-        },
-        {
-            h: 0.0,
-            s: 0.0,
-            l: 0.3
-        },
-        {
-            h: 0.0,
-            s: 0.0,
-            l: 0.4
-        },
-    ];
-
-    for (let i = 0; i < buildingCount; i++) {
-
-        const angle = (i / buildingCount) * Math.PI * 2 + Math.random() * 0.5;
-        const radius = 10 + Math.random() * cityRadius;
-        const x = Math.cos(angle) * radius + (Math.random() - 0.5) * 15;
-        const z = Math.sin(angle) * radius + (Math.random() - 0.5) * 15;
-
-
-        const width = 4 + Math.random() * 6;
-        const depth = 4 + Math.random() * 6;
-        const height = 15 + Math.random() * 60;
-
-
-        const geometry = new THREE.BoxGeometry(width, height, depth);
-
-
-        const palette = colorPalettes[Math.floor(Math.random() * colorPalettes.length)];
-        const colorVariation = (Math.random() - 0.5) * 0.1;
-
-
-        const material = new THREE.MeshStandardMaterial({
-            color: new THREE.Color().setHSL(
-                palette.h + colorVariation,
-                palette.s,
-                palette.l + 0.1
-            ),
-            emissive: new THREE.Color().setHSL(palette.h, 0.5, 0.15),
-            emissiveIntensity: 0.3,
-            roughness: 0.4,
-            metalness: 0.6
-        });
-
-        const building = new THREE.Mesh(geometry, material);
-        building.position.set(x, height / 2, z);
-        building.castShadow = true;
-        building.receiveShadow = true;
-        building.userData = {
-            baseHeight: height
-        };
-        scene.add(building);
-        buildings.push(building);
-
-
-        addBuildingWindows(building, width, height, depth);
-
-
-        if (height > 40) {
-            addAntenna(building, height);
+    const geo = new THREE.BoxGeometry(1, 1, 1);
+    const facade = material(0x151d2a, 0x10152a, .45);
+    const towers = new THREE.InstancedMesh(geo, facade, CONFIG.buildings);
+    towers.castShadow = towers.receiveShadow = true;
+    windowMaterial = new THREE.MeshBasicMaterial({ color: palette.gold, transparent: true, opacity: .82, blending: THREE.AdditiveBlending, depthWrite: false });
+    const windows = new THREE.InstancedMesh(geo, windowMaterial, CONFIG.buildings * 2);
+    const dummy = new THREE.Object3D(); let wi = 0;
+    for (let i = 0; i < CONFIG.buildings; i++) {
+        const gx = (i % 12) - 5.5, gz = Math.floor(i / 12) - 5.5;
+        let x = gx * 13.8 + rand(-2, 2), z = gz * 13.8 + rand(-2, 2);
+        if (Math.abs(x) < 17 && Math.abs(z) < 17) { x += x < 0 ? -17 : 17; z += z < 0 ? -10 : 10; }
+        const radial = Math.hypot(x, z), h = rand(10, 33) + Math.max(0, 43 - radial * .38);
+        const w = rand(5, 9), d = rand(5, 9);
+        dummy.position.set(x, h / 2, z); dummy.scale.set(w, h, d); dummy.rotation.y = Math.round(rand(0, 4)) * Math.PI / 2; dummy.updateMatrix(); towers.setMatrixAt(i, dummy.matrix);
+        const c = new THREE.Color().setHSL(rand(.55, .69), rand(.16, .36), rand(.09, .18)); towers.setColorAt(i, c);
+        for (let face = 0; face < 2; face++) {
+            dummy.position.set(x + (face ? w / 2 + .03 : 0), h * rand(.42, .72), z + (face ? 0 : d / 2 + .03));
+            dummy.scale.set(face ? .035 : w * .7, h * rand(.35, .6), face ? d * .7 : .035); dummy.rotation.y = 0; dummy.updateMatrix(); windows.setMatrixAt(wi++, dummy.matrix);
         }
     }
-
-
-    addCentralBuildings();
+    city.add(towers, windows); $('stat-buildings').textContent = CONFIG.buildings;
 }
 
-
-function addBuildingWindows(building, width, height, depth) {
-    const floorHeight = 2.6;
-    const windowHeight = 1.2;
-    const windowWidth = 0.7;
-    const windowDepth = 0.08;
-    const verticalPadding = 1.0;
-    const horizontalPadding = 0.8;
-    const inset = 0.05;
-    const floors = Math.max(2, Math.floor((height - verticalPadding * 2) / floorHeight));
-    const frontCols = Math.max(2, Math.floor((width - horizontalPadding * 2) / (windowWidth + 0.4)));
-    const sideCols = Math.max(2, Math.floor((depth - horizontalPadding * 2) / (windowWidth + 0.4)));
-    const frontSpacing = windowWidth + 0.4;
-    const sideSpacing = windowWidth + 0.4;
-    const frontStart = -((frontCols - 1) * frontSpacing) / 2;
-    const sideStart = -((sideCols - 1) * sideSpacing) / 2;
-    const baseY = -height / 2 + verticalPadding + windowHeight * 0.5;
-
-    const windowMaterial = new THREE.MeshStandardMaterial({
-        color: 0xffff99,
-        emissive: 0xffff66,
-        emissiveIntensity: 1.8
+function createSanctum() {
+    const group = new THREE.Group();
+    const dark = material(0x111827, 0x241b42, .65);
+    const tower = new THREE.Mesh(new THREE.CylinderGeometry(5, 9, 76, 6), dark); tower.position.y = 38; tower.castShadow = true; group.add(tower);
+    const crown = new THREE.Mesh(new THREE.ConeGeometry(8, 21, 6, 1, true), dark); crown.position.y = 82; group.add(crown);
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(.18, .65, 38, 8), new THREE.MeshBasicMaterial({ color: palette.violet, transparent: true, opacity: .55, blending: THREE.AdditiveBlending }));
+    beam.position.y = 104; group.add(beam);
+    [16, 27, 39].forEach((y, i) => {
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(7 + i * .5, .12, 5, 48), new THREE.MeshBasicMaterial({ color: i === 1 ? palette.gold : palette.violet, transparent: true, opacity: .72 }));
+        ring.rotation.x = Math.PI / 2; ring.position.y = y; group.add(ring); animated.rings.push(ring);
     });
+    for (let i = 0; i < 8; i++) {
+        const spire = new THREE.Mesh(new THREE.ConeGeometry(1.4, rand(9, 16), 4), dark); const a = i / 8 * Math.PI * 2;
+        spire.position.set(Math.cos(a) * 12, rand(8, 12), Math.sin(a) * 12); spire.rotation.z = Math.cos(a) * .12; group.add(spire);
+    }
+    city.add(group);
+}
 
-    for (let floor = 0; floor < floors; floor++) {
-        const y = baseY + floor * floorHeight;
-
-        for (let col = 0; col < frontCols; col++) {
-            if (Math.random() > 0.35) {
-                const x = frontStart + col * frontSpacing;
-                const frontWindow = new THREE.Mesh(
-                    new THREE.BoxGeometry(windowWidth, windowHeight, windowDepth),
-                    windowMaterial
-                );
-                frontWindow.position.set(x, y, depth / 2 + inset);
-                building.add(frontWindow);
-
-                const backWindow = frontWindow.clone();
-                backWindow.position.set(x, y, -depth / 2 - inset);
-                building.add(backWindow);
-            }
-        }
-
-        for (let col = 0; col < sideCols; col++) {
-            if (Math.random() > 0.35) {
-                const z = sideStart + col * sideSpacing;
-                const sideWindow = new THREE.Mesh(
-                    new THREE.BoxGeometry(windowDepth, windowHeight, windowWidth),
-                    windowMaterial
-                );
-                sideWindow.position.set(width / 2 + inset, y, z);
-                building.add(sideWindow);
-
-                const otherSideWindow = sideWindow.clone();
-                otherSideWindow.position.set(-width / 2 - inset, y, z);
-                building.add(otherSideWindow);
-            }
-        }
+function createTraffic() {
+    const geo = new THREE.BoxGeometry(1.25, .5, 2.4), mat = new THREE.MeshBasicMaterial({ color: palette.cyan });
+    for (let i = 0; i < CONFIG.vehicles; i++) {
+        const mesh = new THREE.Mesh(geo, mat); const horizontal = i % 2 === 0, lane = [-60,-36,-12,12,36,60][i % 6];
+        mesh.position.set(horizontal ? rand(-94,94) : lane + (i%3-1)*1.4, .65, horizontal ? lane + (i%3-1)*1.4 : rand(-94,94));
+        if (horizontal) mesh.rotation.y = Math.PI / 2;
+        mesh.userData = { horizontal, dir: i % 4 < 2 ? 1 : -1, speed: rand(7, 14) }; city.add(mesh); animated.traffic.push(mesh);
     }
 }
 
-
-function addAntenna(building, height) {
-    const antennaGeometry = new THREE.CylinderGeometry(0.1, 0.1, 8, 8);
-    const antennaMaterial = new THREE.MeshStandardMaterial({
-        color: 0xff0000,
-        emissive: 0xff0000,
-        emissiveIntensity: 1.0
-    });
-    const antenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
-    antenna.position.y = height / 2 + 4;
-    building.add(antenna);
-
-
-    const beaconGeometry = new THREE.SphereGeometry(0.3, 8, 8);
-    const beaconMaterial = new THREE.MeshStandardMaterial({
-        color: 0xff0000,
-        emissive: 0xff0000,
-        emissiveIntensity: 2.0
-    });
-    const beacon = new THREE.Mesh(beaconGeometry, beaconMaterial);
-    beacon.position.y = height / 2 + 8;
-    building.add(beacon);
+function createAtmosphere() {
+    const positions = new Float32Array(CONFIG.particles * 3);
+    for (let i=0;i<CONFIG.particles;i++) { positions[i*3]=rand(-125,125); positions[i*3+1]=rand(3,105); positions[i*3+2]=rand(-125,125); }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(positions,3));
+    const dust = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0x94eadf, size: .28, transparent:true, opacity:.42, depthWrite:false, blending:THREE.AdditiveBlending })); city.add(dust); animated.wisps.push(dust);
+    const moon = new THREE.Mesh(new THREE.SphereGeometry(7,24,24), new THREE.MeshBasicMaterial({color:0xd5d4ff})); moon.position.set(-88,92,-110); scene.add(moon);
 }
 
-
-function addCentralBuildings() {
-
-    const centralHeight = 80;
-    const centralGeometry = new THREE.BoxGeometry(8, centralHeight, 8);
-    const centralMaterial = new THREE.MeshStandardMaterial({
-        color: 0x4a90d9,
-        emissive: 0x1a5a99,
-        emissiveIntensity: 0.4,
-        roughness: 0.3,
-        metalness: 0.7
-    });
-    const centralTower = new THREE.Mesh(centralGeometry, centralMaterial);
-    centralTower.position.set(0, centralHeight / 2, 0);
-    centralTower.castShadow = true;
-    centralTower.receiveShadow = true;
-    centralTower.userData = {
-        baseHeight: centralHeight
-    };
-    scene.add(centralTower);
-    buildings.push(centralTower);
-    addBuildingWindows(centralTower, 8, centralHeight, 8);
-    addAntenna(centralTower, centralHeight);
-
-
-    const surroundingPositions = [{
-            x: 12,
-            z: 0
-        }, {
-            x: -12,
-            z: 0
-        },
-        {
-            x: 0,
-            z: 12
-        }, {
-            x: 0,
-            z: -12
-        },
-        {
-            x: 8,
-            z: 8
-        }, {
-            x: -8,
-            z: 8
-        },
-        {
-            x: 8,
-            z: -8
-        }, {
-            x: -8,
-            z: -8
-        }
-    ];
-
-    surroundingPositions.forEach((pos, index) => {
-        const height = 40 + Math.random() * 25;
-        const width = 5 + Math.random() * 3;
-        const geometry = new THREE.BoxGeometry(width, height, width);
-        const hue = 0.55 + (index * 0.02);
-        const material = new THREE.MeshStandardMaterial({
-            color: new THREE.Color().setHSL(hue, 0.5, 0.45),
-            emissive: new THREE.Color().setHSL(hue, 0.4, 0.15),
-            emissiveIntensity: 0.3,
-            roughness: 0.4,
-            metalness: 0.6
-        });
-        const building = new THREE.Mesh(geometry, material);
-        building.position.set(pos.x, height / 2, pos.z);
-        building.castShadow = true;
-        building.receiveShadow = true;
-        building.userData = {
-            baseHeight: height
-        };
-        scene.add(building);
-        buildings.push(building);
-        addBuildingWindows(building, width, height, width);
-        if (height > 50) {
-            addAntenna(building, height);
-        }
-    });
+function updateEnvironment(value) {
+    currentTime = Number(value); const daylight = Math.max(0, Math.sin((currentTime - 6) / 24 * Math.PI * 2));
+    const twilight = Math.max(0, 1 - Math.abs(currentTime - 6)/3, 1 - Math.abs(currentTime - 18)/3);
+    const sky = palette.void.clone().lerp(palette.dusk, twilight).lerp(palette.day, daylight * .72);
+    scene.background.copy(sky); scene.fog.color.copy(sky); ambient.intensity = .28 + daylight * 1.05; sun.intensity = .15 + daylight * 2;
+    sun.color.set(daylight < .25 ? 0xb99cff : 0xffdfbd); windowMaterial.opacity = .92 - daylight * .62;
+    renderer.toneMappingExposure = .9 + daylight * .42;
+    const label = `${String(Math.floor(currentTime)).padStart(2,'0')}:${String(Math.round(currentTime%1*60)).padStart(2,'0')}`;
+    $('time-display').textContent = $('stat-time').textContent = label;
 }
 
+function updateFog(value) { fogAmount = Number(value); scene.fog.density = .0015 + fogAmount / 100 * .011; $('fog-display').textContent = $('stat-fog').textContent = `${fogAmount}%`; }
+function updateSpeed(value) { animationSpeed = Number(value)/100; $('speed-display').textContent = $('stat-speed').textContent = `${value}%`; }
 
-function createHighways() {
-    const highwayMaterial = new THREE.MeshStandardMaterial({
-        color: 0x333333,
-        roughness: 0.9,
-        metalness: 0.1
-    });
-
-
-    for (const offset of HIGHWAY_OFFSETS) {
-
-
-        const hHighway = new THREE.Mesh(
-            new THREE.BoxGeometry(200, 0.2, 4),
-            highwayMaterial
-        );
-        hHighway.position.set(0, 0.1, offset);
-        hHighway.receiveShadow = true;
-        scene.add(hHighway);
-        highways.push(hHighway);
-
-
-        const vHighway = new THREE.Mesh(
-            new THREE.BoxGeometry(4, 0.2, 200),
-            highwayMaterial
-        );
-        vHighway.position.set(offset, 0.1, 0);
-        vHighway.receiveShadow = true;
-        scene.add(vHighway);
-        highways.push(vHighway);
-
-
-        addLaneMarkers(hHighway, true);
-        addLaneMarkers(vHighway, false);
-    }
+function bindUI() {
+    $('time-slider').value = currentTime; $('fog-slider').value = fogAmount;
+    $('time-slider').addEventListener('input', e => { updateEnvironment(e.target.value); setPreset(); });
+    $('fog-slider').addEventListener('input', e => updateFog(e.target.value));
+    $('speed-slider').addEventListener('input', e => updateSpeed(e.target.value));
+    $('autoRotate').addEventListener('change', e => controls.autoRotate = e.target.checked);
+    const presets = { btnSunrise:[6.5,38], btnMidday:[12,12], btnSunset:[18.5,30], btnNight:[22,42] };
+    Object.entries(presets).forEach(([id,v]) => $(id).addEventListener('click', () => { $('time-slider').value=v[0]; $('fog-slider').value=v[1]; updateEnvironment(v[0]); updateFog(v[1]); setPreset(id); }));
+    $('reset-btn').addEventListener('click', () => { camera.position.set(118,78,118); controls.target.set(0,25,0); controls.update(); });
+    $('screenshot-btn').addEventListener('click', () => { renderer.render(scene,camera); const a=document.createElement('a'); a.download='aether-city.png'; a.href=renderer.domElement.toDataURL('image/png'); a.click(); });
 }
-
-
-function addLaneMarkers(highway, horizontal) {
-    const markerMaterial = new THREE.MeshStandardMaterial({
-        color: 0xffff00,
-        emissive: 0xffff00,
-        emissiveIntensity: 0.5
-    });
-
-    const count = 40;
-    for (let i = 0; i < count; i++) {
-        const marker = new THREE.Mesh(
-            new THREE.BoxGeometry(horizontal ? 2 : 0.2, 0.05, horizontal ? 0.2 : 2),
-            markerMaterial
-        );
-
-        const offset = (i - count / 2) * 5;
-        if (horizontal) {
-            marker.position.set(offset, 0.25, 0);
-        } else {
-            marker.position.set(0, 0.25, offset);
-        }
-        highway.add(marker);
-    }
-}
-
-
-function createCars() {
-    const carCount = CAR_COUNT;
-    const cityRadius = CAR_SPAWN_RADIUS;
-    const laneOffsets = HIGHWAY_OFFSETS;
-
-
-    const carColors = [
-        0xff0000,
-        0x0000ff,
-        0x00ff00,
-        0xffff00,
-        0xff00ff,
-        0x00ffff,
-        0xffffff,
-        0x888888,
-        0x000000
-    ];
-
-    for (let i = 0; i < carCount; i++) {
-
-        const carWidth = 1.5;
-        const carHeight = 1.2;
-        const carLength = 3;
-
-        const bodyGeometry = new THREE.BoxGeometry(carWidth, carHeight, carLength);
-        const bodyColor = carColors[Math.floor(Math.random() * carColors.length)];
-        const bodyMaterial = new THREE.MeshStandardMaterial({
-            color: bodyColor,
-            roughness: 0.3,
-            metalness: 0.7
-        });
-        const carBody = new THREE.Mesh(bodyGeometry, bodyMaterial);
-
-
-        const cabinGeometry = new THREE.BoxGeometry(carWidth * 0.8, carHeight * 0.6, carLength * 0.5);
-        const cabinMaterial = new THREE.MeshStandardMaterial({
-            color: 0x333333,
-            roughness: 0.1,
-            metalness: 0.3,
-            transparent: true,
-            opacity: 0.7
-        });
-        const cabin = new THREE.Mesh(cabinGeometry, cabinMaterial);
-        cabin.position.y = carHeight * 0.8;
-        cabin.position.z = -carLength * 0.1;
-        carBody.add(cabin);
-
-
-        const headlightGeometry = new THREE.SphereGeometry(0.2, 8, 8);
-        const headlightMaterial = new THREE.MeshStandardMaterial({
-            color: 0xffffaa,
-            emissive: 0xffffaa,
-            emissiveIntensity: 2.0
-        });
-        const headlightLeft = new THREE.Mesh(headlightGeometry, headlightMaterial);
-        headlightLeft.position.set(-carWidth * 0.3, -carHeight * 0.3, carLength * 0.5);
-        carBody.add(headlightLeft);
-
-        const headlightRight = new THREE.Mesh(headlightGeometry, headlightMaterial.clone());
-        headlightRight.position.set(carWidth * 0.3, -carHeight * 0.3, carLength * 0.5);
-        carBody.add(headlightRight);
-
-
-        const taillightMaterial = new THREE.MeshStandardMaterial({
-            color: 0xff0000,
-            emissive: 0xff0000,
-            emissiveIntensity: 1.0
-        });
-        const taillightLeft = new THREE.Mesh(headlightGeometry, taillightMaterial);
-        taillightLeft.position.set(-carWidth * 0.3, -carHeight * 0.3, -carLength * 0.5);
-        carBody.add(taillightLeft);
-
-        const taillightRight = new THREE.Mesh(headlightGeometry, taillightMaterial.clone());
-        taillightRight.position.set(carWidth * 0.3, -carHeight * 0.3, -carLength * 0.5);
-        carBody.add(taillightRight);
-
-
-        const isHorizontal = Math.random() > 0.5;
-        const laneOffset = laneOffsets[Math.floor(Math.random() * laneOffsets.length)];
-        const direction = Math.random() > 0.5 ? 1 : -1;
-
-        if (isHorizontal) {
-            carBody.position.set(
-                (Math.random() - 0.5) * cityRadius,
-                0.8,
-                laneOffset + (Math.random() > 0.5 ? 1.2 : -1.2)
-            );
-            carBody.rotation.y = direction > 0 ? Math.PI / 2 : -Math.PI / 2;
-        } else {
-            carBody.position.set(
-                laneOffset + (Math.random() > 0.5 ? 1.2 : -1.2),
-                0.8,
-                (Math.random() - 0.5) * cityRadius
-            );
-            carBody.rotation.y = direction > 0 ? 0 : Math.PI;
-        }
-
-        carBody.castShadow = true;
-        carBody.receiveShadow = true;
-
-
-        carBody.userData = {
-            speed: 0.1 + Math.random() * 0.15,
-            isHorizontal: isHorizontal,
-            laneOffset: laneOffset,
-            direction: direction,
-            headlights: [headlightLeft, headlightRight],
-            taillights: [taillightLeft, taillightRight]
-        };
-
-        scene.add(carBody);
-        cars.push(carBody);
-    }
-}
-
-
-function createPeople() {
-    const peopleCount = PEOPLE_COUNT;
-    const laneOffsets = HIGHWAY_OFFSETS;
-    const sidewalkOffset = 3.5;
-
-
-    const clothingColors = [
-        0xff0000,
-        0x0000ff,
-        0x00ff00,
-        0xffff00,
-        0xff00ff,
-        0x00ffff,
-        0xffffff,
-        0x888888,
-        0x000000,
-        0x8b4513
-    ];
-
-    for (let i = 0; i < peopleCount; i++) {
-
-        const personGroup = new THREE.Group();
-
-
-        const bodyGeometry = new THREE.BoxGeometry(0.8, 1.5, 0.5);
-        const clothingColor = clothingColors[Math.floor(Math.random() * clothingColors.length)];
-        const bodyMaterial = new THREE.MeshStandardMaterial({
-            color: clothingColor,
-            roughness: 0.8,
-            metalness: 0.1
-        });
-        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-        body.position.y = 1.5;
-        body.castShadow = true;
-        personGroup.add(body);
-
-
-        const headGeometry = new THREE.SphereGeometry(0.35, 16, 16);
-        const headMaterial = new THREE.MeshStandardMaterial({
-            color: 0xffdbac,
-            roughness: 0.7,
-            metalness: 0.0
-        });
-        const head = new THREE.Mesh(headGeometry, headMaterial);
-        head.position.y = 2.6;
-        head.castShadow = true;
-        personGroup.add(head);
-
-
-        const legGeometry = new THREE.BoxGeometry(0.3, 1.2, 0.4);
-        const legMaterial = new THREE.MeshStandardMaterial({
-            color: 0x333333,
-            roughness: 0.8,
-            metalness: 0.1
-        });
-
-        const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
-        leftLeg.position.set(-0.25, 0.6, 0);
-        leftLeg.castShadow = true;
-        personGroup.add(leftLeg);
-
-        const rightLeg = new THREE.Mesh(legGeometry, legMaterial.clone());
-        rightLeg.position.set(0.25, 0.6, 0);
-        rightLeg.castShadow = true;
-        personGroup.add(rightLeg);
-
-
-        const armGeometry = new THREE.BoxGeometry(0.25, 1.0, 0.25);
-        const armMaterial = new THREE.MeshStandardMaterial({
-            color: clothingColor,
-            roughness: 0.8,
-            metalness: 0.1
-        });
-
-        const leftArm = new THREE.Mesh(armGeometry, armMaterial);
-        leftArm.position.set(-0.6, 1.5, 0);
-        leftArm.castShadow = true;
-        personGroup.add(leftArm);
-
-        const rightArm = new THREE.Mesh(armGeometry, armMaterial.clone());
-        rightArm.position.set(0.6, 1.5, 0);
-        rightArm.castShadow = true;
-        personGroup.add(rightArm);
-
-        const isHorizontal = Math.random() > 0.5;
-        const baseOffset = laneOffsets[Math.floor(Math.random() * laneOffsets.length)];
-        const sideOffset = Math.random() > 0.5 ? sidewalkOffset : -sidewalkOffset;
-        const direction = Math.random() > 0.5 ? 1 : -1;
-        let x = 0;
-        let z = 0;
-
-        if (isHorizontal) {
-            x = (Math.random() - 0.5) * 140;
-            z = baseOffset + sideOffset;
-            personGroup.rotation.y = direction > 0 ? Math.PI / 2 : -Math.PI / 2;
-        } else {
-            x = baseOffset + sideOffset;
-            z = (Math.random() - 0.5) * 140;
-            personGroup.rotation.y = direction > 0 ? 0 : Math.PI;
-        }
-
-        personGroup.position.set(x, 0, z);
-
-
-        personGroup.userData = {
-            walkSpeed: 0.03 + Math.random() * 0.02,
-            isHorizontal: isHorizontal,
-            direction: direction,
-            baseOffset: baseOffset,
-            sideOffset: sideOffset,
-            animationOffset: Math.random() * Math.PI * 2,
-            pauseTime: 80 + Math.random() * 120,
-            pauseCounter: 0,
-            isPaused: Math.random() > 0.75,
-            bodyParts: {
-                leftLeg: leftLeg,
-                rightLeg: rightLeg,
-                leftArm: leftArm,
-                rightArm: rightArm
-            }
-        };
-
-        scene.add(personGroup);
-        people.push(personGroup);
-    }
-}
-
-
-function createParticles() {
-    const particleCount = 1000;
-    const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(particleCount * 3);
-
-    for (let i = 0; i < particleCount; i++) {
-        positions[i * 3] = (Math.random() - 0.5) * 200;
-        positions[i * 3 + 1] = Math.random() * 100;
-        positions[i * 3 + 2] = (Math.random() - 0.5) * 200;
-    }
-
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-
-    const material = new THREE.PointsMaterial({
-        color: 0xffffff,
-        size: 0.5,
-        transparent: true,
-        opacity: 0.6
-    });
-
-    const particles = new THREE.Points(geometry, material);
-    scene.add(particles);
-}
-
-
-function updateDayNightCycle(time) {
-    if (!lights.sun || !lights.ambient || !scene) return;
-
-    currentTime = time;
-
-
-    const sunAngle = (time / 24) * Math.PI * 2 - Math.PI / 2;
-    const sunX = Math.cos(sunAngle) * 100;
-    const sunY = Math.sin(sunAngle) * 100;
-    lights.sun.position.set(sunX, Math.abs(sunY) + 20, 50);
-
-
-    const isDay = time >= 6 && time <= 18;
-    const transitionFactor = isDay ?
-        Math.min(1, (time - 6) / 2) * Math.min(1, (18 - time) / 2) :
-        0;
-
-
-    if (isDay) {
-
-        lights.sun.color.setHSL(0.1, 0.9, 0.95);
-        lights.sun.intensity = 1.0 + transitionFactor * 0.5;
-        lights.ambient.intensity = 0.4 + transitionFactor * 0.2;
-    } else {
-
-        lights.sun.color.setHSL(0.6, 0.5, 0.8);
-        lights.sun.intensity = 0.3;
-        lights.ambient.intensity = 0.2;
-    }
-
-
-    lights.ambient.color.setHSL(
-        isDay ? 0.6 : 0.65,
-        isDay ? 0.3 : 0.8,
-        isDay ? 1.0 : 0.4
-    );
-
-
-    const skyHue = isDay ? 0.55 : 0.65;
-    const skyLightness = isDay ? 0.5 + transitionFactor * 0.3 : 0.08;
-    scene.background = new THREE.Color().setHSL(skyHue, 0.8, skyLightness);
-
-
-    if (scene.fog) {
-        scene.fog.color.setHSL(skyHue, 0.6, skyLightness);
-    }
-
-
-    const buildingLightIntensity = isDay ? 0.1 : 1.0;
-    lights.buildingLights.forEach(light => {
-        light.intensity = buildingLightIntensity * 0.3;
-    });
-
-
-    buildings.forEach(building => {
-        if (building.material) {
-            building.material.emissiveIntensity = isDay ? 0.2 : 0.8;
-        }
-    });
-
-
-    if (timeDisplay) {
-        const hours = Math.floor(time);
-        const minutes = Math.floor((time - hours) * 60);
-        timeDisplay.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-    }
-    updateStats();
-}
-
-
-function updateFog(density) {
-    if (!scene || !scene.fog) return;
-    const near = 50;
-    const far = 200 + (100 - density) * 5;
-    scene.fog.near = near;
-    scene.fog.far = far;
-    if (fogDisplay) {
-        fogDisplay.textContent = `${density}%`;
-    }
-    updateStats();
-}
-
-
-function updateSpeed(speed) {
-    animationSpeed = speed / 100;
-    if (speedDisplay) {
-        speedDisplay.textContent = `${speed}%`;
-    }
-    updateStats();
-}
-
-
-function updateStats() {
-    if (statTime && timeSlider) {
-        const time = parseFloat(timeSlider.value);
-        const hours = Math.floor(time);
-        const minutes = Math.floor((time - hours) * 60);
-        statTime.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-    }
-    if (statFog && fogSlider) {
-        statFog.textContent = `${fogSlider.value}%`;
-    }
-    if (statSpeed && speedSlider) {
-        statSpeed.textContent = `${speedSlider.value}%`;
-    }
-    if (statBuildings) {
-        statBuildings.textContent = buildings.length.toString();
-    }
-}
-
-
-function updatePresetButtons(activeBtn) {
-    [btnSunrise, btnMidday, btnSunset, btnNight].forEach(btn => {
-        if (btn) btn.classList.remove('active');
-    });
-    if (activeBtn) {
-        activeBtn.classList.add('active');
-    }
-}
-
-
-function applyPreset(time, fog, speed, activeBtn) {
-    if (timeSlider) timeSlider.value = time;
-    if (fogSlider) fogSlider.value = fog;
-    if (speedSlider) speedSlider.value = speed;
-    updateDayNightCycle(time);
-    updateFog(fog);
-    updateSpeed(speed);
-    updatePresetButtons(activeBtn);
-}
-
-
-function takeScreenshot() {
-    if (!renderer) return;
-    try {
-        const link = document.createElement('a');
-        link.download = `futuristic-city-${Date.now()}.png`;
-        link.href = renderer.domElement.toDataURL('image/png');
-        link.click();
-    } catch (error) {
-        console.error('Screenshot failed:', error);
-    }
-}
-
-
-function resetCamera() {
-    if (!camera || !controls) return;
-    camera.position.set(80, 60, 80);
-    camera.lookAt(0, 20, 0);
-    controls.target.set(0, 20, 0);
-    controls.update();
-}
-
-
-function setupEventListeners() {
-
-    if (timeSlider) {
-        timeSlider.addEventListener('input', (e) => {
-            updateDayNightCycle(parseFloat(e.target.value));
-            updatePresetButtons(null);
-        });
-    }
-
-
-    if (fogSlider) {
-        fogSlider.addEventListener('input', (e) => {
-            updateFog(parseInt(e.target.value));
-            updatePresetButtons(null);
-        });
-    }
-
-
-    if (speedSlider) {
-        speedSlider.addEventListener('input', (e) => {
-            updateSpeed(parseInt(e.target.value));
-            updatePresetButtons(null);
-        });
-    }
-
-
-    if (resetBtn) {
-        resetBtn.addEventListener('click', resetCamera);
-    }
-
-
-    if (btnSunrise) {
-        btnSunrise.addEventListener('click', () => {
-            applyPreset(6, 40, 80, btnSunrise);
-        });
-    }
-
-    if (btnMidday) {
-        btnMidday.addEventListener('click', () => {
-            applyPreset(12, 20, 100, btnMidday);
-        });
-    }
-
-    if (btnSunset) {
-        btnSunset.addEventListener('click', () => {
-            applyPreset(18, 35, 90, btnSunset);
-        });
-    }
-
-    if (btnNight) {
-        btnNight.addEventListener('click', () => {
-            applyPreset(22, 50, 70, btnNight);
-        });
-    }
-
-
-    if (autoRotateCheck) {
-        autoRotateCheck.addEventListener('change', (e) => {
-            if (controls) {
-                controls.autoRotate = e.target.checked;
-                controls.autoRotateSpeed = AUTO_ROTATE_SPEED;
-            }
-        });
-    }
-
-
-    if (screenshotBtn) {
-        screenshotBtn.addEventListener('click', takeScreenshot);
-    }
-
-
-    window.addEventListener('resize', onWindowResize);
-}
-
-
-function onWindowResize() {
-    if (!isInitialized || !container || !camera || !renderer) return;
-
-    const width = container.clientWidth || window.innerWidth * 0.9;
-    const height = container.clientHeight || 500;
-
-    camera.aspect = width / height;
-    camera.updateProjectionMatrix();
-    renderer.setSize(width, height);
-}
-
+function setPreset(active) { document.querySelectorAll('.preset-option').forEach(b=>b.classList.toggle('active',b.id===active)); }
+function resize() { const host=$('canvas-container'), w=host.clientWidth, h=host.clientHeight; if(!w||!h)return; camera.aspect=w/h; camera.updateProjectionMatrix(); renderer.setSize(w,h,false); }
 
 function animate() {
-    if (!isInitialized) return;
-
-    requestAnimationFrame(animate);
-
-
-    if (controls) {
-        controls.update();
-    }
-
-
-    const time = Date.now() * 0.0001 * animationSpeed;
-    buildings.forEach((building, index) => {
-
-        if (building.material && building.material.emissive) {
-            const pulse = Math.sin(time + index * 0.5) * 0.1 + 0.9;
-            const baseIntensity = currentTime >= 6 && currentTime <= 18 ? 0.2 : 0.8;
-            building.material.emissiveIntensity = baseIntensity * pulse;
-        }
-    });
-
-
-    cars.forEach((car) => {
-        const data = car.userData;
-        const speed = data.speed * animationSpeed;
-
-        if (data.isHorizontal) {
-
-            car.position.x += speed * data.direction;
-            if (car.position.x > 100) car.position.x = -100;
-            if (car.position.x < -100) car.position.x = 100;
-        } else {
-
-            car.position.z += speed * data.direction;
-            if (car.position.z > 100) car.position.z = -100;
-            if (car.position.z < -100) car.position.z = 100;
-        }
-
-
-        const isNight = currentTime < 6 || currentTime > 18;
-        if (car.userData.headlights) {
-            car.userData.headlights.forEach(light => {
-                if (light.material) {
-                    light.material.emissiveIntensity = isNight ? 2.0 : 0.5;
-                }
-            });
-        }
-        if (car.userData.taillights) {
-            car.userData.taillights.forEach(light => {
-                if (light.material) {
-                    light.material.emissiveIntensity = isNight ? 1.0 : 0.3;
-                }
-            });
-        }
-    });
-
-
-    people.forEach((person, index) => {
-        const data = person.userData;
-
-        if (!data.isPaused) {
-
-            const walkTime = time * 10 + data.animationOffset;
-
-            if (data.isHorizontal) {
-                person.position.x += data.walkSpeed * data.direction * animationSpeed;
-                if (person.position.x > 80) data.direction = -1;
-                if (person.position.x < -80) data.direction = 1;
-            } else {
-                person.position.z += data.walkSpeed * data.direction * animationSpeed;
-                if (person.position.z > 80) data.direction = -1;
-                if (person.position.z < -80) data.direction = 1;
-            }
-
-            if (data.isHorizontal) {
-                person.rotation.y = data.direction > 0 ? Math.PI / 2 : -Math.PI / 2;
-            } else {
-                person.rotation.y = data.direction > 0 ? 0 : Math.PI;
-            }
-
-
-            if (data.bodyParts) {
-                const {
-                    leftLeg,
-                    rightLeg,
-                    leftArm,
-                    rightArm
-                } = data.bodyParts;
-                if (leftLeg && rightLeg) {
-                    leftLeg.rotation.x = Math.sin(walkTime) * 0.25;
-                    rightLeg.rotation.x = Math.sin(walkTime + Math.PI) * 0.25;
-                }
-
-
-                if (leftArm && rightArm) {
-                    leftArm.rotation.x = Math.sin(walkTime + Math.PI) * 0.15;
-                    rightArm.rotation.x = Math.sin(walkTime) * 0.15;
-                }
-            }
-
-
-            if (Math.random() < PERSON_PAUSE_PROBABILITY) {
-                data.isPaused = true;
-                data.pauseCounter = data.pauseTime;
-            }
-        } else {
-
-            data.pauseCounter--;
-            if (data.pauseCounter <= 0) {
-                data.isPaused = false;
-
-                if (Math.random() > 0.5) {
-                    data.walkDirection = Math.random() * Math.PI * 2;
-                    person.rotation.y = data.walkDirection;
-                }
-            }
-        }
-    });
-
-
-    if (renderer && scene && camera) {
-        renderer.render(scene, camera);
-    }
+    requestAnimationFrame(animate); if (!running) return;
+    const dt=Math.min(clock.getDelta(),.05)*animationSpeed, t=clock.elapsedTime;
+    animated.traffic.forEach(v=>{ const axis=v.userData.horizontal?'x':'z'; v.position[axis]+=v.userData.dir*v.userData.speed*dt; if(Math.abs(v.position[axis])>96)v.position[axis]*=-1; });
+    animated.rings.forEach((r,i)=>{ r.rotation.z += dt*(i%2?.18:-.13); r.position.y += Math.sin(t*.7+i)*.003; });
+    animated.wisps.forEach(w=>{ w.rotation.y=t*.003; });
+    controls.autoRotateSpeed=.35*animationSpeed; controls.update(); renderer.render(scene,camera);
 }
 
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-} else {
-
-    requestAnimationFrame(() => {
-        requestAnimationFrame(init);
-    });
-}
+init();

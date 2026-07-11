@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const calculateButton = document.getElementById("calculate");
     const clearButton = document.getElementById("clear");
     const canvas = document.getElementById("canvas");
+    const status = document.getElementById("root-status");
     const ctx = canvas.getContext("2d");
 
     const getColorForMode = (colorLight, colorDark) => {
@@ -273,16 +274,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     calculateButton.addEventListener("click", () => {
         const coefficients = parseCoefficients(coefficientsInput.value);
-        if (coefficients.some(isNaN)) {
-            alert("Invalid coefficients. Please enter a comma-separated list of numbers.");
+        if (coefficients.length < 2 || coefficients.some(isNaN) || coefficients.every((value) => value === 0)) {
+            status.textContent = "Enter at least two valid coefficients, including one non-zero value.";
+            status.className = "status-message is-error";
+            coefficientsInput.setAttribute("aria-invalid", "true");
+            coefficientsInput.focus();
             return;
         }
+        coefficientsInput.removeAttribute("aria-invalid");
 
         const roots = durandKerner(coefficients);
         const polynomialStr = formatPolynomial(coefficients);
         const rootsDisplay = roots.map((root) => root.toString(6)).join("\n");
 
         outputRoots.value = `Polynomial Equation:\n${polynomialStr}\n\nRoots:\n${rootsDisplay}`;
+        status.textContent = `${roots.length} root${roots.length === 1 ? "" : "s"} calculated successfully.`;
+        status.className = "status-message is-success";
 
         const {
             xMin,
@@ -304,5 +311,20 @@ document.addEventListener("DOMContentLoaded", () => {
         outputRoots.value = "";
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawAxis(-10, 10, -10, 10);
+        status.textContent = "Cleared. Ready for coefficients.";
+        status.className = "status-message";
+        coefficientsInput.removeAttribute("aria-invalid");
+        coefficientsInput.focus();
+    });
+
+    document.querySelectorAll("[data-coefficients]").forEach((button) => {
+        button.addEventListener("click", () => {
+            coefficientsInput.value = button.dataset.coefficients;
+            calculateButton.click();
+        });
+    });
+
+    coefficientsInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") calculateButton.click();
     });
 });

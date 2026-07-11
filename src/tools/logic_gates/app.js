@@ -18,9 +18,19 @@ function updateInputs() {
         var inputDiv = document.createElement("div");
         inputDiv.className = "lightBulb inactive";
         inputDiv.id = 'input' + (i + 1);
+        inputDiv.setAttribute('role', 'button');
+        inputDiv.setAttribute('tabindex', '0');
+        inputDiv.setAttribute('aria-label', 'Input ' + (i + 1) + ': off');
+        inputDiv.setAttribute('aria-pressed', 'false');
         inputDiv.onclick = function() {
             toggleInput(this);
             updateOutput();
+        };
+        inputDiv.onkeydown = function(event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                this.click();
+            }
         };
 
 
@@ -51,6 +61,9 @@ function getNumberOfInputsForGate(gateType) {
 function toggleInput(inputElement) {
     inputElement.classList.toggle('inactive');
     inputElement.classList.toggle('active');
+    var active = inputElement.classList.contains('active');
+    inputElement.setAttribute('aria-pressed', String(active));
+    inputElement.setAttribute('aria-label', inputElement.id.replace('input', 'Input ') + ': ' + (active ? 'on' : 'off'));
 }
 
 function updateOutput() {
@@ -84,6 +97,8 @@ function updateOutput() {
     }
 
     var outputElement = document.getElementById("outputArea").querySelector('.lightBulb');
+    outputElement.setAttribute('role', 'status');
+    outputElement.setAttribute('aria-label', 'Output: ' + (output ? 'on' : 'off'));
     if (output) {
         outputElement.classList.add('active');
         outputElement.classList.remove('inactive');
@@ -191,6 +206,8 @@ function resetInputs() {
     inputs.forEach(function(input) {
         input.classList.remove('active');
         input.classList.add('inactive');
+        input.setAttribute('aria-pressed', 'false');
+        input.setAttribute('aria-label', input.id.replace('input', 'Input ') + ': off');
     });
 
     updateOutput();
