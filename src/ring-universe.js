@@ -3,11 +3,11 @@
 
   const TAU = Math.PI * 2;
   const DESTINATIONS = [
-    { label: 'Projects', href: 'core/projects.html', color: 0x8ef6ff, angle: -0.95 },
-    { label: 'Tools', href: 'core/tools.html', color: 0xffb36a, angle: -0.42 },
-    { label: 'Blog', href: 'core/blog.html', color: 0xd5b4ff, angle: 0.1 },
-    { label: 'Courses', href: 'core/courses.html', color: 0xa7f3d0, angle: 0.62 },
-    { label: 'Resume', href: 'core/resume.html', color: 0xff8fb3, angle: 1.12 }
+    { label: 'Projects', href: 'core/projects.html', color: 0x55e7ff, angle: -0.18 },
+    { label: 'Tools', href: 'core/tools.html', color: 0xffa24a, angle: 1.08 },
+    { label: 'Blog', href: 'core/blog.html', color: 0xb77bff, angle: 2.34 },
+    { label: 'Courses', href: 'core/courses.html', color: 0x58e6a9, angle: 3.60 },
+    { label: 'Resume', href: 'core/resume.html', color: 0xff5f91, angle: 4.86 }
   ];
 
   function clamp(value, min, max) {
@@ -83,9 +83,8 @@
         align-items: end;
         justify-content: space-between;
         gap: 14px;
-        font: 500 11px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        letter-spacing: .08em;
-        text-transform: uppercase;
+        font: 500 12px/1.45 Inter, ui-sans-serif, system-ui, sans-serif;
+        letter-spacing: .015em;
         color: rgba(235, 245, 255, .78);
         text-shadow: 0 0 18px rgba(125, 245, 255, .35);
         transition: opacity .7s ease, transform .7s ease;
@@ -100,6 +99,13 @@
         background: linear-gradient(180deg, rgba(10, 12, 26, .66), rgba(5, 6, 13, .34));
         box-shadow: 0 10px 36px rgba(0, 0, 0, .28), inset 0 1px rgba(255,255,255,.08);
         backdrop-filter: blur(10px);
+      }
+      .ring-universe-hud__panel strong {
+        display: block;
+        margin-bottom: 2px;
+        color: #fff;
+        font-size: 13px;
+        letter-spacing: .01em;
       }
       .ring-universe-hud__status {
         min-width: 178px;
@@ -116,6 +122,8 @@
         margin-top: 6px;
         color: rgba(205, 224, 255, .56);
         font-size: 9px;
+        letter-spacing: .07em;
+        text-transform: uppercase;
       }
       .ring-universe-hud__metrics b { color: rgba(235, 250, 255, .9); font-weight: 600; }
       .ring-universe-charge {
@@ -206,10 +214,10 @@
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.shadowColor = hex;
-    ctx.shadowBlur = 22;
-    ctx.strokeStyle = 'rgba(255,255,255,.34)';
-    ctx.lineWidth = 2;
-    ctx.fillStyle = 'rgba(4,6,18,.58)';
+    ctx.shadowBlur = 14;
+    ctx.strokeStyle = hex;
+    ctx.lineWidth = 3;
+    ctx.fillStyle = 'rgba(3,7,18,.92)';
     if (ctx.roundRect) {
       ctx.roundRect(22, 26, 340, 76, 14);
     } else {
@@ -217,9 +225,11 @@
     }
     ctx.fill();
     ctx.stroke();
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = 8;
     ctx.fillStyle = hex;
-    ctx.font = '700 38px Inter, Arial, sans-serif';
+    ctx.fillRect(28, 35, 6, 58);
+    ctx.fillStyle = '#f8fbff';
+    ctx.font = '700 32px Inter, Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(text, 192, 64);
@@ -577,16 +587,16 @@
     const rune = new THREE.Color(colors.rune);
 
     for (let i = 0; i < count; i++) {
-      const radius = rand(2.6, 10.8);
+      const radius = rand(4.6, 12.4);
       const angle = Math.random() * TAU;
       const y = rand(-2.4, 2.4);
       const offset = i * 3;
       positions[offset] = Math.cos(angle) * radius;
-      positions[offset + 1] = 2.05 + y;
+      positions[offset + 1] = 2.05 + y * 0.62;
       positions[offset + 2] = Math.sin(angle) * radius;
-      setColorAttribute(particleColors, i, pick([portal, portal, ember, ghost, rune]), rand(0.34, 0.98));
+      setColorAttribute(particleColors, i, pick([portal, portal, ember, ghost, rune]), rand(0.28, 0.72));
       const direction = Math.random() < 0.16 ? -1 : 1;
-      const orbitalSpeed = Math.sqrt(12.5 / radius) * direction * rand(0.82, 1.18);
+      const orbitalSpeed = Math.sqrt(9.5 / radius) * direction * rand(0.82, 1.18);
       data.push({
         vx: -Math.sin(angle) * orbitalSpeed,
         vy: rand(-0.18, 0.18),
@@ -603,11 +613,11 @@
     geometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
     const material = new THREE.PointsMaterial({
       map: texture,
-      size: 1.95,
+      size: 1.05,
       sizeAttenuation: true,
       vertexColors: true,
       transparent: true,
-      opacity: 0.48,
+      opacity: 0.38,
       blending: THREE.AdditiveBlending,
       depthWrite: false
     });
@@ -642,7 +652,7 @@
       const pathMaterial = new THREE.LineBasicMaterial({
         color: hues[i],
         transparent: true,
-        opacity: 0.055,
+        opacity: 0.022,
         blending: THREE.AdditiveBlending,
         depthWrite: false
       });
@@ -696,7 +706,7 @@
           const hoveredBoost = hovered === orbiter.body ? 1 : 0;
           orbiter.bodyGroup.scale.setScalar(1 + pulse * 0.12 + hoveredBoost * 0.8);
           orbiter.haloMaterial.opacity = 0.12 + charge * 0.12 + openProgress * 0.18 + hoveredBoost * 0.3 + Math.sin(t * 2 + index) * 0.025;
-          orbiter.pathMaterial.opacity = 0.035 + charge * 0.08 + openProgress * 0.07;
+          orbiter.pathMaterial.opacity = 0.016 + charge * 0.035 + openProgress * 0.025;
         });
       },
       dispose() {
@@ -851,7 +861,7 @@
       emissive: colors.nebulaViolet,
       emissiveIntensity: 0.012,
       transparent: true,
-      opacity: 0.58
+      opacity: 0.38
     });
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(180, 180, 24, 24), groundMaterial);
     ground.rotation.x = -Math.PI / 2;
@@ -999,7 +1009,7 @@
         opacity: 0,
         depthWrite: false
       }));
-      label.scale.set(5.4, 1.8, 1);
+      label.scale.set(4.35, 1.45, 1);
       label.userData.interactive = 'destination';
       label.userData.href = item.href;
       label.userData.label = item.label;
@@ -1017,7 +1027,7 @@
 
       node.add(glow, label);
       node.userData.angle = item.angle;
-      node.userData.radius = 9.6;
+      node.userData.radius = 7.8;
       group.add(node);
       return { group: node, label, glow, texture };
     });
@@ -1029,10 +1039,10 @@
         group.visible = openProgress > 0.01;
         nodes.forEach((node, index) => {
           const reveal = clamp(openProgress * 1.35 - index * 0.12, 0, 1);
-          const angle = node.group.userData.angle + Math.sin(t * 0.35 + index) * 0.04;
+          const angle = node.group.userData.angle + Math.sin(t * 0.35 + index) * 0.018;
           const radius = node.group.userData.radius;
           const hoverBoost = hovered === node.label ? 1.12 : 1;
-          node.group.position.set(Math.sin(angle) * radius, 2.4 + Math.cos(index * 1.7 + t * 0.5) * 0.38, Math.cos(angle) * 2.2 - 1.8);
+          node.group.position.set(Math.cos(angle) * radius, 2.05 + Math.sin(angle) * radius * 0.7, 1.15 + Math.sin(t * 0.4 + index) * 0.08);
           node.group.scale.setScalar(hoverBoost);
           node.label.material.opacity = reveal;
           node.glow.material.opacity = reveal * (0.58 + Math.sin(t * 2 + index) * 0.16);
@@ -1065,7 +1075,7 @@
       pixelRatio: isMobile ? Math.min(window.devicePixelRatio || 1, 1.45) : Math.min(window.devicePixelRatio || 1, 2.25),
       stars: isMobile ? 1200 : 3800,
       clouds: isMobile ? 105 : 245,
-      motes: isMobile ? 320 : 900,
+      motes: isMobile ? 180 : 480,
       trails: isMobile ? 140 : 300,
       meteors: isMobile ? 3 : 7
     };
@@ -1145,7 +1155,7 @@
     const hud = document.createElement('div');
     hud.className = 'ring-universe-hud';
     hud.innerHTML = `
-      <div class="ring-universe-hud__panel">${isMobile ? 'Tap pulse | drag orbit | pinch depth | two-finger charge' : 'Hold to charge | release shockwave | drag orbit | wheel depth | Shift+drag draw sigils | WASD/QE fly | Space pulse | C cinematic | M meteors | R reset'}</div>
+      <div class="ring-universe-hud__panel"><strong>Explore the ring</strong>${isMobile ? 'Tap the core for destinations · drag to orbit · hold to charge' : 'Click the core for destinations · drag to orbit · hold to disturb the field'}</div>
       <div class="ring-universe-hud__status">
         Charge <span class="ring-universe-charge"><i></i></span>
         <span class="ring-universe-hud__metrics"><span>Stability <b data-stability>100%</b></span><span>Flux <b data-flux>low</b></span></span>
@@ -1374,6 +1384,10 @@
       cameraTargetTarget.lerp(tempVector, 0.28);
       state.selected = object;
       state.selectedBoost = 1.4;
+      if (object.userData.interactive === 'portal' || object.userData.interactive === 'void' || object.userData.interactive === 'ring') {
+        state.portalOpen = !state.portalOpen;
+        hud.classList.remove('is-muted');
+      }
       if (object.userData.interactive === 'obelisk' && object.userData.parentObelisk) {
         object.userData.parentObelisk.position.y += 0.26;
       }
@@ -1657,7 +1671,10 @@
       }
 
       ring.group.scale.lerp(tempVector.setScalar(1 + pulse * 0.075 + charge * 0.035), 0.095);
-      ring.group.rotation.y += dt * (0.145 + pulse * 0.25 + charge * 0.08);
+      const presentationYaw = Math.sin(t * 0.23) * 0.045 + pointerNdc.x * 0.035;
+      const presentationPitch = -0.1 + Math.sin(t * 0.17) * 0.025 - pointerNdc.y * 0.025;
+      ring.group.rotation.y += (presentationYaw - ring.group.rotation.y) * 0.045;
+      ring.group.rotation.x += (presentationPitch - ring.group.rotation.x) * 0.045;
       ring.group.rotation.z += dt * (0.032 + charge * 0.04);
       ring.inner.rotation.z -= dt * (0.38 + pulse * 1.1 + charge * 0.55);
       ring.rim.rotation.z += dt * (0.14 + pulse * 0.4);
@@ -1688,7 +1705,7 @@
 
       const motePositions = motes.positions;
       const influence = state.pointerInfluence;
-      const gravity = 12.5 * (1 + charge * 0.72 + state.portalOpenProgress * 0.38);
+      const gravity = 9.5 * (1 + charge * 0.62 + state.portalOpenProgress * 0.3);
       for (let i = 0; i < motes.data.length; i++) {
         const mote = motes.data[i];
         const offset = i * 3;
@@ -1727,10 +1744,10 @@
         y += mote.vy * dt;
         z += mote.vz * dt;
 
-        if (radius > 27 || radius < 1.25 || !Number.isFinite(x + y + z)) {
+        if (radius > 29 || radius < 3.35 || !Number.isFinite(x + y + z)) {
           const resetAngle = rand(0, TAU);
-          const resetRadius = rand(5.5, 11.5);
-          const resetSpeed = Math.sqrt(12.5 / resetRadius) * (Math.random() < 0.14 ? -1 : 1);
+          const resetRadius = rand(6.2, 12.8);
+          const resetSpeed = Math.sqrt(9.5 / resetRadius) * (Math.random() < 0.14 ? -1 : 1);
           x = Math.cos(resetAngle) * resetRadius;
           y = 2.05 + rand(-1.8, 1.8);
           z = Math.sin(resetAngle) * resetRadius;
