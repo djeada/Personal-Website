@@ -20,7 +20,7 @@ const palette = {
     stone: new THREE.Color(0x141a25)
 };
 
-let scene, camera, renderer, controls, clock, sun, ambient, city, windowMaterial;
+let scene, camera, renderer, controls, clock, sun, ambient, city, windowMaterial, facadeMaterial, groundMaterial;
 let currentTime = 20.5,
     animationSpeed = 1,
     fogAmount = 28,
@@ -65,7 +65,7 @@ function init() {
     renderer.setPixelRatio(Math.min(devicePixelRatio, 1.6));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
+    renderer.toneMappingExposure = 1.28;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     host.querySelectorAll('canvas').forEach(canvas => canvas.remove());
@@ -106,7 +106,14 @@ function createWorld() {
         far: 270
     });
     scene.add(sun);
-    const ground = new THREE.Mesh(new THREE.CircleGeometry(138, 64), material(0x090d15));
+    const cityGlow = new THREE.PointLight(0x55d9d0, 48, 155, 1.55);
+    cityGlow.position.set(0, 38, 0);
+    scene.add(cityGlow);
+    const violetFill = new THREE.DirectionalLight(0x7867c8, 1.15);
+    violetFill.position.set(85, 55, -90);
+    scene.add(violetFill);
+    groundMaterial = material(0x101923, 0x071820, .34);
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(138, 64), groundMaterial);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     city.add(ground);
@@ -155,8 +162,8 @@ function createRoads() {
 
 function createBuildings() {
     const geo = new THREE.BoxGeometry(1, 1, 1);
-    const facade = material(0x151d2a, 0x10152a, .45);
-    const towers = new THREE.InstancedMesh(geo, facade, CONFIG.buildings);
+    facadeMaterial = material(0x273449, 0x13233e, .8);
+    const towers = new THREE.InstancedMesh(geo, facadeMaterial, CONFIG.buildings);
     towers.castShadow = towers.receiveShadow = true;
     windowMaterial = new THREE.MeshBasicMaterial({
         color: palette.gold,
@@ -332,11 +339,13 @@ function updateEnvironment(value) {
     const sky = palette.void.clone().lerp(palette.dusk, twilight).lerp(palette.day, daylight * .72);
     scene.background.copy(sky);
     scene.fog.color.copy(sky);
-    ambient.intensity = .28 + daylight * 1.05;
-    sun.intensity = .15 + daylight * 2;
+    ambient.intensity = .62 + daylight * .9;
+    sun.intensity = .42 + daylight * 1.8;
     sun.color.set(daylight < .25 ? 0xb99cff : 0xffdfbd);
     windowMaterial.opacity = .92 - daylight * .62;
-    renderer.toneMappingExposure = .9 + daylight * .42;
+    facadeMaterial.emissiveIntensity = .92 - daylight * .38;
+    groundMaterial.emissiveIntensity = .42 - daylight * .12;
+    renderer.toneMappingExposure = 1.18 + daylight * .32;
     const label = `${String(Math.floor(currentTime)).padStart(2,'0')}:${String(Math.round(currentTime%1*60)).padStart(2,'0')}`;
     $('time-display').textContent = $('stat-time').textContent = label;
 }
