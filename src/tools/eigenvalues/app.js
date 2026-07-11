@@ -11,6 +11,8 @@
     const clearButton = document.getElementById("clear");
     const exactButton = document.getElementById("calculate-analytical");
     const powerButton = document.getElementById("calculate-power");
+    const eigenInsight = document.getElementById("eigen-insight");
+    const eigenMetrics = document.getElementById("eigen-metrics");
 
     const exactValuesOutput = document.getElementById("output-eigenvalues-analytical");
     const exactVectorsOutput = document.getElementById("output-eigenvectors-analytical");
@@ -72,6 +74,11 @@
         inputStatus.textContent = message;
         inputStatus.classList.toggle("is-error", type === "error");
         inputStatus.classList.toggle("is-success", type === "success");
+    }
+
+    function setTeaching(message, metrics) {
+        eigenInsight.textContent = message;
+        Array.from(eigenMetrics.children).forEach((node, index) => node.textContent = metrics[index] || "—");
     }
 
     function setEmptyState(title, detail) {
@@ -421,6 +428,11 @@
         ).join("\n");
         renderExactResults(roots, vectors);
         resultSummary.textContent = `${roots.length} real eigenpair${roots.length === 1 ? "" : "s"} found.`;
+        const dominant = roots.reduce((best, value) => Math.abs(value) > Math.abs(best) ? value : best, roots[0]);
+        const signs = roots.map(Math.sign);
+        const behavior = signs.every(sign => sign > 0) ? "Every real eigenvalue is positive, so invariant directions keep their orientation." :
+            signs.some(sign => sign < 0) ? "A negative eigenvalue reverses at least one invariant direction." : "A zero eigenvalue collapses at least one invariant direction.";
+        setTeaching(behavior, ["Method: exact", `Real eigenpairs: ${roots.length}`, `Dominant value: ${formatNumber(dominant)}`, "Convergence: not iterative"]);
         setStatus("Exact calculation complete.", "success");
     }
 
@@ -439,6 +451,7 @@
             powerVectorOutput.value = formatVector(result.eigenvector);
             renderPowerResult(result);
             resultSummary.textContent = `${result.converged ? "Converged" : "Stopped"} after ${result.iterations} iterations.`;
+            setTeaching("Power iteration estimates only the strongest invariant direction. It can miss other eigenpairs and may struggle when dominant magnitudes are tied.", ["Method: power iteration", "Real eigenpairs: dominant only", `Dominant value: ${formatNumber(result.eigenvalue)}`, `Convergence: ${result.converged ? `${result.iterations} iterations` : "not reached"}`]);
             setStatus("Power iteration complete.", result.converged ? "success" : "info");
         } catch (error) {
             setStatus(error.message, "error");
@@ -453,6 +466,7 @@
         }));
         clearOutputs();
         setEmptyState("No calculation yet", "Enter a matrix or choose a preset.");
+        setTeaching("Choose a preset or enter a matrix, then run a method. Eigenvectors identify directions preserved by the transformation; eigenvalues show their scale.", ["Method: not run", "Real eigenpairs: —", "Dominant value: —", "Convergence: —"]);
         setStatus("Cleared.");
     }
 
@@ -484,4 +498,5 @@
 
     updateSizeUI();
     writeMatrix(presets.symmetric.matrix);
+    calculateExact();
 })();

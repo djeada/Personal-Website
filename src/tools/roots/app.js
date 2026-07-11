@@ -5,7 +5,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const clearButton = document.getElementById("clear");
     const canvas = document.getElementById("canvas");
     const status = document.getElementById("root-status");
+    const rootsInsight = document.getElementById("roots-insight");
+    const rootsMetrics = document.getElementById("roots-metrics");
     const ctx = canvas.getContext("2d");
+
+    const setTeaching = (message, metrics) => {
+        rootsInsight.textContent = message;
+        Array.from(rootsMetrics.children).forEach((node, index) => node.textContent = metrics[index] || "—");
+    };
 
     const getColorForMode = (colorLight, colorDark) => {
         const darkModeValue = getCookie("darkMode");
@@ -286,10 +293,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const roots = durandKerner(coefficients);
         const polynomialStr = formatPolynomial(coefficients);
         const rootsDisplay = roots.map((root) => root.toString(6)).join("\n");
+        const realRoots = roots.filter((root) => Math.abs(root.imag) < 1e-6);
+        const complexRoots = roots.length - realRoots.length;
+        const repeatedRoots = roots.filter((root, index) => roots.some((other, otherIndex) => otherIndex < index && root.sub(other).abs() < 1e-4)).length;
 
         outputRoots.value = `Polynomial Equation:\n${polynomialStr}\n\nRoots:\n${rootsDisplay}`;
         status.textContent = `${roots.length} root${roots.length === 1 ? "" : "s"} calculated successfully.`;
         status.className = "status-message is-success";
+        const interpretation = complexRoots ? `${complexRoots} non-real root${complexRoots === 1 ? "" : "s"} cannot appear as x-axis crossings; for real coefficients they occur in conjugate pairs.` :
+            `All ${realRoots.length} roots are real and can be located where the plotted curve meets the x-axis.`;
+        setTeaching(interpretation, [`Degree: ${coefficients.length - 1}`, `Real roots: ${realRoots.length}`, `Complex roots: ${complexRoots}`, `Repeated roots: ${repeatedRoots}`]);
 
         const {
             xMin,
@@ -315,6 +328,7 @@ document.addEventListener("DOMContentLoaded", () => {
         status.className = "status-message";
         coefficientsInput.removeAttribute("aria-invalid");
         coefficientsInput.focus();
+        setTeaching("Real roots lie on the plotted x-axis. Non-real roots occur in conjugate pairs for real coefficients and do not appear as x-axis crossings.", ["Degree: —", "Real roots: —", "Complex roots: —", "Repeated roots: —"]);
     });
 
     document.querySelectorAll("[data-coefficients]").forEach((button) => {
@@ -327,4 +341,7 @@ document.addEventListener("DOMContentLoaded", () => {
     coefficientsInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter") calculateButton.click();
     });
+
+    coefficientsInput.value = "1, -5, 6";
+    calculateButton.click();
 });

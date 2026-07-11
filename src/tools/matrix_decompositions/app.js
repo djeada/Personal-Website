@@ -11,6 +11,8 @@
     const resultGrid = document.getElementById("result-grid");
     const legendRow = document.getElementById("legend-row");
     const statusMessage = document.getElementById("status-message");
+    const decompositionInsight = document.getElementById("decomposition-insight");
+    const decompositionMetrics = document.getElementById("decomposition-metrics");
     const canvas = document.getElementById("decomposition-canvas");
     const ctx = canvas.getContext("2d");
 
@@ -78,6 +80,11 @@
         statusMessage.textContent = message;
         statusMessage.classList.toggle("is-error", type === "error");
         statusMessage.classList.toggle("is-success", type === "success");
+    }
+
+    function setTeaching(message, metrics) {
+        decompositionInsight.textContent = message;
+        Array.from(decompositionMetrics.children).forEach((node, index) => node.textContent = metrics[index] || "—");
     }
 
     function readMatrix() {
@@ -403,6 +410,8 @@
             card("U", matrixFmt(transpose(result.U)), true),
             card("V", matrixFmt(transpose(result.V)), true)
         ], "SVD decomposes A into input directions, stretches, and output directions.");
+        const ratio = result.singularValues[1] < 1e-9 ? Infinity : result.singularValues[0] / result.singularValues[1];
+        setTeaching(Number.isFinite(ratio) ? `The first singular direction is stretched ${fmt(ratio)} times as strongly as the second.` : "The second singular value is zero, so the transformation collapses the plane onto a line.", ["Mode: SVD", `Primary strength: ${fmt(result.singularValues[0])}`, `Secondary strength: ${fmt(result.singularValues[1])}`, `Condition ratio: ${Number.isFinite(ratio) ? fmt(ratio) : "infinite"}`]);
         setStatus("SVD complete.", "success");
     }
 
@@ -414,6 +423,7 @@
             card("Mean", vectorFmt(result.mean)),
             card("Covariance", matrixFmt(result.covariance), true)
         ], "PCA found the principal axes of the centered dataset.");
+        setTeaching(`PC1 explains ${fmt(result.explained[0] * 100)}% of the observed variance. The closer this is to 100%, the more nearly the data follows one line.`, ["Mode: PCA", `PC1 variance: ${fmt(result.explained[0] * 100)}%`, `PC2 variance: ${fmt(result.explained[1] * 100)}%`, `Samples: ${result.points.length}`]);
         setStatus("PCA complete.", "success");
     }
 
@@ -426,6 +436,7 @@
                 card("Real EVD unavailable", "This 2x2 matrix has complex eigenvalues, so no real eigenvector basis exists.")
             ], "No real eigendecomposition for this matrix.");
             setStatus("Complex eigenvalues detected.", "error");
+            setTeaching("This transform rotates invariant directions out of the real plane, so a real eigenvector basis does not exist.", ["Mode: EVD", "Real eigenvalues: none", "Eigenvectors: complex", "Interpretation: rotation-like"]);
             return;
         }
         renderResults([
@@ -433,6 +444,7 @@
             card("Eigenvectors", result.vectors.map((vector, index) => `v${index + 1} = ${vectorFmt(vector)}`).join("\n"), true),
             card("Matrix", matrixFmt(A), true)
         ], "EVD found real invariant directions for the transform.");
+        setTeaching("Each eigenvector stays on its original line after the transformation. Its eigenvalue gives the signed scale along that line.", ["Mode: EVD", `Eigenvalue 1: ${fmt(result.values[0])}`, `Eigenvalue 2: ${fmt(result.values[1])}`, `Real directions: ${result.vectors.length}`]);
         setStatus("EVD complete.", "success");
     }
 
@@ -464,6 +476,9 @@
             pca: "PCA centers the data, then draws principal axes from the covariance matrix.",
             evd: "EVD shows eigenvectors as directions that remain on the same line after transformation."
         }[mode];
+        const formula = document.getElementById("decomposition-formula");
+        formula.textContent = { svd: "\\(A=U\\Sigma V^{\\mathsf T}\\)", pca: "\\(C=\\frac{1}{n-1}X^{\\mathsf T}X\\)", evd: "\\(A=V\\Lambda V^{-1}\\)" }[mode];
+        if (window.MathJax && window.MathJax.typesetPromise) window.MathJax.typesetPromise([formula]);
         setStatus(`${mode.toUpperCase()} mode active.`);
         runAnalysis();
     }

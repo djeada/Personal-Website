@@ -15,6 +15,8 @@
     const operationCount = document.getElementById("operation-count");
     const statusMessage = document.getElementById("status-message");
     const breakdownCard = document.getElementById("breakdown-card");
+    const multiplicationInsight = document.getElementById("multiplication-insight");
+    const multiplicationMetrics = document.getElementById("multiplication-metrics");
 
     const presets = {
         standard: {
@@ -85,6 +87,11 @@
         statusMessage.textContent = message;
         statusMessage.classList.toggle("is-error", type === "error");
         statusMessage.classList.toggle("is-success", type === "success");
+    }
+
+    function setTeaching(message, metrics) {
+        multiplicationInsight.textContent = message;
+        Array.from(multiplicationMetrics.children).forEach((node, index) => node.textContent = metrics[index] || "—");
     }
 
     function createInput(tableName, row, col) {
@@ -228,6 +235,8 @@
             const B = readMatrix(matrixBTable, inner, colsB, "B");
             const result = multiply(A, B);
             renderResult(result, A, B);
+            const scalarMultiplications = rowsA * inner * colsB;
+            setTeaching(`The ${rowsA} by ${colsB} product contains ${rowsA * colsB} dot products. Select any result cell to see its ${inner}-term calculation.`, [`Output shape: ${rowsA} x ${colsB}`, `Dot products: ${rowsA * colsB}`, `Terms per cell: ${inner}`, `Scalar operations: ${scalarMultiplications} multiply, ${rowsA * colsB * Math.max(0, inner - 1)} add`]);
             setStatus("Multiplication complete.", "success");
         } catch (error) {
             clearResult(error.message);
@@ -265,6 +274,7 @@
             input.classList.remove("has-error");
         });
         clearResult("Cleared. Empty active cells count as zero.");
+        setTeaching("Each output cell is a dot product: one row from A paired with one column from B. Choose a preset to see the full calculation immediately.", ["Output shape: —", "Dot products: —", "Terms per cell: —", "Scalar operations: —"]);
     }
 
     function transposeProduct() {
