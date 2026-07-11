@@ -421,8 +421,8 @@ function main() {
 
     let navToggle = document.getElementById('navbar-toggle');
 
-    // Older generated pages use a styled checkbox as the hamburger. Pseudo-elements
-    // on form controls are unreliable in mobile Safari, so upgrade it to a button.
+
+
     if (navToggle && navToggle.matches('input[type="checkbox"]')) {
         const button = document.createElement('button');
         button.id = navToggle.id;

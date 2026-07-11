@@ -1,43 +1,67 @@
-(function () {
-  'use strict';
+(function() {
+    'use strict';
 
-  const TAU = Math.PI * 2;
-  const DESTINATIONS = [
-    { label: 'Projects', href: 'core/projects.html', color: 0x55e7ff, angle: -0.18 },
-    { label: 'Tools', href: 'core/tools.html', color: 0xffa24a, angle: 1.08 },
-    { label: 'Blog', href: 'core/blog.html', color: 0xb77bff, angle: 2.34 },
-    { label: 'Courses', href: 'core/courses.html', color: 0x58e6a9, angle: 3.60 },
-    { label: 'Resume', href: 'core/resume.html', color: 0xff5f91, angle: 4.86 }
-  ];
+    const TAU = Math.PI * 2;
+    const DESTINATIONS = [{
+            label: 'Projects',
+            href: 'core/projects.html',
+            color: 0x55e7ff,
+            angle: -0.18
+        },
+        {
+            label: 'Tools',
+            href: 'core/tools.html',
+            color: 0xffa24a,
+            angle: 1.08
+        },
+        {
+            label: 'Blog',
+            href: 'core/blog.html',
+            color: 0xb77bff,
+            angle: 2.34
+        },
+        {
+            label: 'Courses',
+            href: 'core/courses.html',
+            color: 0x58e6a9,
+            angle: 3.60
+        },
+        {
+            label: 'Resume',
+            href: 'core/resume.html',
+            color: 0xff5f91,
+            angle: 4.86
+        }
+    ];
 
-  function clamp(value, min, max) {
-    return Math.max(min, Math.min(max, value));
-  }
+    function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+    }
 
-  function lerp(a, b, t) {
-    return a + (b - a) * t;
-  }
+    function lerp(a, b, t) {
+        return a + (b - a) * t;
+    }
 
-  function rand(min, max) {
-    return min + Math.random() * (max - min);
-  }
+    function rand(min, max) {
+        return min + Math.random() * (max - min);
+    }
 
-  function pick(list) {
-    return list[(Math.random() * list.length) | 0];
-  }
+    function pick(list) {
+        return list[(Math.random() * list.length) | 0];
+    }
 
-  function setColorAttribute(array, index, color, strength) {
-    const offset = index * 3;
-    array[offset] = color.r * strength;
-    array[offset + 1] = color.g * strength;
-    array[offset + 2] = color.b * strength;
-  }
+    function setColorAttribute(array, index, color, strength) {
+        const offset = index * 3;
+        array[offset] = color.r * strength;
+        array[offset + 1] = color.g * strength;
+        array[offset + 2] = color.b * strength;
+    }
 
-  function injectStyles() {
-    if (document.getElementById('ring-universe-immersive-styles')) return;
-    const style = document.createElement('style');
-    style.id = 'ring-universe-immersive-styles';
-    style.textContent = `
+    function injectStyles() {
+        if (document.getElementById('ring-universe-immersive-styles')) return;
+        const style = document.createElement('style');
+        style.id = 'ring-universe-immersive-styles';
+        style.textContent = `
       .ring-universe-shell {
         position: relative;
         overflow: hidden;
@@ -155,116 +179,132 @@
         .ring-universe-hud__status { align-self: flex-start; }
       }
     `;
-    document.head.appendChild(style);
-  }
-
-  function createRadialTexture(size, stops) {
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-    stops.forEach((stop) => gradient.addColorStop(stop[0], stop[1]));
-    ctx.clearRect(0, 0, size, size);
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, size, size);
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.needsUpdate = true;
-    texture.generateMipmaps = true;
-    texture.minFilter = THREE.LinearMipmapLinearFilter;
-    texture.magFilter = THREE.LinearFilter;
-    texture.wrapS = THREE.ClampToEdgeWrapping;
-    texture.wrapT = THREE.ClampToEdgeWrapping;
-    return texture;
-  }
-
-  function createPointTexture() {
-    return createRadialTexture(128, [
-      [0.00, 'rgba(255,255,255,1)'],
-      [0.18, 'rgba(255,248,224,.95)'],
-      [0.45, 'rgba(155,205,255,.35)'],
-      [1.00, 'rgba(0,0,0,0)']
-    ]);
-  }
-
-  function createSmokeTexture() {
-    return createRadialTexture(192, [
-      [0.00, 'rgba(255,255,255,.55)'],
-      [0.25, 'rgba(216,190,255,.28)'],
-      [0.62, 'rgba(80,155,210,.10)'],
-      [1.00, 'rgba(0,0,0,0)']
-    ]);
-  }
-
-  function createStrokeTexture() {
-    return createRadialTexture(96, [
-      [0.00, 'rgba(255,255,255,.96)'],
-      [0.22, 'rgba(160,255,250,.64)'],
-      [0.62, 'rgba(120,80,255,.12)'],
-      [1.00, 'rgba(0,0,0,0)']
-    ]);
-  }
-
-  function createLabelTexture(text, color) {
-    const canvas = document.createElement('canvas');
-    canvas.width = 384;
-    canvas.height = 128;
-    const ctx = canvas.getContext('2d');
-    const hex = `#${color.toString(16).padStart(6, '0')}`;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.shadowColor = hex;
-    ctx.shadowBlur = 14;
-    ctx.strokeStyle = hex;
-    ctx.lineWidth = 3;
-    ctx.fillStyle = 'rgba(3,7,18,.92)';
-    if (ctx.roundRect) {
-      ctx.roundRect(22, 26, 340, 76, 14);
-    } else {
-      ctx.rect(22, 26, 340, 76);
+        document.head.appendChild(style);
     }
-    ctx.fill();
-    ctx.stroke();
-    ctx.shadowBlur = 8;
-    ctx.fillStyle = hex;
-    ctx.fillRect(28, 35, 6, 58);
-    ctx.fillStyle = '#f8fbff';
-    ctx.font = '700 32px Inter, Arial, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, 192, 64);
 
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.needsUpdate = true;
-    texture.minFilter = THREE.LinearFilter;
-    texture.magFilter = THREE.LinearFilter;
-    return texture;
-  }
+    function createRadialTexture(size, stops) {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+        stops.forEach((stop) => gradient.addColorStop(stop[0], stop[1]));
+        ctx.clearRect(0, 0, size, size);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, size, size);
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.needsUpdate = true;
+        texture.generateMipmaps = true;
+        texture.minFilter = THREE.LinearMipmapLinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        texture.wrapS = THREE.ClampToEdgeWrapping;
+        texture.wrapT = THREE.ClampToEdgeWrapping;
+        return texture;
+    }
 
-  function makePortalMaterial(colors) {
-    return new THREE.ShaderMaterial({
-      transparent: true,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-      blending: THREE.AdditiveBlending,
-      uniforms: {
-        uTime: { value: 0 },
-        uPulse: { value: 0 },
-        uCharge: { value: 0 },
-        uPointer: { value: new THREE.Vector2(0.5, 0.5) },
-        uPortal: { value: new THREE.Color(colors.portal) },
-        uRune: { value: new THREE.Color(colors.rune) },
-        uEmber: { value: new THREE.Color(colors.ember) },
-        uVoid: { value: new THREE.Color(colors.background) }
-      },
-      vertexShader: `
+    function createPointTexture() {
+        return createRadialTexture(128, [
+            [0.00, 'rgba(255,255,255,1)'],
+            [0.18, 'rgba(255,248,224,.95)'],
+            [0.45, 'rgba(155,205,255,.35)'],
+            [1.00, 'rgba(0,0,0,0)']
+        ]);
+    }
+
+    function createSmokeTexture() {
+        return createRadialTexture(192, [
+            [0.00, 'rgba(255,255,255,.55)'],
+            [0.25, 'rgba(216,190,255,.28)'],
+            [0.62, 'rgba(80,155,210,.10)'],
+            [1.00, 'rgba(0,0,0,0)']
+        ]);
+    }
+
+    function createStrokeTexture() {
+        return createRadialTexture(96, [
+            [0.00, 'rgba(255,255,255,.96)'],
+            [0.22, 'rgba(160,255,250,.64)'],
+            [0.62, 'rgba(120,80,255,.12)'],
+            [1.00, 'rgba(0,0,0,0)']
+        ]);
+    }
+
+    function createLabelTexture(text, color) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 384;
+        canvas.height = 128;
+        const ctx = canvas.getContext('2d');
+        const hex = `#${color.toString(16).padStart(6, '0')}`;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.shadowColor = hex;
+        ctx.shadowBlur = 14;
+        ctx.strokeStyle = hex;
+        ctx.lineWidth = 3;
+        ctx.fillStyle = 'rgba(3,7,18,.92)';
+        if (ctx.roundRect) {
+            ctx.roundRect(22, 26, 340, 76, 14);
+        } else {
+            ctx.rect(22, 26, 340, 76);
+        }
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowBlur = 8;
+        ctx.fillStyle = hex;
+        ctx.fillRect(28, 35, 6, 58);
+        ctx.fillStyle = '#f8fbff';
+        ctx.font = '700 32px Inter, Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, 192, 64);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.needsUpdate = true;
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        return texture;
+    }
+
+    function makePortalMaterial(colors) {
+        return new THREE.ShaderMaterial({
+            transparent: true,
+            depthWrite: false,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending,
+            uniforms: {
+                uTime: {
+                    value: 0
+                },
+                uPulse: {
+                    value: 0
+                },
+                uCharge: {
+                    value: 0
+                },
+                uPointer: {
+                    value: new THREE.Vector2(0.5, 0.5)
+                },
+                uPortal: {
+                    value: new THREE.Color(colors.portal)
+                },
+                uRune: {
+                    value: new THREE.Color(colors.rune)
+                },
+                uEmber: {
+                    value: new THREE.Color(colors.ember)
+                },
+                uVoid: {
+                    value: new THREE.Color(colors.background)
+                }
+            },
+            vertexShader: `
         varying vec2 vUv;
         void main() {
           vUv = uv;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
       `,
-      fragmentShader: `
+            fragmentShader: `
         precision highp float;
         varying vec2 vUv;
         uniform float uTime;
@@ -322,1592 +362,1679 @@
           gl_FragColor = vec4(color, clamp(alpha, 0.0, .86));
         }
       `
-    });
-  }
-
-  function makeShockwaveMaterial(color) {
-    return new THREE.MeshBasicMaterial({
-      color,
-      transparent: true,
-      opacity: 1,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
-      depthWrite: false
-    });
-  }
-
-  function createShardGeometry() {
-    const geometry = new THREE.ConeGeometry(0.45, 3.15, 5, 1);
-    geometry.translate(0, 1.55, 0);
-    return geometry;
-  }
-
-  function addRuneMarks(group, colors, quality, interactiveTargets) {
-    const runeCount = quality.isMobile ? 28 : 54;
-    const runeMaterial = new THREE.MeshBasicMaterial({
-      color: colors.rune,
-      transparent: true,
-      opacity: 0.68,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
-    });
-    const longGeometry = new THREE.BoxGeometry(0.034, 0.46, 0.018);
-    const shortGeometry = new THREE.BoxGeometry(0.03, 0.24, 0.018);
-
-    for (let i = 0; i < runeCount; i++) {
-      const angle = (i / runeCount) * TAU;
-      const mark = new THREE.Mesh(i % 4 === 0 ? longGeometry : shortGeometry, runeMaterial);
-      const radius = i % 5 === 0 ? 5.38 : 5.05;
-      mark.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius, 0.07);
-      mark.rotation.z = angle;
-      mark.userData.interactive = 'rune';
-      mark.userData.phase = i * 0.31;
-      group.add(mark);
-      interactiveTargets.push(mark);
-    }
-
-    return { runeMaterial, longGeometry, shortGeometry };
-  }
-
-  function createRingGroup(colors, quality, interactiveTargets) {
-    const group = new THREE.Group();
-
-    const ringMaterial = new THREE.MeshPhysicalMaterial({
-      color: colors.iron,
-      metalness: 0.96,
-      roughness: 0.14,
-      clearcoat: 0.95,
-      clearcoatRoughness: 0.06,
-      emissive: colors.ringGlow,
-      emissiveIntensity: 0.18
-    });
-
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(4.18, 0.36, quality.isMobile ? 36 : 72, quality.isMobile ? 144 : 288),
-      ringMaterial
-    );
-    ring.castShadow = quality.shadows;
-    ring.userData.interactive = 'ring';
-    group.add(ring);
-    interactiveTargets.push(ring);
-
-    const rimMaterial = new THREE.MeshBasicMaterial({
-      color: colors.portal,
-      transparent: true,
-      opacity: 0.26,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
-      depthWrite: false
-    });
-    const rim = new THREE.Mesh(new THREE.RingGeometry(3.74, 4.64, quality.isMobile ? 128 : 256), rimMaterial);
-    group.add(rim);
-
-    const portalMaterial = makePortalMaterial(colors);
-    const inner = new THREE.Mesh(new THREE.CircleGeometry(3.66, quality.isMobile ? 112 : 224), portalMaterial);
-    inner.userData.interactive = 'portal';
-    group.add(inner);
-    interactiveTargets.push(inner);
-
-    const veilMaterial = new THREE.MeshBasicMaterial({
-      color: colors.ember,
-      transparent: true,
-      opacity: 0.13,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
-      depthWrite: false
-    });
-    const veil = new THREE.Mesh(new THREE.RingGeometry(2.15, 5.05, quality.isMobile ? 112 : 224), veilMaterial);
-    group.add(veil);
-
-    const crownMaterial = new THREE.MeshPhysicalMaterial({
-      color: colors.bone,
-      metalness: 0.5,
-      roughness: 0.24,
-      clearcoat: 0.5,
-      emissive: colors.ember,
-      emissiveIntensity: 0.14
-    });
-    const shardGeometry = createShardGeometry();
-    const shardCount = quality.isMobile ? 18 : 32;
-    const shards = [];
-    for (let i = 0; i < shardCount; i++) {
-      const angle = (i / shardCount) * TAU;
-      const shard = new THREE.Mesh(shardGeometry, crownMaterial);
-      const radius = 4.92 + (i % 2) * 0.38 + (i % 7 === 0 ? 0.24 : 0);
-      shard.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius, -0.22);
-      shard.rotation.z = angle - Math.PI / 2;
-      shard.rotation.x = rand(-0.35, 0.35);
-      shard.rotation.y = rand(-0.14, 0.14);
-      shard.scale.setScalar(rand(0.55, 1.28));
-      shard.castShadow = quality.shadows;
-      shard.userData.interactive = 'shard';
-      shard.userData.home = shard.position.clone();
-      shard.userData.baseRotationX = shard.rotation.x;
-      shard.userData.baseRotationY = shard.rotation.y;
-      shard.userData.baseRotationZ = shard.rotation.z;
-      shard.userData.angle = angle;
-      shard.userData.phase = rand(0, TAU);
-      group.add(shard);
-      interactiveTargets.push(shard);
-      shards.push(shard);
-    }
-
-    const runes = addRuneMarks(group, colors, quality, interactiveTargets);
-
-    return {
-      group,
-      ring,
-      rim,
-      inner,
-      veil,
-      shards,
-      materials: {
-        ringMaterial,
-        rimMaterial,
-        portalMaterial,
-        veilMaterial,
-        crownMaterial,
-        runeMaterial: runes.runeMaterial
-      },
-      geometries: {
-        ringGeometry: ring.geometry,
-        rimGeometry: rim.geometry,
-        innerGeometry: inner.geometry,
-        veilGeometry: veil.geometry,
-        shardGeometry,
-        runeLongGeometry: runes.longGeometry,
-        runeShortGeometry: runes.shortGeometry
-      }
-    };
-  }
-
-  function createStars(count, texture, colors) {
-    const positions = new Float32Array(count * 3);
-    const starColors = new Float32Array(count * 3);
-    const phases = new Float32Array(count);
-    const speeds = new Float32Array(count);
-    const sizes = new Float32Array(count);
-
-    const cold = new THREE.Color(colors.starCold);
-    const warm = new THREE.Color(colors.starWarm);
-    const pale = new THREE.Color(colors.starPale);
-
-    for (let i = 0; i < count; i++) {
-      const theta = Math.random() * TAU;
-      const phi = Math.acos(rand(-1, 1));
-      const radius = rand(120, 980);
-      const offset = i * 3;
-      positions[offset] = radius * Math.sin(phi) * Math.cos(theta);
-      positions[offset + 1] = radius * Math.sin(phi) * Math.sin(theta) * 0.74 + rand(-35, 42);
-      positions[offset + 2] = radius * Math.cos(phi);
-      setColorAttribute(starColors, i, pick([cold, cold, pale, pale, warm]), rand(0.34, 1.16));
-      phases[i] = Math.random() * TAU;
-      speeds[i] = rand(0.20, 1.65);
-      sizes[i] = rand(0.5, 1.0);
-    }
-
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
-
-    const material = new THREE.PointsMaterial({
-      map: texture,
-      size: 2.25,
-      sizeAttenuation: true,
-      vertexColors: true,
-      transparent: true,
-      opacity: 0.9,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
-    });
-
-    return {
-      points: new THREE.Points(geometry, material),
-      colors: starColors,
-      baseColors: starColors.slice(),
-      phases,
-      speeds,
-      sizes,
-      geometry,
-      material
-    };
-  }
-
-  function createClouds(count, texture, colors) {
-    const positions = new Float32Array(count * 3);
-    const cloudColors = new Float32Array(count * 3);
-    const data = [];
-    const violet = new THREE.Color(colors.nebulaViolet);
-    const cyan = new THREE.Color(colors.nebulaCyan);
-    const blood = new THREE.Color(colors.blood);
-
-    for (let i = 0; i < count; i++) {
-      const arm = i % 4;
-      const angle = (i / count) * Math.PI * 12 + arm * 1.55 + rand(-0.55, 0.55);
-      const radius = rand(22, 165);
-      const offset = i * 3;
-      positions[offset] = Math.cos(angle) * radius;
-      positions[offset + 1] = rand(-34, 52) + Math.sin(angle * 0.55) * 14;
-      positions[offset + 2] = Math.sin(angle) * radius - 58;
-      setColorAttribute(cloudColors, i, arm === 0 ? violet : arm === 1 ? cyan : arm === 2 ? blood : violet, rand(0.28, 0.76));
-      data.push({
-        drift: rand(0.012, 0.052),
-        phase: rand(0, TAU),
-        lift: rand(0.3, 1.7),
-        baseX: positions[offset],
-        baseY: positions[offset + 1],
-        baseZ: positions[offset + 2]
-      });
-    }
-
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(cloudColors, 3));
-    const material = new THREE.PointsMaterial({
-      map: texture,
-      size: 18,
-      sizeAttenuation: true,
-      vertexColors: true,
-      transparent: true,
-      opacity: 0.24,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
-    });
-
-    return { points: new THREE.Points(geometry, material), positions, data, geometry, material };
-  }
-
-  function createOrbitParticles(count, texture, colors) {
-    const positions = new Float32Array(count * 3);
-    const particleColors = new Float32Array(count * 3);
-    const data = [];
-    const portal = new THREE.Color(colors.portal);
-    const ember = new THREE.Color(colors.ember);
-    const ghost = new THREE.Color(colors.ghost);
-    const rune = new THREE.Color(colors.rune);
-
-    for (let i = 0; i < count; i++) {
-      const radius = rand(4.6, 12.4);
-      const angle = Math.random() * TAU;
-      const y = rand(-2.4, 2.4);
-      const offset = i * 3;
-      positions[offset] = Math.cos(angle) * radius;
-      positions[offset + 1] = 2.05 + y * 0.62;
-      positions[offset + 2] = Math.sin(angle) * radius;
-      setColorAttribute(particleColors, i, pick([portal, portal, ember, ghost, rune]), rand(0.28, 0.72));
-      const direction = Math.random() < 0.16 ? -1 : 1;
-      const orbitalSpeed = Math.sqrt(9.5 / radius) * direction * rand(0.82, 1.18);
-      data.push({
-        vx: -Math.sin(angle) * orbitalSpeed,
-        vy: rand(-0.18, 0.18),
-        vz: Math.cos(angle) * orbitalSpeed,
-        drag: rand(0.9972, 0.9994),
-        phase: rand(0, TAU),
-        turbulence: rand(0.15, 0.7),
-        pointerPull: rand(0.15, 0.75)
-      });
-    }
-
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
-    const material = new THREE.PointsMaterial({
-      map: texture,
-      size: 1.05,
-      sizeAttenuation: true,
-      vertexColors: true,
-      transparent: true,
-      opacity: 0.38,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
-    });
-
-    return { points: new THREE.Points(geometry, material), positions, data, geometry, material };
-  }
-
-  function createOrbitalSystem(colors, quality, interactiveTargets) {
-    const group = new THREE.Group();
-    group.position.set(0, 2.05, 0);
-    const orbiters = [];
-    const count = quality.isMobile ? 3 : 6;
-    const hues = [colors.portal, colors.ember, colors.rune, colors.ghost, colors.starWarm, colors.nebulaViolet];
-
-    for (let i = 0; i < count; i++) {
-      const radius = 7.2 + i * 2.25 + rand(-0.35, 0.35);
-      const eccentricity = rand(0.72, 0.96);
-      const tilt = rand(-0.62, 0.62);
-      const phase = rand(0, TAU);
-      const speed = rand(0.075, 0.17) * (i % 4 === 3 ? -1 : 1) / Math.sqrt(radius / 7);
-      const orbitGroup = new THREE.Group();
-      orbitGroup.rotation.x = tilt;
-      orbitGroup.rotation.z = rand(-0.28, 0.28);
-
-      const pathPoints = [];
-      const segments = quality.isMobile ? 72 : 128;
-      for (let s = 0; s < segments; s++) {
-        const a = (s / segments) * TAU;
-        pathPoints.push(new THREE.Vector3(Math.cos(a) * radius, 0, Math.sin(a) * radius * eccentricity));
-      }
-      const pathGeometry = new THREE.BufferGeometry().setFromPoints(pathPoints);
-      const pathMaterial = new THREE.LineBasicMaterial({
-        color: hues[i],
-        transparent: true,
-        opacity: 0.022,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
-      });
-      const path = new THREE.LineLoop(pathGeometry, pathMaterial);
-      orbitGroup.add(path);
-
-      const bodyGroup = new THREE.Group();
-      const size = rand(0.11, 0.28) * (i === 0 ? 1.35 : 1);
-      const bodyMaterial = new THREE.MeshPhysicalMaterial({
-        color: hues[i],
-        emissive: hues[i],
-        emissiveIntensity: 0.7,
-        roughness: 0.35,
-        metalness: 0.25
-      });
-      const body = new THREE.Mesh(new THREE.IcosahedronGeometry(size, quality.isMobile ? 1 : 2), bodyMaterial);
-      body.userData.interactive = 'orbiter';
-      body.userData.orbiterIndex = i;
-      interactiveTargets.push(body);
-
-      const haloMaterial = new THREE.MeshBasicMaterial({
-        color: hues[i],
-        transparent: true,
-        opacity: 0.2,
-        blending: THREE.AdditiveBlending,
-        side: THREE.DoubleSide,
-        depthWrite: false
-      });
-      const halo = new THREE.Mesh(new THREE.RingGeometry(size * 1.7, size * 3.5, 40), haloMaterial);
-      bodyGroup.add(body, halo);
-      orbitGroup.add(bodyGroup);
-      group.add(orbitGroup);
-      orbiters.push({ orbitGroup, bodyGroup, body, halo, path, phase, speed, radius, eccentricity, size, pathGeometry, pathMaterial, bodyMaterial, haloMaterial });
-    }
-
-    return {
-      group,
-      orbiters,
-      update(t, dt, pulse, charge, openProgress, hovered) {
-        orbiters.forEach((orbiter, index) => {
-          orbiter.phase += dt * orbiter.speed * (1 + charge * 0.75 + pulse * 1.4);
-          const radialKick = pulse * (0.45 + index * 0.035);
-          orbiter.bodyGroup.position.set(
-            Math.cos(orbiter.phase) * (orbiter.radius + radialKick),
-            Math.sin(orbiter.phase * 2.0 + index) * (0.18 + index * 0.035),
-            Math.sin(orbiter.phase) * (orbiter.radius * orbiter.eccentricity + radialKick)
-          );
-          orbiter.body.rotation.x += dt * (0.7 + index * 0.08);
-          orbiter.body.rotation.y += dt * (1.1 - index * 0.05);
-          orbiter.halo.rotation.z = -orbiter.phase;
-          const hoveredBoost = hovered === orbiter.body ? 1 : 0;
-          orbiter.bodyGroup.scale.setScalar(1 + pulse * 0.12 + hoveredBoost * 0.8);
-          orbiter.haloMaterial.opacity = 0.12 + charge * 0.12 + openProgress * 0.18 + hoveredBoost * 0.3 + Math.sin(t * 2 + index) * 0.025;
-          orbiter.pathMaterial.opacity = 0.016 + charge * 0.035 + openProgress * 0.025;
         });
-      },
-      dispose() {
-        orbiters.forEach((orbiter) => {
-          orbiter.pathGeometry.dispose();
-          orbiter.pathMaterial.dispose();
-          orbiter.body.geometry.dispose();
-          orbiter.bodyMaterial.dispose();
-          orbiter.halo.geometry.dispose();
-          orbiter.haloMaterial.dispose();
-        });
-      }
-    };
-  }
-
-  function createEnergyFilaments(colors, quality) {
-    const group = new THREE.Group();
-    group.position.set(0, 0, 0.18);
-    const filaments = [];
-    const count = quality.isMobile ? 5 : 11;
-    const pointCount = quality.isMobile ? 14 : 22;
-
-    for (let i = 0; i < count; i++) {
-      const positions = new Float32Array(pointCount * 3);
-      const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-      const material = new THREE.LineBasicMaterial({
-        color: i % 4 === 0 ? colors.ember : colors.portal,
-        transparent: true,
-        opacity: 0,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
-      });
-      const line = new THREE.Line(geometry, material);
-      group.add(line);
-      filaments.push({ line, geometry, material, positions, pointCount, from: i, to: (i * 7 + 9) % 32, phase: rand(0, TAU) });
     }
 
-    return {
-      group,
-      filaments,
-      update(t, pulse, charge, openProgress, shardCount) {
-        const energy = clamp(charge * 0.7 + pulse * 0.45 + openProgress * 0.55, 0, 1.4);
-        filaments.forEach((filament, index) => {
-          const startAngle = (filament.from % shardCount) / shardCount * TAU;
-          const endAngle = (filament.to % shardCount) / shardCount * TAU;
-          const flicker = 0.78 + Math.sin(t * 19 + filament.phase) * 0.22;
-          for (let p = 0; p < filament.pointCount; p++) {
-            const progress = p / (filament.pointCount - 1);
-            const x = lerp(Math.cos(startAngle) * 5.05, Math.cos(endAngle) * 5.05, progress);
-            const y = lerp(Math.sin(startAngle) * 5.05, Math.sin(endAngle) * 5.05, progress);
-            const bow = Math.sin(progress * Math.PI) * (0.45 + energy * 0.55);
-            const jitter = Math.sin(progress * 31 + t * 16 + filament.phase) * 0.07 * energy;
-            const offset = p * 3;
-            filament.positions[offset] = x + Math.cos(startAngle + Math.PI / 2) * (bow + jitter);
-            filament.positions[offset + 1] = y + Math.sin(startAngle + Math.PI / 2) * (bow + jitter);
-            filament.positions[offset + 2] = 0.12 + Math.sin(progress * Math.PI) * (0.55 + index * 0.025);
-          }
-          filament.geometry.attributes.position.needsUpdate = true;
-          filament.material.opacity = energy > 0.12 ? energy * 0.34 * flicker : 0;
+    function makeShockwaveMaterial(color) {
+        return new THREE.MeshBasicMaterial({
+            color,
+            transparent: true,
+            opacity: 1,
+            blending: THREE.AdditiveBlending,
+            side: THREE.DoubleSide,
+            depthWrite: false
         });
-      },
-      dispose() {
-        filaments.forEach((filament) => {
-          filament.geometry.dispose();
-          filament.material.dispose();
-        });
-      }
-    };
-  }
-
-  function createTrailSystem(maxCount, texture, colors) {
-    const positions = new Float32Array(maxCount * 3);
-    const trailColors = new Float32Array(maxCount * 3);
-    const life = new Float32Array(maxCount);
-    const velocity = Array.from({ length: maxCount }, () => new THREE.Vector3());
-    const portal = new THREE.Color(colors.portal);
-    const ember = new THREE.Color(colors.ember);
-    const rune = new THREE.Color(colors.rune);
-
-    for (let i = 0; i < maxCount; i++) {
-      positions[i * 3 + 1] = -9999;
-      setColorAttribute(trailColors, i, pick([portal, portal, rune, ember]), rand(0.55, 1.2));
     }
 
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(trailColors, 3));
+    function createShardGeometry() {
+        const geometry = new THREE.ConeGeometry(0.45, 3.15, 5, 1);
+        geometry.translate(0, 1.55, 0);
+        return geometry;
+    }
 
-    const material = new THREE.PointsMaterial({
-      map: texture,
-      size: 3.15,
-      sizeAttenuation: true,
-      vertexColors: true,
-      transparent: true,
-      opacity: 0.85,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
-    });
+    function addRuneMarks(group, colors, quality, interactiveTargets) {
+        const runeCount = quality.isMobile ? 28 : 54;
+        const runeMaterial = new THREE.MeshBasicMaterial({
+            color: colors.rune,
+            transparent: true,
+            opacity: 0.68,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const longGeometry = new THREE.BoxGeometry(0.034, 0.46, 0.018);
+        const shortGeometry = new THREE.BoxGeometry(0.03, 0.24, 0.018);
 
-    return {
-      points: new THREE.Points(geometry, material),
-      positions,
-      colors: trailColors,
-      life,
-      velocity,
-      cursor: 0,
-      geometry,
-      material,
-      emit(world, amount, burst) {
-        for (let n = 0; n < amount; n++) {
-          const i = this.cursor;
-          const offset = i * 3;
-          const spread = burst ? 0.55 : 0.14;
-          positions[offset] = world.x + rand(-spread, spread);
-          positions[offset + 1] = world.y + rand(-spread, spread);
-          positions[offset + 2] = world.z + rand(-spread, spread);
-          life[i] = burst ? rand(0.9, 1.35) : rand(0.45, 0.95);
-          velocity[i].set(rand(-0.45, 0.45), rand(-0.35, 0.65), rand(-0.45, 0.45)).multiplyScalar(burst ? 1.4 : 0.55);
-          setColorAttribute(trailColors, i, pick([portal, portal, rune, ember]), rand(0.7, 1.35));
-          this.cursor = (this.cursor + 1) % maxCount;
+        for (let i = 0; i < runeCount; i++) {
+            const angle = (i / runeCount) * TAU;
+            const mark = new THREE.Mesh(i % 4 === 0 ? longGeometry : shortGeometry, runeMaterial);
+            const radius = i % 5 === 0 ? 5.38 : 5.05;
+            mark.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius, 0.07);
+            mark.rotation.z = angle;
+            mark.userData.interactive = 'rune';
+            mark.userData.phase = i * 0.31;
+            group.add(mark);
+            interactiveTargets.push(mark);
         }
-        geometry.attributes.position.needsUpdate = true;
-        geometry.attributes.color.needsUpdate = true;
-      },
-      update(dt) {
+
+        return {
+            runeMaterial,
+            longGeometry,
+            shortGeometry
+        };
+    }
+
+    function createRingGroup(colors, quality, interactiveTargets) {
+        const group = new THREE.Group();
+
+        const ringMaterial = new THREE.MeshPhysicalMaterial({
+            color: colors.iron,
+            metalness: 0.96,
+            roughness: 0.14,
+            clearcoat: 0.95,
+            clearcoatRoughness: 0.06,
+            emissive: colors.ringGlow,
+            emissiveIntensity: 0.18
+        });
+
+        const ring = new THREE.Mesh(
+            new THREE.TorusGeometry(4.18, 0.36, quality.isMobile ? 36 : 72, quality.isMobile ? 144 : 288),
+            ringMaterial
+        );
+        ring.castShadow = quality.shadows;
+        ring.userData.interactive = 'ring';
+        group.add(ring);
+        interactiveTargets.push(ring);
+
+        const rimMaterial = new THREE.MeshBasicMaterial({
+            color: colors.portal,
+            transparent: true,
+            opacity: 0.26,
+            blending: THREE.AdditiveBlending,
+            side: THREE.DoubleSide,
+            depthWrite: false
+        });
+        const rim = new THREE.Mesh(new THREE.RingGeometry(3.74, 4.64, quality.isMobile ? 128 : 256), rimMaterial);
+        group.add(rim);
+
+        const portalMaterial = makePortalMaterial(colors);
+        const inner = new THREE.Mesh(new THREE.CircleGeometry(3.66, quality.isMobile ? 112 : 224), portalMaterial);
+        inner.userData.interactive = 'portal';
+        group.add(inner);
+        interactiveTargets.push(inner);
+
+        const veilMaterial = new THREE.MeshBasicMaterial({
+            color: colors.ember,
+            transparent: true,
+            opacity: 0.13,
+            blending: THREE.AdditiveBlending,
+            side: THREE.DoubleSide,
+            depthWrite: false
+        });
+        const veil = new THREE.Mesh(new THREE.RingGeometry(2.15, 5.05, quality.isMobile ? 112 : 224), veilMaterial);
+        group.add(veil);
+
+        const crownMaterial = new THREE.MeshPhysicalMaterial({
+            color: colors.bone,
+            metalness: 0.5,
+            roughness: 0.24,
+            clearcoat: 0.5,
+            emissive: colors.ember,
+            emissiveIntensity: 0.14
+        });
+        const shardGeometry = createShardGeometry();
+        const shardCount = quality.isMobile ? 18 : 32;
+        const shards = [];
+        for (let i = 0; i < shardCount; i++) {
+            const angle = (i / shardCount) * TAU;
+            const shard = new THREE.Mesh(shardGeometry, crownMaterial);
+            const radius = 4.92 + (i % 2) * 0.38 + (i % 7 === 0 ? 0.24 : 0);
+            shard.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius, -0.22);
+            shard.rotation.z = angle - Math.PI / 2;
+            shard.rotation.x = rand(-0.35, 0.35);
+            shard.rotation.y = rand(-0.14, 0.14);
+            shard.scale.setScalar(rand(0.55, 1.28));
+            shard.castShadow = quality.shadows;
+            shard.userData.interactive = 'shard';
+            shard.userData.home = shard.position.clone();
+            shard.userData.baseRotationX = shard.rotation.x;
+            shard.userData.baseRotationY = shard.rotation.y;
+            shard.userData.baseRotationZ = shard.rotation.z;
+            shard.userData.angle = angle;
+            shard.userData.phase = rand(0, TAU);
+            group.add(shard);
+            interactiveTargets.push(shard);
+            shards.push(shard);
+        }
+
+        const runes = addRuneMarks(group, colors, quality, interactiveTargets);
+
+        return {
+            group,
+            ring,
+            rim,
+            inner,
+            veil,
+            shards,
+            materials: {
+                ringMaterial,
+                rimMaterial,
+                portalMaterial,
+                veilMaterial,
+                crownMaterial,
+                runeMaterial: runes.runeMaterial
+            },
+            geometries: {
+                ringGeometry: ring.geometry,
+                rimGeometry: rim.geometry,
+                innerGeometry: inner.geometry,
+                veilGeometry: veil.geometry,
+                shardGeometry,
+                runeLongGeometry: runes.longGeometry,
+                runeShortGeometry: runes.shortGeometry
+            }
+        };
+    }
+
+    function createStars(count, texture, colors) {
+        const positions = new Float32Array(count * 3);
+        const starColors = new Float32Array(count * 3);
+        const phases = new Float32Array(count);
+        const speeds = new Float32Array(count);
+        const sizes = new Float32Array(count);
+
+        const cold = new THREE.Color(colors.starCold);
+        const warm = new THREE.Color(colors.starWarm);
+        const pale = new THREE.Color(colors.starPale);
+
+        for (let i = 0; i < count; i++) {
+            const theta = Math.random() * TAU;
+            const phi = Math.acos(rand(-1, 1));
+            const radius = rand(120, 980);
+            const offset = i * 3;
+            positions[offset] = radius * Math.sin(phi) * Math.cos(theta);
+            positions[offset + 1] = radius * Math.sin(phi) * Math.sin(theta) * 0.74 + rand(-35, 42);
+            positions[offset + 2] = radius * Math.cos(phi);
+            setColorAttribute(starColors, i, pick([cold, cold, pale, pale, warm]), rand(0.34, 1.16));
+            phases[i] = Math.random() * TAU;
+            speeds[i] = rand(0.20, 1.65);
+            sizes[i] = rand(0.5, 1.0);
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
+
+        const material = new THREE.PointsMaterial({
+            map: texture,
+            size: 2.25,
+            sizeAttenuation: true,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.9,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        return {
+            points: new THREE.Points(geometry, material),
+            colors: starColors,
+            baseColors: starColors.slice(),
+            phases,
+            speeds,
+            sizes,
+            geometry,
+            material
+        };
+    }
+
+    function createClouds(count, texture, colors) {
+        const positions = new Float32Array(count * 3);
+        const cloudColors = new Float32Array(count * 3);
+        const data = [];
+        const violet = new THREE.Color(colors.nebulaViolet);
+        const cyan = new THREE.Color(colors.nebulaCyan);
+        const blood = new THREE.Color(colors.blood);
+
+        for (let i = 0; i < count; i++) {
+            const arm = i % 4;
+            const angle = (i / count) * Math.PI * 12 + arm * 1.55 + rand(-0.55, 0.55);
+            const radius = rand(22, 165);
+            const offset = i * 3;
+            positions[offset] = Math.cos(angle) * radius;
+            positions[offset + 1] = rand(-34, 52) + Math.sin(angle * 0.55) * 14;
+            positions[offset + 2] = Math.sin(angle) * radius - 58;
+            setColorAttribute(cloudColors, i, arm === 0 ? violet : arm === 1 ? cyan : arm === 2 ? blood : violet, rand(0.28, 0.76));
+            data.push({
+                drift: rand(0.012, 0.052),
+                phase: rand(0, TAU),
+                lift: rand(0.3, 1.7),
+                baseX: positions[offset],
+                baseY: positions[offset + 1],
+                baseZ: positions[offset + 2]
+            });
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(cloudColors, 3));
+        const material = new THREE.PointsMaterial({
+            map: texture,
+            size: 18,
+            sizeAttenuation: true,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.24,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        return {
+            points: new THREE.Points(geometry, material),
+            positions,
+            data,
+            geometry,
+            material
+        };
+    }
+
+    function createOrbitParticles(count, texture, colors) {
+        const positions = new Float32Array(count * 3);
+        const particleColors = new Float32Array(count * 3);
+        const data = [];
+        const portal = new THREE.Color(colors.portal);
+        const ember = new THREE.Color(colors.ember);
+        const ghost = new THREE.Color(colors.ghost);
+        const rune = new THREE.Color(colors.rune);
+
+        for (let i = 0; i < count; i++) {
+            const radius = rand(4.6, 12.4);
+            const angle = Math.random() * TAU;
+            const y = rand(-2.4, 2.4);
+            const offset = i * 3;
+            positions[offset] = Math.cos(angle) * radius;
+            positions[offset + 1] = 2.05 + y * 0.62;
+            positions[offset + 2] = Math.sin(angle) * radius;
+            setColorAttribute(particleColors, i, pick([portal, portal, ember, ghost, rune]), rand(0.28, 0.72));
+            const direction = Math.random() < 0.16 ? -1 : 1;
+            const orbitalSpeed = Math.sqrt(9.5 / radius) * direction * rand(0.82, 1.18);
+            data.push({
+                vx: -Math.sin(angle) * orbitalSpeed,
+                vy: rand(-0.18, 0.18),
+                vz: Math.cos(angle) * orbitalSpeed,
+                drag: rand(0.9972, 0.9994),
+                phase: rand(0, TAU),
+                turbulence: rand(0.15, 0.7),
+                pointerPull: rand(0.15, 0.75)
+            });
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
+        const material = new THREE.PointsMaterial({
+            map: texture,
+            size: 1.05,
+            sizeAttenuation: true,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.38,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        return {
+            points: new THREE.Points(geometry, material),
+            positions,
+            data,
+            geometry,
+            material
+        };
+    }
+
+    function createOrbitalSystem(colors, quality, interactiveTargets) {
+        const group = new THREE.Group();
+        group.position.set(0, 2.05, 0);
+        const orbiters = [];
+        const count = quality.isMobile ? 3 : 6;
+        const hues = [colors.portal, colors.ember, colors.rune, colors.ghost, colors.starWarm, colors.nebulaViolet];
+
+        for (let i = 0; i < count; i++) {
+            const radius = 7.2 + i * 2.25 + rand(-0.35, 0.35);
+            const eccentricity = rand(0.72, 0.96);
+            const tilt = rand(-0.62, 0.62);
+            const phase = rand(0, TAU);
+            const speed = rand(0.075, 0.17) * (i % 4 === 3 ? -1 : 1) / Math.sqrt(radius / 7);
+            const orbitGroup = new THREE.Group();
+            orbitGroup.rotation.x = tilt;
+            orbitGroup.rotation.z = rand(-0.28, 0.28);
+
+            const pathPoints = [];
+            const segments = quality.isMobile ? 72 : 128;
+            for (let s = 0; s < segments; s++) {
+                const a = (s / segments) * TAU;
+                pathPoints.push(new THREE.Vector3(Math.cos(a) * radius, 0, Math.sin(a) * radius * eccentricity));
+            }
+            const pathGeometry = new THREE.BufferGeometry().setFromPoints(pathPoints);
+            const pathMaterial = new THREE.LineBasicMaterial({
+                color: hues[i],
+                transparent: true,
+                opacity: 0.022,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            const path = new THREE.LineLoop(pathGeometry, pathMaterial);
+            orbitGroup.add(path);
+
+            const bodyGroup = new THREE.Group();
+            const size = rand(0.11, 0.28) * (i === 0 ? 1.35 : 1);
+            const bodyMaterial = new THREE.MeshPhysicalMaterial({
+                color: hues[i],
+                emissive: hues[i],
+                emissiveIntensity: 0.7,
+                roughness: 0.35,
+                metalness: 0.25
+            });
+            const body = new THREE.Mesh(new THREE.IcosahedronGeometry(size, quality.isMobile ? 1 : 2), bodyMaterial);
+            body.userData.interactive = 'orbiter';
+            body.userData.orbiterIndex = i;
+            interactiveTargets.push(body);
+
+            const haloMaterial = new THREE.MeshBasicMaterial({
+                color: hues[i],
+                transparent: true,
+                opacity: 0.2,
+                blending: THREE.AdditiveBlending,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            });
+            const halo = new THREE.Mesh(new THREE.RingGeometry(size * 1.7, size * 3.5, 40), haloMaterial);
+            bodyGroup.add(body, halo);
+            orbitGroup.add(bodyGroup);
+            group.add(orbitGroup);
+            orbiters.push({
+                orbitGroup,
+                bodyGroup,
+                body,
+                halo,
+                path,
+                phase,
+                speed,
+                radius,
+                eccentricity,
+                size,
+                pathGeometry,
+                pathMaterial,
+                bodyMaterial,
+                haloMaterial
+            });
+        }
+
+        return {
+            group,
+            orbiters,
+            update(t, dt, pulse, charge, openProgress, hovered) {
+                orbiters.forEach((orbiter, index) => {
+                    orbiter.phase += dt * orbiter.speed * (1 + charge * 0.75 + pulse * 1.4);
+                    const radialKick = pulse * (0.45 + index * 0.035);
+                    orbiter.bodyGroup.position.set(
+                        Math.cos(orbiter.phase) * (orbiter.radius + radialKick),
+                        Math.sin(orbiter.phase * 2.0 + index) * (0.18 + index * 0.035),
+                        Math.sin(orbiter.phase) * (orbiter.radius * orbiter.eccentricity + radialKick)
+                    );
+                    orbiter.body.rotation.x += dt * (0.7 + index * 0.08);
+                    orbiter.body.rotation.y += dt * (1.1 - index * 0.05);
+                    orbiter.halo.rotation.z = -orbiter.phase;
+                    const hoveredBoost = hovered === orbiter.body ? 1 : 0;
+                    orbiter.bodyGroup.scale.setScalar(1 + pulse * 0.12 + hoveredBoost * 0.8);
+                    orbiter.haloMaterial.opacity = 0.12 + charge * 0.12 + openProgress * 0.18 + hoveredBoost * 0.3 + Math.sin(t * 2 + index) * 0.025;
+                    orbiter.pathMaterial.opacity = 0.016 + charge * 0.035 + openProgress * 0.025;
+                });
+            },
+            dispose() {
+                orbiters.forEach((orbiter) => {
+                    orbiter.pathGeometry.dispose();
+                    orbiter.pathMaterial.dispose();
+                    orbiter.body.geometry.dispose();
+                    orbiter.bodyMaterial.dispose();
+                    orbiter.halo.geometry.dispose();
+                    orbiter.haloMaterial.dispose();
+                });
+            }
+        };
+    }
+
+    function createEnergyFilaments(colors, quality) {
+        const group = new THREE.Group();
+        group.position.set(0, 0, 0.18);
+        const filaments = [];
+        const count = quality.isMobile ? 5 : 11;
+        const pointCount = quality.isMobile ? 14 : 22;
+
+        for (let i = 0; i < count; i++) {
+            const positions = new Float32Array(pointCount * 3);
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const material = new THREE.LineBasicMaterial({
+                color: i % 4 === 0 ? colors.ember : colors.portal,
+                transparent: true,
+                opacity: 0,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            const line = new THREE.Line(geometry, material);
+            group.add(line);
+            filaments.push({
+                line,
+                geometry,
+                material,
+                positions,
+                pointCount,
+                from: i,
+                to: (i * 7 + 9) % 32,
+                phase: rand(0, TAU)
+            });
+        }
+
+        return {
+            group,
+            filaments,
+            update(t, pulse, charge, openProgress, shardCount) {
+                const energy = clamp(charge * 0.7 + pulse * 0.45 + openProgress * 0.55, 0, 1.4);
+                filaments.forEach((filament, index) => {
+                    const startAngle = (filament.from % shardCount) / shardCount * TAU;
+                    const endAngle = (filament.to % shardCount) / shardCount * TAU;
+                    const flicker = 0.78 + Math.sin(t * 19 + filament.phase) * 0.22;
+                    for (let p = 0; p < filament.pointCount; p++) {
+                        const progress = p / (filament.pointCount - 1);
+                        const x = lerp(Math.cos(startAngle) * 5.05, Math.cos(endAngle) * 5.05, progress);
+                        const y = lerp(Math.sin(startAngle) * 5.05, Math.sin(endAngle) * 5.05, progress);
+                        const bow = Math.sin(progress * Math.PI) * (0.45 + energy * 0.55);
+                        const jitter = Math.sin(progress * 31 + t * 16 + filament.phase) * 0.07 * energy;
+                        const offset = p * 3;
+                        filament.positions[offset] = x + Math.cos(startAngle + Math.PI / 2) * (bow + jitter);
+                        filament.positions[offset + 1] = y + Math.sin(startAngle + Math.PI / 2) * (bow + jitter);
+                        filament.positions[offset + 2] = 0.12 + Math.sin(progress * Math.PI) * (0.55 + index * 0.025);
+                    }
+                    filament.geometry.attributes.position.needsUpdate = true;
+                    filament.material.opacity = energy > 0.12 ? energy * 0.34 * flicker : 0;
+                });
+            },
+            dispose() {
+                filaments.forEach((filament) => {
+                    filament.geometry.dispose();
+                    filament.material.dispose();
+                });
+            }
+        };
+    }
+
+    function createTrailSystem(maxCount, texture, colors) {
+        const positions = new Float32Array(maxCount * 3);
+        const trailColors = new Float32Array(maxCount * 3);
+        const life = new Float32Array(maxCount);
+        const velocity = Array.from({
+            length: maxCount
+        }, () => new THREE.Vector3());
+        const portal = new THREE.Color(colors.portal);
+        const ember = new THREE.Color(colors.ember);
+        const rune = new THREE.Color(colors.rune);
+
         for (let i = 0; i < maxCount; i++) {
-          if (life[i] <= 0) continue;
-          life[i] -= dt;
-          const offset = i * 3;
-          positions[offset] += velocity[i].x * dt;
-          positions[offset + 1] += velocity[i].y * dt;
-          positions[offset + 2] += velocity[i].z * dt;
-          velocity[i].multiplyScalar(0.985);
-          const fade = clamp(life[i], 0, 1);
-          trailColors[offset] *= 0.985 + fade * 0.006;
-          trailColors[offset + 1] *= 0.985 + fade * 0.006;
-          trailColors[offset + 2] *= 0.985 + fade * 0.006;
-          if (life[i] <= 0) positions[offset + 1] = -9999;
+            positions[i * 3 + 1] = -9999;
+            setColorAttribute(trailColors, i, pick([portal, portal, rune, ember]), rand(0.55, 1.2));
         }
-        geometry.attributes.position.needsUpdate = true;
-        geometry.attributes.color.needsUpdate = true;
-      }
-    };
-  }
 
-  function createGround(scene, colors, quality) {
-    const groundMaterial = new THREE.MeshPhysicalMaterial({
-      color: colors.ground,
-      roughness: 0.92,
-      metalness: 0.08,
-      emissive: colors.nebulaViolet,
-      emissiveIntensity: 0.012,
-      transparent: true,
-      opacity: 0.38
-    });
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(180, 180, 24, 24), groundMaterial);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -9.6;
-    ground.receiveShadow = quality.shadows;
-    scene.add(ground);
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(trailColors, 3));
 
-    const circleMaterial = new THREE.MeshBasicMaterial({
-      color: colors.portal,
-      transparent: true,
-      opacity: 0.055,
-      side: THREE.DoubleSide,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
-    });
-    const circle = new THREE.Mesh(new THREE.RingGeometry(6.8, 25, quality.isMobile ? 128 : 220), circleMaterial);
-    circle.rotation.x = -Math.PI / 2;
-    circle.position.y = -9.42;
-    scene.add(circle);
+        const material = new THREE.PointsMaterial({
+            map: texture,
+            size: 3.15,
+            sizeAttenuation: true,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.85,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
 
-    const sigilMaterial = new THREE.MeshBasicMaterial({
-      color: colors.rune,
-      transparent: true,
-      opacity: 0.04,
-      side: THREE.DoubleSide,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
-    });
-    const sigil = new THREE.Group();
-    for (let i = 0; i < 5; i++) {
-      const ring = new THREE.Mesh(new THREE.RingGeometry(8 + i * 3.1, 8.05 + i * 3.1, 144), sigilMaterial);
-      ring.rotation.x = -Math.PI / 2;
-      ring.position.y = -9.39 + i * 0.004;
-      sigil.add(ring);
-    }
-    scene.add(sigil);
-
-    return { ground, circle, sigil, materials: { groundMaterial, circleMaterial, sigilMaterial } };
-  }
-
-  function createObelisks(scene, colors, quality, interactiveTargets) {
-    const material = new THREE.MeshPhysicalMaterial({
-      color: colors.obsidian,
-      roughness: 0.48,
-      metalness: 0.38,
-      clearcoat: 0.18,
-      emissive: colors.blood,
-      emissiveIntensity: 0.06
-    });
-    const topMaterial = new THREE.MeshBasicMaterial({
-      color: colors.ember,
-      transparent: true,
-      opacity: 0.44,
-      blending: THREE.AdditiveBlending
-    });
-    const count = quality.isMobile ? 8 : 16;
-    const obelisks = [];
-
-    for (let i = 0; i < count; i++) {
-      const angle = (i / count) * TAU + rand(-0.08, 0.08);
-      const radius = rand(24, 58);
-      const height = rand(4, 13);
-      const group = new THREE.Group();
-      group.position.set(Math.cos(angle) * radius, -9.55, -24 - Math.abs(Math.sin(angle)) * radius * 0.58);
-      group.rotation.y = -angle + rand(-0.45, 0.45);
-
-      const body = new THREE.Mesh(new THREE.ConeGeometry(rand(0.28, 0.72), height, 5), material);
-      body.position.y = height * 0.5;
-      body.castShadow = quality.shadows;
-      body.userData.interactive = 'obelisk';
-      body.userData.parentObelisk = group;
-      body.userData.phase = rand(0, TAU);
-      group.add(body);
-      interactiveTargets.push(body);
-
-      const ember = new THREE.Mesh(new THREE.SphereGeometry(rand(0.12, 0.29), 14, 10), topMaterial);
-      ember.position.y = height + 0.18;
-      group.add(ember);
-
-      scene.add(group);
-      obelisks.push({ group, body, ember, phase: rand(0, TAU), baseHeight: height, angle });
+        return {
+            points: new THREE.Points(geometry, material),
+            positions,
+            colors: trailColors,
+            life,
+            velocity,
+            cursor: 0,
+            geometry,
+            material,
+            emit(world, amount, burst) {
+                for (let n = 0; n < amount; n++) {
+                    const i = this.cursor;
+                    const offset = i * 3;
+                    const spread = burst ? 0.55 : 0.14;
+                    positions[offset] = world.x + rand(-spread, spread);
+                    positions[offset + 1] = world.y + rand(-spread, spread);
+                    positions[offset + 2] = world.z + rand(-spread, spread);
+                    life[i] = burst ? rand(0.9, 1.35) : rand(0.45, 0.95);
+                    velocity[i].set(rand(-0.45, 0.45), rand(-0.35, 0.65), rand(-0.45, 0.45)).multiplyScalar(burst ? 1.4 : 0.55);
+                    setColorAttribute(trailColors, i, pick([portal, portal, rune, ember]), rand(0.7, 1.35));
+                    this.cursor = (this.cursor + 1) % maxCount;
+                }
+                geometry.attributes.position.needsUpdate = true;
+                geometry.attributes.color.needsUpdate = true;
+            },
+            update(dt) {
+                for (let i = 0; i < maxCount; i++) {
+                    if (life[i] <= 0) continue;
+                    life[i] -= dt;
+                    const offset = i * 3;
+                    positions[offset] += velocity[i].x * dt;
+                    positions[offset + 1] += velocity[i].y * dt;
+                    positions[offset + 2] += velocity[i].z * dt;
+                    velocity[i].multiplyScalar(0.985);
+                    const fade = clamp(life[i], 0, 1);
+                    trailColors[offset] *= 0.985 + fade * 0.006;
+                    trailColors[offset + 1] *= 0.985 + fade * 0.006;
+                    trailColors[offset + 2] *= 0.985 + fade * 0.006;
+                    if (life[i] <= 0) positions[offset + 1] = -9999;
+                }
+                geometry.attributes.position.needsUpdate = true;
+                geometry.attributes.color.needsUpdate = true;
+            }
+        };
     }
 
-    return { obelisks, material, topMaterial };
-  }
+    function createGround(scene, colors, quality) {
+        const groundMaterial = new THREE.MeshPhysicalMaterial({
+            color: colors.ground,
+            roughness: 0.92,
+            metalness: 0.08,
+            emissive: colors.nebulaViolet,
+            emissiveIntensity: 0.012,
+            transparent: true,
+            opacity: 0.38
+        });
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(180, 180, 24, 24), groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -9.6;
+        ground.receiveShadow = quality.shadows;
+        scene.add(ground);
 
-  function createMeteor(scene, colors, quality) {
-    const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(6);
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    const material = new THREE.LineBasicMaterial({
-      color: colors.starWarm,
-      transparent: true,
-      opacity: 0,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
-    });
-    const line = new THREE.Line(geometry, material);
-    scene.add(line);
-    return {
-      line,
-      geometry,
-      material,
-      active: false,
-      life: 0,
-      pos: new THREE.Vector3(),
-      vel: new THREE.Vector3(),
-      launch() {
-        this.active = true;
-        this.life = rand(0.7, 1.3);
-        this.pos.set(rand(-85, 85), rand(50, 90), rand(-120, -30));
-        this.vel.set(rand(-32, 22), rand(-35, -18), rand(26, 42));
-        material.opacity = quality.isMobile ? 0.55 : 0.78;
-      },
-      update(dt) {
-        if (!this.active) return;
-        this.life -= dt;
-        this.pos.addScaledVector(this.vel, dt);
-        const tail = this.pos.clone().addScaledVector(this.vel, -0.045);
-        positions[0] = this.pos.x;
-        positions[1] = this.pos.y;
-        positions[2] = this.pos.z;
-        positions[3] = tail.x;
-        positions[4] = tail.y;
-        positions[5] = tail.z;
-        geometry.attributes.position.needsUpdate = true;
-        material.opacity = Math.max(0, Math.min(0.9, this.life));
-        if (this.life <= 0) {
-          this.active = false;
-          material.opacity = 0;
+        const circleMaterial = new THREE.MeshBasicMaterial({
+            color: colors.portal,
+            transparent: true,
+            opacity: 0.055,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const circle = new THREE.Mesh(new THREE.RingGeometry(6.8, 25, quality.isMobile ? 128 : 220), circleMaterial);
+        circle.rotation.x = -Math.PI / 2;
+        circle.position.y = -9.42;
+        scene.add(circle);
+
+        const sigilMaterial = new THREE.MeshBasicMaterial({
+            color: colors.rune,
+            transparent: true,
+            opacity: 0.04,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const sigil = new THREE.Group();
+        for (let i = 0; i < 5; i++) {
+            const ring = new THREE.Mesh(new THREE.RingGeometry(8 + i * 3.1, 8.05 + i * 3.1, 144), sigilMaterial);
+            ring.rotation.x = -Math.PI / 2;
+            ring.position.y = -9.39 + i * 0.004;
+            sigil.add(ring);
         }
-      }
-    };
-  }
+        scene.add(sigil);
 
-  function createDestinationNodes() {
-    const group = new THREE.Group();
-    group.visible = false;
-    const nodes = DESTINATIONS.map((item) => {
-      const node = new THREE.Group();
-      const texture = createLabelTexture(item.label, item.color);
-      const label = new THREE.Sprite(new THREE.SpriteMaterial({
-        map: texture,
-        transparent: true,
-        opacity: 0,
-        depthWrite: false
-      }));
-      label.scale.set(4.35, 1.45, 1);
-      label.userData.interactive = 'destination';
-      label.userData.href = item.href;
-      label.userData.label = item.label;
-
-      const glow = new THREE.Mesh(
-        new THREE.SphereGeometry(0.18, 18, 12),
-        new THREE.MeshBasicMaterial({
-          color: item.color,
-          transparent: true,
-          opacity: 0,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false
-        })
-      );
-
-      node.add(glow, label);
-      node.userData.angle = item.angle;
-      node.userData.radius = 7.8;
-      group.add(node);
-      return { group: node, label, glow, texture };
-    });
-
-    return {
-      group,
-      nodes,
-      update(t, openProgress, hovered) {
-        group.visible = openProgress > 0.01;
-        nodes.forEach((node, index) => {
-          const reveal = clamp(openProgress * 1.35 - index * 0.12, 0, 1);
-          const angle = node.group.userData.angle + Math.sin(t * 0.35 + index) * 0.018;
-          const radius = node.group.userData.radius;
-          const hoverBoost = hovered === node.label ? 1.12 : 1;
-          node.group.position.set(Math.cos(angle) * radius, 2.05 + Math.sin(angle) * radius * 0.7, 1.15 + Math.sin(t * 0.4 + index) * 0.08);
-          node.group.scale.setScalar(hoverBoost);
-          node.label.material.opacity = reveal;
-          node.glow.material.opacity = reveal * (0.58 + Math.sin(t * 2 + index) * 0.16);
-          node.glow.scale.setScalar(1 + reveal * (4 + Math.sin(t * 2.4 + index) * 0.6));
-        });
-      },
-      dispose() {
-        nodes.forEach((node) => {
-          node.texture.dispose();
-          node.label.material.dispose();
-          node.glow.geometry.dispose();
-          node.glow.material.dispose();
-        });
-      }
-    };
-  }
-
-  function createSimulation(container, options) {
-    options = options || {};
-    if (!window.THREE || !container) return null;
-
-    injectStyles();
-    container.classList.add('ring-universe-shell');
-    container.tabIndex = container.tabIndex >= 0 ? container.tabIndex : 0;
-
-    const isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const quality = {
-      isMobile,
-      shadows: !isMobile,
-      pixelRatio: isMobile ? Math.min(window.devicePixelRatio || 1, 1.45) : Math.min(window.devicePixelRatio || 1, 2.25),
-      stars: isMobile ? 1200 : 3800,
-      clouds: isMobile ? 105 : 245,
-      motes: isMobile ? 180 : 480,
-      trails: isMobile ? 140 : 300,
-      meteors: isMobile ? 3 : 7
-    };
-
-    const palettes = {
-      dark: {
-        background: 0x03030a,
-        fog: 0x070615,
-        iron: 0x211d28,
-        ringGlow: 0xa685ff,
-        portal: 0x74faff,
-        ember: 0xff8b44,
-        rune: 0xe6d4ff,
-        bone: 0xb9a98d,
-        ghost: 0xc2fff2,
-        blood: 0x96173d,
-        obsidian: 0x08080f,
-        ground: 0x06060b,
-        nebulaViolet: 0x6544ad,
-        nebulaCyan: 0x238ba0,
-        starCold: 0xa7ccff,
-        starWarm: 0xffc18a,
-        starPale: 0xf5f0ff
-      },
-      light: {
-        background: 0x070816,
-        fog: 0x101128,
-        iron: 0x302b38,
-        ringGlow: 0x9f91ff,
-        portal: 0x9efbff,
-        ember: 0xff9d4d,
-        rune: 0xefe6ff,
-        bone: 0xc9b797,
-        ghost: 0xd0fff5,
-        blood: 0xa72041,
-        obsidian: 0x101017,
-        ground: 0x0d0c14,
-        nebulaViolet: 0x704fba,
-        nebulaCyan: 0x2a93a8,
-        starCold: 0xb5d6ff,
-        starWarm: 0xffca96,
-        starPale: 0xffffff
-      }
-    };
-
-    let darkMode = Boolean(options.getDarkMode && options.getDarkMode());
-    let colors = darkMode ? palettes.dark : palettes.light;
-
-    const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(colors.fog, isMobile ? 0.0135 : 0.0074);
-
-    const camera = new THREE.PerspectiveCamera(isMobile ? 68 : 56, 1, 0.1, 1600);
-    camera.position.set(0, isMobile ? 4.8 : 5.8, isMobile ? 26 : 30);
-
-    const renderer = new THREE.WebGLRenderer({
-      alpha: true,
-      antialias: true,
-      powerPreference: isMobile ? 'default' : 'high-performance'
-    });
-    renderer.setPixelRatio(quality.pixelRatio);
-    renderer.setSize(container.clientWidth || 1, container.clientHeight || 1);
-    renderer.setClearColor(colors.background, 1);
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.12;
-    if ('outputColorSpace' in renderer && THREE.SRGBColorSpace) renderer.outputColorSpace = THREE.SRGBColorSpace;
-    if ('useLegacyLights' in renderer) renderer.useLegacyLights = false;
-    if (quality.shadows) {
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        return {
+            ground,
+            circle,
+            sigil,
+            materials: {
+                groundMaterial,
+                circleMaterial,
+                sigilMaterial
+            }
+        };
     }
-    container.appendChild(renderer.domElement);
 
-    const vignette = document.createElement('div');
-    vignette.className = 'ring-universe-vignette';
-    const grain = document.createElement('div');
-    grain.className = 'ring-universe-grain';
-    const hud = document.createElement('div');
-    hud.className = 'ring-universe-hud';
-    hud.innerHTML = `
+    function createObelisks(scene, colors, quality, interactiveTargets) {
+        const material = new THREE.MeshPhysicalMaterial({
+            color: colors.obsidian,
+            roughness: 0.48,
+            metalness: 0.38,
+            clearcoat: 0.18,
+            emissive: colors.blood,
+            emissiveIntensity: 0.06
+        });
+        const topMaterial = new THREE.MeshBasicMaterial({
+            color: colors.ember,
+            transparent: true,
+            opacity: 0.44,
+            blending: THREE.AdditiveBlending
+        });
+        const count = quality.isMobile ? 8 : 16;
+        const obelisks = [];
+
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * TAU + rand(-0.08, 0.08);
+            const radius = rand(24, 58);
+            const height = rand(4, 13);
+            const group = new THREE.Group();
+            group.position.set(Math.cos(angle) * radius, -9.55, -24 - Math.abs(Math.sin(angle)) * radius * 0.58);
+            group.rotation.y = -angle + rand(-0.45, 0.45);
+
+            const body = new THREE.Mesh(new THREE.ConeGeometry(rand(0.28, 0.72), height, 5), material);
+            body.position.y = height * 0.5;
+            body.castShadow = quality.shadows;
+            body.userData.interactive = 'obelisk';
+            body.userData.parentObelisk = group;
+            body.userData.phase = rand(0, TAU);
+            group.add(body);
+            interactiveTargets.push(body);
+
+            const ember = new THREE.Mesh(new THREE.SphereGeometry(rand(0.12, 0.29), 14, 10), topMaterial);
+            ember.position.y = height + 0.18;
+            group.add(ember);
+
+            scene.add(group);
+            obelisks.push({
+                group,
+                body,
+                ember,
+                phase: rand(0, TAU),
+                baseHeight: height,
+                angle
+            });
+        }
+
+        return {
+            obelisks,
+            material,
+            topMaterial
+        };
+    }
+
+    function createMeteor(scene, colors, quality) {
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(6);
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const material = new THREE.LineBasicMaterial({
+            color: colors.starWarm,
+            transparent: true,
+            opacity: 0,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const line = new THREE.Line(geometry, material);
+        scene.add(line);
+        return {
+            line,
+            geometry,
+            material,
+            active: false,
+            life: 0,
+            pos: new THREE.Vector3(),
+            vel: new THREE.Vector3(),
+            launch() {
+                this.active = true;
+                this.life = rand(0.7, 1.3);
+                this.pos.set(rand(-85, 85), rand(50, 90), rand(-120, -30));
+                this.vel.set(rand(-32, 22), rand(-35, -18), rand(26, 42));
+                material.opacity = quality.isMobile ? 0.55 : 0.78;
+            },
+            update(dt) {
+                if (!this.active) return;
+                this.life -= dt;
+                this.pos.addScaledVector(this.vel, dt);
+                const tail = this.pos.clone().addScaledVector(this.vel, -0.045);
+                positions[0] = this.pos.x;
+                positions[1] = this.pos.y;
+                positions[2] = this.pos.z;
+                positions[3] = tail.x;
+                positions[4] = tail.y;
+                positions[5] = tail.z;
+                geometry.attributes.position.needsUpdate = true;
+                material.opacity = Math.max(0, Math.min(0.9, this.life));
+                if (this.life <= 0) {
+                    this.active = false;
+                    material.opacity = 0;
+                }
+            }
+        };
+    }
+
+    function createDestinationNodes() {
+        const group = new THREE.Group();
+        group.visible = false;
+        const nodes = DESTINATIONS.map((item) => {
+            const node = new THREE.Group();
+            const texture = createLabelTexture(item.label, item.color);
+            const label = new THREE.Sprite(new THREE.SpriteMaterial({
+                map: texture,
+                transparent: true,
+                opacity: 0,
+                depthWrite: false
+            }));
+            label.scale.set(4.35, 1.45, 1);
+            label.userData.interactive = 'destination';
+            label.userData.href = item.href;
+            label.userData.label = item.label;
+
+            const glow = new THREE.Mesh(
+                new THREE.SphereGeometry(0.18, 18, 12),
+                new THREE.MeshBasicMaterial({
+                    color: item.color,
+                    transparent: true,
+                    opacity: 0,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                })
+            );
+
+            node.add(glow, label);
+            node.userData.angle = item.angle;
+            node.userData.radius = 7.8;
+            group.add(node);
+            return {
+                group: node,
+                label,
+                glow,
+                texture
+            };
+        });
+
+        return {
+            group,
+            nodes,
+            update(t, openProgress, hovered) {
+                group.visible = openProgress > 0.01;
+                nodes.forEach((node, index) => {
+                    const reveal = clamp(openProgress * 1.35 - index * 0.12, 0, 1);
+                    const angle = node.group.userData.angle + Math.sin(t * 0.35 + index) * 0.018;
+                    const radius = node.group.userData.radius;
+                    const hoverBoost = hovered === node.label ? 1.12 : 1;
+                    node.group.position.set(Math.cos(angle) * radius, 2.05 + Math.sin(angle) * radius * 0.7, 1.15 + Math.sin(t * 0.4 + index) * 0.08);
+                    node.group.scale.setScalar(hoverBoost);
+                    node.label.material.opacity = reveal;
+                    node.glow.material.opacity = reveal * (0.58 + Math.sin(t * 2 + index) * 0.16);
+                    node.glow.scale.setScalar(1 + reveal * (4 + Math.sin(t * 2.4 + index) * 0.6));
+                });
+            },
+            dispose() {
+                nodes.forEach((node) => {
+                    node.texture.dispose();
+                    node.label.material.dispose();
+                    node.glow.geometry.dispose();
+                    node.glow.material.dispose();
+                });
+            }
+        };
+    }
+
+    function createSimulation(container, options) {
+        options = options || {};
+        if (!window.THREE || !container) return null;
+
+        injectStyles();
+        container.classList.add('ring-universe-shell');
+        container.tabIndex = container.tabIndex >= 0 ? container.tabIndex : 0;
+
+        const isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const quality = {
+            isMobile,
+            shadows: !isMobile,
+            pixelRatio: isMobile ? Math.min(window.devicePixelRatio || 1, 1.45) : Math.min(window.devicePixelRatio || 1, 2.25),
+            stars: isMobile ? 1200 : 3800,
+            clouds: isMobile ? 105 : 245,
+            motes: isMobile ? 180 : 480,
+            trails: isMobile ? 140 : 300,
+            meteors: isMobile ? 3 : 7
+        };
+
+        const palettes = {
+            dark: {
+                background: 0x03030a,
+                fog: 0x070615,
+                iron: 0x211d28,
+                ringGlow: 0xa685ff,
+                portal: 0x74faff,
+                ember: 0xff8b44,
+                rune: 0xe6d4ff,
+                bone: 0xb9a98d,
+                ghost: 0xc2fff2,
+                blood: 0x96173d,
+                obsidian: 0x08080f,
+                ground: 0x06060b,
+                nebulaViolet: 0x6544ad,
+                nebulaCyan: 0x238ba0,
+                starCold: 0xa7ccff,
+                starWarm: 0xffc18a,
+                starPale: 0xf5f0ff
+            },
+            light: {
+                background: 0x070816,
+                fog: 0x101128,
+                iron: 0x302b38,
+                ringGlow: 0x9f91ff,
+                portal: 0x9efbff,
+                ember: 0xff9d4d,
+                rune: 0xefe6ff,
+                bone: 0xc9b797,
+                ghost: 0xd0fff5,
+                blood: 0xa72041,
+                obsidian: 0x101017,
+                ground: 0x0d0c14,
+                nebulaViolet: 0x704fba,
+                nebulaCyan: 0x2a93a8,
+                starCold: 0xb5d6ff,
+                starWarm: 0xffca96,
+                starPale: 0xffffff
+            }
+        };
+
+        let darkMode = Boolean(options.getDarkMode && options.getDarkMode());
+        let colors = darkMode ? palettes.dark : palettes.light;
+
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(colors.fog, isMobile ? 0.0135 : 0.0074);
+
+        const camera = new THREE.PerspectiveCamera(isMobile ? 68 : 56, 1, 0.1, 1600);
+        camera.position.set(0, isMobile ? 4.8 : 5.8, isMobile ? 26 : 30);
+
+        const renderer = new THREE.WebGLRenderer({
+            alpha: true,
+            antialias: true,
+            powerPreference: isMobile ? 'default' : 'high-performance'
+        });
+        renderer.setPixelRatio(quality.pixelRatio);
+        renderer.setSize(container.clientWidth || 1, container.clientHeight || 1);
+        renderer.setClearColor(colors.background, 1);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.12;
+        if ('outputColorSpace' in renderer && THREE.SRGBColorSpace) renderer.outputColorSpace = THREE.SRGBColorSpace;
+        if ('useLegacyLights' in renderer) renderer.useLegacyLights = false;
+        if (quality.shadows) {
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        }
+        container.appendChild(renderer.domElement);
+
+        const vignette = document.createElement('div');
+        vignette.className = 'ring-universe-vignette';
+        const grain = document.createElement('div');
+        grain.className = 'ring-universe-grain';
+        const hud = document.createElement('div');
+        hud.className = 'ring-universe-hud';
+        hud.innerHTML = `
       <div class="ring-universe-hud__panel"><strong>Explore the ring</strong>${isMobile ? 'Tap the core for destinations · drag to orbit · hold to charge' : 'Click the core for destinations · drag to orbit · hold to disturb the field'}</div>
       <div class="ring-universe-hud__status">
         Charge <span class="ring-universe-charge"><i></i></span>
         <span class="ring-universe-hud__metrics"><span>Stability <b data-stability>100%</b></span><span>Flux <b data-flux>low</b></span></span>
       </div>
     `;
-    container.appendChild(vignette);
-    container.appendChild(grain);
-    container.appendChild(hud);
-    const chargeBar = hud.querySelector('.ring-universe-charge > i');
-    const stabilityReadout = hud.querySelector('[data-stability]');
-    const fluxReadout = hud.querySelector('[data-flux]');
-    window.setTimeout(() => hud.classList.add('is-muted'), 8000);
+        container.appendChild(vignette);
+        container.appendChild(grain);
+        container.appendChild(hud);
+        const chargeBar = hud.querySelector('.ring-universe-charge > i');
+        const stabilityReadout = hud.querySelector('[data-stability]');
+        const fluxReadout = hud.querySelector('[data-flux]');
+        window.setTimeout(() => hud.classList.add('is-muted'), 8000);
 
-    const pointTexture = createPointTexture();
-    const smokeTexture = createSmokeTexture();
-    const strokeTexture = createStrokeTexture();
+        const pointTexture = createPointTexture();
+        const smokeTexture = createSmokeTexture();
+        const strokeTexture = createStrokeTexture();
 
-    scene.add(new THREE.HemisphereLight(0x9bbcff, 0x17040a, isMobile ? 0.64 : 0.46));
+        scene.add(new THREE.HemisphereLight(0x9bbcff, 0x17040a, isMobile ? 0.64 : 0.46));
 
-    const moonLight = new THREE.DirectionalLight(0xdce9ff, isMobile ? 0.95 : 1.18);
-    moonLight.position.set(-28, 50, 20);
-    moonLight.castShadow = quality.shadows;
-    if (quality.shadows) {
-      moonLight.shadow.mapSize.set(2048, 2048);
-      moonLight.shadow.camera.left = -62;
-      moonLight.shadow.camera.right = 62;
-      moonLight.shadow.camera.top = 62;
-      moonLight.shadow.camera.bottom = -62;
-    }
-    scene.add(moonLight);
-
-    const portalLight = new THREE.PointLight(colors.portal, 5.6, 92, 1.45);
-    portalLight.position.set(0, 2, 0);
-    scene.add(portalLight);
-
-    const emberLight = new THREE.PointLight(colors.ember, 2.2, 65, 2.0);
-    emberLight.position.set(12, -1, 7);
-    scene.add(emberLight);
-
-    const interactiveTargets = [];
-    const ring = createRingGroup(colors, quality, interactiveTargets);
-    ring.group.position.set(0, 2.05, 0);
-    ring.group.rotation.x = -0.1;
-    scene.add(ring.group);
-
-    const voidCoreMaterial = new THREE.MeshBasicMaterial({
-      color: colors.background,
-      transparent: true,
-      opacity: 0.64,
-      side: THREE.BackSide
-    });
-    const voidCore = new THREE.Mesh(new THREE.SphereGeometry(2.02, quality.isMobile ? 48 : 80, quality.isMobile ? 30 : 48), voidCoreMaterial);
-    voidCore.userData.interactive = 'void';
-    ring.group.add(voidCore);
-    interactiveTargets.push(voidCore);
-
-    const stars = createStars(quality.stars, pointTexture, colors);
-    scene.add(stars.points);
-
-    const clouds = createClouds(quality.clouds, smokeTexture, colors);
-    scene.add(clouds.points);
-
-    const motes = createOrbitParticles(quality.motes, pointTexture, colors);
-    scene.add(motes.points);
-
-    const orbitalSystem = createOrbitalSystem(colors, quality, interactiveTargets);
-    scene.add(orbitalSystem.group);
-
-    const filaments = createEnergyFilaments(colors, quality);
-    ring.group.add(filaments.group);
-
-    const trails = createTrailSystem(quality.trails, strokeTexture, colors);
-    scene.add(trails.points);
-
-    const ground = createGround(scene, colors, quality);
-    const obelisks = createObelisks(scene, colors, quality, interactiveTargets);
-    const meteors = Array.from({ length: quality.meteors }, () => createMeteor(scene, colors, quality));
-    const destinations = createDestinationNodes();
-    scene.add(destinations.group);
-    destinations.nodes.forEach((node) => interactiveTargets.push(node.label));
-
-    const raycaster = new THREE.Raycaster();
-    const pointerNdc = new THREE.Vector2(0, 0);
-    const pointerUv = new THREE.Vector2(0.5, 0.5);
-    const pointerPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
-    const pointerWorld = new THREE.Vector3();
-    const pointerTargetWorld = new THREE.Vector3();
-    const cameraTarget = new THREE.Vector3(0, 1.65, 0);
-    const cameraTargetTarget = new THREE.Vector3(0, 1.65, 0);
-    const tempVector = new THREE.Vector3();
-    const tempVector2 = new THREE.Vector3();
-
-    const state = {
-      pointerDown: false,
-      pointerId: null,
-      pointerX: 0,
-      pointerY: 0,
-      lastPointerX: 0,
-      lastPointerY: 0,
-      dragDistance: 0,
-      targetYaw: -0.15,
-      yaw: -0.15,
-      pitch: 0.08,
-      targetPitch: 0.08,
-      roll: 0,
-      targetRoll: 0,
-      distance: isMobile ? 26 : 30,
-      targetDistance: isMobile ? 26 : 30,
-      pulse: 0,
-      charge: 0,
-      charging: false,
-      selected: null,
-      selectedType: '',
-      selectedBoost: 0,
-      hover: null,
-      hoverBoost: 0,
-      visible: true,
-      raf: 0,
-      disposed: false,
-      cinematic: false,
-      screenShake: 0,
-      pointerInfluence: 0,
-      drawing: false,
-      portalOpen: false,
-      portalOpenProgress: 0,
-      entropy: 0,
-      nextMeteor: rand(4, 9),
-      keys: Object.create(null),
-      hudHidden: false,
-      pinch: {
-        active: false,
-        ids: [],
-        startDistance: 0,
-        startCameraDistance: 0,
-        chargeStart: 0
-      },
-      activePointers: new Map()
-    };
-
-    const shockwaves = [];
-
-    const observer = new IntersectionObserver((entries) => {
-      state.visible = entries[0] ? entries[0].isIntersecting : true;
-    }, { threshold: 0.02 });
-    observer.observe(container);
-
-    function resize() {
-      const width = Math.max(1, container.clientWidth);
-      const height = Math.max(1, container.clientHeight);
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-      renderer.setSize(width, height);
-    }
-
-    function updatePointerFromEvent(event) {
-      const rect = renderer.domElement.getBoundingClientRect();
-      const x = (event.clientX - rect.left) / Math.max(1, rect.width);
-      const y = (event.clientY - rect.top) / Math.max(1, rect.height);
-      pointerNdc.set(x * 2 - 1, -(y * 2 - 1));
-      pointerUv.set(clamp(x, 0, 1), clamp(1 - y, 0, 1));
-      raycaster.setFromCamera(pointerNdc, camera);
-      if (raycaster.ray.intersectPlane(pointerPlane, pointerTargetWorld)) {
-        pointerTargetWorld.copy(pointerTargetWorld);
-      }
-    }
-
-    function updateHover() {
-      raycaster.setFromCamera(pointerNdc, camera);
-      const hits = raycaster.intersectObjects(interactiveTargets, false);
-      const hit = hits.length ? hits[0].object : null;
-      state.hover = hit;
-      if (hit) {
-        state.hoverBoost = 1;
-        state.selectedType = hit.userData.interactive || '';
-      }
-    }
-
-    function spawnShockwave(strength, origin) {
-      const material = makeShockwaveMaterial(strength > 1.55 ? colors.ember : colors.portal);
-      const mesh = new THREE.Mesh(new THREE.RingGeometry(0.72, 0.78, 160), material);
-      mesh.position.copy(origin || ring.group.position);
-      mesh.position.z += 0.04;
-      mesh.rotation.copy(ring.group.rotation);
-      ring.group.add(mesh);
-      shockwaves.push({ mesh, material, life: 1, strength, speed: lerp(7.5, 13.5, clamp(strength / 2, 0, 1)) });
-    }
-
-    function launchPulse(strength, origin) {
-      const s = clamp(strength, 0.25, 3.0);
-      state.pulse = Math.max(state.pulse, s);
-      state.screenShake = Math.max(state.screenShake, s * 0.32);
-      state.pointerInfluence = Math.max(state.pointerInfluence, s);
-      state.selectedBoost = Math.max(state.selectedBoost, s);
-      portalLight.intensity = 9 + s * 6.2;
-      ring.group.scale.setScalar(1 + s * 0.045);
-      spawnShockwave(s, origin || new THREE.Vector3(0, 0, 0));
-      trails.emit(pointerWorld, Math.floor(18 + s * 18), true);
-      for (let i = 0; i < ring.shards.length; i++) {
-        const shard = ring.shards[i];
-        const angle = shard.userData.angle;
-        shard.position.x += Math.cos(angle) * s * 0.075;
-        shard.position.y += Math.sin(angle) * s * 0.075;
-        shard.position.z += s * 0.07;
-      }
-      for (let i = 0; i < motes.data.length; i++) {
-        const offset = i * 3;
-        const dx = motes.positions[offset];
-        const dy = motes.positions[offset + 1] - 2.05;
-        const dz = motes.positions[offset + 2];
-        const inverseLength = 1 / Math.max(1.2, Math.sqrt(dx * dx + dy * dy + dz * dz));
-        const kick = s * rand(0.55, 1.15);
-        motes.data[i].vx += dx * inverseLength * kick;
-        motes.data[i].vy += dy * inverseLength * kick;
-        motes.data[i].vz += dz * inverseLength * kick;
-      }
-      state.entropy = clamp(state.entropy + s * 0.18, 0, 1);
-    }
-
-    function focusObject(object) {
-      if (!object) return;
-      if (object.userData.interactive === 'destination' && object.userData.href) {
-        window.location.href = object.userData.href;
-        return;
-      }
-      object.getWorldPosition(tempVector);
-      cameraTargetTarget.lerp(tempVector, 0.28);
-      state.selected = object;
-      state.selectedBoost = 1.4;
-      if (object.userData.interactive === 'portal' || object.userData.interactive === 'void' || object.userData.interactive === 'ring') {
-        state.portalOpen = !state.portalOpen;
-        hud.classList.remove('is-muted');
-      }
-      if (object.userData.interactive === 'obelisk' && object.userData.parentObelisk) {
-        object.userData.parentObelisk.position.y += 0.26;
-      }
-      launchPulse(object.userData.interactive === 'void' ? 1.8 : 1.1, ring.group.worldToLocal(tempVector.clone()));
-    }
-
-    function resetView() {
-      state.targetYaw = -0.15;
-      state.targetPitch = 0.08;
-      state.targetRoll = 0;
-      state.targetDistance = isMobile ? 26 : 30;
-      cameraTargetTarget.set(0, 1.65, 0);
-      state.cinematic = false;
-      state.portalOpen = false;
-      state.portalOpenProgress = 0;
-      launchPulse(1.15);
-    }
-
-    function updatePinch() {
-      const points = state.pinch.ids.map((id) => state.activePointers.get(id)).filter(Boolean);
-      if (points.length < 2) {
-        state.pinch.active = false;
-        return;
-      }
-      const dx = points[0].x - points[1].x;
-      const dy = points[0].y - points[1].y;
-      const distance = Math.max(1, Math.sqrt(dx * dx + dy * dy));
-      if (!state.pinch.active) {
-        state.pinch.active = true;
-        state.pinch.startDistance = distance;
-        state.pinch.startCameraDistance = state.targetDistance;
-        state.pinch.chargeStart = state.charge;
-      }
-      const scale = state.pinch.startDistance / distance;
-      state.targetDistance = clamp(state.pinch.startCameraDistance * scale, isMobile ? 19 : 22, 58);
-      state.charging = true;
-      state.charge = clamp(state.pinch.chargeStart + Math.abs(1 - scale) * 1.35, 0, 1.7);
-    }
-
-    function onPointerDown(event) {
-      container.focus({ preventScroll: true });
-      updatePointerFromEvent(event);
-      state.activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-      if (state.activePointers.size >= 2) {
-        state.pinch.ids = Array.from(state.activePointers.keys()).slice(0, 2);
-        updatePinch();
-        return;
-      }
-      state.pointerDown = true;
-      state.pointerId = event.pointerId;
-      state.pointerX = event.clientX;
-      state.pointerY = event.clientY;
-      state.lastPointerX = event.clientX;
-      state.lastPointerY = event.clientY;
-      state.dragDistance = 0;
-      state.charging = true;
-      state.drawing = event.shiftKey || event.button === 2;
-      container.classList.add('is-dragging');
-      renderer.domElement.setPointerCapture(event.pointerId);
-      updateHover();
-    }
-
-    function onPointerMove(event) {
-      updatePointerFromEvent(event);
-      state.activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-      if (state.activePointers.size >= 2) {
-        updatePinch();
-        return;
-      }
-      updateHover();
-      if (!state.pointerDown || state.pointerId !== event.pointerId) return;
-
-      const dx = event.clientX - state.lastPointerX;
-      const dy = event.clientY - state.lastPointerY;
-      state.lastPointerX = event.clientX;
-      state.lastPointerY = event.clientY;
-      state.dragDistance += Math.abs(dx) + Math.abs(dy);
-
-      if (event.shiftKey || state.drawing) {
-        state.drawing = true;
-        trails.emit(pointerWorld, isMobile ? 1 : 2, false);
-        state.charge = clamp(state.charge + 0.0028 * (Math.abs(dx) + Math.abs(dy)), 0, 1.85);
-        state.pointerInfluence = Math.max(state.pointerInfluence, 0.5);
-      } else {
-        state.targetYaw += dx * 0.006;
-        state.targetPitch = clamp(state.targetPitch + dy * 0.0034, -0.32, 0.90);
-        ring.group.rotation.z += dx * 0.00175;
-        ring.group.rotation.x += dy * 0.0011;
-      }
-    }
-
-    function onPointerUp(event) {
-      state.activePointers.delete(event.pointerId);
-      if (state.activePointers.size < 2) state.pinch.active = false;
-
-      if (state.pointerId === event.pointerId || state.pointerDown) {
-        const wasTap = state.dragDistance < 9;
-        const strength = wasTap ? Math.max(1, 0.65 + state.charge * 1.2) : Math.max(0.65, state.charge * 1.35);
-        if (state.charge > 1.5) {
-          state.portalOpen = true;
-          hud.classList.remove('is-muted');
+        const moonLight = new THREE.DirectionalLight(0xdce9ff, isMobile ? 0.95 : 1.18);
+        moonLight.position.set(-28, 50, 20);
+        moonLight.castShadow = quality.shadows;
+        if (quality.shadows) {
+            moonLight.shadow.mapSize.set(2048, 2048);
+            moonLight.shadow.camera.left = -62;
+            moonLight.shadow.camera.right = 62;
+            moonLight.shadow.camera.top = 62;
+            moonLight.shadow.camera.bottom = -62;
         }
-        if (state.hover && wasTap) focusObject(state.hover);
-        else launchPulse(strength);
-      }
+        scene.add(moonLight);
 
-      state.pointerDown = false;
-      state.pointerId = null;
-      state.charging = false;
-      state.drawing = false;
-      state.charge = 0;
-      container.classList.remove('is-dragging');
-      if (renderer.domElement.hasPointerCapture && renderer.domElement.hasPointerCapture(event.pointerId)) {
-        renderer.domElement.releasePointerCapture(event.pointerId);
-      }
-    }
+        const portalLight = new THREE.PointLight(colors.portal, 5.6, 92, 1.45);
+        portalLight.position.set(0, 2, 0);
+        scene.add(portalLight);
 
-    function onDoubleClick(event) {
-      updatePointerFromEvent(event);
-      launchPulse(2.25);
-    }
+        const emberLight = new THREE.PointLight(colors.ember, 2.2, 65, 2.0);
+        emberLight.position.set(12, -1, 7);
+        scene.add(emberLight);
 
-    function onContextMenu(event) {
-      event.preventDefault();
-    }
+        const interactiveTargets = [];
+        const ring = createRingGroup(colors, quality, interactiveTargets);
+        ring.group.position.set(0, 2.05, 0);
+        ring.group.rotation.x = -0.1;
+        scene.add(ring.group);
 
-    function onWheel(event) {
-      event.preventDefault();
-      state.targetDistance = clamp(state.targetDistance + event.deltaY * 0.036, isMobile ? 19 : 22, 58);
-      state.pointerInfluence = Math.max(state.pointerInfluence, 0.45);
-    }
-
-    function onKeyDown(event) {
-      state.keys[event.code] = true;
-      if (event.code === 'Space') {
-        event.preventDefault();
-        launchPulse(1.65 + state.charge * 0.5);
-      } else if (event.code === 'KeyR') {
-        resetView();
-      } else if (event.code === 'KeyC') {
-        state.cinematic = !state.cinematic;
-        hud.classList.toggle('is-muted', !state.cinematic);
-      } else if (event.code === 'KeyH') {
-        state.hudHidden = !state.hudHidden;
-        hud.classList.toggle('is-hidden', state.hudHidden);
-      } else if (event.code === 'KeyM') {
-        meteors.forEach((meteor, index) => window.setTimeout(() => meteor.launch(), index * 90));
-        state.screenShake = Math.max(state.screenShake, 0.34);
-      } else if (event.code === 'KeyF') {
-        focusObject(voidCore);
-      }
-    }
-
-    function onKeyUp(event) {
-      state.keys[event.code] = false;
-    }
-
-    renderer.domElement.addEventListener('pointerdown', onPointerDown);
-    renderer.domElement.addEventListener('pointermove', onPointerMove);
-    renderer.domElement.addEventListener('pointerup', onPointerUp);
-    renderer.domElement.addEventListener('pointercancel', onPointerUp);
-    renderer.domElement.addEventListener('dblclick', onDoubleClick);
-    renderer.domElement.addEventListener('wheel', onWheel, { passive: false });
-    renderer.domElement.addEventListener('contextmenu', onContextMenu);
-    window.addEventListener('resize', resize);
-    window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('keyup', onKeyUp);
-
-    function applyPalette(nextColors) {
-      colors = nextColors;
-      renderer.setClearColor(colors.background, 1);
-      scene.fog.color.setHex(colors.fog);
-      portalLight.color.setHex(colors.portal);
-      emberLight.color.setHex(colors.ember);
-      ring.materials.ringMaterial.color.setHex(colors.iron);
-      ring.materials.ringMaterial.emissive.setHex(colors.ringGlow);
-      ring.materials.rimMaterial.color.setHex(colors.portal);
-      ring.materials.portalMaterial.uniforms.uPortal.value.setHex(colors.portal);
-      ring.materials.portalMaterial.uniforms.uRune.value.setHex(colors.rune);
-      ring.materials.portalMaterial.uniforms.uEmber.value.setHex(colors.ember);
-      ring.materials.portalMaterial.uniforms.uVoid.value.setHex(colors.background);
-      ring.materials.veilMaterial.color.setHex(colors.ember);
-      ring.materials.crownMaterial.color.setHex(colors.bone);
-      ring.materials.crownMaterial.emissive.setHex(colors.ember);
-      ring.materials.runeMaterial.color.setHex(colors.rune);
-      ground.materials.groundMaterial.color.setHex(colors.ground);
-      ground.materials.circleMaterial.color.setHex(colors.portal);
-      ground.materials.sigilMaterial.color.setHex(colors.rune);
-      obelisks.material.color.setHex(colors.obsidian);
-      obelisks.material.emissive.setHex(colors.blood);
-      obelisks.topMaterial.color.setHex(colors.ember);
-      voidCoreMaterial.color.setHex(colors.background);
-      meteors.forEach((meteor) => meteor.material.color.setHex(colors.starWarm));
-      const orbitalHues = [colors.portal, colors.ember, colors.rune, colors.ghost, colors.starWarm, colors.nebulaViolet];
-      orbitalSystem.orbiters.forEach((orbiter, index) => {
-        const color = orbitalHues[index % orbitalHues.length];
-        orbiter.pathMaterial.color.setHex(color);
-        orbiter.bodyMaterial.color.setHex(color);
-        orbiter.bodyMaterial.emissive.setHex(color);
-        orbiter.haloMaterial.color.setHex(color);
-      });
-      filaments.filaments.forEach((filament, index) => filament.material.color.setHex(index % 4 === 0 ? colors.ember : colors.portal));
-    }
-
-    const clock = new THREE.Clock();
-    let frame = 0;
-
-    function animate() {
-      state.raf = requestAnimationFrame(animate);
-      if (state.disposed) return;
-      if (!state.visible) {
-        clock.getDelta();
-        return;
-      }
-
-      const dt = Math.min(clock.getDelta(), 0.05);
-      const t = clock.elapsedTime;
-      frame++;
-
-      pointerWorld.lerp(pointerTargetWorld, 0.18);
-
-      const nextDarkMode = Boolean(options.getDarkMode && options.getDarkMode());
-      if (nextDarkMode !== darkMode) {
-        darkMode = nextDarkMode;
-        applyPalette(darkMode ? palettes.dark : palettes.light);
-      }
-
-      if (state.charging) {
-        state.charge = clamp(state.charge + dt * (state.drawing ? 0.18 : 0.42), 0, 1.85);
-        state.pointerInfluence = Math.max(state.pointerInfluence, 0.32 + state.charge * 0.5);
-      }
-      if (chargeBar) chargeBar.style.setProperty('--charge', `${clamp(state.charge / 1.85, 0, 1) * 100}%`);
-
-      state.pulse = Math.max(0, state.pulse - dt * 1.55);
-      state.screenShake = Math.max(0, state.screenShake - dt * 1.6);
-      state.pointerInfluence = Math.max(0, state.pointerInfluence - dt * 0.9);
-      state.selectedBoost = Math.max(0, state.selectedBoost - dt * 0.9);
-      state.hoverBoost = Math.max(0, state.hoverBoost - dt * 2.2);
-      state.entropy = Math.max(0, state.entropy - dt * 0.075);
-      state.portalOpenProgress += ((state.portalOpen ? 1 : 0) - state.portalOpenProgress) * 0.07;
-
-      const pulse = state.pulse;
-      const charge = state.charge;
-      const breathing = 0.5 + 0.5 * Math.sin(t * 1.08);
-      const slowBreath = 0.5 + 0.5 * Math.sin(t * 0.31);
-
-      ring.materials.portalMaterial.uniforms.uTime.value = t;
-      ring.materials.portalMaterial.uniforms.uPulse.value = pulse;
-      ring.materials.portalMaterial.uniforms.uCharge.value = charge;
-      ring.materials.portalMaterial.uniforms.uPointer.value.copy(pointerUv);
-
-      for (let i = shockwaves.length - 1; i >= 0; i--) {
-        const wave = shockwaves[i];
-        wave.life -= dt * 0.78;
-        const progress = 1 - wave.life;
-        wave.mesh.scale.setScalar(1 + progress * wave.speed * wave.strength);
-        wave.material.opacity = Math.max(0, wave.life) * (0.55 + 0.25 * wave.strength);
-        wave.mesh.rotation.z += dt * (0.6 + wave.strength * 0.4);
-        if (wave.life <= 0) {
-          ring.group.remove(wave.mesh);
-          wave.mesh.geometry.dispose();
-          wave.material.dispose();
-          shockwaves.splice(i, 1);
-        }
-      }
-
-      if (state.keys.KeyA) state.targetYaw -= dt * 1.0;
-      if (state.keys.KeyD) state.targetYaw += dt * 1.0;
-      if (state.keys.KeyW) state.targetDistance = clamp(state.targetDistance - dt * 18, isMobile ? 19 : 22, 58);
-      if (state.keys.KeyS) state.targetDistance = clamp(state.targetDistance + dt * 18, isMobile ? 19 : 22, 58);
-      if (state.keys.KeyQ) state.targetRoll = clamp(state.targetRoll - dt * 0.7, -0.32, 0.32);
-      if (state.keys.KeyE) state.targetRoll = clamp(state.targetRoll + dt * 0.7, -0.32, 0.32);
-      if (!state.keys.KeyQ && !state.keys.KeyE) state.targetRoll *= 0.94;
-
-      if (state.cinematic && !state.pointerDown) {
-        state.targetYaw += dt * 0.09;
-        state.targetPitch = 0.08 + Math.sin(t * 0.19) * 0.09;
-        state.targetDistance = (isMobile ? 26 : 30) + Math.sin(t * 0.23) * 4.5;
-      } else if (!state.pointerDown && !state.pinch.active) {
-        state.targetYaw += dt * 0.045;
-      }
-
-      ring.group.scale.lerp(tempVector.setScalar(1 + pulse * 0.075 + charge * 0.035), 0.095);
-      const presentationYaw = Math.sin(t * 0.23) * 0.045 + pointerNdc.x * 0.035;
-      const presentationPitch = -0.1 + Math.sin(t * 0.17) * 0.025 - pointerNdc.y * 0.025;
-      ring.group.rotation.y += (presentationYaw - ring.group.rotation.y) * 0.045;
-      ring.group.rotation.x += (presentationPitch - ring.group.rotation.x) * 0.045;
-      ring.group.rotation.z += dt * (0.032 + charge * 0.04);
-      ring.inner.rotation.z -= dt * (0.38 + pulse * 1.1 + charge * 0.55);
-      ring.rim.rotation.z += dt * (0.14 + pulse * 0.4);
-      ring.veil.rotation.z += dt * (0.18 + pulse * 0.48 + charge * 0.2);
-      ring.inner.scale.setScalar(1 + breathing * 0.03 + pulse * 0.08 + charge * 0.04);
-      ring.rim.scale.setScalar(1 + breathing * 0.012 + pulse * 0.035);
-      ring.veil.scale.setScalar(1 + slowBreath * 0.075 + pulse * 0.12 + charge * 0.05);
-      ring.materials.rimMaterial.opacity = 0.18 + breathing * 0.12 + pulse * 0.18 + charge * 0.1;
-      ring.materials.veilMaterial.opacity = 0.10 + slowBreath * 0.09 + pulse * 0.15 + charge * 0.08;
-      ring.materials.ringMaterial.emissiveIntensity = 0.15 + breathing * 0.11 + pulse * 0.65 + charge * 0.22 + state.hoverBoost * 0.12;
-      ring.materials.runeMaterial.opacity = 0.38 + breathing * 0.34 + pulse * 0.22 + charge * 0.18;
-      voidCore.scale.setScalar(1 + slowBreath * 0.07 + pulse * 0.12 + charge * 0.08);
-      voidCoreMaterial.opacity = 0.54 + pulse * 0.12 + charge * 0.08;
-      filaments.update(t, pulse, charge, state.portalOpenProgress, ring.shards.length);
-      orbitalSystem.update(t, dt, pulse, charge, state.portalOpenProgress, state.hover);
-
-      for (let i = 0; i < ring.shards.length; i++) {
-        const shard = ring.shards[i];
-        const home = shard.userData.home;
-        const outward = 1 + pulse * 0.055 + charge * 0.04 + (state.hover === shard ? 0.05 : 0);
-        shard.position.x += (home.x * outward - shard.position.x) * 0.045;
-        shard.position.y += (home.y * outward - shard.position.y) * 0.045;
-        shard.position.z += (-0.22 + Math.sin(t * 1.35 + shard.userData.phase) * 0.18 + pulse * 0.22 + charge * 0.12 - shard.position.z) * 0.05;
-        shard.rotation.x = shard.userData.baseRotationX + Math.sin(t * 1.15 + shard.userData.phase) * (0.045 + charge * 0.025);
-        shard.rotation.y = shard.userData.baseRotationY + (state.hover === shard ? Math.sin(t * 4.2) * 0.08 : 0);
-        shard.rotation.z = shard.userData.baseRotationZ;
-      }
-
-      const motePositions = motes.positions;
-      const influence = state.pointerInfluence;
-      const gravity = 9.5 * (1 + charge * 0.62 + state.portalOpenProgress * 0.3);
-      for (let i = 0; i < motes.data.length; i++) {
-        const mote = motes.data[i];
-        const offset = i * 3;
-        let x = motePositions[offset];
-        let y = motePositions[offset + 1];
-        let z = motePositions[offset + 2];
-        const dx = x;
-        const dy = y - 2.05;
-        const dz = z;
-        const radiusSq = dx * dx + dy * dy + dz * dz;
-        const radius = Math.sqrt(radiusSq);
-        const inverseRadius = 1 / Math.max(1.2, radius);
-        const gravityScale = -gravity * inverseRadius * inverseRadius * inverseRadius;
-        const turbulence = Math.sin(t * 1.7 + mote.phase + radius) * mote.turbulence;
-
-        mote.vx += (dx * gravityScale - dz * turbulence * 0.018) * dt;
-        mote.vy += (dy * gravityScale * 0.42 + Math.sin(t * 0.9 + mote.phase) * 0.025) * dt;
-        mote.vz += (dz * gravityScale + dx * turbulence * 0.018) * dt;
-
-        if (influence > 0.02) {
-          const px = pointerWorld.x - x;
-          const py = pointerWorld.y - y;
-          const pz = pointerWorld.z - z;
-          const pointerDistanceSq = px * px + py * py + pz * pz + 3.5;
-          const pointerForce = influence * mote.pointerPull / pointerDistanceSq;
-          mote.vx += px * pointerForce * dt;
-          mote.vy += py * pointerForce * dt;
-          mote.vz += pz * pointerForce * dt;
-        }
-
-        const damping = Math.pow(mote.drag, dt * 60);
-        mote.vx *= damping;
-        mote.vy *= damping;
-        mote.vz *= damping;
-        x += mote.vx * dt;
-        y += mote.vy * dt;
-        z += mote.vz * dt;
-
-        if (radius > 29 || radius < 3.35 || !Number.isFinite(x + y + z)) {
-          const resetAngle = rand(0, TAU);
-          const resetRadius = rand(6.2, 12.8);
-          const resetSpeed = Math.sqrt(9.5 / resetRadius) * (Math.random() < 0.14 ? -1 : 1);
-          x = Math.cos(resetAngle) * resetRadius;
-          y = 2.05 + rand(-1.8, 1.8);
-          z = Math.sin(resetAngle) * resetRadius;
-          mote.vx = -Math.sin(resetAngle) * resetSpeed;
-          mote.vy = rand(-0.12, 0.12);
-          mote.vz = Math.cos(resetAngle) * resetSpeed;
-        }
-
-        motePositions[offset] = x;
-        motePositions[offset + 1] = y;
-        motePositions[offset + 2] = z;
-      }
-      motes.geometry.attributes.position.needsUpdate = true;
-      motes.material.opacity = 0.38 + pulse * 0.16 + charge * 0.1;
-
-      if (frame % 6 === 0) {
-        const instability = clamp(state.entropy * 0.78 + charge * 0.16 + pulse * 0.12, 0, 1);
-        if (stabilityReadout) stabilityReadout.textContent = `${Math.round((1 - instability) * 100)}%`;
-        if (fluxReadout) fluxReadout.textContent = instability > 0.72 ? 'critical' : instability > 0.42 ? 'surging' : instability > 0.16 ? 'active' : 'low';
-      }
-
-      if (state.drawing || state.charging) {
-        trails.emit(pointerWorld, state.drawing ? (isMobile ? 1 : 2) : 1, false);
-      }
-      trails.update(dt);
-
-      if (frame % (isMobile ? 3 : 1) === 0) {
-        const cloudPositions = clouds.positions;
-        for (let i = 0; i < clouds.data.length; i++) {
-          const cloud = clouds.data[i];
-          const offset = i * 3;
-          cloudPositions[offset] = cloud.baseX + Math.sin(t * cloud.drift + cloud.phase) * (0.45 + charge * 1.8);
-          cloudPositions[offset + 1] = cloud.baseY + Math.cos(t * cloud.drift * 0.8 + cloud.phase) * 0.62 * cloud.lift;
-          cloudPositions[offset + 2] = cloud.baseZ + Math.sin(t * cloud.drift * 0.6 + cloud.phase) * (0.8 + pulse * 2.2);
-        }
-        clouds.geometry.attributes.position.needsUpdate = true;
-      }
-      clouds.points.rotation.y = t * 0.017 + state.yaw * 0.015;
-      clouds.points.rotation.x = Math.sin(t * 0.08) * 0.09;
-      clouds.material.opacity = 0.20 + slowBreath * 0.075 + charge * 0.045;
-
-      if (frame % (isMobile ? 8 : 4) === 0) {
-        const updateCount = isMobile ? Math.floor(quality.stars / 16) : Math.floor(quality.stars / 7);
-        for (let i = 0; i < updateCount; i++) {
-          const index = (frame * 17 + i * 23) % quality.stars;
-          const offset = index * 3;
-          const twinkle = 0.72 + Math.sin(t * stars.speeds[index] + stars.phases[index]) * 0.28 + pulse * 0.08;
-          stars.colors[offset] = stars.baseColors[offset] * twinkle;
-          stars.colors[offset + 1] = stars.baseColors[offset + 1] * twinkle;
-          stars.colors[offset + 2] = stars.baseColors[offset + 2] * twinkle;
-        }
-        stars.geometry.attributes.color.needsUpdate = true;
-      }
-      stars.points.rotation.y = t * 0.0024 + state.yaw * 0.004;
-      stars.points.rotation.x = t * 0.00085;
-
-      ground.circle.rotation.z -= dt * (0.062 + pulse * 0.16 + charge * 0.07);
-      ground.sigil.rotation.y += dt * 0.014;
-      ground.materials.circleMaterial.opacity = 0.04 + slowBreath * 0.03 + pulse * 0.08 + charge * 0.04;
-      ground.materials.sigilMaterial.opacity = 0.025 + pulse * 0.045 + charge * 0.045;
-
-      for (let i = 0; i < obelisks.obelisks.length; i++) {
-        const item = obelisks.obelisks[i];
-        item.group.position.y += (-9.55 + Math.sin(t * 0.68 + item.phase) * 0.1 - item.group.position.y) * 0.045;
-        item.ember.scale.setScalar(1 + Math.sin(t * 2.55 + item.phase) * 0.32 + pulse * 0.55 + charge * 0.22);
-        item.group.rotation.y += Math.sin(t * 0.26 + item.phase) * 0.0009;
-      }
-
-      state.nextMeteor -= dt;
-      if (state.nextMeteor <= 0) {
-        const inactive = meteors.find((meteor) => !meteor.active);
-        if (inactive) inactive.launch();
-        state.nextMeteor = rand(isMobile ? 9 : 5, isMobile ? 18 : 12);
-      }
-      meteors.forEach((meteor) => meteor.update(dt));
-      destinations.update(t, state.portalOpenProgress, state.hover);
-
-      portalLight.intensity += ((4.85 + breathing * 1.75 + pulse * 8.2 + charge * 3.0 + state.portalOpenProgress * 4.2 + state.hoverBoost * 0.8) - portalLight.intensity) * 0.08;
-      portalLight.position.set(Math.sin(t * 0.8) * 1.45, 1.45 + Math.sin(t * 1.1) * 0.82, Math.cos(t * 0.7) * 1.45);
-      emberLight.intensity = 1.45 + slowBreath * 1.25 + pulse * 3.2 + charge * 0.9;
-      emberLight.position.set(Math.sin(t * 0.43) * 19, -2 + Math.sin(t * 0.7) * 2, Math.cos(t * 0.37) * 19);
-
-      state.yaw += (state.targetYaw - state.yaw) * 0.078;
-      state.pitch += (state.targetPitch - state.pitch) * 0.078;
-      state.distance += (state.targetDistance - state.distance) * 0.08;
-      state.roll += (state.targetRoll - state.roll) * 0.08;
-      cameraTarget.lerp(cameraTargetTarget, 0.05);
-      cameraTargetTarget.lerp(tempVector2.set(0, 1.65, 0), 0.006);
-
-      const shake = state.screenShake;
-      const shakeX = shake ? Math.sin(t * 39.7) * shake : 0;
-      const shakeY = shake ? Math.cos(t * 31.1) * shake * 0.55 : 0;
-      const height = 4.8 + state.pitch * 8 + Math.sin(t * 0.3) * 0.75 + shakeY;
-      camera.position.x = Math.sin(state.yaw) * state.distance + shakeX;
-      camera.position.z = Math.cos(state.yaw) * state.distance + 5.5;
-      camera.position.y = height;
-      camera.rotation.z = state.roll;
-      camera.lookAt(cameraTarget);
-
-      renderer.render(scene, camera);
-    }
-
-    resize();
-    animate();
-
-    return {
-      pulse(strength) {
-        launchPulse(strength || 1.4);
-      },
-      cinematic(enabled) {
-        state.cinematic = Boolean(enabled);
-      },
-      dispose() {
-        state.disposed = true;
-        cancelAnimationFrame(state.raf);
-        observer.disconnect();
-        window.removeEventListener('resize', resize);
-        window.removeEventListener('keydown', onKeyDown);
-        window.removeEventListener('keyup', onKeyUp);
-        renderer.domElement.removeEventListener('pointerdown', onPointerDown);
-        renderer.domElement.removeEventListener('pointermove', onPointerMove);
-        renderer.domElement.removeEventListener('pointerup', onPointerUp);
-        renderer.domElement.removeEventListener('pointercancel', onPointerUp);
-        renderer.domElement.removeEventListener('dblclick', onDoubleClick);
-        renderer.domElement.removeEventListener('wheel', onWheel);
-        renderer.domElement.removeEventListener('contextmenu', onContextMenu);
-
-        shockwaves.forEach((wave) => {
-          ring.group.remove(wave.mesh);
-          wave.mesh.geometry.dispose();
-          wave.material.dispose();
+        const voidCoreMaterial = new THREE.MeshBasicMaterial({
+            color: colors.background,
+            transparent: true,
+            opacity: 0.64,
+            side: THREE.BackSide
         });
-        meteors.forEach((meteor) => {
-          scene.remove(meteor.line);
-          meteor.geometry.dispose();
-          meteor.material.dispose();
+        const voidCore = new THREE.Mesh(new THREE.SphereGeometry(2.02, quality.isMobile ? 48 : 80, quality.isMobile ? 30 : 48), voidCoreMaterial);
+        voidCore.userData.interactive = 'void';
+        ring.group.add(voidCore);
+        interactiveTargets.push(voidCore);
+
+        const stars = createStars(quality.stars, pointTexture, colors);
+        scene.add(stars.points);
+
+        const clouds = createClouds(quality.clouds, smokeTexture, colors);
+        scene.add(clouds.points);
+
+        const motes = createOrbitParticles(quality.motes, pointTexture, colors);
+        scene.add(motes.points);
+
+        const orbitalSystem = createOrbitalSystem(colors, quality, interactiveTargets);
+        scene.add(orbitalSystem.group);
+
+        const filaments = createEnergyFilaments(colors, quality);
+        ring.group.add(filaments.group);
+
+        const trails = createTrailSystem(quality.trails, strokeTexture, colors);
+        scene.add(trails.points);
+
+        const ground = createGround(scene, colors, quality);
+        const obelisks = createObelisks(scene, colors, quality, interactiveTargets);
+        const meteors = Array.from({
+            length: quality.meteors
+        }, () => createMeteor(scene, colors, quality));
+        const destinations = createDestinationNodes();
+        scene.add(destinations.group);
+        destinations.nodes.forEach((node) => interactiveTargets.push(node.label));
+
+        const raycaster = new THREE.Raycaster();
+        const pointerNdc = new THREE.Vector2(0, 0);
+        const pointerUv = new THREE.Vector2(0.5, 0.5);
+        const pointerPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+        const pointerWorld = new THREE.Vector3();
+        const pointerTargetWorld = new THREE.Vector3();
+        const cameraTarget = new THREE.Vector3(0, 1.65, 0);
+        const cameraTargetTarget = new THREE.Vector3(0, 1.65, 0);
+        const tempVector = new THREE.Vector3();
+        const tempVector2 = new THREE.Vector3();
+
+        const state = {
+            pointerDown: false,
+            pointerId: null,
+            pointerX: 0,
+            pointerY: 0,
+            lastPointerX: 0,
+            lastPointerY: 0,
+            dragDistance: 0,
+            targetYaw: -0.15,
+            yaw: -0.15,
+            pitch: 0.08,
+            targetPitch: 0.08,
+            roll: 0,
+            targetRoll: 0,
+            distance: isMobile ? 26 : 30,
+            targetDistance: isMobile ? 26 : 30,
+            pulse: 0,
+            charge: 0,
+            charging: false,
+            selected: null,
+            selectedType: '',
+            selectedBoost: 0,
+            hover: null,
+            hoverBoost: 0,
+            visible: true,
+            raf: 0,
+            disposed: false,
+            cinematic: false,
+            screenShake: 0,
+            pointerInfluence: 0,
+            drawing: false,
+            portalOpen: false,
+            portalOpenProgress: 0,
+            entropy: 0,
+            nextMeteor: rand(4, 9),
+            keys: Object.create(null),
+            hudHidden: false,
+            pinch: {
+                active: false,
+                ids: [],
+                startDistance: 0,
+                startCameraDistance: 0,
+                chargeStart: 0
+            },
+            activePointers: new Map()
+        };
+
+        const shockwaves = [];
+
+        const observer = new IntersectionObserver((entries) => {
+            state.visible = entries[0] ? entries[0].isIntersecting : true;
+        }, {
+            threshold: 0.02
         });
-        destinations.dispose();
-        orbitalSystem.dispose();
-        filaments.dispose();
+        observer.observe(container);
 
-        [pointTexture, smokeTexture, strokeTexture].forEach((texture) => texture.dispose());
-        [stars.geometry, clouds.geometry, motes.geometry, trails.geometry].forEach((geometry) => geometry.dispose());
-        [stars.material, clouds.material, motes.material, trails.material].forEach((material) => material.dispose());
-        Object.values(ring.materials).forEach((material) => material.dispose());
-        Object.values(ring.geometries).forEach((geometry) => geometry.dispose());
-        ground.ground.geometry.dispose();
-        ground.circle.geometry.dispose();
-        ground.sigil.children.forEach((child) => child.geometry.dispose());
-        Object.values(ground.materials).forEach((material) => material.dispose());
-        obelisks.material.dispose();
-        obelisks.topMaterial.dispose();
-        voidCore.geometry.dispose();
-        voidCoreMaterial.dispose();
-        renderer.dispose();
-        container.replaceChildren();
-        container.classList.remove('ring-universe-shell', 'is-dragging');
-      }
-    };
-  }
+        function resize() {
+            const width = Math.max(1, container.clientWidth);
+            const height = Math.max(1, container.clientHeight);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        }
 
-  window.createRingUniverseSimulation = createSimulation;
+        function updatePointerFromEvent(event) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            const x = (event.clientX - rect.left) / Math.max(1, rect.width);
+            const y = (event.clientY - rect.top) / Math.max(1, rect.height);
+            pointerNdc.set(x * 2 - 1, -(y * 2 - 1));
+            pointerUv.set(clamp(x, 0, 1), clamp(1 - y, 0, 1));
+            raycaster.setFromCamera(pointerNdc, camera);
+            if (raycaster.ray.intersectPlane(pointerPlane, pointerTargetWorld)) {
+                pointerTargetWorld.copy(pointerTargetWorld);
+            }
+        }
+
+        function updateHover() {
+            raycaster.setFromCamera(pointerNdc, camera);
+            const hits = raycaster.intersectObjects(interactiveTargets, false);
+            const hit = hits.length ? hits[0].object : null;
+            state.hover = hit;
+            if (hit) {
+                state.hoverBoost = 1;
+                state.selectedType = hit.userData.interactive || '';
+            }
+        }
+
+        function spawnShockwave(strength, origin) {
+            const material = makeShockwaveMaterial(strength > 1.55 ? colors.ember : colors.portal);
+            const mesh = new THREE.Mesh(new THREE.RingGeometry(0.72, 0.78, 160), material);
+            mesh.position.copy(origin || ring.group.position);
+            mesh.position.z += 0.04;
+            mesh.rotation.copy(ring.group.rotation);
+            ring.group.add(mesh);
+            shockwaves.push({
+                mesh,
+                material,
+                life: 1,
+                strength,
+                speed: lerp(7.5, 13.5, clamp(strength / 2, 0, 1))
+            });
+        }
+
+        function launchPulse(strength, origin) {
+            const s = clamp(strength, 0.25, 3.0);
+            state.pulse = Math.max(state.pulse, s);
+            state.screenShake = Math.max(state.screenShake, s * 0.32);
+            state.pointerInfluence = Math.max(state.pointerInfluence, s);
+            state.selectedBoost = Math.max(state.selectedBoost, s);
+            portalLight.intensity = 9 + s * 6.2;
+            ring.group.scale.setScalar(1 + s * 0.045);
+            spawnShockwave(s, origin || new THREE.Vector3(0, 0, 0));
+            trails.emit(pointerWorld, Math.floor(18 + s * 18), true);
+            for (let i = 0; i < ring.shards.length; i++) {
+                const shard = ring.shards[i];
+                const angle = shard.userData.angle;
+                shard.position.x += Math.cos(angle) * s * 0.075;
+                shard.position.y += Math.sin(angle) * s * 0.075;
+                shard.position.z += s * 0.07;
+            }
+            for (let i = 0; i < motes.data.length; i++) {
+                const offset = i * 3;
+                const dx = motes.positions[offset];
+                const dy = motes.positions[offset + 1] - 2.05;
+                const dz = motes.positions[offset + 2];
+                const inverseLength = 1 / Math.max(1.2, Math.sqrt(dx * dx + dy * dy + dz * dz));
+                const kick = s * rand(0.55, 1.15);
+                motes.data[i].vx += dx * inverseLength * kick;
+                motes.data[i].vy += dy * inverseLength * kick;
+                motes.data[i].vz += dz * inverseLength * kick;
+            }
+            state.entropy = clamp(state.entropy + s * 0.18, 0, 1);
+        }
+
+        function focusObject(object) {
+            if (!object) return;
+            if (object.userData.interactive === 'destination' && object.userData.href) {
+                window.location.href = object.userData.href;
+                return;
+            }
+            object.getWorldPosition(tempVector);
+            cameraTargetTarget.lerp(tempVector, 0.28);
+            state.selected = object;
+            state.selectedBoost = 1.4;
+            if (object.userData.interactive === 'portal' || object.userData.interactive === 'void' || object.userData.interactive === 'ring') {
+                state.portalOpen = !state.portalOpen;
+                hud.classList.remove('is-muted');
+            }
+            if (object.userData.interactive === 'obelisk' && object.userData.parentObelisk) {
+                object.userData.parentObelisk.position.y += 0.26;
+            }
+            launchPulse(object.userData.interactive === 'void' ? 1.8 : 1.1, ring.group.worldToLocal(tempVector.clone()));
+        }
+
+        function resetView() {
+            state.targetYaw = -0.15;
+            state.targetPitch = 0.08;
+            state.targetRoll = 0;
+            state.targetDistance = isMobile ? 26 : 30;
+            cameraTargetTarget.set(0, 1.65, 0);
+            state.cinematic = false;
+            state.portalOpen = false;
+            state.portalOpenProgress = 0;
+            launchPulse(1.15);
+        }
+
+        function updatePinch() {
+            const points = state.pinch.ids.map((id) => state.activePointers.get(id)).filter(Boolean);
+            if (points.length < 2) {
+                state.pinch.active = false;
+                return;
+            }
+            const dx = points[0].x - points[1].x;
+            const dy = points[0].y - points[1].y;
+            const distance = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+            if (!state.pinch.active) {
+                state.pinch.active = true;
+                state.pinch.startDistance = distance;
+                state.pinch.startCameraDistance = state.targetDistance;
+                state.pinch.chargeStart = state.charge;
+            }
+            const scale = state.pinch.startDistance / distance;
+            state.targetDistance = clamp(state.pinch.startCameraDistance * scale, isMobile ? 19 : 22, 58);
+            state.charging = true;
+            state.charge = clamp(state.pinch.chargeStart + Math.abs(1 - scale) * 1.35, 0, 1.7);
+        }
+
+        function onPointerDown(event) {
+            container.focus({
+                preventScroll: true
+            });
+            updatePointerFromEvent(event);
+            state.activePointers.set(event.pointerId, {
+                x: event.clientX,
+                y: event.clientY
+            });
+            if (state.activePointers.size >= 2) {
+                state.pinch.ids = Array.from(state.activePointers.keys()).slice(0, 2);
+                updatePinch();
+                return;
+            }
+            state.pointerDown = true;
+            state.pointerId = event.pointerId;
+            state.pointerX = event.clientX;
+            state.pointerY = event.clientY;
+            state.lastPointerX = event.clientX;
+            state.lastPointerY = event.clientY;
+            state.dragDistance = 0;
+            state.charging = true;
+            state.drawing = event.shiftKey || event.button === 2;
+            container.classList.add('is-dragging');
+            renderer.domElement.setPointerCapture(event.pointerId);
+            updateHover();
+        }
+
+        function onPointerMove(event) {
+            updatePointerFromEvent(event);
+            state.activePointers.set(event.pointerId, {
+                x: event.clientX,
+                y: event.clientY
+            });
+            if (state.activePointers.size >= 2) {
+                updatePinch();
+                return;
+            }
+            updateHover();
+            if (!state.pointerDown || state.pointerId !== event.pointerId) return;
+
+            const dx = event.clientX - state.lastPointerX;
+            const dy = event.clientY - state.lastPointerY;
+            state.lastPointerX = event.clientX;
+            state.lastPointerY = event.clientY;
+            state.dragDistance += Math.abs(dx) + Math.abs(dy);
+
+            if (event.shiftKey || state.drawing) {
+                state.drawing = true;
+                trails.emit(pointerWorld, isMobile ? 1 : 2, false);
+                state.charge = clamp(state.charge + 0.0028 * (Math.abs(dx) + Math.abs(dy)), 0, 1.85);
+                state.pointerInfluence = Math.max(state.pointerInfluence, 0.5);
+            } else {
+                state.targetYaw += dx * 0.006;
+                state.targetPitch = clamp(state.targetPitch + dy * 0.0034, -0.32, 0.90);
+                ring.group.rotation.z += dx * 0.00175;
+                ring.group.rotation.x += dy * 0.0011;
+            }
+        }
+
+        function onPointerUp(event) {
+            state.activePointers.delete(event.pointerId);
+            if (state.activePointers.size < 2) state.pinch.active = false;
+
+            if (state.pointerId === event.pointerId || state.pointerDown) {
+                const wasTap = state.dragDistance < 9;
+                const strength = wasTap ? Math.max(1, 0.65 + state.charge * 1.2) : Math.max(0.65, state.charge * 1.35);
+                if (state.charge > 1.5) {
+                    state.portalOpen = true;
+                    hud.classList.remove('is-muted');
+                }
+                if (state.hover && wasTap) focusObject(state.hover);
+                else launchPulse(strength);
+            }
+
+            state.pointerDown = false;
+            state.pointerId = null;
+            state.charging = false;
+            state.drawing = false;
+            state.charge = 0;
+            container.classList.remove('is-dragging');
+            if (renderer.domElement.hasPointerCapture && renderer.domElement.hasPointerCapture(event.pointerId)) {
+                renderer.domElement.releasePointerCapture(event.pointerId);
+            }
+        }
+
+        function onDoubleClick(event) {
+            updatePointerFromEvent(event);
+            launchPulse(2.25);
+        }
+
+        function onContextMenu(event) {
+            event.preventDefault();
+        }
+
+        function onWheel(event) {
+            event.preventDefault();
+            state.targetDistance = clamp(state.targetDistance + event.deltaY * 0.036, isMobile ? 19 : 22, 58);
+            state.pointerInfluence = Math.max(state.pointerInfluence, 0.45);
+        }
+
+        function onKeyDown(event) {
+            state.keys[event.code] = true;
+            if (event.code === 'Space') {
+                event.preventDefault();
+                launchPulse(1.65 + state.charge * 0.5);
+            } else if (event.code === 'KeyR') {
+                resetView();
+            } else if (event.code === 'KeyC') {
+                state.cinematic = !state.cinematic;
+                hud.classList.toggle('is-muted', !state.cinematic);
+            } else if (event.code === 'KeyH') {
+                state.hudHidden = !state.hudHidden;
+                hud.classList.toggle('is-hidden', state.hudHidden);
+            } else if (event.code === 'KeyM') {
+                meteors.forEach((meteor, index) => window.setTimeout(() => meteor.launch(), index * 90));
+                state.screenShake = Math.max(state.screenShake, 0.34);
+            } else if (event.code === 'KeyF') {
+                focusObject(voidCore);
+            }
+        }
+
+        function onKeyUp(event) {
+            state.keys[event.code] = false;
+        }
+
+        renderer.domElement.addEventListener('pointerdown', onPointerDown);
+        renderer.domElement.addEventListener('pointermove', onPointerMove);
+        renderer.domElement.addEventListener('pointerup', onPointerUp);
+        renderer.domElement.addEventListener('pointercancel', onPointerUp);
+        renderer.domElement.addEventListener('dblclick', onDoubleClick);
+        renderer.domElement.addEventListener('wheel', onWheel, {
+            passive: false
+        });
+        renderer.domElement.addEventListener('contextmenu', onContextMenu);
+        window.addEventListener('resize', resize);
+        window.addEventListener('keydown', onKeyDown);
+        window.addEventListener('keyup', onKeyUp);
+
+        function applyPalette(nextColors) {
+            colors = nextColors;
+            renderer.setClearColor(colors.background, 1);
+            scene.fog.color.setHex(colors.fog);
+            portalLight.color.setHex(colors.portal);
+            emberLight.color.setHex(colors.ember);
+            ring.materials.ringMaterial.color.setHex(colors.iron);
+            ring.materials.ringMaterial.emissive.setHex(colors.ringGlow);
+            ring.materials.rimMaterial.color.setHex(colors.portal);
+            ring.materials.portalMaterial.uniforms.uPortal.value.setHex(colors.portal);
+            ring.materials.portalMaterial.uniforms.uRune.value.setHex(colors.rune);
+            ring.materials.portalMaterial.uniforms.uEmber.value.setHex(colors.ember);
+            ring.materials.portalMaterial.uniforms.uVoid.value.setHex(colors.background);
+            ring.materials.veilMaterial.color.setHex(colors.ember);
+            ring.materials.crownMaterial.color.setHex(colors.bone);
+            ring.materials.crownMaterial.emissive.setHex(colors.ember);
+            ring.materials.runeMaterial.color.setHex(colors.rune);
+            ground.materials.groundMaterial.color.setHex(colors.ground);
+            ground.materials.circleMaterial.color.setHex(colors.portal);
+            ground.materials.sigilMaterial.color.setHex(colors.rune);
+            obelisks.material.color.setHex(colors.obsidian);
+            obelisks.material.emissive.setHex(colors.blood);
+            obelisks.topMaterial.color.setHex(colors.ember);
+            voidCoreMaterial.color.setHex(colors.background);
+            meteors.forEach((meteor) => meteor.material.color.setHex(colors.starWarm));
+            const orbitalHues = [colors.portal, colors.ember, colors.rune, colors.ghost, colors.starWarm, colors.nebulaViolet];
+            orbitalSystem.orbiters.forEach((orbiter, index) => {
+                const color = orbitalHues[index % orbitalHues.length];
+                orbiter.pathMaterial.color.setHex(color);
+                orbiter.bodyMaterial.color.setHex(color);
+                orbiter.bodyMaterial.emissive.setHex(color);
+                orbiter.haloMaterial.color.setHex(color);
+            });
+            filaments.filaments.forEach((filament, index) => filament.material.color.setHex(index % 4 === 0 ? colors.ember : colors.portal));
+        }
+
+        const clock = new THREE.Clock();
+        let frame = 0;
+
+        function animate() {
+            state.raf = requestAnimationFrame(animate);
+            if (state.disposed) return;
+            if (!state.visible) {
+                clock.getDelta();
+                return;
+            }
+
+            const dt = Math.min(clock.getDelta(), 0.05);
+            const t = clock.elapsedTime;
+            frame++;
+
+            pointerWorld.lerp(pointerTargetWorld, 0.18);
+
+            const nextDarkMode = Boolean(options.getDarkMode && options.getDarkMode());
+            if (nextDarkMode !== darkMode) {
+                darkMode = nextDarkMode;
+                applyPalette(darkMode ? palettes.dark : palettes.light);
+            }
+
+            if (state.charging) {
+                state.charge = clamp(state.charge + dt * (state.drawing ? 0.18 : 0.42), 0, 1.85);
+                state.pointerInfluence = Math.max(state.pointerInfluence, 0.32 + state.charge * 0.5);
+            }
+            if (chargeBar) chargeBar.style.setProperty('--charge', `${clamp(state.charge / 1.85, 0, 1) * 100}%`);
+
+            state.pulse = Math.max(0, state.pulse - dt * 1.55);
+            state.screenShake = Math.max(0, state.screenShake - dt * 1.6);
+            state.pointerInfluence = Math.max(0, state.pointerInfluence - dt * 0.9);
+            state.selectedBoost = Math.max(0, state.selectedBoost - dt * 0.9);
+            state.hoverBoost = Math.max(0, state.hoverBoost - dt * 2.2);
+            state.entropy = Math.max(0, state.entropy - dt * 0.075);
+            state.portalOpenProgress += ((state.portalOpen ? 1 : 0) - state.portalOpenProgress) * 0.07;
+
+            const pulse = state.pulse;
+            const charge = state.charge;
+            const breathing = 0.5 + 0.5 * Math.sin(t * 1.08);
+            const slowBreath = 0.5 + 0.5 * Math.sin(t * 0.31);
+
+            ring.materials.portalMaterial.uniforms.uTime.value = t;
+            ring.materials.portalMaterial.uniforms.uPulse.value = pulse;
+            ring.materials.portalMaterial.uniforms.uCharge.value = charge;
+            ring.materials.portalMaterial.uniforms.uPointer.value.copy(pointerUv);
+
+            for (let i = shockwaves.length - 1; i >= 0; i--) {
+                const wave = shockwaves[i];
+                wave.life -= dt * 0.78;
+                const progress = 1 - wave.life;
+                wave.mesh.scale.setScalar(1 + progress * wave.speed * wave.strength);
+                wave.material.opacity = Math.max(0, wave.life) * (0.55 + 0.25 * wave.strength);
+                wave.mesh.rotation.z += dt * (0.6 + wave.strength * 0.4);
+                if (wave.life <= 0) {
+                    ring.group.remove(wave.mesh);
+                    wave.mesh.geometry.dispose();
+                    wave.material.dispose();
+                    shockwaves.splice(i, 1);
+                }
+            }
+
+            if (state.keys.KeyA) state.targetYaw -= dt * 1.0;
+            if (state.keys.KeyD) state.targetYaw += dt * 1.0;
+            if (state.keys.KeyW) state.targetDistance = clamp(state.targetDistance - dt * 18, isMobile ? 19 : 22, 58);
+            if (state.keys.KeyS) state.targetDistance = clamp(state.targetDistance + dt * 18, isMobile ? 19 : 22, 58);
+            if (state.keys.KeyQ) state.targetRoll = clamp(state.targetRoll - dt * 0.7, -0.32, 0.32);
+            if (state.keys.KeyE) state.targetRoll = clamp(state.targetRoll + dt * 0.7, -0.32, 0.32);
+            if (!state.keys.KeyQ && !state.keys.KeyE) state.targetRoll *= 0.94;
+
+            if (state.cinematic && !state.pointerDown) {
+                state.targetYaw += dt * 0.09;
+                state.targetPitch = 0.08 + Math.sin(t * 0.19) * 0.09;
+                state.targetDistance = (isMobile ? 26 : 30) + Math.sin(t * 0.23) * 4.5;
+            } else if (!state.pointerDown && !state.pinch.active) {
+                state.targetYaw += dt * 0.045;
+            }
+
+            ring.group.scale.lerp(tempVector.setScalar(1 + pulse * 0.075 + charge * 0.035), 0.095);
+            const presentationYaw = Math.sin(t * 0.23) * 0.045 + pointerNdc.x * 0.035;
+            const presentationPitch = -0.1 + Math.sin(t * 0.17) * 0.025 - pointerNdc.y * 0.025;
+            ring.group.rotation.y += (presentationYaw - ring.group.rotation.y) * 0.045;
+            ring.group.rotation.x += (presentationPitch - ring.group.rotation.x) * 0.045;
+            ring.group.rotation.z += dt * (0.032 + charge * 0.04);
+            ring.inner.rotation.z -= dt * (0.38 + pulse * 1.1 + charge * 0.55);
+            ring.rim.rotation.z += dt * (0.14 + pulse * 0.4);
+            ring.veil.rotation.z += dt * (0.18 + pulse * 0.48 + charge * 0.2);
+            ring.inner.scale.setScalar(1 + breathing * 0.03 + pulse * 0.08 + charge * 0.04);
+            ring.rim.scale.setScalar(1 + breathing * 0.012 + pulse * 0.035);
+            ring.veil.scale.setScalar(1 + slowBreath * 0.075 + pulse * 0.12 + charge * 0.05);
+            ring.materials.rimMaterial.opacity = 0.18 + breathing * 0.12 + pulse * 0.18 + charge * 0.1;
+            ring.materials.veilMaterial.opacity = 0.10 + slowBreath * 0.09 + pulse * 0.15 + charge * 0.08;
+            ring.materials.ringMaterial.emissiveIntensity = 0.15 + breathing * 0.11 + pulse * 0.65 + charge * 0.22 + state.hoverBoost * 0.12;
+            ring.materials.runeMaterial.opacity = 0.38 + breathing * 0.34 + pulse * 0.22 + charge * 0.18;
+            voidCore.scale.setScalar(1 + slowBreath * 0.07 + pulse * 0.12 + charge * 0.08);
+            voidCoreMaterial.opacity = 0.54 + pulse * 0.12 + charge * 0.08;
+            filaments.update(t, pulse, charge, state.portalOpenProgress, ring.shards.length);
+            orbitalSystem.update(t, dt, pulse, charge, state.portalOpenProgress, state.hover);
+
+            for (let i = 0; i < ring.shards.length; i++) {
+                const shard = ring.shards[i];
+                const home = shard.userData.home;
+                const outward = 1 + pulse * 0.055 + charge * 0.04 + (state.hover === shard ? 0.05 : 0);
+                shard.position.x += (home.x * outward - shard.position.x) * 0.045;
+                shard.position.y += (home.y * outward - shard.position.y) * 0.045;
+                shard.position.z += (-0.22 + Math.sin(t * 1.35 + shard.userData.phase) * 0.18 + pulse * 0.22 + charge * 0.12 - shard.position.z) * 0.05;
+                shard.rotation.x = shard.userData.baseRotationX + Math.sin(t * 1.15 + shard.userData.phase) * (0.045 + charge * 0.025);
+                shard.rotation.y = shard.userData.baseRotationY + (state.hover === shard ? Math.sin(t * 4.2) * 0.08 : 0);
+                shard.rotation.z = shard.userData.baseRotationZ;
+            }
+
+            const motePositions = motes.positions;
+            const influence = state.pointerInfluence;
+            const gravity = 9.5 * (1 + charge * 0.62 + state.portalOpenProgress * 0.3);
+            for (let i = 0; i < motes.data.length; i++) {
+                const mote = motes.data[i];
+                const offset = i * 3;
+                let x = motePositions[offset];
+                let y = motePositions[offset + 1];
+                let z = motePositions[offset + 2];
+                const dx = x;
+                const dy = y - 2.05;
+                const dz = z;
+                const radiusSq = dx * dx + dy * dy + dz * dz;
+                const radius = Math.sqrt(radiusSq);
+                const inverseRadius = 1 / Math.max(1.2, radius);
+                const gravityScale = -gravity * inverseRadius * inverseRadius * inverseRadius;
+                const turbulence = Math.sin(t * 1.7 + mote.phase + radius) * mote.turbulence;
+
+                mote.vx += (dx * gravityScale - dz * turbulence * 0.018) * dt;
+                mote.vy += (dy * gravityScale * 0.42 + Math.sin(t * 0.9 + mote.phase) * 0.025) * dt;
+                mote.vz += (dz * gravityScale + dx * turbulence * 0.018) * dt;
+
+                if (influence > 0.02) {
+                    const px = pointerWorld.x - x;
+                    const py = pointerWorld.y - y;
+                    const pz = pointerWorld.z - z;
+                    const pointerDistanceSq = px * px + py * py + pz * pz + 3.5;
+                    const pointerForce = influence * mote.pointerPull / pointerDistanceSq;
+                    mote.vx += px * pointerForce * dt;
+                    mote.vy += py * pointerForce * dt;
+                    mote.vz += pz * pointerForce * dt;
+                }
+
+                const damping = Math.pow(mote.drag, dt * 60);
+                mote.vx *= damping;
+                mote.vy *= damping;
+                mote.vz *= damping;
+                x += mote.vx * dt;
+                y += mote.vy * dt;
+                z += mote.vz * dt;
+
+                if (radius > 29 || radius < 3.35 || !Number.isFinite(x + y + z)) {
+                    const resetAngle = rand(0, TAU);
+                    const resetRadius = rand(6.2, 12.8);
+                    const resetSpeed = Math.sqrt(9.5 / resetRadius) * (Math.random() < 0.14 ? -1 : 1);
+                    x = Math.cos(resetAngle) * resetRadius;
+                    y = 2.05 + rand(-1.8, 1.8);
+                    z = Math.sin(resetAngle) * resetRadius;
+                    mote.vx = -Math.sin(resetAngle) * resetSpeed;
+                    mote.vy = rand(-0.12, 0.12);
+                    mote.vz = Math.cos(resetAngle) * resetSpeed;
+                }
+
+                motePositions[offset] = x;
+                motePositions[offset + 1] = y;
+                motePositions[offset + 2] = z;
+            }
+            motes.geometry.attributes.position.needsUpdate = true;
+            motes.material.opacity = 0.38 + pulse * 0.16 + charge * 0.1;
+
+            if (frame % 6 === 0) {
+                const instability = clamp(state.entropy * 0.78 + charge * 0.16 + pulse * 0.12, 0, 1);
+                if (stabilityReadout) stabilityReadout.textContent = `${Math.round((1 - instability) * 100)}%`;
+                if (fluxReadout) fluxReadout.textContent = instability > 0.72 ? 'critical' : instability > 0.42 ? 'surging' : instability > 0.16 ? 'active' : 'low';
+            }
+
+            if (state.drawing || state.charging) {
+                trails.emit(pointerWorld, state.drawing ? (isMobile ? 1 : 2) : 1, false);
+            }
+            trails.update(dt);
+
+            if (frame % (isMobile ? 3 : 1) === 0) {
+                const cloudPositions = clouds.positions;
+                for (let i = 0; i < clouds.data.length; i++) {
+                    const cloud = clouds.data[i];
+                    const offset = i * 3;
+                    cloudPositions[offset] = cloud.baseX + Math.sin(t * cloud.drift + cloud.phase) * (0.45 + charge * 1.8);
+                    cloudPositions[offset + 1] = cloud.baseY + Math.cos(t * cloud.drift * 0.8 + cloud.phase) * 0.62 * cloud.lift;
+                    cloudPositions[offset + 2] = cloud.baseZ + Math.sin(t * cloud.drift * 0.6 + cloud.phase) * (0.8 + pulse * 2.2);
+                }
+                clouds.geometry.attributes.position.needsUpdate = true;
+            }
+            clouds.points.rotation.y = t * 0.017 + state.yaw * 0.015;
+            clouds.points.rotation.x = Math.sin(t * 0.08) * 0.09;
+            clouds.material.opacity = 0.20 + slowBreath * 0.075 + charge * 0.045;
+
+            if (frame % (isMobile ? 8 : 4) === 0) {
+                const updateCount = isMobile ? Math.floor(quality.stars / 16) : Math.floor(quality.stars / 7);
+                for (let i = 0; i < updateCount; i++) {
+                    const index = (frame * 17 + i * 23) % quality.stars;
+                    const offset = index * 3;
+                    const twinkle = 0.72 + Math.sin(t * stars.speeds[index] + stars.phases[index]) * 0.28 + pulse * 0.08;
+                    stars.colors[offset] = stars.baseColors[offset] * twinkle;
+                    stars.colors[offset + 1] = stars.baseColors[offset + 1] * twinkle;
+                    stars.colors[offset + 2] = stars.baseColors[offset + 2] * twinkle;
+                }
+                stars.geometry.attributes.color.needsUpdate = true;
+            }
+            stars.points.rotation.y = t * 0.0024 + state.yaw * 0.004;
+            stars.points.rotation.x = t * 0.00085;
+
+            ground.circle.rotation.z -= dt * (0.062 + pulse * 0.16 + charge * 0.07);
+            ground.sigil.rotation.y += dt * 0.014;
+            ground.materials.circleMaterial.opacity = 0.04 + slowBreath * 0.03 + pulse * 0.08 + charge * 0.04;
+            ground.materials.sigilMaterial.opacity = 0.025 + pulse * 0.045 + charge * 0.045;
+
+            for (let i = 0; i < obelisks.obelisks.length; i++) {
+                const item = obelisks.obelisks[i];
+                item.group.position.y += (-9.55 + Math.sin(t * 0.68 + item.phase) * 0.1 - item.group.position.y) * 0.045;
+                item.ember.scale.setScalar(1 + Math.sin(t * 2.55 + item.phase) * 0.32 + pulse * 0.55 + charge * 0.22);
+                item.group.rotation.y += Math.sin(t * 0.26 + item.phase) * 0.0009;
+            }
+
+            state.nextMeteor -= dt;
+            if (state.nextMeteor <= 0) {
+                const inactive = meteors.find((meteor) => !meteor.active);
+                if (inactive) inactive.launch();
+                state.nextMeteor = rand(isMobile ? 9 : 5, isMobile ? 18 : 12);
+            }
+            meteors.forEach((meteor) => meteor.update(dt));
+            destinations.update(t, state.portalOpenProgress, state.hover);
+
+            portalLight.intensity += ((4.85 + breathing * 1.75 + pulse * 8.2 + charge * 3.0 + state.portalOpenProgress * 4.2 + state.hoverBoost * 0.8) - portalLight.intensity) * 0.08;
+            portalLight.position.set(Math.sin(t * 0.8) * 1.45, 1.45 + Math.sin(t * 1.1) * 0.82, Math.cos(t * 0.7) * 1.45);
+            emberLight.intensity = 1.45 + slowBreath * 1.25 + pulse * 3.2 + charge * 0.9;
+            emberLight.position.set(Math.sin(t * 0.43) * 19, -2 + Math.sin(t * 0.7) * 2, Math.cos(t * 0.37) * 19);
+
+            state.yaw += (state.targetYaw - state.yaw) * 0.078;
+            state.pitch += (state.targetPitch - state.pitch) * 0.078;
+            state.distance += (state.targetDistance - state.distance) * 0.08;
+            state.roll += (state.targetRoll - state.roll) * 0.08;
+            cameraTarget.lerp(cameraTargetTarget, 0.05);
+            cameraTargetTarget.lerp(tempVector2.set(0, 1.65, 0), 0.006);
+
+            const shake = state.screenShake;
+            const shakeX = shake ? Math.sin(t * 39.7) * shake : 0;
+            const shakeY = shake ? Math.cos(t * 31.1) * shake * 0.55 : 0;
+            const height = 4.8 + state.pitch * 8 + Math.sin(t * 0.3) * 0.75 + shakeY;
+            camera.position.x = Math.sin(state.yaw) * state.distance + shakeX;
+            camera.position.z = Math.cos(state.yaw) * state.distance + 5.5;
+            camera.position.y = height;
+            camera.rotation.z = state.roll;
+            camera.lookAt(cameraTarget);
+
+            renderer.render(scene, camera);
+        }
+
+        resize();
+        animate();
+
+        return {
+            pulse(strength) {
+                launchPulse(strength || 1.4);
+            },
+            cinematic(enabled) {
+                state.cinematic = Boolean(enabled);
+            },
+            dispose() {
+                state.disposed = true;
+                cancelAnimationFrame(state.raf);
+                observer.disconnect();
+                window.removeEventListener('resize', resize);
+                window.removeEventListener('keydown', onKeyDown);
+                window.removeEventListener('keyup', onKeyUp);
+                renderer.domElement.removeEventListener('pointerdown', onPointerDown);
+                renderer.domElement.removeEventListener('pointermove', onPointerMove);
+                renderer.domElement.removeEventListener('pointerup', onPointerUp);
+                renderer.domElement.removeEventListener('pointercancel', onPointerUp);
+                renderer.domElement.removeEventListener('dblclick', onDoubleClick);
+                renderer.domElement.removeEventListener('wheel', onWheel);
+                renderer.domElement.removeEventListener('contextmenu', onContextMenu);
+
+                shockwaves.forEach((wave) => {
+                    ring.group.remove(wave.mesh);
+                    wave.mesh.geometry.dispose();
+                    wave.material.dispose();
+                });
+                meteors.forEach((meteor) => {
+                    scene.remove(meteor.line);
+                    meteor.geometry.dispose();
+                    meteor.material.dispose();
+                });
+                destinations.dispose();
+                orbitalSystem.dispose();
+                filaments.dispose();
+
+                [pointTexture, smokeTexture, strokeTexture].forEach((texture) => texture.dispose());
+                [stars.geometry, clouds.geometry, motes.geometry, trails.geometry].forEach((geometry) => geometry.dispose());
+                [stars.material, clouds.material, motes.material, trails.material].forEach((material) => material.dispose());
+                Object.values(ring.materials).forEach((material) => material.dispose());
+                Object.values(ring.geometries).forEach((geometry) => geometry.dispose());
+                ground.ground.geometry.dispose();
+                ground.circle.geometry.dispose();
+                ground.sigil.children.forEach((child) => child.geometry.dispose());
+                Object.values(ground.materials).forEach((material) => material.dispose());
+                obelisks.material.dispose();
+                obelisks.topMaterial.dispose();
+                voidCore.geometry.dispose();
+                voidCoreMaterial.dispose();
+                renderer.dispose();
+                container.replaceChildren();
+                container.classList.remove('ring-universe-shell', 'is-dragging');
+            }
+        };
+    }
+
+    window.createRingUniverseSimulation = createSimulation;
 })();

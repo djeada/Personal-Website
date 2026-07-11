@@ -1,41 +1,545 @@
 (() => {
-'use strict';
-const canvas=document.querySelector('#canvas'),ctx=canvas.getContext('2d',{alpha:false});
-const background=new Image(),backgroundLayer=document.createElement('canvas');backgroundLayer.width=960;backgroundLayer.height=600;const backgroundCtx=backgroundLayer.getContext('2d',{alpha:false});background.onload=()=>backgroundCtx.drawImage(background,0,0,960,600);background.src='assets/moonveil-background.webp';
-const $=s=>document.querySelector(s), ui={overlay:$('#game-overlay'),title:$('#overlay-title'),copy:$('#overlay-copy'),kicker:$('#overlay-kicker'),start:$('#start-btn'),score:$('#score-label'),best:$('#hs-badge'),pause:$('#pause-btn'),mute:$('#mute-btn'),restart:$('#restart-btn'),difficulty:$('#difficulty'),skin:$('#bird-skin'),theme:$('#theme-mode')};
-const W=960,H=600,TAU=Math.PI*2,STEP=1/60,CONFIG={easy:{speed:155,gap:190,gravity:900,flap:-340},normal:{speed:180,gap:170,gravity:980,flap:-365},hard:{speed:205,gap:150,gravity:1040,flap:-380},insane:{speed:230,gap:136,gravity:1100,flap:-395}},clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),rand=(a,b)=>a+Math.random()*(b-a);
-let dpr=1,audio=null,endTimer=0,muted=localStorage.getItem('moonveil_muted')==='1';
-const saved={best:+localStorage.getItem('flappy_highscore')||0,difficulty:localStorage.getItem('moonveil_difficulty')||'normal',skin:localStorage.getItem('flappy_bird_skin')||'ember',theme:localStorage.getItem('flappy_theme')||'auto'};
-Object.entries({difficulty:saved.difficulty,skin:saved.skin,theme:saved.theme}).forEach(([k,v])=>ui[k].value=v); ui.best.textContent=saved.best; updateMute();
-const state={mode:'ready',score:0,best:saved.best,time:0,last:0,acc:0,flash:0,distance:0,nextGate:660,trailClock:0,gates:[],particles:[],trail:[],fireflies:Array.from({length:12},()=>({x:rand(0,W),y:rand(30,H-80),r:rand(1,2.2),p:rand(0,TAU)})),bird:{x:220,y:300,vy:0,rot:0,wing:0}};
-function resize(){const r=canvas.getBoundingClientRect();dpr=Math.min(devicePixelRatio||1,innerWidth<700?1:1.25);const w=Math.max(1,Math.round(r.width*dpr)),h=Math.max(1,Math.round(r.height*dpr));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;ctx.imageSmoothingEnabled=true}}
-new ResizeObserver(resize).observe(canvas);resize();
-function config(){return CONFIG[ui.difficulty.value]||CONFIG.normal}
-function reset(start=false){clearTimeout(endTimer);endTimer=0;Object.assign(state,{mode:start?'playing':'ready',score:0,time:0,acc:0,flash:0,distance:0,nextGate:650,trailClock:0,gates:[],particles:[],trail:[]});Object.assign(state.bird,{x:220,y:H*.48,vy:0,rot:0,wing:0});ui.score.textContent='0';if(start){hideOverlay();state.bird.vy=config().flap;sound('flap')}else showOverlay('THE WOODS ARE LISTENING','Ready to fly?','Glide between ancient gates and collect their light.','Begin flight')}
-function flap(){if(state.mode==='ready'||state.mode==='over'){reset(true);return}if(state.mode!=='playing')return;state.bird.vy=config().flap;state.bird.wing=1;burst(state.bird.x-12,state.bird.y,7,'#e8ca79',.7);sound('flap')}
-function spawnGate(){const c=config(),prev=state.gates.at(-1)?.gapY||H*.48;const gapY=clamp(prev+rand(-125,125),135,H-135);state.gates.push({x:W+75,gapY,gap:c.gap,w:74,passed:false,seed:Math.random()*99});state.nextGate=rand(320,390)}
-function update(dt){if(state.mode!=='playing')return;const c=config(),b=state.bird;state.time+=dt;state.distance+=c.speed*dt;state.nextGate-=c.speed*dt;if(state.nextGate<=0)spawnGate();b.vy=Math.min(b.vy+c.gravity*dt,620);b.y+=b.vy*dt;b.rot=clamp(b.vy/650,-.5,1);b.wing=Math.max(0,b.wing-dt*5);state.trailClock+=dt;if(state.trailClock>=.08){state.trailClock=0;if(state.trail.length<10)state.trail.push({x:b.x-19,y:b.y+rand(-2,2),life:1,r:3})}for(const t of state.trail){t.x-=c.speed*.3*dt;t.life-=dt*2}state.trail=state.trail.filter(t=>t.life>0);for(const g of state.gates){g.x-=c.speed*dt;if(!g.passed&&g.x+g.w<b.x){g.passed=true;state.score++;ui.score.textContent=state.score;if(state.score>state.best){state.best=state.score;ui.best.textContent=state.best;localStorage.setItem('flappy_highscore',state.best)}burst(g.x+g.w/2,g.gapY,12,'#f3d37e',.8);state.flash=.12;sound('score')}}state.gates=state.gates.filter(g=>g.x>-120);for(const p of state.particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=45*dt;p.life-=dt}state.particles=state.particles.filter(p=>p.life>0);state.flash=Math.max(0,state.flash-dt);if(collides()||b.y<-30||b.y>H-35)end()}
-function collides(){const b=state.bird,r=12;return state.gates.some(g=>b.x+r>g.x+5&&b.x-r<g.x+g.w-5&&(b.y-r<g.gapY-g.gap/2+4||b.y+r>g.gapY+g.gap/2-4))}
-function end(){if(state.mode!=='playing')return;state.mode='over';sound('hit');burst(state.bird.x,state.bird.y,14,'#e3b965',.8);endTimer=setTimeout(()=>{endTimer=0;if(state.mode==='over')showOverlay(state.score>=state.best&&state.score>0?'A NEW LEGEND':'THE FOREST REMEMBERS',state.score?`${state.score} gate${state.score===1?'':'s'} crossed`:'The first gate awaits',`Best flight: ${state.best} gates. The moonwing is ready to try again.`,'Fly again')},180)}
-function pause(){if(state.mode==='playing'){state.mode='paused';showOverlay('A QUIET MOMENT','Flight paused','The forest will wait for you.','Continue');ui.pause.textContent='▶'}else if(state.mode==='paused'){state.mode='playing';hideOverlay();ui.pause.textContent='Ⅱ'}}
-function showOverlay(k,t,c,b){ui.kicker.textContent=k;ui.title.textContent=t;ui.copy.textContent=c;ui.start.querySelector('span').textContent=b;ui.overlay.classList.add('is-visible')}
-function hideOverlay(){ui.overlay.classList.remove('is-visible');ui.pause.textContent='Ⅱ';canvas.focus({preventScroll:true})}
-function theme(){if(ui.theme.value!=='auto')return ui.theme.value;return 'night'}
-function render(){const sx=canvas.width/W,sy=canvas.height/H;ctx.setTransform(sx,0,0,sy,0,0);drawWorld();drawGates();drawTrail();drawParticles();drawBird();drawForeground();if(state.flash){ctx.fillStyle=`rgba(255,224,112,${state.flash*.45})`;ctx.fillRect(0,0,W,H)}ctx.setTransform(1,0,0,1,0,0)}
-function drawWorld(){if(background.complete&&background.naturalWidth)ctx.drawImage(backgroundLayer,0,0);else{ctx.fillStyle='#25235f';ctx.fillRect(0,0,W,H)}const tint=theme()==='day'?'rgba(255,190,115,.09)':theme()==='night'?'rgba(8,12,48,.2)':'rgba(42,30,95,.05)';ctx.fillStyle=tint;ctx.fillRect(0,0,W,H);ctx.fillStyle='#ffd76a';for(const f of state.fireflies){let x=(f.x-state.distance*.07)%W;if(x<0)x+=W;ctx.globalAlpha=.35+.5*(.5+.5*Math.sin(state.time*2+f.p));ctx.fillRect(x,f.y+Math.sin(state.time+f.p)*3,f.r*2,f.r*2)}ctx.globalAlpha=1}
-function drawGates(){for(const g of state.gates){pillar(g,0,g.gapY-g.gap/2,true);pillar(g,g.gapY+g.gap/2,H,false);const pulse=.5+.5*Math.sin(state.time*3+g.seed),r=g.gap*.32;ctx.save();ctx.translate(g.x+g.w/2,g.gapY);ctx.strokeStyle=`rgba(109,246,255,${.34+pulse*.22})`;ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,r+pulse*2,0,TAU);ctx.stroke();ctx.rotate(state.time*.18+g.seed);for(let i=0;i<8;i++){ctx.rotate(TAU/8);ctx.fillStyle='#bdfaff';ctx.beginPath();ctx.moveTo(-3,r+5);ctx.lineTo(0,r+12);ctx.lineTo(3,r+5);ctx.closePath();ctx.fill()}ctx.restore()}}
-function pillar(g,y,end,top){const h=top?end:H-y,edge=top?end:y,x=g.x,w=g.w;ctx.fillStyle='#191737';ctx.fillRect(x-5,y,w+10,h);ctx.fillStyle='#d9cbaa';ctx.fillRect(x,y,w,h);ctx.fillStyle='#fff0c9';ctx.fillRect(x+18,y,w-36,h);ctx.strokeStyle='#6d6685';ctx.lineWidth=3;ctx.strokeRect(x+7,y,w-14,h);ctx.fillStyle='#29234c';ctx.fillRect(x-13,top?edge-25:edge,w+26,25);ctx.fillStyle='#f3ce72';ctx.fillRect(x-13,top?edge-5:edge,w+26,5);ctx.fillStyle='#78eff5';for(let i=0;i<3;i++)ctx.fillRect(x+14+i*21,top?edge-17:edge+10,7,7)}
-function drawTrail(){ctx.fillStyle='#f6d77c';for(const t of state.trail){ctx.globalAlpha=t.life*.4;ctx.fillRect(t.x,t.y,t.r*t.life,t.r*t.life)}ctx.globalAlpha=1}
-function drawBird(){const b=state.bird,colors={ember:['#ffbd3e','#ed5b3a'],frost:['#baf5ff','#248cc5'],moss:['#d9f57a','#4a9c55'],spirit:['#ffffff','#a97cff']}[ui.skin.value]||['#ffbd3e','#ed5b3a'];ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.rot);ctx.strokeStyle='#ffffff';ctx.lineWidth=4;ctx.lineJoin='round';ctx.fillStyle=colors[1];ctx.beginPath();ctx.moveTo(-17,2);ctx.quadraticCurveTo(-35,-9,-40,1);ctx.quadraticCurveTo(-29,11,-14,10);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle=colors[0];ctx.beginPath();ctx.ellipse(0,0,23,17,-.08,0,TAU);ctx.fill();ctx.stroke();const flap=Math.sin(state.time*18)*5-b.wing*12;ctx.fillStyle=colors[1];ctx.beginPath();ctx.moveTo(-10,2);ctx.quadraticCurveTo(-29,-15+flap,-30,11);ctx.quadraticCurveTo(-10,14,6,6);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(9,-6,7,0,TAU);ctx.fill();ctx.fillStyle='#14152f';ctx.beginPath();ctx.arc(12,-7,3,0,TAU);ctx.fill();ctx.fillStyle='#ff8a35';ctx.beginPath();ctx.moveTo(18,-3);ctx.lineTo(33,1);ctx.lineTo(18,6);ctx.closePath();ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();ctx.restore()}
-function drawForeground(){ctx.fillStyle='rgba(12,14,47,.22)';ctx.fillRect(0,H-45,W,45)}
-function burst(x,y,n,color,life){for(let i=0;i<n;i++){const a=rand(0,TAU),v=rand(35,150);state.particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:rand(life*.5,life),max:life,r:rand(1,3.5),color})}}
-function drawParticles(){for(const p of state.particles){ctx.globalAlpha=clamp(p.life/p.max,0,1);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,TAU);ctx.fill()}ctx.globalAlpha=1}
-function sound(kind){if(muted)return;try{audio||=(new(window.AudioContext||window.webkitAudioContext));if(audio.state==='suspended')audio.resume();const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;o.type=kind==='hit'?'sawtooth':'sine';o.frequency.setValueAtTime(kind==='score'?720:kind==='hit'?130:420,now);o.frequency.exponentialRampToValueAtTime(kind==='score'?1040:kind==='hit'?70:620,now+.1);g.gain.setValueAtTime(.045,now);g.gain.exponentialRampToValueAtTime(.001,now+(kind==='hit'?.28:.11));o.connect(g).connect(audio.destination);o.start();o.stop(now+.3)}catch(_){}}
-function updateMute(){ui.mute.textContent=muted?'♩':'♫';ui.mute.setAttribute('aria-pressed',String(muted))}
-function loop(t){const dt=Math.min((t-state.last)/1000||0,.05);state.last=t;state.acc=Math.min(state.acc+dt,STEP*3);while(state.acc>=STEP){update(STEP);state.acc-=STEP}render();requestAnimationFrame(loop)}
-function action(){state.mode==='paused'?pause():flap()}
-canvas.addEventListener('pointerdown',e=>{e.preventDefault();action()});ui.start.addEventListener('click',action);ui.pause.addEventListener('click',pause);ui.restart.addEventListener('click',()=>reset(true));ui.mute.addEventListener('click',()=>{muted=!muted;localStorage.setItem('moonveil_muted',muted?'1':'0');updateMute()});
-window.addEventListener('keydown',e=>{if(['Space','ArrowUp'].includes(e.code)){e.preventDefault();action()}else if(e.code==='KeyP')pause();else if(e.code==='KeyM')ui.mute.click();else if(e.code==='Escape')reset(true)});
-ui.difficulty.addEventListener('change',()=>localStorage.setItem('moonveil_difficulty',ui.difficulty.value));ui.skin.addEventListener('change',()=>localStorage.setItem('flappy_bird_skin',ui.skin.value));ui.theme.addEventListener('change',()=>localStorage.setItem('flappy_theme',ui.theme.value));document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.mode==='playing')pause()});
-reset();requestAnimationFrame(loop);
+    'use strict';
+    const canvas = document.querySelector('#canvas'),
+        ctx = canvas.getContext('2d', {
+            alpha: false
+        });
+    const background = new Image(),
+        backgroundLayer = document.createElement('canvas');
+    backgroundLayer.width = 960;
+    backgroundLayer.height = 600;
+    const backgroundCtx = backgroundLayer.getContext('2d', {
+        alpha: false
+    });
+    background.onload = () => backgroundCtx.drawImage(background, 0, 0, 960, 600);
+    background.src = 'assets/moonveil-background.webp';
+    const $ = s => document.querySelector(s),
+        ui = {
+            overlay: $('#game-overlay'),
+            title: $('#overlay-title'),
+            copy: $('#overlay-copy'),
+            kicker: $('#overlay-kicker'),
+            start: $('#start-btn'),
+            score: $('#score-label'),
+            best: $('#hs-badge'),
+            pause: $('#pause-btn'),
+            mute: $('#mute-btn'),
+            restart: $('#restart-btn'),
+            difficulty: $('#difficulty'),
+            skin: $('#bird-skin'),
+            theme: $('#theme-mode')
+        };
+    const W = 960,
+        H = 600,
+        TAU = Math.PI * 2,
+        STEP = 1 / 60,
+        CONFIG = {
+            easy: {
+                speed: 155,
+                gap: 190,
+                gravity: 900,
+                flap: -340
+            },
+            normal: {
+                speed: 180,
+                gap: 170,
+                gravity: 980,
+                flap: -365
+            },
+            hard: {
+                speed: 205,
+                gap: 150,
+                gravity: 1040,
+                flap: -380
+            },
+            insane: {
+                speed: 230,
+                gap: 136,
+                gravity: 1100,
+                flap: -395
+            }
+        },
+        clamp = (v, a, b) => Math.max(a, Math.min(b, v)),
+        rand = (a, b) => a + Math.random() * (b - a);
+    let dpr = 1,
+        audio = null,
+        endTimer = 0,
+        muted = localStorage.getItem('moonveil_muted') === '1';
+    const saved = {
+        best: +localStorage.getItem('flappy_highscore') || 0,
+        difficulty: localStorage.getItem('moonveil_difficulty') || 'normal',
+        skin: localStorage.getItem('flappy_bird_skin') || 'ember',
+        theme: localStorage.getItem('flappy_theme') || 'auto'
+    };
+    Object.entries({
+        difficulty: saved.difficulty,
+        skin: saved.skin,
+        theme: saved.theme
+    }).forEach(([k, v]) => ui[k].value = v);
+    ui.best.textContent = saved.best;
+    updateMute();
+    const state = {
+        mode: 'ready',
+        score: 0,
+        best: saved.best,
+        time: 0,
+        last: 0,
+        acc: 0,
+        flash: 0,
+        distance: 0,
+        nextGate: 660,
+        trailClock: 0,
+        gates: [],
+        particles: [],
+        trail: [],
+        fireflies: Array.from({
+            length: 12
+        }, () => ({
+            x: rand(0, W),
+            y: rand(30, H - 80),
+            r: rand(1, 2.2),
+            p: rand(0, TAU)
+        })),
+        bird: {
+            x: 220,
+            y: 300,
+            vy: 0,
+            rot: 0,
+            wing: 0
+        }
+    };
+
+    function resize() {
+        const r = canvas.getBoundingClientRect();
+        dpr = Math.min(devicePixelRatio || 1, innerWidth < 700 ? 1 : 1.25);
+        const w = Math.max(1, Math.round(r.width * dpr)),
+            h = Math.max(1, Math.round(r.height * dpr));
+        if (canvas.width !== w || canvas.height !== h) {
+            canvas.width = w;
+            canvas.height = h;
+            ctx.imageSmoothingEnabled = true
+        }
+    }
+    new ResizeObserver(resize).observe(canvas);
+    resize();
+
+    function config() {
+        return CONFIG[ui.difficulty.value] || CONFIG.normal
+    }
+
+    function reset(start = false) {
+        clearTimeout(endTimer);
+        endTimer = 0;
+        Object.assign(state, {
+            mode: start ? 'playing' : 'ready',
+            score: 0,
+            time: 0,
+            acc: 0,
+            flash: 0,
+            distance: 0,
+            nextGate: 650,
+            trailClock: 0,
+            gates: [],
+            particles: [],
+            trail: []
+        });
+        Object.assign(state.bird, {
+            x: 220,
+            y: H * .48,
+            vy: 0,
+            rot: 0,
+            wing: 0
+        });
+        ui.score.textContent = '0';
+        if (start) {
+            hideOverlay();
+            state.bird.vy = config().flap;
+            sound('flap')
+        } else showOverlay('THE WOODS ARE LISTENING', 'Ready to fly?', 'Glide between ancient gates and collect their light.', 'Begin flight')
+    }
+
+    function flap() {
+        if (state.mode === 'ready' || state.mode === 'over') {
+            reset(true);
+            return
+        }
+        if (state.mode !== 'playing') return;
+        state.bird.vy = config().flap;
+        state.bird.wing = 1;
+        burst(state.bird.x - 12, state.bird.y, 7, '#e8ca79', .7);
+        sound('flap')
+    }
+
+    function spawnGate() {
+        const c = config(),
+            prev = state.gates.at(-1)?.gapY || H * .48;
+        const gapY = clamp(prev + rand(-125, 125), 135, H - 135);
+        state.gates.push({
+            x: W + 75,
+            gapY,
+            gap: c.gap,
+            w: 74,
+            passed: false,
+            seed: Math.random() * 99
+        });
+        state.nextGate = rand(320, 390)
+    }
+
+    function update(dt) {
+        if (state.mode !== 'playing') return;
+        const c = config(),
+            b = state.bird;
+        state.time += dt;
+        state.distance += c.speed * dt;
+        state.nextGate -= c.speed * dt;
+        if (state.nextGate <= 0) spawnGate();
+        b.vy = Math.min(b.vy + c.gravity * dt, 620);
+        b.y += b.vy * dt;
+        b.rot = clamp(b.vy / 650, -.5, 1);
+        b.wing = Math.max(0, b.wing - dt * 5);
+        state.trailClock += dt;
+        if (state.trailClock >= .08) {
+            state.trailClock = 0;
+            if (state.trail.length < 10) state.trail.push({
+                x: b.x - 19,
+                y: b.y + rand(-2, 2),
+                life: 1,
+                r: 3
+            })
+        }
+        for (const t of state.trail) {
+            t.x -= c.speed * .3 * dt;
+            t.life -= dt * 2
+        }
+        state.trail = state.trail.filter(t => t.life > 0);
+        for (const g of state.gates) {
+            g.x -= c.speed * dt;
+            if (!g.passed && g.x + g.w < b.x) {
+                g.passed = true;
+                state.score++;
+                ui.score.textContent = state.score;
+                if (state.score > state.best) {
+                    state.best = state.score;
+                    ui.best.textContent = state.best;
+                    localStorage.setItem('flappy_highscore', state.best)
+                }
+                burst(g.x + g.w / 2, g.gapY, 12, '#f3d37e', .8);
+                state.flash = .12;
+                sound('score')
+            }
+        }
+        state.gates = state.gates.filter(g => g.x > -120);
+        for (const p of state.particles) {
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.vy += 45 * dt;
+            p.life -= dt
+        }
+        state.particles = state.particles.filter(p => p.life > 0);
+        state.flash = Math.max(0, state.flash - dt);
+        if (collides() || b.y < -30 || b.y > H - 35) end()
+    }
+
+    function collides() {
+        const b = state.bird,
+            r = 12;
+        return state.gates.some(g => b.x + r > g.x + 5 && b.x - r < g.x + g.w - 5 && (b.y - r < g.gapY - g.gap / 2 + 4 || b.y + r > g.gapY + g.gap / 2 - 4))
+    }
+
+    function end() {
+        if (state.mode !== 'playing') return;
+        state.mode = 'over';
+        sound('hit');
+        burst(state.bird.x, state.bird.y, 14, '#e3b965', .8);
+        endTimer = setTimeout(() => {
+            endTimer = 0;
+            if (state.mode === 'over') showOverlay(state.score >= state.best && state.score > 0 ? 'A NEW LEGEND' : 'THE FOREST REMEMBERS', state.score ? `${state.score} gate${state.score===1?'':'s'} crossed` : 'The first gate awaits', `Best flight: ${state.best} gates. The moonwing is ready to try again.`, 'Fly again')
+        }, 180)
+    }
+
+    function pause() {
+        if (state.mode === 'playing') {
+            state.mode = 'paused';
+            showOverlay('A QUIET MOMENT', 'Flight paused', 'The forest will wait for you.', 'Continue');
+            ui.pause.textContent = '▶'
+        } else if (state.mode === 'paused') {
+            state.mode = 'playing';
+            hideOverlay();
+            ui.pause.textContent = 'Ⅱ'
+        }
+    }
+
+    function showOverlay(k, t, c, b) {
+        ui.kicker.textContent = k;
+        ui.title.textContent = t;
+        ui.copy.textContent = c;
+        ui.start.querySelector('span').textContent = b;
+        ui.overlay.classList.add('is-visible')
+    }
+
+    function hideOverlay() {
+        ui.overlay.classList.remove('is-visible');
+        ui.pause.textContent = 'Ⅱ';
+        canvas.focus({
+            preventScroll: true
+        })
+    }
+
+    function theme() {
+        if (ui.theme.value !== 'auto') return ui.theme.value;
+        return 'night'
+    }
+
+    function render() {
+        const sx = canvas.width / W,
+            sy = canvas.height / H;
+        ctx.setTransform(sx, 0, 0, sy, 0, 0);
+        drawWorld();
+        drawGates();
+        drawTrail();
+        drawParticles();
+        drawBird();
+        drawForeground();
+        if (state.flash) {
+            ctx.fillStyle = `rgba(255,224,112,${state.flash*.45})`;
+            ctx.fillRect(0, 0, W, H)
+        }
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
+    }
+
+    function drawWorld() {
+        if (background.complete && background.naturalWidth) ctx.drawImage(backgroundLayer, 0, 0);
+        else {
+            ctx.fillStyle = '#25235f';
+            ctx.fillRect(0, 0, W, H)
+        }
+        const tint = theme() === 'day' ? 'rgba(255,190,115,.09)' : theme() === 'night' ? 'rgba(8,12,48,.2)' : 'rgba(42,30,95,.05)';
+        ctx.fillStyle = tint;
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#ffd76a';
+        for (const f of state.fireflies) {
+            let x = (f.x - state.distance * .07) % W;
+            if (x < 0) x += W;
+            ctx.globalAlpha = .35 + .5 * (.5 + .5 * Math.sin(state.time * 2 + f.p));
+            ctx.fillRect(x, f.y + Math.sin(state.time + f.p) * 3, f.r * 2, f.r * 2)
+        }
+        ctx.globalAlpha = 1
+    }
+
+    function drawGates() {
+        for (const g of state.gates) {
+            pillar(g, 0, g.gapY - g.gap / 2, true);
+            pillar(g, g.gapY + g.gap / 2, H, false);
+            const pulse = .5 + .5 * Math.sin(state.time * 3 + g.seed),
+                r = g.gap * .32;
+            ctx.save();
+            ctx.translate(g.x + g.w / 2, g.gapY);
+            ctx.strokeStyle = `rgba(109,246,255,${.34+pulse*.22})`;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, r + pulse * 2, 0, TAU);
+            ctx.stroke();
+            ctx.rotate(state.time * .18 + g.seed);
+            for (let i = 0; i < 8; i++) {
+                ctx.rotate(TAU / 8);
+                ctx.fillStyle = '#bdfaff';
+                ctx.beginPath();
+                ctx.moveTo(-3, r + 5);
+                ctx.lineTo(0, r + 12);
+                ctx.lineTo(3, r + 5);
+                ctx.closePath();
+                ctx.fill()
+            }
+            ctx.restore()
+        }
+    }
+
+    function pillar(g, y, end, top) {
+        const h = top ? end : H - y,
+            edge = top ? end : y,
+            x = g.x,
+            w = g.w;
+        ctx.fillStyle = '#191737';
+        ctx.fillRect(x - 5, y, w + 10, h);
+        ctx.fillStyle = '#d9cbaa';
+        ctx.fillRect(x, y, w, h);
+        ctx.fillStyle = '#fff0c9';
+        ctx.fillRect(x + 18, y, w - 36, h);
+        ctx.strokeStyle = '#6d6685';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x + 7, y, w - 14, h);
+        ctx.fillStyle = '#29234c';
+        ctx.fillRect(x - 13, top ? edge - 25 : edge, w + 26, 25);
+        ctx.fillStyle = '#f3ce72';
+        ctx.fillRect(x - 13, top ? edge - 5 : edge, w + 26, 5);
+        ctx.fillStyle = '#78eff5';
+        for (let i = 0; i < 3; i++) ctx.fillRect(x + 14 + i * 21, top ? edge - 17 : edge + 10, 7, 7)
+    }
+
+    function drawTrail() {
+        ctx.fillStyle = '#f6d77c';
+        for (const t of state.trail) {
+            ctx.globalAlpha = t.life * .4;
+            ctx.fillRect(t.x, t.y, t.r * t.life, t.r * t.life)
+        }
+        ctx.globalAlpha = 1
+    }
+
+    function drawBird() {
+        const b = state.bird,
+            colors = {
+                ember: ['#ffbd3e', '#ed5b3a'],
+                frost: ['#baf5ff', '#248cc5'],
+                moss: ['#d9f57a', '#4a9c55'],
+                spirit: ['#ffffff', '#a97cff']
+            } [ui.skin.value] || ['#ffbd3e', '#ed5b3a'];
+        ctx.save();
+        ctx.translate(b.x, b.y);
+        ctx.rotate(b.rot);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 4;
+        ctx.lineJoin = 'round';
+        ctx.fillStyle = colors[1];
+        ctx.beginPath();
+        ctx.moveTo(-17, 2);
+        ctx.quadraticCurveTo(-35, -9, -40, 1);
+        ctx.quadraticCurveTo(-29, 11, -14, 10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = colors[0];
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 23, 17, -.08, 0, TAU);
+        ctx.fill();
+        ctx.stroke();
+        const flap = Math.sin(state.time * 18) * 5 - b.wing * 12;
+        ctx.fillStyle = colors[1];
+        ctx.beginPath();
+        ctx.moveTo(-10, 2);
+        ctx.quadraticCurveTo(-29, -15 + flap, -30, 11);
+        ctx.quadraticCurveTo(-10, 14, 6, 6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(9, -6, 7, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = '#14152f';
+        ctx.beginPath();
+        ctx.arc(12, -7, 3, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = '#ff8a35';
+        ctx.beginPath();
+        ctx.moveTo(18, -3);
+        ctx.lineTo(33, 1);
+        ctx.lineTo(18, 6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore()
+    }
+
+    function drawForeground() {
+        ctx.fillStyle = 'rgba(12,14,47,.22)';
+        ctx.fillRect(0, H - 45, W, 45)
+    }
+
+    function burst(x, y, n, color, life) {
+        for (let i = 0; i < n; i++) {
+            const a = rand(0, TAU),
+                v = rand(35, 150);
+            state.particles.push({
+                x,
+                y,
+                vx: Math.cos(a) * v,
+                vy: Math.sin(a) * v,
+                life: rand(life * .5, life),
+                max: life,
+                r: rand(1, 3.5),
+                color
+            })
+        }
+    }
+
+    function drawParticles() {
+        for (const p of state.particles) {
+            ctx.globalAlpha = clamp(p.life / p.max, 0, 1);
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, TAU);
+            ctx.fill()
+        }
+        ctx.globalAlpha = 1
+    }
+
+    function sound(kind) {
+        if (muted) return;
+        try {
+            audio ||= (new(window.AudioContext || window.webkitAudioContext));
+            if (audio.state === 'suspended') audio.resume();
+            const o = audio.createOscillator(),
+                g = audio.createGain(),
+                now = audio.currentTime;
+            o.type = kind === 'hit' ? 'sawtooth' : 'sine';
+            o.frequency.setValueAtTime(kind === 'score' ? 720 : kind === 'hit' ? 130 : 420, now);
+            o.frequency.exponentialRampToValueAtTime(kind === 'score' ? 1040 : kind === 'hit' ? 70 : 620, now + .1);
+            g.gain.setValueAtTime(.045, now);
+            g.gain.exponentialRampToValueAtTime(.001, now + (kind === 'hit' ? .28 : .11));
+            o.connect(g).connect(audio.destination);
+            o.start();
+            o.stop(now + .3)
+        } catch (_) {}
+    }
+
+    function updateMute() {
+        ui.mute.textContent = muted ? '♩' : '♫';
+        ui.mute.setAttribute('aria-pressed', String(muted))
+    }
+
+    function loop(t) {
+        const dt = Math.min((t - state.last) / 1000 || 0, .05);
+        state.last = t;
+        state.acc = Math.min(state.acc + dt, STEP * 3);
+        while (state.acc >= STEP) {
+            update(STEP);
+            state.acc -= STEP
+        }
+        render();
+        requestAnimationFrame(loop)
+    }
+
+    function action() {
+        state.mode === 'paused' ? pause() : flap()
+    }
+    canvas.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        action()
+    });
+    ui.start.addEventListener('click', action);
+    ui.pause.addEventListener('click', pause);
+    ui.restart.addEventListener('click', () => reset(true));
+    ui.mute.addEventListener('click', () => {
+        muted = !muted;
+        localStorage.setItem('moonveil_muted', muted ? '1' : '0');
+        updateMute()
+    });
+    window.addEventListener('keydown', e => {
+        if (['Space', 'ArrowUp'].includes(e.code)) {
+            e.preventDefault();
+            action()
+        } else if (e.code === 'KeyP') pause();
+        else if (e.code === 'KeyM') ui.mute.click();
+        else if (e.code === 'Escape') reset(true)
+    });
+    ui.difficulty.addEventListener('change', () => localStorage.setItem('moonveil_difficulty', ui.difficulty.value));
+    ui.skin.addEventListener('change', () => localStorage.setItem('flappy_bird_skin', ui.skin.value));
+    ui.theme.addEventListener('change', () => localStorage.setItem('flappy_theme', ui.theme.value));
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden && state.mode === 'playing') pause()
+    });
+    reset();
+    requestAnimationFrame(loop);
 })();

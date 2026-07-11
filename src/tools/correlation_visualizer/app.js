@@ -1,49 +1,130 @@
 const DATASETS = {
     "positive-linear": {
         points: [
-            [12, 18], [16, 21], [20, 26], [24, 31], [28, 33], [32, 37],
-            [36, 42], [40, 44], [44, 49], [48, 53], [52, 55], [56, 62],
-            [60, 65], [64, 68], [68, 73], [72, 75]
+            [12, 18],
+            [16, 21],
+            [20, 26],
+            [24, 31],
+            [28, 33],
+            [32, 37],
+            [36, 42],
+            [40, 44],
+            [44, 49],
+            [48, 53],
+            [52, 55],
+            [56, 62],
+            [60, 65],
+            [64, 68],
+            [68, 73],
+            [72, 75]
         ],
         note: "Positive covariance: x and y tend to move above or below their means together."
     },
     "negative-linear": {
         points: [
-            [12, 78], [16, 75], [20, 70], [24, 68], [28, 63], [32, 59],
-            [36, 55], [40, 52], [44, 48], [48, 45], [52, 39], [56, 36],
-            [60, 32], [64, 28], [68, 24], [72, 20]
+            [12, 78],
+            [16, 75],
+            [20, 70],
+            [24, 68],
+            [28, 63],
+            [32, 59],
+            [36, 55],
+            [40, 52],
+            [44, 48],
+            [48, 45],
+            [52, 39],
+            [56, 36],
+            [60, 32],
+            [64, 28],
+            [68, 24],
+            [72, 20]
         ],
         note: "Negative covariance: large x values tend to pair with small y values."
     },
     "near-zero": {
         points: [
-            [12, 41], [16, 58], [20, 48], [24, 61], [28, 37], [32, 55],
-            [36, 45], [40, 64], [44, 40], [48, 53], [52, 47], [56, 60],
-            [60, 38], [64, 56], [68, 44], [72, 51]
+            [12, 41],
+            [16, 58],
+            [20, 48],
+            [24, 61],
+            [28, 37],
+            [32, 55],
+            [36, 45],
+            [40, 64],
+            [44, 40],
+            [48, 53],
+            [52, 47],
+            [56, 60],
+            [60, 38],
+            [64, 56],
+            [68, 44],
+            [72, 51]
         ],
         note: "Near-zero correlation: the cloud has no strong linear direction."
     },
     "curved": {
         points: [
-            [-8, 72], [-7, 63], [-6, 55], [-5, 47], [-4, 40], [-3, 35],
-            [-2, 31], [-1, 29], [0, 28], [1, 29], [2, 32], [3, 36],
-            [4, 42], [5, 49], [6, 56], [7, 65], [8, 75]
+            [-8, 72],
+            [-7, 63],
+            [-6, 55],
+            [-5, 47],
+            [-4, 40],
+            [-3, 35],
+            [-2, 31],
+            [-1, 29],
+            [0, 28],
+            [1, 29],
+            [2, 32],
+            [3, 36],
+            [4, 42],
+            [5, 49],
+            [6, 56],
+            [7, 65],
+            [8, 75]
         ],
         note: "Pearson correlation can be small even when a clear nonlinear relationship exists."
     },
     "outlier-leverage": {
         points: [
-            [24, 32], [27, 35], [30, 34], [33, 37], [36, 36], [39, 38],
-            [42, 40], [45, 41], [48, 39], [51, 42], [54, 43], [57, 41],
-            [60, 44], [63, 43], [66, 45], [118, 92]
+            [24, 32],
+            [27, 35],
+            [30, 34],
+            [33, 37],
+            [36, 36],
+            [39, 38],
+            [42, 40],
+            [45, 41],
+            [48, 39],
+            [51, 42],
+            [54, 43],
+            [57, 41],
+            [60, 44],
+            [63, 43],
+            [66, 45],
+            [118, 92]
         ],
         note: "A high-leverage point can pull the regression line and Pearson r."
     },
     "clusters": {
         points: [
-            [18, 28], [20, 32], [22, 31], [24, 34], [26, 29], [28, 33],
-            [52, 58], [54, 61], [56, 57], [58, 63], [60, 60], [62, 64],
-            [78, 38], [80, 42], [82, 39], [84, 44], [86, 41], [88, 45]
+            [18, 28],
+            [20, 32],
+            [22, 31],
+            [24, 34],
+            [26, 29],
+            [28, 33],
+            [52, 58],
+            [54, 61],
+            [56, 57],
+            [58, 63],
+            [60, 60],
+            [62, 64],
+            [78, 38],
+            [80, 42],
+            [82, 39],
+            [84, 44],
+            [86, 41],
+            [88, 45]
         ],
         note: "Clusters can create a misleading overall correlation when groups differ."
     }
@@ -104,7 +185,10 @@ function pearson(cov, stdX, stdY) {
 
 function ranks(values) {
     const ordered = values
-        .map((value, index) => ({ value, index }))
+        .map((value, index) => ({
+            value,
+            index
+        }))
         .sort((a, b) => a.value - b.value);
     const result = Array(values.length);
 
@@ -178,7 +262,10 @@ function parsePoints(raw) {
     const points = [];
 
     for (let i = 0; i + 1 < numbers.length; i += 2) {
-        points.push({ x: numbers[i], y: numbers[i + 1] });
+        points.push({
+            x: numbers[i],
+            y: numbers[i + 1]
+        });
     }
 
     return points;
@@ -304,7 +391,10 @@ function resizeCanvas(showResiduals) {
 
     const ctx = canvas.getContext("2d");
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    return { width, height };
+    return {
+        width,
+        height
+    };
 }
 
 function getCookie(name) {

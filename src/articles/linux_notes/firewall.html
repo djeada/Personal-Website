@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Firewalls</title>
-    <meta content="A firewall is like a guard for your computer." name="description" />
+    <meta content="A firewall controls network traffic entering, leaving, or passing through a system." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/linux_notes/firewall"
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/firewall",
-            "description": "A firewall is like a guard for your computer.",
-            "dateModified": "2026-03-23"
+            "description": "A firewall controls network traffic entering, leaving, or passing through a system.",
+            "dateModified": "2026-07-11"
         }
     </script>
 </head>
@@ -77,16 +77,142 @@
         <aside id="article-sidebar">
             <div id="table-of-contents">
                 <h2>Table of Contents</h2>
-                <ol>
-                    <li><a href="#firewalls">Firewalls</a></li>
-                    <li><a href="#iptables">Iptables</a></li>
-                    <li><a href="#ufw">UFW</a></li>
-                    <li><a href="#firewalld">Firewalld</a>
-                        <ol>
-                            <li><a href="#choosing-between-iptables-ufw-and-firewalld">Choosing Between iptables, ufw, and firewalld</a></li>
-                            <li><a href="#challenges">Challenges</a></li>
-                        </ol>
-                    </li>
+                <ol><a href="#firewalls">Firewalls</a>
+                    <ol>
+                        <li><a href="#basic-firewall-concepts">Basic Firewall Concepts</a></li>
+                        <li><a href="#common-firewall-actions">Common Firewall Actions</a></li>
+                        <li><a href="#incoming-outgoing-and-forwarded-traffic">Incoming, Outgoing, and Forwarded Traffic</a></li>
+                        <li><a href="#ports-and-protocols">Ports and Protocols</a></li>
+                        <li><a href="#firewall-tools-on-linux">Firewall Tools on Linux</a></li>
+                        <li><a href="#safety-warning-for-remote-servers">Safety Warning for Remote Servers</a></li>
+                        <li><a href="#iptables">iptables</a></li>
+                        <li><a href="#viewing-iptables-rules">Viewing iptables Rules</a></li>
+                        <li><a href="#iptables-rule-order">iptables Rule Order</a></li>
+                        <li><a href="#adding-an-iptables-rule">Adding an iptables Rule</a></li>
+                        <li><a href="#deleting-an-iptables-rule">Deleting an iptables Rule</a></li>
+                        <li><a href="#saving-iptables-rules">Saving iptables Rules</a></li>
+                        <li><a href="#ufw">ufw</a></li>
+                        <li><a href="#basic-ufw-commands">Basic ufw Commands</a></li>
+                        <li><a href="#ufw-default-policies">UFW Default Policies</a></li>
+                        <li><a href="#firewalld">firewalld</a></li>
+                        <li><a href="#runtime-vs-permanent-configuration">Runtime vs Permanent Configuration</a></li>
+                        <li><a href="#viewing-firewalld-rules">Viewing firewalld Rules</a></li>
+                        <li><a href="#adding-and-removing-firewalld-rules">Adding and Removing firewalld Rules</a></li>
+                        <li><a href="#firewalld-zones-and-interfaces">firewalld Zones and Interfaces</a></li>
+                        <li><a href="#firewalld-rich-rules">firewalld Rich Rules</a></li>
+                        <li><a href="#choosing-between-iptables-ufw-and-firewalld">Choosing Between iptables, ufw, and firewalld</a></li>
+                        <li><a href="#scenario-1-allow-ssh-but-block-http-with-ufw">Scenario 1: Allow SSH but Block HTTP with UFW</a>
+                            <ol>
+                                <li><a href="#simulate">Simulate</a></li>
+                                <li><a href="#check">Check</a></li>
+                                <li><a href="#test">Test</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-2-deny-incoming-by-default-and-allow-outgoing">Scenario 2: Deny Incoming by Default and Allow Outgoing</a>
+                            <ol>
+                                <li><a href="#simulate">Simulate</a></li>
+                                <li><a href="#check">Check</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-3-block-icmp-echo-requests">Scenario 3: Block ICMP Echo Requests</a>
+                            <ol>
+                                <li><a href="#iptables-simulation">iptables Simulation</a></li>
+                                <li><a href="#check">Check</a></li>
+                                <li><a href="#test">Test</a></li>
+                                <li><a href="#remove-the-rule">Remove the Rule</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-4-allow-http-only-from-one-ip-address">Scenario 4: Allow HTTP Only from One IP Address</a>
+                            <ol>
+                                <li><a href="#ufw-simulation">UFW Simulation</a></li>
+                                <li><a href="#check">Check</a></li>
+                                <li><a href="#test">Test</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-5-safely-change-firewall-rules-on-a-remote-server">Scenario 5: Safely Change Firewall Rules on a Remote Server</a>
+                            <ol>
+                                <li><a href="#safe-pattern-with-ufw">Safe Pattern with UFW</a></li>
+                                <li><a href="#optional-rollback-timer">Optional Rollback Timer</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-6-allow-ssh-only-from-trusted-ips">Scenario 6: Allow SSH Only from Trusted IPs</a>
+                            <ol>
+                                <li><a href="#ufw-simulation">UFW Simulation</a></li>
+                                <li><a href="#check">Check</a></li>
+                                <li><a href="#important-warning">Important Warning</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-7-rate-limit-incoming-connections">Scenario 7: Rate-Limit Incoming Connections</a>
+                            <ol>
+                                <li><a href="#ufw-ssh-rate-limit">UFW SSH Rate Limit</a></li>
+                                <li><a href="#iptables-example">iptables Example</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-8-log-dropped-packets">Scenario 8: Log Dropped Packets</a>
+                            <ol>
+                                <li><a href="#iptables-simulation">iptables Simulation</a></li>
+                                <li><a href="#check-logs">Check Logs</a></li>
+                                <li><a href="#important-warning">Important Warning</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-9-forward-port-8080-to-port-80">Scenario 9: Forward Port 8080 to Port 80</a>
+                            <ol>
+                                <li><a href="#local-redirect-with-iptables">Local Redirect with iptables</a></li>
+                                <li><a href="#check-nat-rules">Check NAT Rules</a></li>
+                                <li><a href="#test">Test</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-10-block-outgoing-traffic-to-a-specific-ip">Scenario 10: Block Outgoing Traffic to a Specific IP</a>
+                            <ol>
+                                <li><a href="#ufw-simulation">UFW Simulation</a></li>
+                                <li><a href="#check">Check</a></li>
+                                <li><a href="#test">Test</a></li>
+                                <li><a href="#note-about-domains">Note About Domains</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-11-firewalld-public-zone-with-http-and-https">Scenario 11: firewalld Public Zone with HTTP and HTTPS</a>
+                            <ol>
+                                <li><a href="#simulate">Simulate</a></li>
+                                <li><a href="#check">Check</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-12-firewalld-custom-port">Scenario 12: firewalld Custom Port</a>
+                            <ol>
+                                <li><a href="#simulate">Simulate</a></li>
+                                <li><a href="#check">Check</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-13-firewalld-runtime-vs-permanent-rule">Scenario 13: firewalld Runtime vs Permanent Rule</a>
+                            <ol>
+                                <li><a href="#add-runtime-rule-only">Add Runtime Rule Only</a></li>
+                                <li><a href="#permanent-fix">Permanent Fix</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-14-diagnose-service-is-running-but-not-reachable-">Scenario 14: Diagnose “Service Is Running but Not Reachable”</a>
+                            <ol>
+                                <li><a href="#symptom">Symptom</a></li>
+                                <li><a href="#step-1-check-service">Step 1: Check Service</a></li>
+                                <li><a href="#step-2-check-listening-port">Step 2: Check Listening Port</a></li>
+                                <li><a href="#step-3-check-firewall">Step 3: Check Firewall</a></li>
+                                <li><a href="#example-firewall-output">Example Firewall Output</a></li>
+                                <li><a href="#fix-with-ufw">Fix with UFW</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-15-diagnose-firewall-rule-exists-but-still-cannot-connect-">Scenario 15: Diagnose “Firewall Rule Exists but Still Cannot Connect”</a>
+                            <ol>
+                                <li><a href="#checklist">Checklist</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#common-firewall-troubleshooting-workflow">Common Firewall Troubleshooting Workflow</a></li>
+                        <li><a href="#step-1-identify-the-traffic">Step 1: Identify the Traffic</a></li>
+                        <li><a href="#step-2-check-service-listening">Step 2: Check Service Listening</a></li>
+                        <li><a href="#step-3-check-firewall-rules">Step 3: Check Firewall Rules</a></li>
+                        <li><a href="#step-4-check-packet-counters">Step 4: Check Packet Counters</a></li>
+                        <li><a href="#step-5-test-from-client">Step 5: Test from Client</a></li>
+                        <li><a href="#useful-command-summary">Useful Command Summary</a></li>
+                        <li><a href="#safe-lab-cleanup">Safe Lab Cleanup</a></li>
+                        <li><a href="#practical-challenges">Practical Challenges</a></li>
+                    </ol>
                 </ol>
             </div>
             <div id="related-articles">
@@ -159,250 +285,1536 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: March 23, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: July 11, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="firewalls">Firewalls</h2>
-            <p>A firewall is like a guard for your computer. It keeps your computer safe from others who shouldn't use it. It checks the information going in and out and follows safety rules. In Linux, there are several utilities to manage your firewall, including <code>iptables</code>, <code>ufw</code>, and <code>firewalld</code>.</p>
+            <p>A firewall controls network traffic entering, leaving, or passing through a system.</p>
+            <p>A simple way to think about a firewall is:</p>
             <div>
-                <pre><code class="language-shell">INTERNET TRAFFIC ---&gt; |--------------------------| ---&gt; INTERNAL NETWORK
+                <pre><code class="language-text">A firewall is a rule-based traffic guard.</code></pre>
+            </div>
+            <p>It checks packets against rules and decides whether to allow, block, reject, forward, or log them.</p>
+            <div>
+                <pre><code class="language-text">INTERNET TRAFFIC ---&gt; |--------------------------| ---&gt; INTERNAL NETWORK
    [IP:123.45.67.89]  |                          | [Accepted IP: 123.45.67.89]
-   Port 80 (HTTP)     |    +----------------+    | Port 80 -&gt; Allowed
+   Port 80 HTTP       |    +----------------+    | Port 80 -&gt; Allowed
                       |    |   FIREWALL     |    |
                       |    | Rules Applied: |    |
    [IP: 98.76.54.32]  |    | - Allow HTTP   |    | [Rejected IP: 98.76.54.32]
-   Port 22 (SSH)      |    | - Block SSH    |    | Port 22 -&gt; Blocked
+   Port 22 SSH        |    | - Block SSH    |    | Port 22 -&gt; Blocked
                       |    +----------------+    |
                       |                          |
                       |--------------------------|</code></pre>
             </div>
-            <h2 id="iptables">Iptables</h2>
-            <p><code>Iptables</code> is a command-line utility for managing the Linux firewall. It is pre-installed on most Linux systems and lets you configure rules to control incoming and outgoing network traffic.</p>
-            <p>To view the current rules, use the <code>-L</code> flag:</p>
-            <div>
-                <pre><code class="language-bash">iptables -L</code></pre>
-            </div>
-            <p>An example output might look something like this:</p>
-            <div>
-                <pre><code class="language-shell">Chain INPUT (policy ACCEPT)
-target     prot opt source               destination         
-ACCEPT     all  --  anywhere             anywhere             ctstate RELATED,ESTABLISHED
-DROP       icmp --  anywhere             anywhere             icmp echo-request
-ACCEPT     tcp  --  anywhere             anywhere             tcp dpt:ssh
-LOG        all  --  anywhere             anywhere             limit: avg 10/min burst 5 LOG level debug prefix "iptables denied: "
-
-Chain FORWARD (policy DROP)
-target     prot opt source               destination         
-ACCEPT     all  --  192.168.1.0/24       192.168.1.0/24       
-DROP       all  --  anywhere             anywhere             
-
-Chain OUTPUT (policy ACCEPT)
-target     prot opt source               destination</code></pre>
-            </div>
-            <p>Explanation:</p>
-            <p>I. <strong>Chain Names</strong>: <code>INPUT</code>, <code>FORWARD</code>, <code>OUTPUT</code> are the default chains in iptables.</p>
-            <p>II. <strong>Policies</strong>: Set to <code>ACCEPT</code>, <code>DROP</code>, or <code>REJECT</code>. For example, the default policy for <code>FORWARD</code> is <code>DROP</code>.</p>
-            <p>III. <strong>Rules</strong>: Listed under each chain.</p>
+            <p>Firewalls are used to:</p>
             <ul>
-                <li><strong>Target</strong>: The action to take, e.g., <code>ACCEPT</code>, <code>DROP</code>, <code>LOG</code>.</li>
-                <li><strong>Prot</strong>: The protocol, e.g., <code>tcp</code>, <code>udp</code>, <code>icmp</code>, or <code>all</code>.</li>
-                <li><strong>Opt</strong>: Options, often includes flags like <code>--</code>.</li>
-                <li><strong>Source and Destination</strong>: IP addresses or ranges for source and/or destination.</li>
-                <li><strong>Additional Conditions</strong>: For example, <code>tcp dpt:ssh</code> means TCP packets destined for SSH port.</li>
-                <li><strong>Logging</strong>: The <code>LOG</code> rule can specify logging of packets, including a prefix for log messages.</li>
+                <li>allow trusted traffic</li>
+                <li>block unwanted traffic</li>
+                <li>limit exposed services</li>
+                <li>protect servers from scans and attacks</li>
+                <li>restrict access by source IP</li>
+                <li>log suspicious packets</li>
+                <li>rate-limit abusive traffic</li>
+                <li>forward traffic to another port or host</li>
             </ul>
-            <p>To add a new rule, use the <code>-A</code> flag followed by the rule itself. For example, to allow incoming traffic on port 80 (used for HTTP), use:</p>
-            <div>
-                <pre><code class="language-bash">iptables -A INPUT -p tcp --dport 80 -j ACCEPT</code></pre>
-            </div>
-            <p>To delete a rule, use the <code>-D</code> flag followed by the rule number (as displayed by the <code>-L</code> flag). For example, to delete the second rule in the INPUT chain, use:</p>
-            <div>
-                <pre><code class="language-bash">iptables -D INPUT 2</code></pre>
-            </div>
-            <p>🔴 Caution: Keep in mind that changes to the safety guard's rules with iptables don't last when you restart your computer. To keep the changes, save them in a file and bring them back when your computer starts.</p>
-            <p>I. On Debian-based systems, you can save the current iptables configuration with:</p>
-            <div>
-                <pre><code class="language-bash">iptables-save &gt; /etc/iptables/rules.v4</code></pre>
-            </div>
-            <p>And ensure they are reloaded on boot by installing the <code>iptables-persistent</code> package.</p>
-            <p>II. On Red Hat-based systems, you can save the configuration with:</p>
-            <div>
-                <pre><code class="language-bash">service iptables save</code></pre>
-            </div>
-            <h2 id="ufw">UFW</h2>
-            <p>UFW (Uncomplicated Firewall) is a user-friendly alternative to iptables for managing the Linux firewall. It is pre-installed on many Linux distributions, including Ubuntu.</p>
-            <p>To view the configured rules, use the status numbered command:</p>
-            <div>
-                <pre><code class="language-shell">ufw status numbered</code></pre>
-            </div>
-            <p>An example output of this command might look something like this:</p>
-            <div>
-                <pre><code class="language-shell">Status: active
-
-     To                         Action      From
-     --                         ------      ----
-[ 1] 22/tcp                     ALLOW IN    Anywhere                  
-[ 2] 80/tcp                     ALLOW IN    Anywhere                  
-[ 3] 443/tcp                    ALLOW IN    Anywhere                  
-[ 4] 1000:2000/tcp              ALLOW IN    192.168.1.0/24            
-[ 5] 22/tcp                     ALLOW IN    Anywhere (v6)             
-[ 6] 80/tcp                     ALLOW IN    Anywhere (v6)             
-[ 7] 443/tcp                    ALLOW IN    Anywhere (v6)</code></pre>
-            </div>
-            <p>Explanation:</p>
-            <p>I. <strong>Status</strong>: Indicates whether the firewall is active or inactive. In this case, it's <code>active</code>.</p>
-            <p>II. <strong>Columns in the Output</strong>:</p>
-            <ul>
-                <li><strong>To</strong>: This column shows the port or port range and protocol (like <code>22/tcp</code>) for which the rule is applied.</li>
-                <li><strong>Action</strong>: Specifies the action (<code>ALLOW IN</code>, <code>DENY</code>, etc.) taken by the firewall for matching traffic.</li>
-                <li><strong>From</strong>: This column indicates the source of the traffic for which the rule is applicable. It can be an IP address, a subnet, or <code>Anywhere</code>.</li>
-            </ul>
-            <p>III. <strong>Numbered Rules</strong>: Each rule is prefixed with a number in square brackets (e.g., <code>[ 1]</code>). This numbering is crucial for modifying or deleting specific rules, as it allows you to reference them easily.</p>
-            <p>IV. <strong>IPv4 and IPv6 Rules</strong>: The rules apply to both IPv4 and IPv6 traffic if suffixed with <code>(v6)</code>.</p>
-            <p>To allow incoming traffic on a specific port, use the allow command followed by the protocol and port number. For example, to allow incoming <code>SSH</code> connections (which use port 22 by default), use:</p>
-            <div>
-                <pre><code class="language-bash">ufw allow ssh</code></pre>
-            </div>
-            <p>To block incoming traffic on a specific port, use the deny command followed by the protocol and port number. For example, to block incoming <code>HTTP</code> connections (which use port 80 by default), use:</p>
-            <div>
-                <pre><code class="language-bash">ufw deny http</code></pre>
-            </div>
-            <p>To activate the firewall and apply the rules, use the enable command:</p>
-            <div>
-                <pre><code class="language-bash">ufw enable</code></pre>
-            </div>
-            <p>You can also set default policies for incoming and outgoing traffic using the default command. For example, to deny all incoming traffic and allow all outgoing traffic, use:</p>
-            <div>
-                <pre><code class="language-bash">ufw default deny incoming
-ufw default allow outgoing
-ufw enable</code></pre>
-            </div>
-            <h2 id="firewalld">Firewalld</h2>
-            <p>Firewalld is a more advanced firewall used by Fedora and other Linux distributions. It lets you configure firewalls using zones, which are collections of rules that apply to specific types of network interfaces. One helpful detail to remember is that <code>firewalld</code> keeps separate runtime and permanent configurations. Commands without <code>--permanent</code> affect the current session only, while permanent rules are written to disk and take effect after a reload or reboot.</p>
-            <p>To view the currently configured rules, use the <code>--list-all</code> flag:</p>
-            <div>
-                <pre><code class="language-bash">firewall-cmd --list-all</code></pre>
-            </div>
-            <p>An example output might look something like this:</p>
-            <div>
-                <pre><code class="language-shell">public (active)
-  target: default
-  icmp-block-inversion: no
-  interfaces: eth0
-  sources: 
-  services: ssh dhcpv6-client http https
-  ports: 8080/tcp 9090/tcp
-  protocols: 
-  masquerade: no
-  forward-ports: 
-  source-ports: 
-  icmp-blocks: 
-  rich rules: 
-    rule family="ipv4" source address="192.168.0.0/24" accept
-    rule family="ipv4" source address="10.0.0.0/8" port port="443" protocol="tcp" accept</code></pre>
-            </div>
-            <p>Explanation:</p>
-            <ul>
-                <li><strong>Zone</strong>: The name of the zone (e.g., <code>public</code>) and its status (<code>active</code>).</li>
-                <li><strong>Target</strong>: The default action for incoming traffic not matching any other rule.</li>
-                <li><strong>Interfaces</strong>: Network interfaces (e.g., <code>eth0</code>) associated with the zone.</li>
-                <li><strong>Services</strong>: Predefined services allowed in this zone (e.g., <code>ssh</code>, <code>http</code>, <code>https</code>).</li>
-                <li><strong>Ports</strong>: Custom ports that are open (e.g., <code>8080/tcp</code>, <code>9090/tcp</code>).</li>
-                <li><strong>Protocols, Masquerade, Forward-ports, Source-ports, Icmp-blocks</strong>: Other network settings and rules.</li>
-                <li><strong>Rich Rules</strong>: More complex rules defined, like allowing specific IP ranges on certain ports. For example, the rule allowing all traffic from the <code>192.168.0.0/24</code> subnet, and allowing TCP traffic on port <code>443</code> from the <code>10.0.0.0/8</code> subnet.</li>
-            </ul>
-            <p>You can also inspect which zones exist and which one is currently the default:</p>
-            <div>
-                <pre><code class="language-bash">firewall-cmd --get-zones
-firewall-cmd --get-default-zone
-firewall-cmd --get-active-zones</code></pre>
-            </div>
-            <p>This is useful on multi-homed hosts. For example, you might place a public-facing interface in the <code>public</code> zone and an internal interface in the <code>internal</code> zone.</p>
-            <p>I. Adding Rules</p>
-            <p>To add a new rule, use the <code>--add-service</code> flag followed by the service name. For example, to allow incoming <code>SSH</code> connections, use:</p>
-            <div>
-                <pre><code class="language-bash">firewall-cmd --permanent --add-service=ssh</code></pre>
-            </div>
-            <p>To allow a custom port instead of a predefined service, use <code>--add-port</code>:</p>
-            <div>
-                <pre><code class="language-bash">firewall-cmd --permanent --add-port=8443/tcp</code></pre>
-            </div>
-            <p>II. Removing Rules</p>
-            <p>To remove a rule, use the <code>--remove-service</code> flag followed by the service name. For example, to block incoming <code>HTTP</code> connections, use:</p>
-            <div>
-                <pre><code class="language-bash">firewall-cmd --permanent --remove-service=http</code></pre>
-            </div>
-            <p>III. Assigning Interfaces and Using Zones</p>
-            <p>Zones become especially useful when the same machine serves different networks. The commands below move an interface into the <code>internal</code> zone and then confirm the result:</p>
-            <div>
-                <pre><code class="language-bash">firewall-cmd --permanent --zone=internal --change-interface=eth1
-firewall-cmd --reload
-firewall-cmd --zone=internal --list-all</code></pre>
-            </div>
-            <p>If the built-in zones do not match your environment, you can create a new one:</p>
-            <div>
-                <pre><code class="language-bash">firewall-cmd --permanent --new-zone=web-admin
-firewall-cmd --permanent --zone=web-admin --add-service=https
-firewall-cmd --permanent --zone=web-admin --add-source=192.168.50.0/24
-firewall-cmd --reload</code></pre>
-            </div>
-            <p>This configuration creates a dedicated zone for administrative HTTPS access from a trusted subnet.</p>
-            <p>IV. Rich Rules</p>
-            <p>For more precise filtering, <code>firewalld</code> supports rich rules. For example, the following rule allows HTTPS only from the <code>10.0.0.0/8</code> network:</p>
-            <div>
-                <pre><code class="language-bash">firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="10.0.0.0/8" service name="https" accept'</code></pre>
-            </div>
-            <p>V. Applying Changes</p>
-            <p>To apply the changes and reload the firewall, use the <code>--reload</code> flag:</p>
-            <div>
-                <pre><code class="language-shell">firewall-cmd --reload</code></pre>
-            </div>
-            <p>To make the changes persistent across reboots, restart the <code>firewalld.service</code> using systemctl. For example:</p>
-            <div>
-                <pre><code class="language-shell">systemctl restart firewalld.service</code></pre>
-            </div>
-            <h3 id="choosing-between-iptables-ufw-and-firewalld">Choosing Between <code>iptables</code>, <code>ufw</code>, and <code>firewalld</code></h3>
-            <p>Each firewall tool can solve the same basic problem, but they target different workflows:</p>
+            <p>A firewall does not make a vulnerable service safe by itself, but it reduces what can reach that service.</p>
+            <h3 id="basic-firewall-concepts">Basic Firewall Concepts</h3>
+            <p>A firewall rule usually answers these questions:</p>
             <p>
             <table>
                 <tr>
-                    <td>Tool</td>
-                    <td>Best For</td>
-                    <td>Strengths</td>
-                    <td>Trade-Offs</td>
+                    <td>Firewall Rule Component</td>
+                    <td>Description</td>
                 </tr>
                 <tr>
-                    <td><code>iptables</code></td>
-                    <td>Low-level packet filtering and legacy environments</td>
-                    <td>Very flexible, widely documented, exposes the full rule chain model</td>
-                    <td>Verbose syntax, easier to misconfigure, harder for beginners</td>
+                    <td><strong>Direction</strong></td>
+                    <td>Is the traffic <strong>incoming</strong>, <strong>outgoing</strong>, or <strong>forwarded</strong>?</td>
                 </tr>
                 <tr>
-                    <td><code>ufw</code></td>
-                    <td>Small servers and desktop systems</td>
-                    <td>Simple commands such as <code>allow</code>, <code>deny</code>, and <code>status</code>, quick to learn</td>
-                    <td>Less expressive for advanced routing and zone-based designs</td>
+                    <td><strong>Protocol</strong></td>
+                    <td>Does the rule apply to <strong>TCP</strong>, <strong>UDP</strong>, <strong>ICMP</strong>, or <strong>all protocols</strong>?</td>
                 </tr>
                 <tr>
-                    <td><code>firewalld</code></td>
-                    <td>Systems with changing interfaces, multiple trust zones, and enterprise distros</td>
-                    <td>Supports runtime vs permanent rules, zones, rich rules, and D-Bus integration</td>
-                    <td>More concepts to learn than <code>ufw</code>, less direct than raw <code>iptables</code></td>
+                    <td><strong>Port</strong></td>
+                    <td>Which port(s) are affected (e.g., <strong>22</strong>, <strong>80</strong>, <strong>443</strong>, <strong>8080</strong>)?</td>
+                </tr>
+                <tr>
+                    <td><strong>Source</strong></td>
+                    <td>Which IP address or subnet is the traffic coming from?</td>
+                </tr>
+                <tr>
+                    <td><strong>Destination</strong></td>
+                    <td>Which IP address or subnet is the traffic going to?</td>
+                </tr>
+                <tr>
+                    <td><strong>Action</strong></td>
+                    <td>What should happen to matching traffic: <strong>allow</strong>, <strong>drop</strong>, <strong>reject</strong>, <strong>log</strong>, or <strong>forward</strong>?</td>
                 </tr>
             </table>
             </p>
-            <p>As a rule of thumb, choose <code>ufw</code> when you want a simple host firewall, choose <code>firewalld</code> when you need zone-aware administration, and fall back to <code>iptables</code> when you need direct low-level control or you are maintaining an older system.</p>
-            <h3 id="challenges">Challenges</h3>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">Allow incoming TCP traffic from anywhere to port 22.</code></pre>
+            </div>
+            <p>This means SSH is reachable.</p>
+            <p>Another example:</p>
+            <div>
+                <pre><code class="language-text">Deny incoming TCP traffic from anywhere to port 80.</code></pre>
+            </div>
+            <p>This means HTTP is blocked.</p>
+            <h3 id="common-firewall-actions">Common Firewall Actions</h3>
+            <p>Firewalls commonly use these actions:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Firewall Target</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td><strong>ACCEPT</strong></td>
+                    <td>Allow the packet to pass.</td>
+                </tr>
+                <tr>
+                    <td><strong>DROP</strong></td>
+                    <td>Silently discard the packet without notifying the sender.</td>
+                </tr>
+                <tr>
+                    <td><strong>REJECT</strong></td>
+                    <td>Block the packet and send an error response to the sender.</td>
+                </tr>
+                <tr>
+                    <td><strong>LOG</strong></td>
+                    <td>Record information about the packet, then continue processing subsequent rules.</td>
+                </tr>
+                <tr>
+                    <td><strong>DNAT</strong> (Destination NAT)</td>
+                    <td>Rewrite the packet's destination IP address and/or port.</td>
+                </tr>
+                <tr>
+                    <td><strong>SNAT</strong> (Source NAT)</td>
+                    <td>Rewrite the packet's source IP address.</td>
+                </tr>
+                <tr>
+                    <td><strong>MASQUERADE</strong></td>
+                    <td>Dynamically rewrite the source IP address for NAT, commonly used for internet sharing when the external IP may change.</td>
+                </tr>
+            </table>
+            </p>
+            <p><code>DROP</code> is quiet. The client may wait until timeout.</p>
+            <p><code>REJECT</code> is explicit. The client receives a refusal.</p>
+            <p>Example difference:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Action</td>
+                    <td>Client Behavior</td>
+                </tr>
+                <tr>
+                    <td><strong>DROP</strong></td>
+                    <td>The packet is silently discarded. The client waits and eventually times out.</td>
+                </tr>
+                <tr>
+                    <td><strong>REJECT</strong></td>
+                    <td>The packet is blocked and an error response is sent. The client quickly receives a "connection refused" or "unreachable" message.</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="incoming-outgoing-and-forwarded-traffic">Incoming, Outgoing, and Forwarded Traffic</h3>
+            <p>Traffic direction matters.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Traffic Direction</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td><strong>Incoming traffic</strong></td>
+                    <td>Remote client → this machine</td>
+                </tr>
+                <tr>
+                    <td><strong>Outgoing traffic</strong></td>
+                    <td>This machine → remote server</td>
+                </tr>
+                <tr>
+                    <td><strong>Forwarded traffic</strong></td>
+                    <td>One network → this machine/router → another network</td>
+                </tr>
+            </table>
+            </p>
+            <p>Diagram:</p>
+            <div>
+                <pre><code class="language-text">Incoming:
+Internet ---&gt; Server
+
+Outgoing:
+Server ---&gt; Internet
+
+Forwarded:
+LAN Client ---&gt; Linux Router ---&gt; Internet</code></pre>
+            </div>
+            <p>Most host firewalls focus on incoming traffic.</p>
+            <p>Routers, gateways, and NAT systems also care heavily about forwarded traffic.</p>
+            <h3 id="ports-and-protocols">Ports and Protocols</h3>
+            <p>Many services listen on well-known ports.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Port / Protocol</td>
+                    <td>Service</td>
+                </tr>
+                <tr>
+                    <td><strong>22/tcp</strong></td>
+                    <td>SSH</td>
+                </tr>
+                <tr>
+                    <td><strong>53/tcp, 53/udp</strong></td>
+                    <td>DNS</td>
+                </tr>
+                <tr>
+                    <td><strong>80/tcp</strong></td>
+                    <td>HTTP</td>
+                </tr>
+                <tr>
+                    <td><strong>443/tcp</strong></td>
+                    <td>HTTPS</td>
+                </tr>
+                <tr>
+                    <td><strong>25/tcp</strong></td>
+                    <td>SMTP</td>
+                </tr>
+                <tr>
+                    <td><strong>3306/tcp</strong></td>
+                    <td>MySQL / MariaDB</td>
+                </tr>
+                <tr>
+                    <td><strong>5432/tcp</strong></td>
+                    <td>PostgreSQL</td>
+                </tr>
+                <tr>
+                    <td><strong>21/tcp</strong></td>
+                    <td>FTP (control connection)</td>
+                </tr>
+            </table>
+            </p>
+            <p>Check listening services with:</p>
+            <div>
+                <pre><code class="language-bash">sudo ss -tulnp</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Netid State  Local Address:Port  Peer Address:Port Process
+tcp   LISTEN 0.0.0.0:22          0.0.0.0:*         users:(("sshd",pid=1100,fd=3))
+tcp   LISTEN 0.0.0.0:80          0.0.0.0:*         users:(("nginx",pid=2200,fd=6))</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>sshd is listening on TCP port 22.</li>
+                <li>nginx is listening on TCP port 80.</li>
+                <li>A firewall can decide whether remote clients can reach those ports.</li>
+            </ul>
+            <h3 id="firewall-tools-on-linux">Firewall Tools on Linux</h3>
+            <p>Linux has several firewall management tools.</p>
+            <p>Common ones include:</p>
+            <ul>
+                <li>iptables</li>
+                <li>nftables</li>
+                <li>ufw</li>
+                <li>firewalld</li>
+            </ul>
+            <p>This note focuses on:</p>
+            <ul>
+                <li>iptables</li>
+                <li>ufw</li>
+                <li>firewalld</li>
+            </ul>
+            <p>A simple comparison:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Firewall Tool</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td><strong>iptables</strong></td>
+                    <td>Low-level and powerful firewall framework; commonly found on older Linux systems.</td>
+                </tr>
+                <tr>
+                    <td><strong>ufw</strong> (Uncomplicated Firewall)</td>
+                    <td>Simple and beginner-friendly firewall interface; commonly used on Ubuntu.</td>
+                </tr>
+                <tr>
+                    <td><strong>firewalld</strong></td>
+                    <td>Zone-based, dynamic firewall management tool; commonly used on Fedora, RHEL, CentOS, AlmaLinux, and Rocky Linux.</td>
+                </tr>
+            </table>
+            </p>
+            <p>Modern systems often use <code>nftables</code> underneath, even when administrators use higher-level tools such as <code>firewalld</code> or <code>ufw</code>.</p>
+            <h3 id="safety-warning-for-remote-servers">Safety Warning for Remote Servers</h3>
+            <p>Firewall mistakes can lock you out of a remote server.</p>
+            <p>Before changing firewall rules over SSH:</p>
+            <ul>
+                <li>allow SSH first</li>
+                <li>know your current source IP</li>
+                <li>use a temporary rollback plan</li>
+                <li>keep a second session open</li>
+                <li>avoid setting default deny before allowing SSH</li>
+                <li>test carefully</li>
+            </ul>
+            <p>A safe pattern is:</p>
             <ol>
-                <li>Block all incoming traffic on port 80 (HTTP) while allowing all incoming traffic on port 22 (SSH). Test the configuration by attempting to access the system on both ports and verify that HTTP is blocked while SSH remains accessible. Discuss the importance of selectively blocking and allowing specific ports for securing a system.</li>
-                <li>Configure the firewall to deny all incoming traffic by default and allow all outgoing traffic. Explain the purpose of setting default policies, and discuss how a restrictive incoming policy can improve system security by blocking unsolicited connections.</li>
-                <li>Create a firewall rule to block incoming ICMP echo requests, effectively preventing ping requests. Test the configuration by pinging the system from another device, and discuss why blocking ICMP can be a useful security measure for preventing network reconnaissance.</li>
-                <li>Set up a rule to allow incoming traffic on port 80 (HTTP) only from a specific IP address. Test this rule by trying to access the system from the allowed IP address and from a different IP. Discuss the use cases for restricting access to specific IP addresses and how it helps secure services exposed to the internet.</li>
-                <li>What happens if you manually modify iptables rules on a remote server? Is recovery possible, and could you still connect via SSH afterward?</li>
-                <li>Modify firewall rules to allow SSH access (port 22) only from a set of predefined IP addresses. Test access from an allowed IP and a blocked IP, and discuss the importance of limiting SSH access to trusted sources as a security best practice for remote management.</li>
-                <li>Implement a rule to limit the rate of incoming connections on a specific port (e.g., 100 connections per minute) to mitigate potential DoS attacks. Simulate an excessive number of connections to this port, and monitor the firewall’s response. Explain how rate limiting can protect services from abuse and help maintain system availability.</li>
-                <li>Set up the firewall to log details of all dropped packets for analysis and monitoring purposes. Review the log entries to ensure that dropped packets are being recorded, and explain how logging provides insights into unauthorized access attempts and potential threats.</li>
-                <li>Create a rule to forward traffic incoming on a specific port (e.g., 8080) to another port (e.g., 80). Test this configuration by sending requests to port 8080 and verifying that they reach the service listening on port 80. Discuss port forwarding as a method for managing and redirecting traffic to internal services.</li>
-                <li>Configure the firewall to block all outgoing traffic to specific domains or IP addresses. Test this by attempting to connect to the blocked addresses, and discuss scenarios where limiting outgoing connections is beneficial, such as preventing communication with known malicious domains.</li>
+                <li>Allow SSH from your trusted IP.</li>
+                <li>Confirm the rule exists.</li>
+                <li>Only then enable stricter defaults.</li>
+                <li>Test with a new SSH session before closing the old one.</li>
+            </ol>
+            <p>On remote servers, a bad firewall command can cause this:</p>
+            <ul>
+                <li>You block port 22.</li>
+                <li>Your SSH session disconnects.</li>
+                <li>You cannot reconnect.</li>
+                <li>Recovery may require console, cloud rescue mode, or provider access.</li>
+            </ul>
+            <h3 id="iptables"><code>iptables</code></h3>
+            <p><code>iptables</code> is a low-level firewall tool for managing packet filtering rules.</p>
+            <p>It uses tables, chains, and rules.</p>
+            <p>The most common table for basic filtering is:</p>
+            <div>
+                <pre><code class="language-text">filter</code></pre>
+            </div>
+            <p>The default chains in the filter table are:</p>
+            <ul>
+                <li>INPUT</li>
+                <li>FORWARD</li>
+                <li>OUTPUT</li>
+            </ul>
+            <p>Diagram:</p>
+            <div>
+                <pre><code class="language-text">Packet entering local machine
+        |
+        v
+INPUT chain
+        |
+        v
+local service, if allowed
+
+
+Packet leaving local machine
+        |
+        v
+OUTPUT chain
+        |
+        v
+network
+
+
+Packet passing through machine
+        |
+        v
+FORWARD chain
+        |
+        v
+another network</code></pre>
+            </div>
+            <h3 id="viewing-iptables-rules">Viewing <code>iptables</code> Rules</h3>
+            <p>Use:</p>
+            <div>
+                <pre><code class="language-bash">sudo iptables -L</code></pre>
+            </div>
+            <p>A more useful version includes numbers and numeric ports:</p>
+            <div>
+                <pre><code class="language-bash">sudo iptables -L -n -v --line-numbers</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Chain INPUT (policy ACCEPT)
+num  pkts bytes target  prot opt in  out source      destination
+1    1200  96K ACCEPT  all  --  *   *   0.0.0.0/0   0.0.0.0/0   ctstate RELATED,ESTABLISHED
+2       5  420 DROP    icmp --  *   *   0.0.0.0/0   0.0.0.0/0   icmp echo-request
+3     200 18K ACCEPT  tcp  --  *   *   0.0.0.0/0   0.0.0.0/0   tcp dpt:22
+4      20 1600 ACCEPT tcp  --  *   *   0.0.0.0/0   0.0.0.0/0   tcp dpt:80
+
+Chain FORWARD (policy DROP)
+num  pkts bytes target  prot opt in  out source          destination
+1       0    0 ACCEPT  all  --  *   *   192.168.1.0/24  192.168.1.0/24
+2       0    0 DROP    all  --  *   *   0.0.0.0/0       0.0.0.0/0
+
+Chain OUTPUT (policy ACCEPT)
+num  pkts bytes target  prot opt in  out source      destination</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>INPUT policy is ACCEPT.</li>
+                <li>Established connections are allowed.</li>
+                <li>ICMP echo requests are dropped.</li>
+                <li>SSH on port 22 is allowed.</li>
+                <li>HTTP on port 80 is allowed.</li>
+                <li>FORWARD policy is DROP.</li>
+                <li>OUTPUT policy is ACCEPT.</li>
+            </ul>
+            <h3 id="iptables-rule-order"><code>iptables</code> Rule Order</h3>
+            <p>Rule order matters.</p>
+            <p>iptables checks rules from top to bottom.</p>
+            <div>
+                <pre><code class="language-text">Packet arrives
+    |
+    v
+Rule 1 match? yes -&gt; action
+    |
+    no
+    v
+Rule 2 match? yes -&gt; action
+    |
+    no
+    v
+Rule 3 match? yes -&gt; action
+    |
+    no
+    v
+Default policy</code></pre>
+            </div>
+            <p>If a broad <code>DROP</code> rule appears before an <code>ACCEPT</code> rule, the later <code>ACCEPT</code> may never be reached.</p>
+            <p>Example bad order:</p>
+            <ul>
+                <li>DROP all traffic</li>
+                <li>ACCEPT port 22</li>
+            </ul>
+            <p>The SSH allow rule is useless because traffic was already dropped.</p>
+            <h3 id="adding-an-iptables-rule">Adding an <code>iptables</code> Rule</h3>
+            <p>Allow incoming HTTP:</p>
+            <div>
+                <pre><code class="language-bash">sudo iptables -A INPUT -p tcp --dport 80 -j ACCEPT</code></pre>
+            </div>
+            <p>Meaning:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>iptables Option</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td><strong>-A INPUT</strong></td>
+                    <td>Append a rule to the <strong>INPUT</strong> chain.</td>
+                </tr>
+                <tr>
+                    <td><strong>-p tcp</strong></td>
+                    <td>Match <strong>TCP</strong> packets.</td>
+                </tr>
+                <tr>
+                    <td><strong>--dport 80</strong></td>
+                    <td>Match packets with destination port <strong>80</strong>.</td>
+                </tr>
+                <tr>
+                    <td><strong>-j ACCEPT</strong></td>
+                    <td>Jump to the <strong>ACCEPT</strong> target and allow matching packets.</td>
+                </tr>
+            </table>
+            </p>
+            <p>Allow SSH:</p>
+            <div>
+                <pre><code class="language-bash">sudo iptables -A INPUT -p tcp --dport 22 -j ACCEPT</code></pre>
+            </div>
+            <p>Block ping:</p>
+            <div>
+                <pre><code class="language-bash">sudo iptables -A INPUT -p icmp --icmp-type echo-request -j DROP</code></pre>
+            </div>
+            <h3 id="deleting-an-iptables-rule">Deleting an <code>iptables</code> Rule</h3>
+            <p>First list with line numbers:</p>
+            <div>
+                <pre><code class="language-bash">sudo iptables -L INPUT -n -v --line-numbers</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">Chain INPUT (policy ACCEPT)
+num  target  prot source      destination
+1    ACCEPT  tcp  0.0.0.0/0   0.0.0.0/0   tcp dpt:22
+2    ACCEPT  tcp  0.0.0.0/0   0.0.0.0/0   tcp dpt:80</code></pre>
+            </div>
+            <p>Delete rule 2:</p>
+            <div>
+                <pre><code class="language-bash">sudo iptables -D INPUT 2</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The second rule in the INPUT chain is removed.</li>
+                <li>If that rule allowed HTTP, HTTP may now be blocked depending on other rules and policy.</li>
+            </ul>
+            <h3 id="saving-iptables-rules">Saving <code>iptables</code> Rules</h3>
+            <p>iptables changes are usually runtime-only unless saved.</p>
+            <p>On Debian-based systems:</p>
+            <div>
+                <pre><code class="language-bash">sudo iptables-save | sudo tee /etc/iptables/rules.v4</code></pre>
+            </div>
+            <p>You may need:</p>
+            <div>
+                <pre><code class="language-bash">sudo apt install iptables-persistent</code></pre>
+            </div>
+            <p>On older Red Hat-based systems:</p>
+            <div>
+                <pre><code class="language-bash">sudo service iptables save</code></pre>
+            </div>
+            <p>Important:</p>
+            <div>
+                <pre><code class="language-text">If rules are not saved, they may disappear after reboot.</code></pre>
+            </div>
+            <h3 id="ufw"><code>ufw</code></h3>
+            <p>UFW stands for Uncomplicated Firewall.</p>
+            <p>It provides a simpler interface for common firewall tasks.</p>
+            <p>It is common on Ubuntu and beginner-friendly systems.</p>
+            <p>Check status:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw status numbered</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Status: active
+
+     To                         Action      From
+     --                         ------      ----
+[ 1] 22/tcp                     ALLOW IN    Anywhere
+[ 2] 80/tcp                     ALLOW IN    Anywhere
+[ 3] 443/tcp                    ALLOW IN    Anywhere
+[ 4] 1000:2000/tcp              ALLOW IN    192.168.1.0/24
+[ 5] 22/tcp                     ALLOW IN    Anywhere (v6)
+[ 6] 80/tcp                     ALLOW IN    Anywhere (v6)
+[ 7] 443/tcp                    ALLOW IN    Anywhere (v6)</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>UFW is active.</li>
+                <li>SSH, HTTP, and HTTPS are allowed from anywhere.</li>
+                <li>Ports 1000 through 2000 are allowed only from 192.168.1.0/24.</li>
+                <li>IPv6 versions of some rules also exist.</li>
+            </ul>
+            <h3 id="basic-ufw-commands">Basic <code>ufw</code> Commands</h3>
+            <p>Allow SSH:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw allow ssh</code></pre>
+            </div>
+            <p>Allow port 22 explicitly:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw allow 22/tcp</code></pre>
+            </div>
+            <p>Allow HTTP:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw allow http</code></pre>
+            </div>
+            <p>Allow HTTPS:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw allow https</code></pre>
+            </div>
+            <p>Deny HTTP:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw deny http</code></pre>
+            </div>
+            <p>Delete a numbered rule:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw status numbered
+sudo ufw delete 2</code></pre>
+            </div>
+            <p>Enable UFW:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw enable</code></pre>
+            </div>
+            <p>Disable UFW:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw disable</code></pre>
+            </div>
+            <h3 id="ufw-default-policies">UFW Default Policies</h3>
+            <p>A common safe server policy is:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow ssh
+sudo ufw enable</code></pre>
+            </div>
+            <p>Meaning:</p>
+            <ul>
+                <li>Block unsolicited inbound traffic.</li>
+                <li>Allow outbound traffic initiated by the server.</li>
+                <li>Allow SSH so administrators can connect.</li>
+                <li>Enable the firewall.</li>
+            </ul>
+            <p>On a remote server, allow SSH before enabling UFW.</p>
+            <h3 id="firewalld"><code>firewalld</code></h3>
+            <p><code>firewalld</code> is a dynamic firewall manager commonly used on Fedora, RHEL, CentOS, AlmaLinux, and Rocky Linux.</p>
+            <p>It organizes rules into zones.</p>
+            <p>A zone represents a trust level.</p>
+            <p>Examples:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Firewalld Zone</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td><strong>public</strong></td>
+                    <td>For untrusted networks; only explicitly allowed services are accessible.</td>
+                </tr>
+                <tr>
+                    <td><strong>home</strong></td>
+                    <td>For home networks with a moderate level of trust.</td>
+                </tr>
+                <tr>
+                    <td><strong>work</strong></td>
+                    <td>For work networks with trusted devices and services.</td>
+                </tr>
+                <tr>
+                    <td><strong>internal</strong></td>
+                    <td>For internal trusted networks.</td>
+                </tr>
+                <tr>
+                    <td><strong>trusted</strong></td>
+                    <td>All network traffic is allowed.</td>
+                </tr>
+                <tr>
+                    <td><strong>drop</strong></td>
+                    <td>Incoming traffic is silently dropped.</td>
+                </tr>
+                <tr>
+                    <td><strong>block</strong></td>
+                    <td>Incoming traffic is rejected with an error response.</td>
+                </tr>
+            </table>
+            </p>
+            <p>Diagram:</p>
+            <div>
+                <pre><code class="language-text">eth0 connected to internet
+        |
+        v
+public zone
+        |
+        v
+allow ssh, http, https
+
+
+eth1 connected to office LAN
+        |
+        v
+internal zone
+        |
+        v
+allow more trusted services</code></pre>
+            </div>
+            <h3 id="runtime-vs-permanent-configuration">Runtime vs Permanent Configuration</h3>
+            <p>firewalld has two configurations:</p>
+            <ul>
+                <li>runtime active now, lost after reload or reboot</li>
+                <li>permanent saved on disk, used after reload or reboot</li>
+            </ul>
+            <p>Commands without <code>--permanent</code> usually affect runtime only.</p>
+            <p>Commands with <code>--permanent</code> save the rule, but the rule usually needs reload before it becomes active.</p>
+            <p>Common pattern:</p>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --reload</code></pre>
+            </div>
+            <h3 id="viewing-firewalld-rules">Viewing firewalld Rules</h3>
+            <p>List active zone configuration:</p>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --list-all</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">public (active)
+  target: default
+  interfaces: eth0
+  services: ssh dhcpv6-client http https
+  ports: 8080/tcp 9090/tcp
+  masquerade: no
+  forward-ports:
+  rich rules:
+    rule family="ipv4" source address="192.168.0.0/24" accept
+    rule family="ipv4" source address="10.0.0.0/8" port port="443" protocol="tcp" accept</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The active zone is public.</li>
+                <li>Interface eth0 is assigned to it.</li>
+                <li>SSH, HTTP, and HTTPS are allowed.</li>
+                <li>Custom ports 8080/tcp and 9090/tcp are allowed.</li>
+                <li>There are rich rules for specific source networks.</li>
+            </ul>
+            <p>Check zones:</p>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --get-zones
+sudo firewall-cmd --get-default-zone
+sudo firewall-cmd --get-active-zones</code></pre>
+            </div>
+            <h3 id="adding-and-removing-firewalld-rules">Adding and Removing firewalld Rules</h3>
+            <p>Allow SSH permanently:</p>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --permanent --add-service=ssh
+sudo firewall-cmd --reload</code></pre>
+            </div>
+            <p>Allow a custom port:</p>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --permanent --add-port=8443/tcp
+sudo firewall-cmd --reload</code></pre>
+            </div>
+            <p>Remove HTTP:</p>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --permanent --remove-service=http
+sudo firewall-cmd --reload</code></pre>
+            </div>
+            <p>List again:</p>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --list-all</code></pre>
+            </div>
+            <h3 id="firewalld-zones-and-interfaces">firewalld Zones and Interfaces</h3>
+            <p>Move an interface to the internal zone:</p>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --permanent --zone=internal --change-interface=eth1
+sudo firewall-cmd --reload
+sudo firewall-cmd --zone=internal --list-all</code></pre>
+            </div>
+            <p>Create a custom zone:</p>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --permanent --new-zone=web-admin
+sudo firewall-cmd --permanent --zone=web-admin --add-service=https
+sudo firewall-cmd --permanent --zone=web-admin --add-source=192.168.50.0/24
+sudo firewall-cmd --reload</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>A new zone called web-admin is created.</li>
+                <li>HTTPS is allowed in that zone.</li>
+                <li>Only traffic from 192.168.50.0/24 is associated with it.</li>
+            </ul>
+            <h3 id="firewalld-rich-rules">firewalld Rich Rules</h3>
+            <p>Rich rules allow more specific matching.</p>
+            <p>Allow HTTPS only from <code>10.0.0.0/8</code>:</p>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --permanent \
+  --add-rich-rule='rule family="ipv4" source address="10.0.0.0/8" service name="https" accept'
+
+sudo firewall-cmd --reload</code></pre>
+            </div>
+            <p>List rich rules:</p>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --list-rich-rules</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">rule family="ipv4" source address="10.0.0.0/8" service name="https" accept</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">Only clients from 10.0.0.0/8 match this HTTPS allow rule.</code></pre>
+            </div>
+            <h3 id="choosing-between-iptables-ufw-and-firewalld">Choosing Between <code>iptables</code>, <code>ufw</code>, and <code>firewalld</code></h3>
+            <p>Use ufw:</p>
+            <ul>
+                <li>simple host firewall</li>
+                <li>small servers</li>
+                <li>desktops</li>
+                <li>Ubuntu-style systems</li>
+            </ul>
+            <p>Use firewalld:</p>
+            <ul>
+                <li>zone-based firewalling</li>
+                <li>multiple interfaces</li>
+                <li>enterprise distributions</li>
+                <li>runtime and permanent rule management</li>
+            </ul>
+            <p>Use iptables:</p>
+            <ul>
+                <li>low-level control</li>
+                <li>legacy systems</li>
+                <li>advanced packet filtering</li>
+                <li>systems without a higher-level firewall manager</li>
+            </ul>
+            <p>Rule of thumb:</p>
+            <ul>
+                <li>ufw is easiest.</li>
+                <li>firewalld is better for zones.</li>
+                <li>iptables is powerful but easier to misconfigure.</li>
+            </ul>
+            <h3 id="scenario-1-allow-ssh-but-block-http-with-ufw">Scenario 1: Allow SSH but Block HTTP with UFW</h3>
+            <p>Allow remote administration through SSH while blocking web traffic on HTTP port 80.</p>
+            <h4 id="simulate">Simulate</h4>
+            <p>Check current status:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw status numbered</code></pre>
+            </div>
+            <p>Allow SSH:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw allow 22/tcp</code></pre>
+            </div>
+            <p>Deny HTTP:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw deny 80/tcp</code></pre>
+            </div>
+            <p>Enable UFW if not already enabled:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw enable</code></pre>
+            </div>
+            <h4 id="check">Check</h4>
+            <div>
+                <pre><code class="language-bash">sudo ufw status numbered</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Status: active
+
+     To        Action      From
+     --        ------      ----
+[ 1] 22/tcp    ALLOW IN    Anywhere
+[ 2] 80/tcp    DENY IN     Anywhere</code></pre>
+            </div>
+            <h4 id="test">Test</h4>
+            <p>From another machine:</p>
+            <div>
+                <pre><code class="language-bash">ssh user@SERVER_IP
+curl -I http://SERVER_IP</code></pre>
+            </div>
+            <p>Example SSH result:</p>
+            <div>
+                <pre><code class="language-text">user@SERVER_IP's password:</code></pre>
+            </div>
+            <p>Example HTTP result:</p>
+            <div>
+                <pre><code class="language-text">curl: (7) Failed to connect to SERVER_IP port 80: Connection refused</code></pre>
+            </div>
+            <p>or:</p>
+            <div>
+                <pre><code class="language-text">curl: (28) Connection timed out</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>SSH is allowed, so remote administration works.</li>
+                <li>HTTP is blocked, so web traffic cannot reach port 80.</li>
+                <li>A timeout usually suggests DROP-like behavior.</li>
+                <li>Connection refused may mean no service is listening or the firewall rejected it.</li>
+            </ul>
+            <h3 id="scenario-2-deny-incoming-by-default-and-allow-outgoing">Scenario 2: Deny Incoming by Default and Allow Outgoing</h3>
+            <p>Create a secure default host firewall posture.</p>
+            <h4 id="simulate">Simulate</h4>
+            <div>
+                <pre><code class="language-bash">sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow ssh
+sudo ufw enable</code></pre>
+            </div>
+            <h4 id="check">Check</h4>
+            <div>
+                <pre><code class="language-bash">sudo ufw status verbose</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Status: active
+Logging: on
+Default: deny (incoming), allow (outgoing), disabled (routed)
+New profiles: skip
+
+To                         Action      From
+--                         ------      ----
+22/tcp                     ALLOW IN    Anywhere</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>Unsolicited inbound traffic is blocked.</li>
+                <li>Outbound traffic from the server is allowed.</li>
+                <li>SSH remains reachable.</li>
+                <li>This is a common baseline for servers.</li>
+            </ul>
+            <h3 id="scenario-3-block-icmp-echo-requests">Scenario 3: Block ICMP Echo Requests</h3>
+            <p>Prevent the system from replying to ping requests.</p>
+            <h4 id="iptables-simulation">iptables Simulation</h4>
+            <div>
+                <pre><code class="language-bash">sudo iptables -A INPUT -p icmp --icmp-type echo-request -j DROP</code></pre>
+            </div>
+            <h4 id="check">Check</h4>
+            <div>
+                <pre><code class="language-bash">sudo iptables -L INPUT -n -v --line-numbers</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">num  pkts bytes target prot opt source      destination
+1       3   252 DROP   icmp --  0.0.0.0/0   0.0.0.0/0   icmp echo-request</code></pre>
+            </div>
+            <h4 id="test">Test</h4>
+            <p>From another host:</p>
+            <div>
+                <pre><code class="language-bash">ping SERVER_IP</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">PING SERVER_IP 56(84) bytes of data.
+Request timeout for icmp_seq 1
+Request timeout for icmp_seq 2</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The server is not replying to ICMP echo requests.</li>
+                <li>This can reduce casual network discovery.</li>
+                <li>However, blocking all ICMP can also make troubleshooting harder.</li>
+            </ul>
+            <h4 id="remove-the-rule">Remove the Rule</h4>
+            <p>List line numbers:</p>
+            <div>
+                <pre><code class="language-bash">sudo iptables -L INPUT --line-numbers</code></pre>
+            </div>
+            <p>Delete the matching rule number:</p>
+            <div>
+                <pre><code class="language-bash">sudo iptables -D INPUT 1</code></pre>
+            </div>
+            <h3 id="scenario-4-allow-http-only-from-one-ip-address">Scenario 4: Allow HTTP Only from One IP Address</h3>
+            <p>Restrict access to a web service so only one trusted client can connect.</p>
+            <h4 id="ufw-simulation">UFW Simulation</h4>
+            <p>Allow HTTP from one IP:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw allow from 192.168.1.50 to any port 80 proto tcp</code></pre>
+            </div>
+            <p>Deny other HTTP traffic:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw deny 80/tcp</code></pre>
+            </div>
+            <h4 id="check">Check</h4>
+            <div>
+                <pre><code class="language-bash">sudo ufw status numbered</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Status: active
+
+     To        Action      From
+     --        ------      ----
+[ 1] 80/tcp    ALLOW IN    192.168.1.50
+[ 2] 80/tcp    DENY IN     Anywhere</code></pre>
+            </div>
+            <h4 id="test">Test</h4>
+            <p>From allowed host:</p>
+            <div>
+                <pre><code class="language-bash">curl -I http://SERVER_IP</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">HTTP/1.1 200 OK</code></pre>
+            </div>
+            <p>From blocked host:</p>
+            <div>
+                <pre><code class="language-bash">curl -I http://SERVER_IP</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">curl: (28) Failed to connect: Connection timed out</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The trusted IP can access HTTP.</li>
+                <li>Other sources are blocked.</li>
+                <li>This is useful for admin panels, staging sites, or private dashboards.</li>
+            </ul>
+            <h3 id="scenario-5-safely-change-firewall-rules-on-a-remote-server">Scenario 5: Safely Change Firewall Rules on a Remote Server</h3>
+            <p>Avoid locking yourself out while changing firewall rules over SSH.</p>
+            <h4 id="safe-pattern-with-ufw">Safe Pattern with UFW</h4>
+            <p>First, find your client IP from the server side:</p>
+            <div>
+                <pre><code class="language-bash">echo "$SSH_CLIENT"</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">203.0.113.25 53244 22</code></pre>
+            </div>
+            <p>Allow SSH from your IP:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw allow from 203.0.113.25 to any port 22 proto tcp</code></pre>
+            </div>
+            <p>Allow fallback SSH generally if needed:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw allow 22/tcp</code></pre>
+            </div>
+            <p>Then set defaults:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw default deny incoming
+sudo ufw default allow outgoing</code></pre>
+            </div>
+            <p>Enable:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw enable</code></pre>
+            </div>
+            <p>Open a new terminal and test a second SSH connection before closing the first.</p>
+            <h4 id="optional-rollback-timer">Optional Rollback Timer</h4>
+            <p>Before risky changes, schedule a rollback:</p>
+            <div>
+                <pre><code class="language-bash">echo "sudo ufw disable" | at now + 5 minutes</code></pre>
+            </div>
+            <p>If the firewall works, cancel the job:</p>
+            <div>
+                <pre><code class="language-bash">atq
+atrm JOB_ID</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The rollback timer protects against accidental lockout.</li>
+                <li>If you lose SSH access, UFW disables itself after 5 minutes.</li>
+                <li>If everything works, cancel the rollback job.</li>
+            </ul>
+            <h3 id="scenario-6-allow-ssh-only-from-trusted-ips">Scenario 6: Allow SSH Only from Trusted IPs</h3>
+            <p>Reduce SSH attack surface by allowing only known source addresses.</p>
+            <h4 id="ufw-simulation">UFW Simulation</h4>
+            <p>Allow trusted IP:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw allow from 203.0.113.25 to any port 22 proto tcp</code></pre>
+            </div>
+            <p>Deny other SSH:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw deny 22/tcp</code></pre>
+            </div>
+            <h4 id="check">Check</h4>
+            <div>
+                <pre><code class="language-bash">sudo ufw status numbered</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Status: active
+
+     To        Action      From
+     --        ------      ----
+[ 1] 22/tcp    ALLOW IN    203.0.113.25
+[ 2] 22/tcp    DENY IN     Anywhere</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>Only 203.0.113.25 can connect to SSH.</li>
+                <li>Other IP addresses are denied.</li>
+                <li>This reduces brute-force exposure.</li>
+            </ul>
+            <h4 id="important-warning">Important Warning</h4>
+            <ul>
+                <li>Do not do this unless you know your trusted IP is stable.</li>
+                <li>If your IP changes, you may lock yourself out.</li>
+            </ul>
+            <h3 id="scenario-7-rate-limit-incoming-connections">Scenario 7: Rate-Limit Incoming Connections</h3>
+            <p>Limit repeated connection attempts to reduce brute-force or abuse.</p>
+            <h4 id="ufw-ssh-rate-limit">UFW SSH Rate Limit</h4>
+            <p>UFW has a simple built-in rate limit:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw limit ssh</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw status numbered</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Status: active
+
+     To        Action      From
+     --        ------      ----
+[ 1] 22/tcp    LIMIT IN    Anywhere</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>UFW allows SSH but rate-limits repeated connection attempts.</li>
+                <li>This can help reduce brute-force attempts.</li>
+            </ul>
+            <h4 id="iptables-example">iptables Example</h4>
+            <p>Limit new TCP connections to port 8080:</p>
+            <div>
+                <pre><code class="language-bash">sudo iptables -A INPUT -p tcp --dport 8080 -m conntrack --ctstate NEW \
+  -m limit --limit 100/minute --limit-burst 20 -j ACCEPT
+
+sudo iptables -A INPUT -p tcp --dport 8080 -j DROP</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">sudo iptables -L INPUT -n -v --line-numbers</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">num  pkts bytes target prot source      destination
+1    1000  60K ACCEPT tcp  0.0.0.0/0   0.0.0.0/0 tcp dpt:8080 ctstate NEW limit: avg 100/min burst 20
+2     200  12K DROP   tcp  0.0.0.0/0   0.0.0.0/0 tcp dpt:8080</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>New connections to port 8080 are allowed up to the rate limit.</li>
+                <li>Excess traffic is dropped.</li>
+                <li>This can reduce simple connection floods, but it is not a full DDoS solution.</li>
+            </ul>
+            <h3 id="scenario-8-log-dropped-packets">Scenario 8: Log Dropped Packets</h3>
+            <p>Record blocked packets for investigation.</p>
+            <h4 id="iptables-simulation">iptables Simulation</h4>
+            <p>Add a logging rule before a drop rule:</p>
+            <div>
+                <pre><code class="language-bash">sudo iptables -A INPUT -m limit --limit 10/min --limit-burst 5 \
+  -j LOG --log-prefix "iptables denied: " --log-level 4
+
+sudo iptables -A INPUT -j DROP</code></pre>
+            </div>
+            <h4 id="check-logs">Check Logs</h4>
+            <p>On many systems:</p>
+            <div>
+                <pre><code class="language-bash">sudo journalctl -k | grep "iptables denied"</code></pre>
+            </div>
+            <p>or:</p>
+            <div>
+                <pre><code class="language-bash">sudo dmesg | grep "iptables denied"</code></pre>
+            </div>
+            <p>Example log:</p>
+            <div>
+                <pre><code class="language-text">kernel: iptables denied: IN=eth0 OUT= MAC=... SRC=198.51.100.20 DST=203.0.113.10 LEN=60 PROTO=TCP SPT=51512 DPT=23</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>A packet from 198.51.100.20 tried to reach port 23.</li>
+                <li>Port 23 is Telnet, which is usually unsafe.</li>
+                <li>The packet was logged and then dropped.</li>
+            </ul>
+            <h4 id="important-warning">Important Warning</h4>
+            <ul>
+                <li>Always rate-limit firewall logging.</li>
+                <li>Logging every dropped packet can flood logs and hurt performance.</li>
+            </ul>
+            <h3 id="scenario-9-forward-port-8080-to-port-80">Scenario 9: Forward Port 8080 to Port 80</h3>
+            <p>Redirect traffic arriving on port 8080 to a service listening on port 80.</p>
+            <h4 id="local-redirect-with-iptables">Local Redirect with iptables</h4>
+            <p>This redirects local incoming TCP port 8080 to port 80:</p>
+            <div>
+                <pre><code class="language-bash">sudo iptables -t nat -A PREROUTING -p tcp --dport 8080 -j REDIRECT --to-port 80</code></pre>
+            </div>
+            <p>If testing from the same host, also use OUTPUT redirect:</p>
+            <div>
+                <pre><code class="language-bash">sudo iptables -t nat -A OUTPUT -p tcp -o lo --dport 8080 -j REDIRECT --to-port 80</code></pre>
+            </div>
+            <h4 id="check-nat-rules">Check NAT Rules</h4>
+            <div>
+                <pre><code class="language-bash">sudo iptables -t nat -L -n -v --line-numbers</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Chain PREROUTING (policy ACCEPT)
+num  pkts bytes target   prot source      destination
+1      10   600 REDIRECT tcp  0.0.0.0/0   0.0.0.0/0 tcp dpt:8080 redir ports 80</code></pre>
+            </div>
+            <h4 id="test">Test</h4>
+            <p>Run a web server on port 80, then from another host:</p>
+            <div>
+                <pre><code class="language-bash">curl -I http://SERVER_IP:8080</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">HTTP/1.1 200 OK</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The client connects to port 8080.</li>
+                <li>iptables redirects the connection to local port 80.</li>
+                <li>The web server responds successfully.</li>
+            </ul>
+            <h3 id="scenario-10-block-outgoing-traffic-to-a-specific-ip">Scenario 10: Block Outgoing Traffic to a Specific IP</h3>
+            <p>Prevent the server from connecting to a known unwanted destination.</p>
+            <h4 id="ufw-simulation">UFW Simulation</h4>
+            <p>Block outgoing traffic to a specific IP:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw deny out to 203.0.113.200</code></pre>
+            </div>
+            <h4 id="check">Check</h4>
+            <div>
+                <pre><code class="language-bash">sudo ufw status numbered</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Status: active
+
+     To              Action      From
+     --              ------      ----
+[ 1] 203.0.113.200   DENY OUT    Anywhere</code></pre>
+            </div>
+            <h4 id="test">Test</h4>
+            <div>
+                <pre><code class="language-bash">curl http://203.0.113.200</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">curl: (7) Failed to connect to 203.0.113.200 port 80</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The local system is blocked from connecting to that IP.</li>
+                <li>Outbound filtering can help prevent compromised systems from calling known malicious infrastructure.</li>
+            </ul>
+            <h4 id="note-about-domains">Note About Domains</h4>
+            <p>Firewalls usually filter IP addresses, ports, protocols, and interfaces.</p>
+            <p>Blocking domains is more complicated because domain names can resolve to changing IP addresses.</p>
+            <p>For domain-based blocking, consider:</p>
+            <ul>
+                <li>DNS filtering</li>
+                <li>proxy filtering</li>
+                <li>application-layer controls</li>
+                <li>regularly updated IP sets</li>
+            </ul>
+            <h3 id="scenario-11-firewalld-public-zone-with-http-and-https">Scenario 11: firewalld Public Zone with HTTP and HTTPS</h3>
+            <p>Allow web traffic using firewalld.</p>
+            <h4 id="simulate">Simulate</h4>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --permanent --add-service=https
+sudo firewall-cmd --reload</code></pre>
+            </div>
+            <h4 id="check">Check</h4>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --list-all</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">public (active)
+  services: ssh http https
+  ports:</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The public zone allows SSH, HTTP, and HTTPS.</li>
+                <li>Web clients should be able to connect if services are listening.</li>
+            </ul>
+            <p>Check listening services:</p>
+            <div>
+                <pre><code class="language-bash">sudo ss -tulnp | grep -E ':80|:443'</code></pre>
+            </div>
+            <h3 id="scenario-12-firewalld-custom-port">Scenario 12: firewalld Custom Port</h3>
+            <p>Allow a custom TCP port, such as 8443.</p>
+            <h4 id="simulate">Simulate</h4>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --permanent --add-port=8443/tcp
+sudo firewall-cmd --reload</code></pre>
+            </div>
+            <h4 id="check">Check</h4>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --list-ports</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">8443/tcp</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>TCP port 8443 is open in the active zone.</li>
+                <li>A service still must be listening on that port for clients to connect.</li>
+            </ul>
+            <h3 id="scenario-13-firewalld-runtime-vs-permanent-rule">Scenario 13: firewalld Runtime vs Permanent Rule</h3>
+            <p>Understand why a rule may disappear after reload.</p>
+            <h4 id="add-runtime-rule-only">Add Runtime Rule Only</h4>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --add-port=9090/tcp</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --list-ports</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">9090/tcp</code></pre>
+            </div>
+            <p>Reload:</p>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --reload</code></pre>
+            </div>
+            <p>Check again:</p>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --list-ports</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text"></code></pre>
+            </div>
+            <p>No output.</p>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The rule was runtime-only.</li>
+                <li>It disappeared after reload.</li>
+                <li>Use --permanent for persistent rules.</li>
+            </ul>
+            <h4 id="permanent-fix">Permanent Fix</h4>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --permanent --add-port=9090/tcp
+sudo firewall-cmd --reload</code></pre>
+            </div>
+            <h3 id="scenario-14-diagnose-service-is-running-but-not-reachable-">Scenario 14: Diagnose “Service Is Running but Not Reachable”</h3>
+            <p>Use firewall tools to separate service problems from firewall problems.</p>
+            <h4 id="symptom">Symptom</h4>
+            <p>A web service should be reachable, but clients cannot connect.</p>
+            <h4 id="step-1-check-service">Step 1: Check Service</h4>
+            <div>
+                <pre><code class="language-bash">sudo systemctl status nginx</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">Active: active (running)</code></pre>
+            </div>
+            <h4 id="step-2-check-listening-port">Step 2: Check Listening Port</h4>
+            <div>
+                <pre><code class="language-bash">sudo ss -tulnp | grep ':80'</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">tcp LISTEN 0 511 0.0.0.0:80 0.0.0.0:* users:(("nginx",pid=2200,fd=6))</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>nginx is running and listening on port 80.</li>
+                <li>If remote clients cannot connect, firewall or network path may be the issue.</li>
+            </ul>
+            <h4 id="step-3-check-firewall">Step 3: Check Firewall</h4>
+            <p>UFW:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw status numbered</code></pre>
+            </div>
+            <p>firewalld:</p>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --list-all</code></pre>
+            </div>
+            <p>iptables:</p>
+            <div>
+                <pre><code class="language-bash">sudo iptables -L INPUT -n -v --line-numbers</code></pre>
+            </div>
+            <h4 id="example-firewall-output">Example Firewall Output</h4>
+            <div>
+                <pre><code class="language-text">Status: active
+
+To        Action      From
+--        ------      ----
+22/tcp    ALLOW IN    Anywhere
+80/tcp    DENY IN     Anywhere</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The service is running.</li>
+                <li>The firewall blocks port 80.</li>
+                <li>Allow HTTP or remove the deny rule.</li>
+            </ul>
+            <h4 id="fix-with-ufw">Fix with UFW</h4>
+            <div>
+                <pre><code class="language-bash">sudo ufw allow 80/tcp</code></pre>
+            </div>
+            <h3 id="scenario-15-diagnose-firewall-rule-exists-but-still-cannot-connect-">Scenario 15: Diagnose “Firewall Rule Exists but Still Cannot Connect”</h3>
+            <p>Understand that firewall rules are only one part of connectivity.</p>
+            <h4 id="checklist">Checklist</h4>
+            <ol>
+                <li>Is the service running?</li>
+                <li>Is the service listening on the expected port?</li>
+                <li>Is it listening on the correct address?</li>
+                <li>Does the firewall allow the traffic?</li>
+                <li>Is the cloud firewall/security group open?</li>
+                <li>Is the client using the correct IP and port?</li>
+                <li>Is routing correct?</li>
+                <li>Is SELinux blocking the service?</li>
+            </ol>
+            <p>Commands:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl status SERVICE
+sudo ss -tulnp
+ip addr
+ip route
+sudo ufw status numbered
+sudo firewall-cmd --list-all
+sudo iptables -L -n -v</code></pre>
+            </div>
+            <p>Example issue:</p>
+            <ul>
+                <li>Firewall allows port 80.</li>
+                <li>Service listens only on 127.0.0.1:80.</li>
+                <li>Remote clients still cannot connect.</li>
+            </ul>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">sudo ss -tulnp | grep ':80'</code></pre>
+            </div>
+            <p>Output:</p>
+            <div>
+                <pre><code class="language-text">tcp LISTEN 0 511 127.0.0.1:80 0.0.0.0:* users:(("nginx",pid=2200,fd=6))</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The service listens only on localhost.</li>
+                <li>The firewall is not the main problem.</li>
+                <li>Configure the service to listen on the external interface or 0.0.0.0 if appropriate.</li>
+            </ul>
+            <h3 id="common-firewall-troubleshooting-workflow">Common Firewall Troubleshooting Workflow</h3>
+            <p>When a connection fails:</p>
+            <ol>
+                <li>Identify source IP, destination IP, protocol, and port.</li>
+                <li>Check whether the service is listening.</li>
+                <li>Check local firewall rules.</li>
+                <li>Check cloud or upstream firewall rules.</li>
+                <li>Test from the client.</li>
+                <li>Check logs and packet counters.</li>
+                <li>Confirm rule order.</li>
+                <li>Confirm persistence after reboot or reload.</li>
+            </ol>
+            <h3 id="step-1-identify-the-traffic">Step 1: Identify the Traffic</h3>
+            <p>Example:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Field</td>
+                    <td>Value</td>
+                </tr>
+                <tr>
+                    <td><strong>Client IP</strong></td>
+                    <td><code>192.168.1.50</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Server IP</strong></td>
+                    <td><code>192.168.1.10</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Protocol</strong></td>
+                    <td>TCP</td>
+                </tr>
+                <tr>
+                    <td><strong>Port</strong></td>
+                    <td>443</td>
+                </tr>
+                <tr>
+                    <td><strong>Direction</strong></td>
+                    <td>Incoming</td>
+                </tr>
+            </table>
+            </p>
+            <p>This prevents vague troubleshooting.</p>
+            <h3 id="step-2-check-service-listening">Step 2: Check Service Listening</h3>
+            <div>
+                <pre><code class="language-bash">sudo ss -tulnp | grep ':443'</code></pre>
+            </div>
+            <p>If there is no listener, the firewall is not the only issue.</p>
+            <h3 id="step-3-check-firewall-rules">Step 3: Check Firewall Rules</h3>
+            <p>UFW:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw status numbered</code></pre>
+            </div>
+            <p>firewalld:</p>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --list-all</code></pre>
+            </div>
+            <p>iptables:</p>
+            <div>
+                <pre><code class="language-bash">sudo iptables -L INPUT -n -v --line-numbers</code></pre>
+            </div>
+            <h3 id="step-4-check-packet-counters">Step 4: Check Packet Counters</h3>
+            <p>iptables counters can show whether traffic is matching rules.</p>
+            <div>
+                <pre><code class="language-bash">sudo iptables -L INPUT -n -v --line-numbers</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">num  pkts bytes target prot source      destination
+1       0     0 ACCEPT tcp  0.0.0.0/0   0.0.0.0/0 tcp dpt:443
+2     150  9K DROP   all  0.0.0.0/0   0.0.0.0/0</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The HTTPS allow rule has 0 packet matches.</li>
+                <li>The traffic may not be reaching this host, or another firewall is blocking it earlier.</li>
+            </ul>
+            <h3 id="step-5-test-from-client">Step 5: Test from Client</h3>
+            <p>Use:</p>
+            <div>
+                <pre><code class="language-bash">curl -I http://SERVER_IP
+nc -vz SERVER_IP 22
+nc -vz SERVER_IP 443</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">Connection to SERVER_IP 22 port [tcp/ssh] succeeded!</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The TCP connection to port 22 succeeded.</li>
+                <li>The service is reachable from this client.</li>
+            </ul>
+            <h3 id="useful-command-summary">Useful Command Summary</h3>
+            <p>Check listening services:</p>
+            <div>
+                <pre><code class="language-bash">sudo ss -tulnp</code></pre>
+            </div>
+            <p>iptables:</p>
+            <div>
+                <pre><code class="language-bash">sudo iptables -L -n -v --line-numbers
+sudo iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+sudo iptables -D INPUT RULE_NUMBER
+sudo iptables-save</code></pre>
+            </div>
+            <p>UFW:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw status numbered
+sudo ufw status verbose
+sudo ufw allow ssh
+sudo ufw allow 80/tcp
+sudo ufw deny 80/tcp
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw enable
+sudo ufw delete RULE_NUMBER</code></pre>
+            </div>
+            <p>firewalld:</p>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --list-all
+sudo firewall-cmd --get-zones
+sudo firewall-cmd --get-default-zone
+sudo firewall-cmd --get-active-zones
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --permanent --remove-service=http
+sudo firewall-cmd --permanent --add-port=8443/tcp
+sudo firewall-cmd --reload
+sudo firewall-cmd --list-rich-rules</code></pre>
+            </div>
+            <p>Testing:</p>
+            <div>
+                <pre><code class="language-bash">curl -I http://SERVER_IP
+nc -vz SERVER_IP PORT
+ping SERVER_IP
+traceroute SERVER_IP</code></pre>
+            </div>
+            <p>Logs:</p>
+            <div>
+                <pre><code class="language-bash">sudo journalctl -k
+sudo dmesg
+sudo journalctl -u firewalld
+sudo tail -f /var/log/ufw.log</code></pre>
+            </div>
+            <h3 id="safe-lab-cleanup">Safe Lab Cleanup</h3>
+            <p>If you added temporary iptables rules, list them first:</p>
+            <div>
+                <pre><code class="language-bash">sudo iptables -L INPUT -n -v --line-numbers</code></pre>
+            </div>
+            <p>Delete only the test rules by number:</p>
+            <div>
+                <pre><code class="language-bash">sudo iptables -D INPUT RULE_NUMBER</code></pre>
+            </div>
+            <p>For UFW, list and delete numbered rules:</p>
+            <div>
+                <pre><code class="language-bash">sudo ufw status numbered
+sudo ufw delete RULE_NUMBER</code></pre>
+            </div>
+            <p>For firewalld test ports:</p>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --permanent --remove-port=8443/tcp
+sudo firewall-cmd --permanent --remove-port=9090/tcp
+sudo firewall-cmd --reload</code></pre>
+            </div>
+            <p>If you created a custom firewalld zone:</p>
+            <div>
+                <pre><code class="language-bash">sudo firewall-cmd --permanent --delete-zone=web-admin
+sudo firewall-cmd --reload</code></pre>
+            </div>
+            <h3 id="practical-challenges">Practical Challenges</h3>
+            <ol>
+                <li>Configure the firewall to allow SSH on port 22 but block HTTP on port 80. Test both from another machine.</li>
+                <li>Set the default policy to deny incoming traffic and allow outgoing traffic. Explain why SSH must be allowed before enabling this policy remotely.</li>
+                <li>Block ICMP echo requests and confirm that another host cannot ping the machine. Then remove the rule and test again.</li>
+                <li>Allow HTTP only from a specific IP address. Test from the allowed IP and from a blocked IP.</li>
+                <li>Create a safe rollback plan before changing firewall rules on a remote server.</li>
+                <li>Restrict SSH to a trusted source IP. Explain the risk if your source IP changes.</li>
+                <li>Rate-limit SSH or another TCP service and explain what kind of abuse this helps reduce.</li>
+                <li>Add logging for dropped packets with rate limiting. Review logs and interpret one dropped packet entry.</li>
+                <li>Forward local port 8080 to port 80 and verify that traffic to 8080 reaches the web service.</li>
+                <li>Block outgoing traffic to a specific IP address and test the result with <code>curl</code> or <code>nc</code>.</li>
+                <li>With firewalld, add a runtime-only port rule, reload firewalld, and observe that the rule disappears.</li>
+                <li>With firewalld, create a permanent custom port rule and verify it survives reload.</li>
+                <li>Diagnose a service that is running but unreachable. Check the service, listening port, firewall rules, and client test output.</li>
+                <li>Compare the same rule implemented with <code>iptables</code>, <code>ufw</code>, and <code>firewalld</code>.</li>
+                <li>Write a short firewall troubleshooting report including source IP, destination IP, protocol, port, rule checked, test command, output, and interpretation.</li>
             </ol>
         </article-section>
     </div>

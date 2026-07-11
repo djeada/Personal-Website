@@ -60,7 +60,12 @@
         const ctx = canvas.getContext("2d");
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         if (typeof draw === "function") draw(ctx, width, height);
-        return { ctx, width, height, dpr };
+        return {
+            ctx,
+            width,
+            height,
+            dpr
+        };
     }
 
     function getCSSColor(name, fallback = "") {

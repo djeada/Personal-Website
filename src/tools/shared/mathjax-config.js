@@ -1,11 +1,19 @@
 window.MathJax = {
     tex: {
-        inlineMath: [["\\(", "\\)"], ["$", "$"]],
-        displayMath: [["\\[", "\\]"], ["$$", "$$"]],
+        inlineMath: [
+            ["\\(", "\\)"],
+            ["$", "$"]
+        ],
+        displayMath: [
+            ["\\[", "\\]"],
+            ["$$", "$$"]
+        ],
         processEscapes: true
     },
     options: {
         skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"]
     },
-    chtml: { scale: 1 }
+    chtml: {
+        scale: 1
+    }
 };

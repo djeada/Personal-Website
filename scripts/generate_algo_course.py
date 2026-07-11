@@ -36,14 +36,46 @@ COURSE_DESCRIPTION = (
 
 TOPIC_RULES = [
     ("Trees & tries", ("tree", "subtree", "bst", "trie", "ancestor")),
-    ("Graphs", ("graph", "island", "course schedule", "pacific atlantic", "visiting all nodes")),
-    ("Linked lists", ("linked list", "node from end", "reorder list", "merge k sorted lists")),
-    ("Dynamic programming", ("subsequence", "coin change", "house robber", "decode ways", "unique paths", "climbing stairs", "word break", "partition array", "maximum product subarray", "palindromic substring")),
-    ("Intervals & greedy", ("interval", "jump game", "flower", "pair chain", "stock", "buy and sell")),
+    (
+        "Graphs",
+        (
+            "graph",
+            "island",
+            "course schedule",
+            "pacific atlantic",
+            "visiting all nodes",
+        ),
+    ),
+    (
+        "Linked lists",
+        ("linked list", "node from end", "reorder list", "merge k sorted lists"),
+    ),
+    (
+        "Dynamic programming",
+        (
+            "subsequence",
+            "coin change",
+            "house robber",
+            "decode ways",
+            "unique paths",
+            "climbing stairs",
+            "word break",
+            "partition array",
+            "maximum product subarray",
+            "palindromic substring",
+        ),
+    ),
+    (
+        "Intervals & greedy",
+        ("interval", "jump game", "flower", "pair chain", "stock", "buy and sell"),
+    ),
     ("Bits & math", ("bits", "missing number", "sum of two integers")),
     ("Backtracking", ("combination sum", "word search")),
     ("Heaps & design", ("median from data stream", "top k frequent", "design add")),
-    ("Two pointers & windows", ("substring", "palindrome", "container", "triplet", "character replacement")),
+    (
+        "Two pointers & windows",
+        ("substring", "palindrome", "container", "triplet", "character replacement"),
+    ),
 ]
 
 
@@ -51,7 +83,9 @@ def _topic_for_title(title: str) -> str:
     """Assign a friendly study topic using stable title keywords."""
     lowered = title.lower()
     for topic, keywords in TOPIC_RULES:
-        if any(re.search(rf"\b{re.escape(keyword)}\b", lowered) for keyword in keywords):
+        if any(
+            re.search(rf"\b{re.escape(keyword)}\b", lowered) for keyword in keywords
+        ):
             return topic
     return "Arrays & hashing"
 
@@ -171,7 +205,7 @@ def _build_playlist_sidebar(
         active_class = ' class="active"' if idx == current_index else ""
         playlist_items.append(
             f'<li data-course-lesson="{idx + 1}"><a href="./{slugs[idx]}.html"{active_class}>'
-            f'<span>{idx + 1}. {safe_title}</span><small>{html_mod.escape(topic)}</small></a></li>'
+            f"<span>{idx + 1}. {safe_title}</span><small>{html_mod.escape(topic)}</small></a></li>"
         )
     playlist_html = "\n".join(playlist_items)
 
@@ -350,12 +384,16 @@ def update_course_page(videos: List[Video]) -> None:
     for i, video in enumerate(videos):
         safe_title = html_mod.escape(video.title)
         topic = _topic_for_title(video.title)
-        lesson_summary = html_mod.escape(_summarize_text(
-            video.description,
-            "Step-by-step Python solution with the core pattern and complexity explained.",
-            width=120,
-        ))
-        cards.append(textwrap.dedent(f"""\
+        lesson_summary = html_mod.escape(
+            _summarize_text(
+                video.description,
+                "Step-by-step Python solution with the core pattern and complexity explained.",
+                width=120,
+            )
+        )
+        cards.append(
+            textwrap.dedent(
+                f"""\
             <article class="tool-card course-lesson-card" data-course-card data-topic="{_topic_slug(topic)}" data-title="{safe_title.lower()}" data-lesson-number="{i + 1}">
                 <a href="./lessons/{slugs[i]}.html" class="course-card-main" aria-label="Open lesson {i + 1}: {safe_title}">
                     <div class="course-lesson-card-media">
@@ -373,7 +411,9 @@ def update_course_page(videos: List[Video]) -> None:
                     <a href="./lessons/{slugs[i]}.html">Open lesson <span aria-hidden="true">→</span></a>
                     <a href="https://www.youtube.com/watch?v={video.video_id}" target="_blank" rel="noopener" aria-label="Watch {safe_title} on YouTube">YouTube <span aria-hidden="true">↗</span></a>
                 </div>
-            </article>""").rstrip())
+            </article>"""
+            ).rstrip()
+        )
 
     cards_html = "\n".join(cards)
     topics = list(dict.fromkeys(_topic_for_title(video.title) for video in videos))
@@ -382,7 +422,8 @@ def update_course_page(videos: List[Video]) -> None:
         for topic in topics
     )
 
-    lessons_html = textwrap.dedent(f"""\
+    lessons_html = textwrap.dedent(
+        f"""\
         <div class="course-overview-card" data-course-page="overview" data-lesson-total="{len(videos)}">
             <div class="course-overview-copy">
                 <span class="course-page-badge">Free video course · Python</span>
@@ -421,7 +462,8 @@ def update_course_page(videos: List[Video]) -> None:
         <div class="tools-grid course-lessons-grid" data-course-grid>{cards_html}</div>
         <div class="course-empty" data-course-empty hidden><h3>No lessons found</h3><p>Try a different problem name, number, or topic.</p></div>
         <script src="./course.js"></script>
-    """)
+    """
+    )
     pattern = r"<!-- LESSONS:START -->.*?<!-- LESSONS:END -->"
     replacement = f"<!-- LESSONS:START -->\n{lessons_html}\n<!-- LESSONS:END -->"
     updated = re.sub(pattern, lambda _: replacement, html, flags=re.S)

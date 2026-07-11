@@ -136,7 +136,12 @@
     }
 
     function updateActiveCells() {
-        const { rowsA, colsA, rowsB, colsB } = dims();
+        const {
+            rowsA,
+            colsA,
+            rowsB,
+            colsB
+        } = dims();
         const compatible = colsA === rowsB;
         matrixASize.textContent = `${rowsA} row${rowsA === 1 ? "" : "s"} × ${colsA} column${colsA === 1 ? "" : "s"}`;
         matrixBSize.textContent = `${rowsB} row${rowsB === 1 ? "" : "s"} × ${colsB} column${colsB === 1 ? "" : "s"}`;
@@ -237,7 +242,12 @@
         try {
             forEachInput(matrixATable, input => input.classList.remove("has-error"));
             forEachInput(matrixBTable, input => input.classList.remove("has-error"));
-            const { rowsA, colsA, rowsB, colsB } = dims();
+            const {
+                rowsA,
+                colsA,
+                rowsB,
+                colsB
+            } = dims();
             if (colsA !== rowsB) throw new Error(`Cannot multiply: A has ${colsA} columns while B has ${rowsB} rows.`);
             const A = readMatrix(matrixATable, rowsA, colsA, "A");
             const B = readMatrix(matrixBTable, rowsB, colsB, "B");
@@ -287,7 +297,12 @@
     }
 
     function transposeProduct() {
-        const { rowsA, colsA, rowsB, colsB } = dims();
+        const {
+            rowsA,
+            colsA,
+            rowsB,
+            colsB
+        } = dims();
         if (colsA !== rowsB) throw new Error("Transpose operation requires a valid A × B product first.");
         const A = readMatrix(matrixATable, rowsA, colsA, "A");
         const B = readMatrix(matrixBTable, rowsB, colsB, "B");

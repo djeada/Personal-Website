@@ -122,14 +122,26 @@ function updateTeaching(gateType, output) {
         XNOR: "XNOR is true when the inputs match. It acts as a one-bit equality test."
     };
     var table = getTruthTable(gateType);
-    var formulas = { AND: '\\(Y=A\\land B\\)', OR: '\\(Y=A\\lor B\\)', NOT: '\\(Y=\\lnot A\\)', NAND: '\\(Y=\\lnot(A\\land B)\\)', NOR: '\\(Y=\\lnot(A\\lor B)\\)', XOR: '\\(Y=A\\oplus B\\)', XNOR: '\\(Y=\\lnot(A\\oplus B)\\)' };
-    var trueCases = table.filter(function(row) { return row[row.length - 1]; }).length;
+    var formulas = {
+        AND: '\\(Y=A\\land B\\)',
+        OR: '\\(Y=A\\lor B\\)',
+        NOT: '\\(Y=\\lnot A\\)',
+        NAND: '\\(Y=\\lnot(A\\land B)\\)',
+        NOR: '\\(Y=\\lnot(A\\lor B)\\)',
+        XOR: '\\(Y=A\\oplus B\\)',
+        XNOR: '\\(Y=\\lnot(A\\oplus B)\\)'
+    };
+    var trueCases = table.filter(function(row) {
+        return row[row.length - 1];
+    }).length;
     var insight = document.getElementById('logic-insight');
     var metrics = document.getElementById('logic-metrics');
     if (insight) insight.textContent = descriptions[gateType];
     if (metrics) {
         var values = ['Gate: ' + gateType, 'Inputs: ' + getNumberOfInputsForGate(gateType), 'True cases: ' + trueCases + ' of ' + table.length, 'Current output: ' + (output ? '1' : '0')];
-        Array.from(metrics.children).forEach(function(node, index) { node.textContent = values[index]; });
+        Array.from(metrics.children).forEach(function(node, index) {
+            node.textContent = values[index];
+        });
     }
     var formula = document.getElementById('logic-formula');
     if (formula) {
@@ -175,7 +187,9 @@ function updateTruthTable() {
     var count = getNumberOfInputsForGate(gateType);
     for (var inputIndex = 1; inputIndex <= count; inputIndex++) activeValues.push(document.getElementById('input' + inputIndex).classList.contains('active'));
     Array.from(truthTableDiv.querySelectorAll('tbody tr')).forEach(function(row, rowIndex) {
-        var matches = activeValues.every(function(value, valueIndex) { return truthTable[rowIndex][valueIndex] === value; });
+        var matches = activeValues.every(function(value, valueIndex) {
+            return truthTable[rowIndex][valueIndex] === value;
+        });
         row.classList.toggle('is-current', matches);
         if (matches) row.setAttribute('aria-current', 'true');
     });

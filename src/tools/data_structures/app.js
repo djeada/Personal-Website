@@ -258,7 +258,13 @@ const STRUCTURES = {
         memory: "O(V + E) with adjacency lists.",
         initial: {
             nodes: ["A", "B", "C", "D", "E", "F"],
-            edges: [["A", "B"], ["A", "C"], ["B", "D"], ["C", "E"], ["D", "F"]]
+            edges: [
+                ["A", "B"],
+                ["A", "C"],
+                ["B", "D"],
+                ["C", "E"],
+                ["D", "F"]
+            ]
         },
         sampleValues: ["G", "H", "I", "J"],
         secondaryLabel: "Connect to",
@@ -589,7 +595,10 @@ function algorithmFor(key, operation) {
             special: ["Recursive in-order traversal", "Visit the left subtree, current node, then right subtree to produce values in sorted order."]
         };
         const [name, detail] = algorithms[operation];
-        return { name, detail };
+        return {
+            name,
+            detail
+        };
     }
     if (config.kind === "graph") {
         const algorithms = {
@@ -599,7 +608,10 @@ function algorithmFor(key, operation) {
             special: ["Undirected adjacency-list edge insertion", "Add each endpoint to the other endpoint's neighbor list after checking for a duplicate edge."]
         };
         const [name, detail] = algorithms[operation];
-        return { name, detail };
+        return {
+            name,
+            detail
+        };
     }
     if (config.kind === "heap") {
         const algorithms = {
@@ -609,15 +621,42 @@ function algorithmFor(key, operation) {
             special: ["Extract-min with sink-down", "Remove the root, move the final item to the root, then swap with the smaller child until ordered."]
         };
         const [name, detail] = algorithms[operation];
-        return { name, detail };
+        return {
+            name,
+            detail
+        };
     }
-    if (config.kind === "trie") return { name: operation === "special" ? "Prefix walk with depth-first collection" : "Character-by-character trie walk", detail: "Follow one child edge per character; no unrelated branch is inspected." };
-    if (config.kind === "buckets") return operation === "special" && key === "hashTable" ? { name: "Load-factor analysis", detail: "Count stored entries and divide by the seven allocated buckets; no keys are moved." } : { name: "Polynomial hash with separate chaining", detail: "Compute a bucket index with a base-31 string hash, then scan only that bucket's collision chain." };
-    if (config.kind === "list") return { name: operation === "add" ? "Tail-pointer append" : "Forward pointer traversal", detail: operation === "add" ? "Link the current tail to a new node and move the tail pointer." : "Start at head and follow next pointers until the value is found or the list ends." };
-    if (config.kind === "array") return { name: operation === "special" ? "Direct indexed access" : operation === "add" ? "Dynamic-array append" : "Linear scan", detail: operation === "special" ? "Calculate the slot address directly from its zero-based index." : operation === "add" ? "Write after the final element; resize and copy only when capacity is exhausted." : "Compare values from index 0 onward and stop at the first match." };
-    if (config.kind === "stack") return { name: operation === "search" ? "Linear stack scan" : "LIFO top operation", detail: operation === "search" ? "Inspect items sequentially; stacks provide no fast arbitrary lookup." : "Read, add, or remove only at the top of the stack." };
-    if (["queue", "deque"].includes(config.kind)) return { name: operation === "search" ? "Linear queue scan" : "Constant-time endpoint operation", detail: operation === "search" ? "Inspect queued items from front to back." : "Use the front or back pointer without scanning middle items." };
-    return { name: config.operations[operation][0], detail: config.operations[operation][4] };
+    if (config.kind === "trie") return {
+        name: operation === "special" ? "Prefix walk with depth-first collection" : "Character-by-character trie walk",
+        detail: "Follow one child edge per character; no unrelated branch is inspected."
+    };
+    if (config.kind === "buckets") return operation === "special" && key === "hashTable" ? {
+        name: "Load-factor analysis",
+        detail: "Count stored entries and divide by the seven allocated buckets; no keys are moved."
+    } : {
+        name: "Polynomial hash with separate chaining",
+        detail: "Compute a bucket index with a base-31 string hash, then scan only that bucket's collision chain."
+    };
+    if (config.kind === "list") return {
+        name: operation === "add" ? "Tail-pointer append" : "Forward pointer traversal",
+        detail: operation === "add" ? "Link the current tail to a new node and move the tail pointer." : "Start at head and follow next pointers until the value is found or the list ends."
+    };
+    if (config.kind === "array") return {
+        name: operation === "special" ? "Direct indexed access" : operation === "add" ? "Dynamic-array append" : "Linear scan",
+        detail: operation === "special" ? "Calculate the slot address directly from its zero-based index." : operation === "add" ? "Write after the final element; resize and copy only when capacity is exhausted." : "Compare values from index 0 onward and stop at the first match."
+    };
+    if (config.kind === "stack") return {
+        name: operation === "search" ? "Linear stack scan" : "LIFO top operation",
+        detail: operation === "search" ? "Inspect items sequentially; stacks provide no fast arbitrary lookup." : "Read, add, or remove only at the top of the stack."
+    };
+    if (["queue", "deque"].includes(config.kind)) return {
+        name: operation === "search" ? "Linear queue scan" : "Constant-time endpoint operation",
+        detail: operation === "search" ? "Inspect queued items from front to back." : "Use the front or back pointer without scanning middle items."
+    };
+    return {
+        name: config.operations[operation][0],
+        detail: config.operations[operation][4]
+    };
 }
 
 function showIdleResult() {
@@ -838,7 +877,14 @@ function buildOutcome(operation, requestedValue, beforeSize) {
         returned = highlight.resultValue ?? highlight.value ?? (highlight.index !== undefined ? state[highlight.index] : "complete");
     }
     const status = success ? "Operation succeeded" : operation === "add" ? "No change needed" : "Operation finished: no match";
-    return { success, status, title, returned: String(returned ?? "null"), detail: operationConfig(operation)[4], steps: lastMetrics.touched };
+    return {
+        success,
+        status,
+        title,
+        returned: String(returned ?? "null"),
+        detail: operationConfig(operation)[4],
+        steps: lastMetrics.touched
+    };
 }
 
 function showRunningResult(outcome) {
@@ -868,7 +914,9 @@ function cancelAnimation() {
     visualStage.classList.remove("is-playing", "is-starting", "is-finishing");
     animationStatus.textContent = "Ready";
     comparisonBubble.hidden = true;
-    operationButtons.forEach((button) => { button.disabled = false; });
+    operationButtons.forEach((button) => {
+        button.disabled = false;
+    });
     executeOperationButton.disabled = false;
 }
 
@@ -906,7 +954,9 @@ async function animateTargets(targets, label) {
     visualStage.classList.add("is-playing", "is-starting");
     comparisonBubble.hidden = false;
     comparisonBubble.textContent = `${label} starting`;
-    operationButtons.forEach((button) => { button.disabled = true; });
+    operationButtons.forEach((button) => {
+        button.disabled = true;
+    });
     executeOperationButton.disabled = true;
     targets.forEach((node) => node.classList.remove("animation-focus", "animation-done", "animation-result"));
     await delay(Math.min(420, Math.max(220, interval * 0.55)));
@@ -924,7 +974,9 @@ async function animateTargets(targets, label) {
         comparisonBubble.hidden = true;
         visualStage.classList.remove("is-finishing");
         animationStatus.textContent = `${label} complete`;
-        operationButtons.forEach((button) => { button.disabled = false; });
+        operationButtons.forEach((button) => {
+            button.disabled = false;
+        });
         executeOperationButton.disabled = false;
         return true;
     }
@@ -939,7 +991,11 @@ async function animateTargets(targets, label) {
         animationStatus.textContent = `${label} - step ${index + 1} of ${targets.length}`;
         comparisonBubble.textContent = `Inspecting ${targets[index].dataset.value || `node ${index + 1}`}`;
         resultSteps.textContent = `${index + 1} / ${targets.length}`;
-        targets[index].scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+        targets[index].scrollIntoView({
+            behavior: "smooth",
+            block: "nearest",
+            inline: "nearest"
+        });
         await delay(interval);
     }
 
@@ -955,7 +1011,9 @@ async function animateTargets(targets, label) {
     await delay(420);
     visualStage.classList.remove("is-finishing");
     animationStatus.textContent = `${label} complete`;
-    operationButtons.forEach((button) => { button.disabled = false; });
+    operationButtons.forEach((button) => {
+        button.disabled = false;
+    });
     executeOperationButton.disabled = false;
     return true;
 }

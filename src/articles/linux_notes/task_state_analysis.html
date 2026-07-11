@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>Task-State Analysis for Monitoring Application Processes</title>
-    <meta content="Monitoring the performance of applications often involves keeping an eye on resource usage like CPU load, memory consumption, and disk I/O." name="description" />
+    <meta content="Task-state analysis is a way to understand what processes and threads are doing by looking at their runtime states." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/linux_notes/task_state_analysis"
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/task_state_analysis",
-            "description": "Monitoring the performance of applications often involves keeping an eye on resource usage like CPU load, memory consumption, and disk I/O.",
-            "dateModified": "2016-08-02"
+            "description": "Task-state analysis is a way to understand what processes and threads are doing by looking at their runtime states.",
+            "dateModified": "2026-07-11"
         }
     </script>
 </head>
@@ -79,24 +79,121 @@
                 <h2>Table of Contents</h2>
                 <ol><a href="#task-state-analysis-for-monitoring-application-processes">Task-State Analysis for Monitoring Application Processes</a>
                     <ol>
-                        <li><a href="#visualizing-threads-within-a-process">Visualizing Threads Within a Process</a></li>
-                        <li><a href="#understanding-thread-states">Understanding Thread States</a></li>
-                        <li><a href="#sampling-thread-states-using-proc">Sampling Thread States Using /proc</a></li>
-                        <li><a href="#monitoring-thread-states-with-commands">Monitoring Thread States with Commands</a></li>
-                        <li><a href="#interpreting-the-output">Interpreting the Output</a></li>
-                        <li><a href="#using-proc-to-sample-threads-over-time">Using /proc to Sample Threads Over Time</a></li>
-                        <li><a href="#tools-for-task-state-analysis">Tools for Task-State Analysis</a>
+                        <li><a href="#processes-and-threads">Processes and Threads</a></li>
+                        <li><a href="#task">Task</a></li>
+                        <li><a href="#why-task-state-analysis-matters">Why Task-State Analysis Matters</a></li>
+                        <li><a href="#common-linux-task-states">Common Linux Task States</a></li>
+                        <li><a href="#r-running-or-runnable">R: Running or Runnable</a></li>
+                        <li><a href="#s-sleeping">S: Sleeping</a></li>
+                        <li><a href="#d-uninterruptible-sleep">D: Uninterruptible Sleep</a></li>
+                        <li><a href="#t-stopped">T: Stopped</a></li>
+                        <li><a href="#z-zombie">Z: Zombie</a></li>
+                        <li><a href="#viewing-process-and-thread-states-with-ps">Viewing Process and Thread States with ps</a></li>
+                        <li><a href="#viewing-threads-for-one-process">Viewing Threads for One Process</a></li>
+                        <li><a href="#using-proc-for-task-state-analysis">Using /proc for Task-State Analysis</a></li>
+                        <li><a href="#-proc-pid-stat">/proc/PID/stat</a></li>
+                        <li><a href="#counting-task-states">Counting Task States</a></li>
+                        <li><a href="#finding-d-state-tasks">Finding D-State Tasks</a></li>
+                        <li><a href="#htop-for-interactive-state-viewing">htop for Interactive State Viewing</a></li>
+                        <li><a href="#top-for-thread-view">top for Thread View</a></li>
+                        <li><a href="#perf-top">perf top</a></li>
+                        <li><a href="#combining-task-states-with-other-tools">Combining Task States with Other Tools</a></li>
+                        <li><a href="#scenario-1-simulate-cpu-bound-threads-in-r-state">Scenario 1: Simulate CPU-Bound Threads in R State</a>
                             <ol>
-                                <li><a href="#htop">htop</a></li>
-                                <li><a href="#perf">perf</a></li>
+                                <li><a href="#simulate-the-bottleneck">Simulate the Bottleneck</a></li>
+                                <li><a href="#check-with-top">Check with top</a></li>
+                                <li><a href="#check-task-states">Check Task States</a></li>
+                                <li><a href="#what-this-means-in-a-real-application">What This Means in a Real Application</a></li>
                             </ol>
                         </li>
-                        <li><a href="#application-in-database-systems">Application in Database Systems</a></li>
-                        <li><a href="#shifting-focus-from-resource-utilization">Shifting Focus from Resource Utilization</a></li>
-                        <li><a href="#practical-steps-to-implement-task-state-analysis">Practical Steps to Implement Task-State Analysis</a></li>
-                        <li><a href="#example-scenario-diagnosing-a-performance-issue">Example Scenario: Diagnosing a Performance Issue</a></li>
-                        <li><a href="#understanding-the-caveats-of-task-state-analysis">Understanding the Caveats of Task-State Analysis</a></li>
-                        <li><a href="#combining-task-state-analysis-with-other-metrics">Combining Task-State Analysis with Other Metrics</a></li>
+                        <li><a href="#scenario-2-simulate-sleeping-tasks-in-s-state">Scenario 2: Simulate Sleeping Tasks in S State</a>
+                            <ol>
+                                <li><a href="#simulate">Simulate</a></li>
+                                <li><a href="#real-meaning">Real Meaning</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-3-simulate-a-stopped-task-in-t-state">Scenario 3: Simulate a Stopped Task in T State</a>
+                            <ol>
+                                <li><a href="#simulate">Simulate</a></li>
+                                <li><a href="#real-meaning">Real Meaning</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-4-simulate-a-zombie-process-in-z-state">Scenario 4: Simulate a Zombie Process in Z State</a>
+                            <ol>
+                                <li><a href="#simulate-with-python">Simulate with Python</a></li>
+                                <li><a href="#real-meaning">Real Meaning</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-5-simulate-disk-i-o-pressure-and-look-for-d-state">Scenario 5: Simulate Disk I/O Pressure and Look for D State</a>
+                            <ol>
+                                <li><a href="#simulate-disk-pressure">Simulate Disk Pressure</a></li>
+                                <li><a href="#check-task-states">Check Task States</a></li>
+                                <li><a href="#check-with-iostat">Check with iostat</a></li>
+                                <li><a href="#check-with-vmstat">Check with vmstat</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-6-simulate-high-load-from-cpu-vs-high-load-from-i-o">Scenario 6: Simulate High Load from CPU vs High Load from I/O</a>
+                            <ol>
+                                <li><a href="#cpu-based-load">CPU-Based Load</a></li>
+                                <li><a href="#i-o-based-load">I/O-Based Load</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-7-analyze-a-multi-threaded-process">Scenario 7: Analyze a Multi-Threaded Process</a>
+                            <ol>
+                                <li><a href="#simulate-a-multi-threaded-python-program">Simulate a Multi-Threaded Python Program</a></li>
+                                <li><a href="#check-threads">Check Threads</a></li>
+                                <li><a href="#check-with-top">Check with top</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-8-detect-lock-or-synchronization-waiting">Scenario 8: Detect Lock or Synchronization Waiting</a>
+                            <ol>
+                                <li><a href="#simulate-with-file-locking">Simulate with File Locking</a></li>
+                                <li><a href="#check-state">Check State</a></li>
+                                <li><a href="#real-meaning">Real Meaning</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-9-use-strace-to-see-what-a-sleeping-process-waits-on">Scenario 9: Use strace to See What a Sleeping Process Waits On</a>
+                            <ol>
+                                <li><a href="#simulate">Simulate</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-10-create-a-simple-task-state-sampler">Scenario 10: Create a Simple Task-State Sampler</a>
+                            <ol>
+                                <li><a href="#script">Script</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-11-sample-states-for-one-application">Scenario 11: Sample States for One Application</a>
+                            <ol>
+                                <li><a href="#script">Script</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-12-database-like-i-o-wait-investigation">Scenario 12: Database-Like I/O Wait Investigation</a>
+                            <ol>
+                                <li><a href="#symptoms">Symptoms</a></li>
+                                <li><a href="#check-task-states">Check Task States</a></li>
+                                <li><a href="#check-disk">Check Disk</a></li>
+                                <li><a href="#possible-fixes">Possible Fixes</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#task-state-interpretation-guide">Task-State Interpretation Guide</a>
+                            <ol>
+                                <li><a href="#pattern-many-r-tasks">Pattern: Many R Tasks</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#pattern-many-s-tasks">Pattern: Many S Tasks</a></li>
+                        <li><a href="#pattern-many-d-tasks">Pattern: Many D Tasks</a></li>
+                        <li><a href="#pattern-t-tasks">Pattern: T Tasks</a></li>
+                        <li><a href="#pattern-z-tasks">Pattern: Z Tasks</a></li>
+                        <li><a href="#practical-troubleshooting-workflow">Practical Troubleshooting Workflow</a></li>
+                        <li><a href="#step-1-identify-the-pid">Step 1: Identify the PID</a></li>
+                        <li><a href="#step-2-check-overall-system-health">Step 2: Check Overall System Health</a></li>
+                        <li><a href="#step-3-inspect-threads">Step 3: Inspect Threads</a></li>
+                        <li><a href="#step-4-check-disk-if-d-state-appears">Step 4: Check Disk If D-State Appears</a></li>
+                        <li><a href="#step-5-check-cpu-hotspots-if-r-state-dominates">Step 5: Check CPU Hotspots If R-State Dominates</a></li>
+                        <li><a href="#step-6-check-application-logs">Step 6: Check Application Logs</a></li>
+                        <li><a href="#caveats-of-task-state-analysis">Caveats of Task-State Analysis</a></li>
+                        <li><a href="#useful-command-summary">Useful Command Summary</a></li>
+                        <li><a href="#safe-lab-cleanup">Safe Lab Cleanup</a></li>
                         <li><a href="#challenges">Challenges</a></li>
                     </ol>
                 </ol>
@@ -171,185 +268,1301 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: August 02, 2016</i></p>
+            <p style="text-align: right;"><i>Last modified: July 11, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="task-state-analysis-for-monitoring-application-processes">Task-State Analysis for Monitoring Application Processes</h2>
-            <p>Monitoring the performance of applications often involves keeping an eye on resource usage like CPU load, memory consumption, and disk I/O. However, to truly understand what's happening inside an application, especially one that's multi-threaded, it's helpful to look at the states of its threads over time. Task-State Analysis offers a way to do this by observing how threads transition between different states, such as running, sleeping, or waiting for I/O. This approach provides deeper insights into the application's behavior without the need for intrusive monitoring tools.</p>
-            <h3 id="visualizing-threads-within-a-process">Visualizing Threads Within a Process</h3>
-            <p>To grasp how threads operate within a process, imagine a process as a container that holds multiple threads, each performing its own tasks but sharing the same resources.</p>
+            <p>Task-state analysis is a way to understand what processes and threads are doing by looking at their runtime states.</p>
+            <p>Traditional monitoring often starts with resource usage:</p>
+            <ul>
+                <li>CPU usage</li>
+                <li>memory usage</li>
+                <li>disk I/O</li>
+                <li>network usage</li>
+                <li>load average</li>
+            </ul>
+            <p>These are useful, but they do not always explain why an application is slow.</p>
+            <p>For example, an application may feel sluggish even when CPU usage is low. In that case, the problem may be that its threads are waiting on disk I/O, network I/O, locks, signals, or child processes.</p>
+            <p>Task-state analysis helps answer questions like:</p>
+            <ul>
+                <li>Are threads running on the CPU?</li>
+                <li>Are they sleeping?</li>
+                <li>Are they blocked on disk I/O?</li>
+                <li>Are they stopped?</li>
+                <li>Are zombie processes accumulating?</li>
+                <li>Are many threads waiting instead of doing useful work?</li>
+            </ul>
+            <p>The main idea is:</p>
+            <ul>
+                <li>Resource monitoring shows how busy the system is.</li>
+                <li>Task-state analysis shows what processes and threads are actually doing.</li>
+            </ul>
+            <h3 id="processes-and-threads">Processes and Threads</h3>
+            <ul>
+                <li>A process is a running instance of a program.</li>
+                <li>A thread is an execution path inside a process.</li>
+                <li>A process can have one thread or many threads.</li>
+            </ul>
+            <p>Threads inside the same process share resources such as memory, open files, and process-level settings.</p>
             <div>
-                <pre><code class="language-+-------------------------------------+">|             Process A               |
-| (Runs in its own memory space)      |
+                <pre><code class="language-text">+-------------------------------------+
+|             Process A               |
 |                                     |
 |   +-----------+    +-----------+    |
 |   | Thread 1  |    | Thread 2  |    |
 |   +-----------+    +-----------+    |
 |         |                |          |
-|         | Shared Memory   |          |
 |         +----------------+          |
+|              Shared memory          |
 |                                     |
 +-------------------------------------+</code></pre>
             </div>
-            <p>In this diagram, <strong>Process A</strong> contains <strong>Thread 1</strong> and <strong>Thread 2</strong>, both of which can access shared memory within the process. This setup allows threads to communicate efficiently but also requires careful synchronization to prevent conflicts.</p>
-            <h3 id="understanding-thread-states">Understanding Thread States</h3>
-            <p>Every thread (also known as a task) has a state that indicates what it's currently doing. These states help the operating system manage resources and schedule tasks effectively. The common thread states include:</p>
+            <p>Multi-threaded applications can do multiple things at the same time.</p>
+            <p>For example, a web server may have:</p>
+            <ul>
+                <li>one thread accepting connections</li>
+                <li>several threads handling requests</li>
+                <li>one thread writing logs</li>
+                <li>one thread talking to a database</li>
+            </ul>
+            <p>If many threads are waiting, users may experience slow responses even if CPU usage looks low.</p>
+            <h3 id="task">Task</h3>
+            <p>In Linux, a “task” is the kernel’s schedulable unit.</p>
+            <p>A task may represent:</p>
+            <ul>
+                <li>a process</li>
+                <li>a thread inside a process</li>
+            </ul>
+            <p>This is why Linux tools often expose both:</p>
+            <ul>
+                <li>PID process ID</li>
+                <li>TID thread ID</li>
+            </ul>
+            <p>For a single-threaded process, the PID and TID are usually the same.</p>
+            <p>For a multi-threaded process, all threads share the same process ID, but each thread has its own thread ID.</p>
+            <h3 id="why-task-state-analysis-matters">Why Task-State Analysis Matters</h3>
+            <p>Task-state analysis is useful because resource usage alone can be misleading.</p>
+            <p>Example:</p>
+            <ul>
+                <li>CPU usage is low.</li>
+                <li>Users say the app is slow.</li>
+                <li>Load average is high.</li>
+            </ul>
+            <p>This may mean the application is not CPU-bound. Instead, threads may be blocked on disk or waiting for locks.</p>
+            <p>Another example:</p>
+            <ul>
+                <li>CPU usage is high.</li>
+                <li>Many threads are in R state.</li>
+                <li>The run queue is growing.</li>
+            </ul>
+            <p>This may indicate CPU saturation.</p>
+            <p>Task-state analysis helps separate different types of problems:</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Condition</td>
+                    <td>Typical Task State Pattern</td>
+                </tr>
+                <tr>
+                    <td>CPU bottleneck</td>
+                    <td>Many tasks runnable or running (<strong>R</strong> state)</td>
+                </tr>
+                <tr>
+                    <td>I/O bottleneck</td>
+                    <td>Many tasks blocked in uninterruptible sleep (<strong>D</strong> state)</td>
+                </tr>
+                <tr>
+                    <td>Idle waiting</td>
+                    <td>Many tasks sleeping (<strong>S</strong> state)</td>
+                </tr>
+                <tr>
+                    <td>Stopped process</td>
+                    <td>Tasks in stopped/traced (<strong>T</strong> state)</td>
+                </tr>
+                <tr>
+                    <td>Zombie accumulation</td>
+                    <td>Tasks in zombie (<strong>Z</strong> state)</td>
+                </tr>
+            </table>
+            </p>
+            <h3 id="common-linux-task-states">Common Linux Task States</h3>
+            <p>Linux process and thread states are often shown as letters.</p>
             <p>
             <table>
                 <tr>
                     <td>State</td>
-                    <td>Meaning</td>
                     <td>Description</td>
                 </tr>
                 <tr>
-                    <td><code>R</code></td>
-                    <td>Running</td>
-                    <td>The thread is either currently running on the CPU or is ready to run.</td>
+                    <td><strong>R</strong></td>
+                    <td>Running or runnable</td>
                 </tr>
                 <tr>
-                    <td><code>S</code></td>
-                    <td>Sleeping</td>
-                    <td>The thread is waiting for an event, such as I/O completion or a signal.</td>
+                    <td><strong>S</strong></td>
+                    <td>Interruptible sleep</td>
                 </tr>
                 <tr>
-                    <td><code>D</code></td>
-                    <td>Uninterruptible Sleep</td>
-                    <td>The thread is in a sleep state that cannot be interrupted, usually waiting for I/O operations.</td>
+                    <td><strong>D</strong></td>
+                    <td>Uninterruptible sleep</td>
                 </tr>
                 <tr>
-                    <td><code>T</code></td>
+                    <td><strong>T</strong></td>
                     <td>Stopped</td>
-                    <td>The thread has been stopped, often by a signal or debugger.</td>
                 </tr>
                 <tr>
-                    <td><code>Z</code></td>
+                    <td><strong>Z</strong></td>
                     <td>Zombie</td>
-                    <td>The thread has finished execution but still has an entry in the process table.</td>
                 </tr>
             </table>
             </p>
-            <h3 id="sampling-thread-states-using-proc">Sampling Thread States Using <code>/proc</code></h3>
-            <p>One non-intrusive way to monitor thread states is by sampling data from the <code>/proc</code> file system. This virtual file system provides detailed information about running processes and threads.</p>
-            <p>For example, to check the state of a specific process, you can look at <code>/proc/[PID]/stat</code>, where <code>[PID]</code> is the process ID. This file contains various statistics about the process, including its current state.</p>
+            <p>Some tools show extra letters after the main state.</p>
+            <p>For example:</p>
+            <ul>
+                <li>Ss</li>
+                <li>R+</li>
+                <li>Sl</li>
+            </ul>
+            <p>The first letter is usually the most important state.</p>
+            <h3 id="r-running-or-runnable"><code>R</code>: Running or Runnable</h3>
+            <p><code>R</code> means the task is either currently running on a CPU or ready to run as soon as CPU time is available.</p>
+            <p>A task in <code>R</code> may be:</p>
+            <ul>
+                <li>actively executing</li>
+                <li>waiting in the CPU run queue</li>
+                <li>ready but not currently scheduled</li>
+            </ul>
+            <p>A few <code>R</code> tasks are normal.</p>
+            <p>Many <code>R</code> tasks for a long time may suggest CPU pressure.</p>
+            <div>
+                <pre><code class="language-text">Many R tasks + high CPU usage + high run queue = possible CPU bottleneck</code></pre>
+            </div>
+            <h3 id="s-sleeping"><code>S</code>: Sleeping</h3>
+            <p><code>S</code> means interruptible sleep.</p>
+            <p>The task is waiting for something and can be woken up by a signal.</p>
+            <p>Common reasons for <code>S</code> state include:</p>
+            <ul>
+                <li>waiting for user input</li>
+                <li>waiting for a network response</li>
+                <li>waiting for a timer</li>
+                <li>waiting for a lock</li>
+                <li>waiting for a child process</li>
+                <li>sleeping between work cycles</li>
+            </ul>
+            <p>Most processes on a normal Linux system are usually in <code>S</code> state most of the time.</p>
+            <p>This is not automatically bad.</p>
+            <ul>
+                <li>Many S tasks can be normal.</li>
+                <li>The important question is what they are waiting for.</li>
+            </ul>
+            <h3 id="d-uninterruptible-sleep"><code>D</code>: Uninterruptible Sleep</h3>
+            <p><code>D</code> means uninterruptible sleep.</p>
+            <p>A task in <code>D</code> state is usually waiting for a kernel-level operation to finish, often disk I/O or another low-level I/O operation.</p>
+            <p>Common causes include:</p>
+            <ul>
+                <li>slow disk</li>
+                <li>stuck network filesystem</li>
+                <li>storage timeout</li>
+                <li>blocked device driver operation</li>
+                <li>filesystem issue</li>
+                <li>I/O congestion</li>
+            </ul>
+            <p>A short-lived <code>D</code> state can be normal.</p>
+            <p>Many tasks stuck in <code>D</code> for a long time is a warning sign.</p>
+            <div>
+                <pre><code class="language-text">Many D tasks + high iowait + high disk latency = likely I/O bottleneck</code></pre>
+            </div>
+            <p>Important note:</p>
+            <ul>
+                <li>D-state tasks often cannot be killed immediately.</li>
+                <li>They usually leave D state only when the kernel operation finishes.</li>
+            </ul>
+            <h3 id="t-stopped"><code>T</code>: Stopped</h3>
+            <p><code>T</code> means the task is stopped.</p>
+            <p>This can happen when:</p>
+            <ul>
+                <li>a user sends SIGSTOP</li>
+                <li>a shell job is suspended with Ctrl+Z</li>
+                <li>a debugger stops the process</li>
+            </ul>
+            <p>A stopped process is not running. It stays paused until continued.</p>
+            <h3 id="z-zombie"><code>Z</code>: Zombie</h3>
+            <p><code>Z</code> means zombie.</p>
+            <p>A zombie process has finished execution, but its parent process has not yet collected its exit status.</p>
+            <p>A zombie is not using CPU or memory like a normal running process, but it still has an entry in the process table.</p>
+            <p>A few short-lived zombies are usually harmless.</p>
+            <p>Many persistent zombies may indicate that a parent process is broken.</p>
+            <div>
+                <pre><code class="language-text">Zombie = child finished, parent has not reaped it</code></pre>
+            </div>
+            <h3 id="viewing-process-and-thread-states-with-ps">Viewing Process and Thread States with <code>ps</code></h3>
+            <p>A basic command to view process states is:</p>
+            <div>
+                <pre><code class="language-bash">ps -eo pid,stat,comm</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">PID STAT COMMAND
+    1 Ss   systemd
+ 1234 S    myprocess
+ 1300 R    python3
+ 1400 Z    old-worker</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>systemd is sleeping and is a session leader.</li>
+                <li>myprocess is sleeping.</li>
+                <li>python3 is running or runnable.</li>
+                <li>old-worker is a zombie process.</li>
+            </ul>
+            <p>To include threads, use:</p>
+            <div>
+                <pre><code class="language-bash">ps -eLo pid,tid,stat,comm</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">PID   TID STAT COMMAND
+ 1234  1234 Sl   myprocess
+ 1234  1235 Rl   myprocess
+ 1234  1236 Sl   myprocess</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>Process 1234 has multiple threads.</li>
+                <li>Thread 1235 is running or runnable.</li>
+                <li>The other threads are sleeping.</li>
+            </ul>
+            <h3 id="viewing-threads-for-one-process">Viewing Threads for One Process</h3>
+            <p>To inspect threads for a specific PID:</p>
+            <div>
+                <pre><code class="language-bash">ps -L -p 1234 -o pid,tid,stat,pcpu,pmem,comm</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">PID   TID STAT %CPU %MEM COMMAND
+ 1234  1234 Sl    0.0  1.2 myprocess
+ 1234  1235 Rl   95.0  1.2 myprocess
+ 1234  1236 Sl    0.0  1.2 myprocess</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>Thread 1235 is consuming CPU.</li>
+                <li>The process is multi-threaded.</li>
+                <li>Only one thread appears CPU-heavy in this sample.</li>
+            </ul>
+            <h3 id="using-proc-for-task-state-analysis">Using <code>/proc</code> for Task-State Analysis</h3>
+            <p>The <code>/proc</code> filesystem exposes runtime information about processes.</p>
+            <p>For a process:</p>
+            <div>
+                <pre><code class="language-text">/proc/PID/</code></pre>
+            </div>
+            <p>For threads inside a process:</p>
+            <div>
+                <pre><code class="language-text">/proc/PID/task/TID/</code></pre>
+            </div>
+            <p>To view process status:</p>
+            <div>
+                <pre><code class="language-bash">cat /proc/1234/status</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">Name:   myprocess
+State:  S (sleeping)
+Tgid:   1234
+Pid:    1234
+Threads: 3</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The process is sleeping.</li>
+                <li>It has 3 threads.</li>
+                <li>Tgid is the thread group ID, usually the main process ID.</li>
+            </ul>
+            <h3 id="-proc-pid-stat"><code>/proc/PID/stat</code></h3>
+            <p>The file <code>/proc/PID/stat</code> contains many fields.</p>
+            <p>Example:</p>
             <div>
                 <pre><code class="language-bash">cat /proc/1234/stat</code></pre>
             </div>
-            <p>The output might look like this (fields are space-separated):</p>
+            <p>Example output:</p>
             <div>
-                <pre><code class="language-shell">1234 (myprocess) S 1000 1234 1234 0 -1 4194560 500 0 0 0 0 0 0 0 20 0 1 0 100 0 0 18446744073709551615 4194304 4198400 140736897651776 0 0 0 0 0 0 0 0 0 17 0 0 0 0 0 0</code></pre>
+                <pre><code class="language-text">1234 (myprocess) S 1000 1234 1234 0 -1 4194560 ...</code></pre>
             </div>
-            <p>Here, the third field (<code>S</code>) represents the state of the process, which in this case is <code>S</code> for sleeping. By periodically reading this file, you can track how the state changes over time.</p>
-            <h3 id="monitoring-thread-states-with-commands">Monitoring Thread States with Commands</h3>
-            <p>To get a snapshot of all running processes and their states, the <code>ps</code> command is quite handy. For instance:</p>
-            <div>
-                <pre><code class="language-bash">ps -eo pid,tid,stat,comm</code></pre>
-            </div>
-            <p>This command lists the process ID (<code>pid</code>), thread ID (<code>tid</code>), state (<code>stat</code>), and command name (<code>comm</code>) for all processes and their threads. An example output might be:</p>
-            <div>
-                <pre><code class="language-shell">PID   TID STAT COMMAND
-    1     1 Ss   systemd
-    2     2 S    kthreadd
-    3     3 S    rcu_gp
- 1234  1234 S    myprocess
- 1234  1235 R    myprocess</code></pre>
-            </div>
-            <p>In this output:</p>
+            <p>The third field is the state.</p>
             <ul>
-                <li>Process <code>1234</code> has two threads: one in a sleeping state (<code>S</code>) and one running (<code>R</code>).</li>
-                <li>The <code>PID</code> and <code>TID</code> are the same for the main thread of the process.</li>
+                <li>1234 PID</li>
+                <li>(myprocess) command name</li>
+                <li>S state</li>
             </ul>
-            <p>By examining which threads are in which states, you can identify if threads are spending too much time waiting or if they're actively running.</p>
-            <h3 id="interpreting-the-output">Interpreting the Output</h3>
-            <p>Suppose you notice that many threads are in the <code>D</code> state (uninterruptible sleep). This could indicate that they are waiting for I/O operations to complete, which might be a sign of disk bottlenecks.</p>
-            <p>To dig deeper, you could use:</p>
+            <p>This means the process is sleeping.</p>
+            <p>For scripting, <code>/proc/PID/status</code> is usually easier to read than <code>/proc/PID/stat</code>.</p>
+            <h3 id="counting-task-states">Counting Task States</h3>
+            <p>A useful quick view is to count states across the system.</p>
             <div>
-                <pre><code class="language-bash">ps -eo state,pid,cmd | grep "^D"</code></pre>
+                <pre><code class="language-bash">ps -eo state | sort | uniq -c</code></pre>
             </div>
-            <p>This command filters the list to show only threads in the uninterruptible sleep state. The output could be:</p>
+            <p>Example output:</p>
             <div>
-                <pre><code class="language-shell">D  5678  [kjournald]
-D  1234  myprocess</code></pre>
+                <pre><code class="language-text">4 D
+  8 R
+230 S
+  1 Z</code></pre>
             </div>
-            <p>Here, <code>myprocess</code> with PID <code>1234</code> is in an uninterruptible sleep state, suggesting it's waiting for an I/O operation.</p>
-            <h3 id="using-proc-to-sample-threads-over-time">Using <code>/proc</code> to Sample Threads Over Time</h3>
-            <p>By scripting the sampling of thread states, you can collect data over an extended period. For example, a simple Bash script could sample the states every second:</p>
+            <p>Interpretation:</p>
+            <ul>
+                <li>Most tasks are sleeping.</li>
+                <li>Eight tasks are runnable or running.</li>
+                <li>Four tasks are in uninterruptible sleep.</li>
+                <li>One zombie exists.</li>
+            </ul>
+            <p>A few sleeping tasks are normal. Many <code>D</code> tasks deserve investigation.</p>
+            <p>To repeat every second:</p>
             <div>
                 <pre><code class="language-bash">while true; do
+    date
     ps -eo state | sort | uniq -c
     sleep 1
 done</code></pre>
             </div>
-            <p>This script counts the number of threads in each state every second. Sample output might be:</p>
+            <h3 id="finding-d-state-tasks">Finding D-State Tasks</h3>
+            <p>To show tasks in uninterruptible sleep:</p>
             <div>
-                <pre><code class="language-shell">50 R
- 200 S
-   5 D</code></pre>
+                <pre><code class="language-bash">ps -eo state,pid,cmd | awk '$1 ~ /^D/ {print}'</code></pre>
             </div>
-            <p>Interpreting this, you might see that most threads are sleeping (<code>S</code>), some are running (<code>R</code>), and a few are in uninterruptible sleep (<code>D</code>).</p>
-            <h3 id="tools-for-task-state-analysis">Tools for Task-State Analysis</h3>
-            <p>While command-line tools provide valuable insights, specialized tools can offer more detailed analysis.</p>
-            <h4 id="htop"><code>htop</code></h4>
-            <p>An interactive process viewer that shows a real-time overview of system processes.</p>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">D  5678  myprocess
+D  6010  backup-worker</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>These processes are blocked in uninterruptible sleep.</li>
+                <li>They may be waiting on disk, filesystem, or device I/O.</li>
+            </ul>
+            <p>To include kernel wait channel:</p>
+            <div>
+                <pre><code class="language-bash">ps -eo pid,stat,wchan:30,comm | awk '$2 ~ /^D/ {print}'</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">PID STAT WCHAN                          COMMAND
+ 5678 D    wait_on_page_bit_common        myprocess
+ 6010 D    io_schedule                    backup-worker</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The wait channel gives a hint about what the task is waiting for.</li>
+                <li>io_schedule and wait_on_page_bit_common often point toward I/O waits.</li>
+            </ul>
+            <h3 id="htop-for-interactive-state-viewing"><code>htop</code> for Interactive State Viewing</h3>
+            <p><code>htop</code> shows processes interactively.</p>
+            <p>Run:</p>
             <div>
                 <pre><code class="language-bash">htop</code></pre>
             </div>
-            <p>In <code>htop</code>, you can see CPU usage per core, memory usage, and a list of processes with their CPU and memory consumption. You can also sort processes by various criteria.</p>
-            <h4 id="perf"><code>perf</code></h4>
-            <p>A powerful profiling tool that can collect performance data.</p>
-            <div>
-                <pre><code class="language-bash">perf top</code></pre>
-            </div>
-            <p>This command shows a live view of the functions consuming the most CPU time, helping identify hotspots in your application.</p>
-            <h3 id="application-in-database-systems">Application in Database Systems</h3>
-            <p>Database systems are often multi-threaded and I/O-intensive, making them prime candidates for Task-State Analysis. For example, if a database server experiences slow query performance, monitoring thread states can reveal whether threads are waiting on I/O, locks, or CPU resources.</p>
-            <p>Suppose you notice many threads in the <code>S</code> state waiting for locks. This could indicate contention and might prompt you to optimize your queries or adjust your database configuration.</p>
-            <h3 id="shifting-focus-from-resource-utilization">Shifting Focus from Resource Utilization</h3>
-            <p>Traditional monitoring focuses on metrics like CPU and memory usage. While important, these metrics don't always tell the whole story. Task-State Analysis shifts the focus to what threads are actually doing.</p>
-            <p>By understanding thread states, you can:</p>
+            <p>Useful actions:</p>
             <ul>
-                <li>Identify if threads are mostly waiting rather than doing work.</li>
-                <li>Detect if I/O waits are causing performance issues.</li>
-                <li>Determine if there are synchronization problems causing threads to sleep.</li>
+                <li>F5 tree view</li>
+                <li>F4 filter</li>
+                <li>F3 search</li>
+                <li>F6 sort</li>
+                <li>H show or hide user threads</li>
+                <li>K show or hide kernel threads</li>
             </ul>
-            <h3 id="practical-steps-to-implement-task-state-analysis">Practical Steps to Implement Task-State Analysis</h3>
-            <ol>
-                <li>Use scripts or monitoring tools to collect thread state data at regular intervals.</li>
-                <li>Look for trends, such as an increasing number of threads in uninterruptible sleep.</li>
-                <li>Relate the thread states to what the application is doing at the time.</li>
-                <li>If unusual patterns emerge, delve deeper using more specialized tools or logs.</li>
-                <li>Based on your findings, optimize code, adjust configurations, or allocate resources as needed.</li>
-            </ol>
-            <h3 id="example-scenario-diagnosing-a-performance-issue">Example Scenario: Diagnosing a Performance Issue</h3>
-            <p>Imagine an application that has become sluggish. Users report slow response times, and initial monitoring shows that CPU usage is low. Using Task-State Analysis, you sample the thread states and find that a significant number of threads are in the <code>D</code> state.</p>
-            <p>By examining these threads, you discover they are waiting for disk I/O. Checking the disk performance with <code>iostat</code>, you notice high I/O wait times.</p>
+            <p>In <code>htop</code>, look at the state column and CPU usage.</p>
+            <p><code>htop</code> is useful when you want to interactively explore which process or thread is active.</p>
+            <h3 id="top-for-thread-view"><code>top</code> for Thread View</h3>
+            <p>To show threads in <code>top</code>, run:</p>
             <div>
-                <pre><code class="language-bash">iostat -x 1 3</code></pre>
+                <pre><code class="language-bash">top -H -p 1234</code></pre>
             </div>
-            <p>Sample output:</p>
+            <p>Meaning:</p>
+            <ul>
+                <li>-H show threads</li>
+                <li>-p monitor a specific process ID</li>
+            </ul>
+            <p>Example output:</p>
             <div>
-                <pre><code class="language-shell">avg-cpu:  %user   %nice %system %iowait  %steal   %idle
-           5.00    0.00    2.00   90.00    0.00    3.00
+                <pre><code class="language-text">PID USER  PR NI S %CPU %MEM TIME+ COMMAND
+ 1235 user  20  0 R 99.0  1.0 1:20.00 myprocess
+ 1236 user  20  0 S  0.0  1.0 0:00.10 myprocess
+ 1237 user  20  0 S  0.0  1.0 0:00.05 myprocess</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>Thread 1235 is CPU-bound.</li>
+                <li>The other threads are sleeping.</li>
+            </ul>
+            <h3 id="perf-top"><code>perf top</code></h3>
+            <p><code>perf</code> can show where CPU time is being spent.</p>
+            <p>Run:</p>
+            <div>
+                <pre><code class="language-bash">sudo perf top</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Samples: 20K of event 'cycles'
+Overhead  Shared Object      Symbol
+  35.10%  myapp              [.] calculate_hash
+  18.20%  libc.so            [.] memcpy
+   9.50%  kernel             [k] schedule</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The application spends much CPU time in calculate_hash.</li>
+                <li>memcpy also consumes noticeable CPU.</li>
+                <li>This helps identify CPU hotspots inside code.</li>
+            </ul>
+            <p><code>perf</code> is useful after task-state analysis suggests the application is CPU-bound.</p>
+            <h3 id="combining-task-states-with-other-tools">Combining Task States with Other Tools</h3>
+            <p>Task states are most useful when combined with other metrics.</p>
+            <p>
+            <table>
+                <tr>
+                    <td>Observation</td>
+                    <td>What to Check</td>
+                </tr>
+                <tr>
+                    <td><strong>Many R tasks</strong></td>
+                    <td>Check CPU usage with <code>top</code>, <code>uptime</code>, <code>vmstat</code>, <code>perf</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Many D tasks</strong></td>
+                    <td>Check disk and I/O with <code>iostat</code>, <code>iotop</code>, <code>dmesg</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Many S tasks</strong></td>
+                    <td>Check locks, network issues, application logs, and database waits</td>
+                </tr>
+                <tr>
+                    <td><strong>Many Z tasks</strong></td>
+                    <td>Check parent process behavior and whether it is reaping child processes</td>
+                </tr>
+                <tr>
+                    <td><strong>Many T tasks</strong></td>
+                    <td>Check signals, job control, and debugger activity</td>
+                </tr>
+            </table>
+            </p>
+            <p>Task-state analysis tells you where to look next.</p>
+            <h3 id="scenario-1-simulate-cpu-bound-threads-in-r-state">Scenario 1: Simulate CPU-Bound Threads in <code>R</code> State</h3>
+            <p>Create CPU pressure and observe runnable/running tasks.</p>
+            <h4 id="simulate-the-bottleneck">Simulate the Bottleneck</h4>
+            <p>Install <code>stress-ng</code> if needed:</p>
+            <div>
+                <pre><code class="language-bash">sudo apt install stress-ng</code></pre>
+            </div>
+            <p>Run four CPU workers:</p>
+            <div>
+                <pre><code class="language-bash">stress-ng --cpu 4 --timeout 60s</code></pre>
+            </div>
+            <h4 id="check-with-top">Check with <code>top</code></h4>
+            <div>
+                <pre><code class="language-bash">top</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">%Cpu(s): 96.0 us,  3.0 sy,  0.0 ni,  1.0 id,  0.0 wa
 
-Device:         rrqm/s wrqm/s   r/s   w/s  rMB/s  wMB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
-sda               0.00   0.00 100.00 50.00    5.00   2.50    70.00     5.00   50.00   30.00   70.00   5.00  75.00</code></pre>
+  PID USER      PR  NI S  %CPU COMMAND
+ 4101 user      20   0 R 399.0 stress-ng-cpu</code></pre>
             </div>
-            <p>The high <code>%iowait</code> and <code>await</code> times indicate disk latency. In this case, upgrading the storage system or optimizing disk usage could help the performance issues.</p>
-            <h3 id="understanding-the-caveats-of-task-state-analysis">Understanding the Caveats of Task-State Analysis</h3>
-            <p>While Task-State Analysis provides valuable insights, it's important to consider:</p>
+            <h4 id="check-task-states">Check Task States</h4>
+            <div>
+                <pre><code class="language-bash">ps -eLo pid,tid,stat,comm | grep stress-ng</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">4101  4101 R    stress-ng-cpu
+ 4101  4102 R    stress-ng-cpu
+ 4101  4103 R    stress-ng-cpu
+ 4101  4104 R    stress-ng-cpu</code></pre>
+            </div>
+            <p>Interpretation:
+                - The stress-ng workers are in R state.
+                - CPU user time is high.
+                - Idle time is very low.
+                - This is a CPU-bound workload.</p>
+            <h4 id="what-this-means-in-a-real-application">What This Means in a Real Application</h4>
+            <p>If an application has many <code>R</code> threads and high CPU usage, it may be doing heavy computation or spinning in a loop.</p>
+            <p>Next tools:</p>
+            <div>
+                <pre><code class="language-bash">top -H -p PID
+sudo perf top</code></pre>
+            </div>
+            <p>Possible fixes:</p>
             <ul>
-                <li>Frequent sampling can introduce overhead. Balance the frequency with the need for timely data.</li>
-                <li>Threads can change states rapidly. Sampling might miss brief but significant events.</li>
-                <li>Understanding what the thread states mean in the context of your application is crucial.</li>
+                <li>optimize CPU-heavy code</li>
+                <li>reduce worker count</li>
+                <li>add CPU capacity</li>
+                <li>use caching</li>
+                <li>move heavy jobs to off-peak hours</li>
             </ul>
-            <h3 id="combining-task-state-analysis-with-other-metrics">Combining Task-State Analysis with Other Metrics</h3>
-            <p>For a comprehensive view, combine Task-State Analysis with other monitoring methods:</p>
+            <h3 id="scenario-2-simulate-sleeping-tasks-in-s-state">Scenario 2: Simulate Sleeping Tasks in <code>S</code> State</h3>
+            <p>Show that sleeping tasks are often normal.</p>
+            <h4 id="simulate">Simulate</h4>
+            <p>Run:</p>
+            <div>
+                <pre><code class="language-bash">sleep 300</code></pre>
+            </div>
+            <p>In another terminal, find it:</p>
+            <div>
+                <pre><code class="language-bash">ps -eo pid,stat,comm | grep sleep</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">4200 S    sleep</code></pre>
+            </div>
+            <p>Interpretation:
+                - The process is sleeping while waiting for its timer to expire.
+                - This is normal.
+                - It is not consuming CPU.</p>
+            <h4 id="real-meaning">Real Meaning</h4>
+            <p>Many services spend much of their time sleeping because they are waiting for requests.</p>
+            <p>Examples:</p>
             <ul>
-                <li>Monitoring <strong>CPU and Memory Usage</strong> helps identify resource utilization levels, which can be correlated with specific thread states to better understand how each thread impacts overall system performance.</li>
-                <li>Regularly reviewing <strong>Application Logs</strong> is essential, as logs often contain error messages or warnings that can shed light on abnormal thread behavior or unexpected application issues.</li>
-                <li>Integrating <strong>Network Monitoring</strong> can be particularly useful if threads are frequently waiting on network I/O, as network performance metrics may reveal underlying issues impacting response times.</li>
-                <li><strong>Disk I/O metrics</strong> should also be reviewed, as they help in identifying delays due to storage performance, especially for threads engaged in heavy read and write operations.</li>
-                <li><strong>System-level tracing</strong> tools provide insights into thread transitions and can be valuable for identifying patterns or repeated states that might indicate inefficiencies.</li>
-                <li>Combining <strong>user activity monitoring</strong> can add context to Task-State Analysis, as user interactions can directly influence thread states, especially in interactive applications.</li>
+                <li>web server waiting for connections</li>
+                <li>cron waiting for scheduled time</li>
+                <li>daemon waiting for events</li>
+                <li>application waiting for network response</li>
             </ul>
+            <p>Sleeping alone is not a bottleneck.</p>
+            <p>The question is whether the sleep is expected.</p>
+            <h3 id="scenario-3-simulate-a-stopped-task-in-t-state">Scenario 3: Simulate a Stopped Task in <code>T</code> State</h3>
+            <p>Show what happens when a process is paused.</p>
+            <h4 id="simulate">Simulate</h4>
+            <p>Run a long sleep:</p>
+            <div>
+                <pre><code class="language-bash">sleep 300</code></pre>
+            </div>
+            <p>Find its PID:</p>
+            <div>
+                <pre><code class="language-bash">pgrep -n sleep</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">4300</code></pre>
+            </div>
+            <p>Stop it:</p>
+            <div>
+                <pre><code class="language-bash">kill -STOP 4300</code></pre>
+            </div>
+            <p>Check state:</p>
+            <div>
+                <pre><code class="language-bash">ps -p 4300 -o pid,stat,comm</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">PID STAT COMMAND
+ 4300 T    sleep</code></pre>
+            </div>
+            <p>Interpretation:
+                - T means the process is stopped.
+                - It will not continue until it receives SIGCONT.</p>
+            <p>Continue it:</p>
+            <div>
+                <pre><code class="language-bash">kill -CONT 4300</code></pre>
+            </div>
+            <p>Check again:</p>
+            <div>
+                <pre><code class="language-bash">ps -p 4300 -o pid,stat,comm</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">PID STAT COMMAND
+ 4300 S    sleep</code></pre>
+            </div>
+            <h4 id="real-meaning">Real Meaning</h4>
+            <p>A <code>T</code> state may appear when:</p>
+            <ul>
+                <li>a user presses Ctrl+Z</li>
+                <li>a debugger pauses a process</li>
+                <li>SIGSTOP is sent</li>
+                <li>job control suspends the process</li>
+            </ul>
+            <h3 id="scenario-4-simulate-a-zombie-process-in-z-state">Scenario 4: Simulate a Zombie Process in <code>Z</code> State</h3>
+            <p>Create a safe zombie process and learn how to identify it.</p>
+            <h4 id="simulate-with-python">Simulate with Python</h4>
+            <p>Create a small script:</p>
+            <div>
+                <pre><code class="language-bash">cat &gt; /tmp/make-zombie.py &lt;&lt;'EOF'
+import os
+import time
+
+pid = os.fork()
+
+if pid == 0:
+    os._exit(0)
+else:
+    time.sleep(60)
+EOF</code></pre>
+            </div>
+            <p>Run it:</p>
+            <div>
+                <pre><code class="language-bash">python3 /tmp/make-zombie.py</code></pre>
+            </div>
+            <p>In another terminal:</p>
+            <div>
+                <pre><code class="language-bash">ps -eo pid,ppid,state,cmd | awk '$3 == "Z" {print}'</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">4451  4450 Z [python3] &lt;defunct&gt;</code></pre>
+            </div>
+            <p>Interpretation:
+                - The child process exited.
+                - The parent process has not collected its exit status.
+                - The zombie will disappear when the parent exits or reaps it.</p>
+            <h4 id="real-meaning">Real Meaning</h4>
+            <p>A few temporary zombies are not usually a problem.</p>
+            <p>Many persistent zombies may mean:</p>
+            <ul>
+                <li>the parent process is buggy</li>
+                <li>the application is not handling child processes correctly</li>
+                <li>a service supervisor is not reaping children</li>
+            </ul>
+            <p>Fix the parent process rather than trying to kill the zombie directly.</p>
+            <h3 id="scenario-5-simulate-disk-i-o-pressure-and-look-for-d-state">Scenario 5: Simulate Disk I/O Pressure and Look for <code>D</code> State</h3>
+            <p>Generate disk pressure, then check for blocked tasks and disk wait.</p>
+            <p><code>D</code> state is not always easy to reproduce safely because it depends on kernel-level I/O waits. A normal disk test may create high I/O wait without leaving many visible tasks stuck in <code>D</code>.</p>
+            <h4 id="simulate-disk-pressure">Simulate Disk Pressure</h4>
+            <p>Install tools:</p>
+            <div>
+                <pre><code class="language-bash">sudo apt install fio sysstat iotop</code></pre>
+            </div>
+            <p>Run a random write workload:</p>
+            <div>
+                <pre><code class="language-bash">mkdir -p ~/task-state-lab
+
+fio --name=randwrite-test \
+    --directory=~/task-state-lab \
+    --size=1G \
+    --rw=randwrite \
+    --bs=4k \
+    --numjobs=4 \
+    --iodepth=32 \
+    --direct=1 \
+    --runtime=60 \
+    --time_based</code></pre>
+            </div>
+            <h4 id="check-task-states">Check Task States</h4>
+            <div>
+                <pre><code class="language-bash">ps -eo pid,stat,wchan:30,comm | awk '$2 ~ /^D/ {print}'</code></pre>
+            </div>
+            <p>Possible output:</p>
+            <div>
+                <pre><code class="language-text">5012 D    io_schedule                    fio</code></pre>
+            </div>
+            <p>Or there may be no output:</p>
+            <div>
+                <pre><code class="language-text"></code></pre>
+            </div>
+            <p>Interpretation:
+                If output shows <code>D</code>:</p>
+            <ul>
+                <li>The process is blocked in uninterruptible sleep.</li>
+                <li>The wait channel suggests it is waiting on I/O.</li>
+            </ul>
+            <p>If there is no <code>D</code> output:</p>
+            <ul>
+                <li>The disk can still be busy.</li>
+                <li>D state may be brief or not captured by the sample.</li>
+                <li>Check disk metrics with iostat and vmstat.</li>
+            </ul>
+            <h4 id="check-with-iostat">Check with <code>iostat</code></h4>
+            <div>
+                <pre><code class="language-bash">iostat -xz 1</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Device            r/s     w/s    rkB/s    wkB/s   await  aqu-sz  %util
+sda              0.00  5200.00    0.00  20800.0   48.30   25.60  99.90</code></pre>
+            </div>
+            <p>Interpretation:
+                - w/s is high.
+                - await is high.
+                - aqu-sz is high.
+                - %util is almost 100%.
+                - The disk is saturated even if D-state sampling does not always catch it.</p>
+            <h4 id="check-with-vmstat">Check with <code>vmstat</code></h4>
+            <div>
+                <pre><code class="language-bash">vmstat 1</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">r  b   swpd   free   buff  cache   si   so    bi    bo   in    cs us sy id wa st
+1  8      0 500000  20000 700000    0    0     0 75000 3000 9000  5  8 15 72  0</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>b is high, meaning blocked tasks.</li>
+                <li>wa is high, meaning CPU is waiting on I/O.</li>
+                <li>This confirms an I/O bottleneck.</li>
+            </ul>
+            <h3 id="scenario-6-simulate-high-load-from-cpu-vs-high-load-from-i-o">Scenario 6: Simulate High Load from CPU vs High Load from I/O</h3>
+            <p>Learn that load average can rise for different reasons.</p>
+            <h4 id="cpu-based-load">CPU-Based Load</h4>
+            <p>Run:</p>
+            <div>
+                <pre><code class="language-bash">stress-ng --cpu 4 --timeout 60s</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">uptime
+vmstat 1</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">load average: 4.20, 2.10, 1.00
+
+r  b  us sy id wa
+5  0  95  4  1  0</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>Load is high because tasks are runnable.</li>
+                <li>r is high.</li>
+                <li>CPU user time is high.</li>
+                <li>I/O wait is low.</li>
+                <li>This is CPU pressure.</li>
+            </ul>
+            <h4 id="i-o-based-load">I/O-Based Load</h4>
+            <p>Run the <code>fio</code> random write test from Scenario 5.</p>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">uptime
+vmstat 1</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">load average: 6.80, 4.10, 2.30
+
+r  b  us sy id wa
+1  8   5  8 15 72</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>Load is high, but CPU is not mostly busy.</li>
+                <li>b and wa are high.</li>
+                <li>The load comes from tasks blocked on I/O.</li>
+            </ul>
+            <h3 id="scenario-7-analyze-a-multi-threaded-process">Scenario 7: Analyze a Multi-Threaded Process</h3>
+            <p>See thread-level states inside one process.</p>
+            <h4 id="simulate-a-multi-threaded-python-program">Simulate a Multi-Threaded Python Program</h4>
+            <p>Create a script:</p>
+            <div>
+                <pre><code class="language-bash">cat &gt; /tmp/thread-states.py &lt;&lt;'EOF'
+import threading
+import time
+
+def cpu_worker():
+    while True:
+        pass
+
+def sleep_worker():
+    while True:
+        time.sleep(10)
+
+threads = []
+
+t1 = threading.Thread(target=cpu_worker, name="cpu-worker")
+t2 = threading.Thread(target=sleep_worker, name="sleep-worker")
+t3 = threading.Thread(target=sleep_worker, name="sleep-worker-2")
+
+for t in (t1, t2, t3):
+    t.daemon = True
+    t.start()
+
+time.sleep(300)
+EOF</code></pre>
+            </div>
+            <p>Run it:</p>
+            <div>
+                <pre><code class="language-bash">python3 /tmp/thread-states.py</code></pre>
+            </div>
+            <p>Find PID:</p>
+            <div>
+                <pre><code class="language-bash">pgrep -f thread-states.py</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">5200</code></pre>
+            </div>
+            <h4 id="check-threads">Check Threads</h4>
+            <div>
+                <pre><code class="language-bash">ps -L -p 5200 -o pid,tid,stat,pcpu,comm</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">PID   TID STAT %CPU COMMAND
+ 5200  5200 Sl    0.0 python3
+ 5200  5201 Rl   99.0 python3
+ 5200  5202 Sl    0.0 python3
+ 5200  5203 Sl    0.0 python3</code></pre>
+            </div>
+            <p>Interpretation:
+                - The process has multiple threads.
+                - One thread is CPU-bound in R state.
+                - Other threads are sleeping.
+                - Thread-level monitoring shows more detail than process-level monitoring alone.</p>
+            <h4 id="check-with-top">Check with <code>top</code></h4>
+            <div>
+                <pre><code class="language-bash">top -H -p 5200</code></pre>
+            </div>
+            <p>This shows CPU usage by thread.</p>
+            <h3 id="scenario-8-detect-lock-or-synchronization-waiting">Scenario 8: Detect Lock or Synchronization Waiting</h3>
+            <p>Show how an application can be slow because threads wait, even when CPU is low.</p>
+            <h4 id="simulate-with-file-locking">Simulate with File Locking</h4>
+            <p>Terminal 1:</p>
+            <div>
+                <pre><code class="language-bash">flock /tmp/demo.lock sleep 300</code></pre>
+            </div>
+            <p>Terminal 2:</p>
+            <div>
+                <pre><code class="language-bash">flock /tmp/demo.lock echo "got lock"</code></pre>
+            </div>
+            <p>The second command waits because the first command holds the lock.</p>
+            <h4 id="check-state">Check State</h4>
+            <p>Find the waiting process:</p>
+            <div>
+                <pre><code class="language-bash">ps -eo pid,stat,wchan:30,cmd | grep flock</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">5400 S    do_wait                        flock /tmp/demo.lock sleep 300
+ 5410 S    locks_lock_inode_wait          flock /tmp/demo.lock echo got lock</code></pre>
+            </div>
+            <p>Interpretation:
+                - The waiting process is sleeping.
+                - The wait channel suggests it is waiting on a lock.
+                - This is not a CPU bottleneck.
+                - It is synchronization or lock contention.</p>
+            <h4 id="real-meaning">Real Meaning</h4>
+            <p>In real applications, many sleeping threads may indicate:</p>
+            <ul>
+                <li>database lock contention</li>
+                <li>mutex contention</li>
+                <li>thread pool exhaustion</li>
+                <li>waiting on another service</li>
+                <li>waiting for a shared resource</li>
+            </ul>
+            <p>Next tools may include:</p>
+            <ul>
+                <li>application logs</li>
+                <li>database lock views</li>
+                <li>strace</li>
+                <li>perf</li>
+                <li>language runtime profilers</li>
+            </ul>
+            <h3 id="scenario-9-use-strace-to-see-what-a-sleeping-process-waits-on">Scenario 9: Use <code>strace</code> to See What a Sleeping Process Waits On</h3>
+            <p>Connect task state to system calls.</p>
+            <h4 id="simulate">Simulate</h4>
+            <p>Run:</p>
+            <div>
+                <pre><code class="language-bash">sleep 300</code></pre>
+            </div>
+            <p>Find PID:</p>
+            <div>
+                <pre><code class="language-bash">pgrep -n sleep</code></pre>
+            </div>
+            <p>Attach <code>strace</code>:</p>
+            <div>
+                <pre><code class="language-bash">sudo strace -p PID</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">restart_syscall(&lt;... resuming interrupted nanosleep ...&gt;</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <ul>
+                <li>The process is sleeping in a timer-related system call.</li>
+                <li>This confirms the S state is expected.</li>
+            </ul>
+            <p>For a network server, <code>strace</code> might show:</p>
+            <div>
+                <pre><code class="language-text">accept(...)
+poll(...)
+epoll_wait(...)</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The process is waiting for network events or connections.</code></pre>
+            </div>
+            <p>Use <code>strace</code> carefully on production systems because it can add overhead and expose sensitive data.</p>
+            <h3 id="scenario-10-create-a-simple-task-state-sampler">Scenario 10: Create a Simple Task-State Sampler</h3>
+            <p>Collect thread state counts over time.</p>
+            <h4 id="script">Script</h4>
+            <div>
+                <pre><code class="language-bash">cat &gt; ~/task-state-sampler.sh &lt;&lt;'EOF'
+#!/bin/bash
+
+INTERVAL="${1:-1}"
+COUNT="${2:-10}"
+
+for i in $(seq 1 "$COUNT"); do
+    echo "===== $(date) ====="
+    ps -eo state | sort | uniq -c
+    echo
+    sleep "$INTERVAL"
+done
+EOF
+
+chmod +x ~/task-state-sampler.sh</code></pre>
+            </div>
+            <p>Run:</p>
+            <div>
+                <pre><code class="language-bash">~/task-state-sampler.sh 1 5</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">===== Mon Jun  1 15:00:01 CEST 2026 =====
+  6 R
+210 S
+  1 Z
+
+===== Mon Jun  1 15:00:02 CEST 2026 =====
+  8 R
+208 S
+  1 Z</code></pre>
+            </div>
+            <p>Interpretation:
+                - Most tasks are sleeping.
+                - Runnable tasks are present but not extreme.
+                - One zombie exists.
+                - No D-state tasks were captured in this sample.</p>
+            <p>This kind of sampling helps show trends over time.</p>
+            <h3 id="scenario-11-sample-states-for-one-application">Scenario 11: Sample States for One Application</h3>
+            <p>Track only one process and its threads.</p>
+            <h4 id="script">Script</h4>
+            <div>
+                <pre><code class="language-bash">cat &gt; ~/sample-process-threads.sh &lt;&lt;'EOF'
+#!/bin/bash
+
+PID="$1"
+INTERVAL="${2:-1}"
+COUNT="${3:-10}"
+
+if [ -z "$PID" ]; then
+    echo "Usage: $0 PID [interval] [count]"
+    exit 1
+fi
+
+for i in $(seq 1 "$COUNT"); do
+    echo "===== $(date) ====="
+    ps -L -p "$PID" -o pid,tid,stat,pcpu,pmem,wchan:25,comm
+    echo
+    sleep "$INTERVAL"
+done
+EOF
+
+chmod +x ~/sample-process-threads.sh</code></pre>
+            </div>
+            <p>Run:</p>
+            <div>
+                <pre><code class="language-bash">~/sample-process-threads.sh 5200 1 5</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">===== Mon Jun  1 15:05:01 CEST 2026 =====
+  PID   TID STAT %CPU %MEM WCHAN                     COMMAND
+ 5200  5200 Sl    0.0  0.5 hrtimer_nanosleep          python3
+ 5200  5201 Rl   99.0  0.5 -                          python3
+ 5200  5202 Sl    0.0  0.5 hrtimer_nanosleep          python3
+ 5200  5203 Sl    0.0  0.5 hrtimer_nanosleep          python3</code></pre>
+            </div>
+            <p>Interpretation:
+                - One thread is CPU-bound.
+                - Other threads are sleeping on timers.
+                - The application slowdown, if present, would likely be caused by the CPU-heavy thread or single-threaded bottleneck.</p>
+            <h3 id="scenario-12-database-like-i-o-wait-investigation">Scenario 12: Database-Like I/O Wait Investigation</h3>
+            <p>Use task states to diagnose a slow, I/O-heavy application.</p>
+            <h4 id="symptoms">Symptoms</h4>
+            <ul>
+                <li>Users report slow queries.</li>
+                <li>CPU usage is low.</li>
+                <li>Application response time is high.</li>
+            </ul>
+            <h4 id="check-task-states">Check Task States</h4>
+            <div>
+                <pre><code class="language-bash">ps -eo pid,stat,wchan:30,comm | awk '$2 ~ /^D/ {print}'</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">6200 D    wait_on_page_bit_common        postgres
+ 6201 D    io_schedule                    postgres
+ 6202 D    io_schedule                    postgres</code></pre>
+            </div>
+            <h4 id="check-disk">Check Disk</h4>
+            <div>
+                <pre><code class="language-bash">iostat -xz 1 3</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">avg-cpu:  %user %system %iowait %idle
+           5.00    2.00   90.00  3.00
+
+Device            r/s    w/s   rkB/s   wkB/s  await  aqu-sz  %util
+sda            100.00  50.00 5120.0  2560.0   50.00    5.00  75.00</code></pre>
+            </div>
+            <p>Interpretation:
+                - Several database processes are in D state.
+                - CPU iowait is very high.
+                - Disk await is high.
+                - The database is likely waiting on storage.</p>
+            <h4 id="possible-fixes">Possible Fixes</h4>
+            <ul>
+                <li>optimize queries</li>
+                <li>add indexes carefully</li>
+                <li>increase database cache if memory allows</li>
+                <li>move data to faster storage</li>
+                <li>separate logs and data files</li>
+                <li>reduce competing disk workloads</li>
+                <li>check for disk errors</li>
+            </ul>
+            <h3 id="task-state-interpretation-guide">Task-State Interpretation Guide</h3>
+            <h4 id="pattern-many-r-tasks">Pattern: Many <code>R</code> Tasks</h4>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">20 R
+180 S</code></pre>
+            </div>
+            <p>Likely meaning:</p>
+            <div>
+                <pre><code class="language-text">CPU pressure or many runnable tasks</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">top
+vmstat 1
+uptime
+sudo perf top</code></pre>
+            </div>
+            <p>Look for:</p>
+            <ul>
+                <li>high CPU usage</li>
+                <li>low idle percentage</li>
+                <li>high run queue</li>
+                <li>specific CPU-heavy process</li>
+            </ul>
+            <h3 id="pattern-many-s-tasks">Pattern: Many <code>S</code> Tasks</h3>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">2 R
+250 S</code></pre>
+            </div>
+            <p>Likely meaning:</p>
+            <div>
+                <pre><code class="language-text">Normal idle waiting, or application-level waiting</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">ps -eo pid,stat,wchan:30,comm
+application logs
+strace -p PID</code></pre>
+            </div>
+            <p>Look for:</p>
+            <ul>
+                <li>lock waits</li>
+                <li>network waits</li>
+                <li>timer sleeps</li>
+                <li>thread pool exhaustion</li>
+                <li>external service delays</li>
+            </ul>
+            <h3 id="pattern-many-d-tasks">Pattern: Many <code>D</code> Tasks</h3>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">1 R
+180 S
+15 D</code></pre>
+            </div>
+            <p>Likely meaning:</p>
+            <div>
+                <pre><code class="language-text">I/O bottleneck or stuck kernel-level wait</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">iostat -xz 1
+vmstat 1
+sudo iotop -o
+dmesg -T | grep -iE 'error|timeout|reset|I/O'</code></pre>
+            </div>
+            <p>Look for:</p>
+            <ul>
+                <li>high iowait</li>
+                <li>high disk await</li>
+                <li>high disk queue</li>
+                <li>storage errors</li>
+                <li>network filesystem problems</li>
+            </ul>
+            <h3 id="pattern-t-tasks">Pattern: <code>T</code> Tasks</h3>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">PID STAT COMMAND
+4300 T    python3</code></pre>
+            </div>
+            <p>Likely meaning:</p>
+            <div>
+                <pre><code class="language-text">process was stopped by signal, shell job control, or debugger</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">jobs
+ps -o pid,ppid,stat,cmd -p PID</code></pre>
+            </div>
+            <p>Fix:</p>
+            <div>
+                <pre><code class="language-bash">kill -CONT PID</code></pre>
+            </div>
+            <h3 id="pattern-z-tasks">Pattern: <code>Z</code> Tasks</h3>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">PID PPID STAT CMD
+4451 4450 Z    [python3] &lt;defunct&gt;</code></pre>
+            </div>
+            <p>Likely meaning:</p>
+            <div>
+                <pre><code class="language-text">child process exited but parent did not reap it</code></pre>
+            </div>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">ps -eo pid,ppid,state,cmd | awk '$3 == "Z" {print}'</code></pre>
+            </div>
+            <p>Fix:</p>
+            <div>
+                <pre><code class="language-text">restart or fix the parent process</code></pre>
+            </div>
+            <h3 id="practical-troubleshooting-workflow">Practical Troubleshooting Workflow</h3>
+            <p>When an application is slow:</p>
+            <ol>
+                <li>Identify the process ID.</li>
+                <li>Check overall CPU, memory, and load.</li>
+                <li>Inspect thread states.</li>
+                <li>Count state patterns.</li>
+                <li>Check wait channels.</li>
+                <li>Correlate with disk, network, or logs.</li>
+                <li>Use deeper tools only when needed.</li>
+            </ol>
+            <h3 id="step-1-identify-the-pid">Step 1: Identify the PID</h3>
+            <div>
+                <pre><code class="language-bash">pgrep -af myprocess</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">1234 /usr/local/bin/myprocess --config /etc/myprocess.conf</code></pre>
+            </div>
+            <h3 id="step-2-check-overall-system-health">Step 2: Check Overall System Health</h3>
+            <div>
+                <pre><code class="language-bash">uptime
+top
+free -h
+vmstat 1</code></pre>
+            </div>
+            <p>This tells you whether the system is CPU-bound, memory-bound, or I/O-bound.</p>
+            <h3 id="step-3-inspect-threads">Step 3: Inspect Threads</h3>
+            <div>
+                <pre><code class="language-bash">ps -L -p 1234 -o pid,tid,stat,pcpu,pmem,wchan:30,comm</code></pre>
+            </div>
+            <p>Look for:</p>
+            <ul>
+                <li>many R threads</li>
+                <li>many D threads</li>
+                <li>many sleeping threads on the same wait channel</li>
+            </ul>
+            <h3 id="step-4-check-disk-if-d-state-appears">Step 4: Check Disk If D-State Appears</h3>
+            <div>
+                <pre><code class="language-bash">iostat -xz 1
+sudo iotop -o
+dmesg -T | grep -iE 'I/O|error|timeout|reset'</code></pre>
+            </div>
+            <h3 id="step-5-check-cpu-hotspots-if-r-state-dominates">Step 5: Check CPU Hotspots If R-State Dominates</h3>
+            <div>
+                <pre><code class="language-bash">top -H -p 1234
+sudo perf top</code></pre>
+            </div>
+            <h3 id="step-6-check-application-logs">Step 6: Check Application Logs</h3>
+            <div>
+                <pre><code class="language-bash">journalctl -u myservice.service -b
+tail -f /var/log/myapp.log</code></pre>
+            </div>
+            <p>Logs can reveal errors that task states alone cannot explain.</p>
+            <h3 id="caveats-of-task-state-analysis">Caveats of Task-State Analysis</h3>
+            <p>Task-state analysis is powerful, but it has limitations.</p>
+            <ul>
+                <li>Tasks can change state very quickly.</li>
+                <li>Sampling may miss short events.</li>
+                <li>State letters do not explain the full cause.</li>
+                <li>High sampling frequency can add overhead.</li>
+                <li>Some wait channels require kernel knowledge.</li>
+                <li>Application context still matters.</li>
+            </ul>
+            <p>A task in <code>S</code> state is not necessarily healthy or unhealthy.</p>
+            <p>A task in <code>D</code> state is not always a disaster if it is brief.</p>
+            <p>Interpret states together with:</p>
+            <ul>
+                <li>CPU metrics</li>
+                <li>disk metrics</li>
+                <li>network metrics</li>
+                <li>logs</li>
+                <li>application behavior</li>
+                <li>user reports</li>
+            </ul>
+            <h3 id="useful-command-summary">Useful Command Summary</h3>
+            <p>Process and thread states:</p>
+            <div>
+                <pre><code class="language-bash">ps -eo pid,stat,comm
+ps -eLo pid,tid,stat,comm
+ps -L -p PID -o pid,tid,stat,pcpu,pmem,wchan:30,comm</code></pre>
+            </div>
+            <p>Count states:</p>
+            <div>
+                <pre><code class="language-bash">ps -eo state | sort | uniq -c</code></pre>
+            </div>
+            <p>Find D-state tasks:</p>
+            <div>
+                <pre><code class="language-bash">ps -eo pid,stat,wchan:30,comm | awk '$2 ~ /^D/ {print}'</code></pre>
+            </div>
+            <p>Find zombies:</p>
+            <div>
+                <pre><code class="language-bash">ps -eo pid,ppid,state,cmd | awk '$3 == "Z" {print}'</code></pre>
+            </div>
+            <p>Inspect <code>/proc</code>:</p>
+            <div>
+                <pre><code class="language-bash">cat /proc/PID/status
+cat /proc/PID/stat
+ls /proc/PID/task</code></pre>
+            </div>
+            <p>Interactive tools:</p>
+            <div>
+                <pre><code class="language-bash">top -H -p PID
+htop
+sudo perf top</code></pre>
+            </div>
+            <p>Correlate with system metrics:</p>
+            <div>
+                <pre><code class="language-bash">uptime
+vmstat 1
+iostat -xz 1
+sudo iotop -o
+free -h
+journalctl -u service.service -b</code></pre>
+            </div>
+            <h3 id="safe-lab-cleanup">Safe Lab Cleanup</h3>
+            <p>Remove test files:</p>
+            <div>
+                <pre><code class="language-bash">rm -f /tmp/make-zombie.py
+rm -f /tmp/thread-states.py
+rm -f ~/task-state-sampler.sh
+rm -f ~/sample-process-threads.sh
+rm -rf ~/task-state-lab</code></pre>
+            </div>
+            <p>Stop leftover test processes if needed:</p>
+            <div>
+                <pre><code class="language-bash">pkill -f thread-states.py
+pkill -f stress-ng
+pkill -f fio</code></pre>
+            </div>
+            <p>Be careful with <code>pkill</code> on shared systems. Confirm process names first with:</p>
+            <div>
+                <pre><code class="language-bash">pgrep -af process-name</code></pre>
+            </div>
             <h3 id="challenges">Challenges</h3>
             <ol>
                 <li>Use the <code>ps</code> command to view the current states of all threads in a specific process. Record the states and explain the significance of each, such as <code>R</code> for running, <code>S</code> for sleeping, and <code>D</code> for uninterruptible sleep. Then, check the <code>/proc/[PID]/stat</code> file for the same process and compare the results with <code>ps</code>. Discuss how these commands help monitor thread behavior over time.</li>

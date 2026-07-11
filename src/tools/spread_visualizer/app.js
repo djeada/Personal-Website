@@ -26,18 +26,44 @@ const DATASETS = {
     }
 };
 
-const SERIES = [
-    { key: "a", label: "Dataset A", color: "#2563eb", fill: "rgba(37, 99, 235, 0.14)" },
-    { key: "b", label: "Dataset B", color: "#e11d48", fill: "rgba(225, 29, 72, 0.12)" }
+const SERIES = [{
+        key: "a",
+        label: "Dataset A",
+        color: "#2563eb",
+        fill: "rgba(37, 99, 235, 0.14)"
+    },
+    {
+        key: "b",
+        label: "Dataset B",
+        color: "#e11d48",
+        fill: "rgba(225, 29, 72, 0.12)"
+    }
 ];
 
-const SIGMA_MARKERS = [
-    { multiplier: -3, label: "-3σ" },
-    { multiplier: -2, label: "-2σ" },
-    { multiplier: -1, label: "-σ" },
-    { multiplier: 1, label: "+σ" },
-    { multiplier: 2, label: "+2σ" },
-    { multiplier: 3, label: "+3σ" }
+const SIGMA_MARKERS = [{
+        multiplier: -3,
+        label: "-3σ"
+    },
+    {
+        multiplier: -2,
+        label: "-2σ"
+    },
+    {
+        multiplier: -1,
+        label: "-σ"
+    },
+    {
+        multiplier: 1,
+        label: "+σ"
+    },
+    {
+        multiplier: 2,
+        label: "+2σ"
+    },
+    {
+        multiplier: 3,
+        label: "+3σ"
+    }
 ];
 
 const CHART = {
@@ -277,7 +303,10 @@ function resizeCanvas(activeCount, showIqr, showStd, showPoints) {
 
     const ctx = canvas.getContext("2d");
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    return { width, height };
+    return {
+        width,
+        height
+    };
 }
 
 function getColor(light, dark) {
@@ -528,13 +557,17 @@ function axisTicks(xScale) {
     const ticks = [];
 
     for (let value = Math.ceil(min / tickStep) * tickStep; value <= max; value += tickStep) {
-        ticks.push({ value });
+        ticks.push({
+            value
+        });
     }
 
     if (xScale.compressed) {
         const endpoints = [xScale.min, xScale.max]
             .filter(value => value < xScale.focusMin || value > xScale.focusMax)
-            .map(value => ({ value }));
+            .map(value => ({
+                value
+            }));
         return endpoints.concat(ticks).filter((tick, index, allTicks) => {
             const px = mapX(xScale, tick.value);
             return allTicks.findIndex(other => Math.abs(mapX(xScale, other.value) - px) < 28) === index;
@@ -564,7 +597,9 @@ function drawAxisBreaks(ctx, xScale, bottom) {
 function histogram(values, xRange) {
     const binCount = Math.max(8, Math.min(18, Math.ceil(Math.sqrt(values.length) * 3)));
     const binWidth = (xRange.max - xRange.min) / binCount;
-    const bins = Array.from({ length: binCount }, (_, index) => ({
+    const bins = Array.from({
+        length: binCount
+    }, (_, index) => ({
         start: xRange.min + index * binWidth,
         end: xRange.min + (index + 1) * binWidth,
         count: 0,
@@ -582,7 +617,10 @@ function histogram(values, xRange) {
         maxDensity = Math.max(maxDensity, bin.density);
     });
 
-    return { bins, maxDensity };
+    return {
+        bins,
+        maxDensity
+    };
 }
 
 function drawHistogram(ctx, hist, series, x, y, baseline) {
@@ -815,10 +853,22 @@ function drawBoxLabels(ctx, summary, series, x, yCenter, boxHeight, dimensions, 
     const labelDirection = seriesIndex % 2 === 0 ? -1 : 1;
     const labelY = yCenter + labelDirection * (boxHeight / 2 + labelOffset);
     const guideEndY = yCenter + labelDirection * (boxHeight / 2 + 5);
-    const labels = distributeLabels([
-        { text: "Q1", value: summary.q1, y: labelY },
-        { text: "Med", value: summary.median, y: labelY, color: series.color },
-        { text: "Q3", value: summary.q3, y: labelY }
+    const labels = distributeLabels([{
+            text: "Q1",
+            value: summary.q1,
+            y: labelY
+        },
+        {
+            text: "Med",
+            value: summary.median,
+            y: labelY,
+            color: series.color
+        },
+        {
+            text: "Q3",
+            value: summary.q3,
+            y: labelY
+        }
     ].map(item => ({
         ...item,
         targetX: x(item.value)

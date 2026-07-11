@@ -1,4 +1,4 @@
-(function () {
+(function() {
     "use strict";
 
     const STORAGE_KEY = "algorithms-course-progress-v1";
@@ -17,7 +17,7 @@
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(completed).sort((a, b) => a - b)));
         } catch (_) {
-            // Progress is an enhancement; the course still works if storage is unavailable.
+
         }
     }
 
@@ -33,7 +33,7 @@
         try {
             localStorage.setItem(LAST_KEY, String(number));
         } catch (_) {
-            // Ignore storage failures.
+
         }
     }
 

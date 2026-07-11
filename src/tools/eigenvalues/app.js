@@ -20,7 +20,9 @@
     const powerVectorOutput = document.getElementById("output-eigenvector-power");
 
     const inputs = Array.from(matrixTable.querySelectorAll("input"));
-    const grid = Array.from({ length: 4 }, (_, row) => inputs.slice(row * 4, row * 4 + 4));
+    const grid = Array.from({
+        length: 4
+    }, (_, row) => inputs.slice(row * 4, row * 4 + 4));
 
     const presets = {
         diagonal: {
@@ -148,7 +150,10 @@
             };
         }
 
-        return { matrix, error: "" };
+        return {
+            matrix,
+            error: ""
+        };
     }
 
     function writeMatrix(matrix) {
@@ -170,7 +175,10 @@
     }
 
     function characteristicPolynomial2x2(A) {
-        const [[a, b], [c, d]] = A;
+        const [
+            [a, b],
+            [c, d]
+        ] = A;
         const trace = a + d;
         const determinant = a * d - b * c;
         return [1, -trace, determinant];
@@ -276,7 +284,9 @@
             }
         }
 
-        const freeCols = Array.from({ length: size }, (_, index) => index).filter(column => !pivotCols.includes(column));
+        const freeCols = Array.from({
+            length: size
+        }, (_, index) => index).filter(column => !pivotCols.includes(column));
         const vector = Array(size).fill(0);
         if (freeCols.length === 0) return vector;
         vector[freeCols[0]] = 1;
@@ -317,7 +327,9 @@
 
     function powerIteration(matrix, maxIterations = 1000, tolerance = 1e-10) {
         const size = matrix.length;
-        let vector = normalize(Array.from({ length: size }, (_, index) => index + 1));
+        let vector = normalize(Array.from({
+            length: size
+        }, (_, index) => index + 1));
         let eigenvalue = 0;
         let converged = false;
         let iterations = 0;
@@ -340,7 +352,12 @@
             eigenvalue = nextEigenvalue;
         }
 
-        return { eigenvalue, eigenvector: vector, iterations, converged };
+        return {
+            eigenvalue,
+            eigenvector: vector,
+            iterations,
+            converged
+        };
     }
 
     function uniqueRoots(roots) {
@@ -396,7 +413,10 @@
     }
 
     function calculateExact() {
-        const { matrix, error } = readMatrix();
+        const {
+            matrix,
+            error
+        } = readMatrix();
         clearOutputs();
         if (!matrix) {
             setStatus(error, "error");
@@ -439,7 +459,10 @@
     }
 
     function calculatePower() {
-        const { matrix, error } = readMatrix();
+        const {
+            matrix,
+            error
+        } = readMatrix();
         clearOutputs();
         if (!matrix) {
             setStatus(error, "error");
