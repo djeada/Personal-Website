@@ -27,6 +27,7 @@ let currentTime = 20.5,
     running = true;
 const animated = {
     traffic: [],
+    drones: [],
     wisps: [],
     rings: [],
     beacon: []
@@ -67,7 +68,8 @@ function init() {
     renderer.toneMappingExposure = 1.1;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    host.replaceChildren(renderer.domElement);
+    host.querySelectorAll('canvas').forEach(canvas => canvas.remove());
+    host.append(renderer.domElement);
 
     controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -112,6 +114,7 @@ function createWorld() {
     createBuildings();
     createSanctum();
     createTraffic();
+    createSkyways();
     createAtmosphere();
 }
 
@@ -265,6 +268,37 @@ function createTraffic() {
     }
 }
 
+function createSkyways() {
+    const railMaterial = new THREE.MeshBasicMaterial({ color: palette.cyan, transparent: true, opacity: .46, blending: THREE.AdditiveBlending });
+    const supportMaterial = material(0x17212c, 0x12342f, .32);
+    [39, 68].forEach((radius, level) => {
+        const height = 10 + level * 8;
+        const rail = new THREE.Mesh(new THREE.TorusGeometry(radius, .24, 6, 128), railMaterial.clone());
+        rail.rotation.x = Math.PI / 2; rail.position.y = height; city.add(rail);
+        for (let i = 0; i < 12; i++) {
+            const a = i / 12 * Math.PI * 2;
+            const support = new THREE.Mesh(new THREE.CylinderGeometry(.22, .5, height, 5), supportMaterial);
+            support.position.set(Math.cos(a) * radius, height / 2, Math.sin(a) * radius); city.add(support);
+        }
+        const count = 7 + level * 3;
+        for (let i = 0; i < count; i++) {
+            const drone = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.CapsuleGeometry(.45, 1.8, 3, 7), new THREE.MeshStandardMaterial({ color: level ? 0x6d75a2 : 0x638b87, metalness: .9, roughness: .22 }));
+            body.rotation.z = Math.PI / 2;
+            const lamp = new THREE.Mesh(new THREE.SphereGeometry(.22, 6, 6), new THREE.MeshBasicMaterial({ color: i % 3 ? palette.cyan : palette.gold }));
+            lamp.position.x = 1.05; drone.add(body, lamp);
+            drone.userData = { radius, angle: i / count * Math.PI * 2, speed: (.09 + Math.random() * .045) * (i % 2 ? 1 : -1), height: height + 1.15 };
+            city.add(drone); animated.drones.push(drone);
+        }
+    });
+    const holoMaterial = new THREE.MeshBasicMaterial({ color: palette.violet, transparent: true, opacity: .28, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
+    [[-48, 34, -48], [52, 42, -20], [-18, 30, 59]].forEach(([x, y, z], i) => {
+        const marker = new THREE.Mesh(new THREE.RingGeometry(3.2, 3.5, 6), holoMaterial.clone());
+        marker.position.set(x, y, z); marker.rotation.y = i * .7; marker.userData.floatBase = y;
+        city.add(marker); animated.beacon.push(marker);
+    });
+}
+
 function createAtmosphere() {
     const positions = new Float32Array(CONFIG.particles * 3);
     for (let i = 0; i < CONFIG.particles; i++) {
@@ -382,6 +416,16 @@ function animate() {
     animated.rings.forEach((r, i) => {
         r.rotation.z += dt * (i % 2 ? .18 : -.13);
         r.position.y += Math.sin(t * .7 + i) * .003;
+    });
+    animated.drones.forEach(d => {
+        d.userData.angle += d.userData.speed * dt;
+        d.position.set(Math.cos(d.userData.angle) * d.userData.radius, d.userData.height, Math.sin(d.userData.angle) * d.userData.radius);
+        d.rotation.y = -d.userData.angle;
+    });
+    animated.beacon.forEach((b, i) => {
+        b.rotation.z = t * (.12 + i * .03);
+        b.position.y = b.userData.floatBase + Math.sin(t * .7 + i) * .8;
+        b.material.opacity = .2 + Math.sin(t * 1.3 + i) * .09;
     });
     animated.wisps.forEach(w => {
         w.rotation.y = t * .003;

@@ -2,6 +2,7 @@
     "use strict";
 
     const W = 800, H = 600, TAU = Math.PI * 2, GRID = 8;
+    const HARVEST_AMOUNT = 8;
     const nest = { x: 400, y: 310, radius: 38 };
     const food = [
         { x: 126, y: 135, radius: 28, amount: 1000, max: 1000, hue: 82 },
@@ -52,6 +53,7 @@
             this.x = nest.x + Math.cos(a) * r; this.y = nest.y + Math.sin(a) * r;
             this.angle = fresh ? a : Math.random() * TAU; this.target = this.angle;
             this.carrying = false; this.speed = .85 + Math.random() * .5; this.seed = Math.random() * 100;
+            this.stuckFrames = 0;
         }
         sense(field, offset) {
             const a = this.angle + offset, d = 28;
@@ -63,7 +65,17 @@
             }
             return value;
         }
-        blocked(x, y) { return obstacles.some(o => Math.hypot(x - o.x, y - o.y) < o.r + 5); }
+        blocked(x, y, padding = 2) { return obstacles.some(o => Math.hypot(x - o.x, y - o.y) < o.r + padding); }
+        avoidObstacles() {
+            const look = 18;
+            const ahead = this.blocked(this.x + Math.cos(this.angle) * look, this.y + Math.sin(this.angle) * look, 4);
+            if (!ahead) return;
+            const leftAngle = this.angle - .9, rightAngle = this.angle + .9;
+            const leftFree = !this.blocked(this.x + Math.cos(leftAngle) * look, this.y + Math.sin(leftAngle) * look, 3);
+            const rightFree = !this.blocked(this.x + Math.cos(rightAngle) * look, this.y + Math.sin(rightAngle) * look, 3);
+            if (leftFree !== rightFree) this.target = leftFree ? leftAngle : rightAngle;
+            else this.target += (this.seed % 2 > 1 ? 1 : -1) * 1.15;
+        }
         update() {
             const field = this.carrying ? home : nectar;
             const left = this.sense(field, -.62), center = this.sense(field, 0), right = this.sense(field, .62);
@@ -75,16 +87,28 @@
                 const homeAngle = Math.atan2(nest.y - this.y, nest.x - this.x);
                 this.target += angleDelta(this.target, homeAngle) * .075;
             }
+            this.avoidObstacles();
             this.angle += angleDelta(this.angle, this.target) * .24;
             const step = this.speed * 1.35, nx = this.x + Math.cos(this.angle) * step, ny = this.y + Math.sin(this.angle) * step;
             if (nx < 8 || nx > W - 8 || ny < 8 || ny > H - 8 || this.blocked(nx, ny)) {
-                this.target += Math.PI * (.72 + Math.random() * .55); this.angle = this.target;
-            } else { this.x = nx; this.y = ny; }
+                this.stuckFrames++;
+                this.target += (this.seed % 2 > 1 ? 1 : -1) * (1.05 + Math.random() * .55); this.angle = this.target;
+                if (this.stuckFrames > 20) {
+                    const nearest = obstacles.reduce((best, o) => !best || distance(this, o) < distance(this, best) ? o : best, null);
+                    const escape = nearest ? Math.atan2(this.y - nearest.y, this.x - nearest.x) : this.angle + Math.PI;
+                    this.x = clamp(this.x + Math.cos(escape) * 9, 10, W - 10);
+                    this.y = clamp(this.y + Math.sin(escape) * 9, 10, H - 10);
+                    this.target = escape + (Math.random() - .5) * .7; this.angle = this.target; this.stuckFrames = 0;
+                }
+            } else { this.x = nx; this.y = ny; this.stuckFrames = Math.max(0, this.stuckFrames - 2); }
             const i = gridIndex(this.x, this.y);
             (this.carrying ? nectar : home)[i] = Math.min(255, (this.carrying ? nectar : home)[i] + settings.strength * .12);
             if (!this.carrying) for (const source of food) {
-                if (source.amount > 0 && distance(this, source) < source.radius) {
-                    source.amount--; this.carrying = true; this.angle += Math.PI; this.target = this.angle;
+                const remaining = source.amount / source.max;
+                const harvestRadius = source.radius * (.3 + .7 * Math.sqrt(remaining));
+                if (source.amount > 0 && distance(this, source) < harvestRadius) {
+                    source.amount = Math.max(0, source.amount - HARVEST_AMOUNT);
+                    this.carrying = true; this.angle += Math.PI; this.target = this.angle;
                     nectar[gridIndex(source.x, source.y)] = 255; break;
                 }
             }
@@ -125,7 +149,7 @@
 
     function drawGround() {
         const bg = ctx.createRadialGradient(410, 300, 20, 400, 300, 520);
-        bg.addColorStop(0, "#18231f"); bg.addColorStop(.48, "#0e1818"); bg.addColorStop(1, "#060a0e");
+        bg.addColorStop(0, "#22352f"); bg.addColorStop(.48, "#142421"); bg.addColorStop(1, "#0a1115");
         ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
         ctx.save(); ctx.globalAlpha = .18; ctx.strokeStyle = "#61715c"; ctx.lineWidth = 1;
         for (let i = 0; i < 32; i++) {
@@ -140,11 +164,11 @@
 
     function drawTrails() {
         if (!settings.trails) return;
-        ctx.save(); ctx.globalCompositeOperation = "lighter";
+        ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.shadowBlur = 9;
         for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
             const i = r * cols + c, a = nectar[i], b = home[i];
-            if (a > 2) { ctx.fillStyle = `rgba(174,244,108,${Math.min(.17, a / 1300)})`; ctx.fillRect(c * GRID - 2, r * GRID - 2, GRID + 4, GRID + 4); }
-            if (b > 2) { ctx.fillStyle = `rgba(133,113,255,${Math.min(.14, b / 1500)})`; ctx.fillRect(c * GRID - 2, r * GRID - 2, GRID + 4, GRID + 4); }
+            if (a > 2) { ctx.shadowColor = "#9dff55"; ctx.fillStyle = `rgba(164,255,83,${Math.min(.42, .035 + a / 620)})`; ctx.beginPath(); ctx.arc(c * GRID + 4, r * GRID + 4, 4.8, 0, TAU); ctx.fill(); }
+            if (b > 2) { ctx.shadowColor = "#8d7cff"; ctx.fillStyle = `rgba(139,118,255,${Math.min(.38, .03 + b / 700)})`; ctx.beginPath(); ctx.arc(c * GRID + 4, r * GRID + 4, 4.5, 0, TAU); ctx.fill(); }
         }
         ctx.restore();
     }
@@ -178,11 +202,13 @@
     function drawFood() {
         food.forEach((f, fi) => {
             if (f.amount <= 0) return;
-            const scale = .55 + .45 * Math.sqrt(f.amount / f.max), pulse = 1 + Math.sin(frame * .025 + fi * 2) * .05;
+            const remaining = f.amount / f.max;
+            const scale = .12 + .88 * Math.sqrt(remaining), pulse = 1 + Math.sin(frame * .025 + fi * 2) * .05;
+            const shardCount = Math.max(1, Math.ceil(7 * remaining));
             ctx.save(); ctx.translate(f.x, f.y); ctx.scale(scale * pulse, scale * pulse);
             ctx.globalCompositeOperation = "lighter"; ctx.shadowBlur = 24; ctx.shadowColor = `hsla(${f.hue},90%,65%,.75)`;
-            for (let i = 0; i < 7; i++) {
-                const a = i / 7 * TAU + fi, h = 12 + (i % 3) * 6;
+            for (let i = 0; i < shardCount; i++) {
+                const a = i / shardCount * TAU + fi, h = 12 + (i % 3) * 6;
                 ctx.fillStyle = `hsla(${f.hue + i * 4},75%,${52 + i * 3}%,.72)`;
                 ctx.beginPath(); ctx.moveTo(Math.cos(a) * 5, Math.sin(a) * 5); ctx.lineTo(Math.cos(a - .2) * h, Math.sin(a - .2) * h); ctx.lineTo(Math.cos(a + .2) * h, Math.sin(a + .2) * h); ctx.closePath(); ctx.fill();
             }
