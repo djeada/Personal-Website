@@ -292,7 +292,7 @@ class LatexRenderer {
 
     prepareMathJaxSource(source) {
         const converted = this.convertUnsupportedEnvironments(source);
-        if (converted === source || this.hasMathDelimiters(converted)) {
+        if (this.hasMathDelimiters(converted)) {
             return converted;
         }
 
@@ -892,7 +892,7 @@ class LatexRenderer {
             binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
         }
 
-        return btoa(binary).replace(/\+/g, '-').replace(/\
+        return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
         }
 
         decodeContentFromURL(value) {
