@@ -25,7 +25,7 @@ let currentTime = 20.5,
     animationSpeed = 1,
     fogAmount = 28,
     running = true,
-    nextPatrolTime = 4;
+    nextPatrolTime = 2;
 const animated = {
     traffic: [],
     drones: [],
@@ -323,7 +323,7 @@ function createPatrolCraft() {
     engine.rotation.z = Math.PI / 2; engine.position.x = -4;
     const beacon = new THREE.Mesh(new THREE.SphereGeometry(.17, 6, 6), new THREE.MeshBasicMaterial({ color: 0xffb55f }));
     beacon.position.set(.2, .45, 0);
-    craft.add(hull, wings, engine, beacon); craft.scale.setScalar(.72);
+    craft.add(hull, wings, engine, beacon); craft.scale.setScalar(1.22);
     return craft;
 }
 
@@ -349,19 +349,29 @@ function launchPatrol(t) {
         craft.position.y += (i % 2) * 3;
         craft.rotation.y = -heading;
         craft.rotation.z = rand(-.08, .08);
-        craft.userData = { velocity: direction.clone().multiplyScalar(closePass ? rand(38, 48) : rand(52, 66)), born: t, life: closePass ? rand(3.8, 5) : rand(5.2, 6.5), phase: Math.random() * Math.PI * 2, rollSpeed: Math.random() < .58 ? rand(2.6, 4.8) * (Math.random() < .5 ? 1 : -1) : 0, shotAt: t + rand(.9, 2.6), fired: false, willFire: Math.random() > .42 };
+        craft.userData = { velocity: direction.clone().multiplyScalar(closePass ? rand(38, 48) : rand(52, 66)), born: t, life: closePass ? rand(3.8, 5) : rand(5.2, 6.5), phase: Math.random() * Math.PI * 2, rollSpeed: Math.random() < .58 ? rand(2.6, 4.8) * (Math.random() < .5 ? 1 : -1) : 0, shotAt: t + rand(.9, 2.6), fired: false, willFire: Math.random() < .78 };
         scene.add(craft); animated.patrols.push(craft);
     }
-    nextPatrolTime = t + rand(10, 22);
+    nextPatrolTime = t + rand(5, 10);
 }
 
 function firePatrolLaser(craft, t) {
-    const target = new THREE.Vector3(rand(-72, 72), rand(2, 18), rand(-72, 72));
-    const points = [craft.position.clone(), target];
-    const beam = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), new THREE.LineBasicMaterial({ color: 0xff456f, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false }));
-    const impact = new THREE.Mesh(new THREE.SphereGeometry(1.15, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffb06b, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false }));
-    impact.position.copy(target); scene.add(beam, impact);
-    animated.lasers.push({ beam, impact, born: t, life: .38 });
+    const target = new THREE.Vector3(rand(-74, 74), .8, rand(-74, 74));
+    const origin = craft.position.clone();
+    const direction = target.clone().sub(origin), length = direction.length();
+    const beamMaterial = new THREE.MeshBasicMaterial({ color: 0xff315f, transparent: true, opacity: .95, blending: THREE.AdditiveBlending, depthWrite: false });
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(.16, .32, length, 8), beamMaterial);
+    beam.position.copy(origin).add(target).multiplyScalar(.5);
+    beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+    const impactMaterial = new THREE.MeshBasicMaterial({ color: 0xffb06b, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false });
+    const impact = new THREE.Mesh(new THREE.SphereGeometry(1.8, 10, 10), impactMaterial);
+    impact.position.copy(target);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(1.5, 2.1, 28), impactMaterial.clone());
+    ring.rotation.x = -Math.PI / 2; ring.position.copy(target); ring.position.y = 1.05;
+    const flash = new THREE.PointLight(0xff365f, 85, 46, 2);
+    flash.position.copy(target).setY(5);
+    scene.add(beam, impact, ring, flash);
+    animated.lasers.push({ beam, impact, ring, flash, born: t, life: .82 });
 }
 
 function createAtmosphere() {
@@ -506,11 +516,15 @@ function animate() {
         const opacity = Math.max(0, 1 - progress);
         laser.beam.material.opacity = opacity;
         laser.impact.material.opacity = opacity;
-        laser.impact.scale.setScalar(1 + progress * 3.5);
+        laser.ring.material.opacity = opacity * .8;
+        laser.flash.intensity = 85 * opacity;
+        laser.impact.scale.setScalar(1 + progress * 4.5);
+        laser.ring.scale.setScalar(1 + progress * 8);
         if (progress >= 1) {
-            scene.remove(laser.beam, laser.impact);
+            scene.remove(laser.beam, laser.impact, laser.ring, laser.flash);
             laser.beam.geometry.dispose(); laser.beam.material.dispose();
             laser.impact.geometry.dispose(); laser.impact.material.dispose();
+            laser.ring.geometry.dispose(); laser.ring.material.dispose();
             animated.lasers.splice(i, 1);
         }
     }
