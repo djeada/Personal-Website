@@ -53,7 +53,7 @@
             this.x = nest.x + Math.cos(a) * r; this.y = nest.y + Math.sin(a) * r;
             this.angle = fresh ? a : Math.random() * TAU; this.target = this.angle;
             this.carrying = false; this.speed = .85 + Math.random() * .5; this.seed = Math.random() * 100;
-            this.stuckFrames = 0;
+            this.stuckFrames = 0; this.steps = Math.floor(Math.random() * 4);
         }
         sense(field, offset) {
             const a = this.angle + offset, d = 28;
@@ -101,8 +101,13 @@
                     this.target = escape + (Math.random() - .5) * .7; this.angle = this.target; this.stuckFrames = 0;
                 }
             } else { this.x = nx; this.y = ny; this.stuckFrames = Math.max(0, this.stuckFrames - 2); }
-            const i = gridIndex(this.x, this.y);
-            (this.carrying ? nectar : home)[i] = Math.min(255, (this.carrying ? nectar : home)[i] + settings.strength * .12);
+            this.steps++;
+            if (this.steps % 4 === 0) {
+                const i = gridIndex(this.x, this.y);
+                const field = this.carrying ? nectar : home;
+                const deposit = settings.strength * (this.carrying ? .065 : .012);
+                field[i] = Math.min(210, field[i] + deposit);
+            }
             if (!this.carrying) for (const source of food) {
                 const remaining = source.amount / source.max;
                 const harvestRadius = source.radius * (.3 + .7 * Math.sqrt(remaining));
@@ -119,18 +124,20 @@
         draw() {
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
             const leg = Math.sin(frame * .18 + this.seed) * 1.8;
-            ctx.strokeStyle = this.carrying ? "rgba(255,220,118,.9)" : "rgba(182,181,217,.72)";
-            ctx.lineWidth = .75;
+            ctx.strokeStyle = this.carrying ? "rgba(255,214,92,.95)" : "rgba(44,31,25,.95)";
+            ctx.lineWidth = 1.05;
             [[-1, -1], [0, 1], [1, -1]].forEach(([px, side], i) => {
                 ctx.beginPath(); ctx.moveTo(px, side * 1.5); ctx.lineTo(px - 1 + leg * (i % 2 ? -1 : 1), side * 4); ctx.stroke();
             });
-            ctx.shadowBlur = this.carrying ? 10 : 3; ctx.shadowColor = this.carrying ? "#ffd36e" : "#8f7cff";
-            ctx.fillStyle = this.carrying ? "#f1c267" : "#c5c1d9";
-            ctx.beginPath(); ctx.ellipse(-2.5, 0, 2.4, 1.8, 0, 0, TAU); ctx.ellipse(1, 0, 1.8, 1.5, 0, 0, TAU); ctx.ellipse(3.7, 0, 1.5, 1.3, 0, 0, TAU); ctx.fill();
+            ctx.shadowBlur = this.carrying ? 9 : 2; ctx.shadowColor = this.carrying ? "#ffd36e" : "#f4b46d";
+            ctx.fillStyle = this.carrying ? "#ffd268" : "#d9894f";
+            ctx.strokeStyle = "#281914"; ctx.lineWidth = .8;
+            ctx.beginPath(); ctx.ellipse(-2.5, 0, 2.6, 1.9, 0, 0, TAU); ctx.ellipse(1, 0, 1.9, 1.55, 0, 0, TAU); ctx.ellipse(3.8, 0, 1.55, 1.35, 0, 0, TAU); ctx.fill(); ctx.stroke();
             if (this.carrying) { ctx.fillStyle = "#dfff92"; ctx.beginPath(); ctx.arc(6.2, 0, 1.8, 0, TAU); ctx.fill(); }
             ctx.restore();
             if (settings.sensors) {
-                ctx.strokeStyle = "rgba(214,255,174,.16)";
+                ctx.strokeStyle = "rgba(214,255,174,.055)";
+                ctx.lineWidth = .6;
                 [-.62, 0, .62].forEach(o => { ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + Math.cos(this.angle + o) * 28, this.y + Math.sin(this.angle + o) * 28); ctx.stroke(); });
             }
         }
@@ -164,11 +171,11 @@
 
     function drawTrails() {
         if (!settings.trails) return;
-        ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.shadowBlur = 9;
+        ctx.save(); ctx.globalCompositeOperation = "lighter";
         for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
             const i = r * cols + c, a = nectar[i], b = home[i];
-            if (a > 2) { ctx.shadowColor = "#9dff55"; ctx.fillStyle = `rgba(164,255,83,${Math.min(.42, .035 + a / 620)})`; ctx.beginPath(); ctx.arc(c * GRID + 4, r * GRID + 4, 4.8, 0, TAU); ctx.fill(); }
-            if (b > 2) { ctx.shadowColor = "#8d7cff"; ctx.fillStyle = `rgba(139,118,255,${Math.min(.38, .03 + b / 700)})`; ctx.beginPath(); ctx.arc(c * GRID + 4, r * GRID + 4, 4.5, 0, TAU); ctx.fill(); }
+            if (a > 8) { ctx.fillStyle = `rgba(177,255,91,${Math.min(.24, a / 850)})`; ctx.beginPath(); ctx.arc(c * GRID + 4, r * GRID + 4, 3.1, 0, TAU); ctx.fill(); }
+            if (b > 12) { ctx.fillStyle = `rgba(139,122,255,${Math.min(.13, b / 1350)})`; ctx.beginPath(); ctx.arc(c * GRID + 4, r * GRID + 4, 2.6, 0, TAU); ctx.fill(); }
         }
         ctx.restore();
     }
