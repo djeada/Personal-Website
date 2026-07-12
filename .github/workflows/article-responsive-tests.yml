@@ -1,0 +1,33 @@
+name: Article responsive tests
+
+on:
+  pull_request:
+    paths:
+      - "src/resources/**"
+      - "src/articles/**"
+      - "tests/**"
+      - "package.json"
+      - "package-lock.json"
+      - "playwright.config.js"
+  push:
+    branches: [master]
+    paths:
+      - "src/resources/**"
+      - "src/articles/**"
+      - "tests/**"
+
+jobs:
+  article-layout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Verify bundled CSS is current
+        run: cd scripts && python3 bundle_css.py && git diff --exit-code ../src/resources/style.css
+      - run: npm run test:articles
