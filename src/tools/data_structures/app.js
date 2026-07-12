@@ -807,9 +807,10 @@ async function performOperation(operation) {
     if (stateChanged) {
         state = committedState;
         render();
-        if (operation === "add" && ["stack", "queue", "deque"].includes(currentKey)) {
+        if (operation === "add") {
             const added = Array.from(visual.querySelectorAll(".selectable")).find((node) =>
-                String(node.dataset.value) === String(highlight.value)
+                String(node.dataset.value) === String(highlight.value) ||
+                String(node.dataset.key) === String(highlight.value)
             );
             if (added) {
                 added.classList.add("animation-result", "endpoint-result");
@@ -956,7 +957,11 @@ function delay(ms) {
 }
 
 async function animateTargets(targets, label) {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return true;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        targets.forEach((node) => node.classList.add("animation-result"));
+        animationStatus.textContent = `${label} complete`;
+        return true;
+    }
     const run = ++animationRun;
     const interval = Number(animationSpeed.value) || 500;
     visualStage.classList.remove("is-finishing");
@@ -1037,6 +1042,19 @@ async function playOperationAnimation(operation) {
         else if (currentKey === "deque" && operation === "add") endpoint = nodes[nodes.length - 1];
         else if (currentKey === "deque" && operation === "special") endpoint = nodes[0];
         if (endpoint) lastAnimationTargets = [endpoint];
+    }
+    // Every renderer must produce a visible operation, even when a newly added
+    // value is absent from the pre-commit DOM or a path contains no exact match.
+    if (!lastAnimationTargets.length) {
+        const nodes = Array.from(visual.querySelectorAll(".selectable"));
+        const touched = Math.max(1, Math.min(nodes.length, lastMetrics.touched || 1));
+        if (["bst", "heap", "trie", "graph"].includes(currentKey)) {
+            lastAnimationTargets = nodes.slice(0, touched);
+        } else if (["hashTable", "set", "map"].includes(currentKey)) {
+            lastAnimationTargets = nodes.slice(0, touched);
+        } else {
+            lastAnimationTargets = nodes.slice(-touched);
+        }
     }
     return animateTargets(lastAnimationTargets, operationConfig(operation)[0]);
 }
