@@ -65,16 +65,17 @@ test("wide display equations scroll without widening or shifting the article", a
   await page.setViewportSize({ width: 320, height: 720 });
   await page.goto(articles[0], { waitUntil: "domcontentloaded" });
 
-  // MathJax is loaded from a third-party CDN in production. Insert the stable
-  // MathJax 2 output shape so the regression test does not depend on the CDN.
+  // MathJax is loaded from a third-party CDN in production. Insert its actual
+  // v2 CommonHTML output shape so the regression test does not depend on CDN
+  // availability while still exercising the production selector.
   await page.locator("#article-body").evaluate((article) => {
     const display = document.createElement("span");
-    display.className = "MathJax_Display";
-    display.innerHTML = '<span class="MathJax_CHTML" style="display:inline-block;min-width:700px">equation</span>';
+    display.className = "mjx-chtml MJXc-display";
+    display.innerHTML = '<span class="mjx-chtml MathJax_CHTML" style="display:inline-block;min-width:700px">equation</span>';
     article.append(display);
   });
 
-  const equation = page.locator('#article-body .MathJax_Display, #article-body mjx-container[display="true"]').first();
+  const equation = page.locator('#article-body .MJXc-display, #article-body .MathJax_Display, #article-body mjx-container[display="true"]').first();
   await expect(equation).toBeVisible({ timeout: 15_000 });
   const dimensions = await equation.evaluate((element) => {
     const article = document.querySelector("#article-body").getBoundingClientRect();
