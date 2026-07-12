@@ -167,6 +167,7 @@ test("Covariance Lab scales for the full ellipse and plot-wide fit line", async 
 test("Eigenvalues tool plots v, Av, and the matrix basis", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/tools/eigenvalues/", { waitUntil: "domcontentloaded" });
+  await page.locator("#plot-mode").selectOption("arbitrary");
   const vectorInputs = page.locator("#plot-vector-inputs input:not(.is-inactive)");
   await vectorInputs.nth(0).fill("2");
   await vectorInputs.nth(1).fill("-1");
@@ -185,4 +186,27 @@ test("Eigenvalues tool plots v, Av, and the matrix basis", async ({ page }) => {
   expect(plot.visibleWidth).toBeGreaterThan(700);
   expect(plot.intrinsicWidth).toBeGreaterThanOrEqual(plot.visibleWidth);
   expect(plot.label).toContain("A [2, -1, 0] = [7, -1, 2]");
+});
+
+test("Eigenvalues tool demonstrates Av = lambda v on an invariant line", async ({ page }) => {
+  await page.goto("/tools/eigenvalues/", { waitUntil: "domcontentloaded" });
+  const plot = await page.locator("#transformation-canvas").evaluate((canvas) => {
+    const vector = JSON.parse(canvas.dataset.vector);
+    const result = JSON.parse(canvas.dataset.result);
+    return {
+      vector,
+      result,
+      crossProduct: vector[0] * result[1] - vector[1] * result[0],
+      equation: document.querySelector("#transform-equation").textContent,
+      mode: document.querySelector("#plot-mode").value,
+      coordinatesLocked: [...document.querySelectorAll("#plot-vector-inputs input:not(.is-inactive)")]
+        .every((input) => input.disabled),
+    };
+  });
+  expect(plot.mode).toBe("eigenvector");
+  expect(Math.abs(plot.crossProduct)).toBeLessThan(1e-5);
+  expect(plot.equation).toContain("Av =");
+  expect(plot.equation).toContain("λ =");
+  expect(plot.equation).toContain("projection only");
+  expect(plot.coordinatesLocked).toBe(true);
 });

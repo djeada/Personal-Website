@@ -18,6 +18,12 @@
     const vectorInputs = Array.from(document.querySelectorAll("#plot-vector-inputs input"));
     const transformEquation = document.getElementById("transform-equation");
     const projectionNote = document.getElementById("projection-note");
+    const plotMode = document.getElementById("plot-mode");
+    const plotEigenpair = document.getElementById("plot-eigenpair");
+    const eigenpairControl = document.getElementById("eigenpair-control");
+    const transformDescription = document.getElementById("transform-description");
+    const plotMatrix = document.getElementById("plot-matrix");
+    let plottedEigenpairs = [];
 
     const exactValuesOutput = document.getElementById("output-eigenvalues-analytical");
     const exactVectorsOutput = document.getElementById("output-eigenvectors-analytical");
@@ -127,7 +133,7 @@
         vectorInputs.forEach((input, index) => {
             const active = index < size;
             input.classList.toggle("is-inactive", !active);
-            input.disabled = !active;
+            input.disabled = !active || plotMode.value === "eigenvector";
         });
         projectionNote.textContent = size === 2 ? "2D transformation" : `First two coordinates of ${size}D`;
         drawTransformation();
@@ -154,6 +160,36 @@
             const value = Number(input.value);
             return Number.isFinite(value) ? value : 0;
         });
+    }
+
+    function setPlottedEigenpairs(values, vectors) {
+        plottedEigenpairs = values.map((value, index) => ({ value, vector: vectors[index] }));
+        plotEigenpair.innerHTML = "";
+        plottedEigenpairs.forEach((pair, index) => {
+            const option = document.createElement("option");
+            option.value = String(index);
+            option.textContent = `λ${index + 1} = ${formatNumber(pair.value)}`;
+            plotEigenpair.appendChild(option);
+        });
+        plotMode.value = plottedEigenpairs.length ? "eigenvector" : "arbitrary";
+        syncPlotControls();
+    }
+
+    function syncPlotControls() {
+        const mode = plotMode.value;
+        const pair = plottedEigenpairs[Number(plotEigenpair.value) || 0];
+        eigenpairControl.hidden = mode !== "eigenvector";
+        vectorInputs.forEach(input => input.disabled = mode === "eigenvector" || input.classList.contains("is-inactive"));
+        document.querySelectorAll(".basis-legend").forEach(item => item.hidden = mode !== "basis");
+        if (mode === "eigenvector" && pair) {
+            pair.vector.forEach((value, index) => { vectorInputs[index].value = formatNumber(value); });
+            transformDescription.textContent = "The dashed line is invariant: Av stays on the same direction as v.";
+        } else if (mode === "basis") {
+            transformDescription.textContent = "The first two matrix columns show where the coordinate basis vectors move.";
+        } else {
+            transformDescription.textContent = "Compare an arbitrary input vector with its transformed result Av.";
+        }
+        drawTransformation();
     }
 
     function cssColor(name, fallback) {
@@ -184,7 +220,9 @@
 
     function drawTransformation() {
         const matrix = readMatrixQuietly();
-        const vector = readPlotVector();
+        const mode = plotMode.value;
+        const pair = plottedEigenpairs[Number(plotEigenpair.value) || 0];
+        const vector = mode === "eigenvector" && pair ? pair.vector.slice() : readPlotVector();
         const wrap = transformationCanvas.parentElement;
         const cssWidth = Math.max(280, wrap.clientWidth - 20);
         const cssHeight = Math.max(280, parseFloat(getComputedStyle(transformationCanvas).height) || 370);
@@ -211,14 +249,18 @@
             ctx.textAlign = "center";
             ctx.fillText("Enter a complete numeric matrix to draw the transformation.", width / 2, height / 2);
             transformEquation.textContent = "Enter a valid matrix to plot Av.";
+            plotMatrix.textContent = "A = —";
             return;
         }
+
+        plotMatrix.textContent = `A = [${matrix.map(row => `[${row.map(formatNumber).join(", ")}]`).join(", ")}]`;
 
         const result = multiplyMatrixVector(matrix, vector);
         const basis1 = [matrix[0][0], matrix[1]?.[0] || 0];
         const basis2 = [matrix[0][1] || 0, matrix[1]?.[1] || 0];
         const vectors = [[vector[0] || 0, vector[1] || 0], [result[0] || 0, result[1] || 0], basis1, basis2];
-        const extent = Math.max(1, ...vectors.flat().map(Math.abs)) * 1.25;
+        const scaleVectors = mode === "basis" ? vectors : vectors.slice(0, 2);
+        const extent = Math.max(.5, ...scaleVectors.flat().map(Math.abs)) * 1.25;
         const scale = Math.min((width - 70) / (2 * extent), (height - 60) / (2 * extent));
         const originX = width / 2;
         const originY = height / 2;
@@ -233,6 +275,15 @@
             ctx.globalAlpha = value === 0 ? 0.9 : 0.42;
             ctx.beginPath(); ctx.moveTo(px, 18); ctx.lineTo(px, height - 18); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(18, py); ctx.lineTo(width - 18, py); ctx.stroke();
+            if (value !== 0) {
+                ctx.globalAlpha = .8;
+                ctx.fillStyle = textColor;
+                ctx.font = "10px system-ui, sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText(String(value), px, originY + 14);
+                ctx.textAlign = "right";
+                ctx.fillText(String(value), originX - 7, py + 3);
+            }
         }
         ctx.globalAlpha = 1;
         ctx.fillStyle = textColor;
@@ -241,20 +292,38 @@
         ctx.fillText("y", originX + 7, 22);
 
         const basisColor = "#8b5cf6";
+        const basisTwoColor = "#ec4899";
         const vectorColor = "#f59e0b";
         const resultColor = cssColor("--tool-primary", "#2563eb");
-        [basis1, basis2].forEach((basis, index) => {
+        if (mode === "basis") [basis1, basis2].forEach((basis, index) => {
             const [endX, endY] = map(basis);
             ctx.globalAlpha = 0.7;
-            drawArrow(ctx, originX, originY, endX, endY, basisColor, `Ae${index + 1}`, 2);
+            drawArrow(ctx, originX, originY, endX, endY, index === 0 ? basisColor : basisTwoColor, `Ae${index + 1}`, 3);
         });
         ctx.globalAlpha = 1;
         const [vectorX, vectorY] = map(vectors[0]);
         const [resultX, resultY] = map(vectors[1]);
-        drawArrow(ctx, originX, originY, vectorX, vectorY, vectorColor, "v", 3);
+        if (mode === "eigenvector" && pair) {
+            const dx = vectorX - originX;
+            const dy = vectorY - originY;
+            const length = Math.hypot(dx, dy) || 1;
+            ctx.save();
+            ctx.strokeStyle = textColor;
+            ctx.globalAlpha = .55;
+            ctx.setLineDash([7, 6]);
+            ctx.beginPath();
+            ctx.moveTo(originX - dx / length * width, originY - dy / length * width);
+            ctx.lineTo(originX + dx / length * width, originY + dy / length * width);
+            ctx.stroke();
+            ctx.restore();
+        }
+        drawArrow(ctx, originX, originY, vectorX, vectorY, vectorColor, "v", 4);
         drawArrow(ctx, originX, originY, resultX, resultY, resultColor, "Av", 4);
 
-        transformEquation.textContent = `A ${formatVector(vector)} = ${formatVector(result)}`;
+        const projectionWarning = selectedSize() > 2 ? " Plot shows the x-y projection only." : "";
+        transformEquation.textContent = mode === "eigenvector" && pair ?
+            `Av = ${formatNumber(pair.value)}v; λ = ${formatNumber(pair.value)}.${projectionWarning}` :
+            `A ${formatVector(vector)} = ${formatVector(result)}.${projectionWarning}`;
         transformationCanvas.dataset.vector = JSON.stringify(vector);
         transformationCanvas.dataset.result = JSON.stringify(result);
     }
@@ -308,6 +377,7 @@
         });
         updateSizeUI();
         clearOutputs();
+        setPlottedEigenpairs([], []);
         setEmptyState("Preset loaded", "Choose exact eigenpairs or power iteration.");
         setStatus(`${size}x${size} preset loaded.`, "success");
         drawTransformation();
@@ -583,6 +653,7 @@
         }
 
         const vectors = roots.map(root => findEigenvector(matrix, root));
+        setPlottedEigenpairs(roots, vectors);
         exactValuesOutput.value = roots.map(formatNumber).join(", ");
         exactVectorsOutput.value = roots.map((root, index) =>
             `λ=${formatNumber(root)} → ${formatVector(vectors[index])}`
@@ -611,6 +682,7 @@
 
         try {
             const result = powerIteration(matrix);
+            setPlottedEigenpairs([result.eigenvalue], [result.eigenvector]);
             powerValueOutput.value = formatNumber(result.eigenvalue);
             powerVectorOutput.value = formatVector(result.eigenvector);
             renderPowerResult(result);
@@ -629,6 +701,7 @@
             input.classList.remove("has-error");
         }));
         clearOutputs();
+        setPlottedEigenpairs([], []);
         setEmptyState("No calculation yet", "Enter a matrix or choose a preset.");
         setTeaching("Choose a preset or enter a matrix, then run a method. Eigenvectors identify directions preserved by the transformation; eigenvalues show their scale.", ["Method: not run", "Real eigenpairs: —", "Dominant value: —", "Convergence: —"]);
         setStatus("Cleared.");
@@ -646,6 +719,7 @@
         input.addEventListener("input", () => {
             input.classList.remove("has-error");
             clearOutputs();
+            setPlottedEigenpairs([], []);
             setStatus("Matrix edited. Run a method to refresh results.");
             drawTransformation();
         });
@@ -655,6 +729,8 @@
     });
 
     vectorInputs.forEach(input => input.addEventListener("input", drawTransformation));
+    plotMode.addEventListener("change", syncPlotControls);
+    plotEigenpair.addEventListener("change", syncPlotControls);
     window.addEventListener("resize", drawTransformation);
     document.getElementById("dark-mode-button")?.addEventListener("click", () => setTimeout(drawTransformation, 0));
     document.addEventListener("DOMContentLoaded", drawTransformation);
