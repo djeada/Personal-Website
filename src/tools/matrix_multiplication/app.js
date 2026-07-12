@@ -19,6 +19,9 @@
     const breakdownCard = document.getElementById("breakdown-card");
     const multiplicationInsight = document.getElementById("multiplication-insight");
     const multiplicationMetrics = document.getElementById("multiplication-metrics");
+    const productCanvas = document.getElementById("matrix-product-canvas");
+    const productContext = productCanvas.getContext("2d");
+    let lastProductPlot = null;
 
     const presets = {
         standard: {
@@ -199,6 +202,94 @@
         ));
     }
 
+    function productPlotColor(value, maximum) {
+        const strength = maximum > 0 ? Math.min(1, Math.abs(value) / maximum) : 0;
+        if (Math.abs(value) < 1e-12) return "rgba(148, 163, 184, 0.10)";
+        return value > 0 ? `rgba(8, 126, 139, ${0.18 + strength * 0.72})` :
+            `rgba(220, 76, 100, ${0.18 + strength * 0.72})`;
+    }
+
+    function renderProductPlot(A, B, C, selectedRow = 0, selectedCol = 0) {
+        lastProductPlot = { A, B, C, selectedRow, selectedCol };
+        const wrap = productCanvas.parentElement;
+        const cssWidth = Math.max(680, wrap.clientWidth - 20);
+        const cssHeight = parseFloat(getComputedStyle(productCanvas).height) || 340;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        productCanvas.width = Math.round(cssWidth * dpr);
+        productCanvas.height = Math.round(cssHeight * dpr);
+        productCanvas.style.width = `${cssWidth}px`;
+        productContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const ctx = productContext;
+        const text = getComputedStyle(document.body).getPropertyValue("--tool-text").trim() || "#1e293b";
+        const muted = getComputedStyle(document.body).getPropertyValue("--tool-text-muted").trim() || "#64748b";
+        const border = getComputedStyle(document.body).getPropertyValue("--tool-border").trim() || "#dbe3ec";
+        const surface = getComputedStyle(document.body).getPropertyValue("--tool-surface-raised").trim() || "#f8fafc";
+        const accent = getComputedStyle(document.body).getPropertyValue("--tool-primary").trim() || "#087e8b";
+        const maximum = Math.max(1, ...A.flat().concat(B.flat(), C.flat()).map(Math.abs));
+        ctx.clearRect(0, 0, cssWidth, cssHeight);
+        ctx.fillStyle = surface;
+        ctx.fillRect(0, 0, cssWidth, cssHeight);
+
+        const gap = 42;
+        const panelWidth = (cssWidth - gap * 2 - 36) / 3;
+        const matrices = [
+            { name: "A", values: A, kind: "a" },
+            { name: "B", values: B, kind: "b" },
+            { name: "C = AB", values: C, kind: "c" }
+        ];
+        matrices.forEach((entry, panelIndex) => {
+            const rows = entry.values.length;
+            const cols = entry.values[0].length;
+            const cell = Math.min(62, panelWidth / cols, (cssHeight - 90) / rows);
+            const gridWidth = cell * cols;
+            const gridHeight = cell * rows;
+            const panelX = 18 + panelIndex * (panelWidth + gap);
+            const startX = panelX + (panelWidth - gridWidth) / 2;
+            const startY = 52 + (cssHeight - 72 - gridHeight) / 2;
+            ctx.fillStyle = text;
+            ctx.font = "800 16px system-ui, sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(entry.name, panelX + panelWidth / 2, 28);
+            ctx.fillStyle = muted;
+            ctx.font = "11px system-ui, sans-serif";
+            ctx.fillText(`${rows} × ${cols}`, panelX + panelWidth / 2, 44);
+
+            entry.values.forEach((row, rowIndex) => row.forEach((value, colIndex) => {
+                const x = startX + colIndex * cell;
+                const y = startY + rowIndex * cell;
+                ctx.fillStyle = productPlotColor(value, maximum);
+                ctx.fillRect(x + 1, y + 1, cell - 2, cell - 2);
+                const contributor = entry.kind === "a" ? rowIndex === selectedRow :
+                    entry.kind === "b" ? colIndex === selectedCol :
+                        rowIndex === selectedRow && colIndex === selectedCol;
+                ctx.strokeStyle = contributor ? accent : border;
+                ctx.lineWidth = contributor ? 3 : 1;
+                ctx.strokeRect(x + 1.5, y + 1.5, cell - 3, cell - 3);
+                ctx.fillStyle = text;
+                ctx.font = `${contributor ? "800" : "650"} ${Math.max(10, Math.min(14, cell * .25))}px system-ui, sans-serif`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(fmt(value), x + cell / 2, y + cell / 2);
+            }));
+
+            if (panelIndex < 2) {
+                ctx.fillStyle = muted;
+                ctx.font = "700 22px system-ui, sans-serif";
+                ctx.fillText(panelIndex === 0 ? "×" : "=", panelX + panelWidth + gap / 2, cssHeight / 2);
+            }
+        });
+        productCanvas.dataset.matrices = JSON.stringify({ A, B, C });
+        productCanvas.dataset.selection = `${selectedRow},${selectedCol}`;
+    }
+
+    function clearProductPlot() {
+        lastProductPlot = null;
+        productContext.clearRect(0, 0, productCanvas.width, productCanvas.height);
+        productCanvas.removeAttribute("data-matrices");
+        productCanvas.removeAttribute("data-selection");
+    }
+
     function renderResult(result, A, B) {
         resultTable.innerHTML = "";
         result.forEach((row, rowIndex) => {
@@ -225,6 +316,7 @@
         forEachInput(matrixBTable, input => input.classList.remove("is-contributor"));
         const selected = resultTable.rows[row]?.cells[col]?.querySelector(".result-cell");
         if (selected) selected.classList.add("is-highlighted");
+        renderProductPlot(A, B, result, row, col);
 
         A[row].forEach((_, innerIndex) => {
             matrixATable
@@ -249,6 +341,7 @@
         forEachInput(matrixBTable, input => input.classList.remove("is-contributor"));
         breakdownCard.innerHTML = "<strong>Dot product preview</strong><span>Run multiplication to see how a result cell is formed.</span>";
         setStatus(message);
+        clearProductPlot();
     }
 
     function processMatrices() {
@@ -349,6 +442,25 @@
     document.querySelectorAll("[data-preset]").forEach(button => {
         button.addEventListener("click", () => applyPreset(button.dataset.preset));
     });
+
+    window.addEventListener("resize", () => {
+        if (lastProductPlot) renderProductPlot(
+            lastProductPlot.A,
+            lastProductPlot.B,
+            lastProductPlot.C,
+            lastProductPlot.selectedRow,
+            lastProductPlot.selectedCol
+        );
+    });
+    document.getElementById("dark-mode-button")?.addEventListener("click", () => setTimeout(() => {
+        if (lastProductPlot) renderProductPlot(
+            lastProductPlot.A,
+            lastProductPlot.B,
+            lastProductPlot.C,
+            lastProductPlot.selectedRow,
+            lastProductPlot.selectedCol
+        );
+    }, 0));
 
     updateActiveCells();
     applyPreset("standard");
