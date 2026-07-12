@@ -97,3 +97,27 @@ test("wide display equations scroll without widening or shifting the article", a
   expect(dimensions.right).toBeLessThanOrEqual(dimensions.articleRight + 1);
   expect(dimensions.scrollWidth).toBeGreaterThan(dimensions.clientWidth);
 });
+
+test("article actions align with the metadata header on desktop", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(
+    "/articles/statistics_notes/statistical_inference/resampling.html",
+    { waitUntil: "domcontentloaded" },
+  );
+
+  const positions = await page.evaluate(() => {
+    const actions = document.querySelector("#article-body .article-action-buttons").getBoundingClientRect();
+    const metadata = document.querySelector(
+      '#article-body .article-action-buttons + p[style*="text-align: right"]',
+    ).getBoundingClientRect();
+    return {
+      actionsTop: actions.top,
+      actionsLeft: actions.left,
+      metadataTop: metadata.top,
+      metadataRight: metadata.right,
+    };
+  });
+
+  expect(Math.abs(positions.actionsTop - positions.metadataTop)).toBeLessThanOrEqual(10);
+  expect(positions.actionsLeft).toBeGreaterThan(positions.metadataRight - 180);
+});
