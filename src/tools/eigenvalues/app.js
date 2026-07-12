@@ -21,6 +21,7 @@
     const plotMode = document.getElementById("plot-mode");
     const plotEigenpair = document.getElementById("plot-eigenpair");
     const eigenpairControl = document.getElementById("eigenpair-control");
+    const vectorControl = document.getElementById("vector-control");
     const transformDescription = document.getElementById("transform-description");
     const plotMatrix = document.getElementById("plot-matrix");
     let plottedEigenpairs = [];
@@ -179,8 +180,10 @@
         const mode = plotMode.value;
         const pair = plottedEigenpairs[Number(plotEigenpair.value) || 0];
         eigenpairControl.hidden = mode !== "eigenvector";
+        vectorControl.hidden = mode === "basis";
         vectorInputs.forEach(input => input.disabled = mode === "eigenvector" || input.classList.contains("is-inactive"));
         document.querySelectorAll(".basis-legend").forEach(item => item.hidden = mode !== "basis");
+        document.querySelectorAll(".vector-legend").forEach(item => item.hidden = mode === "basis");
         if (mode === "eigenvector" && pair) {
             pair.vector.forEach((value, index) => { vectorInputs[index].value = formatNumber(value); });
             transformDescription.textContent = "The dashed line is invariant: Av stays on the same direction as v.";
@@ -196,13 +199,21 @@
         return getComputedStyle(document.body).getPropertyValue(name).trim() || fallback;
     }
 
-    function drawArrow(ctx, originX, originY, endX, endY, color, label, width = 3) {
+    function drawArrow(ctx, originX, originY, endX, endY, color, label, width = 3, options = {}) {
         const angle = Math.atan2(endY - originY, endX - originX);
         const head = 10;
         ctx.save();
+        const offset = options.offset || 0;
+        const offsetX = -Math.sin(angle) * offset;
+        const offsetY = Math.cos(angle) * offset;
+        originX += offsetX;
+        originY += offsetY;
+        endX += offsetX;
+        endY += offsetY;
         ctx.strokeStyle = color;
         ctx.fillStyle = color;
         ctx.lineWidth = width;
+        if (options.dashed) ctx.setLineDash([6, 4]);
         ctx.beginPath();
         ctx.moveTo(originX, originY);
         ctx.lineTo(endX, endY);
@@ -213,9 +224,41 @@
         ctx.lineTo(endX - head * Math.cos(angle + Math.PI / 6), endY - head * Math.sin(angle + Math.PI / 6));
         ctx.closePath();
         ctx.fill();
+        ctx.setLineDash([]);
         ctx.font = "700 12px system-ui, sans-serif";
-        ctx.fillText(label, endX + 7 * Math.cos(angle), endY + 7 * Math.sin(angle));
+        const labelX = endX + 9 * Math.cos(angle) - Math.sin(angle) * (options.labelOffset || 0);
+        const labelY = endY + 9 * Math.sin(angle) + Math.cos(angle) * (options.labelOffset || 0);
+        ctx.lineJoin = "round";
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = cssColor("--tool-surface-raised", "#f8fafc");
+        ctx.strokeText(label, labelX, labelY);
+        ctx.fillText(label, labelX, labelY);
         ctx.restore();
+    }
+
+    function nicePlotExtent(value) {
+        const padded = Math.max(2, value * 1.18);
+        const magnitude = 10 ** Math.floor(Math.log10(padded));
+        const normalized = padded / magnitude;
+        const step = normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+        return step * magnitude;
+    }
+
+    function matrixPlotExtent(matrix, currentVector) {
+        const candidates = [
+            [1, 0], [0, 1],
+            [matrix[0][0], matrix[1]?.[0] || 0],
+            [matrix[0][1] || 0, matrix[1]?.[1] || 0],
+            currentVector, multiplyMatrixVector(matrix, currentVector)
+        ];
+
+        // Keep one viewport for every eigenpair so changing the selection does not
+        // visually change the scale of the transformation.
+        plottedEigenpairs.forEach(({ vector }) => {
+            candidates.push(vector, multiplyMatrixVector(matrix, vector));
+        });
+
+        return nicePlotExtent(Math.max(...candidates.flat().map(value => Math.abs(value) || 0)));
     }
 
     function drawTransformation() {
@@ -259,30 +302,30 @@
         const basis1 = [matrix[0][0], matrix[1]?.[0] || 0];
         const basis2 = [matrix[0][1] || 0, matrix[1]?.[1] || 0];
         const vectors = [[vector[0] || 0, vector[1] || 0], [result[0] || 0, result[1] || 0], basis1, basis2];
-        const scaleVectors = mode === "basis" ? vectors : vectors.slice(0, 2);
-        const extent = Math.max(.5, ...scaleVectors.flat().map(Math.abs)) * 1.25;
-        const scale = Math.min((width - 70) / (2 * extent), (height - 60) / (2 * extent));
+        const extent = matrixPlotExtent(matrix, vector);
+        const scale = Math.min((width - 90) / (2 * extent), (height - 70) / (2 * extent));
         const originX = width / 2;
         const originY = height / 2;
         const map = ([x, y]) => [originX + x * scale, originY - y * scale];
 
         ctx.strokeStyle = gridColor;
         ctx.lineWidth = 1;
-        const tick = Math.max(1, Math.ceil(extent / 5));
-        for (let value = -Math.floor(extent); value <= Math.floor(extent); value += tick) {
-            const px = originX + value * scale;
-            const py = originY - value * scale;
-            ctx.globalAlpha = value === 0 ? 0.9 : 0.42;
+        const tick = extent / 5;
+        for (let value = -extent; value <= extent + tick / 2; value += tick) {
+            const cleanValue = Math.abs(value) < tick / 100 ? 0 : value;
+            const px = originX + cleanValue * scale;
+            const py = originY - cleanValue * scale;
+            ctx.globalAlpha = cleanValue === 0 ? 0.9 : 0.42;
             ctx.beginPath(); ctx.moveTo(px, 18); ctx.lineTo(px, height - 18); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(18, py); ctx.lineTo(width - 18, py); ctx.stroke();
-            if (value !== 0) {
+            if (cleanValue !== 0) {
                 ctx.globalAlpha = .8;
                 ctx.fillStyle = textColor;
                 ctx.font = "10px system-ui, sans-serif";
                 ctx.textAlign = "center";
-                ctx.fillText(String(value), px, originY + 14);
+                ctx.fillText(formatNumber(cleanValue), px, originY + 14);
                 ctx.textAlign = "right";
-                ctx.fillText(String(value), originX - 7, py + 3);
+                ctx.fillText(formatNumber(cleanValue), originX - 7, py + 3);
             }
         }
         ctx.globalAlpha = 1;
@@ -295,11 +338,19 @@
         const basisTwoColor = "#ec4899";
         const vectorColor = "#f59e0b";
         const resultColor = cssColor("--tool-primary", "#2563eb");
-        if (mode === "basis") [basis1, basis2].forEach((basis, index) => {
-            const [endX, endY] = map(basis);
-            ctx.globalAlpha = 0.7;
-            drawArrow(ctx, originX, originY, endX, endY, index === 0 ? basisColor : basisTwoColor, `Ae${index + 1}`, 3);
-        });
+        if (mode === "basis") {
+            [[1, 0], [0, 1]].forEach((basis, index) => {
+                const [endX, endY] = map(basis);
+                drawArrow(ctx, originX, originY, endX, endY, textColor, `e${index + 1}`, 2, {
+                    dashed: true,
+                    labelOffset: index === 0 ? 5 : -5
+                });
+            });
+            [basis1, basis2].forEach((basis, index) => {
+                const [endX, endY] = map(basis);
+                drawArrow(ctx, originX, originY, endX, endY, index === 0 ? basisColor : basisTwoColor, `Ae${index + 1}`, 4);
+            });
+        }
         ctx.globalAlpha = 1;
         const [vectorX, vectorY] = map(vectors[0]);
         const [resultX, resultY] = map(vectors[1]);
@@ -317,11 +368,23 @@
             ctx.stroke();
             ctx.restore();
         }
-        drawArrow(ctx, originX, originY, vectorX, vectorY, vectorColor, "v", 4);
-        drawArrow(ctx, originX, originY, resultX, resultY, resultColor, "Av", 4);
+        if (mode !== "basis") {
+            const collinearOffset = mode === "eigenvector" ? 4 : 0;
+            drawArrow(ctx, originX, originY, resultX, resultY, resultColor, "Av", 4, {
+                offset: collinearOffset,
+                labelOffset: collinearOffset
+            });
+            drawArrow(ctx, originX, originY, vectorX, vectorY, vectorColor, "v", 3, {
+                dashed: mode === "eigenvector",
+                offset: -collinearOffset,
+                labelOffset: -collinearOffset
+            });
+        }
 
         const projectionWarning = selectedSize() > 2 ? " Plot shows the x-y projection only." : "";
-        transformEquation.textContent = mode === "eigenvector" && pair ?
+        transformEquation.textContent = mode === "basis" ?
+            `Ae₁ = ${formatVector(matrix.map(row => row[0]))}; Ae₂ = ${formatVector(matrix.map(row => row[1]))}.${projectionWarning}` :
+            mode === "eigenvector" && pair ?
             `Av = ${formatNumber(pair.value)}v; λ = ${formatNumber(pair.value)}.${projectionWarning}` :
             `A ${formatVector(vector)} = ${formatVector(result)}.${projectionWarning}`;
         transformationCanvas.dataset.vector = JSON.stringify(vector);
