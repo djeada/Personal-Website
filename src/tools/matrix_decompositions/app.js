@@ -14,6 +14,7 @@
     const decompositionInsight = document.getElementById("decomposition-insight");
     const decompositionMetrics = document.getElementById("decomposition-metrics");
     const canvas = document.getElementById("decomposition-canvas");
+    const canvasContainer = document.getElementById("canvas-container");
     const ctx = canvas.getContext("2d");
 
     const matrixInputs = [
@@ -56,6 +57,7 @@
     };
 
     let currentMode = "svd";
+    let updateTimer = 0;
 
     function n(value) {
         const parsed = Number(value);
@@ -278,16 +280,26 @@
     }
 
     function clearCanvas() {
-        const rect = canvas.getBoundingClientRect();
+        const width = Math.max(280, canvasContainer.clientWidth);
+        const height = Math.max(340, Math.min(620, Math.round(width * 0.68)));
         const dpr = window.devicePixelRatio || 1;
-        canvas.width = Math.max(320, Math.floor(rect.width * dpr));
-        canvas.height = Math.floor((rect.width * 0.625) * dpr);
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        canvasContainer.style.height = `${height}px`;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ctx.clearRect(0, 0, rect.width, rect.width * 0.625);
+        ctx.clearRect(0, 0, width, height);
         return {
-            width: rect.width,
-            height: rect.width * 0.625
+            width,
+            height
         };
+    }
+
+    function scheduleAnalysis() {
+        window.clearTimeout(updateTimer);
+        setStatus("Updating…");
+        updateTimer = window.setTimeout(runAnalysis, 180);
     }
 
     function drawGrid(width, height, scale) {
@@ -566,9 +578,22 @@
         });
     });
 
-    matrixInputs.flat().forEach(input => input.addEventListener("input", () => setStatus("Matrix edited. Run analysis to refresh.")));
-    datasetInput.addEventListener("input", () => setStatus("Dataset edited. Run analysis to refresh."));
-    window.addEventListener("resize", () => runAnalysis());
+    matrixInputs.flat().forEach(input => input.addEventListener("input", scheduleAnalysis));
+    datasetInput.addEventListener("input", scheduleAnalysis);
+    matrixInputs.flat().forEach(input => input.addEventListener("keydown", event => {
+        if (event.key === "Enter") runAnalysis();
+    }));
+
+    let resizeFrame = 0;
+    const resizeVisualization = () => {
+        cancelAnimationFrame(resizeFrame);
+        resizeFrame = requestAnimationFrame(runAnalysis);
+    };
+    if ("ResizeObserver" in window) {
+        new ResizeObserver(resizeVisualization).observe(canvasContainer);
+    } else {
+        window.addEventListener("resize", resizeVisualization);
+    }
 
     setMode("svd");
 })();

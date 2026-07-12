@@ -1,164 +1,234 @@
-import subprocess
-import logging
-from pathlib import Path
+"""
+Pause and Resume Example with asyncio.Event
+
+Problem:
+Imagine an async application is processing many files.
+
+We want to control the background job while it is running:
+
+- press "p" to pause processing
+- press "r" to resume processing
+- press "q" to quit
+
+The processing task should not be destroyed when paused.
+It should simply wait at a safe checkpoint until it is allowed to continue.
+
+Why asyncio.Event is useful:
+- Event.set() means "you may continue"
+- Event.clear() means "pause at the next checkpoint"
+- await Event.wait() pauses the coroutine efficiently
+- no busy-looping
+- no repeated sleep polling
+- no blocking the whole event loop
+
+Important:
+input() is blocking, so we run it with asyncio.to_thread().
+That allows the event loop to keep running while waiting for user input.
+"""
+
+import asyncio
+import threading
+import time
 
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-
-RANDOM_DATE = False
-RANDOM_DATE_START = "2016-01-01"
-RANDOM_DATE_END = "now"
-RANDOM_DATE_SEED = ""
-SCRIPT_DIR = Path(__file__).resolve().parent
-
-SCRIPTS_TO_ARGS = {
-    "python3 clean_output_dirs.py": [],
-    "python3 generate_from_markdown.py": [],
-    "python3 generate_course_tasks.py": [],
-    "python3 generate_algo_course.py": [],
-    "python3 apply_common_elements.py": [],
-    "python3 bundle_css.py": [],
-    "python3 generate_table_of_contents.py": [],
-    "python3 generate_related_articles_section.py": [],
-    "python3 generate_quizzes.py": [],
-    "python3 generate_flashcards.py": [],
-    "./format.sh": [],
-    "python3 strip_comments.py": [],
-    "python3 generate_article_list.py": [],
-    "python3 generate_article_buttons.py": [],
-    "python3 create_site_map.py": [],
-    "./replace_navbar.sh": [],
-}
-
-
-def validate_pipeline(scripts_to_args):
-    cleaner = "python3 clean_output_dirs.py"
-    article_generator = "python3 generate_from_markdown.py"
-    scripts = list(scripts_to_args)
-
-    if cleaner not in scripts:
-        return
-    if article_generator not in scripts:
-        raise RuntimeError(
-            f"{cleaner} deletes article output, but {article_generator} is not enabled."
-        )
-    if scripts.index(article_generator) < scripts.index(cleaner):
-        raise RuntimeError(
-            f"{article_generator} must run after {cleaner} to regenerate articles."
-        )
-
-
-def run_script(script, args_list):
+def log(message: str) -> None:
     """
-    Executes a given script with specified arguments.
+    Print a message with the current thread ID.
 
-    Args:
-    script (str): The script to be executed.
-    args_list (list): A list of arguments for the script.
-
-    Raises:
-    subprocess.CalledProcessError: If the script execution fails.
+    The async worker runs on the main event-loop thread.
+    The blocking input() call runs in a helper thread through asyncio.to_thread().
     """
-    args = " ".join(args_list)
-    log_message = (
-        "\n"
-        "----------------------------------------\n"
-        f"Running script: {script}\n"
-        f"With arguments: {args}\n"
-        "----------------------------------------"
-    )
-    logging.info(log_message)
+    thread_id = threading.get_ident()
+    thread_name = threading.current_thread().name
+    print(f"[thread={thread_name}:{thread_id}] {message}")
 
-    process = subprocess.Popen(
-        f"{script} {args}",
-        shell=True,
-        cwd=SCRIPT_DIR,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
 
-    stdout_lines = []
-    stderr_lines = []
+async def process_file(filename: str) -> None:
+    """
+    Simulate async file processing.
 
-    def log_stream(stream, logger, storage):
-        for line in iter(stream.readline, ""):
-            logger(line.strip())
-            storage.append(line)
-        stream.close()
+    In a real app this might be:
+    - uploading a file
+    - downloading a file
+    - processing a message
+    - writing to a database
+    - sending data to an API
+    """
+    log(f"Started processing {filename}")
 
-    import threading
+    # Simulate several async steps inside one file.
+    for step in range(1, 4):
+        log(f"{filename}: processing chunk {step}/3")
+        await asyncio.sleep(0.7)
 
-    stdout_thread = threading.Thread(
-        target=log_stream, args=(process.stdout, logging.info, stdout_lines)
-    )
-    stderr_thread = threading.Thread(
-        target=log_stream, args=(process.stderr, logging.error, stderr_lines)
-    )
+    log(f"Finished processing {filename}")
 
-    stdout_thread.start()
-    stderr_thread.start()
 
-    stdout_thread.join()
-    stderr_thread.join()
+async def pausable_file_processor(
+    filenames: list[str],
+    resume_event: asyncio.Event,
+    stop_event: asyncio.Event,
+) -> None:
+    """
+    Process files one by one.
 
-    process.wait()
+    The important line is:
 
-    if process.returncode == 0:
-        logging.info(
-            "\n"
-            "----------------------------------------\n"
-            "Script execution completed successfully.\n"
-            "----------------------------------------\n"
-            f"Output:\n{''.join(stdout_lines)}\n"
-            "----------------------------------------"
-        )
-    else:
-        logging.error(
-            "\n"
-            "----------------------------------------\n"
-            "Script execution failed.\n"
-            "----------------------------------------\n"
-            f"Error:\n{''.join(stderr_lines)}\n"
-            "----------------------------------------"
-        )
-        raise subprocess.CalledProcessError(
-            process.returncode,
-            script,
-            output="".join(stdout_lines),
-            stderr="".join(stderr_lines),
+        await resume_event.wait()
+
+    If the event is set, the worker continues.
+    If the event is cleared, the worker pauses here without wasting CPU.
+    """
+    for filename in filenames:
+        if stop_event.is_set():
+            log("Stop requested. Exiting processor.")
+            return
+
+        # Pause checkpoint.
+        #
+        # If the user pressed "p", resume_event is cleared and this line waits.
+        # If the user pressed "r", resume_event is set and this line continues.
+        await resume_event.wait()
+
+        await process_file(filename)
+
+    log("All files processed.")
+
+
+async def command_listener(
+    resume_event: asyncio.Event,
+    stop_event: asyncio.Event,
+) -> None:
+    """
+    Listen for user commands without blocking the event loop.
+
+    input() is blocking, so we run it in a helper thread with asyncio.to_thread().
+    """
+    while not stop_event.is_set():
+        command = await asyncio.to_thread(
+            input,
+            "\nCommand: [p]ause, [r]esume, [q]uit: ",
         )
 
+        command = command.strip().lower()
 
-def run_all():
+        if command == "p":
+            resume_event.clear()
+            log("Paused. Processing will stop at the next checkpoint.")
+
+        elif command == "r":
+            resume_event.set()
+            log("Resumed.")
+
+        elif command == "q":
+            stop_event.set()
+            resume_event.set()
+            log("Quit requested.")
+            return
+
+        else:
+            log("Unknown command. Use p, r, or q.")
+
+
+async def main() -> None:
+    filenames = [
+        "users.csv",
+        "orders.csv",
+        "payments.csv",
+        "products.csv",
+        "events.csv",
+    ]
+
+    resume_event = asyncio.Event()
+    stop_event = asyncio.Event()
+
+    # Start in the resumed state.
+    resume_event.set()
+
+    processor_task = asyncio.create_task(
+        pausable_file_processor(
+            filenames,
+            resume_event,
+            stop_event,
+        )
+    )
+
+    command_task = asyncio.create_task(
+        command_listener(
+            resume_event,
+            stop_event,
+        )
+    )
+
+    done, pending = await asyncio.wait(
+        {processor_task, command_task},
+        return_when=asyncio.FIRST_COMPLETED,
+    )
+
+    # If the processor finishes first, stop the command listener.
+    stop_event.set()
+    resume_event.set()
+
+    for task in pending:
+        task.cancel()
+
+    await asyncio.gather(*pending, return_exceptions=True)
+
+    log("Program finished.")
+
+
+# ---------------------------------------------------------------------
+# What goes wrong without asyncio.Event?
+# ---------------------------------------------------------------------
+
+async def bad_pause_with_boolean_flag() -> None:
     """
-    Runs all predefined scripts with their associated command line arguments.
+    BAD APPROACH:
+
+    A simple boolean flag is easy to get wrong.
+
+    Problems:
+    - the task may poll repeatedly
+    - it may waste CPU
+    - it needs artificial sleep calls
+    - many tasks may check the flag inconsistently
+    - there is no clean "wait until resumed" primitive
+
+    This is commented out because it demonstrates what NOT to do.
     """
-    logging.info("Initiating the execution of all scripts...")
-    scripts_to_args = dict(SCRIPTS_TO_ARGS)
-    if RANDOM_DATE:
-        date_args = [
-            "--random-date-range",
-            "--random-date-start",
-            RANDOM_DATE_START,
-            "--random-date-end",
-            RANDOM_DATE_END,
-        ]
-        if RANDOM_DATE_SEED:
-            date_args.extend(["--random-date-seed", RANDOM_DATE_SEED])
-        scripts_to_args["python3 generate_from_markdown.py"] = date_args
-        scripts_to_args["python3 generate_article_list.py"] = date_args
 
-    validate_pipeline(scripts_to_args)
+    # paused = False
+    #
+    # while True:
+    #     if paused:
+    #         # This is manual polling.
+    #         # The task wakes up again and again just to ask:
+    #         # "Am I still paused?"
+    #         await asyncio.sleep(0.1)
+    #         continue
+    #
+    #     await do_some_work()
 
-    for script, args_list in scripts_to_args.items():
-        run_script(script, args_list)
-    run_script("python3 apply_common_elements.py", [])
-    run_script("./format.sh", [])
-    logging.info("All scripts executed successfully.")
+
+async def bad_blocking_input_inside_async() -> None:
+    """
+    BAD APPROACH:
+
+    Calling input() directly inside async code blocks the event loop.
+
+    While input() is waiting for the user, no other coroutine can run.
+    That means your background job would freeze completely.
+    """
+
+    # command = input("Enter command: ")
+    #
+    # Problem:
+    # This blocks the whole event-loop thread.
+    # Other async tasks cannot continue while input() waits.
 
 
 if __name__ == "__main__":
-    run_all()
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\nStopped")
