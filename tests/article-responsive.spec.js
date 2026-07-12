@@ -106,11 +106,14 @@ test("article actions align with the metadata header on desktop", async ({ page 
   );
 
   const positions = await page.evaluate(() => {
-    const actions = document.querySelector("#article-body .article-action-buttons").getBoundingClientRect();
+    const header = document.querySelector("#article-body .article-header").getBoundingClientRect();
+    const actions = document.querySelector("#article-body .article-header .article-action-buttons").getBoundingClientRect();
     const metadata = document.querySelector(
-      '#article-body .article-action-buttons + p[style*="text-align: right"]',
+      '#article-body .article-header-metadata > p[style*="text-align: right"]',
     ).getBoundingClientRect();
     return {
+      headerLeft: header.left,
+      headerRight: header.right,
       actionsTop: actions.top,
       actionsLeft: actions.left,
       metadataTop: metadata.top,
@@ -119,5 +122,6 @@ test("article actions align with the metadata header on desktop", async ({ page 
   });
 
   expect(Math.abs(positions.actionsTop - positions.metadataTop)).toBeLessThanOrEqual(10);
-  expect(positions.actionsLeft).toBeGreaterThan(positions.metadataRight - 180);
+  expect(positions.actionsLeft).toBeGreaterThanOrEqual(positions.metadataRight);
+  expect(positions.headerRight - positions.headerLeft).toBeGreaterThan(500);
 });

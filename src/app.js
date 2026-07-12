@@ -373,7 +373,33 @@ function setupHomePageReveals() {
 
 
 
+function initArticleHeader() {
+    const article = document.getElementById('article-body');
+    const actions = article?.querySelector(':scope > .article-action-buttons');
+    if (!actions || actions.closest('.article-header')) return;
+
+    const metadataItems = [];
+    let sibling = actions.nextElementSibling;
+    while (sibling && metadataItems.length < 2 && sibling.matches('p[style*="text-align: right"]')) {
+        metadataItems.push(sibling);
+        sibling = sibling.nextElementSibling;
+    }
+    if (!metadataItems.length) return;
+
+    const header = document.createElement('div');
+    header.className = 'article-header';
+    const metadata = document.createElement('div');
+    metadata.className = 'article-header-metadata';
+
+    actions.before(header);
+    metadataItems.forEach(item => metadata.appendChild(item));
+    header.append(metadata, actions);
+}
+
+
 function main() {
+
+    initArticleHeader();
 
     const darkModeButton = document.getElementById("dark-mode-button");
     darkModeButton.addEventListener("click", () => {
