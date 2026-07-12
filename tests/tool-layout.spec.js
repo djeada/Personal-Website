@@ -60,3 +60,50 @@ test("matrix result selection highlights its source row and column", async ({ pa
   expect(highlighted.a).toEqual([["1", "0"], ["1", "1"], ["1", "2"]]);
   expect(highlighted.b).toEqual([["0", "1"], ["1", "1"], ["2", "1"]]);
 });
+
+const referenceTools = [
+  "graphs",
+  "sorting",
+  "searching",
+  "logic_gates",
+  "filters",
+  "cache_simulator",
+];
+
+for (const name of referenceTools) {
+  test(`${name} uses the Data Structures reference theme`, async ({ page, context }) => {
+    await context.addCookies([{ name: "darkMode", value: "true", domain: "127.0.0.1", path: "/" }]);
+    await page.route(/google|googlesyndication/, (route) => route.abort());
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/tools/${name}/`, { waitUntil: "domcontentloaded" });
+    const theme = await page.evaluate(() => {
+      const style = getComputedStyle(document.body);
+      const content = document.querySelector("section.tool-content");
+      return {
+        reference: document.body.classList.contains("tool-reference"),
+        accent: style.getPropertyValue("--tool-primary").trim(),
+        surface: style.getPropertyValue("--tool-surface").trim(),
+        pageWidth: document.documentElement.scrollWidth,
+        viewportWidth: document.documentElement.clientWidth,
+        contentPadding: content ? parseFloat(getComputedStyle(content).paddingTop) : 0,
+      };
+    });
+    expect(theme.reference).toBe(true);
+    expect(theme.accent).toBe("#38c6c2");
+    expect(theme.surface).toBe("#17222d");
+    expect(theme.pageWidth).toBeLessThanOrEqual(theme.viewportWidth + 1);
+    expect(theme.contentPadding).toBe(0);
+  });
+}
+
+for (const name of ["ant_colony", "futuristic_city"]) {
+  test(`${name} retains its bespoke theme`, async ({ page, context }) => {
+    await context.addCookies([{ name: "darkMode", value: "true", domain: "127.0.0.1", path: "/" }]);
+    await page.goto(`/tools/${name}/`, { waitUntil: "domcontentloaded" });
+    await expect(page.locator("body")).not.toHaveClass(/tool-reference/);
+    const accent = await page.locator("body").evaluate((body) =>
+      getComputedStyle(body).getPropertyValue("--tool-primary").trim(),
+    );
+    expect(accent).toBe("#ff9d1a");
+  });
+}
