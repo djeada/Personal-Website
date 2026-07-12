@@ -201,7 +201,8 @@
 
     function drawArrow(ctx, originX, originY, endX, endY, color, label, width = 3, options = {}) {
         const angle = Math.atan2(endY - originY, endX - originX);
-        const head = 10;
+        const length = Math.hypot(endX - originX, endY - originY);
+        const head = Math.max(14, Math.min(20, length * .18));
         ctx.save();
         const offset = options.offset || 0;
         const offsetX = -Math.sin(angle) * offset;
@@ -212,7 +213,11 @@
         endY += offsetY;
         ctx.strokeStyle = color;
         ctx.fillStyle = color;
-        ctx.lineWidth = width;
+        ctx.lineWidth = Math.max(width, 5);
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 12;
         if (options.dashed) ctx.setLineDash([6, 4]);
         ctx.beginPath();
         ctx.moveTo(originX, originY);
@@ -225,11 +230,12 @@
         ctx.closePath();
         ctx.fill();
         ctx.setLineDash([]);
-        ctx.font = "700 12px system-ui, sans-serif";
+        ctx.shadowBlur = 0;
+        ctx.font = "800 14px system-ui, sans-serif";
         const labelX = endX + 9 * Math.cos(angle) - Math.sin(angle) * (options.labelOffset || 0);
         const labelY = endY + 9 * Math.sin(angle) + Math.cos(angle) * (options.labelOffset || 0);
         ctx.lineJoin = "round";
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 5;
         ctx.strokeStyle = cssColor("--tool-surface-raised", "#f8fafc");
         ctx.strokeText(label, labelX, labelY);
         ctx.fillText(label, labelX, labelY);
@@ -301,8 +307,19 @@
         const result = multiplyMatrixVector(matrix, vector);
         const basis1 = [matrix[0][0], matrix[1]?.[0] || 0];
         const basis2 = [matrix[0][1] || 0, matrix[1]?.[1] || 0];
-        const vectors = [[vector[0] || 0, vector[1] || 0], [result[0] || 0, result[1] || 0], basis1, basis2];
-        const extent = matrixPlotExtent(matrix, vector);
+        const projectedVector = [vector[0] || 0, vector[1] || 0];
+        const projectedResult = [result[0] || 0, result[1] || 0];
+        // Eigenvectors are commonly normalized in 3D, which can leave their x-y
+        // projection only a few pixels long. Normalize that projection for the
+        // drawing while preserving Av = lambda*v and the original numeric values.
+        const projectedLength = Math.hypot(...projectedVector);
+        const displayBoost = mode === "eigenvector" && projectedLength > 1e-10 ? 1 / projectedLength : 1;
+        const displayVector = projectedVector.map(value => value * displayBoost);
+        const displayResult = projectedResult.map(value => value * displayBoost);
+        const vectors = [displayVector, displayResult, basis1, basis2];
+        const extent = mode === "eigenvector" ?
+            nicePlotExtent(Math.max(...displayVector.concat(displayResult).map(value => Math.abs(value)))) :
+            matrixPlotExtent(matrix, vector);
         const scale = Math.min((width - 90) / (2 * extent), (height - 70) / (2 * extent));
         const originX = width / 2;
         const originY = height / 2;
@@ -315,11 +332,11 @@
             const cleanValue = Math.abs(value) < tick / 100 ? 0 : value;
             const px = originX + cleanValue * scale;
             const py = originY - cleanValue * scale;
-            ctx.globalAlpha = cleanValue === 0 ? 0.9 : 0.42;
+            ctx.globalAlpha = cleanValue === 0 ? 0.34 : 0.10;
             ctx.beginPath(); ctx.moveTo(px, 18); ctx.lineTo(px, height - 18); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(18, py); ctx.lineTo(width - 18, py); ctx.stroke();
             if (cleanValue !== 0) {
-                ctx.globalAlpha = .8;
+                ctx.globalAlpha = .55;
                 ctx.fillStyle = textColor;
                 ctx.font = "10px system-ui, sans-serif";
                 ctx.textAlign = "center";
@@ -336,8 +353,8 @@
 
         const basisColor = "#8b5cf6";
         const basisTwoColor = "#ec4899";
-        const vectorColor = "#f59e0b";
-        const resultColor = cssColor("--tool-primary", "#2563eb");
+        const vectorColor = "#ffd54a";
+        const resultColor = "#3b8cff";
         if (mode === "basis") {
             [[1, 0], [0, 1]].forEach((basis, index) => {
                 const [endX, endY] = map(basis);
@@ -360,7 +377,10 @@
             const length = Math.hypot(dx, dy) || 1;
             ctx.save();
             ctx.strokeStyle = textColor;
-            ctx.globalAlpha = .55;
+            ctx.globalAlpha = .42;
+            ctx.lineWidth = 2;
+            ctx.shadowColor = "rgba(255,255,255,.38)";
+            ctx.shadowBlur = 5;
             ctx.setLineDash([7, 6]);
             ctx.beginPath();
             ctx.moveTo(originX - dx / length * width, originY - dy / length * width);

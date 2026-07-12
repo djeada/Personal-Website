@@ -254,44 +254,55 @@
         // Fit the meaningful geometry, not the far-away grid corners. The grid is
         // deliberately allowed to run beyond the panel and is clipped below.
         const shapePoints = [[0, 0], [1, 0], [0, 1], [1, 1]];
-        const extent = Math.max(1.15, ...stages.flatMap(stage =>
-            shapePoints.flatMap(point => apply(stage.matrix, point).map(Math.abs))
-        )) * 1.28;
-        const scale = Math.min((panelWidth - 42) / (2 * extent), (plotHeight - 24) / (2 * extent));
         const determinant = M => M[0][0] * M[1][1] - M[0][1] * M[1][0];
-        const drawArrow = (from, to, color, label) => {
+        const drawArrow = (from, to, color) => {
             const angle = Math.atan2(to[1] - from[1], to[0] - from[0]);
-            ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 4;
+            ctx.save();
+            ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 6;
+            ctx.lineCap = "round"; ctx.lineJoin = "round";
+            ctx.shadowColor = color; ctx.shadowBlur = 12;
             ctx.beginPath(); ctx.moveTo(...from); ctx.lineTo(...to); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(...to); ctx.lineTo(to[0] - 10 * Math.cos(angle - .45), to[1] - 10 * Math.sin(angle - .45)); ctx.lineTo(to[0] - 10 * Math.cos(angle + .45), to[1] - 10 * Math.sin(angle + .45)); ctx.closePath(); ctx.fill();
-            ctx.font = "800 12px system-ui"; ctx.textAlign = "left"; ctx.fillText(label, to[0] + 7, to[1] - 7);
+            ctx.beginPath(); ctx.moveTo(...to); ctx.lineTo(to[0] - 15 * Math.cos(angle - .48), to[1] - 15 * Math.sin(angle - .48)); ctx.lineTo(to[0] - 15 * Math.cos(angle + .48), to[1] - 15 * Math.sin(angle + .48)); ctx.closePath(); ctx.fill();
+            ctx.restore();
         };
         stages.forEach((stage, index) => {
             const matrix = index === geometryStage && geometryTweenMatrix ? geometryTweenMatrix : stage.matrix;
             const left = 20 + index * (panelWidth + panelGap);
             const origin = [left + panelWidth / 2, plotTop + plotHeight / 2];
+            // Auto-fit every stage independently. A large final product must not
+            // shrink the input and intermediate vectors into unreadable dots.
+            const stageExtent = Math.max(.72, ...shapePoints.flatMap(point =>
+                apply(matrix, point).map(Math.abs)
+            )) * 1.24;
+            const scale = Math.min((panelWidth - 42) / (2 * stageExtent), (plotHeight - 24) / (2 * stageExtent));
             const mapRaw = p => [origin[0] + p[0] * scale, origin[1] - p[1] * scale];
             const map = p => mapRaw(apply(matrix, p));
-            ctx.fillStyle = index === geometryStage ? "rgba(8,126,139,.10)" : "rgba(148,163,184,.035)";
+            ctx.fillStyle = index === geometryStage ? "rgba(8,126,139,.12)" : "rgba(148,163,184,.025)";
             ctx.strokeStyle = index === geometryStage ? accent : border; ctx.lineWidth = index === geometryStage ? 2.5 : 1;
             ctx.beginPath(); ctx.roundRect(left, 8, panelWidth, height - 18, 10); ctx.fill(); ctx.stroke();
-            ctx.fillStyle = text; ctx.font = "800 16px system-ui"; ctx.textAlign = "center"; ctx.fillText(stage.title, left + panelWidth / 2, 32);
-            ctx.fillStyle = index === geometryStage ? accent : muted; ctx.font = "700 13px system-ui"; ctx.fillText(stage.formula, left + panelWidth / 2, 53);
-            ctx.fillStyle = muted; ctx.font = "11px system-ui"; ctx.fillText(stage.note, left + panelWidth / 2, 69);
+            ctx.fillStyle = text; ctx.font = "800 18px system-ui"; ctx.textAlign = "center"; ctx.fillText(stage.title, left + panelWidth / 2, 32);
+            ctx.fillStyle = index === geometryStage ? accent : text; ctx.font = "800 14px system-ui"; ctx.fillText(stage.formula, left + panelWidth / 2, 55);
+            ctx.fillStyle = muted; ctx.font = "12px system-ui"; ctx.fillText(`${stage.note} · auto-fit view`, left + panelWidth / 2, 73);
             ctx.save(); ctx.beginPath(); ctx.rect(left + 7, plotTop, panelWidth - 14, plotHeight); ctx.clip();
             for (let k = -6; k <= 6; k++) {
-                let p1 = map([k, -6]), p2 = map([k, 6]); ctx.strokeStyle = k === 0 ? "rgba(239,68,68,.42)" : border; ctx.lineWidth = k === 0 ? 1.6 : .8; ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.stroke();
-                p1 = map([-6, k]); p2 = map([6, k]); ctx.strokeStyle = k === 0 ? "rgba(56,198,194,.42)" : border; ctx.lineWidth = k === 0 ? 1.6 : .8; ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.stroke();
+                let p1 = map([k, -6]), p2 = map([k, 6]); ctx.strokeStyle = k === 0 ? "rgba(255,77,103,.24)" : "rgba(148,163,184,.09)"; ctx.lineWidth = k === 0 ? 1.5 : .7; ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.stroke();
+                p1 = map([-6, k]); p2 = map([6, k]); ctx.strokeStyle = k === 0 ? "rgba(36,224,209,.24)" : "rgba(148,163,184,.09)"; ctx.lineWidth = k === 0 ? 1.5 : .7; ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.stroke();
             }
             const vertices = [[0,0],[1,0],[1,1],[0,1]].map(map);
-            ctx.fillStyle = "rgba(244,201,93,.25)"; ctx.strokeStyle = "#f4c95d"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(...vertices[0]); vertices.slice(1).forEach(p => ctx.lineTo(...p)); ctx.closePath(); ctx.fill(); ctx.stroke();
-            vertices.forEach((p, i) => { ctx.fillStyle = "#f4c95d"; ctx.beginPath(); ctx.arc(p[0], p[1], 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = text; ctx.font = "700 10px system-ui"; ctx.fillText(["O","P","R","Q"][i], p[0] + 9, p[1] - 7); });
-            drawArrow(origin, map([1,0]), "#ef4444", index ? `${index === 1 ? "B" : "AB"}e₁` : "e₁");
-            drawArrow(origin, map([0,1]), "#38c6c2", index ? `${index === 1 ? "B" : "AB"}e₂` : "e₂");
+            ctx.save(); ctx.fillStyle = "rgba(255,213,74,.18)"; ctx.strokeStyle = "#ffd54a"; ctx.lineWidth = 5; ctx.lineJoin = "round"; ctx.shadowColor = "#ffd54a"; ctx.shadowBlur = 14; ctx.beginPath(); ctx.moveTo(...vertices[0]); vertices.slice(1).forEach(p => ctx.lineTo(...p)); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+            vertices.forEach(p => { ctx.save(); ctx.fillStyle = "#fff3a6"; ctx.shadowColor = "#ffd54a"; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(p[0], p[1], 7, 0, Math.PI * 2); ctx.fill(); ctx.restore(); });
+            drawArrow(origin, map([1,0]), "#ff4d67");
+            drawArrow(origin, map([0,1]), "#24e0d1");
             ctx.restore();
             const det = determinant(matrix);
-            ctx.fillStyle = Math.abs(det) < 1e-8 ? "#f59e0b" : muted; ctx.font = "700 11px system-ui"; ctx.textAlign = "center";
-            ctx.fillText(Math.abs(det) < 1e-8 ? "Collapsed dimension (area = 0)" : `Area scale = |det| = ${fmt(Math.abs(det))}`, left + panelWidth / 2, height - 29);
+            const first = apply(matrix, [1, 0]);
+            const second = apply(matrix, [0, 1]);
+            const prefix = index === 0 ? "" : index === 1 ? "B" : "AB";
+            ctx.font = "800 12px ui-monospace, monospace"; ctx.textAlign = "center";
+            ctx.fillStyle = "#ff4d67"; ctx.fillText(`${prefix}e₁ = (${fmt(first[0])}, ${fmt(first[1])})`, left + panelWidth * .27, height - 50);
+            ctx.fillStyle = "#24e0d1"; ctx.fillText(`${prefix}e₂ = (${fmt(second[0])}, ${fmt(second[1])})`, left + panelWidth * .73, height - 50);
+            ctx.fillStyle = Math.abs(det) < 1e-8 ? "#ffd54a" : text; ctx.font = "800 12px system-ui";
+            ctx.fillText(Math.abs(det) < 1e-8 ? "The square collapses to a line (area = 0)" : `Yellow area scales by |det| = ${fmt(Math.abs(det))}`, left + panelWidth / 2, height - 25);
             if (index < 2) { ctx.fillStyle = accent; ctx.font = "900 24px system-ui"; ctx.fillText("→", left + panelWidth + panelGap / 2, height / 2); }
         });
         geometryMessage.textContent = geometryStage === 0 ? "Start: the yellow unit square has area 1." : geometryStage === 1 ? "B acts first. The red and teal arrows are B's columns; they show where the original basis vectors land." : "A now acts on Bx. The last panel is the single transformation C = AB.";
