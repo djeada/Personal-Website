@@ -94,7 +94,10 @@ test("matrix multiplication draws 2D grid composition B then A", async ({ page }
   expect(geometry.product[1][0]).toBeCloseTo(0.63);
   expect(geometry.product[1][1]).toBeCloseTo(0.9075);
   expect(geometry.width).toBeGreaterThan(760);
-  expect(geometry.message).toContain("before transformation, after B");
+  expect(geometry.message).toContain("ordinary coordinate grid");
+  await page.locator('[data-geometry-stage="2"]').click();
+  await expect(page.locator("#matrix-geometry-canvas")).toHaveAttribute("data-stage", "2");
+  await expect(page.locator("#geometry-message")).toContainText("composition AB");
 });
 
 const referenceTools = [

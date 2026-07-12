@@ -24,6 +24,9 @@
     const geometryCanvas = document.getElementById("matrix-geometry-canvas");
     const geometryContext = geometryCanvas.getContext("2d");
     const geometryMessage = document.getElementById("geometry-message");
+    let geometryStage = 0;
+    let geometryTweenMatrix = null;
+    let geometryAnimationFrame = 0;
     let lastProductPlot = null;
 
     const presets = {
@@ -221,7 +224,7 @@
         const valid = A.length === 2 && A[0].length === 2 && B.length === 2 && B[0].length === 2;
         const wrap = geometryCanvas.parentElement;
         const width = Math.max(760, wrap.clientWidth - 16);
-        const height = parseFloat(getComputedStyle(geometryCanvas).height) || 370;
+        const height = parseFloat(getComputedStyle(geometryCanvas).height) || 520;
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
         geometryCanvas.width = Math.round(width * dpr);
         geometryCanvas.height = Math.round(height * dpr);
@@ -247,41 +250,36 @@
 
         const apply = (M, point) => [M[0][0] * point[0] + M[0][1] * point[1], M[1][0] * point[0] + M[1][1] * point[1]];
         const stages = [
-            { title: "Input x", matrix: [[1, 0], [0, 1]], subtitle: "Original grid" },
-            { title: "Bx", matrix: B, subtitle: "Apply B first" },
-            { title: "ABx", matrix: C, subtitle: "Then apply A" }
+            { title: "Input space", matrix: [[1, 0], [0, 1]], subtitle: "x" },
+            { title: "After B", matrix: B, subtitle: "Bx" },
+            { title: "After A", matrix: C, subtitle: "ABx" }
         ];
-        const samples = stages.flatMap(stage => [[-2, -2], [-2, 2], [2, -2], [2, 2]].map(p => apply(stage.matrix, p)));
+        const active = stages[geometryStage];
+        const activeMatrix = geometryTweenMatrix || active.matrix;
+        const samples = stages.flatMap(stage => [[-3, -3], [-3, 3], [3, -3], [3, 3]].map(p => apply(stage.matrix, p)));
         const extent = Math.max(2.2, ...samples.flat().map(Math.abs)) * 1.12;
-        const gap = 24;
-        const panelWidth = (width - gap * 2 - 24) / 3;
-        const plotSize = Math.min(panelWidth - 18, height - 82);
+        const plotSize = Math.min(width - 90, height - 80);
         const scale = plotSize / (2 * extent);
-
-        stages.forEach((stage, stageIndex) => {
-            const panelX = 12 + stageIndex * (panelWidth + gap);
-            const originX = panelX + panelWidth / 2;
-            const originY = 58 + plotSize / 2;
-            const map = point => { const p = apply(stage.matrix, point); return [originX + p[0] * scale, originY - p[1] * scale]; };
-            ctx.fillStyle = text; ctx.font = "800 15px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.fillText(stage.title, originX, 22);
-            ctx.fillStyle = muted; ctx.font = "11px system-ui, sans-serif"; ctx.fillText(stage.subtitle, originX, 39);
-            ctx.save(); ctx.beginPath(); ctx.rect(panelX, 48, panelWidth, plotSize + 18); ctx.clip();
-            ctx.strokeStyle = border; ctx.lineWidth = 1;
-            for (let k = -3; k <= 3; k++) {
-                let p1 = map([k, -3]), p2 = map([k, 3]); ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.stroke();
-                p1 = map([-3, k]); p2 = map([3, k]); ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.stroke();
-            }
-            const square = [[0, 0], [1, 0], [1, 1], [0, 1]].map(map);
-            ctx.fillStyle = "rgba(244, 201, 93, .18)"; ctx.strokeStyle = "#f4c95d"; ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.moveTo(...square[0]); square.slice(1).forEach(p => ctx.lineTo(...p)); ctx.closePath(); ctx.fill(); ctx.stroke();
-            const drawBasis = (basis, color, label) => { const end = map(basis); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(originX, originY); ctx.lineTo(...end); ctx.stroke(); ctx.font = "700 11px system-ui"; ctx.fillText(label, end[0] + 8, end[1] - 5); };
-            drawBasis([1, 0], "#ef4444", "e₁"); drawBasis([0, 1], "#38c6c2", "e₂");
-            ctx.restore();
-            if (stageIndex < 2) { ctx.fillStyle = muted; ctx.font = "700 22px system-ui"; ctx.fillText("→", panelX + panelWidth + gap / 2, height / 2); }
-        });
-        geometryMessage.textContent = "The same unit square is shown before transformation, after B, and after the composed transformation AB.";
+        const originX = width / 2;
+        const originY = height / 2 + 16;
+        const map = point => { const p = apply(activeMatrix, point); return [originX + p[0] * scale, originY - p[1] * scale]; };
+        ctx.fillStyle = text; ctx.font = "800 18px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.fillText(active.title, originX, 25);
+        ctx.fillStyle = muted; ctx.font = "12px system-ui, sans-serif"; ctx.fillText(`${active.subtitle} — basis vectors are the columns of ${geometryStage === 0 ? "I" : geometryStage === 1 ? "B" : "AB"}`, originX, 44);
+        ctx.save(); ctx.beginPath(); ctx.rect(20, 54, width - 40, height - 68); ctx.clip();
+        for (let k = -7; k <= 7; k++) {
+            let p1 = map([k, -7]), p2 = map([k, 7]); ctx.strokeStyle = k === 0 ? "rgba(239,68,68,.55)" : border; ctx.lineWidth = k === 0 ? 2 : 1; ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.stroke();
+            p1 = map([-7, k]); p2 = map([7, k]); ctx.strokeStyle = k === 0 ? "rgba(56,198,194,.55)" : border; ctx.lineWidth = k === 0 ? 2 : 1; ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.stroke();
+        }
+        const square = [[0, 0], [1, 0], [1, 1], [0, 1]].map(map);
+        ctx.fillStyle = "rgba(244, 201, 93, .22)"; ctx.strokeStyle = "#f4c95d"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(...square[0]); square.slice(1).forEach(p => ctx.lineTo(...p)); ctx.closePath(); ctx.fill(); ctx.stroke();
+        const drawBasis = (basis, color, label) => { const end = map(basis); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(originX, originY); ctx.lineTo(...end); ctx.stroke(); ctx.font = "800 13px system-ui"; ctx.fillText(label, end[0] + 12, end[1] - 8); };
+        drawBasis([1, 0], "#ef4444", geometryStage === 0 ? "e₁" : geometryStage === 1 ? "Be₁" : "ABe₁");
+        drawBasis([0, 1], "#38c6c2", geometryStage === 0 ? "e₂" : geometryStage === 1 ? "Be₂" : "ABe₂");
+        ctx.restore();
+        geometryMessage.textContent = geometryStage === 0 ? "Start with the ordinary coordinate grid and unit square." : geometryStage === 1 ? "B moves the grid first. Its columns are the new basis directions." : "A acts on the already-transformed grid, producing the composition AB.";
         geometryCanvas.dataset.available = "true";
         geometryCanvas.dataset.product = JSON.stringify(C);
+        geometryCanvas.dataset.stage = String(geometryStage);
     }
 
     function renderProductPlot(A, B, C, selectedRow = 0, selectedCol = 0) {
@@ -456,6 +454,7 @@
 
     function applyPreset(name) {
         const preset = presets[name];
+        if (name === "geometric") geometryStage = 0;
         rowsASelect.value = String(preset.dims[0]);
         colsASelect.value = String(preset.dims[1]);
         rowsBSelect.value = String(preset.dims[2]);
@@ -464,6 +463,40 @@
         writeMatrix(matrixATable, preset.A);
         writeMatrix(matrixBTable, preset.B);
         processMatrices();
+    }
+
+    function setGeometryStage(stage) {
+        geometryStage = stage;
+        geometryTweenMatrix = null;
+        document.querySelectorAll("[data-geometry-stage]").forEach(button =>
+            button.classList.toggle("is-active", Number(button.dataset.geometryStage) === stage)
+        );
+        if (lastProductPlot) drawGeometricProduct(lastProductPlot.A, lastProductPlot.B, lastProductPlot.C);
+    }
+
+    function animateGeometry() {
+        if (!lastProductPlot || lastProductPlot.A.length !== 2 || lastProductPlot.A[0].length !== 2 || lastProductPlot.B.length !== 2 || lastProductPlot.B[0].length !== 2) {
+            setStatus("Choose the 2D geometry preset before animating.", "error");
+            return;
+        }
+        cancelAnimationFrame(geometryAnimationFrame);
+        const identity = [[1, 0], [0, 1]];
+        const stages = [identity, lastProductPlot.B, lastProductPlot.C];
+        let transition = 0;
+        let started = performance.now();
+        const duration = 900;
+        const frame = now => {
+            const raw = Math.max(0, Math.min(1, (now - started) / duration));
+            const t = raw * raw * (3 - 2 * raw);
+            geometryStage = transition + 1;
+            geometryTweenMatrix = stages[transition].map((row, r) => row.map((value, c) => value + (stages[transition + 1][r][c] - value) * t));
+            document.querySelectorAll("[data-geometry-stage]").forEach(button => button.classList.toggle("is-active", Number(button.dataset.geometryStage) === geometryStage));
+            drawGeometricProduct(lastProductPlot.A, lastProductPlot.B, lastProductPlot.C);
+            if (raw < 1) geometryAnimationFrame = requestAnimationFrame(frame);
+            else if (transition === 0) { transition = 1; started = now + 180; geometryAnimationFrame = requestAnimationFrame(frame); }
+            else { geometryTweenMatrix = null; setGeometryStage(2); }
+        };
+        geometryAnimationFrame = requestAnimationFrame(frame);
     }
 
     function clearAll() {
@@ -519,6 +552,10 @@
     document.querySelectorAll("[data-preset]").forEach(button => {
         button.addEventListener("click", () => applyPreset(button.dataset.preset));
     });
+    document.querySelectorAll("[data-geometry-stage]").forEach(button =>
+        button.addEventListener("click", () => setGeometryStage(Number(button.dataset.geometryStage)))
+    );
+    document.getElementById("play-geometry").addEventListener("click", animateGeometry);
 
     window.addEventListener("resize", () => {
         if (lastProductPlot) renderProductPlot(
