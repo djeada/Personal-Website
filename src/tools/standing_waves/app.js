@@ -36,7 +36,12 @@ const plotLeft = margin;
 const plotRight = cw - margin;
 const plotWidth = plotRight - plotLeft;
 const centerY = ch / 2;
-const amplitude = (ch - 2 * margin) / 2 * 0.8;
+// Each travelling wave has amplitude A, so their superposition can reach 2A.
+// Scale one physical amplitude to half the available vertical half-range and
+// retain extra headroom for stroke width, markers, and envelope labels.
+const maxStandingAmplitude = 2;
+const verticalHalfRange = (ch - 2 * margin) / 2;
+const pixelsPerAmplitude = verticalHalfRange * 0.88 / maxStandingAmplitude;
 
 function getCSSColor(variableName) {
     return getComputedStyle(document.documentElement)
@@ -149,9 +154,9 @@ function drawAxis() {
     ctx.fillText("0", plotLeft, ch - margin + 16);
     ctx.fillText("L", plotRight, ch - margin + 16);
     ctx.textAlign = "right";
-    ctx.fillText("+A", plotLeft - 8, margin + 5);
+    ctx.fillText("+2A", plotLeft - 8, margin + 5);
     ctx.fillText("0", plotLeft - 8, centerY + 4);
-    ctx.fillText("−A", plotLeft - 8, ch - margin + 5);
+    ctx.fillText("−2A", plotLeft - 8, ch - margin + 5);
 
     if (isFixedBoundary()) {
         ctx.strokeStyle = getCSSColor('--text-primary');
@@ -173,6 +178,10 @@ function drawAxis() {
 }
 
 function drawWave(waveFunc, t, color, lineWidth) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(plotLeft, margin, plotWidth, ch - 2 * margin);
+    ctx.clip();
     ctx.strokeStyle = color;
     ctx.lineWidth = lineWidth;
     ctx.beginPath();
@@ -181,7 +190,7 @@ function drawWave(waveFunc, t, color, lineWidth) {
         var xNorm = i / steps;
         var val = waveFunc(xNorm, t);
         var px = plotLeft + i;
-        var py = centerY - val * amplitude;
+        var py = centerY - val * pixelsPerAmplitude;
         if (i === 0) {
             ctx.moveTo(px, py);
         } else {
@@ -189,9 +198,14 @@ function drawWave(waveFunc, t, color, lineWidth) {
         }
     }
     ctx.stroke();
+    ctx.restore();
 }
 
 function drawEnvelope() {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(plotLeft, margin, plotWidth, ch - 2 * margin);
+    ctx.clip();
     ctx.setLineDash([4, 4]);
     ctx.lineWidth = 1.5;
     ctx.strokeStyle = getCSSColor('--primary-color') + "66";
@@ -212,7 +226,7 @@ function drawEnvelope() {
     ctx.beginPath();
     for (var i = 0; i <= steps; i++) {
         var px = plotLeft + i;
-        var py = centerY - envValues[i] * amplitude;
+        var py = centerY - envValues[i] * pixelsPerAmplitude;
         if (i === 0) ctx.moveTo(px, py);
         else ctx.lineTo(px, py);
     }
@@ -221,13 +235,14 @@ function drawEnvelope() {
     ctx.beginPath();
     for (var j = 0; j <= steps; j++) {
         var px2 = plotLeft + j;
-        var py2 = centerY + envValues[j] * amplitude;
+        var py2 = centerY + envValues[j] * pixelsPerAmplitude;
         if (j === 0) ctx.moveTo(px2, py2);
         else ctx.lineTo(px2, py2);
     }
     ctx.stroke();
 
     ctx.setLineDash([]);
+    ctx.restore();
 }
 
 function drawNodeMarkers() {
