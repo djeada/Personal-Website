@@ -61,6 +61,23 @@ test("matrix result selection highlights its source row and column", async ({ pa
   expect(highlighted.b).toEqual([["0", "1"], ["1", "1"], ["2", "1"]]);
 });
 
+test("matrix multiplication plots A, B, and C with the selected dot product", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/tools/matrix_multiplication/", { waitUntil: "domcontentloaded" });
+  await page.locator('[data-preset="standard"]').click();
+  await page.locator("#matrix-result tr").nth(1).locator(".result-cell").nth(1).click();
+  const plot = await page.locator("#matrix-product-canvas").evaluate((canvas) => ({
+    matrices: JSON.parse(canvas.dataset.matrices),
+    selection: canvas.dataset.selection,
+    width: canvas.getBoundingClientRect().width,
+  }));
+  expect(plot.matrices.A).toEqual([[1, 2, 3], [4, 5, 6]]);
+  expect(plot.matrices.B).toEqual([[7, 8], [9, 10], [11, 12]]);
+  expect(plot.matrices.C).toEqual([[58, 64], [139, 154]]);
+  expect(plot.selection).toBe("1,1");
+  expect(plot.width).toBeGreaterThan(680);
+});
+
 const referenceTools = [
   "graphs",
   "sorting",
