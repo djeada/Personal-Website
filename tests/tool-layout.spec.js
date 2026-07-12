@@ -79,6 +79,8 @@ for (const name of referenceTools) {
     const theme = await page.evaluate(() => {
       const style = getComputedStyle(document.body);
       const content = document.querySelector("section.tool-content");
+      const heading = document.querySelector(".tool-header h1, .math-app-header h1");
+      const headingRect = heading.getBoundingClientRect();
       return {
         reference: document.body.classList.contains("tool-reference"),
         accent: style.getPropertyValue("--tool-primary").trim(),
@@ -86,6 +88,9 @@ for (const name of referenceTools) {
         pageWidth: document.documentElement.scrollWidth,
         viewportWidth: document.documentElement.clientWidth,
         contentPadding: content ? parseFloat(getComputedStyle(content).paddingTop) : 0,
+        headingCenter: headingRect.left + headingRect.width / 2,
+        viewportCenter: document.documentElement.clientWidth / 2,
+        headingAlignment: getComputedStyle(heading.parentElement).textAlign,
       };
     });
     expect(theme.reference).toBe(true);
@@ -93,6 +98,8 @@ for (const name of referenceTools) {
     expect(theme.surface).toBe("#17222d");
     expect(theme.pageWidth).toBeLessThanOrEqual(theme.viewportWidth + 1);
     expect(theme.contentPadding).toBe(0);
+    expect(theme.headingAlignment).toBe("center");
+    expect(Math.abs(theme.headingCenter - theme.viewportCenter)).toBeLessThanOrEqual(2);
   });
 }
 
