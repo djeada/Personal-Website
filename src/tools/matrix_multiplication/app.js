@@ -21,9 +21,17 @@
     const multiplicationMetrics = document.getElementById("multiplication-metrics");
     const productCanvas = document.getElementById("matrix-product-canvas");
     const productContext = productCanvas.getContext("2d");
+    const geometryCanvas = document.getElementById("matrix-geometry-canvas");
+    const geometryContext = geometryCanvas.getContext("2d");
+    const geometryMessage = document.getElementById("geometry-message");
     let lastProductPlot = null;
 
     const presets = {
+        geometric: {
+            dims: [2, 2, 2, 2],
+            A: [[1, -0.65], [0.45, 1]],
+            B: [[1.4, 0.35], [0, 0.75]]
+        },
         standard: {
             dims: [2, 3, 3, 2],
             A: [
@@ -209,8 +217,76 @@
             `rgba(220, 76, 100, ${0.18 + strength * 0.72})`;
     }
 
+    function drawGeometricProduct(A, B, C) {
+        const valid = A.length === 2 && A[0].length === 2 && B.length === 2 && B[0].length === 2;
+        const wrap = geometryCanvas.parentElement;
+        const width = Math.max(760, wrap.clientWidth - 16);
+        const height = parseFloat(getComputedStyle(geometryCanvas).height) || 370;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        geometryCanvas.width = Math.round(width * dpr);
+        geometryCanvas.height = Math.round(height * dpr);
+        geometryCanvas.style.width = `${width}px`;
+        geometryContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const ctx = geometryContext;
+        const surface = getComputedStyle(document.body).getPropertyValue("--tool-surface-raised").trim() || "#f8fafc";
+        const border = getComputedStyle(document.body).getPropertyValue("--tool-border").trim() || "#dbe3ec";
+        const text = getComputedStyle(document.body).getPropertyValue("--tool-text").trim() || "#1e293b";
+        const muted = getComputedStyle(document.body).getPropertyValue("--tool-text-muted").trim() || "#64748b";
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = surface;
+        ctx.fillRect(0, 0, width, height);
+        if (!valid) {
+            ctx.fillStyle = muted;
+            ctx.font = "14px system-ui, sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("Geometric grid composition requires A and B to both be 2 × 2.", width / 2, height / 2);
+            geometryMessage.textContent = "This product is still valid algebraically, but its input and output spaces cannot all be drawn on one 2D plane.";
+            geometryCanvas.dataset.available = "false";
+            return;
+        }
+
+        const apply = (M, point) => [M[0][0] * point[0] + M[0][1] * point[1], M[1][0] * point[0] + M[1][1] * point[1]];
+        const stages = [
+            { title: "Input x", matrix: [[1, 0], [0, 1]], subtitle: "Original grid" },
+            { title: "Bx", matrix: B, subtitle: "Apply B first" },
+            { title: "ABx", matrix: C, subtitle: "Then apply A" }
+        ];
+        const samples = stages.flatMap(stage => [[-2, -2], [-2, 2], [2, -2], [2, 2]].map(p => apply(stage.matrix, p)));
+        const extent = Math.max(2.2, ...samples.flat().map(Math.abs)) * 1.12;
+        const gap = 24;
+        const panelWidth = (width - gap * 2 - 24) / 3;
+        const plotSize = Math.min(panelWidth - 18, height - 82);
+        const scale = plotSize / (2 * extent);
+
+        stages.forEach((stage, stageIndex) => {
+            const panelX = 12 + stageIndex * (panelWidth + gap);
+            const originX = panelX + panelWidth / 2;
+            const originY = 58 + plotSize / 2;
+            const map = point => { const p = apply(stage.matrix, point); return [originX + p[0] * scale, originY - p[1] * scale]; };
+            ctx.fillStyle = text; ctx.font = "800 15px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.fillText(stage.title, originX, 22);
+            ctx.fillStyle = muted; ctx.font = "11px system-ui, sans-serif"; ctx.fillText(stage.subtitle, originX, 39);
+            ctx.save(); ctx.beginPath(); ctx.rect(panelX, 48, panelWidth, plotSize + 18); ctx.clip();
+            ctx.strokeStyle = border; ctx.lineWidth = 1;
+            for (let k = -3; k <= 3; k++) {
+                let p1 = map([k, -3]), p2 = map([k, 3]); ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.stroke();
+                p1 = map([-3, k]); p2 = map([3, k]); ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.stroke();
+            }
+            const square = [[0, 0], [1, 0], [1, 1], [0, 1]].map(map);
+            ctx.fillStyle = "rgba(244, 201, 93, .18)"; ctx.strokeStyle = "#f4c95d"; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(...square[0]); square.slice(1).forEach(p => ctx.lineTo(...p)); ctx.closePath(); ctx.fill(); ctx.stroke();
+            const drawBasis = (basis, color, label) => { const end = map(basis); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(originX, originY); ctx.lineTo(...end); ctx.stroke(); ctx.font = "700 11px system-ui"; ctx.fillText(label, end[0] + 8, end[1] - 5); };
+            drawBasis([1, 0], "#ef4444", "e₁"); drawBasis([0, 1], "#38c6c2", "e₂");
+            ctx.restore();
+            if (stageIndex < 2) { ctx.fillStyle = muted; ctx.font = "700 22px system-ui"; ctx.fillText("→", panelX + panelWidth + gap / 2, height / 2); }
+        });
+        geometryMessage.textContent = "The same unit square is shown before transformation, after B, and after the composed transformation AB.";
+        geometryCanvas.dataset.available = "true";
+        geometryCanvas.dataset.product = JSON.stringify(C);
+    }
+
     function renderProductPlot(A, B, C, selectedRow = 0, selectedCol = 0) {
         lastProductPlot = { A, B, C, selectedRow, selectedCol };
+        drawGeometricProduct(A, B, C);
         const wrap = productCanvas.parentElement;
         const cssWidth = Math.max(680, wrap.clientWidth - 20);
         const cssHeight = parseFloat(getComputedStyle(productCanvas).height) || 340;
@@ -288,6 +364,7 @@
         productContext.clearRect(0, 0, productCanvas.width, productCanvas.height);
         productCanvas.removeAttribute("data-matrices");
         productCanvas.removeAttribute("data-selection");
+        drawGeometricProduct([], [], []);
     }
 
     function renderResult(result, A, B) {

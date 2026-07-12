@@ -78,6 +78,25 @@ test("matrix multiplication plots A, B, and C with the selected dot product", as
   expect(plot.width).toBeGreaterThan(680);
 });
 
+test("matrix multiplication draws 2D grid composition B then A", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/tools/matrix_multiplication/", { waitUntil: "domcontentloaded" });
+  await page.locator('[data-preset="geometric"]').click();
+  const geometry = await page.locator("#matrix-geometry-canvas").evaluate((canvas) => ({
+    available: canvas.dataset.available,
+    product: JSON.parse(canvas.dataset.product),
+    width: canvas.getBoundingClientRect().width,
+    message: document.querySelector("#geometry-message").textContent,
+  }));
+  expect(geometry.available).toBe("true");
+  expect(geometry.product[0][0]).toBeCloseTo(1.4);
+  expect(geometry.product[0][1]).toBeCloseTo(-0.1375);
+  expect(geometry.product[1][0]).toBeCloseTo(0.63);
+  expect(geometry.product[1][1]).toBeCloseTo(0.9075);
+  expect(geometry.width).toBeGreaterThan(760);
+  expect(geometry.message).toContain("before transformation, after B");
+});
+
 const referenceTools = [
   "graphs",
   "sorting",
