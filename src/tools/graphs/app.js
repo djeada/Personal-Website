@@ -4,6 +4,10 @@ function getColorForMode(colorLight, colorDark) {
     return isDark ? colorDark : colorLight;
 }
 
+function visualColor(name, fallback) {
+    return getComputedStyle(document.body).getPropertyValue(`--visual-${name}`).trim() || fallback;
+}
+
 document.addEventListener("DOMContentLoaded", function() {
 
     const DEFAULT_GRID_SIZE = 20;
@@ -72,11 +76,9 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     function setCanvasSize() {
-        const availableWidth = window.innerWidth * 0.95;
-        const availableHeight = window.innerHeight * 0.6;
-        const maxSize = 600;
-
-        const size = Math.min(availableWidth, availableHeight, maxSize);
+        const wrapper = mazeCanvas.closest(".canvas-wrapper");
+        const availableWidth = Math.max(240, (wrapper?.clientWidth || window.innerWidth) - 40);
+        const size = Math.min(availableWidth, 760);
 
         mazeCanvas.width = size;
         mazeCanvas.height = size;
@@ -552,19 +554,19 @@ document.addEventListener("DOMContentLoaded", function() {
                     const cell = this.maze[i][j];
 
                     if (cell.wall) {
-                        ctx.fillStyle = getColorForMode("#000000", "#555555");
+                        ctx.fillStyle = visualColor("wall", "#536474");
                     } else if (cell === this.startNode) {
-                        ctx.fillStyle = getColorForMode("#00FF00", "#00AA00");
+                        ctx.fillStyle = visualColor("success", "#21a179");
                     } else if (cell === this.endNode) {
-                        ctx.fillStyle = getColorForMode("#FF0000", "#AA0000");
+                        ctx.fillStyle = visualColor("danger", "#dc4c64");
                     } else if (this.path.includes(cell)) {
-                        ctx.fillStyle = getColorForMode("#FFFF00", "#AAAA00");
+                        ctx.fillStyle = visualColor("path", "#f4c95d");
                     } else if (this.closedSet.includes(cell)) {
-                        ctx.fillStyle = getColorForMode("#FFA500", "#AA5500");
+                        ctx.fillStyle = visualColor("visited", "#8a6fb5");
                     } else if (this.openSet.includes(cell)) {
-                        ctx.fillStyle = getColorForMode("#87CEEB", "#5577AA");
+                        ctx.fillStyle = visualColor("frontier", "#4aa3b5");
                     } else {
-                        ctx.fillStyle = getColorForMode("#FFFFFF", "#333333");
+                        ctx.fillStyle = visualColor("idle", "#dce7ea");
                     }
 
                     ctx.fillRect(
@@ -575,7 +577,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     );
 
                     if (this.showGridLines) {
-                        ctx.strokeStyle = getColorForMode("#CCCCCC", "#444444");
+                        ctx.strokeStyle = visualColor("grid", "#b7c7ce");
                         ctx.strokeRect(
                             cell.x * this.cellSize,
                             cell.y * this.cellSize,

@@ -107,3 +107,29 @@ for (const name of ["ant_colony", "futuristic_city"]) {
     expect(accent).toBe("#ff9d1a");
   });
 }
+
+for (const name of ["graphs", "sorting", "searching"]) {
+  test(`${name} visualization fills its workspace and uses semantic colors`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`/tools/${name}/`, { waitUntil: "domcontentloaded" });
+    const layout = await page.evaluate(() => {
+      const area = document.querySelector(".canvas-area").getBoundingClientRect();
+      const canvas = document.querySelector(".canvas-wrapper canvas");
+      const canvasRect = canvas.getBoundingClientRect();
+      return {
+        areaWidth: area.width,
+        canvasWidth: canvasRect.width,
+        intrinsicWidth: canvas.width,
+        semanticLegend: document.querySelectorAll('.legend-color[class*="visual-"]').length,
+        current: getComputedStyle(document.body).getPropertyValue("--visual-current").trim(),
+        frontier: getComputedStyle(document.body).getPropertyValue("--visual-frontier").trim(),
+      };
+    });
+    expect(layout.areaWidth).toBeGreaterThan(700);
+    expect(layout.canvasWidth).toBeGreaterThan(layout.areaWidth * 0.7);
+    expect(layout.intrinsicWidth).toBeGreaterThan(600);
+    expect(layout.semanticLegend).toBeGreaterThanOrEqual(3);
+    expect(layout.current).toBe("#ffb547");
+    expect(layout.frontier).toBe("#4aa3b5");
+  });
+}

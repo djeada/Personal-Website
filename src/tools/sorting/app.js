@@ -1,5 +1,8 @@
 document.addEventListener("DOMContentLoaded", function() {
 
+    const visualColor = (name, fallback) =>
+        getComputedStyle(document.body).getPropertyValue(`--visual-${name}`).trim() || fallback;
+
     const DEFAULT_ARRAY_SIZE = 50;
     const DEFAULT_SPEED = 5;
     const DEFAULT_ALGORITHM = "bubble";
@@ -44,13 +47,9 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function setCanvasSize() {
-        const availableWidth = window.innerWidth * 0.95;
-        const availableHeight = window.innerHeight * 0.5;
-        const maxWidth = 800;
-        const maxHeight = 400;
-
-        const width = Math.min(availableWidth, maxWidth);
-        const height = Math.min(availableHeight, maxHeight);
+        const wrapper = sortingCanvas.closest(".canvas-wrapper");
+        const width = Math.min(Math.max(240, (wrapper?.clientWidth || window.innerWidth) - 40), 1100);
+        const height = Math.min(500, Math.max(320, Math.round(width * 0.48)));
 
         sortingCanvas.width = width;
         sortingCanvas.height = height;
@@ -146,7 +145,7 @@ document.addEventListener("DOMContentLoaded", function() {
             });
         }
 
-        drawArray(highlightedIndices = []) {
+        drawArray(highlightedIndices = [], completed = false) {
             ctx.clearRect(0, 0, sortingCanvas.width, sortingCanvas.height);
 
             const barWidth = sortingCanvas.width / this.array.length;
@@ -154,10 +153,12 @@ document.addEventListener("DOMContentLoaded", function() {
             for (let i = 0; i < this.array.length; i++) {
                 const height = this.array[i];
 
-                if (highlightedIndices.includes(i)) {
-                    ctx.fillStyle = "#ef4444";
+                if (completed) {
+                    ctx.fillStyle = visualColor("success", "#21a179");
+                } else if (highlightedIndices.includes(i)) {
+                    ctx.fillStyle = visualColor("current", "#ffb547");
                 } else {
-                    ctx.fillStyle = "#eec747";
+                    ctx.fillStyle = visualColor("frontier", "#4aa3b5");
                 }
 
                 ctx.fillRect(
@@ -216,6 +217,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
             this.sortingInProgress = false;
             this.sortingCompleted = true;
+            this.drawArray([], true);
         }
 
         togglePause() {
