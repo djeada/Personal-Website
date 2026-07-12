@@ -24,6 +24,7 @@
     const vectorControl = document.getElementById("vector-control");
     const transformDescription = document.getElementById("transform-description");
     const plotMatrix = document.getElementById("plot-matrix");
+    const vectorReadout = document.getElementById("vector-readout");
     let plottedEigenpairs = [];
 
     const exactValuesOutput = document.getElementById("output-eigenvalues-analytical");
@@ -299,12 +300,15 @@
             ctx.fillText("Enter a complete numeric matrix to draw the transformation.", width / 2, height / 2);
             transformEquation.textContent = "Enter a valid matrix to plot Av.";
             plotMatrix.textContent = "A = —";
+            vectorReadout.innerHTML = "<span><strong>v</strong> = —</span><span><strong>Av</strong> = —</span>";
             return;
         }
 
         plotMatrix.textContent = `A = [${matrix.map(row => `[${row.map(formatNumber).join(", ")}]`).join(", ")}]`;
 
         const result = multiplyMatrixVector(matrix, vector);
+        const lambdaReadout = mode === "eigenvector" && pair ? `<span><strong>λ</strong> = ${formatNumber(pair.value)}</span>` : "";
+        vectorReadout.innerHTML = `<span><strong>v</strong> = ${formatVector(vector)}</span><span><strong>Av</strong> = ${formatVector(result)}</span>${lambdaReadout}`;
         const basis1 = [matrix[0][0], matrix[1]?.[0] || 0];
         const basis2 = [matrix[0][1] || 0, matrix[1]?.[1] || 0];
         const projectedVector = [vector[0] || 0, vector[1] || 0];

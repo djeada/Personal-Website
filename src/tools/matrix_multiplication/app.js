@@ -255,8 +255,11 @@
         // deliberately allowed to run beyond the panel and is clipped below.
         const shapePoints = [[0, 0], [1, 0], [0, 1], [1, 1]];
         const determinant = M => M[0][0] * M[1][1] - M[0][1] * M[1][0];
-        const drawArrow = (from, to, color) => {
+        const drawArrow = (from, to, color, offset = 0) => {
             const angle = Math.atan2(to[1] - from[1], to[0] - from[0]);
+            const normal = [-Math.sin(angle) * offset, Math.cos(angle) * offset];
+            from = [from[0] + normal[0], from[1] + normal[1]];
+            to = [to[0] + normal[0], to[1] + normal[1]];
             ctx.save();
             ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 6;
             ctx.lineCap = "round"; ctx.lineJoin = "round";
@@ -269,20 +272,23 @@
             const matrix = index === geometryStage && geometryTweenMatrix ? geometryTweenMatrix : stage.matrix;
             const left = 20 + index * (panelWidth + panelGap);
             const origin = [left + panelWidth / 2, plotTop + plotHeight / 2];
+            const finalFirst = apply(stage.matrix, [1, 0]);
+            const viewAngle = index === 0 ? 0 : -Math.atan2(finalFirst[1], finalFirst[0]);
+            const rotateView = ([x, y]) => [x * Math.cos(viewAngle) - y * Math.sin(viewAngle), x * Math.sin(viewAngle) + y * Math.cos(viewAngle)];
             // Auto-fit every stage independently. A large final product must not
             // shrink the input and intermediate vectors into unreadable dots.
             const stageExtent = Math.max(.72, ...shapePoints.flatMap(point =>
                 apply(matrix, point).map(Math.abs)
             )) * 1.24;
             const scale = Math.min((panelWidth - 42) / (2 * stageExtent), (plotHeight - 24) / (2 * stageExtent));
-            const mapRaw = p => [origin[0] + p[0] * scale, origin[1] - p[1] * scale];
+            const mapRaw = p => { const rotated = rotateView(p); return [origin[0] + rotated[0] * scale, origin[1] - rotated[1] * scale]; };
             const map = p => mapRaw(apply(matrix, p));
             ctx.fillStyle = index === geometryStage ? "rgba(8,126,139,.12)" : "rgba(148,163,184,.025)";
             ctx.strokeStyle = index === geometryStage ? accent : border; ctx.lineWidth = index === geometryStage ? 2.5 : 1;
             ctx.beginPath(); ctx.roundRect(left, 8, panelWidth, height - 18, 10); ctx.fill(); ctx.stroke();
             ctx.fillStyle = text; ctx.font = "800 18px system-ui"; ctx.textAlign = "center"; ctx.fillText(stage.title, left + panelWidth / 2, 32);
             ctx.fillStyle = index === geometryStage ? accent : text; ctx.font = "800 14px system-ui"; ctx.fillText(stage.formula, left + panelWidth / 2, 55);
-            ctx.fillStyle = muted; ctx.font = "12px system-ui"; ctx.fillText(`${stage.note} · auto-fit view`, left + panelWidth / 2, 73);
+            ctx.fillStyle = muted; ctx.font = "12px system-ui"; ctx.fillText(`${stage.note} · ${index ? "rotated + auto-fit view" : "auto-fit view"}`, left + panelWidth / 2, 73);
             ctx.save(); ctx.beginPath(); ctx.rect(left + 7, plotTop, panelWidth - 14, plotHeight); ctx.clip();
             for (let k = -6; k <= 6; k++) {
                 let p1 = map([k, -6]), p2 = map([k, 6]); ctx.strokeStyle = k === 0 ? "rgba(255,77,103,.24)" : "rgba(148,163,184,.09)"; ctx.lineWidth = k === 0 ? 1.5 : .7; ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.stroke();
@@ -291,8 +297,12 @@
             const vertices = [[0,0],[1,0],[1,1],[0,1]].map(map);
             ctx.save(); ctx.fillStyle = "rgba(255,213,74,.18)"; ctx.strokeStyle = "#ffd54a"; ctx.lineWidth = 5; ctx.lineJoin = "round"; ctx.shadowColor = "#ffd54a"; ctx.shadowBlur = 14; ctx.beginPath(); ctx.moveTo(...vertices[0]); vertices.slice(1).forEach(p => ctx.lineTo(...p)); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
             vertices.forEach(p => { ctx.save(); ctx.fillStyle = "#fff3a6"; ctx.shadowColor = "#ffd54a"; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(p[0], p[1], 7, 0, Math.PI * 2); ctx.fill(); ctx.restore(); });
-            drawArrow(origin, map([1,0]), "#ff4d67");
-            drawArrow(origin, map([0,1]), "#24e0d1");
+            const firstEnd = map([1,0]);
+            const secondEnd = map([0,1]);
+            const cross = Math.abs((firstEnd[0] - origin[0]) * (secondEnd[1] - origin[1]) - (firstEnd[1] - origin[1]) * (secondEnd[0] - origin[0]));
+            const nearlyOverlapping = cross < 900;
+            drawArrow(origin, firstEnd, "#ff4d67", nearlyOverlapping ? -5 : 0);
+            drawArrow(origin, secondEnd, "#24e0d1", nearlyOverlapping ? 5 : 0);
             ctx.restore();
             const det = determinant(matrix);
             const first = apply(matrix, [1, 0]);
@@ -436,11 +446,14 @@
             return;
         }
         cancelAnimationFrame(geometryAnimationFrame);
+        const playButton = document.getElementById("play-geometry");
+        playButton.disabled = true;
+        playButton.textContent = "Animating…";
         const identity = [[1, 0], [0, 1]];
         const stages = [identity, lastProductPlot.B, lastProductPlot.C];
         let transition = 0;
         let started = performance.now();
-        const duration = 900;
+        const duration = 1800;
         const frame = now => {
             const raw = Math.max(0, Math.min(1, (now - started) / duration));
             const t = raw * raw * (3 - 2 * raw);
@@ -449,8 +462,13 @@
             document.querySelectorAll("[data-geometry-stage]").forEach(button => button.classList.toggle("is-active", Number(button.dataset.geometryStage) === geometryStage));
             drawGeometricProduct(lastProductPlot.A, lastProductPlot.B, lastProductPlot.C);
             if (raw < 1) geometryAnimationFrame = requestAnimationFrame(frame);
-            else if (transition === 0) { transition = 1; started = now + 180; geometryAnimationFrame = requestAnimationFrame(frame); }
-            else { geometryTweenMatrix = null; setGeometryStage(2); }
+            else if (transition === 0) { transition = 1; started = now + 650; geometryAnimationFrame = requestAnimationFrame(frame); }
+            else {
+                geometryTweenMatrix = null;
+                setGeometryStage(2);
+                playButton.disabled = false;
+                playButton.textContent = "↻ Replay I → B → AB";
+            }
         };
         geometryAnimationFrame = requestAnimationFrame(frame);
     }
