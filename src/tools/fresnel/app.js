@@ -9,6 +9,8 @@ const cw = canvas.width,
 
 const thetaSlider = document.getElementById("thetaSlider");
 const thetaValue = document.getElementById("thetaValue");
+const n1Slider = document.getElementById("n1Slider");
+const n1Value = document.getElementById("n1Value");
 const n2Slider = document.getElementById("n2Slider");
 const n2Value = document.getElementById("n2Value");
 
@@ -130,10 +132,9 @@ function calculateFresnelCoefficients(theta1) {
     if (theta2 === null) {
 
         return {
-            rs: 1,
-            rp: 1,
-            ts: 0,
-            tp: 0,
+            rs: 1, rp: 1, ts: 0, tp: 0,
+            rSAmplitude: -1, rPAmplitude: 1,
+            tSAmplitude: 0, tPAmplitude: 0,
             tir: true
         };
     }
@@ -155,15 +156,21 @@ function calculateFresnelCoefficients(theta1) {
     const Rp = rp * rp;
 
 
-    const Ts = 1 - Rs;
-    const Tp = 1 - Rp;
+    // Electric-field transmission amplitudes. Power transmission also includes
+    // the normal optical-admittance ratio n₂ cosθ₂ / (n₁ cosθ₁).
+    const tSAmplitude = (2 * n1 * cosTheta1) / rs_den;
+    const tPAmplitude = (2 * n1 * cosTheta1) / rp_den;
+    const fluxRatio = (n2 * cosTheta2) / (n1 * cosTheta1);
+    const Ts = fluxRatio * tSAmplitude * tSAmplitude;
+    const Tp = fluxRatio * tPAmplitude * tPAmplitude;
 
     return {
         rs: Rs,
         rp: Rp,
         ts: Ts,
         tp: Tp,
-        tir: false,
+        rSAmplitude: rs, rPAmplitude: rp,
+        tSAmplitude, tPAmplitude, tir: false,
         theta2: theta2
     };
 }
@@ -172,9 +179,10 @@ function calculateFresnelCoefficients(theta1) {
 function updateStats() {
     const theta1Deg = +thetaSlider.value;
     theta1 = theta1Deg * Math.PI / 180;
+    n1 = +n1Slider.value;
     n2 = +n2Slider.value;
 
-    statTheta.textContent = theta1Deg + "°";
+    statTheta.textContent = theta1Deg.toFixed(1) + "°";
     statN2.textContent = n2.toFixed(2);
 
     const brewsterAngle = calculateBrewsterAngle() * 180 / Math.PI;
@@ -183,8 +191,9 @@ function updateStats() {
     statPolarization.textContent = polarizationType === "both" ? "Both" :
         polarizationType === "s" ? "s-pol" : "p-pol";
 
-    thetaValue.textContent = theta1Deg + "°";
+    thetaValue.textContent = theta1Deg.toFixed(1) + "°";
     n2Value.textContent = n2.toFixed(2);
+    n1Value.textContent = n1.toFixed(2);
 
     updateIntensityBars();
 }
@@ -235,6 +244,8 @@ function drawArrow(ax, ay, bx, by, color, lineWidth = 3) {
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
     ctx.lineWidth = lineWidth;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
     ctx.beginPath();
     ctx.moveTo(ax, ay);
     ctx.lineTo(bx, by);
@@ -355,7 +366,7 @@ function drawInterface() {
     ctx.fillStyle = getCSSColor('--text-primary');
     ctx.font = "14px Arial";
     ctx.textAlign = "left";
-    ctx.fillText("n₁ = " + n1.toFixed(2) + " (Air)", 20, 30);
+    ctx.fillText("n₁ = " + n1.toFixed(2) + " (incident medium)", 20, 30);
     ctx.fillText("n₂ = " + n2.toFixed(2), 20, interfaceY + 25);
 
     ctx.textAlign = "center";
@@ -400,11 +411,12 @@ function drawRays() {
     }
 
 
-    drawAngleArc(originX, originY, 40, Math.PI / 2, Math.PI / 2 + theta1, "θ₁", colors.incident);
-    drawAngleArc(originX, originY, 50, Math.PI / 2, Math.PI / 2 - theta1, "θ₁", colors.reflected);
+    // Canvas angles are measured clockwise because y grows downward.
+    drawAngleArc(originX, originY, 42, -Math.PI / 2 - theta1, -Math.PI / 2, "θᵢ", colors.incident);
+    drawAngleArc(originX, originY, 52, -Math.PI / 2, -Math.PI / 2 + theta1, "θᵣ", colors.reflected);
 
     if (!coeffs.tir && coeffs.theta2 !== undefined) {
-        drawAngleArc(originX, originY, 40, -Math.PI / 2, -Math.PI / 2 + coeffs.theta2, "θ₂", colors.refracted);
+        drawAngleArc(originX, originY, 42, Math.PI / 2 - coeffs.theta2, Math.PI / 2, "θₜ", colors.refracted);
     }
 
 
@@ -430,17 +442,14 @@ function drawAngleArc(cx, cy, radius, startAngle, endAngle, label, color) {
     ctx.lineWidth = 2;
     ctx.beginPath();
 
-    const start = Math.min(startAngle, endAngle);
-    const end = Math.max(startAngle, endAngle);
-
-    ctx.arc(cx, cy, radius, -end, -start);
+    ctx.arc(cx, cy, radius, startAngle, endAngle);
     ctx.stroke();
 
 
     const midAngle = (startAngle + endAngle) / 2;
     const labelRadius = radius + 15;
-    const labelX = cx + labelRadius * Math.cos(-midAngle);
-    const labelY = cy - labelRadius * Math.sin(-midAngle);
+    const labelX = cx + labelRadius * Math.cos(midAngle);
+    const labelY = cy + labelRadius * Math.sin(midAngle);
 
     ctx.fillStyle = color;
     ctx.font = "12px Arial";
@@ -474,10 +483,10 @@ function drawEFields() {
         const fieldPhase = phase - pos * 3;
 
         if (polarizationType === "both" || polarizationType === "s") {
-            drawEFieldVector(x - 10, y, 1, incCanvasAngle, colors.sPol, false, fieldPhase);
+            drawEFieldVector(x, y, 1, incCanvasAngle, colors.sPol, false, fieldPhase);
         }
         if (polarizationType === "both" || polarizationType === "p") {
-            drawEFieldVector(x + 10, y, 1, incCanvasAngle, colors.pPol, true, fieldPhase);
+            drawEFieldVector(x, y, 1, incCanvasAngle, colors.pPol, true, fieldPhase);
         }
     });
 
@@ -489,12 +498,12 @@ function drawEFields() {
         const fieldPhase = phase - pos * 3;
 
         if (polarizationType === "both" || polarizationType === "s") {
-            const amplitude = Math.sqrt(coeffs.rs);
-            drawEFieldVector(x - 10, y, amplitude, refCanvasAngle, colors.sPol, false, fieldPhase);
+            const amplitude = coeffs.rSAmplitude;
+            drawEFieldVector(x, y, amplitude, refCanvasAngle, colors.sPol, false, fieldPhase);
         }
         if (polarizationType === "both" || polarizationType === "p") {
-            const amplitude = Math.sqrt(coeffs.rp);
-            drawEFieldVector(x + 10, y, amplitude, refCanvasAngle, colors.pPol, true, fieldPhase);
+            const amplitude = coeffs.rPAmplitude;
+            drawEFieldVector(x, y, amplitude, refCanvasAngle, colors.pPol, true, fieldPhase);
         }
     });
 
@@ -509,12 +518,12 @@ function drawEFields() {
             const fieldPhase = phase - pos * 3;
 
             if (polarizationType === "both" || polarizationType === "s") {
-                const amplitude = Math.sqrt(coeffs.ts);
-                drawEFieldVector(x - 10, y, amplitude, refrCanvasAngle, colors.sPol, false, fieldPhase);
+                const amplitude = coeffs.tSAmplitude;
+                drawEFieldVector(x, y, amplitude, refrCanvasAngle, colors.sPol, false, fieldPhase);
             }
             if (polarizationType === "both" || polarizationType === "p") {
-                const amplitude = Math.sqrt(coeffs.tp);
-                drawEFieldVector(x + 10, y, amplitude, refrCanvasAngle, colors.pPol, true, fieldPhase);
+                const amplitude = coeffs.tPAmplitude;
+                drawEFieldVector(x, y, amplitude, refrCanvasAngle, colors.pPol, true, fieldPhase);
             }
         });
     }
@@ -625,6 +634,12 @@ n2Slider.addEventListener("input", () => {
     drawAll();
 });
 
+n1Slider.addEventListener("input", () => {
+    updateStats();
+    updatePresetButtons(null);
+    drawAll();
+});
+
 showEFields.addEventListener("change", () => {
     drawAll();
 });
@@ -643,7 +658,7 @@ animateWaves.addEventListener("change", () => {
 
 btnBrewster.addEventListener("click", () => {
     const brewsterAngle = calculateBrewsterAngle() * 180 / Math.PI;
-    thetaSlider.value = Math.round(brewsterAngle);
+    thetaSlider.value = brewsterAngle.toFixed(1);
     updateStats();
     updatePresetButtons(btnBrewster);
     drawAll();
@@ -652,7 +667,7 @@ btnBrewster.addEventListener("click", () => {
 btnCritical.addEventListener("click", () => {
     const criticalAngle = calculateCriticalAngle();
     if (criticalAngle !== null) {
-        thetaSlider.value = Math.round(criticalAngle * 180 / Math.PI);
+        thetaSlider.value = (criticalAngle * 180 / Math.PI).toFixed(1);
         updateStats();
         updatePresetButtons(btnCritical);
         drawAll();
@@ -671,6 +686,7 @@ btnNormal.addEventListener("click", () => {
 
 btnGrazing.addEventListener("click", () => {
     thetaSlider.value = "45";
+    n1Slider.value = "1.00";
     updateStats();
     updatePresetButtons(btnGrazing);
     drawAll();
