@@ -30,7 +30,7 @@ def bundle_css(css: str, output_file: Path) -> None:
     """
     Writes the given CSS to the given output file.
     """
-    output_file.write_text(css)
+    output_file.write_text(css.rstrip() + "\n")
 
 
 def main():

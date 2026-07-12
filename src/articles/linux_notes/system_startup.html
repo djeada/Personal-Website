@@ -6,7 +6,7 @@
     <script async="" crossorigin="anonymous" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5593122079896089"></script>
     <meta charset="utf-8" />
     <title>System Startup Process</title>
-    <meta content="What happens between the time you push the power button and the time you see the login prompt?" name="description" />
+    <meta content="The system startup process is everything that happens between pressing the power button and reaching a usable login prompt or graphical desktop." name="description" />
     <meta content="Adam Djellouli" name="author" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="IE=edge" http-equiv="X-UA-Compatible" />
@@ -33,8 +33,8 @@
                 "@id": "https://adamdjellouli.com/articles/linux_notes/system_startup"
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/system_startup",
-            "description": "What happens between the time you push the power button and the time you see the login prompt?",
-            "dateModified": "2021-04-09"
+            "description": "The system startup process is everything that happens between pressing the power button and reaching a usable login prompt or graphical desktop.",
+            "dateModified": "2026-07-11"
         }
     </script>
 </head>
@@ -79,28 +79,135 @@
                 <h2>Table of Contents</h2>
                 <ol><a href="#system-startup-process">System Startup Process</a>
                     <ol>
-                        <li><a href="#bootup-process">Bootup Process</a>
-                            <ol>
-                                <li><a href="#power-on-self-test-post-">Power-On Self-Test (POST)</a></li>
-                                <li><a href="#boot-loader-execution">Boot Loader Execution</a></li>
-                            </ol>
-                        </li>
-                        <li><a href="#master-boot-record-mbr-">Master Boot Record (MBR)</a></li>
-                        <li><a href="#second-stage-boot-loader">Second-Stage Boot Loader</a></li>
+                        <li><a href="#bootup-process">Bootup Process</a></li>
+                        <li><a href="#post-power-on-self-test">POST: Power-On Self-Test</a></li>
+                        <li><a href="#bios-vs-uefi">BIOS vs UEFI</a></li>
+                        <li><a href="#bios-boot">BIOS Boot</a></li>
+                        <li><a href="#uefi-boot">UEFI Boot</a></li>
+                        <li><a href="#mbr">MBR</a></li>
+                        <li><a href="#gpt-and-efi-system-partition">GPT and EFI System Partition</a></li>
+                        <li><a href="#boot-device-selection">Boot Device Selection</a></li>
+                        <li><a href="#bootloader">Bootloader</a></li>
+                        <li><a href="#grub-2">GRUB 2</a></li>
+                        <li><a href="#kernel-image-and-initramfs">Kernel Image and Initramfs</a></li>
+                        <li><a href="#kernel-command-line">Kernel Command Line</a></li>
                         <li><a href="#kernel-initialization">Kernel Initialization</a></li>
-                        <li><a href="#init-process">Init Process</a></li>
+                        <li><a href="#initramfs">Initramfs</a></li>
+                        <li><a href="#switch_root-and-pivot_root">switch_root and pivot_root</a></li>
+                        <li><a href="#pid-1">PID 1</a></li>
+                        <li><a href="#sysv-init">SysV Init</a></li>
+                        <li><a href="#systemd">systemd</a></li>
+                        <li><a href="#systemd-startup-flow">systemd Startup Flow</a></li>
                         <li><a href="#runlevels">Runlevels</a></li>
-                        <li><a href="#targets-systemd-">Targets (systemd)</a></li>
+                        <li><a href="#systemd-targets">systemd Targets</a></li>
+                        <li><a href="#login-prompts-and-user-sessions">Login Prompts and User Sessions</a></li>
+                        <li><a href="#boot-logs">Boot Logs</a></li>
+                        <li><a href="#boot-performance-tools">Boot Performance Tools</a></li>
                         <li><a href="#kernel-panic">Kernel Panic</a></li>
-                        <li><a href="#system-management-commands">System Management Commands</a>
+                        <li><a href="#kernel-panic-recovery-workflow">Kernel Panic Recovery Workflow</a></li>
+                        <li><a href="#basic-system-management-commands">Basic System Management Commands</a></li>
+                        <li><a href="#hostname">Hostname</a></li>
+                        <li><a href="#uptime">Uptime</a></li>
+                        <li><a href="#reboot">Reboot</a></li>
+                        <li><a href="#shutdown">Shutdown</a></li>
+                        <li><a href="#timezone">Timezone</a></li>
+                        <li><a href="#root-password-recovery">Root Password Recovery</a></li>
+                        <li><a href="#scenario-1-measure-boot-time-and-find-slow-services">Scenario 1: Measure Boot Time and Find Slow Services</a>
                             <ol>
-                                <li><a href="#managing-the-hostname">Managing the Hostname</a></li>
-                                <li><a href="#checking-system-uptime">Checking System Uptime</a></li>
-                                <li><a href="#rebooting-the-system">Rebooting the System</a></li>
-                                <li><a href="#shutting-down-the-system">Shutting Down the System</a></li>
+                                <li><a href="#simulate-a-boot-delay">Simulate a Boot Delay</a></li>
+                                <li><a href="#check-with-systemd-analyze">Check with systemd-analyze</a></li>
+                                <li><a href="#check-slow-services">Check Slow Services</a></li>
+                                <li><a href="#cleanup">Cleanup</a></li>
                             </ol>
                         </li>
-                        <li><a href="#recovering-the-root-password">Recovering the Root Password</a></li>
+                        <li><a href="#scenario-2-diagnose-a-failed-service-during-boot">Scenario 2: Diagnose a Failed Service During Boot</a>
+                            <ol>
+                                <li><a href="#create-a-broken-service">Create a Broken Service</a></li>
+                                <li><a href="#check-failed-units">Check Failed Units</a></li>
+                                <li><a href="#check-status">Check Status</a></li>
+                                <li><a href="#check-logs">Check Logs</a></li>
+                                <li><a href="#cleanup">Cleanup</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-3-simulate-wrong-default-target">Scenario 3: Simulate Wrong Default Target</a>
+                            <ol>
+                                <li><a href="#check-current-default-target">Check Current Default Target</a></li>
+                                <li><a href="#change-future-boots-to-text-mode">Change Future Boots to Text Mode</a></li>
+                                <li><a href="#check-after-boot">Check After Boot</a></li>
+                                <li><a href="#restore-graphical-boot">Restore Graphical Boot</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-4-boot-into-rescue-target">Scenario 4: Boot into Rescue Target</a>
+                            <ol>
+                                <li><a href="#temporary-boot-method">Temporary Boot Method</a></li>
+                                <li><a href="#runtime-method">Runtime Method</a></li>
+                                <li><a href="#check">Check</a></li>
+                                <li><a href="#return-to-normal-target">Return to Normal Target</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-5-diagnose-a-boot-problem-from-logs">Scenario 5: Diagnose a Boot Problem from Logs</a>
+                            <ol>
+                                <li><a href="#check-current-boot-errors">Check Current Boot Errors</a></li>
+                                <li><a href="#check-previous-boot">Check Previous Boot</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-6-simulate-and-cancel-scheduled-shutdown">Scenario 6: Simulate and Cancel Scheduled Shutdown</a>
+                            <ol>
+                                <li><a href="#schedule-shutdown">Schedule Shutdown</a></li>
+                                <li><a href="#cancel-it">Cancel It</a></li>
+                                <li><a href="#schedule-reboot">Schedule Reboot</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-7-verify-a-reboot-with-uptime">Scenario 7: Verify a Reboot with Uptime</a>
+                            <ol>
+                                <li><a href="#before-reboot">Before Reboot</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-8-investigate-kernel-panic-root-filesystem-not-found">Scenario 8: Investigate Kernel Panic: Root Filesystem Not Found</a>
+                            <ol>
+                                <li><a href="#simulated-symptom">Simulated Symptom</a></li>
+                                <li><a href="#check-from-rescue-environment">Check from Rescue Environment</a></li>
+                                <li><a href="#possible-fixes">Possible Fixes</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-9-recover-root-password-in-a-lab-vm">Scenario 9: Recover Root Password in a Lab VM</a>
+                            <ol>
+                                <li><a href="#grub-step">GRUB Step</a></li>
+                                <li><a href="#emergency-shell-commands">Emergency Shell Commands</a></li>
+                                <li><a href="#example-output">Example Output</a></li>
+                                <li><a href="#safety-note">Safety Note</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-10-inspect-systemd-timers-during-startup-maintenance">Scenario 10: Inspect systemd Timers During Startup Maintenance</a>
+                            <ol>
+                                <li><a href="#check-timers">Check Timers</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-11-set-and-verify-timezone">Scenario 11: Set and Verify Timezone</a>
+                            <ol>
+                                <li><a href="#check">Check</a></li>
+                                <li><a href="#change">Change</a></li>
+                                <li><a href="#verify">Verify</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#scenario-12-create-a-simple-cron-maintenance-task">Scenario 12: Create a Simple Cron Maintenance Task</a>
+                            <ol>
+                                <li><a href="#create-a-backup-script">Create a Backup Script</a></li>
+                                <li><a href="#add-cron-job">Add Cron Job</a></li>
+                                <li><a href="#verify-cron-service">Verify Cron Service</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#common-startup-problems-and-fixes">Common Startup Problems and Fixes</a>
+                            <ol>
+                                <li><a href="#problem-system-boots-slowly">Problem: System Boots Slowly</a></li>
+                            </ol>
+                        </li>
+                        <li><a href="#problem-service-fails-at-boot">Problem: Service Fails at Boot</a></li>
+                        <li><a href="#problem-boot-drops-to-emergency-mode">Problem: Boot Drops to Emergency Mode</a></li>
+                        <li><a href="#problem-grub-menu-does-not-show">Problem: GRUB Menu Does Not Show</a></li>
+                        <li><a href="#problem-kernel-panic-after-update">Problem: Kernel Panic After Update</a></li>
+                        <li><a href="#useful-command-summary">Useful Command Summary</a></li>
+                        <li><a href="#safe-lab-cleanup">Safe Lab Cleanup</a></li>
                         <li><a href="#challenges">Challenges</a></li>
                     </ol>
                 </ol>
@@ -175,440 +282,1514 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: April 09, 2021</i></p>
+            <p style="text-align: right;"><i>Last modified: July 11, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="system-startup-process">System Startup Process</h2>
-            <p>What happens between the time you push the power button and the time you see the login prompt?</p>
+            <p>The system startup process is everything that happens between pressing the power button and reaching a usable login prompt or graphical desktop.</p>
+            <p>At a high level, startup moves through several layers:</p>
             <div>
-                <pre><code class="language-shell">[1] Power On
-       │
-       ▼
+                <pre><code class="language-text">Power on
+   |
+   v
+Firmware: BIOS or UEFI
+   |
+   v
+Boot device selection
+   |
+   v
+Bootloader
+   |
+   v
+Linux kernel
+   |
+   v
+initramfs
+   |
+   v
+real root filesystem
+   |
+   v
+PID 1: systemd or init
+   |
+   v
+services, login prompts, network, GUI</code></pre>
+            </div>
+            <p>A more detailed boot flow looks like this:</p>
+            <div>
+                <pre><code class="language-text">[1] Power On
+       |
+       v
 +----------------------------------+
 | [2] BIOS / UEFI                  |
-|  • Load firmware from NVRAM      |
-|  • Run POST (Power-On Self Test) |
+|  - Run POST                      |
+|  - Initialize firmware settings  |
+|  - Detect basic hardware         |
 +----------------------------------+
-       │
-       ▼
-+--------------------------------+
-| [3] Device Detection           |
-|  • Enumerate CPU, RAM, disks   |
-|  • Initialize bus controllers  |
-+--------------------------------+
-       │
-       ▼
-+--------------------------------+
-| [4] Boot-Device Selection      |
-|  • UEFI Boot Manager or MBR    |
-|  • Choose EFI partition or MBR |
-+--------------------------------+
-       │
-       ▼
+       |
+       v
 +----------------------------------+
-| [5] Bootloader (GRUB2 / LILO)    |
-|  • Read /boot/grub2/grub.cfg     |
-|  • Display menu (timeout/user)   |
-|  • Load:                         |
-|     – vmlinuz-&lt;version&gt; (kernel) |
-|     – initramfs-&lt;version&gt;.img    |
-|     – Kernel cmdline args        |
+| [3] Device Detection             |
+|  - CPU, RAM, disks               |
+|  - Bus controllers               |
+|  - Bootable devices              |
 +----------------------------------+
-       │
-       ▼
-+------------------------------------------------+
-| [6] Linux Kernel + Initramfs                   |
-|  • Decompress &amp; relocate kernel image          |
-|  • Mount initramfs (dracut/busybox)            |
-|  • Load early userspace tools &amp; modules (.ko)  |
-|  • Probe hardware &amp; mount real root FS         |
-|  • pivot_root/switch_root → exec /sbin/init    |
-+------------------------------------------------+
-       │
-       ▼
-+-------------------------------------------------+
-| [7] systemd (PID 1)                             |
-|  • Execute /usr/lib/systemd/systemd             |
-|  • Read default.target → resolves into          |
-|      multi-user.target →                        |
-|        ├─ sysinit.target  (fsck, sysctl, kmod)  |
-|        ├─ basic.target    (journald, udev)      |
-|        └─ multi-user.target                     |
-|            ├─ getty@.service (login prompts)    |
-|            ├─ sshd.service                      |
-|            └─ network-online.target             |
-|    [opt] graphical.target → display-manager     |
-+-------------------------------------------------+
-       │
-       ▼
-+-------------------------------------------------+
-| [8] User‐Space Initialization                   |
-|  • systemd-login (logind)                       |
-|  • Shell startup: /etc/profile, ~/.bashrc       |
-|  • GUI login manager (gdm/kdm/xdm)              |
-|  → Finally: users can log in &amp; start sessions   |
-+-------------------------------------------------+</code></pre>
+       |
+       v
++----------------------------------+
+| [4] Boot Device Selection        |
+|  - BIOS reads MBR                |
+|  - UEFI loads EFI executable     |
++----------------------------------+
+       |
+       v
++----------------------------------+
+| [5] Bootloader                   |
+|  - GRUB, systemd-boot, rEFInd    |
+|  - Select kernel                 |
+|  - Load kernel and initramfs     |
+|  - Pass kernel command line      |
++----------------------------------+
+       |
+       v
++----------------------------------+
+| [6] Linux Kernel + Initramfs     |
+|  - Decompress kernel             |
+|  - Initialize memory and drivers |
+|  - Mount initramfs               |
+|  - Find real root filesystem     |
+|  - switch_root to real system    |
++----------------------------------+
+       |
+       v
++----------------------------------+
+| [7] PID 1                        |
+|  - systemd or init               |
+|  - Start targets/runlevels       |
+|  - Start services                |
++----------------------------------+
+       |
+       v
++----------------------------------+
+| [8] User Space Ready             |
+|  - login prompt                  |
+|  - SSH                           |
+|  - graphical login manager       |
+|  - user sessions                 |
++----------------------------------+</code></pre>
+            </div>
+            <p>The important idea is:</p>
+            <div>
+                <pre><code class="language-text">Startup is a chain.
+If one stage fails, the next stage may never begin.</code></pre>
             </div>
             <h3 id="bootup-process">Bootup Process</h3>
-            <p>The bootup process is the ordered set of steps a computer follows after power-on, moving from firmware control to a fully running operating system. At a high level it consists of:</p>
+            <p>The bootup process is the ordered set of steps a computer follows after power-on until the operating system is running.</p>
+            <p>The major stages are:</p>
             <ol>
-                <li><strong>Power-On Self-Test (POST)</strong></li>
-                <li><strong>Boot-loader discovery and first-stage execution</strong></li>
-                <li><strong>Second-stage boot loader / firmware boot manager</strong></li>
-                <li><strong>Kernel (and initramfs) loading</strong></li>
-                <li><strong>PID 1 initialization (SysV init or systemd)</strong></li>
-                <li><strong>Multi-user state (runlevels / targets)</strong></li>
+                <li>POST</li>
+                <li>Firmware boot selection</li>
+                <li>Bootloader execution</li>
+                <li>Kernel loading</li>
+                <li>Initramfs execution</li>
+                <li>Real root filesystem mount</li>
+                <li>PID 1 startup</li>
+                <li>Services and login sessions</li>
             </ol>
-            <h4 id="power-on-self-test-post-">Power-On Self-Test (POST)</h4>
-            <p>When power is applied the system firmware—either classic <strong>BIOS</strong> or modern <strong>UEFI (Unified Extensible Firmware Interface)</strong>—executes POST. POST verifies CPU registers, firmware integrity, system RAM, basic chipset functions, and often attached devices such as GPUs. Many firmwares emit diagnostic beep codes or on-screen messages if errors are found; fatal errors halt the boot process so that subsequent stages are never reached.</p>
-            <h4 id="boot-loader-execution">Boot Loader Execution</h4>
-            <p>After a successful POST the firmware locates a bootable <strong>device</strong> according to its configured boot order.</p>
-            <p><strong>On BIOS systems</strong></p>
+            <p>Each stage has a different responsibility.</p>
             <ul>
-                <li>The firmware reads the <strong>first 512-byte sector</strong> (Master Boot Record) of the selected disk into memory location 0x7C00 and jumps to it.</li>
-                <li>This sector contains a <em>very small</em> first-stage loader (≤ 446 bytes) whose only job is to locate and load a more capable second-stage loader.</li>
+                <li>Firmware finds something bootable.</li>
+                <li>Bootloader loads the kernel.</li>
+                <li>Kernel starts the operating system.</li>
+                <li>Initramfs finds the real root filesystem.</li>
+                <li>PID 1 starts user-space services.</li>
             </ul>
-            <p><strong>On UEFI systems</strong></p>
+            <h3 id="post-power-on-self-test">POST: Power-On Self-Test</h3>
+            <p>POST stands for Power-On Self-Test.</p>
+            <p>It is performed by system firmware, either BIOS or UEFI.</p>
+            <p>POST checks basic hardware before the operating system starts.</p>
+            <p>Common checks include:</p>
             <ul>
-                <li>There is <em>no</em> 512-byte MBR loader requirement. Instead, the firmware reads the FAT32-formatted <strong>EFI System Partition (ESP)</strong>, loads the configured <code>*.efi</code> executable (e.g. <code>\EFI\Microsoft\Boot\bootmgfw.efi</code>, <code>\EFI\debian\grubx64.efi</code>, or a <strong>shim</strong> in Secure Boot scenarios) and transfers control to it.</li>
-                <li>Boot order entries are stored in NVRAM and edited with tools such as <code>efibootmgr</code>.</li>
+                <li>CPU initialization</li>
+                <li>RAM detection</li>
+                <li>firmware integrity</li>
+                <li>basic chipset functions</li>
+                <li>keyboard or display initialization</li>
+                <li>storage controller detection</li>
+                <li>GPU initialization</li>
             </ul>
-            <p>To modify the boot sequence you usually press <strong>Esc, F2, F10, F12 or Del</strong> during POST; the key varies by vendor.</p>
-            <p><strong>Types of Firmware and First-Stage Code</strong></p>
-            <p>
-            <table>
-                <tr>
-                    <td>Firmware Model</td>
-                    <td>First-Stage Location</td>
-                    <td>Notes</td>
-                </tr>
-                <tr>
-                    <td><strong>BIOS</strong></td>
-                    <td>First 446 bytes of the disk’s MBR</td>
-                    <td>Limited space; must chain-load a second-stage loader (GRUB Legacy, LILO, Syslinux, etc.).</td>
-                </tr>
-                <tr>
-                    <td><strong>UEFI (without Secure Boot)</strong></td>
-                    <td>EFI executable on ESP</td>
-                    <td>Can load GRUB 2, systemd-boot, rEFInd, or the kernel directly.</td>
-                </tr>
-                <tr>
-                    <td><strong>UEFI (with Secure Boot)</strong></td>
-                    <td>Microsoft-signed <strong>shim</strong> → GRUB 2</td>
-                    <td>shim validates GRUB’s signature before handing off.</td>
-                </tr>
-            </table>
-            </p>
-            <p>Most modern x86 machines ship with UEFI; legacy BIOS mode is often still available for compatibility.</p>
-            <h3 id="master-boot-record-mbr-">Master Boot Record (MBR)</h3>
-            <p>The <strong>MBR</strong> is the first sector (LBA 0) of a traditional BIOS disk. By convention it is <strong>512 bytes</strong> and contains:</p>
+            <p>If POST fails, the operating system usually never starts.</p>
+            <p>Symptoms of POST failure may include:</p>
             <ul>
-                <li><strong>446 bytes</strong> – first-stage boot loader machine code</li>
-                <li><strong>64 bytes</strong> – primary partition table (four 16-byte entries)</li>
-                <li><strong>2 bytes</strong> – signature <code>0x55 AA</code> used by firmware to validate the read</li>
+                <li>beep codes</li>
+                <li>diagnostic LEDs</li>
+                <li>blank screen</li>
+                <li>firmware error message</li>
+                <li>system powers on then shuts off</li>
             </ul>
-            <blockquote>
-                <p><strong>GPT note</strong> – On GUID Partition Table disks a <em>protective</em> MBR is still present for legacy tools, but real partition metadata lives in GPT headers and tables beyond LBA 0.</p>
-            </blockquote>
+            <p>Common causes include:</p>
+            <ul>
+                <li>bad RAM</li>
+                <li>loose GPU</li>
+                <li>failed motherboard</li>
+                <li>overheating</li>
+                <li>power supply problems</li>
+                <li>firmware corruption</li>
+            </ul>
+            <h3 id="bios-vs-uefi">BIOS vs UEFI</h3>
+            <p>BIOS and UEFI are firmware interfaces.</p>
+            <p>They both start the boot process, but they work differently.</p>
+            <h3 id="bios-boot">BIOS Boot</h3>
+            <p>On BIOS systems, the firmware reads the first sector of the selected disk.</p>
+            <p>That first sector is the Master Boot Record, or MBR.</p>
             <div>
-                <pre><code class="language-shell">Computer Starts
-                         |
-                         v
-              +---------------------+
-              |     BIOS / UEFI     |
-              +---------------------+
-                         |
-                (if BIOS) Reads MBR
-                         v
-              +---------------------+
-              |   Master Boot       |
-              |       Record        |
-              +---------------------+
-                         |
-      +------------------+------------------+
-      |  First-Stage     |  Partition Table |
-      |   Loader (446B)  |   (4 entries)    |
-      +------------------+------------------+
-                         |
-                0x55AA Signature Check
-                         v
-              +---------------------+
-              |  Second-Stage Boot  |
-              |      Loader         |
-              +---------------------+</code></pre>
+                <pre><code class="language-text">BIOS
+ |
+ v
+Read first 512 bytes of disk
+ |
+ v
+Execute first-stage boot code
+ |
+ v
+Load second-stage bootloader</code></pre>
             </div>
-            <h3 id="second-stage-boot-loader">Second-Stage Boot Loader</h3>
-            <p>The full-featured second stage (or, on UEFI, the firmware boot manager itself) understands filesystems and can present a menu.</p>
-            <p><strong>GRUB Legacy vs GRUB 2</strong></p>
-            <p>
-            <table>
-                <tr>
-                    <td></td>
-                    <td><strong>GRUB Legacy</strong></td>
-                    <td><strong>GRUB 2</strong></td>
-                </tr>
-                <tr>
-                    <td>Main files</td>
-                    <td><code>stage1</code>, <code>stage2</code>, <code>menu.lst</code>, <code>grub.conf</code></td>
-                    <td><code>/boot/grub/grub.cfg</code> <em>(generated)</em></td>
-                </tr>
-                <tr>
-                    <td>Editing config</td>
-                    <td>Manual edit</td>
-                    <td>Edit <code>/etc/default/grub</code> + <code>grub-mkconfig</code></td>
-                </tr>
-                <tr>
-                    <td>Filesystem support</td>
-                    <td>ext2/3, iso9660 (limited)</td>
-                    <td>ext2-4, btrfs, xfs, ZFS, LVM, LUKS…</td>
-                </tr>
-                <tr>
-                    <td>ISO/USB live boot</td>
-                    <td>No (patches existed)</td>
-                    <td>Native <code>loopback</code> / <code>search --file</code></td>
-                </tr>
-                <tr>
-                    <td>Menu visibility</td>
-                    <td>Always shown</td>
-                    <td>Hidden unless <strong>Esc/Shift</strong> pressed (configurable)</td>
-                </tr>
-            </table>
-            </p>
-            <p>Other popular loaders include <strong>systemd-boot</strong> (formerly <code>gummiboot</code>), <strong>rEFInd</strong>, and <strong>LILO/Syslinux</strong> on legacy systems.</p>
-            <h3 id="kernel-initialization">Kernel Initialization</h3>
-            <p>Once the loader selects a kernel it usually loads:</p>
-            <ol>
-                <li><strong>Kernel image</strong> (<code>vmlinuz-*</code>)</li>
-                <li><strong>initramfs / initrd</strong> – a compressed cpio archive that holds early-boot userspace and drivers needed to find the real root filesystem.</li>
-            </ol>
-            <p>After decompression the kernel:</p>
-            <ul>
-                <li>Enables paging, sets up memory management and CPU scheduling.</li>
-                <li>Initializes built-in and <strong>modules</strong> (<code>/lib/modules/$(uname -r)/</code>) drivers.</li>
-                <li>Mounts the root filesystem specified by the loader or by <code>root=</code> kernel parameter.</li>
-                <li>Executes <strong>PID 1</strong>:</li>
-                <li><strong><code>/sbin/init</code></strong> on SysV-init systems</li>
-                <li><strong><code>/usr/lib/systemd/systemd</code></strong> on the vast majority of modern distributions</li>
-                <li>Alternatives such as <strong>OpenRC</strong>, <strong>runit</strong>, <strong>s6-rc</strong>, etc.</li>
-            </ul>
-            <h3 id="init-process">Init Process</h3>
-            <p><code>init</code> (or <code>systemd</code>) is the <em>root of the user-space process tree</em>.</p>
-            <ul>
-                <li><strong>SysV-init</strong> consults <code>/etc/inittab</code> and launches scripts in <code>/etc/rc.d/rc*.d/</code>.</li>
-                <li><strong>systemd</strong> reads declarative <strong>unit files</strong> in <code>/usr/lib/systemd/</code> and <code>/etc/systemd/</code>.</li>
-            </ul>
-            <h3 id="runlevels">Runlevels</h3>
-            <p>(Only relevant to SysV-init or distributions that still provide compatibility.)</p>
-            <p>
-            <table>
-                <tr>
-                    <td>Runlevel</td>
-                    <td>Traditional Meaning (Red Hat / Debian)*</td>
-                </tr>
-                <tr>
-                    <td>0</td>
-                    <td>Halt / power-off</td>
-                </tr>
-                <tr>
-                    <td>1</td>
-                    <td>Single-user (rescue)</td>
-                </tr>
-                <tr>
-                    <td>2</td>
-                    <td>Multi-user (Debian: full network; Red Hat: unused)</td>
-                </tr>
-                <tr>
-                    <td>3</td>
-                    <td>Multi-user, networking, no GUI</td>
-                </tr>
-                <tr>
-                    <td>4</td>
-                    <td>Undefined / custom</td>
-                </tr>
-                <tr>
-                    <td>5</td>
-                    <td>Multi-user + graphical login</td>
-                </tr>
-                <tr>
-                    <td>6</td>
-                    <td>Reboot</td>
-                </tr>
-            </table>
-            </p>
-            <p>Runlevel semantics vary slightly across families. Use <code>runlevel</code> to query, <code>telinit &lt;N&gt;</code> to switch, and edit <code>/etc/inittab</code> to change the default (if SysV-init is in use).</p>
+            <p>The first-stage code is tiny, so it usually only knows how to find and load a larger bootloader.</p>
+            <h3 id="uefi-boot">UEFI Boot</h3>
+            <p>On UEFI systems, the firmware reads boot entries from NVRAM.</p>
+            <p>It then loads an EFI executable from the EFI System Partition, also called ESP.</p>
             <div>
-                <pre><code class="language-bash"># Show current and previous runlevel
-runlevel
-# Switch to runlevel 3
+                <pre><code class="language-text">UEFI firmware
+     |
+     v
+Read NVRAM boot entry
+     |
+     v
+Open EFI System Partition
+     |
+     v
+Load .efi boot program
+     |
+     v
+Run GRUB, systemd-boot, rEFInd, shim, or another loader</code></pre>
+            </div>
+            <p>Common EFI boot files include:</p>
+            <ul>
+                <li><code>\EFI\debian\grubx64.efi</code></li>
+                <li><code>\EFI\ubuntu\shimx64.efi</code></li>
+                <li><code>\EFI\Microsoft\Boot\bootmgfw.efi</code></li>
+            </ul>
+            <p>With Secure Boot, the firmware may load a signed shim first. The shim then validates and loads the next bootloader.</p>
+            <h3 id="mbr">MBR</h3>
+            <p>MBR stands for Master Boot Record.</p>
+            <p>It is the first sector of a traditional BIOS disk.</p>
+            <p>It is usually 512 bytes.</p>
+            <div>
+                <pre><code class="language-text">+--------------------------------------+
+| Master Boot Record, 512 bytes        |
++----------------------+---------------+
+| 446 bytes            | boot code     |
+| 64 bytes             | partition tbl |
+| 2 bytes              | 0x55AA sig    |
++----------------------+---------------+</code></pre>
+            </div>
+            <p>The MBR contains:</p>
+            <ul>
+                <li>first-stage bootloader code</li>
+                <li>traditional partition table</li>
+                <li>boot signature</li>
+            </ul>
+            <p>On GPT disks, a protective MBR may still exist, but the real partition information is stored in GPT structures.</p>
+            <h3 id="gpt-and-efi-system-partition">GPT and EFI System Partition</h3>
+            <p>Modern systems usually use GPT with UEFI.</p>
+            <p>GPT stands for GUID Partition Table.</p>
+            <p>UEFI systems usually boot from an EFI System Partition.</p>
+            <p>The ESP is typically:</p>
+            <ul>
+                <li>FAT32 formatted</li>
+                <li>mounted at /boot/efi</li>
+                <li>contains .efi bootloader files</li>
+            </ul>
+            <p>Check EFI partition:</p>
+            <div>
+                <pre><code class="language-bash">lsblk -f</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">NAME   FSTYPE LABEL UUID                                 MOUNTPOINTS
+sda
+├─sda1 vfat         1111-2222                            /boot/efi
+├─sda2 ext4         aaaa-bbbb                            /boot
+└─sda3 ext4         cccc-dddd                            /</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">sda1 is a vfat partition mounted at /boot/efi.
+This is likely the EFI System Partition.</code></pre>
+            </div>
+            <h3 id="boot-device-selection">Boot Device Selection</h3>
+            <p>Firmware chooses a boot device based on boot order.</p>
+            <p>Common boot devices include:</p>
+            <ul>
+                <li>internal SSD</li>
+                <li>NVMe drive</li>
+                <li>USB drive</li>
+                <li>network PXE boot</li>
+                <li>optical media</li>
+                <li>external disk</li>
+            </ul>
+            <p>To change the boot order, users usually press a firmware key during startup.</p>
+            <p>Common keys include:</p>
+            <ul>
+                <li><code>Esc</code></li>
+                <li><code>F2</code></li>
+                <li><code>F10</code></li>
+                <li><code>F12</code></li>
+                <li><code>Del</code></li>
+            </ul>
+            <p>The exact key depends on the system vendor.</p>
+            <p>On UEFI systems, boot entries can often be viewed from Linux using:</p>
+            <div>
+                <pre><code class="language-bash">sudo efibootmgr</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">BootCurrent: 0002
+BootOrder: 0002,0001,0000
+Boot0000* Windows Boot Manager
+Boot0001* UEFI USB Drive
+Boot0002* debian</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The current boot entry is debian.
+The firmware tries debian first, then USB, then Windows.</code></pre>
+            </div>
+            <h3 id="bootloader">Bootloader</h3>
+            <p>The bootloader loads the Linux kernel and initramfs into memory.</p>
+            <p>Common bootloaders include:</p>
+            <ul>
+                <li>GRUB 2</li>
+                <li>systemd-boot</li>
+                <li><code>rEFInd</code></li>
+                <li><code>LILO</code></li>
+                <li>Syslinux</li>
+            </ul>
+            <p>The most common Linux bootloader is GRUB 2.</p>
+            <p>The bootloader usually provides:</p>
+            <ul>
+                <li>boot menu</li>
+                <li>kernel selection</li>
+                <li>recovery entries</li>
+                <li>kernel command-line editing</li>
+                <li>initramfs loading</li>
+                <li>chainloading another OS</li>
+            </ul>
+            <h3 id="grub-2">GRUB 2</h3>
+            <p>GRUB 2 can read filesystems, display menus, load kernels, load initramfs images, and pass kernel parameters.</p>
+            <p>Important files include:</p>
+            <ul>
+                <li><code>/boot/grub/grub.cfg</code></li>
+                <li><code>/etc/default/grub</code></li>
+                <li><code>/etc/grub.d/</code></li>
+            </ul>
+            <p>On some Red Hat-based systems:</p>
+            <div>
+                <pre><code class="language-text">/boot/grub2/grub.cfg</code></pre>
+            </div>
+            <p>Important note:</p>
+            <div>
+                <pre><code class="language-text">Do not usually edit grub.cfg directly.
+Edit /etc/default/grub or files under /etc/grub.d, then regenerate the configuration.</code></pre>
+            </div>
+            <p>Common regeneration commands:</p>
+            <p>Debian/Ubuntu:</p>
+            <div>
+                <pre><code class="language-bash">sudo update-grub</code></pre>
+            </div>
+            <p>Generic GRUB command:</p>
+            <div>
+                <pre><code class="language-bash">sudo grub-mkconfig -o /boot/grub/grub.cfg</code></pre>
+            </div>
+            <p>Red Hat-style systems may use:</p>
+            <div>
+                <pre><code class="language-bash">sudo grub2-mkconfig -o /boot/grub2/grub.cfg</code></pre>
+            </div>
+            <h3 id="kernel-image-and-initramfs">Kernel Image and Initramfs</h3>
+            <p>The bootloader normally loads two important files:</p>
+            <ul>
+                <li><code>vmlinuz-*</code> — compressed Linux kernel image</li>
+                <li><code>initramfs-*</code> — early userspace image</li>
+            </ul>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">ls -lh /boot</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">-rw-r--r-- 1 root root  12M vmlinuz-6.8.0
+-rw-r--r-- 1 root root  45M initramfs-6.8.0.img
+-rw-r--r-- 1 root root 200K config-6.8.0</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The kernel image is vmlinuz-6.8.0.
+The initramfs image contains early boot tools and drivers.</code></pre>
+            </div>
+            <h3 id="kernel-command-line">Kernel Command Line</h3>
+            <p>The bootloader passes parameters to the kernel.</p>
+            <p>View the current kernel command line:</p>
+            <div>
+                <pre><code class="language-bash">cat /proc/cmdline</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">BOOT_IMAGE=/vmlinuz-6.8.0 root=UUID=abcd-1234 ro quiet splash</code></pre>
+            </div>
+            <p>Important parameters:</p>
+            <ul>
+                <li><code>root=UUID=...</code> — real root filesystem</li>
+                <li><code>ro</code> — initially mount root read-only</li>
+                <li><code>quiet</code> — reduce boot messages</li>
+                <li><code>systemd.unit=rescue.target</code> — boot into rescue mode</li>
+                <li><code>rd.break</code> — break into initramfs emergency shell</li>
+                <li><code>single</code> — single-user style boot</li>
+            </ul>
+            <h3 id="kernel-initialization">Kernel Initialization</h3>
+            <p>After the bootloader transfers control, the kernel begins initialization.</p>
+            <p>The kernel:</p>
+            <ul>
+                <li>decompresses itself</li>
+                <li>sets up memory management</li>
+                <li>initializes CPU features</li>
+                <li>starts scheduler</li>
+                <li>initializes device drivers</li>
+                <li>mounts initramfs</li>
+                <li>detects hardware</li>
+                <li>loads needed modules</li>
+                <li>finds the real root filesystem</li>
+                <li>starts PID 1</li>
+            </ul>
+            <p>A simplified flow:</p>
+            <div>
+                <pre><code class="language-text">Kernel image starts
+       |
+       v
+Initialize CPU and memory
+       |
+       v
+Initialize drivers
+       |
+       v
+Mount initramfs
+       |
+       v
+Find real root filesystem
+       |
+       v
+switch_root or pivot_root
+       |
+       v
+Start /sbin/init or systemd</code></pre>
+            </div>
+            <h3 id="initramfs">Initramfs</h3>
+            <p>Initramfs stands for initial RAM filesystem.</p>
+            <p>It is a temporary filesystem loaded into memory during early boot.</p>
+            <p>It contains tools and drivers needed before the real root filesystem is available.</p>
+            <p>Initramfs may contain:</p>
+            <ul>
+                <li>storage drivers</li>
+                <li>filesystem drivers</li>
+                <li>LVM tools</li>
+                <li>RAID tools</li>
+                <li>encryption tools</li>
+                <li>network boot tools</li>
+                <li>busybox or dracut tools</li>
+                <li>early boot scripts</li>
+            </ul>
+            <p>Initramfs is especially important when the root filesystem is on:</p>
+            <ul>
+                <li><code>LVM</code></li>
+                <li>encrypted disk</li>
+                <li>software RAID</li>
+                <li>network storage</li>
+                <li>special storage controller</li>
+            </ul>
+            <p>If initramfs cannot find or mount the real root filesystem, boot may fail.</p>
+            <h3 id="switch_root-and-pivot_root">switch_root and pivot_root</h3>
+            <p>After initramfs finds and mounts the real root filesystem, the system must move from the temporary root to the real root.</p>
+            <p>This is commonly done with:</p>
+            <div>
+                <pre><code class="language-text">switch_root</code></pre>
+            </div>
+            <p>or historically:</p>
+            <div>
+                <pre><code class="language-text">pivot_root</code></pre>
+            </div>
+            <p>Conceptual flow:</p>
+            <div>
+                <pre><code class="language-text">Temporary initramfs root
+        |
+        v
+Mount real root filesystem
+        |
+        v
+Switch to real root
+        |
+        v
+Run real /sbin/init or systemd</code></pre>
+            </div>
+            <h3 id="pid-1">PID 1</h3>
+            <p>PID 1 is the first user-space process.</p>
+            <p>On most modern Linux systems, PID 1 is systemd.</p>
+            <p>Check PID 1:</p>
+            <div>
+                <pre><code class="language-bash">ps -p 1 -o pid,comm,args</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">PID COMMAND ARGS
+1   systemd /usr/lib/systemd/systemd</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">systemd is PID 1.
+It is responsible for starting and supervising user-space services.</code></pre>
+            </div>
+            <p>On older systems, PID 1 may be:</p>
+            <div>
+                <pre><code class="language-text">init</code></pre>
+            </div>
+            <p>or alternatives such as:</p>
+            <ul>
+                <li><code>OpenRC</code></li>
+                <li>runit</li>
+                <li>s6</li>
+            </ul>
+            <h3 id="sysv-init">SysV Init</h3>
+            <p>SysV init is an older initialization system.</p>
+            <p>It uses:</p>
+            <ul>
+                <li><code>/etc/inittab</code></li>
+                <li><code>/etc/init.d/</code></li>
+                <li><code>/etc/rc.d/</code></li>
+            </ul>
+            <p>SysV init organizes system states using runlevels.</p>
+            <p>Commands include:</p>
+            <div>
+                <pre><code class="language-bash">runlevel
 sudo telinit 3</code></pre>
             </div>
-            <h3 id="targets-systemd-">Targets (systemd)</h3>
-            <p><code>systemd</code> replaces runlevels with <strong>targets</strong>, which can aggregate any number of services (units).</p>
-            <p>
-            <table>
-                <tr>
-                    <td>Target</td>
-                    <td>Approx. Runlevel</td>
-                    <td>Purpose</td>
-                </tr>
-                <tr>
-                    <td><code>poweroff.target</code></td>
-                    <td>0</td>
-                    <td>Power-off</td>
-                </tr>
-                <tr>
-                    <td><code>rescue.target</code></td>
-                    <td>1</td>
-                    <td>Single-user (basic services)</td>
-                </tr>
-                <tr>
-                    <td><code>emergency.target</code></td>
-                    <td>—</td>
-                    <td>Root shell, minimal mounts (stricter than rescue)</td>
-                </tr>
-                <tr>
-                    <td><code>multi-user.target</code></td>
-                    <td>2/3</td>
-                    <td>Text-mode multi-user</td>
-                </tr>
-                <tr>
-                    <td><code>graphical.target</code></td>
-                    <td>5</td>
-                    <td>GUI login manager + multi-user</td>
-                </tr>
-                <tr>
-                    <td><code>reboot.target</code></td>
-                    <td>6</td>
-                    <td>Reboot</td>
-                </tr>
-            </table>
-            </p>
-            <div>
-                <pre><code class="language-bash"># Show active targets
-systemctl list-units --type=target --state=active
-# Switch to graphical target
-sudo systemctl isolate graphical.target
-# Query / set default target
-systemctl get-default
-sudo systemctl set-default multi-user.target</code></pre>
-            </div>
-            <p>Symbolic links keep backward compatibility:</p>
-            <div>
-                <pre><code class="language-bash">ls -l /usr/lib/systemd/system/runlevel*.target</code></pre>
-            </div>
-            <h3 id="kernel-panic">Kernel Panic</h3>
-            <p>A <strong>kernel panic</strong> is an unrecoverable fault detected by the kernel (NULL pointer dereference, unhandled IRQ, corrupted stack, etc.). When it occurs the kernel prints a <em>panic stack trace</em>, optionally dumps memory to disk (kdump / crashkernel), and halts or reboots according to <code>kernel.panic</code> sysctl.</p>
-            <p><strong>Common causes</strong></p>
+            <p>SysV init is less common on modern mainstream distributions but still appears in older systems and compatibility layers.</p>
+            <h3 id="systemd">systemd</h3>
+            <p>systemd is the dominant init system on many modern Linux distributions.</p>
+            <p>It manages:</p>
             <ul>
-                <li><strong>Hardware:</strong> defective RAM, overheating CPU, failing storage controller.</li>
-                <li><strong>Software:</strong> buggy kernel module, out-of-tree driver, mis-compiled custom kernel.</li>
-                <li><strong>Filesystem:</strong> unrecoverable journal corruption, I/O errors on root FS.</li>
+                <li>services</li>
+                <li>targets</li>
+                <li>mounts</li>
+                <li>devices</li>
+                <li>timers</li>
+                <li>sockets</li>
+                <li>logging through journald</li>
+                <li>dependency ordering</li>
+                <li>parallel startup</li>
             </ul>
-            <p><strong>Recovery steps</strong></p>
+            <p>systemd uses unit files.</p>
+            <p>Common unit types include:</p>
+            <ul>
+                <li><code>.service</code></li>
+                <li><code>.target</code></li>
+                <li><code>.mount</code></li>
+                <li><code>.socket</code></li>
+                <li><code>.timer</code></li>
+                <li><code>.device</code></li>
+            </ul>
+            <h3 id="systemd-startup-flow">systemd Startup Flow</h3>
+            <p>systemd starts units according to dependencies.</p>
+            <p>A simplified target flow:</p>
+            <div>
+                <pre><code class="language-text">default.target
+      |
+      v
+multi-user.target or graphical.target
+      |
+      +--&gt; sysinit.target
+      |       fsck, sysctl, modules, udev
+      |
+      +--&gt; basic.target
+      |       journald, sockets, basic services
+      |
+      +--&gt; multi-user services
+              sshd, cron, networking, getty</code></pre>
+            </div>
+            <p>If the system boots to a GUI, <code>graphical.target</code> includes display-manager services.</p>
+            <div>
+                <pre><code class="language-text">graphical.target
+      |
+      v
+multi-user.target
+      |
+      v
+display-manager.service
+      |
+      v
+graphical login screen</code></pre>
+            </div>
+            <h3 id="runlevels">Runlevels</h3>
+            <p>Runlevels are the traditional SysV way to represent system state.</p>
+            <ul>
+                <li>0 — halt or power off</li>
+                <li>1 — single-user or rescue</li>
+                <li>2 — multi-user, distro-specific</li>
+                <li>3 — multi-user with networking, no GUI</li>
+                <li>4 — custom or unused</li>
+                <li>5 — multi-user with GUI</li>
+                <li>6 — reboot</li>
+            </ul>
+            <p>Runlevel meaning can vary between distributions.</p>
+            <p>Check runlevel:</p>
+            <div>
+                <pre><code class="language-bash">runlevel</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">N 5</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">There was no previous runlevel.
+The current runlevel is 5.</code></pre>
+            </div>
+            <h3 id="systemd-targets">systemd Targets</h3>
+            <p>systemd replaces runlevels with targets.</p>
+            <p>Common targets:</p>
+            <ul>
+                <li><code>poweroff.target</code> — power off</li>
+                <li><code>rescue.target</code> — basic rescue mode</li>
+                <li><code>emergency.target</code> — very minimal emergency shell</li>
+                <li><code>multi-user.target</code> — text-mode multi-user system</li>
+                <li><code>graphical.target</code> — graphical login and multi-user services</li>
+                <li><code>reboot.target</code> — reboot</li>
+            </ul>
+            <p>Approximate mapping:</p>
+            <ul>
+                <li><code>runlevel 0</code> → <code>poweroff.target</code></li>
+                <li><code>runlevel 1</code> → <code>rescue.target</code></li>
+                <li><code>runlevel 3</code> → <code>multi-user.target</code></li>
+                <li><code>runlevel 5</code> → <code>graphical.target</code></li>
+                <li><code>runlevel 6</code> → <code>reboot.target</code></li>
+            </ul>
+            <p>Check default target:</p>
+            <div>
+                <pre><code class="language-bash">systemctl get-default</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">graphical.target</code></pre>
+            </div>
+            <p>Set default target:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl set-default multi-user.target</code></pre>
+            </div>
+            <p>Switch target immediately:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl isolate multi-user.target</code></pre>
+            </div>
+            <p>Important:</p>
+            <div>
+                <pre><code class="language-text">set-default changes future boots.
+isolate changes the current running state.</code></pre>
+            </div>
+            <h3 id="login-prompts-and-user-sessions">Login Prompts and User Sessions</h3>
+            <p>After startup reaches the appropriate target, login services become available.</p>
+            <p>Text login prompts are usually provided by:</p>
+            <div>
+                <pre><code class="language-text">getty@.service</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-bash">systemctl status getty@tty1.service</code></pre>
+            </div>
+            <p>SSH login is usually provided by:</p>
+            <div>
+                <pre><code class="language-text">sshd.service</code></pre>
+            </div>
+            <p>Graphical login is provided by a display manager, such as:</p>
+            <ul>
+                <li>gdm</li>
+                <li>sddm</li>
+                <li>lightdm</li>
+                <li>xdm</li>
+            </ul>
+            <p>User sessions may load shell startup files such as:</p>
+            <ul>
+                <li><code>/etc/profile</code></li>
+                <li><code>~/.bash_profile</code></li>
+                <li><code>~/.bashrc</code></li>
+            </ul>
+            <h3 id="boot-logs">Boot Logs</h3>
+            <p>Boot logs are essential for diagnosing startup problems.</p>
+            <p>View logs from the current boot:</p>
+            <div>
+                <pre><code class="language-bash">journalctl -b</code></pre>
+            </div>
+            <p>Show only errors from current boot:</p>
+            <div>
+                <pre><code class="language-bash">journalctl -b -p err</code></pre>
+            </div>
+            <p>Show previous boot:</p>
+            <div>
+                <pre><code class="language-bash">journalctl -b -1</code></pre>
+            </div>
+            <p>Show kernel messages:</p>
+            <div>
+                <pre><code class="language-bash">journalctl -k -b</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">Jun 01 10:00:05 host systemd[1]: Started OpenSSH server daemon.
+Jun 01 10:00:08 host kernel: EXT4-fs (sda3): mounted filesystem with ordered data mode.</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">systemd started sshd.
+The kernel mounted the root filesystem successfully.</code></pre>
+            </div>
+            <h3 id="boot-performance-tools">Boot Performance Tools</h3>
+            <p>systemd includes tools for measuring boot performance.</p>
+            <p>Show total boot time:</p>
+            <div>
+                <pre><code class="language-bash">systemd-analyze</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Startup finished in 4.123s (kernel) + 12.456s (userspace) = 16.579s
+graphical.target reached after 12.200s in userspace.</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The kernel stage took about 4.1 seconds.
+User-space services took about 12.5 seconds.
+The graphical target was reached after about 12.2 seconds.</code></pre>
+            </div>
+            <p>Show slow services:</p>
+            <div>
+                <pre><code class="language-bash">systemd-analyze blame</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">12.000s slow-demo.service
+ 3.500s NetworkManager-wait-online.service
+ 1.200s sshd.service</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">slow-demo.service took the most time.
+NetworkManager wait-online also contributed to boot delay.</code></pre>
+            </div>
+            <p>Show dependency chain:</p>
+            <div>
+                <pre><code class="language-bash">systemd-analyze critical-chain</code></pre>
+            </div>
+            <p>This helps identify services that delay the boot path.</p>
+            <h3 id="kernel-panic">Kernel Panic</h3>
+            <p>A kernel panic is an unrecoverable kernel error.</p>
+            <p>When it happens, the kernel cannot safely continue.</p>
+            <p>Symptoms may include:</p>
+            <ul>
+                <li>panic message on console</li>
+                <li>stack trace</li>
+                <li>system freeze</li>
+                <li>automatic reboot</li>
+                <li>failure to mount root filesystem</li>
+            </ul>
+            <p>Common causes:</p>
+            <ul>
+                <li>bad RAM</li>
+                <li>failing disk</li>
+                <li>buggy kernel module</li>
+                <li>broken storage driver</li>
+                <li>filesystem corruption</li>
+                <li>bad kernel update</li>
+                <li>misconfigured custom kernel</li>
+            </ul>
+            <p>Example panic message:</p>
+            <div>
+                <pre><code class="language-text">Kernel panic - not syncing: VFS: Unable to mount root fs on unknown-block(0,0)</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The kernel could not mount the root filesystem.
+Possible causes include wrong root= parameter, missing initramfs driver, bad disk, or filesystem problem.</code></pre>
+            </div>
+            <h3 id="kernel-panic-recovery-workflow">Kernel Panic Recovery Workflow</h3>
+            <p>When diagnosing a panic:</p>
             <ol>
-                <li><strong>Single-user / rescue mode</strong> – add <code>single</code> or <code>systemd.unit=rescue.target</code> to the kernel command line.</li>
-                <li><strong>Examine logs</strong> – review last lines of <code>dmesg</code>, <code>/var/log/kern.log</code>, or crash dumps.</li>
-                <li><strong>Hardware tests</strong> – run <code>memtest86+</code>, manufacturer disk diagnostics, or swap suspected components.</li>
-                <li><strong>Live USB</strong> – chroot into the installation to reinstall kernels or roll back updates.</li>
-                <li><strong>Backups</strong> – maintain verified backups so that a full reinstall remains a quick option if necessary.</li>
+                <li>Photograph or capture the panic message.</li>
+                <li>Boot an older kernel from GRUB if available.</li>
+                <li>Boot rescue mode or live USB.</li>
+                <li>Check storage and filesystem health.</li>
+                <li>Check recent kernel or driver updates.</li>
+                <li>Review logs from previous boot.</li>
+                <li>Rebuild initramfs if storage drivers are missing.</li>
+                <li>Test RAM and hardware if errors persist.</li>
             </ol>
-            <h3 id="system-management-commands">System Management Commands</h3>
-            <p>In Linux, several command-line utilities allow you to manage your system effectively. Here are some of the most commonly used commands.</p>
-            <h4 id="managing-the-hostname">Managing the Hostname</h4>
-            <p>A hostname is a unique name that identifies a system within a network. It's essential for communication in a network environment as it differentiates one machine from another.</p>
-            <p>Viewing the hostname: Use the <code>hostname</code> command to print the current hostname of the system:</p>
+            <p>Useful commands after booting rescue or a working kernel:</p>
+            <div>
+                <pre><code class="language-bash">journalctl -b -1 -p err
+journalctl -k -b -1
+dmesg -T
+lsblk -f
+blkid
+fsck</code></pre>
+            </div>
+            <h3 id="basic-system-management-commands">Basic System Management Commands</h3>
+            <h3 id="hostname">Hostname</h3>
+            <p>View hostname:</p>
             <div>
                 <pre><code class="language-bash">hostname</code></pre>
             </div>
-            <p>Setting the hostname: In SystemD-based systems, you can change the hostname using the hostnamectl command. Alternatively, you can manually modify the /etc/hostname file.</p>
+            <p>Set hostname on systemd systems:</p>
             <div>
-                <pre><code class="language-bash">hostnamectl set-hostname your_new_name</code></pre>
+                <pre><code class="language-bash">sudo hostnamectl set-hostname server01</code></pre>
             </div>
-            <h4 id="checking-system-uptime">Checking System Uptime</h4>
-            <p>The uptime command is used to check how long the system has been running without rebooting. It also displays the current time, number of logged-in users, and system load averages over the last 1, 5, and 15 minutes.</p>
+            <p>Verify:</p>
+            <div>
+                <pre><code class="language-bash">hostnamectl</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Static hostname: server01
+Operating System: Ubuntu
+Kernel: Linux 6.8.0
+Architecture: x86-64</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The system hostname is server01.
+This name identifies the machine on the network and in logs.</code></pre>
+            </div>
+            <h3 id="uptime">Uptime</h3>
+            <p>Check uptime:</p>
             <div>
                 <pre><code class="language-bash">uptime</code></pre>
             </div>
-            <h4 id="rebooting-the-system">Rebooting the System</h4>
-            <p>Immediate reboot: Use the reboot command or systemctl reboot to restart the system immediately.</p>
+            <p>Example output:</p>
             <div>
-                <pre><code class="language-bash"># Using reboot
-reboot
+                <pre><code class="language-text">15:20:10 up 3 days,  4:12,  2 users,  load average: 0.10, 0.20, 0.18</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The system has been running for 3 days and 4 hours.
+Two users are logged in.
+Load average is low.</code></pre>
+            </div>
+            <p>Uptime helps confirm whether a reboot happened recently.</p>
+            <h3 id="reboot">Reboot</h3>
+            <p>Reboot immediately:</p>
+            <div>
+                <pre><code class="language-bash">sudo reboot</code></pre>
+            </div>
+            <p>or:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl reboot</code></pre>
+            </div>
+            <p>Schedule reboot in 5 minutes:</p>
+            <div>
+                <pre><code class="language-bash">sudo shutdown -r +5</code></pre>
+            </div>
+            <p>Cancel scheduled shutdown or reboot:</p>
+            <div>
+                <pre><code class="language-bash">sudo shutdown -c</code></pre>
+            </div>
+            <h3 id="shutdown">Shutdown</h3>
+            <p>Shutdown immediately:</p>
+            <div>
+                <pre><code class="language-bash">sudo shutdown now</code></pre>
+            </div>
+            <p>or:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl poweroff</code></pre>
+            </div>
+            <p>Schedule shutdown in 30 minutes:</p>
+            <div>
+                <pre><code class="language-bash">sudo shutdown -h +30</code></pre>
+            </div>
+            <p>Broadcast message example:</p>
+            <div>
+                <pre><code class="language-bash">sudo shutdown -h +30 "System maintenance in 30 minutes"</code></pre>
+            </div>
+            <h3 id="timezone">Timezone</h3>
+            <p>Show time settings:</p>
+            <div>
+                <pre><code class="language-bash">timedatectl</code></pre>
+            </div>
+            <p>List timezones:</p>
+            <div>
+                <pre><code class="language-bash">timedatectl list-timezones</code></pre>
+            </div>
+            <p>Set timezone:</p>
+            <div>
+                <pre><code class="language-bash">sudo timedatectl set-timezone Europe/Berlin</code></pre>
+            </div>
+            <p>Verify:</p>
+            <div>
+                <pre><code class="language-bash">timedatectl</code></pre>
+            </div>
+            <p>Correct timezone matters for:</p>
+            <ul>
+                <li>logs</li>
+                <li>cron jobs</li>
+                <li>systemd timers</li>
+                <li>security investigations</li>
+                <li>scheduled maintenance</li>
+                <li>distributed systems</li>
+            </ul>
+            <h3 id="root-password-recovery">Root Password Recovery</h3>
+            <p>Root password recovery is a sensitive administrative procedure.</p>
+            <p>Only perform it on systems you own or are authorized to administer.</p>
+            <p>A common Red Hat-style recovery method uses:</p>
+            <div>
+                <pre><code class="language-text">rd.break</code></pre>
+            </div>
+            <p>This breaks into initramfs before the real root filesystem is fully started.</p>
+            <p>General flow:</p>
+            <ol>
+                <li>Reboot.</li>
+                <li>Open GRUB menu.</li>
+                <li>Edit kernel command line.</li>
+                <li>Add rd.break.</li>
+                <li>Boot into emergency shell.</li>
+                <li>Remount sysroot read-write.</li>
+                <li>chroot into /sysroot.</li>
+                <li>Change password.</li>
+                <li>Trigger SELinux relabel if needed.</li>
+                <li>Reboot.</li>
+            </ol>
+            <p>Commands after reaching the emergency shell:</p>
+            <div>
+                <pre><code class="language-bash">mount -o remount,rw /sysroot
+chroot /sysroot
+passwd root
+touch /.autorelabel
+exit
+exit</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The root filesystem is remounted writable.
+chroot makes /sysroot behave like /.
+passwd changes the root password.
+.autorelabel tells SELinux to relabel files on next boot.</code></pre>
+            </div>
+            <p>On Debian/Ubuntu systems, recovery may use GRUB recovery mode or <code>init=/bin/bash</code> depending on setup.</p>
+            <h3 id="scenario-1-measure-boot-time-and-find-slow-services">Scenario 1: Measure Boot Time and Find Slow Services</h3>
+            <p>Identify what slowed down the boot process.</p>
+            <h4 id="simulate-a-boot-delay">Simulate a Boot Delay</h4>
+            <p>Create a test service that sleeps during boot:</p>
+            <div>
+                <pre><code class="language-bash">sudo tee /etc/systemd/system/slow-demo.service &gt; /dev/null &lt;&lt;'EOF'
+[Unit]
+Description=Slow Boot Demo Service
 
-# Using systemctl
-systemctl reboot</code></pre>
-            </div>
-            <p>Scheduled reboot: To reboot at a specific time, use the shutdown command with the -r option followed by the time in minutes. For instance, to reboot in 5 minutes:</p>
-            <div>
-                <pre><code class="language-bash">shutdown -r +5</code></pre>
-            </div>
-            <h4 id="shutting-down-the-system">Shutting Down the System</h4>
-            <p>Immediate shutdown: The system can be shut down immediately using the shutdown now command or systemctl poweroff.</p>
-            <div>
-                <pre><code class="language-bash"># Using shutdown
-shutdown now
+[Service]
+Type=oneshot
+ExecStart=/bin/sleep 20
 
-# Using systemctl
-systemctl poweroff</code></pre>
+[Install]
+WantedBy=multi-user.target
+EOF</code></pre>
             </div>
-            <p>Scheduled shutdown: A shutdown can be scheduled at a specific time using the shutdown command with the -h option followed by the time in minutes. For example, to shut down the system in 30 minutes:</p>
+            <p>Enable it:</p>
             <div>
-                <pre><code class="language-bash">shutdown -h +30</code></pre>
+                <pre><code class="language-bash">sudo systemctl daemon-reload
+sudo systemctl enable slow-demo.service</code></pre>
             </div>
-            <p>Understanding and correctly using these commands can be incredibly beneficial when managing Linux-based systems. It allows users to maintain control over their systems, schedule tasks, and keep track of their system's status.</p>
-            <h3 id="recovering-the-root-password">Recovering the Root Password</h3>
-            <p>If you forget the root password on your Linux system, you can recover it by following these steps. We will interrupt the boot process to gain access to a shell, then change the root password.</p>
-            <ol>
-                <li>
-                    <p><strong>Reboot the machine.</strong> Start by restarting your computer. You can do this with the <code>reboot</code> command or by manually turning it off and on again.</p>
-                </li>
-                <li>
-                    <p><strong>Interrupt the boot process.</strong> During the boot process, you'll see the Grub bootloader screen. This is where you select which kernel you want to boot. Interrupt this by pressing any key before the timer runs out.</p>
-                </li>
-                <li>
-                    <p><strong>Edit the boot options.</strong> Highlight the kernel you want to boot and press <code>e</code> to edit the boot options.</p>
-                </li>
-                <li>
-                    <p><strong>Modify the kernel parameters.</strong> In the kernel parameters line (usually starting with <code>linux16</code> or <code>linux</code>), navigate to the end and add <code>rd.break</code> which interrupts the boot process before control is passed from the initramfs to the actual kernel. Press <code>Ctrl-x</code> or <code>F10</code> to continue booting.</p>
-                </li>
-                <li>
-                    <p><strong>Gain write access to the system root.</strong> After booting, you'll be in an emergency shell. The system root is mounted as read-only. Remount it as read-write with the following command: </p>
-                </li>
-            </ol>
+            <p>Reboot:</p>
             <div>
-                <pre><code class="language-bash">mount -o remount,rw /sysroot</code></pre>
+                <pre><code class="language-bash">sudo systemctl reboot</code></pre>
             </div>
-            <ol>
-                <li><strong>Change to the system root directory</strong>. Use the chroot command to change the apparent root directory to /sysroot:</li>
-            </ol>
+            <h4 id="check-with-systemd-analyze">Check with <code>systemd-analyze</code></h4>
+            <p>After reboot:</p>
             <div>
-                <pre><code class="language-bash">chroot /sysroot</code></pre>
+                <pre><code class="language-bash">systemd-analyze</code></pre>
             </div>
-            <ol>
-                <li>
-                    <p><strong>Change the root password</strong>. You are now in a position to change the root password. Use the passwd command and follow the prompts to enter a new root password.</p>
-                </li>
-                <li>
-                    <p><strong>Update SELinux parameters</strong>. If your system uses SELinux, you need to update the SELinux parameters. Run the following command to ensure the context labels are reset on the filesystem:</p>
-                </li>
-            </ol>
+            <p>Example output:</p>
             <div>
-                <pre><code class="language-bash">touch /.autorelabel</code></pre>
+                <pre><code class="language-text">Startup finished in 3.800s (kernel) + 25.400s (userspace) = 29.200s
+multi-user.target reached after 25.100s in userspace.</code></pre>
             </div>
-            <ol>
-                <li><strong>Exit and reboot</strong>. Finally, type exit twice. The first exit will leave the chroot environment, and the second will continue the boot process. Your system will then reboot and you should be able to log in with the new root password.</li>
-            </ol>
+            <h4 id="check-slow-services">Check Slow Services</h4>
+            <div>
+                <pre><code class="language-bash">systemd-analyze blame | head</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">20.010s slow-demo.service
+ 3.400s NetworkManager-wait-online.service
+ 1.100s sshd.service</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The boot delay is mostly caused by slow-demo.service.
+The kernel was not the main bottleneck.
+The userspace service startup path was delayed.</code></pre>
+            </div>
+            <h4 id="cleanup">Cleanup</h4>
+            <div>
+                <pre><code class="language-bash">sudo systemctl disable --now slow-demo.service
+sudo rm -f /etc/systemd/system/slow-demo.service
+sudo systemctl daemon-reload</code></pre>
+            </div>
+            <h3 id="scenario-2-diagnose-a-failed-service-during-boot">Scenario 2: Diagnose a Failed Service During Boot</h3>
+            <p>Simulate a service that fails during boot and diagnose it.</p>
+            <h4 id="create-a-broken-service">Create a Broken Service</h4>
+            <div>
+                <pre><code class="language-bash">sudo tee /etc/systemd/system/broken-boot.service &gt; /dev/null &lt;&lt;'EOF'
+[Unit]
+Description=Broken Boot Demo Service
+
+[Service]
+Type=oneshot
+ExecStart=/not/a/real/command
+
+[Install]
+WantedBy=multi-user.target
+EOF</code></pre>
+            </div>
+            <p>Enable and start:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl daemon-reload
+sudo systemctl enable broken-boot.service
+sudo systemctl start broken-boot.service</code></pre>
+            </div>
+            <h4 id="check-failed-units">Check Failed Units</h4>
+            <div>
+                <pre><code class="language-bash">systemctl --failed</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">UNIT                 LOAD   ACTIVE SUB    DESCRIPTION
+broken-boot.service  loaded failed failed Broken Boot Demo Service</code></pre>
+            </div>
+            <h4 id="check-status">Check Status</h4>
+            <div>
+                <pre><code class="language-bash">systemctl status broken-boot.service</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Active: failed (Result: exit-code)
+Process: 1300 ExecStart=/not/a/real/command (code=exited, status=203/EXEC)</code></pre>
+            </div>
+            <h4 id="check-logs">Check Logs</h4>
+            <div>
+                <pre><code class="language-bash">journalctl -u broken-boot.service -b</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Failed to locate executable /not/a/real/command
+Failed at step EXEC spawning /not/a/real/command: No such file or directory</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The service failed because ExecStart points to a missing executable.
+This is not a kernel or bootloader problem.
+It is a systemd unit configuration problem.</code></pre>
+            </div>
+            <h4 id="cleanup">Cleanup</h4>
+            <div>
+                <pre><code class="language-bash">sudo systemctl disable broken-boot.service
+sudo rm -f /etc/systemd/system/broken-boot.service
+sudo systemctl daemon-reload
+sudo systemctl reset-failed</code></pre>
+            </div>
+            <h3 id="scenario-3-simulate-wrong-default-target">Scenario 3: Simulate Wrong Default Target</h3>
+            <p>Understand the difference between text-mode and graphical boot.</p>
+            <h4 id="check-current-default-target">Check Current Default Target</h4>
+            <div>
+                <pre><code class="language-bash">systemctl get-default</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">graphical.target</code></pre>
+            </div>
+            <h4 id="change-future-boots-to-text-mode">Change Future Boots to Text Mode</h4>
+            <div>
+                <pre><code class="language-bash">sudo systemctl set-default multi-user.target</code></pre>
+            </div>
+            <p>Reboot:</p>
+            <div>
+                <pre><code class="language-bash">sudo reboot</code></pre>
+            </div>
+            <h4 id="check-after-boot">Check After Boot</h4>
+            <div>
+                <pre><code class="language-bash">systemctl get-default
+systemctl list-units --type=target --state=active</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">multi-user.target</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The system is configured to boot into text-mode multi-user state.
+A graphical login manager may not start automatically.</code></pre>
+            </div>
+            <h4 id="restore-graphical-boot">Restore Graphical Boot</h4>
+            <div>
+                <pre><code class="language-bash">sudo systemctl set-default graphical.target
+sudo systemctl isolate graphical.target</code></pre>
+            </div>
+            <h3 id="scenario-4-boot-into-rescue-target">Scenario 4: Boot into Rescue Target</h3>
+            <p>Practice entering a limited maintenance environment.</p>
+            <h4 id="temporary-boot-method">Temporary Boot Method</h4>
+            <p>At GRUB, edit the kernel command line and add:</p>
+            <div>
+                <pre><code class="language-text">systemd.unit=rescue.target</code></pre>
+            </div>
+            <p>Boot with the edited entry.</p>
+            <h4 id="runtime-method">Runtime Method</h4>
+            <p>From a running system:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl isolate rescue.target</code></pre>
+            </div>
+            <h4 id="check">Check</h4>
+            <div>
+                <pre><code class="language-bash">systemctl list-units --type=target --state=active</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">rescue.target loaded active active Rescue Mode</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The system is in rescue mode.
+Only essential services are running.
+This mode is useful for maintenance and repair.</code></pre>
+            </div>
+            <h4 id="return-to-normal-target">Return to Normal Target</h4>
+            <div>
+                <pre><code class="language-bash">sudo systemctl isolate multi-user.target</code></pre>
+            </div>
+            <p>or for GUI:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl isolate graphical.target</code></pre>
+            </div>
+            <h3 id="scenario-5-diagnose-a-boot-problem-from-logs">Scenario 5: Diagnose a Boot Problem from Logs</h3>
+            <p>Use journal logs to find errors from the current or previous boot.</p>
+            <h4 id="check-current-boot-errors">Check Current Boot Errors</h4>
+            <div>
+                <pre><code class="language-bash">journalctl -b -p err</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Jun 01 10:05:01 host systemd[1]: failed-demo.service: Failed with result 'exit-code'.
+Jun 01 10:05:01 host kernel: ata1.00: failed command: READ FPDMA QUEUED</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">One service failed.
+The kernel also reported a disk-related error.
+The service failure and disk error should be investigated separately.</code></pre>
+            </div>
+            <h4 id="check-previous-boot">Check Previous Boot</h4>
+            <div>
+                <pre><code class="language-bash">journalctl -b -1 -p err</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">Previous boot logs help diagnose failures that happened before the last reboot.</code></pre>
+            </div>
+            <h3 id="scenario-6-simulate-and-cancel-scheduled-shutdown">Scenario 6: Simulate and Cancel Scheduled Shutdown</h3>
+            <p>Practice scheduling and canceling shutdowns safely.</p>
+            <h4 id="schedule-shutdown">Schedule Shutdown</h4>
+            <div>
+                <pre><code class="language-bash">sudo shutdown -h +10 "Test shutdown in 10 minutes"</code></pre>
+            </div>
+            <p>Example broadcast:</p>
+            <div>
+                <pre><code class="language-text">Broadcast message from root:
+The system is going down for poweroff in 10 minutes!</code></pre>
+            </div>
+            <h4 id="cancel-it">Cancel It</h4>
+            <div>
+                <pre><code class="language-bash">sudo shutdown -c</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The shutdown was scheduled.
+shutdown -c canceled it before it happened.
+This is useful during maintenance planning.</code></pre>
+            </div>
+            <h4 id="schedule-reboot">Schedule Reboot</h4>
+            <div>
+                <pre><code class="language-bash">sudo shutdown -r +5 "Test reboot in 5 minutes"</code></pre>
+            </div>
+            <p>Cancel:</p>
+            <div>
+                <pre><code class="language-bash">sudo shutdown -c</code></pre>
+            </div>
+            <h3 id="scenario-7-verify-a-reboot-with-uptime">Scenario 7: Verify a Reboot with Uptime</h3>
+            <p>Confirm that a system actually restarted.</p>
+            <h4 id="before-reboot">Before Reboot</h4>
+            <div>
+                <pre><code class="language-bash">uptime</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">up 14 days, 3:21</code></pre>
+            </div>
+            <p>Reboot:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl reboot</code></pre>
+            </div>
+            <p>After reboot:</p>
+            <div>
+                <pre><code class="language-bash">uptime</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">up 2 min</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The uptime reset from 14 days to 2 minutes.
+This confirms the system rebooted.</code></pre>
+            </div>
+            <h3 id="scenario-8-investigate-kernel-panic-root-filesystem-not-found">Scenario 8: Investigate Kernel Panic: Root Filesystem Not Found</h3>
+            <p>Understand a common boot panic pattern.</p>
+            <h4 id="simulated-symptom">Simulated Symptom</h4>
+            <p>Console shows:</p>
+            <div>
+                <pre><code class="language-text">Kernel panic - not syncing: VFS: Unable to mount root fs on unknown-block(0,0)</code></pre>
+            </div>
+            <h4 id="check-from-rescue-environment">Check from Rescue Environment</h4>
+            <p>Boot from an older kernel, rescue mode, or live USB.</p>
+            <p>Check disks:</p>
+            <div>
+                <pre><code class="language-bash">lsblk -f
+blkid</code></pre>
+            </div>
+            <p>Example:</p>
+            <div>
+                <pre><code class="language-text">NAME   FSTYPE UUID       MOUNTPOINTS
+sda1   vfat   1111-2222  /boot/efi
+sda2   ext4   aaaa-bbbb  /boot
+sda3   ext4   cccc-dddd  /</code></pre>
+            </div>
+            <p>Check kernel command line from bootloader configuration:</p>
+            <div>
+                <pre><code class="language-bash">grep -R "root=" /boot/grub* /boot/loader 2&gt;/dev/null</code></pre>
+            </div>
+            <p>Example problem:</p>
+            <div>
+                <pre><code class="language-text">root=UUID=wrong-uuid</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The kernel was told to mount a root filesystem UUID that does not exist.
+Fix GRUB configuration or filesystem UUID references.</code></pre>
+            </div>
+            <h4 id="possible-fixes">Possible Fixes</h4>
+            <ul>
+                <li>correct root= UUID</li>
+                <li>rebuild GRUB configuration</li>
+                <li>rebuild initramfs</li>
+                <li>check disk health</li>
+                <li>restore missing storage drivers</li>
+            </ul>
+            <h3 id="scenario-9-recover-root-password-in-a-lab-vm">Scenario 9: Recover Root Password in a Lab VM</h3>
+            <p>Practice emergency administrative recovery.</p>
+            <h4 id="grub-step">GRUB Step</h4>
+            <p>At GRUB, edit the kernel entry and add:</p>
+            <div>
+                <pre><code class="language-text">rd.break</code></pre>
+            </div>
+            <p>Boot with Ctrl-X or F10.</p>
+            <h4 id="emergency-shell-commands">Emergency Shell Commands</h4>
+            <div>
+                <pre><code class="language-bash">mount -o remount,rw /sysroot
+chroot /sysroot
+passwd root
+touch /.autorelabel
+exit
+exit</code></pre>
+            </div>
+            <h4 id="example-output">Example Output</h4>
+            <div>
+                <pre><code class="language-text">Changing password for user root.
+New password:
+Retype new password:
+passwd: all authentication tokens updated successfully.</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The root password was changed.
+SELinux relabeling was requested for the next boot.
+The system should reboot and allow login with the new password.</code></pre>
+            </div>
+            <h4 id="safety-note">Safety Note</h4>
+            <div>
+                <pre><code class="language-text">This is for authorized recovery only.
+Physical or console access to a machine often means administrative control is possible.
+Protect servers with disk encryption, firmware passwords, and cloud access controls where appropriate.</code></pre>
+            </div>
+            <h3 id="scenario-10-inspect-systemd-timers-during-startup-maintenance">Scenario 10: Inspect systemd Timers During Startup Maintenance</h3>
+            <p>Understand scheduled system maintenance managed by systemd.</p>
+            <h4 id="check-timers">Check Timers</h4>
+            <div>
+                <pre><code class="language-bash">systemctl list-timers --all</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">NEXT                        LEFT    LAST                        PASSED UNIT                         ACTIVATES
+Mon 2026-06-15 00:00:00     8h      Sun 2026-06-14 00:00:00     16h    logrotate.timer              logrotate.service
+Mon 2026-06-15 06:00:00     14h     Sun 2026-06-14 06:00:00     10h    apt-daily.timer               apt-daily.service</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">logrotate.timer activates logrotate.service.
+apt-daily.timer activates apt-daily.service.
+Timers are systemd's scheduled task mechanism, similar in purpose to cron.</code></pre>
+            </div>
+            <h3 id="scenario-11-set-and-verify-timezone">Scenario 11: Set and Verify Timezone</h3>
+            <p>Ensure logs and schedules use the correct local time.</p>
+            <h4 id="check">Check</h4>
+            <div>
+                <pre><code class="language-bash">timedatectl</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Time zone: UTC (UTC, +0000)
+System clock synchronized: yes</code></pre>
+            </div>
+            <h4 id="change">Change</h4>
+            <div>
+                <pre><code class="language-bash">sudo timedatectl set-timezone Europe/Berlin</code></pre>
+            </div>
+            <h4 id="verify">Verify</h4>
+            <div>
+                <pre><code class="language-bash">timedatectl</code></pre>
+            </div>
+            <p>Example output:</p>
+            <div>
+                <pre><code class="language-text">Time zone: Europe/Berlin (CEST, +0200)
+System clock synchronized: yes</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The system timezone is now Europe/Berlin.
+Logs, cron jobs, and timers will use this timezone unless configured otherwise.</code></pre>
+            </div>
+            <h3 id="scenario-12-create-a-simple-cron-maintenance-task">Scenario 12: Create a Simple Cron Maintenance Task</h3>
+            <p>Use cron for scheduled maintenance.</p>
+            <h4 id="create-a-backup-script">Create a Backup Script</h4>
+            <div>
+                <pre><code class="language-bash">mkdir -p ~/maintenance-demo
+cat &gt; ~/maintenance-demo/backup-demo.sh &lt;&lt;'EOF'
+#!/bin/bash
+mkdir -p "$HOME/maintenance-demo/backups"
+tar -czf "$HOME/maintenance-demo/backups/home-backup-$(date +%F).tar.gz" "$HOME/maintenance-demo" 2&gt;/dev/null
+EOF
+
+chmod +x ~/maintenance-demo/backup-demo.sh</code></pre>
+            </div>
+            <h4 id="add-cron-job">Add Cron Job</h4>
+            <p>Edit crontab:</p>
+            <div>
+                <pre><code class="language-bash">crontab -e</code></pre>
+            </div>
+            <p>Add:</p>
+            <div>
+                <pre><code class="language-text">0 0 * * * /home/user/maintenance-demo/backup-demo.sh</code></pre>
+            </div>
+            <p>Interpretation:</p>
+            <div>
+                <pre><code class="language-text">The script runs every day at midnight.
+Cron is useful for recurring maintenance tasks.</code></pre>
+            </div>
+            <h4 id="verify-cron-service">Verify Cron Service</h4>
+            <div>
+                <pre><code class="language-bash">systemctl status cron</code></pre>
+            </div>
+            <p>or on some systems:</p>
+            <div>
+                <pre><code class="language-bash">systemctl status crond</code></pre>
+            </div>
+            <h3 id="common-startup-problems-and-fixes">Common Startup Problems and Fixes</h3>
+            <h4 id="problem-system-boots-slowly">Problem: System Boots Slowly</h4>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">systemd-analyze
+systemd-analyze blame
+systemd-analyze critical-chain
+journalctl -b -p warning</code></pre>
+            </div>
+            <p>Common causes:</p>
+            <ul>
+                <li>slow service</li>
+                <li>network wait timeout</li>
+                <li>failed mount</li>
+                <li>disk issue</li>
+                <li>DNS delay</li>
+                <li>bad dependency ordering</li>
+            </ul>
+            <h3 id="problem-service-fails-at-boot">Problem: Service Fails at Boot</h3>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">systemctl --failed
+systemctl status service-name
+journalctl -u service-name -b</code></pre>
+            </div>
+            <p>Common causes:</p>
+            <ul>
+                <li>missing executable</li>
+                <li>bad config</li>
+                <li>wrong permissions</li>
+                <li>missing dependency</li>
+                <li>port conflict</li>
+                <li>filesystem not mounted yet</li>
+            </ul>
+            <h3 id="problem-boot-drops-to-emergency-mode">Problem: Boot Drops to Emergency Mode</h3>
+            <p>Check:</p>
+            <div>
+                <pre><code class="language-bash">journalctl -xb
+systemctl --failed
+mount -a
+cat /etc/fstab
+lsblk -f</code></pre>
+            </div>
+            <p>Common causes:</p>
+            <ul>
+                <li>bad /etc/fstab entry</li>
+                <li>missing disk</li>
+                <li>wrong UUID</li>
+                <li>filesystem check failure</li>
+                <li>root filesystem issue</li>
+            </ul>
+            <p>A common fix for optional disks is adding:</p>
+            <div>
+                <pre><code class="language-text">nofail</code></pre>
+            </div>
+            <p>to the <code>/etc/fstab</code> options, if appropriate.</p>
+            <h3 id="problem-grub-menu-does-not-show">Problem: GRUB Menu Does Not Show</h3>
+            <p>Try during boot:</p>
+            <ul>
+                <li>hold Shift on BIOS systems</li>
+                <li>press Esc on many UEFI systems</li>
+            </ul>
+            <p>Also check GRUB configuration:</p>
+            <div>
+                <pre><code class="language-bash">grep GRUB_TIMEOUT /etc/default/grub</code></pre>
+            </div>
+            <h3 id="problem-kernel-panic-after-update">Problem: Kernel Panic After Update</h3>
+            <p>Try:</p>
+            <ul>
+                <li>boot older kernel from GRUB</li>
+                <li>boot rescue mode</li>
+                <li>check journal from previous boot</li>
+                <li>rebuild initramfs</li>
+                <li>reinstall known-good kernel</li>
+                <li>check third-party kernel modules</li>
+            </ul>
+            <p>Commands:</p>
+            <div>
+                <pre><code class="language-bash">journalctl -b -1 -p err
+ls /boot
+uname -r</code></pre>
+            </div>
+            <h3 id="useful-command-summary">Useful Command Summary</h3>
+            <p>Boot and firmware:</p>
+            <div>
+                <pre><code class="language-bash">sudo efibootmgr
+lsblk -f
+cat /proc/cmdline
+ls -lh /boot</code></pre>
+            </div>
+            <p>systemd boot state:</p>
+            <div>
+                <pre><code class="language-bash">ps -p 1 -o pid,comm,args
+systemctl get-default
+systemctl list-units --type=target --state=active
+systemctl --failed</code></pre>
+            </div>
+            <p>Boot performance:</p>
+            <div>
+                <pre><code class="language-bash">systemd-analyze
+systemd-analyze blame
+systemd-analyze critical-chain</code></pre>
+            </div>
+            <p>Logs:</p>
+            <div>
+                <pre><code class="language-bash">journalctl -b
+journalctl -b -p err
+journalctl -k -b
+journalctl -b -1</code></pre>
+            </div>
+            <p>Targets:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl isolate multi-user.target
+sudo systemctl isolate graphical.target
+sudo systemctl set-default multi-user.target
+sudo systemctl set-default graphical.target</code></pre>
+            </div>
+            <p>System management:</p>
+            <div>
+                <pre><code class="language-bash">hostname
+hostnamectl
+uptime
+sudo reboot
+sudo systemctl reboot
+sudo shutdown -r +5
+sudo shutdown -h +30
+sudo shutdown -c
+timedatectl</code></pre>
+            </div>
+            <p>Timers and cron:</p>
+            <div>
+                <pre><code class="language-bash">systemctl list-timers --all
+crontab -e
+crontab -l</code></pre>
+            </div>
+            <h3 id="safe-lab-cleanup">Safe Lab Cleanup</h3>
+            <p>Remove slow demo service:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl disable --now slow-demo.service 2&gt;/dev/null
+sudo rm -f /etc/systemd/system/slow-demo.service</code></pre>
+            </div>
+            <p>Remove broken boot service:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl disable --now broken-boot.service 2&gt;/dev/null
+sudo rm -f /etc/systemd/system/broken-boot.service</code></pre>
+            </div>
+            <p>Reload systemd:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl daemon-reload
+sudo systemctl reset-failed</code></pre>
+            </div>
+            <p>Return to graphical target if needed:</p>
+            <div>
+                <pre><code class="language-bash">sudo systemctl set-default graphical.target
+sudo systemctl isolate graphical.target</code></pre>
+            </div>
+            <p>Cancel scheduled shutdown if one exists:</p>
+            <div>
+                <pre><code class="language-bash">sudo shutdown -c</code></pre>
+            </div>
             <h3 id="challenges">Challenges</h3>
             <ol>
-                <li>Use the <code>reboot</code> command to restart your system, then use the <code>uptime</code> command to confirm the restart by observing the system uptime. Discuss how the <code>uptime</code> command can help you monitor system stability and determine when the system was last rebooted.</li>
-                <li>Check the current hostname of your system with the <code>hostname</code> command, then change it using <code>hostnamectl set-hostname new_hostname</code>. Verify the change by running <code>hostname</code> again. Discuss the significance of hostname settings, particularly for networked environments where unique identification is necessary.</li>
-                <li>Simulate a scenario where you've lost the root password by opening a new terminal or SSH session where you are not logged in as root. Follow the appropriate steps to reset the root password and reboot the system. Verify that you can log in with the new password. Explain the importance of password recovery skills for system administrators.</li>
-                <li>Research kernel panic scenarios and describe the steps you would take to diagnose and resolve a kernel panic. Although not recommended to simulate a kernel panic on a production system, document the commands and troubleshooting techniques used for resolving kernel panics, such as reviewing logs or booting into recovery mode.</li>
-                <li>Check your current system runlevel or target using <code>runlevel</code> on init-based systems or <code>systemctl get-default</code> on systemd-based systems. Change the runlevel (for init) or switch targets (for systemd), and confirm that the change was successful. Explain the differences between runlevels and targets and their roles in controlling system state.</li>
-                <li>Schedule a system shutdown with the <code>shutdown</code> command (e.g., <code>shutdown +10</code> to schedule a shutdown in 10 minutes), then cancel it before it takes effect using <code>shutdown -c</code>. Practice scheduling a reboot in a similar way, and explain how to manage scheduled tasks effectively to prevent unintended system downtime.</li>
-                <li>Use the <code>systemctl list-timers</code> command to view all active timers on your system. Identify which services are associated with each timer and discuss the role of timers in automating system maintenance tasks, such as updates or backups, on a scheduled basis.</li>
-                <li>Modify the timezone of your system using <code>timedatectl set-timezone</code> followed by the appropriate timezone (e.g., <code>America/New_York</code>). Verify the change with <code>timedatectl</code> and discuss how setting the correct timezone is essential for accurate logging and scheduling, especially on servers used by teams in different geographic locations.</li>
-                <li>Set up a recurring system maintenance task using <code>cron</code>. For example, configure a cron job that runs a simple script every day at midnight, such as creating a backup of a directory. Verify that the cron job is functioning by checking the output or logs. Discuss the importance of cron in automating routine maintenance tasks.</li>
-                <li>Use <code>journalctl</code> to view system logs from the most recent boot, filtering the logs to show only critical or error messages. Explain how analyzing boot logs can help you troubleshoot startup issues and identify potential system problems early.</li>
+                <li>Reboot a lab system, then use <code>uptime</code> to confirm that the reboot happened.</li>
+                <li>Check your hostname with <code>hostname</code>, change it with <code>hostnamectl</code>, and verify the result.</li>
+                <li>Use <code>systemd-analyze</code>, <code>systemd-analyze blame</code>, and <code>systemd-analyze critical-chain</code> to identify slow boot components.</li>
+                <li>Create a slow demo service that sleeps for 20 seconds during boot. Reboot, measure the delay, then remove the service.</li>
+                <li>Create a broken systemd service, start it, inspect <code>systemctl --failed</code>, read its logs, and fix or remove it.</li>
+                <li>Check your default systemd target. Switch between <code>multi-user.target</code> and <code>graphical.target</code> on a lab machine.</li>
+                <li>Schedule a shutdown in 10 minutes, then cancel it with <code>shutdown -c</code>.</li>
+                <li>Use <code>journalctl -b -p err</code> to review errors from the current boot.</li>
+                <li>Use <code>systemctl list-timers --all</code> to identify scheduled maintenance tasks and the services they activate.</li>
+                <li>Practice root password recovery only in a lab VM. Document the GRUB parameter used, commands run, and why SELinux relabeling may be needed.</li>
+                <li>Research a kernel panic message and write a diagnosis plan that includes logs, hardware checks, older kernel boot, rescue mode, and backups.</li>
+                <li>Set the timezone with <code>timedatectl</code>, verify it, and explain why timezone correctness matters for logs and scheduled tasks.</li>
             </ol>
         </article-section>
     </div>

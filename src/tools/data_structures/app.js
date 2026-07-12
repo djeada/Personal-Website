@@ -43,6 +43,7 @@ const commandPreview = document.getElementById("command-preview");
 const primaryField = document.getElementById("primary-field");
 const secondaryField = document.getElementById("secondary-field");
 const resultBanner = document.getElementById("result-banner");
+const resultIcon = document.getElementById("result-icon");
 const resultState = document.getElementById("result-state");
 const resultTitle = document.getElementById("result-title");
 const resultDetail = document.getElementById("result-detail");
@@ -159,12 +160,12 @@ const STRUCTURES = {
         initial: ["red", "blue", "green", "gold", "cyan"],
         sampleValues: ["violet", "black", "white", "lime"],
         secondaryLabel: "Value",
-        specialLabel: "Rehash",
+        specialLabel: "Analyze load",
         operations: {
             add: ["Insert", "O(1)", "O(1)", "O(n)", "Worst case is many collisions."],
             search: ["Lookup", "O(1)", "O(1)", "O(n)", "Hash then scan one bucket."],
             remove: ["Delete", "O(1)", "O(1)", "O(n)", "Same path as lookup."],
-            special: ["Rehash", "O(n)", "O(n)", "O(n)", "Move entries into a new bucket array."]
+            special: ["Analyze load", "O(n)", "O(n)", "O(n)", "Count entries and report the current load factor."]
         }
     },
     set: {
@@ -257,7 +258,13 @@ const STRUCTURES = {
         memory: "O(V + E) with adjacency lists.",
         initial: {
             nodes: ["A", "B", "C", "D", "E", "F"],
-            edges: [["A", "B"], ["A", "C"], ["B", "D"], ["C", "E"], ["D", "F"]]
+            edges: [
+                ["A", "B"],
+                ["A", "C"],
+                ["B", "D"],
+                ["C", "E"],
+                ["D", "F"]
+            ]
         },
         sampleValues: ["G", "H", "I", "J"],
         secondaryLabel: "Connect to",
@@ -562,11 +569,11 @@ function updateCommandUI() {
         special: currentKey === "array" ? "Fallback value" : capitalized
     };
     valueLabel.textContent = labels[operation];
-    secondaryLabel.textContent = currentKey === "array" && operation === "special" ? "Index to access" : currentKey === "graph" && operation === "special" ? "Connect to vertex" : currentKey === "map" && operation === "add" ? "Value to store" : config.secondaryLabel;
-    const needsSecondary = (currentKey === "array" && operation === "special") || (currentKey === "graph" && operation === "special") || (currentKey === "map" && operation === "add");
+    secondaryLabel.textContent = currentKey === "array" && operation === "special" ? "Index to access" : currentKey === "graph" && operation === "special" ? "Connect to vertex" : currentKey === "map" && operation === "add" ? "Value to store" : currentKey === "trie" && operation === "special" ? "Prefix to find" : config.secondaryLabel;
+    const needsSecondary = (currentKey === "array" && operation === "special") || (currentKey === "graph" && operation === "special") || (currentKey === "map" && operation === "add") || (currentKey === "trie" && operation === "special");
     secondaryField.classList.toggle("is-required", needsSecondary);
     secondaryField.classList.toggle("is-muted", !needsSecondary);
-    primaryField.classList.toggle("is-muted", ["stack", "queue"].includes(currentKey) && ["remove", "special"].includes(operation));
+    primaryField.classList.toggle("is-muted", (["stack", "queue"].includes(currentKey) && ["remove", "special"].includes(operation)) || (["deque", "heap", "bst", "hashTable", "trie"].includes(currentKey) && operation === "special"));
     executeOperationButton.querySelector("span").textContent = `Run ${op[0].toLowerCase()}`;
     dockOperation.textContent = op[0];
     const primary = valueInput.value || "value";
@@ -588,7 +595,10 @@ function algorithmFor(key, operation) {
             special: ["Recursive in-order traversal", "Visit the left subtree, current node, then right subtree to produce values in sorted order."]
         };
         const [name, detail] = algorithms[operation];
-        return { name, detail };
+        return {
+            name,
+            detail
+        };
     }
     if (config.kind === "graph") {
         const algorithms = {
@@ -598,7 +608,10 @@ function algorithmFor(key, operation) {
             special: ["Undirected adjacency-list edge insertion", "Add each endpoint to the other endpoint's neighbor list after checking for a duplicate edge."]
         };
         const [name, detail] = algorithms[operation];
-        return { name, detail };
+        return {
+            name,
+            detail
+        };
     }
     if (config.kind === "heap") {
         const algorithms = {
@@ -608,20 +621,48 @@ function algorithmFor(key, operation) {
             special: ["Extract-min with sink-down", "Remove the root, move the final item to the root, then swap with the smaller child until ordered."]
         };
         const [name, detail] = algorithms[operation];
-        return { name, detail };
+        return {
+            name,
+            detail
+        };
     }
-    if (config.kind === "trie") return { name: operation === "special" ? "Prefix walk with depth-first collection" : "Character-by-character trie walk", detail: "Follow one child edge per character; no unrelated branch is inspected." };
-    if (config.kind === "buckets") return { name: "Polynomial hash with separate chaining", detail: "Compute a bucket index with a base-31 string hash, then scan only that bucket's collision chain." };
-    if (config.kind === "list") return { name: operation === "add" ? "Tail-pointer append" : "Forward pointer traversal", detail: operation === "add" ? "Link the current tail to a new node and move the tail pointer." : "Start at head and follow next pointers until the value is found or the list ends." };
-    if (config.kind === "array") return { name: operation === "special" ? "Direct indexed access" : operation === "add" ? "Dynamic-array append" : "Linear scan", detail: operation === "special" ? "Calculate the slot address directly from its zero-based index." : operation === "add" ? "Write after the final element; resize and copy only when capacity is exhausted." : "Compare values from index 0 onward and stop at the first match." };
-    if (config.kind === "stack") return { name: operation === "search" ? "Linear stack scan" : "LIFO top operation", detail: operation === "search" ? "Inspect items sequentially; stacks provide no fast arbitrary lookup." : "Read, add, or remove only at the top of the stack." };
-    if (["queue", "deque"].includes(config.kind)) return { name: operation === "search" ? "Linear queue scan" : "Constant-time endpoint operation", detail: operation === "search" ? "Inspect queued items from front to back." : "Use the front or back pointer without scanning middle items." };
-    return { name: config.operations[operation][0], detail: config.operations[operation][4] };
+    if (config.kind === "trie") return {
+        name: operation === "special" ? "Prefix walk with depth-first collection" : "Character-by-character trie walk",
+        detail: "Follow one child edge per character; no unrelated branch is inspected."
+    };
+    if (config.kind === "buckets") return operation === "special" && key === "hashTable" ? {
+        name: "Load-factor analysis",
+        detail: "Count stored entries and divide by the seven allocated buckets; no keys are moved."
+    } : {
+        name: "Polynomial hash with separate chaining",
+        detail: "Compute a bucket index with a base-31 string hash, then scan only that bucket's collision chain."
+    };
+    if (config.kind === "list") return {
+        name: operation === "add" ? "Tail-pointer append" : "Forward pointer traversal",
+        detail: operation === "add" ? "Link the current tail to a new node and move the tail pointer." : "Start at head and follow next pointers until the value is found or the list ends."
+    };
+    if (config.kind === "array") return {
+        name: operation === "special" ? "Direct indexed access" : operation === "add" ? "Dynamic-array append" : "Linear scan",
+        detail: operation === "special" ? "Calculate the slot address directly from its zero-based index." : operation === "add" ? "Write after the final element; resize and copy only when capacity is exhausted." : "Compare values from index 0 onward and stop at the first match."
+    };
+    if (config.kind === "stack") return {
+        name: operation === "search" ? "Linear stack scan" : "LIFO top operation",
+        detail: operation === "search" ? "Inspect items sequentially; stacks provide no fast arbitrary lookup." : "Read, add, or remove only at the top of the stack."
+    };
+    if (["queue", "deque"].includes(config.kind)) return {
+        name: operation === "search" ? "Linear queue scan" : "Constant-time endpoint operation",
+        detail: operation === "search" ? "Inspect queued items from front to back." : "Use the front or back pointer without scanning middle items."
+    };
+    return {
+        name: config.operations[operation][0],
+        detail: config.operations[operation][4]
+    };
 }
 
 function showIdleResult() {
     lastOutcome = null;
     resultBanner.className = "result-banner is-idle";
+    resultIcon.innerHTML = '<i class="fa fa-terminal" aria-hidden="true"></i>';
     resultState.textContent = "No operation run yet";
     resultTitle.textContent = "Select an operation and provide its input.";
     resultDetail.textContent = "The output and cost will appear here.";
@@ -771,8 +812,26 @@ async function performOperation(operation) {
 }
 
 function validateOperationInput(operation) {
+    primaryField.classList.remove("is-invalid");
     secondaryField.classList.remove("is-invalid");
+    valueInput.removeAttribute("aria-invalid");
     secondaryInput.removeAttribute("aria-invalid");
+    const primary = normalizeValue(valueInput.value);
+    const primaryOptional = (operation === "remove" && ["stack", "queue"].includes(currentKey)) ||
+        (operation === "special" && ["stack", "queue", "deque", "heap", "bst", "hashTable"].includes(currentKey));
+    if (!primary && !primaryOptional && !(currentKey === "trie" && operation === "special")) {
+        return showInputError(primaryField, valueInput, "Enter a value before running this operation.", "No sample or fallback value will be used.");
+    }
+
+    if (currentKey === "map" && operation === "add" && !normalizeValue(secondaryInput.value)) {
+        return showInputError(secondaryField, secondaryInput, "Enter the map value to store.", "Both a key and value are required. No random value will be generated.");
+    }
+    if (currentKey === "graph" && operation === "special" && !normalizeValue(secondaryInput.value)) {
+        return showInputError(secondaryField, secondaryInput, "Enter the second endpoint.", "An edge requires two explicit vertices.");
+    }
+    if (currentKey === "trie" && operation === "special" && !normalizeValue(secondaryInput.value)) {
+        return showInputError(secondaryField, secondaryInput, "Enter a prefix to find.", "Prefix search requires an explicit prefix.");
+    }
     if (currentKey !== "array" || operation !== "special") return true;
 
     const rawIndex = normalizeValue(secondaryInput.value);
@@ -780,16 +839,21 @@ function validateOperationInput(operation) {
     const valid = rawIndex !== "" && Number.isInteger(index) && index >= 0 && index < state.length;
     if (valid) return true;
 
-    secondaryField.classList.add("is-invalid");
-    secondaryInput.setAttribute("aria-invalid", "true");
+    return showInputError(secondaryField, secondaryInput, rawIndex === "" ? "Enter an index before running access." : `Index ${rawIndex} is outside the array.`, state.length ? `Use a whole number from 0 to ${state.length - 1}. No fallback index was used.` : "The array is empty, so there is no valid index.");
+}
+
+function showInputError(field, input, title, detail) {
+    field.classList.add("is-invalid");
+    input.setAttribute("aria-invalid", "true");
     resultBanner.className = "result-banner is-failure";
+    resultIcon.innerHTML = '<i class="fa fa-times" aria-hidden="true"></i>';
     resultState.textContent = "Input required";
-    resultTitle.textContent = rawIndex === "" ? "Enter an index before running access." : `Index ${rawIndex} is outside the array.`;
-    resultDetail.textContent = state.length ? `Use a whole number from 0 to ${state.length - 1}. No fallback index was used.` : "The array is empty, so there is no valid index.";
+    resultTitle.textContent = title;
+    resultDetail.textContent = detail;
     resultSteps.textContent = "0";
     resultValue.textContent = "not run";
-    animationStatus.textContent = "Waiting for a valid index";
-    secondaryInput.focus();
+    animationStatus.textContent = "Waiting for valid input";
+    input.focus();
     return false;
 }
 
@@ -810,14 +874,22 @@ function buildOutcome(operation, requestedValue, beforeSize) {
         success = afterSize < beforeSize;
         returned = success ? (highlight.value ?? "removed") : "not found";
     } else {
-        returned = highlight.value ?? (highlight.index !== undefined ? state[highlight.index] : "complete");
+        returned = highlight.resultValue ?? highlight.value ?? (highlight.index !== undefined ? state[highlight.index] : "complete");
     }
     const status = success ? "Operation succeeded" : operation === "add" ? "No change needed" : "Operation finished: no match";
-    return { success, status, title, returned: String(returned ?? "null"), detail: operationConfig(operation)[4], steps: lastMetrics.touched };
+    return {
+        success,
+        status,
+        title,
+        returned: String(returned ?? "null"),
+        detail: operationConfig(operation)[4],
+        steps: lastMetrics.touched
+    };
 }
 
 function showRunningResult(outcome) {
     resultBanner.className = "result-banner is-running";
+    resultIcon.innerHTML = '<i class="fa fa-play" aria-hidden="true"></i>';
     resultState.textContent = "Operation running";
     resultTitle.textContent = outcome.title;
     resultDetail.textContent = "Follow the highlighted path in the visualization.";
@@ -828,6 +900,7 @@ function showRunningResult(outcome) {
 function showCompletedResult(outcome) {
     if (!outcome) return;
     resultBanner.className = `result-banner ${outcome.success ? "is-success" : "is-failure"}`;
+    resultIcon.innerHTML = `<i class="fa ${outcome.success ? "fa-check" : "fa-times"}" aria-hidden="true"></i>`;
     resultState.textContent = outcome.status;
     resultTitle.textContent = outcome.title;
     resultDetail.textContent = outcome.detail;
@@ -841,7 +914,9 @@ function cancelAnimation() {
     visualStage.classList.remove("is-playing", "is-starting", "is-finishing");
     animationStatus.textContent = "Ready";
     comparisonBubble.hidden = true;
-    operationButtons.forEach((button) => { button.disabled = false; });
+    operationButtons.forEach((button) => {
+        button.disabled = false;
+    });
     executeOperationButton.disabled = false;
 }
 
@@ -864,7 +939,7 @@ function animationTargets() {
         if (highlight.index !== undefined && Number(node.dataset.index) === highlight.index) return true;
         return highlight.value !== undefined && String(node.dataset.value) === String(highlight.value);
     });
-    return exact.length ? exact : selectable.slice(0, Math.min(lastMetrics.touched, selectable.length));
+    return exact;
 }
 
 function delay(ms) {
@@ -872,18 +947,39 @@ function delay(ms) {
 }
 
 async function animateTargets(targets, label) {
-    if (!targets.length || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return true;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return true;
     const run = ++animationRun;
     const interval = Number(animationSpeed.value) || 500;
     visualStage.classList.remove("is-finishing");
     visualStage.classList.add("is-playing", "is-starting");
     comparisonBubble.hidden = false;
     comparisonBubble.textContent = `${label} starting`;
-    operationButtons.forEach((button) => { button.disabled = true; });
+    operationButtons.forEach((button) => {
+        button.disabled = true;
+    });
     executeOperationButton.disabled = true;
     targets.forEach((node) => node.classList.remove("animation-focus", "animation-done", "animation-result"));
     await delay(Math.min(420, Math.max(220, interval * 0.55)));
     visualStage.classList.remove("is-starting");
+
+    if (!targets.length) {
+        comparisonBubble.textContent = "Direct operation - no existing node inspected";
+        resultSteps.textContent = String(lastMetrics.touched);
+        await delay(Math.min(650, interval));
+        if (run !== animationRun) return false;
+        visualStage.classList.remove("is-playing");
+        visualStage.classList.add("is-finishing");
+        comparisonBubble.textContent = "Write committed";
+        await delay(420);
+        comparisonBubble.hidden = true;
+        visualStage.classList.remove("is-finishing");
+        animationStatus.textContent = `${label} complete`;
+        operationButtons.forEach((button) => {
+            button.disabled = false;
+        });
+        executeOperationButton.disabled = false;
+        return true;
+    }
 
     for (let index = 0; index < targets.length; index += 1) {
         if (run !== animationRun) return false;
@@ -895,7 +991,11 @@ async function animateTargets(targets, label) {
         animationStatus.textContent = `${label} - step ${index + 1} of ${targets.length}`;
         comparisonBubble.textContent = `Inspecting ${targets[index].dataset.value || `node ${index + 1}`}`;
         resultSteps.textContent = `${index + 1} / ${targets.length}`;
-        targets[index].scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+        targets[index].scrollIntoView({
+            behavior: "smooth",
+            block: "nearest",
+            inline: "nearest"
+        });
         await delay(interval);
     }
 
@@ -911,7 +1011,9 @@ async function animateTargets(targets, label) {
     await delay(420);
     visualStage.classList.remove("is-finishing");
     animationStatus.textContent = `${label} complete`;
-    operationButtons.forEach((button) => { button.disabled = false; });
+    operationButtons.forEach((button) => {
+        button.disabled = false;
+    });
     executeOperationButton.disabled = false;
     return true;
 }
@@ -1017,16 +1119,19 @@ function performLinearOperation(operation) {
     const secondary = getSecondaryValue();
 
     if (operation === "add") {
+        const endpoint = state[state.length - 1];
         state.push(value);
         addTrace(`${config.operations.add[0]} ${value}.`);
         setHighlight({
             value,
-            mode: "new"
+            mode: "new",
+            scan: currentKey === "array" || endpoint === undefined ? [] : [String(endpoint)],
+            action: "endpoint"
         });
         setMetrics(operation, {
             primary: value,
             secondary,
-            touched: currentKey === "linkedList" ? Math.max(1, state.length) : 1
+            touched: 1
         });
         return;
     }
@@ -1128,10 +1233,10 @@ function performLinearOperation(operation) {
             touched: removed === undefined ? 0 : 1
         });
     } else {
-        const item = state[0];
+        const item = currentKey === "stack" ? state[state.length - 1] : state[0];
         addTrace(item === undefined ? `${config.name} is empty.` : `${config.specialLabel}: ${item}.`);
         setHighlight({
-            index: 0,
+            index: currentKey === "stack" ? state.length - 1 : 0,
             mode: "hit"
         });
         setMetrics(operation, {
@@ -1146,7 +1251,8 @@ function performHashSetOperation(operation) {
     const value = getPrimaryValue();
     const exists = state.some((item) => String(item) === value);
     const bucketCount = currentKey === "hashTable" ? 7 : 6;
-    const bucketSize = state.filter((item) => hashValue(entryKey(item), bucketCount) === hashValue(value, bucketCount)).length;
+    const bucketEntries = state.filter((item) => hashValue(entryKey(item), bucketCount) === hashValue(value, bucketCount)).map((item) => String(item));
+    const bucketSize = bucketEntries.length;
 
     if (operation === "add") {
         if (!exists) {
@@ -1157,7 +1263,8 @@ function performHashSetOperation(operation) {
         }
         setHighlight({
             value,
-            mode: exists ? "hit" : "new"
+            mode: exists ? "hit" : "new",
+            scan: bucketEntries
         });
         setMetrics(operation, {
             primary: value,
@@ -1167,7 +1274,8 @@ function performHashSetOperation(operation) {
         addTrace(exists ? `${value} is present.` : `${value} is absent.`);
         setHighlight({
             value,
-            mode: exists ? "hit" : "scan"
+            mode: exists ? "hit" : "scan",
+            scan: bucketEntries
         });
         setMetrics(operation, {
             primary: value,
@@ -1178,7 +1286,8 @@ function performHashSetOperation(operation) {
         addTrace(exists ? `Deleted ${value}.` : `${value} was not present.`);
         setHighlight({
             value,
-            mode: "remove"
+            mode: "remove",
+            scan: bucketEntries
         });
         setMetrics(operation, {
             primary: value,
@@ -1190,14 +1299,16 @@ function performHashSetOperation(operation) {
             addTrace(`Toggled ${value} off.`);
             setHighlight({
                 value,
-                mode: "remove"
+                mode: "remove",
+                scan: bucketEntries
             });
         } else {
             state.push(value);
             addTrace(`Toggled ${value} on.`);
             setHighlight({
                 value,
-                mode: "new"
+                mode: "new",
+                scan: bucketEntries
             });
         }
         setMetrics(operation, {
@@ -1205,10 +1316,13 @@ function performHashSetOperation(operation) {
             touched: Math.max(1, bucketSize)
         });
     } else {
-        addTrace(`Rehashed ${state.length} keys into buckets.`);
+        const bucketCount = 7;
+        const load = state.length / bucketCount;
+        addTrace(`Load factor: ${state.length}/${bucketCount} = ${load.toFixed(2)}.`);
         setHighlight({
-            value,
-            mode: "scan"
+            mode: "scan",
+            scan: state.map(String),
+            resultValue: load.toFixed(2)
         });
         setMetrics(operation, {
             primary: value,
@@ -1222,7 +1336,8 @@ function performMapOperation(operation) {
     const value = getSecondaryValue() || String(Math.floor(Math.random() * 90 + 10));
     const index = state.findIndex((entry) => entry.key === key);
     const bucketCount = 6;
-    const bucketSize = state.filter((entry) => hashValue(entry.key, bucketCount) === hashValue(key, bucketCount)).length;
+    const bucketEntries = state.filter((entry) => hashValue(entry.key, bucketCount) === hashValue(key, bucketCount)).map((entry) => String(entry.key));
+    const bucketSize = bucketEntries.length;
 
     if (operation === "add") {
         if (index >= 0) {
@@ -1237,7 +1352,8 @@ function performMapOperation(operation) {
         }
         setHighlight({
             value: key,
-            mode: index >= 0 ? "hit" : "new"
+            mode: index >= 0 ? "hit" : "new",
+            scan: bucketEntries
         });
         setMetrics(operation, {
             primary: key,
@@ -1248,7 +1364,8 @@ function performMapOperation(operation) {
         addTrace(index >= 0 ? `${key} exists.` : `${key} is absent.`);
         setHighlight({
             value: key,
-            mode: index >= 0 ? "hit" : "scan"
+            mode: index >= 0 ? "hit" : "scan",
+            scan: bucketEntries
         });
         setMetrics(operation, {
             primary: key,
@@ -1264,7 +1381,8 @@ function performMapOperation(operation) {
         }
         setHighlight({
             value: key,
-            mode: "remove"
+            mode: "remove",
+            scan: bucketEntries
         });
         setMetrics(operation, {
             primary: key,
@@ -1275,7 +1393,9 @@ function performMapOperation(operation) {
         addTrace(index >= 0 ? `${key} maps to ${state[index].value}.` : `${key} has no value.`);
         setHighlight({
             value: key,
-            mode: index >= 0 ? "hit" : "scan"
+            mode: index >= 0 ? "hit" : "scan",
+            scan: bucketEntries,
+            resultValue: index >= 0 ? state[index].value : "not found"
         });
         setMetrics(operation, {
             primary: key,
@@ -1288,16 +1408,25 @@ function performMapOperation(operation) {
 function performHeapOperation(operation) {
     const value = getPrimaryValue();
     if (operation === "add") {
+        const comparisonPath = [];
+        let insertionIndex = state.length;
+        while (insertionIndex > 0) {
+            const parent = Math.floor((insertionIndex - 1) / 2);
+            comparisonPath.push(String(state[parent]));
+            if (numericValue(state[parent]) <= numericValue(value)) break;
+            insertionIndex = parent;
+        }
         state.push(value);
         bubbleUp(state.length - 1);
         addTrace(`Inserted ${value} and restored heap order.`);
         setHighlight({
             value,
-            mode: "new"
+            mode: "new",
+            scan: comparisonPath
         });
         setMetrics(operation, {
             primary: value,
-            touched: Math.max(1, Math.ceil(Math.log2(state.length + 1)))
+            touched: Math.max(1, comparisonPath.length)
         });
     } else if (operation === "search") {
         const index = state.findIndex((item) => String(item) === value);
@@ -1305,7 +1434,8 @@ function performHeapOperation(operation) {
         addTrace(found ? `Found ${value}; arbitrary heap search is linear.` : `${value} was not found.`);
         setHighlight({
             value,
-            mode: found ? "hit" : "scan"
+            mode: found ? "hit" : "scan",
+            scan: state.slice(0, found ? index + 1 : state.length).map(String)
         });
         setMetrics(operation, {
             primary: value,
@@ -1313,6 +1443,7 @@ function performHeapOperation(operation) {
         });
     } else if (operation === "remove") {
         const index = state.findIndex((item) => String(item) === value);
+        const scanned = state.slice(0, index >= 0 ? index + 1 : state.length).map(String);
         if (index >= 0) {
             const last = state.pop();
             if (index < state.length) {
@@ -1325,7 +1456,8 @@ function performHeapOperation(operation) {
         }
         setHighlight({
             value,
-            mode: "remove"
+            mode: "remove",
+            scan: scanned
         });
         setMetrics(operation, {
             primary: value,

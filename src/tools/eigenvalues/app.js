@@ -11,6 +11,8 @@
     const clearButton = document.getElementById("clear");
     const exactButton = document.getElementById("calculate-analytical");
     const powerButton = document.getElementById("calculate-power");
+    const eigenInsight = document.getElementById("eigen-insight");
+    const eigenMetrics = document.getElementById("eigen-metrics");
 
     const exactValuesOutput = document.getElementById("output-eigenvalues-analytical");
     const exactVectorsOutput = document.getElementById("output-eigenvectors-analytical");
@@ -18,7 +20,9 @@
     const powerVectorOutput = document.getElementById("output-eigenvector-power");
 
     const inputs = Array.from(matrixTable.querySelectorAll("input"));
-    const grid = Array.from({ length: 4 }, (_, row) => inputs.slice(row * 4, row * 4 + 4));
+    const grid = Array.from({
+        length: 4
+    }, (_, row) => inputs.slice(row * 4, row * 4 + 4));
 
     const presets = {
         diagonal: {
@@ -72,6 +76,11 @@
         inputStatus.textContent = message;
         inputStatus.classList.toggle("is-error", type === "error");
         inputStatus.classList.toggle("is-success", type === "success");
+    }
+
+    function setTeaching(message, metrics) {
+        eigenInsight.textContent = message;
+        Array.from(eigenMetrics.children).forEach((node, index) => node.textContent = metrics[index] || "—");
     }
 
     function setEmptyState(title, detail) {
@@ -141,7 +150,10 @@
             };
         }
 
-        return { matrix, error: "" };
+        return {
+            matrix,
+            error: ""
+        };
     }
 
     function writeMatrix(matrix) {
@@ -163,7 +175,10 @@
     }
 
     function characteristicPolynomial2x2(A) {
-        const [[a, b], [c, d]] = A;
+        const [
+            [a, b],
+            [c, d]
+        ] = A;
         const trace = a + d;
         const determinant = a * d - b * c;
         return [1, -trace, determinant];
@@ -269,7 +284,9 @@
             }
         }
 
-        const freeCols = Array.from({ length: size }, (_, index) => index).filter(column => !pivotCols.includes(column));
+        const freeCols = Array.from({
+            length: size
+        }, (_, index) => index).filter(column => !pivotCols.includes(column));
         const vector = Array(size).fill(0);
         if (freeCols.length === 0) return vector;
         vector[freeCols[0]] = 1;
@@ -310,7 +327,9 @@
 
     function powerIteration(matrix, maxIterations = 1000, tolerance = 1e-10) {
         const size = matrix.length;
-        let vector = normalize(Array.from({ length: size }, (_, index) => index + 1));
+        let vector = normalize(Array.from({
+            length: size
+        }, (_, index) => index + 1));
         let eigenvalue = 0;
         let converged = false;
         let iterations = 0;
@@ -333,7 +352,12 @@
             eigenvalue = nextEigenvalue;
         }
 
-        return { eigenvalue, eigenvector: vector, iterations, converged };
+        return {
+            eigenvalue,
+            eigenvector: vector,
+            iterations,
+            converged
+        };
     }
 
     function uniqueRoots(roots) {
@@ -352,7 +376,7 @@
                 </header>
                 <div class="vector-row"></div>
             `;
-            card.querySelector(".lambda-pill").textContent = `lambda = ${formatNumber(root)}`;
+            card.querySelector(".lambda-pill").textContent = `\\(\\lambda_${index + 1}=${formatNumber(root)}\\)`;
             const vectorRow = card.querySelector(".vector-row");
             vectors[index].forEach(value => {
                 const cell = document.createElement("span");
@@ -362,6 +386,7 @@
             });
             resultCards.appendChild(card);
         });
+        if (window.MathJax && window.MathJax.typesetPromise) window.MathJax.typesetPromise([resultCards]);
     }
 
     function renderPowerResult(result) {
@@ -375,7 +400,7 @@
             </header>
             <div class="vector-row"></div>
         `;
-        card.querySelector(".lambda-pill").textContent = `lambda ≈ ${formatNumber(result.eigenvalue)}`;
+        card.querySelector(".lambda-pill").textContent = `\\(\\lambda_{\\max}\\approx ${formatNumber(result.eigenvalue)}\\)`;
         const vectorRow = card.querySelector(".vector-row");
         result.eigenvector.forEach(value => {
             const cell = document.createElement("span");
@@ -384,10 +409,14 @@
             vectorRow.appendChild(cell);
         });
         resultCards.appendChild(card);
+        if (window.MathJax && window.MathJax.typesetPromise) window.MathJax.typesetPromise([resultCards]);
     }
 
     function calculateExact() {
-        const { matrix, error } = readMatrix();
+        const {
+            matrix,
+            error
+        } = readMatrix();
         clearOutputs();
         if (!matrix) {
             setStatus(error, "error");
@@ -417,15 +446,23 @@
         const vectors = roots.map(root => findEigenvector(matrix, root));
         exactValuesOutput.value = roots.map(formatNumber).join(", ");
         exactVectorsOutput.value = roots.map((root, index) =>
-            `lambda=${formatNumber(root)} => ${formatVector(vectors[index])}`
+            `λ=${formatNumber(root)} → ${formatVector(vectors[index])}`
         ).join("\n");
         renderExactResults(roots, vectors);
         resultSummary.textContent = `${roots.length} real eigenpair${roots.length === 1 ? "" : "s"} found.`;
+        const dominant = roots.reduce((best, value) => Math.abs(value) > Math.abs(best) ? value : best, roots[0]);
+        const signs = roots.map(Math.sign);
+        const behavior = signs.every(sign => sign > 0) ? "Every real eigenvalue is positive, so invariant directions keep their orientation." :
+            signs.some(sign => sign < 0) ? "A negative eigenvalue reverses at least one invariant direction." : "A zero eigenvalue collapses at least one invariant direction.";
+        setTeaching(behavior, ["Method: exact", `Real eigenpairs: ${roots.length}`, `Dominant value: ${formatNumber(dominant)}`, "Convergence: not iterative"]);
         setStatus("Exact calculation complete.", "success");
     }
 
     function calculatePower() {
-        const { matrix, error } = readMatrix();
+        const {
+            matrix,
+            error
+        } = readMatrix();
         clearOutputs();
         if (!matrix) {
             setStatus(error, "error");
@@ -439,6 +476,7 @@
             powerVectorOutput.value = formatVector(result.eigenvector);
             renderPowerResult(result);
             resultSummary.textContent = `${result.converged ? "Converged" : "Stopped"} after ${result.iterations} iterations.`;
+            setTeaching("Power iteration estimates only the strongest invariant direction. It can miss other eigenpairs and may struggle when dominant magnitudes are tied.", ["Method: power iteration", "Real eigenpairs: dominant only", `Dominant value: ${formatNumber(result.eigenvalue)}`, `Convergence: ${result.converged ? `${result.iterations} iterations` : "not reached"}`]);
             setStatus("Power iteration complete.", result.converged ? "success" : "info");
         } catch (error) {
             setStatus(error.message, "error");
@@ -453,6 +491,7 @@
         }));
         clearOutputs();
         setEmptyState("No calculation yet", "Enter a matrix or choose a preset.");
+        setTeaching("Choose a preset or enter a matrix, then run a method. Eigenvectors identify directions preserved by the transformation; eigenvalues show their scale.", ["Method: not run", "Real eigenpairs: —", "Dominant value: —", "Convergence: —"]);
         setStatus("Cleared.");
     }
 
@@ -484,4 +523,5 @@
 
     updateSizeUI();
     writeMatrix(presets.symmetric.matrix);
+    calculateExact();
 })();

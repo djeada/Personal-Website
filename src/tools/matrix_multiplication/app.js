@@ -3,8 +3,10 @@
 
     const MAX_SIZE = 4;
     const rowsASelect = document.getElementById("rows-a");
-    const innerSelect = document.getElementById("inner-dimension");
+    const colsASelect = document.getElementById("cols-a");
+    const rowsBSelect = document.getElementById("rows-b");
     const colsBSelect = document.getElementById("cols-b");
+    const compatibilityMessage = document.getElementById("compatibility-message");
     const matrixATable = document.getElementById("matrix-a").querySelector("tbody");
     const matrixBTable = document.getElementById("matrix-b").querySelector("tbody");
     const resultTable = document.getElementById("matrix-result").querySelector("tbody");
@@ -15,10 +17,12 @@
     const operationCount = document.getElementById("operation-count");
     const statusMessage = document.getElementById("status-message");
     const breakdownCard = document.getElementById("breakdown-card");
+    const multiplicationInsight = document.getElementById("multiplication-insight");
+    const multiplicationMetrics = document.getElementById("multiplication-metrics");
 
     const presets = {
         standard: {
-            dims: [2, 3, 2],
+            dims: [2, 3, 3, 2],
             A: [
                 [1, 2, 3],
                 [4, 5, 6]
@@ -30,7 +34,7 @@
             ]
         },
         transform: {
-            dims: [2, 2, 3],
+            dims: [2, 2, 2, 3],
             A: [
                 [0, -1],
                 [1, 0]
@@ -41,7 +45,7 @@
             ]
         },
         identity: {
-            dims: [3, 3, 3],
+            dims: [3, 3, 3, 3],
             A: [
                 [1, 0, 0],
                 [0, 1, 0],
@@ -54,7 +58,7 @@
             ]
         },
         wide: {
-            dims: [1, 4, 1],
+            dims: [1, 4, 4, 1],
             A: [
                 [2, -1, 3, 4]
             ],
@@ -70,7 +74,8 @@
     function dims() {
         return {
             rowsA: Number(rowsASelect.value),
-            inner: Number(innerSelect.value),
+            colsA: Number(colsASelect.value),
+            rowsB: Number(rowsBSelect.value),
             colsB: Number(colsBSelect.value)
         };
     }
@@ -85,6 +90,11 @@
         statusMessage.textContent = message;
         statusMessage.classList.toggle("is-error", type === "error");
         statusMessage.classList.toggle("is-success", type === "success");
+    }
+
+    function setTeaching(message, metrics) {
+        multiplicationInsight.textContent = message;
+        Array.from(multiplicationMetrics.children).forEach((node, index) => node.textContent = metrics[index] || "—");
     }
 
     function createInput(tableName, row, col) {
@@ -126,29 +136,38 @@
     }
 
     function updateActiveCells() {
-        const { rowsA, inner, colsB } = dims();
-        matrixASize.textContent = `${rowsA} row${rowsA === 1 ? "" : "s"} x ${inner} column${inner === 1 ? "" : "s"}`;
-        matrixBSize.textContent = `${inner} row${inner === 1 ? "" : "s"} x ${colsB} column${colsB === 1 ? "" : "s"}`;
-        resultSize.textContent = `${rowsA} row${rowsA === 1 ? "" : "s"} x ${colsB} column${colsB === 1 ? "" : "s"}`;
-        dimensionEquation.textContent = `A ${rowsA}x${inner} x B ${inner}x${colsB} = C ${rowsA}x${colsB}`;
-        operationCount.textContent = `${rowsA * inner * colsB} multiply-add term${rowsA * inner * colsB === 1 ? "" : "s"}`;
+        const {
+            rowsA,
+            colsA,
+            rowsB,
+            colsB
+        } = dims();
+        const compatible = colsA === rowsB;
+        matrixASize.textContent = `${rowsA} row${rowsA === 1 ? "" : "s"} × ${colsA} column${colsA === 1 ? "" : "s"}`;
+        matrixBSize.textContent = `${rowsB} row${rowsB === 1 ? "" : "s"} × ${colsB} column${colsB === 1 ? "" : "s"}`;
+        resultSize.textContent = `${rowsA} row${rowsA === 1 ? "" : "s"} × ${colsB} column${colsB === 1 ? "" : "s"}`;
+        dimensionEquation.textContent = compatible ? `A ${rowsA}×${colsA} · B ${rowsB}×${colsB} = C ${rowsA}×${colsB}` : `A ${rowsA}×${colsA} cannot multiply B ${rowsB}×${colsB}`;
+        operationCount.textContent = compatible ? `${rowsA * colsA * colsB} scalar multiplications` : "Inner dimensions do not match";
+        compatibilityMessage.textContent = compatible ? `A has ${colsA} column${colsA === 1 ? "" : "s"} and B has ${rowsB} row${rowsB === 1 ? "" : "s"}. The matrices are compatible.` : `A has ${colsA} column${colsA === 1 ? "" : "s"}, but B has ${rowsB} row${rowsB === 1 ? "" : "s"}. These must match.`;
+        compatibilityMessage.classList.toggle("is-error", !compatible);
+        document.getElementById("submit").disabled = !compatible;
 
         forEachInput(matrixATable, (input, row, col) => {
-            const active = row < rowsA && col < inner;
+            const active = row < rowsA && col < colsA;
             input.disabled = !active;
             input.classList.toggle("is-inactive", !active);
             input.classList.remove("has-error");
             if (!active) input.value = "";
         });
         forEachInput(matrixBTable, (input, row, col) => {
-            const active = row < inner && col < colsB;
+            const active = row < rowsB && col < colsB;
             input.disabled = !active;
             input.classList.toggle("is-inactive", !active);
             input.classList.remove("has-error");
             if (!active) input.value = "";
         });
 
-        clearResult("Dimensions changed. Multiply to calculate the product.");
+        clearResult(compatible ? "Dimensions changed. Multiply to calculate the product." : "Incompatible dimensions: A columns must equal B rows.");
     }
 
     function readMatrix(table, rows, cols, name) {
@@ -205,7 +224,7 @@
         const selected = resultTable.rows[row]?.cells[col]?.querySelector(".result-cell");
         if (selected) selected.classList.add("is-highlighted");
 
-        const terms = A[row].map((value, index) => `${fmt(value)} x ${fmt(B[index][col])}`);
+        const terms = A[row].map((value, index) => `${fmt(value)} × ${fmt(B[index][col])}`);
         const expression = terms.join(" + ");
         breakdownCard.innerHTML = `
             <strong>C${row + 1}${col + 1} = row ${row + 1} of A dot column ${col + 1} of B</strong>
@@ -223,11 +242,19 @@
         try {
             forEachInput(matrixATable, input => input.classList.remove("has-error"));
             forEachInput(matrixBTable, input => input.classList.remove("has-error"));
-            const { rowsA, inner, colsB } = dims();
-            const A = readMatrix(matrixATable, rowsA, inner, "A");
-            const B = readMatrix(matrixBTable, inner, colsB, "B");
+            const {
+                rowsA,
+                colsA,
+                rowsB,
+                colsB
+            } = dims();
+            if (colsA !== rowsB) throw new Error(`Cannot multiply: A has ${colsA} columns while B has ${rowsB} rows.`);
+            const A = readMatrix(matrixATable, rowsA, colsA, "A");
+            const B = readMatrix(matrixBTable, rowsB, colsB, "B");
             const result = multiply(A, B);
             renderResult(result, A, B);
+            const scalarMultiplications = rowsA * colsA * colsB;
+            setTeaching(`The ${rowsA} by ${colsB} product contains ${rowsA * colsB} dot products. Select any result cell to see its ${colsA}-term calculation.`, [`Output shape: ${rowsA} × ${colsB}`, `Dot products: ${rowsA * colsB}`, `Terms per cell: ${colsA}`, `Scalar operations: ${scalarMultiplications} multiply, ${rowsA * colsB * Math.max(0, colsA - 1)} add`]);
             setStatus("Multiplication complete.", "success");
         } catch (error) {
             clearResult(error.message);
@@ -247,8 +274,9 @@
     function applyPreset(name) {
         const preset = presets[name];
         rowsASelect.value = String(preset.dims[0]);
-        innerSelect.value = String(preset.dims[1]);
-        colsBSelect.value = String(preset.dims[2]);
+        colsASelect.value = String(preset.dims[1]);
+        rowsBSelect.value = String(preset.dims[2]);
+        colsBSelect.value = String(preset.dims[3]);
         updateActiveCells();
         writeMatrix(matrixATable, preset.A);
         writeMatrix(matrixBTable, preset.B);
@@ -265,13 +293,22 @@
             input.classList.remove("has-error");
         });
         clearResult("Cleared. Empty active cells count as zero.");
+        setTeaching("Each output cell is a dot product: one row from A paired with one column from B. Choose a preset to see the full calculation immediately.", ["Output shape: —", "Dot products: —", "Terms per cell: —", "Scalar operations: —"]);
     }
 
     function transposeProduct() {
-        const { rowsA, inner, colsB } = dims();
-        const A = readMatrix(matrixATable, rowsA, inner, "A");
-        const B = readMatrix(matrixBTable, inner, colsB, "B");
+        const {
+            rowsA,
+            colsA,
+            rowsB,
+            colsB
+        } = dims();
+        if (colsA !== rowsB) throw new Error("Transpose operation requires a valid A × B product first.");
+        const A = readMatrix(matrixATable, rowsA, colsA, "A");
+        const B = readMatrix(matrixBTable, rowsB, colsB, "B");
         rowsASelect.value = String(colsB);
+        colsASelect.value = String(rowsB);
+        rowsBSelect.value = String(colsA);
         colsBSelect.value = String(rowsA);
         updateActiveCells();
         writeMatrix(matrixATable, B[0].map((_, col) => B.map(row => row[col])));
@@ -283,7 +320,7 @@
     buildInputGrid(matrixATable, "A");
     buildInputGrid(matrixBTable, "B");
 
-    [rowsASelect, innerSelect, colsBSelect].forEach(select => {
+    [rowsASelect, colsASelect, rowsBSelect, colsBSelect].forEach(select => {
         select.addEventListener("change", updateActiveCells);
     });
 

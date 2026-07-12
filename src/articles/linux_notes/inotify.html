@@ -34,7 +34,7 @@
             },
             "url": "https://adamdjellouli.com/articles/linux_notes/inotify",
             "description": "Inotify is a Linux kernel subsystem that provides a mechanism for monitoring file system events.",
-            "dateModified": "2026-04-27"
+            "dateModified": "2026-07-11"
         }
     </script>
 </head>
@@ -172,7 +172,7 @@
                         <path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke="currentColor" stroke-width="2"></path>
                     </svg>
                 </button></div>
-            <p style="text-align: right;"><i>Last modified: April 27, 2026</i></p>
+            <p style="text-align: right;"><i>Last modified: July 11, 2026</i></p>
             <p style="text-align: right;"><i>This article is written in: 🇺🇸</i></p>
             <h2 id="inotify">Inotify</h2>
             <p>Inotify is a Linux kernel subsystem that provides a mechanism for monitoring file system events. It allows applications to watch files and directories for changes such as creation, deletion, modification, and access. Rather than repeatedly polling the file system to detect changes, inotify delivers event notifications directly to user-space programs, making it both efficient and responsive.</p>
@@ -196,7 +196,7 @@
                          +-------------------------------+
                          |     Inotify File Descriptor   |
                          |   (Readable via read()/poll() |
-                         |    when events are queued)     |
+                         |    when events are queued)    |
                          +-------------------------------+
                                        │
                                        │ Kernel queues inotify_event
@@ -406,14 +406,14 @@ done</code></pre>
 |           "/path", IN_MODIFY | IN_CREATE)|
 |        │                                 |
 |        ▼                                 |
-|  3. read(fd, buf, BUF_LEN)              |
+|  3. read(fd, buf, BUF_LEN)               |
 |        │                                 |
 |        ▼                                 |
 |  4. Process inotify_event structs        |
 |     from buf                             |
 |        │                                 |
 |        ▼                                 |
-|  5. inotify_rm_watch(fd, wd)            |
+|  5. inotify_rm_watch(fd, wd)             |
 |     close(fd)                            |
 +------------------------------------------+</code></pre>
             </div>
@@ -562,14 +562,38 @@ sudo sysctl -p</code></pre>
                 <li><strong>dnotify</strong> is the predecessor to inotify and is considered obsolete. It required holding open file descriptors on watched directories and delivered events via signals, making it cumbersome and limited.</li>
             </ul>
             <h3 id="common-use-cases">Common Use Cases</h3>
-            <ul>
-                <li><strong>Build systems</strong> such as <code>make</code>, <code>webpack</code>, and <code>cargo</code> use inotify to detect source file changes and trigger automatic rebuilds.</li>
-                <li><strong>File synchronization</strong> tools like <code>rsync</code>-based watchers and <code>lsyncd</code> use inotify to detect changes and replicate them to remote servers in near real-time.</li>
-                <li><strong>Log monitoring</strong> is simplified with inotify because utilities can react to new log entries the moment they are written rather than polling at intervals.</li>
-                <li><strong>Security auditing</strong> benefits from inotify by allowing administrators to watch critical configuration files (e.g., <code>/etc/passwd</code>, <code>/etc/shadow</code>) for unauthorized modifications.</li>
-                <li><strong>Development environments</strong> including IDEs and text editors use inotify to refresh file listings and detect external modifications to open files.</li>
-                <li><strong>Containerized workloads</strong> and orchestration tools watch configuration files for hot-reload without restarting services.</li>
-            </ul>
+            <p>
+            <table>
+                <tr>
+                    <td>Use Case</td>
+                    <td>How Inotify Is Used</td>
+                </tr>
+                <tr>
+                    <td>Build systems (<code>make</code>, <code>webpack</code>, <code>cargo</code>)</td>
+                    <td>Detect source file changes and trigger automatic rebuilds.</td>
+                </tr>
+                <tr>
+                    <td>File synchronization (<code>rsync</code>-based watchers, <code>lsyncd</code>)</td>
+                    <td>Detect file changes and replicate them to remote servers in near real-time.</td>
+                </tr>
+                <tr>
+                    <td>Log monitoring</td>
+                    <td>React to new log entries immediately instead of polling at intervals.</td>
+                </tr>
+                <tr>
+                    <td>Security auditing</td>
+                    <td>Watch critical files such as <code>/etc/passwd</code> and <code>/etc/shadow</code> for unauthorized modifications.</td>
+                </tr>
+                <tr>
+                    <td>Development environments (IDEs, editors)</td>
+                    <td>Refresh file listings and detect external changes to open files.</td>
+                </tr>
+                <tr>
+                    <td>Containerized workloads and orchestration tools</td>
+                    <td>Monitor configuration files and enable hot-reload without restarting services.</td>
+                </tr>
+            </table>
+            </p>
             <h3 id="challenges">Challenges</h3>
             <ol>
                 <li>Install <code>inotify-tools</code> on your system and use <code>inotifywait</code> to monitor your home directory for any file creation events. Create a few files and observe the output.</li>

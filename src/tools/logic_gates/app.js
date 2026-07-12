@@ -18,9 +18,19 @@ function updateInputs() {
         var inputDiv = document.createElement("div");
         inputDiv.className = "lightBulb inactive";
         inputDiv.id = 'input' + (i + 1);
+        inputDiv.setAttribute('role', 'button');
+        inputDiv.setAttribute('tabindex', '0');
+        inputDiv.setAttribute('aria-label', 'Input ' + (i + 1) + ': off');
+        inputDiv.setAttribute('aria-pressed', 'false');
         inputDiv.onclick = function() {
             toggleInput(this);
             updateOutput();
+        };
+        inputDiv.onkeydown = function(event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                this.click();
+            }
         };
 
 
@@ -51,6 +61,9 @@ function getNumberOfInputsForGate(gateType) {
 function toggleInput(inputElement) {
     inputElement.classList.toggle('inactive');
     inputElement.classList.toggle('active');
+    var active = inputElement.classList.contains('active');
+    inputElement.setAttribute('aria-pressed', String(active));
+    inputElement.setAttribute('aria-label', inputElement.id.replace('input', 'Input ') + ': ' + (active ? 'on' : 'off'));
 }
 
 function updateOutput() {
@@ -84,6 +97,8 @@ function updateOutput() {
     }
 
     var outputElement = document.getElementById("outputArea").querySelector('.lightBulb');
+    outputElement.setAttribute('role', 'status');
+    outputElement.setAttribute('aria-label', 'Output: ' + (output ? 'on' : 'off'));
     if (output) {
         outputElement.classList.add('active');
         outputElement.classList.remove('inactive');
@@ -93,6 +108,46 @@ function updateOutput() {
     }
 
     updateTruthTable();
+    updateTeaching(gateType, output);
+}
+
+function updateTeaching(gateType, output) {
+    var descriptions = {
+        AND: "AND is true only when every input is true. It models requirements that must all be satisfied.",
+        OR: "OR is true when at least one input is true. It models alternative sufficient conditions.",
+        NOT: "NOT inverts its single input, turning true into false and false into true.",
+        NAND: "NAND is the inverse of AND. It is false only when every input is true and is functionally complete.",
+        NOR: "NOR is the inverse of OR. It is true only when every input is false and is functionally complete.",
+        XOR: "XOR is true when the inputs differ. It models exclusive choice and one-bit addition without carry.",
+        XNOR: "XNOR is true when the inputs match. It acts as a one-bit equality test."
+    };
+    var table = getTruthTable(gateType);
+    var formulas = {
+        AND: '\\(Y=A\\land B\\)',
+        OR: '\\(Y=A\\lor B\\)',
+        NOT: '\\(Y=\\lnot A\\)',
+        NAND: '\\(Y=\\lnot(A\\land B)\\)',
+        NOR: '\\(Y=\\lnot(A\\lor B)\\)',
+        XOR: '\\(Y=A\\oplus B\\)',
+        XNOR: '\\(Y=\\lnot(A\\oplus B)\\)'
+    };
+    var trueCases = table.filter(function(row) {
+        return row[row.length - 1];
+    }).length;
+    var insight = document.getElementById('logic-insight');
+    var metrics = document.getElementById('logic-metrics');
+    if (insight) insight.textContent = descriptions[gateType];
+    if (metrics) {
+        var values = ['Gate: ' + gateType, 'Inputs: ' + getNumberOfInputsForGate(gateType), 'True cases: ' + trueCases + ' of ' + table.length, 'Current output: ' + (output ? '1' : '0')];
+        Array.from(metrics.children).forEach(function(node, index) {
+            node.textContent = values[index];
+        });
+    }
+    var formula = document.getElementById('logic-formula');
+    if (formula) {
+        formula.textContent = formulas[gateType];
+        if (window.MathJax && window.MathJax.typesetPromise) window.MathJax.typesetPromise([formula]);
+    }
 }
 
 function updateTruthTable() {
@@ -128,6 +183,16 @@ function updateTruthTable() {
     html += '</tbody></table>';
 
     truthTableDiv.innerHTML = html;
+    var activeValues = [];
+    var count = getNumberOfInputsForGate(gateType);
+    for (var inputIndex = 1; inputIndex <= count; inputIndex++) activeValues.push(document.getElementById('input' + inputIndex).classList.contains('active'));
+    Array.from(truthTableDiv.querySelectorAll('tbody tr')).forEach(function(row, rowIndex) {
+        var matches = activeValues.every(function(value, valueIndex) {
+            return truthTable[rowIndex][valueIndex] === value;
+        });
+        row.classList.toggle('is-current', matches);
+        if (matches) row.setAttribute('aria-current', 'true');
+    });
 }
 
 function getTruthTable(gateType) {
@@ -191,6 +256,8 @@ function resetInputs() {
     inputs.forEach(function(input) {
         input.classList.remove('active');
         input.classList.add('inactive');
+        input.setAttribute('aria-pressed', 'false');
+        input.setAttribute('aria-label', input.id.replace('input', 'Input ') + ': off');
     });
 
     updateOutput();

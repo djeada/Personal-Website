@@ -55,7 +55,24 @@ def inject_article_buttons(html: str) -> str:
     download_button.append(BeautifulSoup(svg_download, "html.parser"))
 
     button_container.extend([suggest_button, issue_button, download_button])
-    article_body.insert(0, button_container)
+
+    metadata_paragraphs = []
+    for child in article_body.find_all("p", recursive=False):
+        style = child.get("style", "")
+        if "text-align: right" in style:
+            metadata_paragraphs.append(child)
+        if len(metadata_paragraphs) == 2:
+            break
+
+    if metadata_paragraphs:
+        header = soup.new_tag("div", attrs={"class": "article-header"})
+        metadata = soup.new_tag("div", attrs={"class": "article-header-metadata"})
+        for paragraph in metadata_paragraphs:
+            metadata.append(paragraph.extract())
+        header.extend([metadata, button_container])
+        article_body.insert(0, header)
+    else:
+        article_body.insert(0, button_container)
 
     return str(soup)
 

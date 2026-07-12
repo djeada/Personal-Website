@@ -11,6 +11,8 @@
     const resultGrid = document.getElementById("result-grid");
     const legendRow = document.getElementById("legend-row");
     const statusMessage = document.getElementById("status-message");
+    const decompositionInsight = document.getElementById("decomposition-insight");
+    const decompositionMetrics = document.getElementById("decomposition-metrics");
     const canvas = document.getElementById("decomposition-canvas");
     const ctx = canvas.getContext("2d");
 
@@ -78,6 +80,11 @@
         statusMessage.textContent = message;
         statusMessage.classList.toggle("is-error", type === "error");
         statusMessage.classList.toggle("is-success", type === "success");
+    }
+
+    function setTeaching(message, metrics) {
+        decompositionInsight.textContent = message;
+        Array.from(decompositionMetrics.children).forEach((node, index) => node.textContent = metrics[index] || "—");
     }
 
     function readMatrix() {
@@ -148,7 +155,10 @@
             if (Math.abs(b) > 1e-12) return normalize([b, value - a]);
             return value >= d ? [1, 0] : [0, 1];
         });
-        return { values, vectors };
+        return {
+            values,
+            vectors
+        };
     }
 
     function eigen2x2(A) {
@@ -160,7 +170,11 @@
         const determinant = a * d - b * c;
         const discriminant = trace * trace - 4 * determinant;
         if (discriminant < -1e-12) {
-            return { real: false, values: [], vectors: [] };
+            return {
+                real: false,
+                values: [],
+                vectors: []
+            };
         }
         const root = Math.sqrt(Math.max(discriminant, 0));
         const values = discriminant < 1e-12 ? [trace / 2] : [(trace + root) / 2, (trace - root) / 2];
@@ -170,13 +184,20 @@
             const row = norm(row1) > norm(row2) ? row1 : row2;
             return normalize(Math.abs(row[0]) + Math.abs(row[1]) < 1e-12 ? [1, 0] : [-row[1], row[0]]);
         });
-        return { real: true, values, vectors };
+        return {
+            real: true,
+            values,
+            vectors
+        };
     }
 
     function svd2x2(A) {
         const ata = matMul(transpose(A), A);
         const eig = symmetricEigen2x2(ata);
-        const order = eig.values.map((value, index) => ({ value, index })).sort((a, b) => b.value - a.value);
+        const order = eig.values.map((value, index) => ({
+            value,
+            index
+        })).sort((a, b) => b.value - a.value);
         const singularValues = order.map(item => Math.sqrt(Math.max(item.value, 0)));
         const V = order.map(item => eig.vectors[item.index]);
         const U = V.map((v, index) => {
@@ -184,7 +205,12 @@
             return normalize(matVec(A, v).map(value => value / singularValues[index]));
         });
         if (Math.abs(dot(U[0], U[1])) > 1e-6) U[1] = perpendicular(U[0]);
-        return { singularValues, U, V, ata };
+        return {
+            singularValues,
+            U,
+            V,
+            ata
+        };
     }
 
     function pca2d(points) {
@@ -237,6 +263,7 @@
         resultGrid.innerHTML = "";
         nodes.forEach(node => resultGrid.appendChild(node));
         resultSummary.textContent = summary;
+        if (window.MathJax && window.MathJax.typesetPromise) window.MathJax.typesetPromise([resultGrid]);
     }
 
     function setLegend(items) {
@@ -257,7 +284,10 @@
         canvas.height = Math.floor((rect.width * 0.625) * dpr);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, rect.width, rect.width * 0.625);
-        return { width: rect.width, height: rect.width * 0.625 };
+        return {
+            width: rect.width,
+            height: rect.width * 0.625
+        };
     }
 
     function drawGrid(width, height, scale) {
@@ -314,7 +344,10 @@
     }
 
     function drawSvd(A, result) {
-        const { width, height } = clearCanvas();
+        const {
+            width,
+            height
+        } = clearCanvas();
         const scale = Math.min(width, height) / 8;
         drawGrid(width, height, scale);
         ctx.lineWidth = 2;
@@ -338,12 +371,20 @@
         }
         ctx.stroke();
         drawVector(result.V[0], "#16a34a", width, height, scale, "v1");
-        drawVector(result.U[0].map(value => value * result.singularValues[0]), "#ea8400", width, height, scale, "sigma1 u1");
-        setLegend([["#2563eb", "unit circle"], ["#e11d48", "A applied"], ["#16a34a", "input direction"], ["#ea8400", "output axis"]]);
+        drawVector(result.U[0].map(value => value * result.singularValues[0]), "#ea8400", width, height, scale, "σ₁u₁");
+        setLegend([
+            ["#2563eb", "unit circle"],
+            ["#e11d48", "A applied"],
+            ["#16a34a", "input direction"],
+            ["#ea8400", "output axis"]
+        ]);
     }
 
     function drawPca(result) {
-        const { width, height } = clearCanvas();
+        const {
+            width,
+            height
+        } = clearCanvas();
         const xs = result.points.map(point => point[0]);
         const ys = result.points.map(point => point[1]);
         const maxRange = Math.max(
@@ -363,14 +404,27 @@
         });
         drawVector(result.vectors[0].map(value => value * Math.sqrt(result.values[0]) * 2), "#e11d48", width, height, scale, "PC1");
         drawVector(result.vectors[1].map(value => value * Math.sqrt(result.values[1]) * 2), "#16a34a", width, height, scale, "PC2");
-        setLegend([["#2563eb", "centered data"], ["#e11d48", "PC1"], ["#16a34a", "PC2"]]);
+        setLegend([
+            ["#2563eb", "centered data"],
+            ["#e11d48", "PC1"],
+            ["#16a34a", "PC2"]
+        ]);
     }
 
     function drawEvd(A, result) {
-        const { width, height } = clearCanvas();
+        const {
+            width,
+            height
+        } = clearCanvas();
         const scale = Math.min(width, height) / 8;
         drawGrid(width, height, scale);
-        const square = [[-1, -1], [1, -1], [1, 1], [-1, 1], [-1, -1]];
+        const square = [
+            [-1, -1],
+            [1, -1],
+            [1, 1],
+            [-1, 1],
+            [-1, -1]
+        ];
         ctx.strokeStyle = "#2563eb";
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -388,10 +442,15 @@
         ctx.stroke();
         if (result.real) {
             result.vectors.forEach((vector, index) => {
-                drawVector(vector.map(value => value * result.values[index]), index === 0 ? "#ea8400" : "#16a34a", width, height, scale, `lambda${index + 1} v${index + 1}`);
+                drawVector(vector.map(value => value * result.values[index]), index === 0 ? "#ea8400" : "#16a34a", width, height, scale, `λ${index === 0 ? "₁" : "₂"}v${index === 0 ? "₁" : "₂"}`);
             });
         }
-        setLegend([["#2563eb", "unit square"], ["#e11d48", "A applied"], ["#ea8400", "eigen direction 1"], ["#16a34a", "eigen direction 2"]]);
+        setLegend([
+            ["#2563eb", "unit square"],
+            ["#e11d48", "A applied"],
+            ["#ea8400", "eigen direction 1"],
+            ["#16a34a", "eigen direction 2"]
+        ]);
     }
 
     function runSvd() {
@@ -399,10 +458,15 @@
         const result = svd2x2(A);
         drawSvd(A, result);
         renderResults([
-            metricsCard("Singular Values", [["sigma1", fmt(result.singularValues[0])], ["sigma2", fmt(result.singularValues[1])]]),
+            metricsCard("Singular Values", [
+                ["\\(\\sigma_1\\)", fmt(result.singularValues[0])],
+                ["\\(\\sigma_2\\)", fmt(result.singularValues[1])]
+            ]),
             card("U", matrixFmt(transpose(result.U)), true),
             card("V", matrixFmt(transpose(result.V)), true)
         ], "SVD decomposes A into input directions, stretches, and output directions.");
+        const ratio = result.singularValues[1] < 1e-9 ? Infinity : result.singularValues[0] / result.singularValues[1];
+        setTeaching(Number.isFinite(ratio) ? `The first singular direction is stretched ${fmt(ratio)} times as strongly as the second.` : "The second singular value is zero, so the transformation collapses the plane onto a line.", ["Mode: SVD", `Primary strength: ${fmt(result.singularValues[0])}`, `Secondary strength: ${fmt(result.singularValues[1])}`, `Condition ratio: ${Number.isFinite(ratio) ? fmt(ratio) : "infinite"}`]);
         setStatus("SVD complete.", "success");
     }
 
@@ -410,10 +474,14 @@
         const result = pca2d(parseDataset());
         drawPca(result);
         renderResults([
-            metricsCard("Explained Variance", [["PC1", `${fmt(result.explained[0] * 100)}%`], ["PC2", `${fmt(result.explained[1] * 100)}%`]]),
+            metricsCard("Explained Variance", [
+                ["\\(\\mathrm{PC}_1\\)", `${fmt(result.explained[0] * 100)}%`],
+                ["\\(\\mathrm{PC}_2\\)", `${fmt(result.explained[1] * 100)}%`]
+            ]),
             card("Mean", vectorFmt(result.mean)),
             card("Covariance", matrixFmt(result.covariance), true)
         ], "PCA found the principal axes of the centered dataset.");
+        setTeaching(`PC1 explains ${fmt(result.explained[0] * 100)}% of the observed variance. The closer this is to 100%, the more nearly the data follows one line.`, ["Mode: PCA", `PC1 variance: ${fmt(result.explained[0] * 100)}%`, `PC2 variance: ${fmt(result.explained[1] * 100)}%`, `Samples: ${result.points.length}`]);
         setStatus("PCA complete.", "success");
     }
 
@@ -426,13 +494,15 @@
                 card("Real EVD unavailable", "This 2x2 matrix has complex eigenvalues, so no real eigenvector basis exists.")
             ], "No real eigendecomposition for this matrix.");
             setStatus("Complex eigenvalues detected.", "error");
+            setTeaching("This transform rotates invariant directions out of the real plane, so a real eigenvector basis does not exist.", ["Mode: EVD", "Real eigenvalues: none", "Eigenvectors: complex", "Interpretation: rotation-like"]);
             return;
         }
         renderResults([
-            metricsCard("Eigenvalues", result.values.map((value, index) => [`lambda${index + 1}`, fmt(value)])),
+            metricsCard("Eigenvalues", result.values.map((value, index) => [`\\(\\lambda_${index + 1}\\)`, fmt(value)])),
             card("Eigenvectors", result.vectors.map((vector, index) => `v${index + 1} = ${vectorFmt(vector)}`).join("\n"), true),
             card("Matrix", matrixFmt(A), true)
         ], "EVD found real invariant directions for the transform.");
+        setTeaching("Each eigenvector stays on its original line after the transformation. Its eigenvalue gives the signed scale along that line.", ["Mode: EVD", `Eigenvalue 1: ${fmt(result.values[0])}`, `Eigenvalue 2: ${fmt(result.values[1])}`, `Real directions: ${result.vectors.length}`]);
         setStatus("EVD complete.", "success");
     }
 
@@ -463,7 +533,14 @@
             svd: "SVD maps the unit circle to an ellipse. Principal directions become ellipse axes.",
             pca: "PCA centers the data, then draws principal axes from the covariance matrix.",
             evd: "EVD shows eigenvectors as directions that remain on the same line after transformation."
-        }[mode];
+        } [mode];
+        const formula = document.getElementById("decomposition-formula");
+        formula.textContent = {
+            svd: "\\(A=U\\Sigma V^{\\mathsf T}\\)",
+            pca: "\\(C=\\frac{1}{n-1}X^{\\mathsf T}X\\)",
+            evd: "\\(A=V\\Lambda V^{-1}\\)"
+        } [mode];
+        if (window.MathJax && window.MathJax.typesetPromise) window.MathJax.typesetPromise([formula]);
         setStatus(`${mode.toUpperCase()} mode active.`);
         runAnalysis();
     }
