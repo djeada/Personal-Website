@@ -807,6 +807,15 @@ async function performOperation(operation) {
     if (stateChanged) {
         state = committedState;
         render();
+        if (operation === "add" && ["stack", "queue", "deque"].includes(currentKey)) {
+            const added = Array.from(visual.querySelectorAll(".selectable")).find((node) =>
+                String(node.dataset.value) === String(highlight.value)
+            );
+            if (added) {
+                added.classList.add("animation-result", "endpoint-result");
+                added.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+            }
+        }
     }
     showCompletedResult(lastOutcome);
 }
@@ -1020,6 +1029,15 @@ async function animateTargets(targets, label) {
 
 async function playOperationAnimation(operation) {
     lastAnimationTargets = animationTargets();
+    if (["stack", "queue", "deque"].includes(currentKey) && operation !== "search") {
+        const nodes = Array.from(visual.querySelectorAll(".selectable"));
+        let endpoint = null;
+        if (currentKey === "stack") endpoint = nodes[nodes.length - 1];
+        else if (currentKey === "queue") endpoint = operation === "add" ? nodes[nodes.length - 1] : nodes[0];
+        else if (currentKey === "deque" && operation === "add") endpoint = nodes[nodes.length - 1];
+        else if (currentKey === "deque" && operation === "special") endpoint = nodes[0];
+        if (endpoint) lastAnimationTargets = [endpoint];
+    }
     return animateTargets(lastAnimationTargets, operationConfig(operation)[0]);
 }
 
