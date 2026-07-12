@@ -133,14 +133,14 @@ const DATASETS = {
 const DEFAULT_POINTS = DATASETS["positive-linear"].points;
 
 const COLORS = {
-    point: "#2563eb",
-    pointFill: "rgba(37, 99, 235, 0.78)",
-    regression: "#e11d48",
-    mean: "#f59e0b",
-    positive: "rgba(37, 99, 235, 0.10)",
-    negative: "rgba(225, 29, 72, 0.09)",
-    residual: "rgba(225, 29, 72, 0.72)",
-    ellipse: "#10b981"
+    point: "#60a5fa",
+    pointFill: "rgba(96, 165, 250, 0.82)",
+    regression: "#fb7185",
+    mean: "#fbbf24",
+    positive: "rgba(96, 165, 250, 0.11)",
+    negative: "rgba(251, 113, 133, 0.10)",
+    residual: "rgba(251, 113, 133, 0.78)",
+    ellipse: "#4ade80"
 };
 
 const CHART = {

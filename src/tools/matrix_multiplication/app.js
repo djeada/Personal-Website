@@ -19,8 +19,6 @@
     const breakdownCard = document.getElementById("breakdown-card");
     const multiplicationInsight = document.getElementById("multiplication-insight");
     const multiplicationMetrics = document.getElementById("multiplication-metrics");
-    const productCanvas = document.getElementById("matrix-product-canvas");
-    const productContext = productCanvas.getContext("2d");
     const geometryCanvas = document.getElementById("matrix-geometry-canvas");
     const geometryContext = geometryCanvas.getContext("2d");
     const geometryMessage = document.getElementById("geometry-message");
@@ -213,17 +211,11 @@
         ));
     }
 
-    function productPlotColor(value, maximum) {
-        const strength = maximum > 0 ? Math.min(1, Math.abs(value) / maximum) : 0;
-        if (Math.abs(value) < 1e-12) return "rgba(148, 163, 184, 0.10)";
-        return value > 0 ? `rgba(8, 126, 139, ${0.18 + strength * 0.72})` :
-            `rgba(220, 76, 100, ${0.18 + strength * 0.72})`;
-    }
-
     function drawGeometricProduct(A, B, C) {
         const valid = A.length === 2 && A[0].length === 2 && B.length === 2 && B[0].length === 2;
         const wrap = geometryCanvas.parentElement;
-        const width = Math.max(760, wrap.clientWidth - 16);
+        wrap.classList.toggle("is-unavailable", !valid);
+        const width = Math.max(900, wrap.clientWidth - 16);
         const height = parseFloat(getComputedStyle(geometryCanvas).height) || 520;
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
         geometryCanvas.width = Math.round(width * dpr);
@@ -235,6 +227,7 @@
         const border = getComputedStyle(document.body).getPropertyValue("--tool-border").trim() || "#dbe3ec";
         const text = getComputedStyle(document.body).getPropertyValue("--tool-text").trim() || "#1e293b";
         const muted = getComputedStyle(document.body).getPropertyValue("--tool-text-muted").trim() || "#64748b";
+        const accent = getComputedStyle(document.body).getPropertyValue("--tool-primary").trim() || "#087e8b";
         ctx.clearRect(0, 0, width, height);
         ctx.fillStyle = surface;
         ctx.fillRect(0, 0, width, height);
@@ -250,33 +243,53 @@
 
         const apply = (M, point) => [M[0][0] * point[0] + M[0][1] * point[1], M[1][0] * point[0] + M[1][1] * point[1]];
         const stages = [
-            { title: "Input space", matrix: [[1, 0], [0, 1]], subtitle: "x" },
-            { title: "After B", matrix: B, subtitle: "Bx" },
-            { title: "After A", matrix: C, subtitle: "ABx" }
+            { title: "1. Input", matrix: [[1, 0], [0, 1]], formula: "x", note: "unit square" },
+            { title: "2. Apply B", matrix: B, formula: "Bx", note: "B acts first" },
+            { title: "3. Apply A", matrix: C, formula: "A(Bx) = ABx", note: "the final product" }
         ];
-        const active = stages[geometryStage];
-        const activeMatrix = geometryTweenMatrix || active.matrix;
-        const samples = stages.flatMap(stage => [[-3, -3], [-3, 3], [3, -3], [3, 3]].map(p => apply(stage.matrix, p)));
-        const extent = Math.max(2.2, ...samples.flat().map(Math.abs)) * 1.12;
-        const plotSize = Math.min(width - 90, height - 80);
-        const scale = plotSize / (2 * extent);
-        const originX = width / 2;
-        const originY = height / 2 + 16;
-        const map = point => { const p = apply(activeMatrix, point); return [originX + p[0] * scale, originY - p[1] * scale]; };
-        ctx.fillStyle = text; ctx.font = "800 18px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.fillText(active.title, originX, 25);
-        ctx.fillStyle = muted; ctx.font = "12px system-ui, sans-serif"; ctx.fillText(`${active.subtitle} — basis vectors are the columns of ${geometryStage === 0 ? "I" : geometryStage === 1 ? "B" : "AB"}`, originX, 44);
-        ctx.save(); ctx.beginPath(); ctx.rect(20, 54, width - 40, height - 68); ctx.clip();
-        for (let k = -7; k <= 7; k++) {
-            let p1 = map([k, -7]), p2 = map([k, 7]); ctx.strokeStyle = k === 0 ? "rgba(239,68,68,.55)" : border; ctx.lineWidth = k === 0 ? 2 : 1; ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.stroke();
-            p1 = map([-7, k]); p2 = map([7, k]); ctx.strokeStyle = k === 0 ? "rgba(56,198,194,.55)" : border; ctx.lineWidth = k === 0 ? 2 : 1; ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.stroke();
-        }
-        const square = [[0, 0], [1, 0], [1, 1], [0, 1]].map(map);
-        ctx.fillStyle = "rgba(244, 201, 93, .22)"; ctx.strokeStyle = "#f4c95d"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(...square[0]); square.slice(1).forEach(p => ctx.lineTo(...p)); ctx.closePath(); ctx.fill(); ctx.stroke();
-        const drawBasis = (basis, color, label) => { const end = map(basis); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(originX, originY); ctx.lineTo(...end); ctx.stroke(); ctx.font = "800 13px system-ui"; ctx.fillText(label, end[0] + 12, end[1] - 8); };
-        drawBasis([1, 0], "#ef4444", geometryStage === 0 ? "e₁" : geometryStage === 1 ? "Be₁" : "ABe₁");
-        drawBasis([0, 1], "#38c6c2", geometryStage === 0 ? "e₂" : geometryStage === 1 ? "Be₂" : "ABe₂");
-        ctx.restore();
-        geometryMessage.textContent = geometryStage === 0 ? "Start with the ordinary coordinate grid and unit square." : geometryStage === 1 ? "B moves the grid first. Its columns are the new basis directions." : "A acts on the already-transformed grid, producing the composition AB.";
+        const panelGap = 18;
+        const panelWidth = (width - 40 - panelGap * 2) / 3;
+        const plotTop = 82;
+        const plotHeight = height - 126;
+        const extent = Math.max(2.25, ...stages.flatMap(s => [[-2,-2],[-2,2],[2,-2],[2,2]].flatMap(p => apply(s.matrix, p).map(Math.abs)))) * 1.08;
+        const scale = Math.min((panelWidth - 34) / (2 * extent), plotHeight / (2 * extent));
+        const determinant = M => M[0][0] * M[1][1] - M[0][1] * M[1][0];
+        const drawArrow = (from, to, color, label) => {
+            const angle = Math.atan2(to[1] - from[1], to[0] - from[0]);
+            ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.moveTo(...from); ctx.lineTo(...to); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(...to); ctx.lineTo(to[0] - 10 * Math.cos(angle - .45), to[1] - 10 * Math.sin(angle - .45)); ctx.lineTo(to[0] - 10 * Math.cos(angle + .45), to[1] - 10 * Math.sin(angle + .45)); ctx.closePath(); ctx.fill();
+            ctx.font = "800 12px system-ui"; ctx.textAlign = "left"; ctx.fillText(label, to[0] + 7, to[1] - 7);
+        };
+        stages.forEach((stage, index) => {
+            const matrix = index === geometryStage && geometryTweenMatrix ? geometryTweenMatrix : stage.matrix;
+            const left = 20 + index * (panelWidth + panelGap);
+            const origin = [left + panelWidth / 2, plotTop + plotHeight / 2];
+            const mapRaw = p => [origin[0] + p[0] * scale, origin[1] - p[1] * scale];
+            const map = p => mapRaw(apply(matrix, p));
+            ctx.fillStyle = index === geometryStage ? "rgba(8,126,139,.10)" : "rgba(148,163,184,.035)";
+            ctx.strokeStyle = index === geometryStage ? accent : border; ctx.lineWidth = index === geometryStage ? 2.5 : 1;
+            ctx.beginPath(); ctx.roundRect(left, 8, panelWidth, height - 18, 10); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = text; ctx.font = "800 16px system-ui"; ctx.textAlign = "center"; ctx.fillText(stage.title, left + panelWidth / 2, 32);
+            ctx.fillStyle = index === geometryStage ? accent : muted; ctx.font = "700 13px system-ui"; ctx.fillText(stage.formula, left + panelWidth / 2, 53);
+            ctx.fillStyle = muted; ctx.font = "11px system-ui"; ctx.fillText(stage.note, left + panelWidth / 2, 69);
+            ctx.save(); ctx.beginPath(); ctx.rect(left + 7, plotTop, panelWidth - 14, plotHeight); ctx.clip();
+            for (let k = -6; k <= 6; k++) {
+                let p1 = map([k, -6]), p2 = map([k, 6]); ctx.strokeStyle = k === 0 ? "rgba(239,68,68,.42)" : border; ctx.lineWidth = k === 0 ? 1.6 : .8; ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.stroke();
+                p1 = map([-6, k]); p2 = map([6, k]); ctx.strokeStyle = k === 0 ? "rgba(56,198,194,.42)" : border; ctx.lineWidth = k === 0 ? 1.6 : .8; ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.stroke();
+            }
+            const vertices = [[0,0],[1,0],[1,1],[0,1]].map(map);
+            ctx.fillStyle = "rgba(244,201,93,.25)"; ctx.strokeStyle = "#f4c95d"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(...vertices[0]); vertices.slice(1).forEach(p => ctx.lineTo(...p)); ctx.closePath(); ctx.fill(); ctx.stroke();
+            vertices.forEach((p, i) => { ctx.fillStyle = "#f4c95d"; ctx.beginPath(); ctx.arc(p[0], p[1], 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = text; ctx.font = "700 10px system-ui"; ctx.fillText(["O","P","R","Q"][i], p[0] + 9, p[1] - 7); });
+            drawArrow(origin, map([1,0]), "#ef4444", index ? `${index === 1 ? "B" : "AB"}e₁` : "e₁");
+            drawArrow(origin, map([0,1]), "#38c6c2", index ? `${index === 1 ? "B" : "AB"}e₂` : "e₂");
+            ctx.restore();
+            const det = determinant(matrix);
+            ctx.fillStyle = Math.abs(det) < 1e-8 ? "#f59e0b" : muted; ctx.font = "700 11px system-ui"; ctx.textAlign = "center";
+            ctx.fillText(Math.abs(det) < 1e-8 ? "Collapsed dimension (area = 0)" : `Area scale = |det| = ${fmt(Math.abs(det))}`, left + panelWidth / 2, height - 29);
+            if (index < 2) { ctx.fillStyle = accent; ctx.font = "900 24px system-ui"; ctx.fillText("→", left + panelWidth + panelGap / 2, height / 2); }
+        });
+        geometryMessage.textContent = geometryStage === 0 ? "Start: the yellow unit square has area 1." : geometryStage === 1 ? "B acts first. The red and teal arrows are B's columns; they show where the original basis vectors land." : "A now acts on Bx. The last panel is the single transformation C = AB.";
         geometryCanvas.dataset.available = "true";
         geometryCanvas.dataset.product = JSON.stringify(C);
         geometryCanvas.dataset.stage = String(geometryStage);
@@ -285,83 +298,10 @@
     function renderProductPlot(A, B, C, selectedRow = 0, selectedCol = 0) {
         lastProductPlot = { A, B, C, selectedRow, selectedCol };
         drawGeometricProduct(A, B, C);
-        const wrap = productCanvas.parentElement;
-        const cssWidth = Math.max(680, wrap.clientWidth - 20);
-        const cssHeight = parseFloat(getComputedStyle(productCanvas).height) || 340;
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        productCanvas.width = Math.round(cssWidth * dpr);
-        productCanvas.height = Math.round(cssHeight * dpr);
-        productCanvas.style.width = `${cssWidth}px`;
-        productContext.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-        const ctx = productContext;
-        const text = getComputedStyle(document.body).getPropertyValue("--tool-text").trim() || "#1e293b";
-        const muted = getComputedStyle(document.body).getPropertyValue("--tool-text-muted").trim() || "#64748b";
-        const border = getComputedStyle(document.body).getPropertyValue("--tool-border").trim() || "#dbe3ec";
-        const surface = getComputedStyle(document.body).getPropertyValue("--tool-surface-raised").trim() || "#f8fafc";
-        const accent = getComputedStyle(document.body).getPropertyValue("--tool-primary").trim() || "#087e8b";
-        const maximum = Math.max(1, ...A.flat().concat(B.flat(), C.flat()).map(Math.abs));
-        ctx.clearRect(0, 0, cssWidth, cssHeight);
-        ctx.fillStyle = surface;
-        ctx.fillRect(0, 0, cssWidth, cssHeight);
-
-        const gap = 42;
-        const panelWidth = (cssWidth - gap * 2 - 36) / 3;
-        const matrices = [
-            { name: "A", values: A, kind: "a" },
-            { name: "B", values: B, kind: "b" },
-            { name: "C = AB", values: C, kind: "c" }
-        ];
-        matrices.forEach((entry, panelIndex) => {
-            const rows = entry.values.length;
-            const cols = entry.values[0].length;
-            const cell = Math.min(62, panelWidth / cols, (cssHeight - 90) / rows);
-            const gridWidth = cell * cols;
-            const gridHeight = cell * rows;
-            const panelX = 18 + panelIndex * (panelWidth + gap);
-            const startX = panelX + (panelWidth - gridWidth) / 2;
-            const startY = 52 + (cssHeight - 72 - gridHeight) / 2;
-            ctx.fillStyle = text;
-            ctx.font = "800 16px system-ui, sans-serif";
-            ctx.textAlign = "center";
-            ctx.fillText(entry.name, panelX + panelWidth / 2, 28);
-            ctx.fillStyle = muted;
-            ctx.font = "11px system-ui, sans-serif";
-            ctx.fillText(`${rows} × ${cols}`, panelX + panelWidth / 2, 44);
-
-            entry.values.forEach((row, rowIndex) => row.forEach((value, colIndex) => {
-                const x = startX + colIndex * cell;
-                const y = startY + rowIndex * cell;
-                ctx.fillStyle = productPlotColor(value, maximum);
-                ctx.fillRect(x + 1, y + 1, cell - 2, cell - 2);
-                const contributor = entry.kind === "a" ? rowIndex === selectedRow :
-                    entry.kind === "b" ? colIndex === selectedCol :
-                        rowIndex === selectedRow && colIndex === selectedCol;
-                ctx.strokeStyle = contributor ? accent : border;
-                ctx.lineWidth = contributor ? 3 : 1;
-                ctx.strokeRect(x + 1.5, y + 1.5, cell - 3, cell - 3);
-                ctx.fillStyle = text;
-                ctx.font = `${contributor ? "800" : "650"} ${Math.max(10, Math.min(14, cell * .25))}px system-ui, sans-serif`;
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                ctx.fillText(fmt(value), x + cell / 2, y + cell / 2);
-            }));
-
-            if (panelIndex < 2) {
-                ctx.fillStyle = muted;
-                ctx.font = "700 22px system-ui, sans-serif";
-                ctx.fillText(panelIndex === 0 ? "×" : "=", panelX + panelWidth + gap / 2, cssHeight / 2);
-            }
-        });
-        productCanvas.dataset.matrices = JSON.stringify({ A, B, C });
-        productCanvas.dataset.selection = `${selectedRow},${selectedCol}`;
     }
 
     function clearProductPlot() {
         lastProductPlot = null;
-        productContext.clearRect(0, 0, productCanvas.width, productCanvas.height);
-        productCanvas.removeAttribute("data-matrices");
-        productCanvas.removeAttribute("data-selection");
         drawGeometricProduct([], [], []);
     }
 

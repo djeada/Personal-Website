@@ -20,6 +20,10 @@
     const canvas = document.getElementById("decomposition-canvas");
     const canvasContainer = document.getElementById("canvas-container");
     const ctx = canvas.getContext("2d");
+    const plotColors = {
+        base: "#60a5fa", transformed: "#fb7185", column1: "#c084fc",
+        column2: "#22d3ee", direction1: "#4ade80", direction2: "#fbbf24"
+    };
     const storyInput = document.getElementById("story-input");
     const storyAction = document.getElementById("story-action");
     const storyOutput = document.getElementById("story-output");
@@ -281,7 +285,7 @@
         items.forEach(([color, label]) => {
             const item = document.createElement("span");
             item.className = "legend-item";
-            item.innerHTML = `<span class="legend-swatch" style="background:${color}"></span><span></span>`;
+            item.innerHTML = `<span class="legend-swatch" style="background:${color};color:${color}"></span><span></span>`;
             item.querySelector("span:last-child").textContent = label;
             legendRow.appendChild(item);
         });
@@ -316,6 +320,8 @@
         const styles = getComputedStyle(document.documentElement);
         const gridColor = styles.getPropertyValue("--tool-border").trim() || "#d1d5db";
         const textColor = styles.getPropertyValue("--tool-text-muted").trim() || "#64748b";
+        ctx.save();
+        ctx.globalAlpha = document.body.classList.contains("dark-mode") ? 0.38 : 0.62;
         ctx.strokeStyle = gridColor;
         ctx.lineWidth = 1;
         for (let x = cx % scale; x < width; x += scale) {
@@ -330,7 +336,9 @@
             ctx.lineTo(width, y);
             ctx.stroke();
         }
-        ctx.strokeStyle = "#64748b";
+        ctx.globalAlpha = 0.82;
+        ctx.strokeStyle = document.body.classList.contains("dark-mode") ? "#94a3b8" : "#64748b";
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.moveTo(0, cy);
         ctx.lineTo(width, cy);
@@ -374,6 +382,7 @@
         ctx.fillText(axisNames[1], cx + 9, 9);
         ctx.textAlign = "left";
         ctx.fillText("0", cx + 7, cy + 7);
+        ctx.restore();
     }
 
     function toCanvas(point, width, height, scale) {
@@ -383,9 +392,14 @@
     function drawVector(vector, color, width, height, scale, label = "") {
         const [x, y] = toCanvas(vector, width, height, scale);
         const [cx, cy] = toCanvas([0, 0], width, height, scale);
+        ctx.save();
         ctx.strokeStyle = color;
         ctx.fillStyle = color;
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 13;
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.lineTo(x, y);
@@ -393,14 +407,24 @@
         const angle = Math.atan2(y - cy, x - cx);
         ctx.beginPath();
         ctx.moveTo(x, y);
-        ctx.lineTo(x - 10 * Math.cos(angle - Math.PI / 6), y - 10 * Math.sin(angle - Math.PI / 6));
-        ctx.lineTo(x - 10 * Math.cos(angle + Math.PI / 6), y - 10 * Math.sin(angle + Math.PI / 6));
+        ctx.lineTo(x - 13 * Math.cos(angle - Math.PI / 6), y - 13 * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(x - 13 * Math.cos(angle + Math.PI / 6), y - 13 * Math.sin(angle + Math.PI / 6));
         ctx.closePath();
         ctx.fill();
         if (label) {
-            ctx.font = "13px sans-serif";
-            ctx.fillText(label, x + 8, y - 8);
+            ctx.shadowBlur = 0;
+            ctx.font = "700 14px ui-sans-serif, system-ui, sans-serif";
+            const labelX = x + 9;
+            const labelY = y - 10;
+            const metrics = ctx.measureText(label);
+            ctx.fillStyle = document.body.classList.contains("dark-mode") ? "rgba(5,5,12,.88)" : "rgba(255,255,255,.9)";
+            ctx.beginPath();
+            ctx.roundRect(labelX - 4, labelY - 14, metrics.width + 8, 20, 5);
+            ctx.fill();
+            ctx.fillStyle = color;
+            ctx.fillText(label, labelX, labelY);
         }
+        ctx.restore();
     }
 
     function drawSvd(A, result) {
@@ -412,7 +436,9 @@
         const scale = Math.min(width, height) / (extent * 2);
         drawGrid(width, height, scale);
         ctx.lineWidth = 2;
-        ctx.strokeStyle = "#2563eb";
+        ctx.strokeStyle = plotColors.base;
+        ctx.shadowColor = plotColors.base;
+        ctx.shadowBlur = 8;
         ctx.beginPath();
         for (let i = 0; i <= 180; i++) {
             const t = (i / 180) * Math.PI * 2;
@@ -422,7 +448,8 @@
         }
         ctx.stroke();
 
-        ctx.strokeStyle = "#e11d48";
+        ctx.strokeStyle = plotColors.transformed;
+        ctx.shadowColor = plotColors.transformed;
         ctx.beginPath();
         for (let i = 0; i <= 180; i++) {
             const t = (i / 180) * Math.PI * 2;
@@ -431,17 +458,15 @@
             i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
         ctx.stroke();
-        drawVector(matVec(A, [1, 0]), "#7c3aed", width, height, scale, "Ae₁");
-        drawVector(matVec(A, [0, 1]), "#0891b2", width, height, scale, "Ae₂");
-        drawVector(result.V[0], "#16a34a", width, height, scale, "v1");
-        drawVector(result.U[0].map(value => value * result.singularValues[0]), "#ea8400", width, height, scale, "σ₁u₁");
+        ctx.shadowBlur = 0;
+        drawVector(matVec(A, [1, 0]), plotColors.column1, width, height, scale, "Ae₁");
+        drawVector(matVec(A, [0, 1]), plotColors.column2, width, height, scale, "Ae₂");
+        drawVector(result.V[0], plotColors.direction1, width, height, scale, "v₁");
+        drawVector(result.U[0].map(value => value * result.singularValues[0]), plotColors.direction2, width, height, scale, "σ₁u₁");
         setLegend([
-            ["#2563eb", "unit circle"],
-            ["#e11d48", "A applied"],
-            ["#7c3aed", "A e₁ (column 1)"],
-            ["#0891b2", "A e₂ (column 2)"],
-            ["#16a34a", "input direction"],
-            ["#ea8400", "output axis"]
+            [plotColors.base, "unit circle"], [plotColors.transformed, "A applied"],
+            [plotColors.column1, "A e₁ (column 1)"], [plotColors.column2, "A e₂ (column 2)"],
+            [plotColors.direction1, "input direction"], [plotColors.direction2, "output axis"]
         ]);
     }
 
@@ -456,7 +481,9 @@
         ]), Math.sqrt(Math.max(result.values[0], 0)) * 2, 1);
         const scale = Math.min(width, height) / (centeredExtent * 2.35);
         drawGrid(width, height, scale, ["centered x", "centered y"]);
-        ctx.fillStyle = "#2563eb";
+        ctx.fillStyle = plotColors.base;
+        ctx.shadowColor = plotColors.base;
+        ctx.shadowBlur = 8;
         result.points.forEach(point => {
             const centered = [point[0] - result.mean[0], point[1] - result.mean[1]];
             const [x, y] = toCanvas(centered, width, height, scale);
@@ -464,12 +491,11 @@
             ctx.arc(x, y, 4, 0, Math.PI * 2);
             ctx.fill();
         });
-        drawVector(result.vectors[0].map(value => value * Math.sqrt(result.values[0]) * 2), "#e11d48", width, height, scale, "PC1");
-        drawVector(result.vectors[1].map(value => value * Math.sqrt(result.values[1]) * 2), "#16a34a", width, height, scale, "PC2");
+        ctx.shadowBlur = 0;
+        drawVector(result.vectors[0].map(value => value * Math.sqrt(result.values[0]) * 2), plotColors.transformed, width, height, scale, "PC1");
+        drawVector(result.vectors[1].map(value => value * Math.sqrt(result.values[1]) * 2), plotColors.direction1, width, height, scale, "PC2");
         setLegend([
-            ["#2563eb", "centered data"],
-            ["#e11d48", "PC1"],
-            ["#16a34a", "PC2"]
+            [plotColors.base, "centered data"], [plotColors.transformed, "PC1"], [plotColors.direction1, "PC2"]
         ]);
     }
 
@@ -489,35 +515,36 @@
             [-1, 1],
             [-1, -1]
         ];
-        ctx.strokeStyle = "#2563eb";
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = plotColors.base;
+        ctx.lineWidth = 3;
+        ctx.shadowColor = plotColors.base;
+        ctx.shadowBlur = 8;
         ctx.beginPath();
         square.forEach((point, index) => {
             const [x, y] = toCanvas(point, width, height, scale);
             index === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         });
         ctx.stroke();
-        ctx.strokeStyle = "#e11d48";
+        ctx.strokeStyle = plotColors.transformed;
+        ctx.shadowColor = plotColors.transformed;
         ctx.beginPath();
         square.map(point => matVec(A, point)).forEach((point, index) => {
             const [x, y] = toCanvas(point, width, height, scale);
             index === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         });
         ctx.stroke();
-        drawVector(matVec(A, [1, 0]), "#7c3aed", width, height, scale, "Ae₁");
-        drawVector(matVec(A, [0, 1]), "#0891b2", width, height, scale, "Ae₂");
+        ctx.shadowBlur = 0;
+        drawVector(matVec(A, [1, 0]), plotColors.column1, width, height, scale, "Ae₁");
+        drawVector(matVec(A, [0, 1]), plotColors.column2, width, height, scale, "Ae₂");
         if (result.real) {
             result.vectors.forEach((vector, index) => {
-                drawVector(vector.map(value => value * result.values[index]), index === 0 ? "#ea8400" : "#16a34a", width, height, scale, `λ${index === 0 ? "₁" : "₂"}v${index === 0 ? "₁" : "₂"}`);
+                drawVector(vector.map(value => value * result.values[index]), index === 0 ? plotColors.direction2 : plotColors.direction1, width, height, scale, `λ${index === 0 ? "₁" : "₂"}v${index === 0 ? "₁" : "₂"}`);
             });
         }
         setLegend([
-            ["#2563eb", "unit square"],
-            ["#e11d48", "A applied"],
-            ["#7c3aed", "A e₁ (column 1)"],
-            ["#0891b2", "A e₂ (column 2)"],
-            ["#ea8400", "eigen direction 1"],
-            ["#16a34a", "eigen direction 2"]
+            [plotColors.base, "unit square"], [plotColors.transformed, "A applied"],
+            [plotColors.column1, "A e₁ (column 1)"], [plotColors.column2, "A e₂ (column 2)"],
+            [plotColors.direction2, "eigen direction 1"], [plotColors.direction1, "eigen direction 2"]
         ]);
     }
 

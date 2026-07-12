@@ -29,14 +29,14 @@ const DATASETS = {
 const SERIES = [{
         key: "a",
         label: "Dataset A",
-        color: "#2563eb",
-        fill: "rgba(37, 99, 235, 0.14)"
+        color: "#60a5fa",
+        fill: "rgba(96, 165, 250, 0.16)"
     },
     {
         key: "b",
         label: "Dataset B",
-        color: "#e11d48",
-        fill: "rgba(225, 29, 72, 0.12)"
+        color: "#fb7185",
+        fill: "rgba(251, 113, 133, 0.14)"
     }
 ];
 
