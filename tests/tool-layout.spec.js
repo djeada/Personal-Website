@@ -163,3 +163,26 @@ test("Covariance Lab scales for the full ellipse and plot-wide fit line", async 
   expect(geometry.scaleMin).toBeLessThan(geometry.domain.minX);
   expect(geometry.scaleMax).toBeGreaterThan(geometry.domain.maxX);
 });
+
+test("Eigenvalues tool plots v, Av, and the matrix basis", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/tools/eigenvalues/", { waitUntil: "domcontentloaded" });
+  const vectorInputs = page.locator("#plot-vector-inputs input:not(.is-inactive)");
+  await vectorInputs.nth(0).fill("2");
+  await vectorInputs.nth(1).fill("-1");
+  await vectorInputs.nth(2).fill("0");
+
+  const plot = await page.locator("#transformation-canvas").evaluate((canvas) => ({
+    vector: JSON.parse(canvas.dataset.vector),
+    result: JSON.parse(canvas.dataset.result),
+    intrinsicWidth: canvas.width,
+    visibleWidth: canvas.getBoundingClientRect().width,
+    label: document.querySelector("#transform-equation").textContent,
+  }));
+
+  expect(plot.vector).toEqual([2, -1, 0]);
+  expect(plot.result).toEqual([7, -1, 2]);
+  expect(plot.visibleWidth).toBeGreaterThan(700);
+  expect(plot.intrinsicWidth).toBeGreaterThanOrEqual(plot.visibleWidth);
+  expect(plot.label).toContain("A [2, -1, 0] = [7, -1, 2]");
+});

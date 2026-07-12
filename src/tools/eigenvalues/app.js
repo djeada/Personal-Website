@@ -13,6 +13,11 @@
     const powerButton = document.getElementById("calculate-power");
     const eigenInsight = document.getElementById("eigen-insight");
     const eigenMetrics = document.getElementById("eigen-metrics");
+    const transformationCanvas = document.getElementById("transformation-canvas");
+    const transformationContext = transformationCanvas.getContext("2d");
+    const vectorInputs = Array.from(document.querySelectorAll("#plot-vector-inputs input"));
+    const transformEquation = document.getElementById("transform-equation");
+    const projectionNote = document.getElementById("projection-note");
 
     const exactValuesOutput = document.getElementById("output-eigenvalues-analytical");
     const exactVectorsOutput = document.getElementById("output-eigenvectors-analytical");
@@ -119,6 +124,139 @@
                 input.classList.remove("has-error");
             });
         });
+        vectorInputs.forEach((input, index) => {
+            const active = index < size;
+            input.classList.toggle("is-inactive", !active);
+            input.disabled = !active;
+        });
+        projectionNote.textContent = size === 2 ? "2D transformation" : `First two coordinates of ${size}D`;
+        drawTransformation();
+    }
+
+    function readMatrixQuietly() {
+        const size = selectedSize();
+        const matrix = [];
+        for (let row = 0; row < size; row++) {
+            const values = [];
+            for (let column = 0; column < size; column++) {
+                const raw = grid[row][column].value.trim();
+                const value = Number(raw);
+                if (raw === "" || !Number.isFinite(value)) return null;
+                values.push(value);
+            }
+            matrix.push(values);
+        }
+        return matrix;
+    }
+
+    function readPlotVector() {
+        return vectorInputs.slice(0, selectedSize()).map(input => {
+            const value = Number(input.value);
+            return Number.isFinite(value) ? value : 0;
+        });
+    }
+
+    function cssColor(name, fallback) {
+        return getComputedStyle(document.body).getPropertyValue(name).trim() || fallback;
+    }
+
+    function drawArrow(ctx, originX, originY, endX, endY, color, label, width = 3) {
+        const angle = Math.atan2(endY - originY, endX - originX);
+        const head = 10;
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        ctx.moveTo(originX, originY);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(endX, endY);
+        ctx.lineTo(endX - head * Math.cos(angle - Math.PI / 6), endY - head * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(endX - head * Math.cos(angle + Math.PI / 6), endY - head * Math.sin(angle + Math.PI / 6));
+        ctx.closePath();
+        ctx.fill();
+        ctx.font = "700 12px system-ui, sans-serif";
+        ctx.fillText(label, endX + 7 * Math.cos(angle), endY + 7 * Math.sin(angle));
+        ctx.restore();
+    }
+
+    function drawTransformation() {
+        const matrix = readMatrixQuietly();
+        const vector = readPlotVector();
+        const wrap = transformationCanvas.parentElement;
+        const cssWidth = Math.max(280, wrap.clientWidth - 20);
+        const cssHeight = Math.max(280, parseFloat(getComputedStyle(transformationCanvas).height) || 370);
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        transformationCanvas.width = Math.round(cssWidth * dpr);
+        transformationCanvas.height = Math.round(cssHeight * dpr);
+        transformationCanvas.style.width = `${cssWidth}px`;
+        transformationCanvas.style.height = `${cssHeight}px`;
+        transformationContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const ctx = transformationContext;
+        const width = cssWidth;
+        const height = cssHeight;
+        const surface = cssColor("--tool-surface-raised", "#f8fafc");
+        const gridColor = cssColor("--tool-border", "#dbe3ec");
+        const textColor = cssColor("--tool-text-muted", "#64748b");
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = surface;
+        ctx.fillRect(0, 0, width, height);
+
+        if (!matrix) {
+            ctx.fillStyle = textColor;
+            ctx.font = "14px system-ui, sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("Enter a complete numeric matrix to draw the transformation.", width / 2, height / 2);
+            transformEquation.textContent = "Enter a valid matrix to plot Av.";
+            return;
+        }
+
+        const result = multiplyMatrixVector(matrix, vector);
+        const basis1 = [matrix[0][0], matrix[1]?.[0] || 0];
+        const basis2 = [matrix[0][1] || 0, matrix[1]?.[1] || 0];
+        const vectors = [[vector[0] || 0, vector[1] || 0], [result[0] || 0, result[1] || 0], basis1, basis2];
+        const extent = Math.max(1, ...vectors.flat().map(Math.abs)) * 1.25;
+        const scale = Math.min((width - 70) / (2 * extent), (height - 60) / (2 * extent));
+        const originX = width / 2;
+        const originY = height / 2;
+        const map = ([x, y]) => [originX + x * scale, originY - y * scale];
+
+        ctx.strokeStyle = gridColor;
+        ctx.lineWidth = 1;
+        const tick = Math.max(1, Math.ceil(extent / 5));
+        for (let value = -Math.floor(extent); value <= Math.floor(extent); value += tick) {
+            const px = originX + value * scale;
+            const py = originY - value * scale;
+            ctx.globalAlpha = value === 0 ? 0.9 : 0.42;
+            ctx.beginPath(); ctx.moveTo(px, 18); ctx.lineTo(px, height - 18); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(18, py); ctx.lineTo(width - 18, py); ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = textColor;
+        ctx.font = "11px system-ui, sans-serif";
+        ctx.fillText("x", width - 22, originY - 7);
+        ctx.fillText("y", originX + 7, 22);
+
+        const basisColor = "#8b5cf6";
+        const vectorColor = "#f59e0b";
+        const resultColor = cssColor("--tool-primary", "#2563eb");
+        [basis1, basis2].forEach((basis, index) => {
+            const [endX, endY] = map(basis);
+            ctx.globalAlpha = 0.7;
+            drawArrow(ctx, originX, originY, endX, endY, basisColor, `Ae${index + 1}`, 2);
+        });
+        ctx.globalAlpha = 1;
+        const [vectorX, vectorY] = map(vectors[0]);
+        const [resultX, resultY] = map(vectors[1]);
+        drawArrow(ctx, originX, originY, vectorX, vectorY, vectorColor, "v", 3);
+        drawArrow(ctx, originX, originY, resultX, resultY, resultColor, "Av", 4);
+
+        transformEquation.textContent = `A ${formatVector(vector)} = ${formatVector(result)}`;
+        transformationCanvas.dataset.vector = JSON.stringify(vector);
+        transformationCanvas.dataset.result = JSON.stringify(result);
     }
 
     function readMatrix() {
@@ -172,6 +310,7 @@
         clearOutputs();
         setEmptyState("Preset loaded", "Choose exact eigenpairs or power iteration.");
         setStatus(`${size}x${size} preset loaded.`, "success");
+        drawTransformation();
     }
 
     function characteristicPolynomial2x2(A) {
@@ -493,6 +632,7 @@
         setEmptyState("No calculation yet", "Enter a matrix or choose a preset.");
         setTeaching("Choose a preset or enter a matrix, then run a method. Eigenvectors identify directions preserved by the transformation; eigenvalues show their scale.", ["Method: not run", "Real eigenpairs: —", "Dominant value: —", "Convergence: —"]);
         setStatus("Cleared.");
+        drawTransformation();
     }
 
     sizeSelect.addEventListener("change", () => {
@@ -507,11 +647,17 @@
             input.classList.remove("has-error");
             clearOutputs();
             setStatus("Matrix edited. Run a method to refresh results.");
+            drawTransformation();
         });
         input.addEventListener("keydown", event => {
             if (event.key === "Enter") calculateExact();
         });
     });
+
+    vectorInputs.forEach(input => input.addEventListener("input", drawTransformation));
+    window.addEventListener("resize", drawTransformation);
+    document.getElementById("dark-mode-button")?.addEventListener("click", () => setTimeout(drawTransformation, 0));
+    document.addEventListener("DOMContentLoaded", drawTransformation);
 
     document.querySelectorAll("[data-preset]").forEach(button => {
         button.addEventListener("click", () => writeMatrix(presets[button.dataset.preset].matrix));
