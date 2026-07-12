@@ -892,7 +892,7 @@ class LatexRenderer {
             binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
         }
 
-        return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+        return btoa(binary).replace(/\+/g, '-').replace(/\
         }
 
         decodeContentFromURL(value) {
