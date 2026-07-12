@@ -221,8 +221,19 @@
 
     function showBreakdown(row, col, A, B, result) {
         resultTable.querySelectorAll(".result-cell").forEach(cell => cell.classList.remove("is-highlighted"));
+        forEachInput(matrixATable, input => input.classList.remove("is-contributor"));
+        forEachInput(matrixBTable, input => input.classList.remove("is-contributor"));
         const selected = resultTable.rows[row]?.cells[col]?.querySelector(".result-cell");
         if (selected) selected.classList.add("is-highlighted");
+
+        A[row].forEach((_, innerIndex) => {
+            matrixATable
+                .querySelector(`input[data-row="${row}"][data-col="${innerIndex}"]`)
+                ?.classList.add("is-contributor");
+            matrixBTable
+                .querySelector(`input[data-row="${innerIndex}"][data-col="${col}"]`)
+                ?.classList.add("is-contributor");
+        });
 
         const terms = A[row].map((value, index) => `${fmt(value)} × ${fmt(B[index][col])}`);
         const expression = terms.join(" + ");
@@ -234,6 +245,8 @@
 
     function clearResult(message = "Ready.") {
         resultTable.innerHTML = "";
+        forEachInput(matrixATable, input => input.classList.remove("is-contributor"));
+        forEachInput(matrixBTable, input => input.classList.remove("is-contributor"));
         breakdownCard.innerHTML = "<strong>Dot product preview</strong><span>Run multiplication to see how a result cell is formed.</span>";
         setStatus(message);
     }

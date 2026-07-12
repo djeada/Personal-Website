@@ -44,3 +44,19 @@ test("AI text cleaner uses side-by-side editors on wide screens", async ({ page 
   expect(Math.abs(editors[0].top - editors[1].top)).toBeLessThanOrEqual(1);
   expect(editors[1].left).toBeGreaterThan(editors[0].right);
 });
+
+test("matrix result selection highlights its source row and column", async ({ page }) => {
+  await page.goto("/tools/matrix_multiplication/", { waitUntil: "domcontentloaded" });
+  await page.locator('[data-preset="standard"]').click();
+  await page.locator("#matrix-result tr").nth(1).locator(".result-cell").nth(1).click();
+
+  const highlighted = await page.evaluate(() => ({
+    result: [...document.querySelectorAll("#matrix-result .is-highlighted")].map((cell) => cell.textContent),
+    a: [...document.querySelectorAll("#matrix-a input.is-contributor")].map((input) => [input.dataset.row, input.dataset.col]),
+    b: [...document.querySelectorAll("#matrix-b input.is-contributor")].map((input) => [input.dataset.row, input.dataset.col]),
+  }));
+
+  expect(highlighted.result).toEqual(["154"]);
+  expect(highlighted.a).toEqual([["1", "0"], ["1", "1"], ["1", "2"]]);
+  expect(highlighted.b).toEqual([["0", "1"], ["1", "1"], ["2", "1"]]);
+});
