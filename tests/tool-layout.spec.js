@@ -140,3 +140,26 @@ for (const name of ["graphs", "sorting", "searching"]) {
     expect(layout.frontier).toBe("#4aa3b5");
   });
 }
+
+test("Covariance Lab scales for the full ellipse and plot-wide fit line", async ({ page }) => {
+  await page.goto("/tools/correlation_visualizer/", { waitUntil: "domcontentloaded" });
+  const geometry = await page.evaluate(() => {
+    const points = [
+      { x: 0, y: 0 },
+      { x: 1, y: 8 },
+      { x: 2, y: 1 },
+      { x: 3, y: 9 },
+    ];
+    const summary = window.CovarianceLabDebug.summarize(points);
+    const domain = window.CovarianceLabDebug.scatterDomain(summary);
+    const scale = window.CovarianceLabDebug.createLinearScale(domain.minX, domain.maxX, 0, 100);
+    return { summary, domain, scaleMin: scale.min, scaleMax: scale.max };
+  });
+
+  expect(geometry.domain.minX).toBeLessThanOrEqual(geometry.summary.meanX - 2 * geometry.summary.stdX);
+  expect(geometry.domain.maxX).toBeGreaterThanOrEqual(geometry.summary.meanX + 2 * geometry.summary.stdX);
+  expect(geometry.domain.minY).toBeLessThanOrEqual(geometry.summary.meanY - 2 * geometry.summary.stdY);
+  expect(geometry.domain.maxY).toBeGreaterThanOrEqual(geometry.summary.meanY + 2 * geometry.summary.stdY);
+  expect(geometry.scaleMin).toBeLessThan(geometry.domain.minX);
+  expect(geometry.scaleMax).toBeGreaterThan(geometry.domain.maxX);
+});

@@ -442,10 +442,13 @@ function drawVisualization(ctx, dimensions, summary) {
     const showQuadrants = document.getElementById("show-quadrants").checked;
     const showEllipse = document.getElementById("show-ellipse").checked;
     const showResiduals = document.getElementById("show-residuals").checked;
-    const xScale = createLinearScale(summary.minX, summary.maxX, CHART.left, dimensions.width - CHART.right);
-    const yScale = createLinearScale(summary.minY, summary.maxY, CHART.top + CHART.plotHeight, CHART.top);
+    const domain = scatterDomain(summary);
+    const xScale = createLinearScale(domain.minX, domain.maxX, CHART.left, dimensions.width - CHART.right);
+    const yScale = createLinearScale(domain.minY, domain.maxY, CHART.top + CHART.plotHeight, CHART.top);
     const x = value => xScale(value);
     const y = value => yScale(value);
+    x.scaleMin = xScale.min;
+    x.scaleMax = xScale.max;
 
     drawBackground(ctx, dimensions);
     if (showQuadrants) {
@@ -466,6 +469,22 @@ function drawVisualization(ctx, dimensions, summary) {
     ctx.restore();
 
     if (showResiduals) drawResidualPlot(ctx, dimensions, summary, xScale);
+}
+
+function scatterDomain(summary) {
+    // A two-sigma covariance ellipse projects to mean ± 2σ on each axis,
+    // regardless of its rotation. Include those projections before padding so
+    // the entire ellipse, points, and mean structure share one plot domain.
+    const ellipseMinX = summary.meanX - 2 * summary.stdX;
+    const ellipseMaxX = summary.meanX + 2 * summary.stdX;
+    const ellipseMinY = summary.meanY - 2 * summary.stdY;
+    const ellipseMaxY = summary.meanY + 2 * summary.stdY;
+    return {
+        minX: Math.min(summary.minX, ellipseMinX),
+        maxX: Math.max(summary.maxX, ellipseMaxX),
+        minY: Math.min(summary.minY, ellipseMinY),
+        maxY: Math.max(summary.maxY, ellipseMaxY)
+    };
 }
 
 function clipScatterPlot(ctx, dimensions) {
@@ -598,8 +617,10 @@ function drawMeanLines(ctx, dimensions, summary, x, y) {
 }
 
 function drawRegressionLine(ctx, dimensions, summary, x, y) {
-    const x1 = Math.min(summary.minX, summary.maxX);
-    const x2 = Math.max(summary.minX, summary.maxX);
+    // Extend through the complete plotted x-domain. The scatter clip trims the
+    // line at the chart boundary when its y-value exits the visible domain.
+    const x1 = x.scaleMin;
+    const x2 = x.scaleMax;
     const y1 = summary.slope * x1 + summary.intercept;
     const y2 = summary.slope * x2 + summary.intercept;
 
@@ -853,6 +874,12 @@ function applyPreset(key) {
     activeMessage = "";
     draw();
 }
+
+window.CovarianceLabDebug = {
+    summarize,
+    scatterDomain,
+    createLinearScale
+};
 
 document.addEventListener("DOMContentLoaded", function() {
     const drawButton = document.querySelector(".draw-button");
