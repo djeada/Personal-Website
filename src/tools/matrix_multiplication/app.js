@@ -251,8 +251,13 @@
         const panelWidth = (width - 40 - panelGap * 2) / 3;
         const plotTop = 82;
         const plotHeight = height - 126;
-        const extent = Math.max(2.25, ...stages.flatMap(s => [[-2,-2],[-2,2],[2,-2],[2,2]].flatMap(p => apply(s.matrix, p).map(Math.abs)))) * 1.08;
-        const scale = Math.min((panelWidth - 34) / (2 * extent), plotHeight / (2 * extent));
+        // Fit the meaningful geometry, not the far-away grid corners. The grid is
+        // deliberately allowed to run beyond the panel and is clipped below.
+        const shapePoints = [[0, 0], [1, 0], [0, 1], [1, 1]];
+        const extent = Math.max(1.15, ...stages.flatMap(stage =>
+            shapePoints.flatMap(point => apply(stage.matrix, point).map(Math.abs))
+        )) * 1.28;
+        const scale = Math.min((panelWidth - 42) / (2 * extent), (plotHeight - 24) / (2 * extent));
         const determinant = M => M[0][0] * M[1][1] - M[0][1] * M[1][0];
         const drawArrow = (from, to, color, label) => {
             const angle = Math.atan2(to[1] - from[1], to[0] - from[0]);
