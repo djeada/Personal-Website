@@ -23,6 +23,7 @@
     const storyInput = document.getElementById("story-input");
     const storyAction = document.getElementById("story-action");
     const storyOutput = document.getElementById("story-output");
+    const plotNote = document.getElementById("plot-note");
 
     const matrixInputs = [
         [document.getElementById("m00"), document.getElementById("m01")],
@@ -309,10 +310,13 @@
         updateTimer = window.setTimeout(runAnalysis, 180);
     }
 
-    function drawGrid(width, height, scale) {
+    function drawGrid(width, height, scale, axisNames = ["x", "y"]) {
         const cx = width / 2;
         const cy = height / 2;
-        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--tool-border") || "#d1d5db";
+        const styles = getComputedStyle(document.documentElement);
+        const gridColor = styles.getPropertyValue("--tool-border").trim() || "#d1d5db";
+        const textColor = styles.getPropertyValue("--tool-text-muted").trim() || "#64748b";
+        ctx.strokeStyle = gridColor;
         ctx.lineWidth = 1;
         for (let x = cx % scale; x < width; x += scale) {
             ctx.beginPath();
@@ -333,6 +337,43 @@
         ctx.moveTo(cx, 0);
         ctx.lineTo(cx, height);
         ctx.stroke();
+
+        const labelStep = scale >= 42 ? 1 : scale >= 22 ? 2 : 5;
+        const maxX = Math.floor(width / (2 * scale));
+        const maxY = Math.floor(height / (2 * scale));
+        ctx.fillStyle = textColor;
+        ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        for (let value = -maxX; value <= maxX; value += labelStep) {
+            if (value === 0) continue;
+            const x = cx + value * scale;
+            ctx.beginPath();
+            ctx.moveTo(x, cy - 4);
+            ctx.lineTo(x, cy + 4);
+            ctx.stroke();
+            ctx.fillText(String(value), x, cy + 7);
+        }
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        for (let value = -maxY; value <= maxY; value += labelStep) {
+            if (value === 0) continue;
+            const y = cy - value * scale;
+            ctx.beginPath();
+            ctx.moveTo(cx - 4, y);
+            ctx.lineTo(cx + 4, y);
+            ctx.stroke();
+            ctx.fillText(String(value), cx - 8, y);
+        }
+        ctx.font = "700 14px sans-serif";
+        ctx.textAlign = "right";
+        ctx.textBaseline = "bottom";
+        ctx.fillText(axisNames[0], width - 10, cy - 8);
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        ctx.fillText(axisNames[1], cx + 9, 9);
+        ctx.textAlign = "left";
+        ctx.fillText("0", cx + 7, cy + 7);
     }
 
     function toCanvas(point, width, height, scale) {
@@ -390,11 +431,15 @@
             i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
         ctx.stroke();
+        drawVector(matVec(A, [1, 0]), "#7c3aed", width, height, scale, "Ae₁");
+        drawVector(matVec(A, [0, 1]), "#0891b2", width, height, scale, "Ae₂");
         drawVector(result.V[0], "#16a34a", width, height, scale, "v1");
         drawVector(result.U[0].map(value => value * result.singularValues[0]), "#ea8400", width, height, scale, "σ₁u₁");
         setLegend([
             ["#2563eb", "unit circle"],
             ["#e11d48", "A applied"],
+            ["#7c3aed", "A e₁ (column 1)"],
+            ["#0891b2", "A e₂ (column 2)"],
             ["#16a34a", "input direction"],
             ["#ea8400", "output axis"]
         ]);
@@ -410,7 +455,7 @@
             Math.abs(point[1] - result.mean[1])
         ]), Math.sqrt(Math.max(result.values[0], 0)) * 2, 1);
         const scale = Math.min(width, height) / (centeredExtent * 2.35);
-        drawGrid(width, height, scale);
+        drawGrid(width, height, scale, ["centered x", "centered y"]);
         ctx.fillStyle = "#2563eb";
         result.points.forEach(point => {
             const centered = [point[0] - result.mean[0], point[1] - result.mean[1]];
@@ -459,6 +504,8 @@
             index === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         });
         ctx.stroke();
+        drawVector(matVec(A, [1, 0]), "#7c3aed", width, height, scale, "Ae₁");
+        drawVector(matVec(A, [0, 1]), "#0891b2", width, height, scale, "Ae₂");
         if (result.real) {
             result.vectors.forEach((vector, index) => {
                 drawVector(vector.map(value => value * result.values[index]), index === 0 ? "#ea8400" : "#16a34a", width, height, scale, `λ${index === 0 ? "₁" : "₂"}v${index === 0 ? "₁" : "₂"}`);
@@ -467,6 +514,8 @@
         setLegend([
             ["#2563eb", "unit square"],
             ["#e11d48", "A applied"],
+            ["#7c3aed", "A e₁ (column 1)"],
+            ["#0891b2", "A e₂ (column 2)"],
             ["#ea8400", "eigen direction 1"],
             ["#16a34a", "eigen direction 2"]
         ]);
@@ -474,6 +523,7 @@
 
     function runSvd() {
         const A = readMatrix();
+        plotNote.textContent = `A maps e₁=(1, 0) to (${fmt(A[0][0])}, ${fmt(A[1][0])}) — the purple arrow — and e₂=(0, 1) to (${fmt(A[0][1])}, ${fmt(A[1][1])}) — the cyan arrow.`;
         const result = svd2x2(A);
         drawSvd(A, result);
         renderResults([
@@ -491,6 +541,7 @@
 
     function runPca() {
         const result = pca2d(parseDataset());
+        plotNote.textContent = `The axes show distance from the dataset mean (${fmt(result.mean[0])}, ${fmt(result.mean[1])}). A centered value of 0 is the mean.`;
         drawPca(result);
         renderResults([
             metricsCard("Variance along each axis", [
@@ -506,6 +557,7 @@
 
     function runEvd() {
         const A = readMatrix();
+        plotNote.textContent = `A maps e₁=(1, 0) to (${fmt(A[0][0])}, ${fmt(A[1][0])}) — the purple arrow — and e₂=(0, 1) to (${fmt(A[0][1])}, ${fmt(A[1][1])}) — the cyan arrow.`;
         const result = eigen2x2(A);
         drawEvd(A, result);
         if (!result.real) {
