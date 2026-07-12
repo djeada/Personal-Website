@@ -6,6 +6,10 @@
     const datasetEditor = document.getElementById("dataset-editor");
     const datasetInput = document.getElementById("dataset-input");
     const inputDescription = document.getElementById("input-description");
+    const inputHeading = document.getElementById("input-heading");
+    const visualHeading = document.getElementById("visual-heading");
+    const matrixPresets = document.getElementById("matrix-presets");
+    const dataPresets = document.getElementById("data-presets");
     const visualDescription = document.getElementById("visual-description");
     const resultSummary = document.getElementById("result-summary");
     const resultGrid = document.getElementById("result-grid");
@@ -16,6 +20,9 @@
     const canvas = document.getElementById("decomposition-canvas");
     const canvasContainer = document.getElementById("canvas-container");
     const ctx = canvas.getContext("2d");
+    const storyInput = document.getElementById("story-input");
+    const storyAction = document.getElementById("story-action");
+    const storyOutput = document.getElementById("story-output");
 
     const matrixInputs = [
         [document.getElementById("m00"), document.getElementById("m01")],
@@ -360,7 +367,8 @@
             width,
             height
         } = clearCanvas();
-        const scale = Math.min(width, height) / 8;
+        const extent = Math.max(1.25, result.singularValues[0] * 1.18);
+        const scale = Math.min(width, height) / (extent * 2);
         drawGrid(width, height, scale);
         ctx.lineWidth = 2;
         ctx.strokeStyle = "#2563eb";
@@ -397,14 +405,11 @@
             width,
             height
         } = clearCanvas();
-        const xs = result.points.map(point => point[0]);
-        const ys = result.points.map(point => point[1]);
-        const maxRange = Math.max(
-            Math.max(...xs) - Math.min(...xs),
-            Math.max(...ys) - Math.min(...ys),
-            1
-        );
-        const scale = Math.min(width, height) / (maxRange * 1.8);
+        const centeredExtent = Math.max(...result.points.flatMap(point => [
+            Math.abs(point[0] - result.mean[0]),
+            Math.abs(point[1] - result.mean[1])
+        ]), Math.sqrt(Math.max(result.values[0], 0)) * 2, 1);
+        const scale = Math.min(width, height) / (centeredExtent * 2.35);
         drawGrid(width, height, scale);
         ctx.fillStyle = "#2563eb";
         result.points.forEach(point => {
@@ -428,7 +433,9 @@
             width,
             height
         } = clearCanvas();
-        const scale = Math.min(width, height) / 8;
+        const transformedCorners = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(point => matVec(A, point));
+        const extent = Math.max(1.4, ...transformedCorners.flat().map(Math.abs), ...result.values.map(Math.abs));
+        const scale = Math.min(width, height) / (extent * 2.35);
         drawGrid(width, height, scale);
         const square = [
             [-1, -1],
@@ -470,13 +477,13 @@
         const result = svd2x2(A);
         drawSvd(A, result);
         renderResults([
-            metricsCard("Singular Values", [
+            metricsCard("How much A stretches", [
                 ["\\(\\sigma_1\\)", fmt(result.singularValues[0])],
                 ["\\(\\sigma_2\\)", fmt(result.singularValues[1])]
             ]),
-            card("U", matrixFmt(transpose(result.U)), true),
-            card("V", matrixFmt(transpose(result.V)), true)
-        ], "SVD decomposes A into input directions, stretches, and output directions.");
+            card("Output directions (U)", matrixFmt(transpose(result.U)), true),
+            card("Input directions (V)", matrixFmt(transpose(result.V)), true)
+        ], "The two singular values are the stretch along the orange and green directions.");
         const ratio = result.singularValues[1] < 1e-9 ? Infinity : result.singularValues[0] / result.singularValues[1];
         setTeaching(Number.isFinite(ratio) ? `The first singular direction is stretched ${fmt(ratio)} times as strongly as the second.` : "The second singular value is zero, so the transformation collapses the plane onto a line.", ["Mode: SVD", `Primary strength: ${fmt(result.singularValues[0])}`, `Secondary strength: ${fmt(result.singularValues[1])}`, `Condition ratio: ${Number.isFinite(ratio) ? fmt(ratio) : "infinite"}`]);
         setStatus("SVD complete.", "success");
@@ -486,13 +493,13 @@
         const result = pca2d(parseDataset());
         drawPca(result);
         renderResults([
-            metricsCard("Explained Variance", [
+            metricsCard("Variance along each axis", [
                 ["\\(\\mathrm{PC}_1\\)", `${fmt(result.explained[0] * 100)}%`],
                 ["\\(\\mathrm{PC}_2\\)", `${fmt(result.explained[1] * 100)}%`]
             ]),
-            card("Mean", vectorFmt(result.mean)),
-            card("Covariance", matrixFmt(result.covariance), true)
-        ], "PCA found the principal axes of the centered dataset.");
+            card("Dataset center (mean)", vectorFmt(result.mean)),
+            card("Covariance matrix", matrixFmt(result.covariance), true)
+        ], "PC1 is the direction in which your points spread out the most.");
         setTeaching(`PC1 explains ${fmt(result.explained[0] * 100)}% of the observed variance. The closer this is to 100%, the more nearly the data follows one line.`, ["Mode: PCA", `PC1 variance: ${fmt(result.explained[0] * 100)}%`, `PC2 variance: ${fmt(result.explained[1] * 100)}%`, `Samples: ${result.points.length}`]);
         setStatus("PCA complete.", "success");
     }
@@ -510,10 +517,10 @@
             return;
         }
         renderResults([
-            metricsCard("Eigenvalues", result.values.map((value, index) => [`\\(\\lambda_${index + 1}\\)`, fmt(value)])),
-            card("Eigenvectors", result.vectors.map((vector, index) => `v${index + 1} = ${vectorFmt(vector)}`).join("\n"), true),
-            card("Matrix", matrixFmt(A), true)
-        ], "EVD found real invariant directions for the transform.");
+            metricsCard("Scale on each fixed direction", result.values.map((value, index) => [`\\(\\lambda_${index + 1}\\)`, fmt(value)])),
+            card("Directions that stay on their line", result.vectors.map((vector, index) => `v${index + 1} = ${vectorFmt(vector)}`).join("\n"), true),
+            card("Your matrix A", matrixFmt(A), true)
+        ], "These are the directions that matrix A scales without turning away from their line.");
         setTeaching("Each eigenvector stays on its original line after the transformation. Its eigenvalue gives the signed scale along that line.", ["Mode: EVD", `Eigenvalue 1: ${fmt(result.values[0])}`, `Eigenvalue 2: ${fmt(result.values[1])}`, `Real directions: ${result.vectors.length}`]);
         setStatus("EVD complete.", "success");
     }
@@ -538,14 +545,24 @@
         });
         matrixEditor.classList.toggle("is-hidden", mode === "pca");
         datasetEditor.classList.toggle("is-hidden", mode !== "pca");
+        matrixPresets.classList.toggle("is-hidden", mode === "pca");
+        dataPresets.classList.toggle("is-hidden", mode !== "pca");
+        inputHeading.textContent = mode === "pca" ? "Your dataset points" : "Your transformation matrix A";
         inputDescription.textContent = mode === "pca" ?
-            "Enter x,y points. PCA analyzes the covariance of centered data." :
-            "Enter a 2x2 matrix for the selected decomposition.";
+            "Each line is one point: x, y. PCA finds the directions in which these points spread out." :
+            "This matrix moves, rotates, stretches, or flips every point in the plane.";
+        visualHeading.textContent = mode === "pca" ? "Your points and their main directions" : "Before and after applying matrix A";
         visualDescription.textContent = {
-            svd: "SVD maps the unit circle to an ellipse. Principal directions become ellipse axes.",
-            pca: "PCA centers the data, then draws principal axes from the covariance matrix.",
-            evd: "EVD shows eigenvectors as directions that remain on the same line after transformation."
+            svd: "Blue is the original unit circle. Red is the same circle after your matrix transforms it.",
+            pca: "Blue dots are your data, moved so their mean is at the center. Red PC1 shows the strongest spread.",
+            evd: "Blue is the original square. Red is that square after applying your matrix. The arrows are directions that stay on the same line."
         } [mode];
+        const story = {
+            svd: ["Unit circle", "Your matrix A", "Ellipse + stretch axes"],
+            pca: ["Your dataset points", "Center + measure spread", "Principal directions"],
+            evd: ["Unit square", "Your matrix A", "Transformed square"]
+        }[mode];
+        [storyInput.textContent, storyAction.textContent, storyOutput.textContent] = story;
         const formula = document.getElementById("decomposition-formula");
         formula.textContent = {
             svd: "\\(A=U\\Sigma V^{\\mathsf T}\\)",

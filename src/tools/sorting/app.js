@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const controls = {
         algorithm: $("algorithm"), size: $("array-size"), speed: $("speed"), values: $("array-values"),
         start: $("start"), pause: $("pause"), step: $("step"), reset: $("reset"), randomize: $("randomize"),
-        apply: $("apply-values"), defaults: $("reset-defaults"), operation: $("operation-label")
+        apply: $("apply-values"), upload: $("upload-array"), file: $("array-file"), defaults: $("reset-defaults"), operation: $("operation-label")
     };
     const names = { bubble: "Bubble", selection: "Selection", insertion: "Insertion", merge: "Merge", quick: "Quick", heap: "Heap", radix: "Radix" };
     const color = (name, fallback) => getComputedStyle(document.body).getPropertyValue(`--visual-${name}`).trim() || fallback;
@@ -36,6 +36,8 @@ document.addEventListener("DOMContentLoaded", () => {
             controls.reset.addEventListener("click", () => this.restore());
             controls.randomize.addEventListener("click", () => this.randomize());
             controls.apply.addEventListener("click", () => this.applyValues());
+            controls.upload.addEventListener("click", () => controls.file.click());
+            controls.file.addEventListener("change", () => this.uploadFile());
             controls.algorithm.addEventListener("change", () => { this.stop(); this.updateAlgorithm(); this.restore(false); });
             controls.size.addEventListener("change", () => this.randomize());
             controls.defaults.addEventListener("click", () => {
@@ -74,12 +76,29 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         applyValues() {
-            const tokens = controls.values.value.trim().split(/[\s,;]+/).filter(Boolean);
-            const values = tokens.map(Number);
+            const values = this.parseValues(controls.values.value);
             if (values.length < 2 || values.length > 60 || values.some((v) => !Number.isInteger(v) || v < 0 || v > 999)) {
                 toast("Enter 2–60 whole numbers from 0 to 999", "error"); return;
             }
             this.setData(values, "Custom values applied");
+        }
+
+        parseValues(text, json = false) {
+            if (json) {
+                const parsed = JSON.parse(text);
+                return (Array.isArray(parsed) ? parsed : parsed?.values || []).map(Number);
+            }
+            return text.trim().split(/[\s,;]+/).filter(Boolean).map(Number);
+        }
+
+        async uploadFile() {
+            const file = controls.file.files[0]; if (!file) return;
+            try {
+                const values = this.parseValues(await file.text(), file.name.toLowerCase().endsWith(".json"));
+                if (values.length < 2 || values.length > 60 || values.some((v) => !Number.isInteger(v) || v < 0 || v > 999)) throw new Error();
+                this.setData(values, `${file.name} loaded`);
+            } catch { toast("Could not read this array. Use 2–60 whole numbers from 0 to 999.", "error"); }
+            controls.file.value = "";
         }
 
         restore(notify = true) { this.stop(); this.array = this.original.slice(); this.clearStats(); this.draw(); if (notify) toast("Original dataset restored", "info"); }
