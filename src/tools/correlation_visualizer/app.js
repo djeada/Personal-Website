@@ -140,7 +140,9 @@ const COLORS = {
     positive: "rgba(96, 165, 250, 0.11)",
     negative: "rgba(251, 113, 133, 0.10)",
     residual: "rgba(251, 113, 133, 0.78)",
-    ellipse: "#4ade80"
+    ellipse: "#4ade80",
+    spearman: "#8b5cf6",
+    spearmanFill: "rgba(139, 92, 246, 0.76)"
 };
 
 const CHART = {
@@ -150,6 +152,8 @@ const CHART = {
     plotHeight: 390,
     residualTop: 500,
     residualHeight: 120,
+    rankTop: 700,
+    rankHeight: 280,
     bottom: 42,
     narrow: false
 };
@@ -336,6 +340,8 @@ function summarize(points, measures = {}) {
     let rankCov = Number.NaN;
     let rankStdX = Number.NaN;
     let rankStdY = Number.NaN;
+    let rankSlope = Number.NaN;
+    let rankIntercept = Number.NaN;
     let spearman = Number.NaN;
     let sumRankCrossProducts = Number.NaN;
     if (measures.spearman) {
@@ -346,6 +352,9 @@ function summarize(points, measures = {}) {
         rankCov = sampleCovariance(rankX, rankY, rankMeanX, rankMeanY);
         rankStdX = sampleStd(rankX, rankMeanX);
         rankStdY = sampleStd(rankY, rankMeanY);
+        const rankVarianceX = rankStdX * rankStdX;
+        rankSlope = rankVarianceX === 0 ? 0 : rankCov / rankVarianceX;
+        rankIntercept = rankMeanY - rankSlope * rankMeanX;
         spearman = pearson(rankCov, rankStdX, rankStdY);
         sumRankCrossProducts = rankX.reduce(
             (sum, value, index) => sum + (value - rankMeanX) * (rankY[index] - rankMeanY),
@@ -405,6 +414,8 @@ function summarize(points, measures = {}) {
         rankCov,
         rankStdX,
         rankStdY,
+        rankSlope,
+        rankIntercept,
         sumRankCrossProducts,
         spearman,
         kendall,
@@ -528,7 +539,7 @@ function generateFromControls() {
     draw();
 }
 
-function configureChart(width, showResiduals) {
+function configureChart(width, showResiduals, showSpearman) {
     const narrow = width < 620;
     const left = narrow ? 54 : 76;
     const right = narrow ? 18 : 34;
@@ -536,8 +547,13 @@ function configureChart(width, showResiduals) {
     const plotHeight = narrow ? 300 : 390;
     const residualTop = top + plotHeight + (narrow ? 72 : 82);
     const residualHeight = showResiduals ? (narrow ? 92 : 120) : 0;
+    const contentBottom = showResiduals ? residualTop + residualHeight : top + plotHeight;
+    const rankTop = contentBottom + (narrow ? 68 : 82);
+    const rankHeight = showSpearman ? (narrow ? 230 : 290) : 0;
     const bottom = narrow ? 28 : 42;
-    const height = showResiduals ? residualTop + residualHeight + bottom : top + plotHeight + bottom;
+    const height = showSpearman
+        ? rankTop + rankHeight + bottom
+        : contentBottom + bottom;
 
     Object.assign(CHART, {
         left,
@@ -546,6 +562,8 @@ function configureChart(width, showResiduals) {
         plotHeight,
         residualTop,
         residualHeight,
+        rankTop,
+        rankHeight,
         bottom,
         narrow
     });
@@ -553,11 +571,11 @@ function configureChart(width, showResiduals) {
     return Math.ceil(height);
 }
 
-function resizeCanvas(showResiduals) {
+function resizeCanvas(showResiduals, showSpearman) {
     const canvas = document.getElementById("canvas");
     const container = canvas.parentElement;
     const width = Math.max(320, Math.min(container.clientWidth, 920));
-    const height = configureChart(width, showResiduals);
+    const height = configureChart(width, showResiduals, showSpearman);
     const dpr = window.devicePixelRatio || 1;
 
     canvas.width = Math.floor(width * dpr);
@@ -591,8 +609,21 @@ function draw() {
     const points = parsePoints(document.getElementById("dataset-points").value);
     const message = document.getElementById("input-message");
     const showResiduals = document.getElementById("show-residuals").checked;
-    const dimensions = resizeCanvas(showResiduals);
-    const ctx = document.getElementById("canvas").getContext("2d");
+    const measures = selectedCorrelationMeasures();
+    const canvas = document.getElementById("canvas");
+    const dimensions = resizeCanvas(showResiduals, measures.spearman);
+    const ctx = canvas.getContext("2d");
+
+    canvas.dataset.spearmanEnabled = String(measures.spearman);
+    canvas.dataset.spearman = "";
+    canvas.dataset.rankPoints = "[]";
+    canvas.setAttribute(
+        "aria-label",
+        measures.spearman
+            ? "Scatter plot, residual plot, and Spearman rank-versus-rank plot"
+            : "Scatter plot and residual plot"
+    );
+    renderLegend(measures);
 
     ctx.clearRect(0, 0, dimensions.width, dimensions.height);
 
@@ -601,18 +632,24 @@ function draw() {
         message.classList.add("error");
         drawBackground(ctx, dimensions);
         drawMessage(ctx, dimensions, "Enter at least three x,y pairs.");
-        renderStats(null);
+        renderStats(null, measures);
         return;
     }
 
-    const summary = summarize(points, selectedCorrelationMeasures());
+    const summary = summarize(points, measures);
+    if (measures.spearman) {
+        canvas.dataset.spearman = String(summary.spearman);
+        canvas.dataset.rankPoints = JSON.stringify(
+            summary.rankX.map((rankX, index) => [rankX, summary.rankY[index]])
+        );
+    }
     message.textContent = activeMessage || currentPresetNote();
     message.classList.remove("error");
-    drawVisualization(ctx, dimensions, summary);
-    renderStats(summary);
+    drawVisualization(ctx, dimensions, summary, measures);
+    renderStats(summary, measures);
 }
 
-function drawVisualization(ctx, dimensions, summary) {
+function drawVisualization(ctx, dimensions, summary, measures) {
     const showRegression = document.getElementById("show-regression").checked;
     const showMeanLines = document.getElementById("show-mean-lines").checked;
     const showQuadrants = document.getElementById("show-quadrants").checked;
@@ -645,6 +682,7 @@ function drawVisualization(ctx, dimensions, summary) {
     ctx.restore();
 
     if (showResiduals) drawResidualPlot(ctx, dimensions, summary, xScale);
+    if (measures.spearman) drawSpearmanRankPlot(ctx, dimensions, summary);
 }
 
 function scatterDomain(summary) {
@@ -926,6 +964,138 @@ function drawResidualPlot(ctx, dimensions, summary, xScale) {
     ctx.fillText(formatNumber(-maxAbs), CHART.left - 8, yResidual(-maxAbs));
 }
 
+function drawSpearmanRankPlot(ctx, dimensions, summary) {
+    const textColor = getColor("#475467", "#dbe4ef");
+    const gridColor = getColor("rgba(148, 163, 184, 0.24)", "rgba(148, 163, 184, 0.18)");
+    const axisColor = getColor("#667085", "#cbd5e1");
+    const top = CHART.rankTop;
+    const bottom = top + CHART.rankHeight;
+    const right = dimensions.width - CHART.right;
+    const rankMinX = Math.min(...summary.rankX);
+    const rankMaxX = Math.max(...summary.rankX);
+    const rankMinY = Math.min(...summary.rankY);
+    const rankMaxY = Math.max(...summary.rankY);
+    const xScale = createLinearScale(rankMinX, rankMaxX, CHART.left, right);
+    const yScale = createLinearScale(rankMinY, rankMaxY, bottom, top);
+    const xTicks = ticks(xScale.min, xScale.max, CHART.narrow ? 4 : 7);
+    const yTicks = ticks(yScale.min, yScale.max, CHART.narrow ? 4 : 6);
+    const tiedX = new Set(summary.rankX).size < summary.n;
+    const tiedY = new Set(summary.rankY).size < summary.n;
+    const tieNote = tiedX || tiedY ? " • ties use average ranks" : "";
+
+    drawDivider(ctx, dimensions, top - 28);
+    drawSectionLabel(
+        ctx,
+        `Spearman rank view  ρₛ = ${formatNumber(summary.spearman)}`,
+        CHART.left,
+        top - 42
+    );
+
+    ctx.save();
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 1;
+    xTicks.forEach(value => {
+        const px = xScale(value);
+        ctx.beginPath();
+        ctx.moveTo(px, top);
+        ctx.lineTo(px, bottom);
+        ctx.stroke();
+    });
+    yTicks.forEach(value => {
+        const py = yScale(value);
+        ctx.beginPath();
+        ctx.moveTo(CHART.left, py);
+        ctx.lineTo(right, py);
+        ctx.stroke();
+    });
+
+    ctx.strokeStyle = axisColor;
+    ctx.beginPath();
+    ctx.moveTo(CHART.left, bottom);
+    ctx.lineTo(right, bottom);
+    ctx.moveTo(CHART.left, top);
+    ctx.lineTo(CHART.left, bottom);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.rect(CHART.left, top, right - CHART.left, CHART.rankHeight);
+    ctx.clip();
+
+    if (Number.isFinite(summary.rankSlope) && Number.isFinite(summary.rankIntercept)) {
+        const rankX1 = xScale.min;
+        const rankX2 = xScale.max;
+        ctx.strokeStyle = COLORS.spearman;
+        ctx.lineWidth = 2.25;
+        ctx.beginPath();
+        ctx.moveTo(xScale(rankX1), yScale(summary.rankSlope * rankX1 + summary.rankIntercept));
+        ctx.lineTo(xScale(rankX2), yScale(summary.rankSlope * rankX2 + summary.rankIntercept));
+        ctx.stroke();
+    }
+
+    const coordinateCounts = new Map();
+    summary.rankX.forEach((rankX, index) => {
+        const key = `${rankX}|${summary.rankY[index]}`;
+        coordinateCounts.set(key, (coordinateCounts.get(key) || 0) + 1);
+    });
+    const drawnCoordinates = new Set();
+    summary.rankX.forEach((rankX, index) => {
+        const rankY = summary.rankY[index];
+        const key = `${rankX}|${rankY}`;
+        const px = xScale(rankX);
+        const py = yScale(rankY);
+        const count = coordinateCounts.get(key);
+
+        if (!drawnCoordinates.has(key)) {
+            ctx.beginPath();
+            ctx.fillStyle = COLORS.spearmanFill;
+            ctx.strokeStyle = COLORS.spearman;
+            ctx.lineWidth = 1.3;
+            ctx.arc(px, py, count > 1 ? 5.5 : 4.3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            if (count > 1) {
+                ctx.fillStyle = textColor;
+                ctx.font = "10px Arial";
+                ctx.textAlign = "left";
+                ctx.textBaseline = "bottom";
+                ctx.fillText(`×${count}`, px + 6, py - 4);
+            }
+            drawnCoordinates.add(key);
+        }
+
+        if (document.getElementById("show-labels").checked) {
+            ctx.fillStyle = textColor;
+            ctx.font = "10px Arial";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "top";
+            ctx.fillText(String(index + 1), px + 5, py + 5 + (index % 2) * 9);
+        }
+    });
+    ctx.restore();
+
+    ctx.fillStyle = textColor;
+    ctx.font = CHART.narrow ? "10px Arial" : "12px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    xTicks.forEach(value => ctx.fillText(formatTick(value), xScale(value), bottom + 8));
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    yTicks.forEach(value => ctx.fillText(formatTick(value), CHART.left - 8, yScale(value)));
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillText(`Rank of x${tieNote}`, CHART.left + (right - CHART.left) / 2, bottom + (CHART.narrow ? 25 : 39));
+    if (!CHART.narrow) {
+        ctx.save();
+        ctx.translate(18, top + CHART.rankHeight / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText("Rank of y", 0, 0);
+        ctx.restore();
+    }
+}
+
 function drawDivider(ctx, dimensions, y) {
     ctx.strokeStyle = getColor("#e3e8ef", "#333333");
     ctx.beginPath();
@@ -1201,9 +1371,8 @@ function renderCalculations(summary, measures = selectedCorrelationMeasures()) {
     typesetMath(container);
 }
 
-function renderStats(summary) {
+function renderStats(summary, measures = selectedCorrelationMeasures()) {
     const grid = document.getElementById("stats-grid");
-    const measures = selectedCorrelationMeasures();
     renderCalculations(summary, measures);
     if (!summary) {
         grid.innerHTML = "";
@@ -1260,8 +1429,11 @@ function renderStats(summary) {
     `;
 }
 
-function renderLegend() {
+function renderLegend(measures = selectedCorrelationMeasures()) {
     const legend = document.getElementById("plot-legend");
+    const spearmanItem = measures.spearman
+        ? '<span class="legend-item"><span class="legend-line spearman-line"></span>Rank fit (Spearman panel)</span>'
+        : "";
     legend.innerHTML = `
         <span class="legend-item"><span class="legend-swatch point-swatch"></span>Data point</span>
         <span class="legend-item"><span class="legend-line regression-line"></span>Least-squares line</span>
@@ -1269,6 +1441,7 @@ function renderLegend() {
         <span class="legend-item"><span class="legend-line ellipse-line"></span>Covariance ellipse</span>
         <span class="legend-item"><span class="legend-swatch positive-swatch"></span>Positive covariance quadrant</span>
         <span class="legend-item"><span class="legend-swatch negative-swatch"></span>Negative covariance quadrant</span>
+        ${spearmanItem}
     `;
 }
 

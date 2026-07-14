@@ -267,7 +267,22 @@ test("Covariance Lab shows the complete sample calculation", async ({ page }) =>
   expect(calculation.hasMathJaxLoader).toBe(true);
   expect(calculation.workedText).toContain("Inspect all 3 point contributions");
 
+  const canvasHeightBeforeSpearman = await page.locator("#canvas").evaluate((canvas) => canvas.height);
   await page.locator("#measure-spearman").check();
+  await expect(page.locator("#canvas")).toHaveAttribute("data-spearman-enabled", "true");
+  const rankVisualization = await page.locator("#canvas").evaluate((canvas) => ({
+    enabled: canvas.dataset.spearmanEnabled,
+    value: Number(canvas.dataset.spearman),
+    points: JSON.parse(canvas.dataset.rankPoints),
+    height: canvas.height,
+    label: canvas.getAttribute("aria-label"),
+  }));
+  expect(rankVisualization.enabled).toBe("true");
+  expect(rankVisualization.value).toBeCloseTo(1, 12);
+  expect(rankVisualization.points).toEqual([[1, 1], [2, 2], [3, 3]]);
+  expect(rankVisualization.height).toBeGreaterThan(canvasHeightBeforeSpearman);
+  expect(rankVisualization.label).toContain("Spearman rank-versus-rank plot");
+  await expect(page.locator("#plot-legend")).toContainText("Rank fit (Spearman panel)");
   await page.locator("#measure-kendall").check();
   await page.locator("#measure-distance").check();
   await expect(page.locator(".optional-measure-step")).toHaveCount(3);
