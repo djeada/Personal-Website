@@ -207,6 +207,21 @@ function ranks(values) {
     return result;
 }
 
+function tiedRankGroups(values, assignedRanks) {
+    const groups = new Map();
+    values.forEach((value, index) => {
+        if (!groups.has(value)) groups.set(value, []);
+        groups.get(value).push(index);
+    });
+    return [...groups.entries()]
+        .filter(([, indices]) => indices.length > 1)
+        .map(([value, indices]) => ({
+            value,
+            count: indices.length,
+            averageRank: assignedRanks[indices[0]]
+        }));
+}
+
 function kendallTauB(xs, ys) {
     let concordant = 0;
     let discordant = 0;
@@ -343,12 +358,39 @@ function summarize(points, measures = {}) {
     let rankSlope = Number.NaN;
     let rankIntercept = Number.NaN;
     let spearman = Number.NaN;
+    let spearmanShortcut = Number.NaN;
+    let rankDeviations = [];
+    let rankTiesX = [];
+    let rankTiesY = [];
     let sumRankCrossProducts = Number.NaN;
+    let sumRankSquaresX = Number.NaN;
+    let sumRankSquaresY = Number.NaN;
+    let sumRankDifferencesSquared = Number.NaN;
     if (measures.spearman) {
         rankX = ranks(xs);
         rankY = ranks(ys);
         rankMeanX = mean(rankX);
         rankMeanY = mean(rankY);
+        rankTiesX = tiedRankGroups(xs, rankX);
+        rankTiesY = tiedRankGroups(ys, rankY);
+        rankDeviations = rankX.map((value, index) => {
+            const dx = value - rankMeanX;
+            const dy = rankY[index] - rankMeanY;
+            const difference = value - rankY[index];
+            return {
+                dx,
+                dy,
+                crossProduct: dx * dy,
+                squareX: dx * dx,
+                squareY: dy * dy,
+                difference,
+                differenceSquared: difference * difference
+            };
+        });
+        sumRankCrossProducts = rankDeviations.reduce((sum, row) => sum + row.crossProduct, 0);
+        sumRankSquaresX = rankDeviations.reduce((sum, row) => sum + row.squareX, 0);
+        sumRankSquaresY = rankDeviations.reduce((sum, row) => sum + row.squareY, 0);
+        sumRankDifferencesSquared = rankDeviations.reduce((sum, row) => sum + row.differenceSquared, 0);
         rankCov = sampleCovariance(rankX, rankY, rankMeanX, rankMeanY);
         rankStdX = sampleStd(rankX, rankMeanX);
         rankStdY = sampleStd(rankY, rankMeanY);
@@ -356,10 +398,9 @@ function summarize(points, measures = {}) {
         rankSlope = rankVarianceX === 0 ? 0 : rankCov / rankVarianceX;
         rankIntercept = rankMeanY - rankSlope * rankMeanX;
         spearman = pearson(rankCov, rankStdX, rankStdY);
-        sumRankCrossProducts = rankX.reduce(
-            (sum, value, index) => sum + (value - rankMeanX) * (rankY[index] - rankMeanY),
-            0
-        );
+        if (rankTiesX.length === 0 && rankTiesY.length === 0) {
+            spearmanShortcut = 1 - (6 * sumRankDifferencesSquared) / (points.length * (points.length * points.length - 1));
+        }
     }
     const ellipseTrace = varianceX + varianceY;
     const ellipseDelta = Math.sqrt(Math.pow(varianceX - varianceY, 2) + 4 * cov * cov);
@@ -416,8 +457,15 @@ function summarize(points, measures = {}) {
         rankStdY,
         rankSlope,
         rankIntercept,
+        rankDeviations,
+        rankTiesX,
+        rankTiesY,
         sumRankCrossProducts,
+        sumRankSquaresX,
+        sumRankSquaresY,
+        sumRankDifferencesSquared,
         spearman,
+        spearmanShortcut,
         kendall,
         distance,
         ellipse,
@@ -1182,6 +1230,22 @@ function renderCalculations(summary, measures = selectedCorrelationMeasures()) {
     const regressionExplanation = summary.sumSquaresX === 0
         ? "All x values are identical, so there is no x variation from which to estimate a unique slope. The plot uses the mean of y as a clearly identified fallback."
         : "The slope uses the same cross-product sum divided by x's squared-deviation sum. The intercept makes the line pass through \\(\\bar{x},\\bar{y}\\).";
+    const rankSumX = measures.spearman ? summary.rankX.reduce((sum, value) => sum + value, 0) : Number.NaN;
+    const rankSumY = measures.spearman ? summary.rankY.reduce((sum, value) => sum + value, 0) : Number.NaN;
+    const rankTieBadges = measures.spearman
+        ? [
+            ...summary.rankTiesX.map(group => `<span>x = ${formatDetailedNumber(group.value)} occurs ${group.count} times → average rank ${formatDetailedNumber(group.averageRank)}</span>`),
+            ...summary.rankTiesY.map(group => `<span>y = ${formatDetailedNumber(group.value)} occurs ${group.count} times → average rank ${formatDetailedNumber(group.averageRank)}</span>`)
+        ]
+        : [];
+    const rankTieSummary = rankTieBadges.length > 0
+        ? `<div class="measure-counts rank-tie-counts">${rankTieBadges.join("")}</div>`
+        : '<div class="measure-counts rank-tie-counts"><span>No ties: ranks are 1 through n in each variable</span></div>';
+    const spearmanShortcutFormula = rankTieBadges.length > 0
+        ? String.raw`\[\text{Ties are present, so do not use }1-\frac{6\sum d_i^2}{n(n^2-1)}.\]`
+        : String.raw`\[d_i=R_{x,i}-R_{y,i},\qquad \sum_{i=1}^{n}d_i^2=${latexNumber(summary.sumRankDifferencesSquared)}\]
+            \[\rho_s=1-\frac{6\sum_{i=1}^{n}d_i^2}{n(n^2-1)}
+            =1-\frac{6(${latexNumber(summary.sumRankDifferencesSquared)})}{${summary.n}(${summary.n}^2-1)}=${latexNumber(summary.spearmanShortcut)}\]`;
     let nextStepNumber = 7;
     const optionalSteps = [];
     if (measures.spearman) {
@@ -1190,10 +1254,27 @@ function renderCalculations(summary, measures = selectedCorrelationMeasures()) {
                 <span class="step-number">${nextStepNumber++}</span>
                 <div>
                     <h3>Compute Spearman rank correlation</h3>
-                    <p>Replace x and y by their average ranks, then run the same standardized covariance calculation on those ranks.</p>
+                    <p>Sort each variable independently. Assign rank 1 to its smallest value and rank n to its largest. If positions a through b are tied, every tied value receives the average rank \((a+b)/2\).</p>
+                    ${rankTieSummary}
                     <div class="live-formula">
-                        \[\widehat{\sigma}_{R_xR_y}=\frac{${latexNumber(summary.sumRankCrossProducts)}}{${nMinusOne}}=${latexNumber(summary.rankCov)}\]
-                        \[\rho_s=\frac{\widehat{\sigma}_{R_xR_y}}{\widehat{\sigma}_{R_x}\widehat{\sigma}_{R_y}}=\frac{${latexNumber(summary.rankCov)}}{${latexNumber(summary.rankStdX)}\cdot ${latexNumber(summary.rankStdY)}}=${latexNumber(summary.spearman)}\]
+                        \[\bar R_x=\frac{\sum_{i=1}^{n}R_{x,i}}{n}=\frac{${latexNumber(rankSumX)}}{${summary.n}}=${latexNumber(summary.rankMeanX)},\qquad
+                        \bar R_y=\frac{\sum_{i=1}^{n}R_{y,i}}{n}=\frac{${latexNumber(rankSumY)}}{${summary.n}}=${latexNumber(summary.rankMeanY)}\]
+                        \[\widehat{\sigma}_{R_xR_y}=\frac{\sum_{i=1}^{n}(R_{x,i}-\bar R_x)(R_{y,i}-\bar R_y)}{n-1}
+                        =\frac{${latexNumber(summary.sumRankCrossProducts)}}{${nMinusOne}}=${latexNumber(summary.rankCov)}\]
+                        \[\widehat{\sigma}_{R_x}=\sqrt{\frac{\sum_{i=1}^{n}(R_{x,i}-\bar R_x)^2}{n-1}}
+                        =\sqrt{\frac{${latexNumber(summary.sumRankSquaresX)}}{${nMinusOne}}}=${latexNumber(summary.rankStdX)}\]
+                        \[\widehat{\sigma}_{R_y}=\sqrt{\frac{\sum_{i=1}^{n}(R_{y,i}-\bar R_y)^2}{n-1}}
+                        =\sqrt{\frac{${latexNumber(summary.sumRankSquaresY)}}{${nMinusOne}}}=${latexNumber(summary.rankStdY)}\]
+                        \[\rho_s=\frac{\widehat{\sigma}_{R_xR_y}}{\widehat{\sigma}_{R_x}\widehat{\sigma}_{R_y}}
+                        =\frac{${latexNumber(summary.rankCov)}}{${latexNumber(summary.rankStdX)}\cdot ${latexNumber(summary.rankStdY)}}=${latexNumber(summary.spearman)}\]
+                        \[\rho_s=\frac{\sum_{i=1}^{n}(R_{x,i}-\bar R_x)(R_{y,i}-\bar R_y)}
+                        {\sqrt{\sum_{i=1}^{n}(R_{x,i}-\bar R_x)^2}\sqrt{\sum_{i=1}^{n}(R_{y,i}-\bar R_y)^2}}
+                        =\frac{${latexNumber(summary.sumRankCrossProducts)}}{\sqrt{${latexNumber(summary.sumRankSquaresX)}}\sqrt{${latexNumber(summary.sumRankSquaresY)}}}=${latexNumber(summary.spearman)}\]
+                    </div>
+                    <p>Each \(n-1\) factor appears once in the rank covariance and under both rank-standard-deviation square roots, so those factors cancel in the final centered-sum formula. The expanded contribution table below shows every centered rank, rank product, and \(d_i^2\) term used in these sums.</p>
+                    <p><strong>Shortcut check:</strong> the formula below is valid only when neither variable contains ties. The general average-rank calculation above is always the one used by this tool.</p>
+                    <div class="live-formula spearman-shortcut-formula">
+                        ${spearmanShortcutFormula}
                     </div>
                     <p class="result-meaning"><strong>Use it for:</strong> monotonic relationships where values generally move in one direction, even when the pattern is not a straight line.</p>
                 </div>
@@ -1237,10 +1318,10 @@ function renderCalculations(summary, measures = selectedCorrelationMeasures()) {
     }
     const ellipseStepNumber = nextStepNumber;
     const rankHeaderCells = measures.spearman
-        ? '<th scope="col">Rank x</th><th scope="col">Rank y</th>'
+        ? '<th scope="col">Rₓ</th><th scope="col">Rᵧ</th><th scope="col">Rₓ − R̄ₓ</th><th scope="col">Rᵧ − R̄ᵧ</th><th scope="col">Rank product</th><th scope="col">dᵢ²</th>'
         : "";
     const rankFooterCells = measures.spearman
-        ? `<td>${formatDetailedNumber(summary.rankX.reduce((sum, value) => sum + value, 0))}</td><td>${formatDetailedNumber(summary.rankY.reduce((sum, value) => sum + value, 0))}</td>`
+        ? `<td>${formatDetailedNumber(rankSumX)}</td><td>${formatDetailedNumber(rankSumY)}</td><td>0</td><td>0</td><td>${formatDetailedNumber(summary.sumRankCrossProducts)}</td><td>${formatDetailedNumber(summary.sumRankDifferencesSquared)}</td>`
         : "";
     const contributionRows = summary.deviations.map((row, index) => `
         <tr>
@@ -1252,7 +1333,7 @@ function renderCalculations(summary, measures = selectedCorrelationMeasures()) {
             <td>${formatDetailedNumber(row.crossProduct)}</td>
             <td>${formatDetailedNumber(row.squareX)}</td>
             <td>${formatDetailedNumber(row.squareY)}</td>
-            ${measures.spearman ? `<td>${formatDetailedNumber(summary.rankX[index])}</td><td>${formatDetailedNumber(summary.rankY[index])}</td>` : ""}
+            ${measures.spearman ? `<td>${formatDetailedNumber(summary.rankX[index])}</td><td>${formatDetailedNumber(summary.rankY[index])}</td><td>${formatDetailedNumber(summary.rankDeviations[index].dx)}</td><td>${formatDetailedNumber(summary.rankDeviations[index].dy)}</td><td>${formatDetailedNumber(summary.rankDeviations[index].crossProduct)}</td><td>${formatDetailedNumber(summary.rankDeviations[index].differenceSquared)}</td>` : ""}
             <td>${formatDetailedNumber(summary.fittedValues[index])}</td>
             <td>${formatDetailedNumber(summary.residuals[index])}</td>
         </tr>

@@ -251,6 +251,19 @@ test("Covariance Lab shows the complete sample calculation", async ({ page }) =>
   expect(calculation.summary.slope).toBeCloseTo(1.5, 12);
   expect(calculation.summary.intercept).toBeCloseTo(2 / 3, 12);
   expect(calculation.summary.spearman).toBeCloseTo(1, 12);
+  expect(calculation.summary.rankMeanX).toBeCloseTo(2, 12);
+  expect(calculation.summary.rankMeanY).toBeCloseTo(2, 12);
+  expect(calculation.summary.sumRankCrossProducts).toBeCloseTo(2, 12);
+  expect(calculation.summary.sumRankSquaresX).toBeCloseTo(2, 12);
+  expect(calculation.summary.sumRankSquaresY).toBeCloseTo(2, 12);
+  expect(calculation.summary.sumRankDifferencesSquared).toBe(0);
+  expect(calculation.summary.spearmanShortcut).toBeCloseTo(1, 12);
+  expect(calculation.tied.rankX).toEqual([1.5, 1.5, 3]);
+  expect(calculation.tied.rankTiesX).toEqual([{ value: 1, count: 2, averageRank: 1.5 }]);
+  expect(calculation.tied.sumRankCrossProducts).toBeCloseTo(1.5, 12);
+  expect(calculation.tied.sumRankSquaresX).toBeCloseTo(1.5, 12);
+  expect(calculation.tied.sumRankSquaresY).toBeCloseTo(2, 12);
+  expect(calculation.tied.spearmanShortcut).toBeNaN();
   expect(calculation.summary.kendall.value).toBeCloseTo(1, 12);
   expect(calculation.summary.kendall.concordant).toBe(3);
   expect(calculation.perfect.distance.value).toBeCloseTo(1, 12);
@@ -290,7 +303,10 @@ test("Covariance Lab shows the complete sample calculation", async ({ page }) =>
   await expect(page.locator(".optional-results-card")).toContainText("Kendall τᵦ");
   await expect(page.locator(".optional-results-card")).toContainText("Distance ℛ");
   await expect(page.locator(".calculation-step")).toHaveCount(10);
-  await expect(page.locator(".calculation-table thead")).toContainText("Rank x");
+  await expect(page.locator('[data-measure="spearman"]')).toContainText("average rank");
+  await expect(page.locator('[data-measure="spearman"]')).toContainText("Shortcut check");
+  await expect(page.locator(".calculation-table thead")).toContainText("Rank product");
+  await expect(page.locator(".calculation-table thead")).toContainText("dᵢ²");
 });
 
 test("Covariance Lab contains wide formulas and tables on mobile", async ({ page }) => {
