@@ -84,6 +84,21 @@ const DATASETS = {
         ],
         note: "Pearson correlation can be small even when a clear nonlinear relationship exists."
     },
+    "monotonic-curve": {
+        points: [
+            [1, 1],
+            [2, 8],
+            [3, 27],
+            [4, 64],
+            [5, 125],
+            [6, 216],
+            [7, 343],
+            [8, 512],
+            [9, 729],
+            [10, 1000]
+        ],
+        note: "Spearman is 1 because the ordering is perfectly increasing, while Pearson is lower because the original values follow a curve rather than a straight line."
+    },
     "outlier-leverage": {
         points: [
             [24, 32],
@@ -680,6 +695,7 @@ function draw() {
         message.classList.add("error");
         drawBackground(ctx, dimensions);
         drawMessage(ctx, dimensions, "Enter at least three x,y pairs.");
+        renderSpearmanVisualGuide(null, measures);
         renderStats(null, measures);
         return;
     }
@@ -694,6 +710,7 @@ function draw() {
     message.textContent = activeMessage || currentPresetNote();
     message.classList.remove("error");
     drawVisualization(ctx, dimensions, summary, measures);
+    renderSpearmanVisualGuide(summary, measures);
     renderStats(summary, measures);
 }
 
@@ -719,14 +736,19 @@ function drawVisualization(ctx, dimensions, summary, measures) {
         ctx.restore();
     }
     drawScatterAxes(ctx, dimensions, summary, xScale, yScale);
-    drawSectionLabel(ctx, CHART.narrow ? "Scatter" : "Scatter plot with covariance structure", CHART.left, CHART.top - 16);
+    drawSectionLabel(
+        ctx,
+        CHART.narrow ? "Original values (Pearson)" : "Original-value scatter — Pearson uses these axes",
+        CHART.left,
+        CHART.top - 16
+    );
 
     ctx.save();
     clipScatterPlot(ctx, dimensions);
     if (showMeanLines) drawMeanLines(ctx, dimensions, summary, x, y);
     if (showEllipse) drawCovarianceEllipse(ctx, summary, x, y);
     if (showRegression) drawRegressionLine(ctx, dimensions, summary, x, y);
-    drawPoints(ctx, summary, x, y);
+    drawPoints(ctx, summary, x, y, measures.spearman);
     ctx.restore();
 
     if (showResiduals) drawResidualPlot(ctx, dimensions, summary, xScale);
@@ -827,11 +849,11 @@ function drawScatterAxes(ctx, dimensions, summary, xScale, yScale) {
         ctx.translate(18, CHART.top + CHART.plotHeight / 2);
         ctx.rotate(-Math.PI / 2);
         ctx.textAlign = "center";
-        ctx.fillText("Y", 0, 0);
+        ctx.fillText("Original y", 0, 0);
         ctx.restore();
         ctx.textAlign = "center";
         ctx.textBaseline = "bottom";
-        ctx.fillText("X", CHART.left + (plotRight - CHART.left) / 2, plotBottom + 38);
+        ctx.fillText("Original x", CHART.left + (plotRight - CHART.left) / 2, plotBottom + 38);
     }
 }
 
@@ -931,7 +953,7 @@ function drawCovarianceEllipse(ctx, summary, x, y) {
     ctx.restore();
 }
 
-function drawPoints(ctx, summary, x, y) {
+function drawPoints(ctx, summary, x, y, highlightRankExample = false) {
     ctx.save();
     summary.points.forEach((point, index) => {
         const influence = Math.abs((point.x - summary.meanX) * (point.y - summary.meanY));
@@ -944,12 +966,20 @@ function drawPoints(ctx, summary, x, y) {
         ctx.fill();
         ctx.stroke();
 
-        if (document.getElementById("show-labels").checked) {
+        if (highlightRankExample && index === 0) {
+            ctx.beginPath();
+            ctx.strokeStyle = COLORS.spearman;
+            ctx.lineWidth = 2;
+            ctx.arc(x(point.x), y(point.y), radius + 3.5, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        if (document.getElementById("show-labels").checked || (highlightRankExample && index === 0)) {
             ctx.fillStyle = getColor("#344054", "#dbe4ef");
             ctx.font = "10px Arial";
             ctx.textAlign = "left";
             ctx.textBaseline = "bottom";
-            ctx.fillText(String(index + 1), x(point.x) + 5, y(point.y) - 4);
+            ctx.fillText(index === 0 && highlightRankExample ? "point 1" : String(index + 1), x(point.x) + 7, y(point.y) - 5);
         }
     });
     ctx.restore();
@@ -1034,7 +1064,9 @@ function drawSpearmanRankPlot(ctx, dimensions, summary) {
     drawDivider(ctx, dimensions, top - 28);
     drawSectionLabel(
         ctx,
-        `Spearman rank view  ρₛ = ${formatNumber(summary.spearman)}`,
+        CHART.narrow
+            ? `Same points as ranks  ρₛ = ${formatNumber(summary.spearman)}`
+            : `Same points after replacing values with ranks — ρₛ = ${formatNumber(summary.spearman)}`,
         CHART.left,
         top - 42
     );
@@ -1111,12 +1143,12 @@ function drawSpearmanRankPlot(ctx, dimensions, summary) {
             drawnCoordinates.add(key);
         }
 
-        if (document.getElementById("show-labels").checked) {
+        if (document.getElementById("show-labels").checked || index === 0) {
             ctx.fillStyle = textColor;
             ctx.font = "10px Arial";
             ctx.textAlign = "left";
             ctx.textBaseline = "top";
-            ctx.fillText(String(index + 1), px + 5, py + 5 + (index % 2) * 9);
+            ctx.fillText(index === 0 ? "point 1" : String(index + 1), px + 6, py + 5 + (index % 2) * 9);
         }
     });
     ctx.restore();
@@ -1132,16 +1164,90 @@ function drawSpearmanRankPlot(ctx, dimensions, summary) {
 
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
-    ctx.fillText(`Rank of x${tieNote}`, CHART.left + (right - CHART.left) / 2, bottom + (CHART.narrow ? 25 : 39));
+    ctx.fillText(`x rank (1 = smallest x)${tieNote}`, CHART.left + (right - CHART.left) / 2, bottom + (CHART.narrow ? 25 : 39));
     if (!CHART.narrow) {
         ctx.save();
         ctx.translate(18, top + CHART.rankHeight / 2);
         ctx.rotate(-Math.PI / 2);
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-        ctx.fillText("Rank of y", 0, 0);
+        ctx.fillText("y rank (1 = smallest y)", 0, 0);
         ctx.restore();
     }
+}
+
+function renderSpearmanVisualGuide(summary, measures = selectedCorrelationMeasures()) {
+    const guide = document.getElementById("spearman-visual-guide");
+    if (!guide) return;
+    if (!summary || !measures.spearman) {
+        guide.hidden = true;
+        guide.innerHTML = "";
+        return;
+    }
+
+    const exampleIndex = 0;
+    const examplePoint = summary.points[exampleIndex];
+    const difference = Number.isFinite(summary.r) && Number.isFinite(summary.spearman)
+        ? Math.abs(summary.r - summary.spearman)
+        : Number.NaN;
+    const comparisonMessage = !Number.isFinite(difference)
+        ? "At least one measure is undefined because one of its required axes has no variation."
+        : difference < 0.03
+            ? "They are close for this dataset because its ordering is already almost a straight-line pattern. The methods still use different coordinates. Try the “Monotonic curve (Spearman demo)” preset to make the difference visible."
+            : `They differ by ${formatNumber(difference)} here because the raw gaps and the rank ordering describe the pattern differently.`;
+    const mappingRows = summary.points.map((point, index) => `
+        <tr>
+            <th scope="row">${index + 1}</th>
+            <td>${formatDetailedNumber(point.x)}</td>
+            <td>${formatDetailedNumber(point.y)}</td>
+            <td>${formatDetailedNumber(summary.rankX[index])}</td>
+            <td>${formatDetailedNumber(summary.rankY[index])}</td>
+        </tr>
+    `).join("");
+
+    guide.hidden = false;
+    guide.innerHTML = `
+        <div class="spearman-guide-heading">
+            <p class="eyebrow">Why the axes changed</p>
+            <h3>Spearman plots the same observations using positions instead of measurements</h3>
+            <p>The original plot uses the entered x and y units. The rank plot sorts x and y separately, replaces each value by its position from 1 to n, and discards the original units and gap sizes. Point 1 is outlined and named in both plots so you can follow the same observation.</p>
+        </div>
+        <div class="rank-transform" aria-label="Example original point converted to ranks">
+            <div>
+                <span>Original plot: point 1</span>
+                <strong>(x₁, y₁) = (${formatDetailedNumber(examplePoint.x)}, ${formatDetailedNumber(examplePoint.y)})</strong>
+                <small>Measured values; their numerical gaps matter</small>
+            </div>
+            <span class="rank-transform-arrow" aria-hidden="true">rank x and y separately →</span>
+            <div>
+                <span>Spearman plot: the same point 1</span>
+                <strong>(R<sub>x,1</sub>, R<sub>y,1</sub>) = (${formatDetailedNumber(summary.rankX[exampleIndex])}, ${formatDetailedNumber(summary.rankY[exampleIndex])})</strong>
+                <small>Positions only; 1 means smallest</small>
+            </div>
+        </div>
+        <div class="correlation-contrast">
+            <article>
+                <span>Original axes</span>
+                <h4>Pearson r = ${formatNumber(summary.r)}</h4>
+                <p>Asks: do the measured values follow a straight line? It keeps units, distances, and outlier leverage.</p>
+            </article>
+            <article>
+                <span>Rank axes</span>
+                <h4>Spearman ρₛ = ${formatNumber(summary.spearman)}</h4>
+                <p>Asks: as x moves up in order, does y generally move up or down in order? It keeps ordering, not distances.</p>
+            </article>
+        </div>
+        <p class="spearman-comparison-note"><strong>For the current points:</strong> ${comparisonMessage}</p>
+        <details class="rank-mapping-details">
+            <summary>See how every original point becomes a rank point</summary>
+            <div class="rank-mapping-table-wrap">
+                <table class="rank-mapping-table">
+                    <thead><tr><th>Point</th><th>Original x</th><th>Original y</th><th>x rank</th><th>y rank</th></tr></thead>
+                    <tbody>${mappingRows}</tbody>
+                </table>
+            </div>
+        </details>
+    `;
 }
 
 function drawDivider(ctx, dimensions, y) {

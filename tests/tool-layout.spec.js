@@ -236,6 +236,7 @@ test("Covariance Lab shows the complete sample calculation", async ({ page }) =>
       headings: [...document.querySelectorAll(".calculation-step h3")].map((heading) => heading.textContent),
       optionalChecked: [...document.querySelectorAll(".optional-measures-panel input")].map((input) => input.checked),
       optionalCardVisible: Boolean(document.querySelector(".optional-results-card")),
+      spearmanGuideHidden: document.querySelector("#spearman-visual-guide").hidden,
       hasMathJaxLoader: Boolean(document.querySelector('script[src*="mathjax@3"]')),
       workedText: document.querySelector("#calculation-content").textContent,
     };
@@ -274,6 +275,7 @@ test("Covariance Lab shows the complete sample calculation", async ({ page }) =>
   expect(calculation.contributionRows).toBe(3);
   expect(calculation.optionalChecked).toEqual([false, false, false]);
   expect(calculation.optionalCardVisible).toBe(false);
+  expect(calculation.spearmanGuideHidden).toBe(true);
   expect(calculation.headings).toContain("Build and average the cross-products");
   expect(calculation.headings).toContain("Measure residual error and explained variation");
   expect(calculation.headings).toContain("Turn the covariance matrix into the plotted ellipse");
@@ -296,6 +298,19 @@ test("Covariance Lab shows the complete sample calculation", async ({ page }) =>
   expect(rankVisualization.height).toBeGreaterThan(canvasHeightBeforeSpearman);
   expect(rankVisualization.label).toContain("Spearman rank-versus-rank plot");
   await expect(page.locator("#plot-legend")).toContainText("Rank fit (Spearman panel)");
+  await expect(page.locator("#spearman-visual-guide")).toBeVisible();
+  await expect(page.locator("#spearman-visual-guide")).toContainText("positions instead of measurements");
+  await expect(page.locator("#spearman-visual-guide")).toContainText("(x₁, y₁) = (1, 2)");
+  await expect(page.locator("#spearman-visual-guide")).toContainText("(Rx,1, Ry,1) = (1, 1)");
+  await expect(page.locator(".rank-mapping-table tbody tr")).toHaveCount(3);
+  await page.locator("#preset-select").selectOption("monotonic-curve");
+  await expect(page.locator("#input-message")).toContainText("Spearman is 1");
+  const monotonicComparison = await page.evaluate(() => ({
+    spearman: Number(document.querySelector("#canvas").dataset.spearman),
+    guide: document.querySelector("#spearman-visual-guide").textContent,
+  }));
+  expect(monotonicComparison.spearman).toBeCloseTo(1, 12);
+  expect(monotonicComparison.guide).toContain("describe the pattern differently");
   await page.locator("#measure-kendall").check();
   await page.locator("#measure-distance").check();
   await expect(page.locator(".optional-measure-step")).toHaveCount(3);
@@ -321,6 +336,7 @@ test("Covariance Lab contains wide formulas and tables on mobile", async ({ page
     const calculation = document.querySelector(".calculation-section").getBoundingClientRect();
     const tableWrap = document.querySelector(".calculation-table-wrap");
     const formulaBoxes = [...document.querySelectorAll(".live-formula")];
+    const guide = document.querySelector("#spearman-visual-guide").getBoundingClientRect();
     return {
       pageWidth: document.documentElement.scrollWidth,
       viewportWidth: document.documentElement.clientWidth,
@@ -329,6 +345,8 @@ test("Covariance Lab contains wide formulas and tables on mobile", async ({ page
       tableClientWidth: tableWrap.clientWidth,
       tableScrollWidth: tableWrap.scrollWidth,
       formulasContainOverflow: formulaBoxes.every((box) => getComputedStyle(box).overflowX === "auto"),
+      guideLeft: guide.left,
+      guideRight: guide.right,
     };
   });
 
@@ -337,6 +355,8 @@ test("Covariance Lab contains wide formulas and tables on mobile", async ({ page
   expect(layout.calculationRight).toBeLessThanOrEqual(layout.viewportWidth + 1);
   expect(layout.tableScrollWidth).toBeGreaterThan(layout.tableClientWidth);
   expect(layout.formulasContainOverflow).toBe(true);
+  expect(layout.guideLeft).toBeGreaterThanOrEqual(0);
+  expect(layout.guideRight).toBeLessThanOrEqual(layout.viewportWidth + 1);
 });
 
 test("Eigenvalues tool plots v, Av, and the matrix basis", async ({ page }) => {
