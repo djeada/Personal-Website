@@ -109,6 +109,18 @@ test("unlabelled ASCII diagrams keep their top border", async ({ page }) => {
   await expect(tileDiagram).toHaveText(/^\+-----------------------\+-----------------------\+/);
 });
 
+test("ASCII diagrams preserve leading indentation on their first lines", async ({ page }) => {
+  await page.goto(articles[0], { waitUntil: "domcontentloaded" });
+
+  const scatterDiagram = page.locator("#article-body pre code", {
+    hasText: "Scatter:",
+  });
+
+  await expect(scatterDiagram).toHaveText(
+    /^Scatter:\n {7}\+-----------------------\+\n {7}\|          ABC          \|/,
+  );
+});
+
 test("article actions align with the metadata header on desktop", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto(

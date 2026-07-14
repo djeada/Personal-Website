@@ -203,7 +203,95 @@ function ranks(values) {
     return result;
 }
 
-function summarize(points) {
+function kendallTauB(xs, ys) {
+    let concordant = 0;
+    let discordant = 0;
+    let tiesX = 0;
+    let tiesY = 0;
+    let tiesBoth = 0;
+
+    for (let i = 0; i < xs.length - 1; i++) {
+        for (let j = i + 1; j < xs.length; j++) {
+            const dx = xs[j] - xs[i];
+            const dy = ys[j] - ys[i];
+            if (dx === 0 && dy === 0) tiesBoth++;
+            else if (dx === 0) tiesX++;
+            else if (dy === 0) tiesY++;
+            else if (dx * dy > 0) concordant++;
+            else discordant++;
+        }
+    }
+
+    const denominator = Math.sqrt(
+        (concordant + discordant + tiesX) * (concordant + discordant + tiesY)
+    );
+    return {
+        value: denominator === 0 ? Number.NaN : (concordant - discordant) / denominator,
+        concordant,
+        discordant,
+        tiesX,
+        tiesY,
+        tiesBoth,
+        denominator,
+        totalPairs: xs.length * (xs.length - 1) / 2
+    };
+}
+
+function doubleCenteredDistances(values) {
+    const n = values.length;
+    const distances = Array.from({ length: n }, (_, i) =>
+        Array.from({ length: n }, (_, j) => Math.abs(values[i] - values[j]))
+    );
+    const rowMeans = distances.map(row => row.reduce((sum, value) => sum + value, 0) / n);
+    const grandMean = rowMeans.reduce((sum, value) => sum + value, 0) / n;
+    const centered = distances.map((row, i) =>
+        row.map((value, j) => value - rowMeans[i] - rowMeans[j] + grandMean)
+    );
+    return { distances, rowMeans, grandMean, centered };
+}
+
+function distanceCorrelation(xs, ys) {
+    const centeredX = doubleCenteredDistances(xs);
+    const centeredY = doubleCenteredDistances(ys);
+    const nSquared = xs.length * xs.length;
+    let crossSum = 0;
+    let squareSumX = 0;
+    let squareSumY = 0;
+
+    for (let i = 0; i < xs.length; i++) {
+        for (let j = 0; j < xs.length; j++) {
+            const a = centeredX.centered[i][j];
+            const b = centeredY.centered[i][j];
+            crossSum += a * b;
+            squareSumX += a * a;
+            squareSumY += b * b;
+        }
+    }
+
+    const covarianceSquared = Math.max(0, crossSum / nSquared);
+    const varianceXSquared = Math.max(0, squareSumX / nSquared);
+    const varianceYSquared = Math.max(0, squareSumY / nSquared);
+    const denominator = Math.sqrt(varianceXSquared * varianceYSquared);
+    const correlationSquared = denominator === 0
+        ? Number.NaN
+        : Math.max(0, Math.min(1, covarianceSquared / denominator));
+
+    return {
+        value: Number.isFinite(correlationSquared) ? Math.sqrt(correlationSquared) : Number.NaN,
+        correlationSquared,
+        covarianceSquared,
+        varianceXSquared,
+        varianceYSquared,
+        crossSum,
+        squareSumX,
+        squareSumY,
+        nSquared,
+        grandMeanX: centeredX.grandMean,
+        grandMeanY: centeredY.grandMean
+    };
+}
+
+function summarize(points, measures = {}) {
     const xs = points.map(point => point.x);
     const ys = points.map(point => point.y);
     const sumX = xs.reduce((sum, value) => sum + value, 0);
@@ -241,18 +329,29 @@ function summarize(points) {
     const sse = residuals.reduce((sum, value) => sum + value * value, 0);
     const sst = ys.reduce((sum, value) => sum + Math.pow(value - meanY, 2), 0);
     const r2 = sst === 0 ? Number.NaN : 1 - sse / sst;
-    const rankX = ranks(xs);
-    const rankY = ranks(ys);
-    const rankMeanX = mean(rankX);
-    const rankMeanY = mean(rankY);
-    const rankCov = sampleCovariance(rankX, rankY, rankMeanX, rankMeanY);
-    const rankStdX = sampleStd(rankX, rankMeanX);
-    const rankStdY = sampleStd(rankY, rankMeanY);
-    const spearman = pearson(rankCov, rankStdX, rankStdY);
-    const sumRankCrossProducts = rankX.reduce(
-        (sum, value, index) => sum + (value - rankMeanX) * (rankY[index] - rankMeanY),
-        0
-    );
+    let rankX = [];
+    let rankY = [];
+    let rankMeanX = Number.NaN;
+    let rankMeanY = Number.NaN;
+    let rankCov = Number.NaN;
+    let rankStdX = Number.NaN;
+    let rankStdY = Number.NaN;
+    let spearman = Number.NaN;
+    let sumRankCrossProducts = Number.NaN;
+    if (measures.spearman) {
+        rankX = ranks(xs);
+        rankY = ranks(ys);
+        rankMeanX = mean(rankX);
+        rankMeanY = mean(rankY);
+        rankCov = sampleCovariance(rankX, rankY, rankMeanX, rankMeanY);
+        rankStdX = sampleStd(rankX, rankMeanX);
+        rankStdY = sampleStd(rankY, rankMeanY);
+        spearman = pearson(rankCov, rankStdX, rankStdY);
+        sumRankCrossProducts = rankX.reduce(
+            (sum, value, index) => sum + (value - rankMeanX) * (rankY[index] - rankMeanY),
+            0
+        );
+    }
     const ellipseTrace = varianceX + varianceY;
     const ellipseDelta = Math.sqrt(Math.pow(varianceX - varianceY, 2) + 4 * cov * cov);
     const ellipseLambda1 = Math.max(0, (ellipseTrace + ellipseDelta) / 2);
@@ -268,6 +367,8 @@ function summarize(points) {
         radius1: 2 * Math.sqrt(ellipseLambda1),
         radius2: 2 * Math.sqrt(ellipseLambda2)
     };
+    const kendall = measures.kendall ? kendallTauB(xs, ys) : null;
+    const distance = measures.distance ? distanceCorrelation(xs, ys) : null;
 
     return {
         points,
@@ -306,6 +407,8 @@ function summarize(points) {
         rankStdY,
         sumRankCrossProducts,
         spearman,
+        kendall,
+        distance,
         ellipse,
         minX: Math.min(...xs),
         maxX: Math.max(...xs),
@@ -502,7 +605,7 @@ function draw() {
         return;
     }
 
-    const summary = summarize(points);
+    const summary = summarize(points, selectedCorrelationMeasures());
     message.textContent = activeMessage || currentPresetNote();
     message.classList.remove("error");
     drawVisualization(ctx, dimensions, summary);
@@ -878,7 +981,15 @@ function relationshipDescription(summary) {
     return `For this dataset, r indicates a ${strength} ${direction} linear association. This describes association, not causation.`;
 }
 
-function renderCalculations(summary) {
+function selectedCorrelationMeasures() {
+    return {
+        spearman: Boolean(document.getElementById("measure-spearman")?.checked),
+        kendall: Boolean(document.getElementById("measure-kendall")?.checked),
+        distance: Boolean(document.getElementById("measure-distance")?.checked)
+    };
+}
+
+function renderCalculations(summary, measures = selectedCorrelationMeasures()) {
     const container = document.getElementById("calculation-content");
     if (!container) return;
     if (!summary) {
@@ -901,6 +1012,66 @@ function renderCalculations(summary) {
     const regressionExplanation = summary.sumSquaresX === 0
         ? "All x values are identical, so there is no x variation from which to estimate a unique slope. The plot uses the mean of y as a clearly identified fallback."
         : "The slope uses the same cross-product sum divided by x's squared-deviation sum. The intercept makes the line pass through \\(\\bar{x},\\bar{y}\\).";
+    let nextStepNumber = 7;
+    const optionalSteps = [];
+    if (measures.spearman) {
+        optionalSteps.push(String.raw`
+            <article class="calculation-step optional-measure-step" data-measure="spearman">
+                <span class="step-number">${nextStepNumber++}</span>
+                <div>
+                    <h3>Compute Spearman rank correlation</h3>
+                    <p>Replace x and y by their average ranks, then run the same standardized covariance calculation on those ranks.</p>
+                    <div class="live-formula">
+                        \[\widehat{\sigma}_{R_xR_y}=\frac{${latexNumber(summary.sumRankCrossProducts)}}{${nMinusOne}}=${latexNumber(summary.rankCov)}\]
+                        \[\rho_s=\frac{\widehat{\sigma}_{R_xR_y}}{\widehat{\sigma}_{R_x}\widehat{\sigma}_{R_y}}=\frac{${latexNumber(summary.rankCov)}}{${latexNumber(summary.rankStdX)}\cdot ${latexNumber(summary.rankStdY)}}=${latexNumber(summary.spearman)}\]
+                    </div>
+                    <p class="result-meaning"><strong>Use it for:</strong> monotonic relationships where values generally move in one direction, even when the pattern is not a straight line.</p>
+                </div>
+            </article>`);
+    }
+    if (measures.kendall) {
+        optionalSteps.push(String.raw`
+            <article class="calculation-step optional-measure-step" data-measure="kendall">
+                <span class="step-number">${nextStepNumber++}</span>
+                <div>
+                    <h3>Count pairs for Kendall τ<sub>b</sub></h3>
+                    <p>Among ${summary.kendall.totalPairs} unordered pairs, count concordant, discordant, and tied comparisons.</p>
+                    <div class="measure-counts">
+                        <span>C = ${summary.kendall.concordant}</span><span>D = ${summary.kendall.discordant}</span>
+                        <span>T<sub>x</sub> = ${summary.kendall.tiesX}</span><span>T<sub>y</sub> = ${summary.kendall.tiesY}</span>
+                        <span>T<sub>both</sub> = ${summary.kendall.tiesBoth}</span>
+                    </div>
+                    <div class="live-formula">
+                        \[\tau_b=\frac{C-D}{\sqrt{(C+D+T_x)(C+D+T_y)}}\]
+                        \[\tau_b=\frac{${summary.kendall.concordant}-${summary.kendall.discordant}}{${latexNumber(summary.kendall.denominator)}}=${latexNumber(summary.kendall.value)}\]
+                    </div>
+                    <p class="result-meaning"><strong>Use it for:</strong> ordinal or small datasets, especially when pair ordering and ties should be explicit.</p>
+                </div>
+            </article>`);
+    }
+    if (measures.distance) {
+        optionalSteps.push(String.raw`
+            <article class="calculation-step optional-measure-step" data-measure="distance">
+                <span class="step-number">${nextStepNumber++}</span>
+                <div>
+                    <h3>Double-center distances for distance correlation</h3>
+                    <p>Form all ${summary.distance.nSquared} ordered pairwise distances, subtract row and column means, add the grand mean, and combine the centered matrices.</p>
+                    <div class="live-formula">
+                        \[\sum_{i,j}A_{ij}B_{ij}=${latexNumber(summary.distance.crossSum)},\quad \sum_{i,j}A_{ij}^2=${latexNumber(summary.distance.squareSumX)},\quad \sum_{i,j}B_{ij}^2=${latexNumber(summary.distance.squareSumY)}\]
+                        \[\mathcal{V}_n^2(X,Y)=\frac{${latexNumber(summary.distance.crossSum)}}{${summary.distance.nSquared}}=${latexNumber(summary.distance.covarianceSquared)}\]
+                        \[\mathcal{R}_n=\sqrt{\frac{${latexNumber(summary.distance.covarianceSquared)}}{\sqrt{${latexNumber(summary.distance.varianceXSquared)}\cdot ${latexNumber(summary.distance.varianceYSquared)}}}}=${latexNumber(summary.distance.value)}\]
+                    </div>
+                    <p class="result-meaning"><strong>Use it for:</strong> linear or nonlinear dependence. Distance correlation has magnitude only, so it does not report a positive or negative direction.</p>
+                </div>
+            </article>`);
+    }
+    const ellipseStepNumber = nextStepNumber;
+    const rankHeaderCells = measures.spearman
+        ? '<th scope="col">Rank x</th><th scope="col">Rank y</th>'
+        : "";
+    const rankFooterCells = measures.spearman
+        ? `<td>${formatDetailedNumber(summary.rankX.reduce((sum, value) => sum + value, 0))}</td><td>${formatDetailedNumber(summary.rankY.reduce((sum, value) => sum + value, 0))}</td>`
+        : "";
     const contributionRows = summary.deviations.map((row, index) => `
         <tr>
             <th scope="row">${index + 1}</th>
@@ -911,8 +1082,7 @@ function renderCalculations(summary) {
             <td>${formatDetailedNumber(row.crossProduct)}</td>
             <td>${formatDetailedNumber(row.squareX)}</td>
             <td>${formatDetailedNumber(row.squareY)}</td>
-            <td>${formatDetailedNumber(summary.rankX[index])}</td>
-            <td>${formatDetailedNumber(summary.rankY[index])}</td>
+            ${measures.spearman ? `<td>${formatDetailedNumber(summary.rankX[index])}</td><td>${formatDetailedNumber(summary.rankY[index])}</td>` : ""}
             <td>${formatDetailedNumber(summary.fittedValues[index])}</td>
             <td>${formatDetailedNumber(summary.residuals[index])}</td>
         </tr>
@@ -938,7 +1108,7 @@ function renderCalculations(summary) {
                     <p>Each row contributes \((x_i-\bar{x})(y_i-\bar{y})\). The contribution table shows every value used in this sum.</p>
                     <div class="live-formula">
                         \[\sum_{i=1}^{${summary.n}}(x_i-\bar{x})(y_i-\bar{y})=${latexNumber(summary.sumCrossProducts)}\]
-                        \[s_{xy}=\frac{${latexNumber(summary.sumCrossProducts)}}{${nMinusOne}}=${latexNumber(summary.cov)}\]
+                        \[\widehat{\sigma}_{xy}=\frac{${latexNumber(summary.sumCrossProducts)}}{${nMinusOne}}=${latexNumber(summary.cov)}\]
                     </div>
                     <p class="result-meaning"><strong>Meaning:</strong> The covariance is ${covarianceDirection}. Its units depend on the units of x and y.</p>
                 </div>
@@ -949,8 +1119,8 @@ function renderCalculations(summary) {
                     <h3>Find each sample standard deviation</h3>
                     <p>Square each deviation, add the squares, divide by \(n-1\), then take the square root.</p>
                     <div class="live-formula">
-                        \[s_x^2=\frac{${latexNumber(summary.sumSquaresX)}}{${nMinusOne}}=${latexNumber(summary.varianceX)},\qquad s_x=\sqrt{${latexNumber(summary.varianceX)}}=${latexNumber(summary.stdX)}\]
-                        \[s_y^2=\frac{${latexNumber(summary.sumSquaresY)}}{${nMinusOne}}=${latexNumber(summary.varianceY)},\qquad s_y=\sqrt{${latexNumber(summary.varianceY)}}=${latexNumber(summary.stdY)}\]
+                        \[\widehat{\sigma}_x^2=\frac{${latexNumber(summary.sumSquaresX)}}{${nMinusOne}}=${latexNumber(summary.varianceX)},\qquad \widehat{\sigma}_x=\sqrt{${latexNumber(summary.varianceX)}}=${latexNumber(summary.stdX)}\]
+                        \[\widehat{\sigma}_y^2=\frac{${latexNumber(summary.sumSquaresY)}}{${nMinusOne}}=${latexNumber(summary.varianceY)},\qquad \widehat{\sigma}_y=\sqrt{${latexNumber(summary.varianceY)}}=${latexNumber(summary.stdY)}\]
                     </div>
                 </div>
             </article>
@@ -986,24 +1156,14 @@ function renderCalculations(summary) {
                     </div>
                 </div>
             </article>
+            ${optionalSteps.join("")}
             <article class="calculation-step">
-                <span class="step-number">7</span>
-                <div>
-                    <h3>Repeat Pearson's calculation on ranks</h3>
-                    <p>The Rank x and Rank y columns show the replacement values; ties receive their average rank.</p>
-                    <div class="live-formula">
-                        \[s_{R_xR_y}=\frac{${latexNumber(summary.sumRankCrossProducts)}}{${nMinusOne}}=${latexNumber(summary.rankCov)}\]
-                        \[\rho_s=\frac{${latexNumber(summary.rankCov)}}{${latexNumber(summary.rankStdX)}\cdot ${latexNumber(summary.rankStdY)}}=${latexNumber(summary.spearman)}\]
-                    </div>
-                </div>
-            </article>
-            <article class="calculation-step">
-                <span class="step-number">8</span>
+                <span class="step-number">${ellipseStepNumber}</span>
                 <div>
                     <h3>Turn the covariance matrix into the plotted ellipse</h3>
                     <p>The covariance matrix stores x variance, y variance, and their covariance. Its eigenvalues give the principal variances; the plot uses twice their square roots as the two semi-axis lengths.</p>
                     <div class="live-formula">
-                        \[\mathbf{S}=\begin{bmatrix}s_x^2&s_{xy}\\s_{xy}&s_y^2\end{bmatrix}=\begin{bmatrix}${latexNumber(summary.varianceX)}&${latexNumber(summary.cov)}\\${latexNumber(summary.cov)}&${latexNumber(summary.varianceY)}\end{bmatrix}\]
+                        \[\widehat{\boldsymbol{\Sigma}}=\begin{bmatrix}\widehat{\sigma}_x^2&\widehat{\sigma}_{xy}\\\widehat{\sigma}_{xy}&\widehat{\sigma}_y^2\end{bmatrix}=\begin{bmatrix}${latexNumber(summary.varianceX)}&${latexNumber(summary.cov)}\\${latexNumber(summary.cov)}&${latexNumber(summary.varianceY)}\end{bmatrix}\]
                         \[\lambda_1=${latexNumber(summary.ellipse.lambda1)},\qquad \lambda_2=${latexNumber(summary.ellipse.lambda2)},\qquad \theta=${latexNumber(summary.ellipse.angleDegrees)}^{\circ}\]
                         \[a=2\sqrt{\lambda_1}=${latexNumber(summary.ellipse.radius1)},\qquad b=2\sqrt{\lambda_2}=${latexNumber(summary.ellipse.radius2)}\]
                     </div>
@@ -1015,13 +1175,13 @@ function renderCalculations(summary) {
             <summary>Inspect all ${summary.n} point contributions</summary>
             <p>These are the actual intermediate values used above. Scroll horizontally on a small screen.</p>
             <div class="calculation-table-wrap">
-                <table class="calculation-table">
+                <table class="calculation-table${measures.spearman ? " with-ranks" : ""}">
                     <thead>
                         <tr>
                             <th scope="col">i</th><th scope="col">xᵢ</th><th scope="col">yᵢ</th>
                             <th scope="col">xᵢ − x̄</th><th scope="col">yᵢ − ȳ</th><th scope="col">deviation product</th>
                             <th scope="col">x deviation²</th><th scope="col">y deviation²</th>
-                            <th scope="col">Rank x</th><th scope="col">Rank y</th><th scope="col">ŷᵢ</th><th scope="col">eᵢ</th>
+                            ${rankHeaderCells}<th scope="col">ŷᵢ</th><th scope="col">eᵢ</th>
                         </tr>
                     </thead>
                     <tbody>${contributionRows}</tbody>
@@ -1030,8 +1190,7 @@ function renderCalculations(summary) {
                             <th scope="row">Sum</th><td>${formatDetailedNumber(summary.sumX)}</td><td>${formatDetailedNumber(summary.sumY)}</td>
                             <td>0</td><td>0</td><td>${formatDetailedNumber(summary.sumCrossProducts)}</td>
                             <td>${formatDetailedNumber(summary.sumSquaresX)}</td><td>${formatDetailedNumber(summary.sumSquaresY)}</td>
-                            <td>${formatDetailedNumber(summary.rankX.reduce((sum, value) => sum + value, 0))}</td>
-                            <td>${formatDetailedNumber(summary.rankY.reduce((sum, value) => sum + value, 0))}</td>
+                            ${rankFooterCells}
                             <td>—</td><td>${formatDetailedNumber(summary.residuals.reduce((sum, value) => sum + value, 0))}</td>
                         </tr>
                     </tfoot>
@@ -1044,11 +1203,27 @@ function renderCalculations(summary) {
 
 function renderStats(summary) {
     const grid = document.getElementById("stats-grid");
-    renderCalculations(summary);
+    const measures = selectedCorrelationMeasures();
+    renderCalculations(summary, measures);
     if (!summary) {
         grid.innerHTML = "";
         return;
     }
+
+    const optionalResults = [
+        measures.spearman ? { name: "Spearman ρₛ", value: summary.spearman, note: "monotonic rank association" } : null,
+        measures.kendall ? { name: "Kendall τᵦ", value: summary.kendall.value, note: "concordant versus discordant pairs" } : null,
+        measures.distance ? { name: "Distance ℛ", value: summary.distance.value, note: "general dependence magnitude" } : null
+    ].filter(Boolean);
+    const optionalCard = optionalResults.length === 0 ? "" : `
+        <article class="stat-card wide-stat optional-results-card">
+            <h3>Selected additional measures</h3>
+            <div class="optional-results-grid">
+                ${optionalResults.map(result => `
+                    <div><span>${result.name}</span><strong>${formatNumber(result.value)}</strong><small>${result.note}</small></div>
+                `).join("")}
+            </div>
+        </article>`;
 
     grid.innerHTML = `
         <article class="stat-card">
@@ -1056,7 +1231,7 @@ function renderStats(summary) {
             <table class="stat-table">
                 <tbody>
                     <tr><th>n</th><td>${summary.n}</td><th>Pearson r</th><td>${formatNumber(summary.r)}</td></tr>
-                    <tr><th>R²</th><td>${formatNumber(summary.r2)}</td><th>Spearman ρ</th><td>${formatNumber(summary.spearman)}</td></tr>
+                    <tr><th>R²</th><td>${formatNumber(summary.r2)}</td><th>SSE</th><td>${formatNumber(summary.sse)}</td></tr>
                     <tr><th>Slope</th><td>${formatNumber(summary.slope)}</td><th>Intercept</th><td>${formatNumber(summary.intercept)}</td></tr>
                 </tbody>
             </table>
@@ -1066,13 +1241,14 @@ function renderStats(summary) {
             <table class="stat-table">
                 <tbody>
                     <tr><th>Mean x</th><td>${formatNumber(summary.meanX)}</td><th>Mean y</th><td>${formatNumber(summary.meanY)}</td></tr>
-                    <tr><th>Sample sₓ</th><td>${formatNumber(summary.stdX)}</td><th>Sample sᵧ</th><td>${formatNumber(summary.stdY)}</td></tr>
-                    <tr><th>Sample sₓᵧ</th><td>${formatNumber(summary.cov)}</td><th>Residual std</th><td>${formatNumber(summary.residualStd)}</td></tr>
+                    <tr><th>Sample σ̂ₓ</th><td>${formatNumber(summary.stdX)}</td><th>Sample σ̂ᵧ</th><td>${formatNumber(summary.stdY)}</td></tr>
+                    <tr><th>Sample σ̂ₓᵧ</th><td>${formatNumber(summary.cov)}</td><th>Residual std</th><td>${formatNumber(summary.residualStd)}</td></tr>
                 </tbody>
             </table>
         </article>
+        ${optionalCard}
         <article class="stat-card wide-stat">
-            <h3>Covariance matrix</h3>
+            <h3>Sample covariance matrix Σ̂</h3>
             <table class="matrix-table">
                 <tbody>
                     <tr><th></th><th>x</th><th>y</th></tr>

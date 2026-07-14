@@ -214,12 +214,28 @@ test("Covariance Lab shows the complete sample calculation", async ({ page }) =>
       { x: 2, y: 4 },
       { x: 3, y: 5 },
     ];
-    const summary = window.CovarianceLabDebug.summarize(points);
+    const allMeasures = { spearman: true, kendall: true, distance: true };
+    const summary = window.CovarianceLabDebug.summarize(points, allMeasures);
+    const perfect = window.CovarianceLabDebug.summarize([
+      { x: 1, y: 2 },
+      { x: 2, y: 4 },
+      { x: 3, y: 6 },
+      { x: 4, y: 8 },
+    ], allMeasures);
+    const tied = window.CovarianceLabDebug.summarize([
+      { x: 1, y: 1 },
+      { x: 1, y: 2 },
+      { x: 2, y: 3 },
+    ], allMeasures);
     return {
       summary,
+      perfect,
+      tied,
       steps: document.querySelectorAll(".calculation-step").length,
       contributionRows: document.querySelectorAll(".calculation-table tbody tr").length,
       headings: [...document.querySelectorAll(".calculation-step h3")].map((heading) => heading.textContent),
+      optionalChecked: [...document.querySelectorAll(".optional-measures-panel input")].map((input) => input.checked),
+      optionalCardVisible: Boolean(document.querySelector(".optional-results-card")),
       hasMathJaxLoader: Boolean(document.querySelector('script[src*="mathjax@3"]')),
       workedText: document.querySelector("#calculation-content").textContent,
     };
@@ -234,18 +250,41 @@ test("Covariance Lab shows the complete sample calculation", async ({ page }) =>
   expect(calculation.summary.r).toBeCloseTo(3 / Math.sqrt(28 / 3), 12);
   expect(calculation.summary.slope).toBeCloseTo(1.5, 12);
   expect(calculation.summary.intercept).toBeCloseTo(2 / 3, 12);
-  expect(calculation.steps).toBe(8);
+  expect(calculation.summary.spearman).toBeCloseTo(1, 12);
+  expect(calculation.summary.kendall.value).toBeCloseTo(1, 12);
+  expect(calculation.summary.kendall.concordant).toBe(3);
+  expect(calculation.perfect.distance.value).toBeCloseTo(1, 12);
+  expect(calculation.tied.kendall.concordant).toBe(2);
+  expect(calculation.tied.kendall.tiesX).toBe(1);
+  expect(calculation.tied.kendall.value).toBeCloseTo(2 / Math.sqrt(6), 12);
+  expect(calculation.steps).toBe(7);
   expect(calculation.contributionRows).toBe(3);
+  expect(calculation.optionalChecked).toEqual([false, false, false]);
+  expect(calculation.optionalCardVisible).toBe(false);
   expect(calculation.headings).toContain("Build and average the cross-products");
   expect(calculation.headings).toContain("Measure residual error and explained variation");
   expect(calculation.headings).toContain("Turn the covariance matrix into the plotted ellipse");
   expect(calculation.hasMathJaxLoader).toBe(true);
   expect(calculation.workedText).toContain("Inspect all 3 point contributions");
+
+  await page.locator("#measure-spearman").check();
+  await page.locator("#measure-kendall").check();
+  await page.locator("#measure-distance").check();
+  await expect(page.locator(".optional-measure-step")).toHaveCount(3);
+  await expect(page.locator(".optional-results-card")).toContainText("Spearman ρₛ");
+  await expect(page.locator(".optional-results-card")).toContainText("Kendall τᵦ");
+  await expect(page.locator(".optional-results-card")).toContainText("Distance ℛ");
+  await expect(page.locator(".calculation-step")).toHaveCount(10);
+  await expect(page.locator(".calculation-table thead")).toContainText("Rank x");
 });
 
 test("Covariance Lab contains wide formulas and tables on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/tools/correlation_visualizer/", { waitUntil: "domcontentloaded" });
+  await page.locator("#measure-spearman").check();
+  await page.locator("#measure-kendall").check();
+  await page.locator("#measure-distance").check();
+  await expect(page.locator(".optional-measure-step")).toHaveCount(3);
 
   const layout = await page.evaluate(() => {
     const calculation = document.querySelector(".calculation-section").getBoundingClientRect();

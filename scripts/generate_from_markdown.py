@@ -263,7 +263,10 @@ class HtmlEnhancer:
             if language in {"c++", "cpp", "c"}:
                 language = "clike"
 
-            code_sample = match.group("code").strip()
+            # The opening-fence newline is excluded by the pattern. Remove only
+            # the matching newline before the closing fence; ``strip()`` also
+            # removed meaningful indentation from the first and last lines.
+            code_sample = re.sub(r"\r?\n\Z", "", match.group("code"))
             code_sample = re.sub(r"<", "&lt;", code_sample)
             code_sample = re.sub(r">", "&gt;", code_sample)
             code_sample = re.sub(r"&lt;p&gt;", "", code_sample)
