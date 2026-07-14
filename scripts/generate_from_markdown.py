@@ -248,7 +248,11 @@ class HtmlEnhancer:
     @classmethod
     def apply_prism_for_code_samples(cls, html: str) -> str:
         pattern = re.compile(
-            r"(?:<p>)?```(?:\s*(?P<lang>[\w+-]+))?\s*\n(?P<code>.*?)```(?:</p>)?",
+            # Fence metadata is confined to the opening fence's line.  Using
+            # ``\s`` here used to cross the newline after a bare fence, so a
+            # first code line such as ``+------+`` was mistaken for a Prism
+            # language and disappeared from the rendered block.
+            r"(?:<p>)?```[ \t]*(?:(?P<lang>[\w+-]+)[ \t]*)?\r?\n(?P<code>.*?)```(?:</p>)?",
             re.DOTALL,
         )
 

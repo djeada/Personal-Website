@@ -203,6 +203,72 @@ test("Covariance Lab scales for the full ellipse and plot-wide fit line", async 
   expect(geometry.scaleMax).toBeGreaterThan(geometry.domain.maxX);
 });
 
+test("Covariance Lab shows the complete sample calculation", async ({ page }) => {
+  await page.goto("/tools/correlation_visualizer/", { waitUntil: "domcontentloaded" });
+  await page.locator("#dataset-points").fill("1, 2\n2, 4\n3, 5");
+  await page.locator(".draw-button").click();
+
+  const calculation = await page.evaluate(() => {
+    const points = [
+      { x: 1, y: 2 },
+      { x: 2, y: 4 },
+      { x: 3, y: 5 },
+    ];
+    const summary = window.CovarianceLabDebug.summarize(points);
+    return {
+      summary,
+      steps: document.querySelectorAll(".calculation-step").length,
+      contributionRows: document.querySelectorAll(".calculation-table tbody tr").length,
+      headings: [...document.querySelectorAll(".calculation-step h3")].map((heading) => heading.textContent),
+      hasMathJaxLoader: Boolean(document.querySelector('script[src*="mathjax@3"]')),
+      workedText: document.querySelector("#calculation-content").textContent,
+    };
+  });
+
+  expect(calculation.summary.meanX).toBeCloseTo(2, 12);
+  expect(calculation.summary.meanY).toBeCloseTo(11 / 3, 12);
+  expect(calculation.summary.sumCrossProducts).toBeCloseTo(3, 12);
+  expect(calculation.summary.sumSquaresX).toBeCloseTo(2, 12);
+  expect(calculation.summary.sumSquaresY).toBeCloseTo(14 / 3, 12);
+  expect(calculation.summary.cov).toBeCloseTo(1.5, 12);
+  expect(calculation.summary.r).toBeCloseTo(3 / Math.sqrt(28 / 3), 12);
+  expect(calculation.summary.slope).toBeCloseTo(1.5, 12);
+  expect(calculation.summary.intercept).toBeCloseTo(2 / 3, 12);
+  expect(calculation.steps).toBe(8);
+  expect(calculation.contributionRows).toBe(3);
+  expect(calculation.headings).toContain("Build and average the cross-products");
+  expect(calculation.headings).toContain("Measure residual error and explained variation");
+  expect(calculation.headings).toContain("Turn the covariance matrix into the plotted ellipse");
+  expect(calculation.hasMathJaxLoader).toBe(true);
+  expect(calculation.workedText).toContain("Inspect all 3 point contributions");
+});
+
+test("Covariance Lab contains wide formulas and tables on mobile", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/tools/correlation_visualizer/", { waitUntil: "domcontentloaded" });
+
+  const layout = await page.evaluate(() => {
+    const calculation = document.querySelector(".calculation-section").getBoundingClientRect();
+    const tableWrap = document.querySelector(".calculation-table-wrap");
+    const formulaBoxes = [...document.querySelectorAll(".live-formula")];
+    return {
+      pageWidth: document.documentElement.scrollWidth,
+      viewportWidth: document.documentElement.clientWidth,
+      calculationLeft: calculation.left,
+      calculationRight: calculation.right,
+      tableClientWidth: tableWrap.clientWidth,
+      tableScrollWidth: tableWrap.scrollWidth,
+      formulasContainOverflow: formulaBoxes.every((box) => getComputedStyle(box).overflowX === "auto"),
+    };
+  });
+
+  expect(layout.pageWidth).toBeLessThanOrEqual(layout.viewportWidth + 1);
+  expect(layout.calculationLeft).toBeGreaterThanOrEqual(0);
+  expect(layout.calculationRight).toBeLessThanOrEqual(layout.viewportWidth + 1);
+  expect(layout.tableScrollWidth).toBeGreaterThan(layout.tableClientWidth);
+  expect(layout.formulasContainOverflow).toBe(true);
+});
+
 test("Eigenvalues tool plots v, Av, and the matrix basis", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/tools/eigenvalues/", { waitUntil: "domcontentloaded" });

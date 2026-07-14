@@ -22,6 +22,8 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="ie-edge" http-equiv="X-UA-Compatible" />
     <link href="https://adamdjellouli.com/tools/correlation_visualizer/" rel="canonical" />
+    <script src="../shared/mathjax-config.js"></script>
+    <script async="" id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script id="structured-data" type="application/ld+json">
         {
             "@context": "https://schema.org",
@@ -156,6 +158,17 @@
                 <div aria-live="polite" class="stats-grid" id="stats-grid"></div>
             </div>
         </div>
+        <section aria-labelledby="worked-calculation-heading" class="calculation-section">
+            <div class="calculation-header">
+                <div>
+                    <p class="eyebrow">Current dataset, worked by hand</p>
+                    <h2 id="worked-calculation-heading">How every result is calculated</h2>
+                    <p>The values below update with the points above. This tool treats the entered pairs as a <strong>sample</strong>, so variance and covariance use <strong>n − 1</strong>. Open the contribution table to inspect every term in the sums.</p>
+                </div>
+                <span class="sample-badge">Sample statistics</span>
+            </div>
+            <div aria-live="polite" class="calculation-content" id="calculation-content"></div>
+        </section>
         <section aria-label="Relationship summary" class="teaching-panel">
             <div>
                 <h2>What to compare</h2>
@@ -176,26 +189,62 @@
             </div>
             <div class="explanation-content">
                 <div class="explanation-card">
-                    <h3>Covariance</h3>
-                    <p>Covariance averages the products of each point's deviations from the x and y means. Positive covariance means points often sit in the same-side mean quadrants. Negative covariance means points often sit in opposite-side quadrants.</p>
+                    <h3>1. Center each variable</h3>
+                    <p>Start with the arithmetic means. A deviation records how far a value lies from its variable's center. Deviations above the mean are positive; deviations below it are negative.</p>
                     <div class="formula-box">
-                        <p><strong>cov(x,y) = sum((x_i - mean(x))(y_i - mean(y))) / (n - 1)</strong></p>
+                        <p>\[\bar{x}=\frac{1}{n}\sum_{i=1}^{n}x_i,\qquad \bar{y}=\frac{1}{n}\sum_{i=1}^{n}y_i\]</p>
+                        <p>\[d_{x,i}=x_i-\bar{x},\qquad d_{y,i}=y_i-\bar{y}\]</p>
                     </div>
                 </div>
                 <div class="explanation-card">
-                    <h3>Pearson Correlation</h3>
-                    <p>Pearson r divides covariance by the two sample standard deviations. This removes units and makes the result easier to compare across datasets.</p>
+                    <h3>2. Sample covariance</h3>
+                    <p>Multiply the two deviations for each pair. Same-sign deviations contribute positively; opposite-sign deviations contribute negatively. Their sum is divided by <strong>n − 1</strong> because the displayed calculation estimates covariance from a sample.</p>
                     <div class="formula-box">
-                        <p><strong>r = cov(x,y) / (std(x) std(y))</strong></p>
+                        <p>\[s_{xy}=\operatorname{Cov}(X,Y)=\frac{\sum_{i=1}^{n}(x_i-\bar{x})(y_i-\bar{y})}{n-1}\]</p>
+                    </div>
+                    <p>Covariance has compound units: if x is measured in hours and y in euros, covariance is measured in hour-euros. Its sign is directly interpretable, but its magnitude depends on both scales.</p>
+                </div>
+                <div class="explanation-card">
+                    <h3>3. Standard deviations and Pearson correlation</h3>
+                    <p>Sample standard deviations measure the separate spread of x and y. Dividing covariance by both spreads removes units. Pearson's r therefore always lies between −1 and 1 when both variables vary.</p>
+                    <div class="formula-box">
+                        <p>\[s_x=\sqrt{\frac{\sum_{i=1}^{n}(x_i-\bar{x})^2}{n-1}},\qquad s_y=\sqrt{\frac{\sum_{i=1}^{n}(y_i-\bar{y})^2}{n-1}}\]</p>
+                        <p>\[r=\frac{s_{xy}}{s_xs_y}=\frac{\sum_{i=1}^{n}(x_i-\bar{x})(y_i-\bar{y})}{\sqrt{\sum_{i=1}^{n}(x_i-\bar{x})^2\sum_{i=1}^{n}(y_i-\bar{y})^2}}\]</p>
+                    </div>
+                    <p>A value near zero means little <em>linear</em> association, not necessarily no relationship. The curved preset demonstrates that distinction.</p>
+                </div>
+                <div class="explanation-card">
+                    <h3>4. Least-squares regression and residuals</h3>
+                    <p>The fitted line predicts y from x. Its slope is joint variation divided by x variation. Each residual is the observed y minus the fitted y; least squares chooses the line that minimizes their squared sum.</p>
+                    <div class="formula-box">
+                        <p>\[\hat{y}_i=b_0+b_1x_i,\qquad b_1=\frac{s_{xy}}{s_x^2}=\frac{\sum d_{x,i}d_{y,i}}{\sum d_{x,i}^2},\qquad b_0=\bar{y}-b_1\bar{x}\]</p>
+                        <p>\[e_i=y_i-\hat{y}_i,\qquad \mathrm{SSE}=\sum_{i=1}^{n}e_i^2,\qquad R^2=1-\frac{\mathrm{SSE}}{\sum_{i=1}^{n}(y_i-\bar{y})^2}\]</p>
                     </div>
                 </div>
                 <div class="explanation-card">
-                    <h3>Regression and Residuals</h3>
-                    <p>The least-squares line minimizes the sum of squared vertical residuals. Strong linear correlation usually produces smaller residual spread, but outliers can strongly influence the fitted line.</p>
+                    <h3>5. Spearman rank correlation</h3>
+                    <p>Replace raw x and y values with their ranks, assigning tied observations their average rank, then apply the Pearson formula to those ranks. This measures monotonic ordering rather than specifically straight-line fit.</p>
+                    <div class="formula-box">
+                        <p>\[\rho_s=\operatorname{Corr}\!\left(\operatorname{rank}(X),\operatorname{rank}(Y)\right)\]</p>
+                    </div>
+                    <p>The familiar shortcut \(1-6\sum d_i^2/[n(n^2-1)]\) is exact only when there are no tied ranks, so the tool uses Pearson correlation of average ranks instead.</p>
                 </div>
                 <div class="explanation-card">
-                    <h3>Rank Correlation</h3>
-                    <p>Spearman rho computes Pearson correlation on ranks instead of raw values. It responds to monotonic order even when the relationship is not well described by a straight line.</p>
+                    <h3>Sample versus population</h3>
+                    <p>Use the sample formulas above when the entered observations are a subset used to learn about a larger population. If the points are the entire population, covariance and variance instead divide by n:</p>
+                    <div class="formula-box">
+                        <p>\[\sigma_{xy}=\frac{1}{n}\sum_{i=1}^{n}(x_i-\mu_x)(y_i-\mu_y)\]</p>
+                    </div>
+                    <p>Pearson correlation is unchanged when covariance and both variances consistently use the same convention, because the common denominator cancels.</p>
+                </div>
+                <div class="explanation-card">
+                    <h3>Covariance matrix and ellipse</h3>
+                    <p>The covariance matrix collects both marginal variances and the shared covariance. Its eigenvectors point along the ellipse's principal directions, while its eigenvalues are the variances along those directions.</p>
+                    <div class="formula-box">
+                        <p>\[\mathbf{S}=\begin{bmatrix}s_x^2&s_{xy}\\s_{xy}&s_y^2\end{bmatrix},\qquad \mathbf{S}\mathbf{v}_j=\lambda_j\mathbf{v}_j\]</p>
+                        <p>\[\text{two-standard-deviation semi-axes:}\qquad a=2\sqrt{\lambda_1},\quad b=2\sqrt{\lambda_2}\]</p>
+                    </div>
+                    <p>For a bivariate normal distribution, a two-standard-deviation covariance ellipse encloses about 86.5% of the distribution. A 95% probability ellipse requires scaling by \(\sqrt{\chi^2_{2,0.95}}\approx2.448\), not by 2.</p>
                 </div>
             </div>
         </section>

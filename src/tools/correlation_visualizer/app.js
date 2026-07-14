@@ -179,7 +179,7 @@ function sampleCovariance(xs, ys, meanX, meanY) {
 }
 
 function pearson(cov, stdX, stdY) {
-    if (stdX === 0 || stdY === 0) return 0;
+    if (stdX === 0 || stdY === 0) return Number.NaN;
     return cov / (stdX * stdY);
 }
 
@@ -206,45 +206,107 @@ function ranks(values) {
 function summarize(points) {
     const xs = points.map(point => point.x);
     const ys = points.map(point => point.y);
+    const sumX = xs.reduce((sum, value) => sum + value, 0);
+    const sumY = ys.reduce((sum, value) => sum + value, 0);
     const meanX = mean(xs);
     const meanY = mean(ys);
-    const stdX = sampleStd(xs, meanX);
-    const stdY = sampleStd(ys, meanY);
+    const deviations = points.map((point, index) => {
+        const dx = point.x - meanX;
+        const dy = point.y - meanY;
+        return {
+            index,
+            x: point.x,
+            y: point.y,
+            dx,
+            dy,
+            crossProduct: dx * dy,
+            squareX: dx * dx,
+            squareY: dy * dy
+        };
+    });
+    const sumCrossProducts = deviations.reduce((sum, row) => sum + row.crossProduct, 0);
+    const sumSquaresX = deviations.reduce((sum, row) => sum + row.squareX, 0);
+    const sumSquaresY = deviations.reduce((sum, row) => sum + row.squareY, 0);
+    const varianceX = sampleVariance(xs, meanX);
+    const varianceY = sampleVariance(ys, meanY);
+    const stdX = Math.sqrt(varianceX);
+    const stdY = Math.sqrt(varianceY);
     const cov = sampleCovariance(xs, ys, meanX, meanY);
     const r = pearson(cov, stdX, stdY);
-    const slope = stdX === 0 ? 0 : cov / Math.pow(stdX, 2);
+    const slope = varianceX === 0 ? 0 : cov / varianceX;
     const intercept = meanY - slope * meanX;
-    const residuals = points.map(point => point.y - (slope * point.x + intercept));
+    const fittedValues = points.map(point => slope * point.x + intercept);
+    const residuals = points.map((point, index) => point.y - fittedValues[index]);
     const residualMean = mean(residuals);
     const sse = residuals.reduce((sum, value) => sum + value * value, 0);
     const sst = ys.reduce((sum, value) => sum + Math.pow(value - meanY, 2), 0);
+    const r2 = sst === 0 ? Number.NaN : 1 - sse / sst;
     const rankX = ranks(xs);
     const rankY = ranks(ys);
     const rankMeanX = mean(rankX);
     const rankMeanY = mean(rankY);
     const rankCov = sampleCovariance(rankX, rankY, rankMeanX, rankMeanY);
-    const spearman = pearson(rankCov, sampleStd(rankX, rankMeanX), sampleStd(rankY, rankMeanY));
+    const rankStdX = sampleStd(rankX, rankMeanX);
+    const rankStdY = sampleStd(rankY, rankMeanY);
+    const spearman = pearson(rankCov, rankStdX, rankStdY);
+    const sumRankCrossProducts = rankX.reduce(
+        (sum, value, index) => sum + (value - rankMeanX) * (rankY[index] - rankMeanY),
+        0
+    );
+    const ellipseTrace = varianceX + varianceY;
+    const ellipseDelta = Math.sqrt(Math.pow(varianceX - varianceY, 2) + 4 * cov * cov);
+    const ellipseLambda1 = Math.max(0, (ellipseTrace + ellipseDelta) / 2);
+    const ellipseLambda2 = Math.max(0, (ellipseTrace - ellipseDelta) / 2);
+    const ellipseAngle = 0.5 * Math.atan2(2 * cov, varianceX - varianceY);
+    const ellipse = {
+        trace: ellipseTrace,
+        delta: ellipseDelta,
+        lambda1: ellipseLambda1,
+        lambda2: ellipseLambda2,
+        angle: ellipseAngle,
+        angleDegrees: ellipseAngle * 180 / Math.PI,
+        radius1: 2 * Math.sqrt(ellipseLambda1),
+        radius2: 2 * Math.sqrt(ellipseLambda2)
+    };
 
     return {
         points,
         xs,
         ys,
         n: points.length,
+        sumX,
+        sumY,
         meanX,
         meanY,
+        deviations,
+        sumCrossProducts,
+        sumSquaresX,
+        sumSquaresY,
+        varianceX,
+        varianceY,
         stdX,
         stdY,
         cov,
         r,
-        r2: r * r,
+        r2,
         slope,
         intercept,
+        fittedValues,
         residuals,
         residualMean,
         residualStd: sampleStd(residuals, residualMean),
         sse,
         sst,
+        rankX,
+        rankY,
+        rankMeanX,
+        rankMeanY,
+        rankCov,
+        rankStdX,
+        rankStdY,
+        sumRankCrossProducts,
         spearman,
+        ellipse,
         minX: Math.min(...xs),
         maxX: Math.max(...xs),
         minY: Math.min(...ys),
@@ -285,6 +347,17 @@ function formatNumber(value) {
 function formatPlain(value) {
     if (!Number.isFinite(value)) return "";
     return Math.round(value * 100) / 100;
+}
+
+function formatDetailedNumber(value) {
+    if (!Number.isFinite(value)) return "undefined";
+    if (Math.abs(value) < 1e-10) return "0";
+    if (Math.abs(value) >= 100000) return value.toExponential(4);
+    return value.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function latexNumber(value) {
+    return Number.isFinite(value) ? formatDetailedNumber(value) : "\\text{undefined}";
 }
 
 function clampNumber(value, min, max, fallback) {
@@ -647,16 +720,7 @@ function drawRegressionLine(ctx, dimensions, summary, x, y) {
 }
 
 function drawCovarianceEllipse(ctx, summary, x, y) {
-    const covXX = summary.stdX * summary.stdX;
-    const covYY = summary.stdY * summary.stdY;
-    const covXY = summary.cov;
-    const trace = covXX + covYY;
-    const delta = Math.sqrt(Math.pow(covXX - covYY, 2) + 4 * covXY * covXY);
-    const lambda1 = Math.max(0, (trace + delta) / 2);
-    const lambda2 = Math.max(0, (trace - delta) / 2);
-    const angle = 0.5 * Math.atan2(2 * covXY, covXX - covYY);
-    const radius1 = 2 * Math.sqrt(lambda1);
-    const radius2 = 2 * Math.sqrt(lambda2);
+    const { angle, radius1, radius2 } = summary.ellipse;
 
     ctx.save();
     ctx.strokeStyle = COLORS.ellipse;
@@ -783,8 +847,204 @@ function drawMessage(ctx, dimensions, message) {
     ctx.fillText(message, dimensions.width / 2, dimensions.height / 2);
 }
 
+let mathTypesetQueue = Promise.resolve();
+
+function typesetMath(element) {
+    if (!element || !window.MathJax || typeof window.MathJax.typesetPromise !== "function") return;
+    mathTypesetQueue = mathTypesetQueue
+        .catch(() => undefined)
+        .then(() => {
+            if (!element.isConnected) return undefined;
+            if (typeof window.MathJax.typesetClear === "function") {
+                window.MathJax.typesetClear([element]);
+            }
+            return window.MathJax.typesetPromise([element]);
+        });
+}
+
+function relationshipDescription(summary) {
+    if (!Number.isFinite(summary.r)) {
+        return "Pearson correlation is undefined because at least one variable has zero standard deviation.";
+    }
+    const magnitude = Math.abs(summary.r);
+    if (magnitude < 1e-10) {
+        return "Pearson r is zero, so these points have no measured linear association. A nonlinear relationship may still exist.";
+    }
+    const direction = summary.r > 0 ? "positive" : summary.r < 0 ? "negative" : "no";
+    let strength = "weak";
+    if (magnitude >= 0.9) strength = "very strong";
+    else if (magnitude >= 0.7) strength = "strong";
+    else if (magnitude >= 0.4) strength = "moderate";
+    return `For this dataset, r indicates a ${strength} ${direction} linear association. This describes association, not causation.`;
+}
+
+function renderCalculations(summary) {
+    const container = document.getElementById("calculation-content");
+    if (!container) return;
+    if (!summary) {
+        container.innerHTML = '<p class="calculation-empty">Enter at least three valid pairs to see the complete worked calculation.</p>';
+        return;
+    }
+
+    const nMinusOne = summary.n - 1;
+    const covarianceDirection = summary.cov > 1e-10
+        ? "positive: same-side deviation products outweigh opposite-side products"
+        : summary.cov < -1e-10
+            ? "negative: opposite-side deviation products outweigh same-side products"
+            : "zero: positive and negative deviation products cancel";
+    const regressionFormula = summary.sumSquaresX === 0
+        ? String.raw`\[\sum(x_i-\bar{x})^2=0\quad\Longrightarrow\quad b_1\text{ is undefined}\]
+            \[\text{Displayed fallback: }\widehat{y}=\bar{y}=${latexNumber(summary.meanY)}\]`
+        : String.raw`\[b_1=\frac{${latexNumber(summary.sumCrossProducts)}}{${latexNumber(summary.sumSquaresX)}}=${latexNumber(summary.slope)}\]
+            \[b_0=${latexNumber(summary.meanY)}-${latexNumber(summary.slope)}(${latexNumber(summary.meanX)})=${latexNumber(summary.intercept)}\]
+            \[\widehat{y}=${latexNumber(summary.intercept)}+${latexNumber(summary.slope)}x\]`;
+    const regressionExplanation = summary.sumSquaresX === 0
+        ? "All x values are identical, so there is no x variation from which to estimate a unique slope. The plot uses the mean of y as a clearly identified fallback."
+        : "The slope uses the same cross-product sum divided by x's squared-deviation sum. The intercept makes the line pass through \\(\\bar{x},\\bar{y}\\).";
+    const contributionRows = summary.deviations.map((row, index) => `
+        <tr>
+            <th scope="row">${index + 1}</th>
+            <td>${formatDetailedNumber(row.x)}</td>
+            <td>${formatDetailedNumber(row.y)}</td>
+            <td>${formatDetailedNumber(row.dx)}</td>
+            <td>${formatDetailedNumber(row.dy)}</td>
+            <td>${formatDetailedNumber(row.crossProduct)}</td>
+            <td>${formatDetailedNumber(row.squareX)}</td>
+            <td>${formatDetailedNumber(row.squareY)}</td>
+            <td>${formatDetailedNumber(summary.rankX[index])}</td>
+            <td>${formatDetailedNumber(summary.rankY[index])}</td>
+            <td>${formatDetailedNumber(summary.fittedValues[index])}</td>
+            <td>${formatDetailedNumber(summary.residuals[index])}</td>
+        </tr>
+    `).join("");
+
+    container.innerHTML = String.raw`
+        <div class="calculation-steps">
+            <article class="calculation-step">
+                <span class="step-number">1</span>
+                <div>
+                    <h3>Compute the means</h3>
+                    <p>Add each column and divide by the number of pairs.</p>
+                    <div class="live-formula">
+                        \[\bar{x}=\frac{\sum x_i}{n}=\frac{${latexNumber(summary.sumX)}}{${summary.n}}=${latexNumber(summary.meanX)}\]
+                        \[\bar{y}=\frac{\sum y_i}{n}=\frac{${latexNumber(summary.sumY)}}{${summary.n}}=${latexNumber(summary.meanY)}\]
+                    </div>
+                </div>
+            </article>
+            <article class="calculation-step">
+                <span class="step-number">2</span>
+                <div>
+                    <h3>Build and average the cross-products</h3>
+                    <p>Each row contributes \((x_i-\bar{x})(y_i-\bar{y})\). The contribution table shows every value used in this sum.</p>
+                    <div class="live-formula">
+                        \[\sum_{i=1}^{${summary.n}}(x_i-\bar{x})(y_i-\bar{y})=${latexNumber(summary.sumCrossProducts)}\]
+                        \[s_{xy}=\frac{${latexNumber(summary.sumCrossProducts)}}{${nMinusOne}}=${latexNumber(summary.cov)}\]
+                    </div>
+                    <p class="result-meaning"><strong>Meaning:</strong> The covariance is ${covarianceDirection}. Its units depend on the units of x and y.</p>
+                </div>
+            </article>
+            <article class="calculation-step">
+                <span class="step-number">3</span>
+                <div>
+                    <h3>Find each sample standard deviation</h3>
+                    <p>Square each deviation, add the squares, divide by \(n-1\), then take the square root.</p>
+                    <div class="live-formula">
+                        \[s_x^2=\frac{${latexNumber(summary.sumSquaresX)}}{${nMinusOne}}=${latexNumber(summary.varianceX)},\qquad s_x=\sqrt{${latexNumber(summary.varianceX)}}=${latexNumber(summary.stdX)}\]
+                        \[s_y^2=\frac{${latexNumber(summary.sumSquaresY)}}{${nMinusOne}}=${latexNumber(summary.varianceY)},\qquad s_y=\sqrt{${latexNumber(summary.varianceY)}}=${latexNumber(summary.stdY)}\]
+                    </div>
+                </div>
+            </article>
+            <article class="calculation-step">
+                <span class="step-number">4</span>
+                <div>
+                    <h3>Standardize covariance to get Pearson r</h3>
+                    <p>The direct-sum form below avoids rounding the covariance and standard deviations before division.</p>
+                    <div class="live-formula">
+                        \[r=\frac{${latexNumber(summary.sumCrossProducts)}}{\sqrt{${latexNumber(summary.sumSquaresX)}\cdot ${latexNumber(summary.sumSquaresY)}}}=${latexNumber(summary.r)}\]
+                    </div>
+                    <p class="result-meaning"><strong>Interpretation:</strong> ${relationshipDescription(summary)}</p>
+                </div>
+            </article>
+            <article class="calculation-step">
+                <span class="step-number">5</span>
+                <div>
+                    <h3>Fit the least-squares line</h3>
+                    <p>${regressionExplanation}</p>
+                    <div class="live-formula">
+                        ${regressionFormula}
+                    </div>
+                </div>
+            </article>
+            <article class="calculation-step">
+                <span class="step-number">6</span>
+                <div>
+                    <h3>Measure residual error and explained variation</h3>
+                    <p>For every point, subtract its fitted value from its observed y. Squaring prevents positive and negative residuals from cancelling.</p>
+                    <div class="live-formula">
+                        \[\mathrm{SSE}=\sum e_i^2=${latexNumber(summary.sse)},\qquad \mathrm{SST}=\sum(y_i-\bar{y})^2=${latexNumber(summary.sst)}\]
+                        \[R^2=1-\frac{${latexNumber(summary.sse)}}{${latexNumber(summary.sst)}}=${latexNumber(summary.r2)}\]
+                    </div>
+                </div>
+            </article>
+            <article class="calculation-step">
+                <span class="step-number">7</span>
+                <div>
+                    <h3>Repeat Pearson's calculation on ranks</h3>
+                    <p>The Rank x and Rank y columns show the replacement values; ties receive their average rank.</p>
+                    <div class="live-formula">
+                        \[s_{R_xR_y}=\frac{${latexNumber(summary.sumRankCrossProducts)}}{${nMinusOne}}=${latexNumber(summary.rankCov)}\]
+                        \[\rho_s=\frac{${latexNumber(summary.rankCov)}}{${latexNumber(summary.rankStdX)}\cdot ${latexNumber(summary.rankStdY)}}=${latexNumber(summary.spearman)}\]
+                    </div>
+                </div>
+            </article>
+            <article class="calculation-step">
+                <span class="step-number">8</span>
+                <div>
+                    <h3>Turn the covariance matrix into the plotted ellipse</h3>
+                    <p>The covariance matrix stores x variance, y variance, and their covariance. Its eigenvalues give the principal variances; the plot uses twice their square roots as the two semi-axis lengths.</p>
+                    <div class="live-formula">
+                        \[\mathbf{S}=\begin{bmatrix}s_x^2&s_{xy}\\s_{xy}&s_y^2\end{bmatrix}=\begin{bmatrix}${latexNumber(summary.varianceX)}&${latexNumber(summary.cov)}\\${latexNumber(summary.cov)}&${latexNumber(summary.varianceY)}\end{bmatrix}\]
+                        \[\lambda_1=${latexNumber(summary.ellipse.lambda1)},\qquad \lambda_2=${latexNumber(summary.ellipse.lambda2)},\qquad \theta=${latexNumber(summary.ellipse.angleDegrees)}^{\circ}\]
+                        \[a=2\sqrt{\lambda_1}=${latexNumber(summary.ellipse.radius1)},\qquad b=2\sqrt{\lambda_2}=${latexNumber(summary.ellipse.radius2)}\]
+                    </div>
+                    <p class="result-meaning"><strong>Important:</strong> This is a two-standard-deviation shape ellipse. It visualizes spread and orientation; it is not automatically a 95% confidence region.</p>
+                </div>
+            </article>
+        </div>
+        <details class="contribution-details" ${summary.n <= 24 ? "open" : ""}>
+            <summary>Inspect all ${summary.n} point contributions</summary>
+            <p>These are the actual intermediate values used above. Scroll horizontally on a small screen.</p>
+            <div class="calculation-table-wrap">
+                <table class="calculation-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">i</th><th scope="col">xᵢ</th><th scope="col">yᵢ</th>
+                            <th scope="col">xᵢ − x̄</th><th scope="col">yᵢ − ȳ</th><th scope="col">deviation product</th>
+                            <th scope="col">x deviation²</th><th scope="col">y deviation²</th>
+                            <th scope="col">Rank x</th><th scope="col">Rank y</th><th scope="col">ŷᵢ</th><th scope="col">eᵢ</th>
+                        </tr>
+                    </thead>
+                    <tbody>${contributionRows}</tbody>
+                    <tfoot>
+                        <tr>
+                            <th scope="row">Sum</th><td>${formatDetailedNumber(summary.sumX)}</td><td>${formatDetailedNumber(summary.sumY)}</td>
+                            <td>0</td><td>0</td><td>${formatDetailedNumber(summary.sumCrossProducts)}</td>
+                            <td>${formatDetailedNumber(summary.sumSquaresX)}</td><td>${formatDetailedNumber(summary.sumSquaresY)}</td>
+                            <td>${formatDetailedNumber(summary.rankX.reduce((sum, value) => sum + value, 0))}</td>
+                            <td>${formatDetailedNumber(summary.rankY.reduce((sum, value) => sum + value, 0))}</td>
+                            <td>—</td><td>${formatDetailedNumber(summary.residuals.reduce((sum, value) => sum + value, 0))}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </details>
+    `;
+    typesetMath(container);
+}
+
 function renderStats(summary) {
     const grid = document.getElementById("stats-grid");
+    renderCalculations(summary);
     if (!summary) {
         grid.innerHTML = "";
         return;
@@ -796,7 +1056,7 @@ function renderStats(summary) {
             <table class="stat-table">
                 <tbody>
                     <tr><th>n</th><td>${summary.n}</td><th>Pearson r</th><td>${formatNumber(summary.r)}</td></tr>
-                    <tr><th>R squared</th><td>${formatNumber(summary.r2)}</td><th>Spearman rho</th><td>${formatNumber(summary.spearman)}</td></tr>
+                    <tr><th>R²</th><td>${formatNumber(summary.r2)}</td><th>Spearman ρ</th><td>${formatNumber(summary.spearman)}</td></tr>
                     <tr><th>Slope</th><td>${formatNumber(summary.slope)}</td><th>Intercept</th><td>${formatNumber(summary.intercept)}</td></tr>
                 </tbody>
             </table>
@@ -806,8 +1066,8 @@ function renderStats(summary) {
             <table class="stat-table">
                 <tbody>
                     <tr><th>Mean x</th><td>${formatNumber(summary.meanX)}</td><th>Mean y</th><td>${formatNumber(summary.meanY)}</td></tr>
-                    <tr><th>Std x</th><td>${formatNumber(summary.stdX)}</td><th>Std y</th><td>${formatNumber(summary.stdY)}</td></tr>
-                    <tr><th>Cov(x,y)</th><td>${formatNumber(summary.cov)}</td><th>Residual std</th><td>${formatNumber(summary.residualStd)}</td></tr>
+                    <tr><th>Sample sₓ</th><td>${formatNumber(summary.stdX)}</td><th>Sample sᵧ</th><td>${formatNumber(summary.stdY)}</td></tr>
+                    <tr><th>Sample sₓᵧ</th><td>${formatNumber(summary.cov)}</td><th>Residual std</th><td>${formatNumber(summary.residualStd)}</td></tr>
                 </tbody>
             </table>
         </article>

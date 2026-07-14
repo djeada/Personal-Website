@@ -98,6 +98,17 @@ test("wide display equations scroll without widening or shifting the article", a
   expect(dimensions.scrollWidth).toBeGreaterThan(dimensions.clientWidth);
 });
 
+test("unlabelled ASCII diagrams keep their top border", async ({ page }) => {
+  await page.goto(articles[0], { waitUntil: "domcontentloaded" });
+
+  const tileDiagram = page.locator("#article-body pre code", {
+    hasText: "Worker 4",
+  });
+
+  await expect(tileDiagram).toHaveClass(/language-shell/);
+  await expect(tileDiagram).toHaveText(/^\+-----------------------\+-----------------------\+/);
+});
+
 test("article actions align with the metadata header on desktop", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto(
