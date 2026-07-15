@@ -86,18 +86,19 @@ const DATASETS = {
     },
     "monotonic-curve": {
         points: [
-            [1, 1],
-            [2, 8],
-            [3, 27],
-            [4, 64],
-            [5, 125],
-            [6, 216],
-            [7, 343],
-            [8, 512],
-            [9, 729],
-            [10, 1000]
+            [0, 1],
+            [39366, 3],
+            [52488, 9],
+            [56862, 27],
+            [58320, 81],
+            [58806, 243],
+            [58968, 729],
+            [59022, 2187],
+            [59040, 6561],
+            [59046, 19683],
+            [59048, 59049]
         ],
-        note: "Spearman is 1 because the ordering is perfectly increasing, while Pearson is lower because the original values follow a curve rather than a straight line."
+        note: "Spearman is 1 because the ordering is perfectly increasing, while Pearson is only about 0.22 because the original values follow a strongly nonlinear curve."
     },
     "outlier-leverage": {
         points: [

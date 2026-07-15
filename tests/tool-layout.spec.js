@@ -61,20 +61,26 @@ test("matrix result selection highlights its source row and column", async ({ pa
   expect(highlighted.b).toEqual([["0", "1"], ["1", "1"], ["2", "1"]]);
 });
 
-test("matrix multiplication plots A, B, and C with the selected dot product", async ({ page }) => {
+test("matrix multiplication explains non-2D geometry and keeps the selected dot product", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/tools/matrix_multiplication/", { waitUntil: "domcontentloaded" });
   await page.locator('[data-preset="standard"]').click();
   await page.locator("#matrix-result tr").nth(1).locator(".result-cell").nth(1).click();
-  const plot = await page.locator("#matrix-product-canvas").evaluate((canvas) => ({
-    matrices: JSON.parse(canvas.dataset.matrices),
-    selection: canvas.dataset.selection,
+  const plot = await page.locator("#matrix-geometry-canvas").evaluate((canvas) => ({
+    available: canvas.dataset.available,
     width: canvas.getBoundingClientRect().width,
+    result: [...document.querySelectorAll("#matrix-result tr")].map((row) =>
+      [...row.querySelectorAll(".result-cell")].map((cell) => Number(cell.textContent)),
+    ),
+    selected: document.querySelector("#matrix-result .is-highlighted").textContent,
+    breakdown: document.querySelector("#breakdown-card").textContent,
+    message: document.querySelector("#geometry-message").textContent,
   }));
-  expect(plot.matrices.A).toEqual([[1, 2, 3], [4, 5, 6]]);
-  expect(plot.matrices.B).toEqual([[7, 8], [9, 10], [11, 12]]);
-  expect(plot.matrices.C).toEqual([[58, 64], [139, 154]]);
-  expect(plot.selection).toBe("1,1");
+  expect(plot.available).toBe("false");
+  expect(plot.result).toEqual([[58, 64], [139, 154]]);
+  expect(plot.selected).toBe("154");
+  expect(plot.breakdown).toContain("4 × 8 + 5 × 10 + 6 × 12 = 154");
+  expect(plot.message).toContain("cannot all be drawn on one 2D plane");
   expect(plot.width).toBeGreaterThan(680);
 });
 
@@ -94,10 +100,10 @@ test("matrix multiplication draws 2D grid composition B then A", async ({ page }
   expect(geometry.product[1][0]).toBeCloseTo(0.63);
   expect(geometry.product[1][1]).toBeCloseTo(0.9075);
   expect(geometry.width).toBeGreaterThan(760);
-  expect(geometry.message).toContain("ordinary coordinate grid");
+  expect(geometry.message).toContain("yellow unit square has area 1");
   await page.locator('[data-geometry-stage="2"]').click();
   await expect(page.locator("#matrix-geometry-canvas")).toHaveAttribute("data-stage", "2");
-  await expect(page.locator("#geometry-message")).toContainText("composition AB");
+  await expect(page.locator("#geometry-message")).toContainText("single transformation C = AB");
 });
 
 const referenceTools = [
@@ -305,11 +311,25 @@ test("Covariance Lab shows the complete sample calculation", async ({ page }) =>
   await expect(page.locator(".rank-mapping-table tbody tr")).toHaveCount(3);
   await page.locator("#preset-select").selectOption("monotonic-curve");
   await expect(page.locator("#input-message")).toContainText("Spearman is 1");
-  const monotonicComparison = await page.evaluate(() => ({
-    spearman: Number(document.querySelector("#canvas").dataset.spearman),
-    guide: document.querySelector("#spearman-visual-guide").textContent,
-  }));
+  const monotonicComparison = await page.evaluate(() => {
+    const points = document.querySelector("#dataset-points").value
+      .trim()
+      .split("\n")
+      .map((line) => {
+        const [x, y] = line.split(",").map(Number);
+        return { x, y };
+      });
+    const summary = window.CovarianceLabDebug.summarize(points, { spearman: true });
+    return {
+      pearson: summary.r,
+      spearman: Number(document.querySelector("#canvas").dataset.spearman),
+      guide: document.querySelector("#spearman-visual-guide").textContent,
+    };
+  });
+  expect(monotonicComparison.pearson).toBeCloseTo(0.2220167716, 9);
+  expect(monotonicComparison.pearson).toBeLessThan(0.3);
   expect(monotonicComparison.spearman).toBeCloseTo(1, 12);
+  expect(monotonicComparison.spearman - monotonicComparison.pearson).toBeGreaterThan(0.7);
   expect(monotonicComparison.guide).toContain("describe the pattern differently");
   await page.locator("#measure-kendall").check();
   await page.locator("#measure-distance").check();
