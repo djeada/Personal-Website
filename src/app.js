@@ -301,13 +301,64 @@ function initializeThreeJS() {
 }
 
 
+// Keep the optional WebGL dependency out of the initial render path.
+function initLazyThreeJS() {
+    const container = document.getElementById('threejs-container');
+    if (!container) return;
+    const appScript = Array.from(document.scripts).find(script => /\/app\.js(?:[?#]|$)/.test(script.src));
+    const simulationUrl = new URL('ring-universe.js', appScript ? appScript.src : document.baseURI).href;
+    let loading = false;
+    const loadScript = src => new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = () => {
+            script.remove();
+            reject(new Error(`Unable to load ${src}`));
+        };
+        document.head.appendChild(script);
+    });
+    const load = async () => {
+        if (loading) return;
+        loading = true;
+        try {
+            if (!window.THREE) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
+            if (!window.createRingUniverseSimulation) await loadScript(simulationUrl);
+            initializeThreeJS();
+        } catch (error) {
+            console.error(error);
+            const retry = document.createElement('button');
+            retry.type = 'button';
+            retry.textContent = 'Load interactive simulation';
+            retry.addEventListener('click', () => {
+                retry.remove();
+                loading = false;
+                load();
+            });
+            container.replaceChildren(retry);
+        }
+    };
+    if (!('IntersectionObserver' in window)) {
+        load();
+        return;
+    }
+    const observer = new IntersectionObserver(entries => {
+        if (entries.some(entry => entry.isIntersecting)) {
+            observer.disconnect();
+            load();
+        }
+    }, { rootMargin: '300px' });
+    observer.observe(container);
+}
+
+
 function initScrollReveal() {
     const revealElements = document.querySelectorAll('.reveal, .reveal-stagger');
 
     if (!revealElements.length) return;
 
 
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         revealElements.forEach(el => {
             el.classList.add('revealed');
         });
@@ -317,7 +368,7 @@ function initScrollReveal() {
     const observerOptions = {
         root: null,
         rootMargin: '0px 0px -50px 0px',
-        threshold: 0.1
+        threshold: 0
     };
 
     const revealObserver = new IntersectionObserver((entries) => {
@@ -418,9 +469,7 @@ function main() {
     initScrollReveal();
 
 
-    if (document.getElementById('threejs-container')) {
-        initializeThreeJS();
-    }
+    initLazyThreeJS();
 
 
     const suggestEditButton = document.querySelector('.btn-suggest-edit');
@@ -475,13 +524,16 @@ function main() {
             document.body.appendChild(overlay);
         }
 
+        const mobileMenu = window.matchMedia('(max-width: 1100px)');
         let open = false;
         const updateOpenState = (nextOpen = open) => {
-            open = nextOpen;
+            open = mobileMenu.matches && nextOpen;
             navToggle.classList.toggle('is-open', open);
             document.body.classList.toggle('nav-open', open);
             document.body.style.overflow = open ? 'hidden' : '';
-            navMenu.setAttribute('aria-hidden', open ? 'false' : 'true');
+            const hidden = mobileMenu.matches && !open;
+            navMenu.setAttribute('aria-hidden', String(hidden));
+            navMenu.inert = hidden;
             navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
             if (open) {
 
@@ -493,6 +545,7 @@ function main() {
         };
 
         updateOpenState();
+        mobileMenu.addEventListener('change', () => updateOpenState(false));
 
         navToggle.addEventListener('click', () => updateOpenState(!open));
         overlay.addEventListener('click', () => {
@@ -678,17 +731,26 @@ function initReadingProgress() {
     document.body.appendChild(progressBar);
 
 
+    let pending = false;
     const updateProgress = () => {
+        pending = false;
         const windowHeight = window.innerHeight;
         const documentHeight = document.documentElement.scrollHeight - windowHeight;
         const scrolled = window.scrollY;
-        const progress = (scrolled / documentHeight) * 100;
-        progressBar.style.width = Math.min(progress, 100) + '%';
+        const progress = documentHeight > 0 ? scrolled / documentHeight : 0;
+        progressBar.style.transform = `scaleX(${Math.max(0, Math.min(progress, 1))})`;
     };
 
-    window.addEventListener('scroll', updateProgress, {
-        passive: true
-    });
+    const scheduleProgress = () => {
+        if (pending) return;
+        pending = true;
+        requestAnimationFrame(updateProgress);
+    };
+    window.addEventListener('scroll', scheduleProgress, { passive: true });
+    window.addEventListener('resize', scheduleProgress);
+    if ('ResizeObserver' in window) {
+        new ResizeObserver(scheduleProgress).observe(document.body);
+    }
     updateProgress();
 }
 
