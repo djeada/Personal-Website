@@ -71,11 +71,18 @@ for (const width of [320, 390, 768]) {
         contentRight: outer.right - parseFloat(css.paddingRight),
         pageWidth: document.documentElement.scrollWidth,
         viewport: document.documentElement.clientWidth,
+        overflowing: [...document.body.querySelectorAll('*')].filter(node => {
+          const box = node.getBoundingClientRect();
+          return getComputedStyle(node).visibility !== 'hidden' && box.right > innerWidth + 1;
+        }).slice(0, 12).map(node => ({
+          tag: node.tagName, id: node.id, className: node.className,
+          right: node.getBoundingClientRect().right,
+        })),
       };
     });
     expect(layout.left).toBeGreaterThanOrEqual(layout.contentLeft - 1);
     expect(layout.right).toBeLessThanOrEqual(layout.contentRight + 1);
-    expect(layout.pageWidth).toBeLessThanOrEqual(layout.viewport + 1);
+    expect(layout.pageWidth, JSON.stringify(layout.overflowing)).toBeLessThanOrEqual(layout.viewport + 1);
   });
 }
 
