@@ -86,7 +86,9 @@ def create_toc_wrapper(soup: BeautifulSoup, html: str) -> Tag:
     toc_header = soup.new_tag("h2")
     toc_header.string = toc_title
 
-    toc_wrapper = soup.new_tag("div", id="table-of-contents")
+    toc_wrapper = soup.new_tag(
+        "div", id="table-of-contents", attrs={"class": "collapsed"}
+    )
     try:
         toc_wrapper.extend([toc_header, process_nested_list(create_toc_entries(soup))])
     except Exception as e:

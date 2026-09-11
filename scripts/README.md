@@ -35,3 +35,18 @@ python run_all.py
 ```
 
 Alternatively, individual scripts can be run separately for specific tasks as needed.
+
+## Layout stability
+
+Keep Google Fonts links on `display=optional` in both templates and generated
+pages: slow downloads should leave the fallback font in place for that visit,
+instead of reflowing visible text. The contents generator emits `class="collapsed"`
+so mobile articles start in the same layout that `app.js` initializes. Desktop
+contents remain expanded through CSS, and links remain visible without JavaScript.
+
+The shared logo CSS reserves the dimensions of both logo variants before they
+download. After editing shared CSS, run `python bundle_css.py` from this directory.
+Run `npx playwright test tests/layout-stability.spec.js` from the repository root
+to check delayed logo loading, delayed article initialization, search insertion,
+and contents accessibility without JavaScript. These tests isolate third parties;
+check live ads and real-user CLS separately after deployment.
