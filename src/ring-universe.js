@@ -1,6 +1,60 @@
 (function() {
     'use strict';
 
+    // Air-core, densely wound ideal toroid: B_phi = B0 R / r.
+    // The visualization uses R = 3.25, B0 = 7 and |q/m| = 1.
+    function toroidalField(position, current = 1) {
+        const scale = 7 * current * 3.25 / (position.x ** 2 + position.z ** 2);
+        return { x: -position.z * scale, y: 0, z: position.x * scale };
+    }
+
+    // Boris rotation with leapfrog positions; no electric field or drag.
+    // https://www.particleincell.com/2011/vxb-rotation/
+    function advanceParticle(particle, magneticField, dt) {
+        const v = particle.velocity;
+        const half = particle.charge * dt / 2;
+        const tx = magneticField.x * half, ty = magneticField.y * half, tz = magneticField.z * half;
+        const factor = 2 / (1 + tx * tx + ty * ty + tz * tz);
+        const px = v.x + v.y * tz - v.z * ty;
+        const py = v.y + v.z * tx - v.x * tz;
+        const pz = v.z + v.x * ty - v.y * tx;
+        v.x += (py * tz - pz * ty) * factor;
+        v.y += (pz * tx - px * tz) * factor;
+        v.z += (px * ty - py * tx) * factor;
+        particle.position.x += v.x * dt;
+        particle.position.y += v.y * dt;
+        particle.position.z += v.z * dt;
+    }
+
+    function advanceTrail(p, current, dt) {
+        if (p.retiring) {
+            // Hold outgoing geometry while it fades. Reset only when invisible.
+            p.opacity = Math.max(0, p.opacity - dt / 0.7);
+            if (p.opacity === 0) {
+                Object.assign(p.position, p.initialPosition);
+                Object.assign(p.velocity, p.initialVelocity);
+                p.history.forEach(v => Object.assign(v, p.position));
+                p.age = 0;
+                p.retiring = false;
+            }
+            return;
+        }
+        advanceParticle(p, toroidalField(p.position, current), dt);
+        if ((Math.hypot(p.position.x, p.position.z) - 3.25) ** 2 + p.position.y ** 2 > 0.82 ** 2) {
+            p.retiring = true;
+        }
+        p.age += dt;
+        const fadeIn = Math.min(1, p.age / 0.7);
+        p.opacity = fadeIn * fadeIn * (3 - 2 * fadeIn);
+        p.cursor = (p.cursor + 1) % p.history.length;
+        Object.assign(p.history[p.cursor], p.position);
+    }
+
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = { toroidalField, advanceParticle, advanceTrail };
+    }
+    if (typeof window === 'undefined') return;
+
     window.createRingUniverseSimulation = function(container) {
         if (!container || !window.THREE) return null;
         const T = window.THREE;
@@ -14,14 +68,15 @@
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
         renderer.outputEncoding = T.sRGBEncoding;
         renderer.toneMapping = T.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.3;
+        renderer.toneMappingExposure = 0.9;
         container.classList.add('ring-lab');
         container.innerHTML = `
-          <div class="ring-lab__heading"><span class="ring-lab__eyebrow">MAGNETIC FIELD / LIVE</span><h3>Inside the toroid.</h3><p>A copper winding. A circulating field. Particles in motion.</p></div>
-          <div class="ring-lab__equation" aria-label="Lorentz force: acceleration equals charge over mass times velocity cross magnetic field">dv/dt = (q/m) v × B<span>IDEAL TOROID · NORMALIZED UNITS</span></div>
-          <div class="ring-lab__readout"><span><i></i> CYAN · POSITIVE CHARGE &nbsp; / &nbsp; AMBER · NEGATIVE CHARGE</span><span>Opposite charges spiral in opposite directions. Stronger fields tighten the spiral.</span></div>
-          <div class="ring-lab__controls"><label>Field strength <span><output>1.0</output> ×</span><input aria-label="Field strength" type="range" min="0.4" max="2" step="0.1" value="1"></label><div><button type="button" data-pause>Pause</button><button type="button" data-reset>Reset view</button></div></div>
-          <p class="ring-lab__note">Drag to orbit · Arrow keys to rotate · + / − to zoom<br>Ideal B ∝ 1/r · equal charge-to-mass magnitudes · particles reinjected at coil boundary · no collisions or electric field.</p>`;
+          <div class="ring-lab__heading"><span class="ring-lab__eyebrow">FIELD ATLAS / 01</span><h3>The toroidal field.</h3><p>Follow the geometry of a magnetic force.</p></div>
+          <div class="ring-lab__equation" aria-label="Magnetic field equals mu zero N I over two pi r">B(r) = μ₀NI / 2πr<span>IDEAL AIR CORE · WINDING SHOWN IN CUTAWAY</span></div>
+          <div class="ring-lab__metrics"><div><span>INNER FIELD</span><output data-inner-field></output></div><div><span>OUTER FIELD</span><output data-outer-field></output></div><div><span>REFERENCE GYRORADIUS</span><output data-radius></output></div></div>
+          <div class="ring-lab__readout"><span><i></i> TEAL · POSITIVE CHARGE &nbsp; / &nbsp; COPPER · NEGATIVE CHARGE</span><span>Opposite charges spiral in opposite directions. Stronger fields tighten the spiral.</span></div>
+          <div class="ring-lab__controls"><label>Coil current <span><output data-current>1.0</output> ×</span><input aria-label="Coil current" type="range" min="0.4" max="2" step="0.1" value="1"></label><div><button type="button" data-field aria-pressed="true">Field lines</button><button type="button" data-pause>Pause</button><button type="button" data-reset>Reset view</button></div></div>
+          <details class="ring-lab__model"><summary>Controls &amp; physical model</summary><p>Drag to orbit · Arrow keys to rotate · + / − to zoom · 0.35× playback.</p><p>dv/dt = (q/m) v × B. Normalized units: major radius R = 3.25, tube radius a = 0.82, reference field B₀ = 7, equal |q/m| = 1. The reference gyroradius is v⊥ / (|q/m| B₀), with v⊥ = 1.</p><p>A complete winding is modeled; its front half is omitted to expose the field. Current selects a prescribed static field; induction, collisions and particle self-fields are omitted. Test particles drift out of a pure toroidal field, fade, and are reinjected.</p><p><a href="https://openstax.org/books/university-physics-volume-2/pages/12-6-solenoids-and-toroids">Field model</a> · <a href="https://www.particleincell.com/2011/vxb-rotation/">Particle integration</a></p></details>`;
         renderer.domElement.tabIndex = 0;
         renderer.domElement.setAttribute('role', 'img');
         renderer.domElement.setAttribute('aria-label', 'Interactive toroidal magnetic field with charged particle trajectories. Drag or use arrow keys to orbit, plus and minus to zoom.');
@@ -37,86 +92,91 @@
         light(0xffd5a0, 0.8, -6, 1, -2);
         const apparatus = new T.Group();
         scene.add(apparatus);
+        const fieldLines = new T.Group();
+        scene.add(fieldLines);
         const copper = new T.MeshStandardMaterial({
             color: 0xa75b2b,
-            emissive: 0x411906,
-            emissiveIntensity: 0.2,
             transparent: true,
-            opacity: 0.48,
+            opacity: 0.65,
             depthWrite: false,
-            metalness: 0.65,
-            roughness: 0.26
+            metalness: 0.2,
+            roughness: 0.8
         });
         const fineLine = new T.LineBasicMaterial({
-            color: 0x36b9d6,
+            color: 0x66868e,
             transparent: true,
             opacity: 0.12,
-            depthWrite: false,
-            blending: T.AdditiveBlending
+            depthWrite: false
         });
 
-        // One continuous poloidal winding, with an open bore so trajectories
-        // remain visible. The ideal field below approximates a dense winding.
+        // The front half of the winding is omitted as a visual cutaway.
+        // The physical model remains a complete, densely wound ideal toroid.
         const winding = [];
-        for (let i = 0; i <= 4608; i++) {
-            const a = i / 4608 * Math.PI * 2;
-            const b = a * 48;
+        for (let i = 0; i <= 2304; i++) {
+            const a = Math.PI + i / 2304 * Math.PI;
+            const b = a * 40;
             const r = 3.25 + 0.86 * Math.cos(b);
             winding.push(new T.Vector3(r * Math.cos(a), 0.86 * Math.sin(b), r * Math.sin(a)));
         }
-        apparatus.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(winding, true), 4608, 0.019, 5, true), copper));
+        apparatus.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(winding), 2304, 0.032, 8, false), copper));
+        const fieldVolume = new T.Mesh(new T.TorusGeometry(3.25, 0.82, 48, 192), new T.MeshPhongMaterial({
+            color: 0x37606a,
+            transparent: true,
+            opacity: 0.18,
+            shininess: 12,
+            depthWrite: false,
+            side: T.BackSide
+        }));
+        fieldVolume.rotation.x = Math.PI / 2;
+        fieldVolume.renderOrder = -1;
+        scene.add(fieldVolume);
         for (const radius of [2.36, 4.14]) {
             const rail = new T.Mesh(new T.TorusGeometry(radius, 0.035, 8, 192), copper);
             rail.rotation.x = Math.PI / 2;
             apparatus.add(rail);
         }
-        for (let j = 0; j < 24; j++) {
+        for (let j = 0; j < 12; j++) {
             const points = [];
-            const theta = j / 12 * Math.PI * 2;
-            const shell = j < 12 ? 0.36 : 0.67;
+            const theta = j / 6 * Math.PI * 2;
+            const shell = j < 6 ? 0.36 : 0.67;
             const radius = 3.25 + shell * Math.cos(theta);
             const y = shell * Math.sin(theta);
             for (let i = 0; i <= 192; i++) {
                 const a = i / 192 * Math.PI * 2;
                 points.push(new T.Vector3(radius * Math.cos(a), y, radius * Math.sin(a)));
             }
-            apparatus.add(new T.Line(new T.BufferGeometry().setFromPoints(points), fineLine));
+            fieldLines.add(new T.Line(new T.BufferGeometry().setFromPoints(points), fineLine));
             if (j % 3 === 0) {
                 const a = j * 2.399;
                 const arrow = new T.ArrowHelper(new T.Vector3(-Math.sin(a), 0, Math.cos(a)),
-                    new T.Vector3(radius * Math.cos(a), y, radius * Math.sin(a)), 0.24, 0x4abbd1, 0.12, 0.075);
-                apparatus.add(arrow);
+                    new T.Vector3(radius * Math.cos(a), y, radius * Math.sin(a)), 0.24, 0x66868e, 0.12, 0.075);
+                fieldLines.add(arrow);
             }
         }
-        const grid = new T.GridHelper(16, 32, 0x345061, 0x243746);
-        grid.position.y = -1.35;
-        grid.material.transparent = true;
-        grid.material.opacity = 0.045;
-        scene.add(grid);
-
-
-
-
-        const count = 64,
-            history = 640,
-            step = 1 / 120;
+        const count = 18,
+            history = 480,
+            step = 1 / 120,
+            playbackRate = 0.35;
         const particles = [];
-        const trailPositions = new Float32Array(count * (history - 1) * 6);
+        const trailPositions = new Float32Array(count * history * 6);
+        const trailNext = new Float32Array(trailPositions.length);
         const trailColors = new Float32Array(trailPositions.length);
-        const heads = new Float32Array(count * 3);
-        const headColors = new Float32Array(count * 3);
-        const cyan = new T.Color(0x13cce8);
-        const amber = new T.Color(0xff7c24);
+        const trailAlpha = new Float32Array(count * history * 2);
+        const trailSides = new Float32Array(trailAlpha.length);
+        const trailIndices = [];
+        const teal = new T.Color(0x7da5ab);
+        const copperTrail = new T.Color(0xb7977b);
         for (let i = 0; i < count; i++) {
-            const a = i / count * Math.PI * 2;
-            const r = 3.25 + 0.25 * Math.sin(i * 2.4);
-            const position = new T.Vector3(r * Math.cos(a), 0.25 * Math.cos(i * 1.7), r * Math.sin(a));
-            const phase = i * 2.399;
+            // Matched initial conditions make the effect of charge sign clear.
+            const pair = Math.floor(i / 2);
+            const a = pair / (count / 2) * Math.PI * 2;
+            const r = 3.25 + 0.2 * Math.sin(pair * 2.4);
+            const position = new T.Vector3(r * Math.cos(a), 0.2 * Math.cos(pair * 1.7), r * Math.sin(a));
+            const phase = pair * 2.399;
             const velocity = new T.Vector3(-Math.sin(a) * 1.35 + Math.cos(a) * Math.cos(phase),
                 Math.sin(phase), Math.cos(a) * 1.35 + Math.sin(a) * Math.cos(phase));
-            const charge = i % 4 === 0 ? -1 : 1;
-            const color = charge > 0 ? cyan : amber;
-            color.toArray(headColors, i * 3);
+            const charge = i % 2 === 0 ? -1 : 1;
+            const color = charge > 0 ? teal : copperTrail;
             particles.push({
                 position,
                 velocity,
@@ -124,82 +184,68 @@
                 initialVelocity: velocity.clone(),
                 initialPosition: position.clone(),
                 cursor: 0,
+                age: 0,
+                opacity: 0,
+                retiring: false,
                 history: Array.from({
                     length: history
                 }, () => position.clone())
             });
-            for (let j = 0; j < history - 1; j++) {
+            for (let j = 0; j < history; j++) {
                 for (let k = 0; k < 2; k++) {
-                    const index = (i * (history - 1) + j) * 6 + k * 3;
-                    color.clone().multiplyScalar(0.015 + 0.985 * (1 - j / history) ** 1.5).toArray(trailColors, index);
+                    const index = (i * history + j) * 6 + k * 3;
+                    color.toArray(trailColors, index);
+                    trailSides[(i * history + j) * 2 + k] = k === 0 ? -1 : 1;
+                }
+                if (j < history - 1) {
+                    const v = (i * history + j) * 2;
+                    trailIndices.push(v, v + 1, v + 2, v + 1, v + 3, v + 2);
                 }
             }
         }
         const trailsGeometry = new T.BufferGeometry();
         trailsGeometry.setAttribute('position', new T.BufferAttribute(trailPositions, 3).setUsage(T.DynamicDrawUsage));
         trailsGeometry.setAttribute('color', new T.BufferAttribute(trailColors, 3));
-        const trails = new T.LineSegments(trailsGeometry, new T.LineBasicMaterial({
+        trailsGeometry.setAttribute('nextPosition', new T.BufferAttribute(trailNext, 3).setUsage(T.DynamicDrawUsage));
+        trailsGeometry.setAttribute('side', new T.BufferAttribute(trailSides, 1));
+        trailsGeometry.setAttribute('trailAlpha', new T.BufferAttribute(trailAlpha, 1).setUsage(T.DynamicDrawUsage));
+        trailsGeometry.setIndex(trailIndices);
+        // Ordinary alpha blending bounds brightness at crossings. No luminous
+        // point sprites, additive layers, pulsing, or automatic camera motion.
+        const trails = new T.Mesh(trailsGeometry, new T.ShaderMaterial({
             vertexColors: true,
             transparent: true,
-            opacity: 0.95,
-            toneMapped: false,
             depthWrite: false,
-            blending: T.AdditiveBlending
+            side: T.DoubleSide,
+            uniforms: { viewport: { value: new T.Vector2(1, 1) } },
+            vertexShader: `attribute float trailAlpha;
+                attribute vec3 nextPosition;
+                attribute float side;
+                uniform vec2 viewport;
+                varying float alpha;
+                varying vec3 tint;
+                varying float edge;
+                void main() {
+                    alpha = trailAlpha;
+                    tint = color;
+                    edge = side;
+                    vec4 current = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    vec4 next = projectionMatrix * modelViewMatrix * vec4(nextPosition, 1.0);
+                    vec2 delta = (next.xy / next.w - current.xy / current.w) * viewport;
+                    vec2 normal = vec2(-delta.y, delta.x) / max(length(delta), 0.00001);
+                    current.xy += normal * side * 2.4 / viewport * current.w;
+                    gl_Position = current;
+                }`,
+            fragmentShader: `varying float alpha;
+                varying vec3 tint;
+                varying float edge;
+                void main() {
+                    float coverage = 1.0 - smoothstep(0.35, 1.0, abs(edge));
+                    gl_FragColor = vec4(tint, alpha * coverage * 0.8);
+                }`
         }));
         trails.frustumCulled = false;
         scene.add(trails);
-        const headGeometry = new T.BufferGeometry();
-        headGeometry.setAttribute('position', new T.BufferAttribute(heads, 3).setUsage(T.DynamicDrawUsage));
-        headGeometry.setAttribute('color', new T.BufferAttribute(headColors, 3));
-        const headPoints = new T.Points(headGeometry, new T.ShaderMaterial({
-            vertexColors: true,
-            transparent: true,
-            depthWrite: false,
-            blending: T.AdditiveBlending,
-            uniforms: { pixelScale: { value: 1 } },
-            vertexShader: `varying vec3 tint;
-                uniform float pixelScale;
-                void main() {
-                    tint = color;
-                    vec4 p = modelViewMatrix * vec4(position, 1.0);
-                    gl_Position = projectionMatrix * p;
-                    gl_PointSize = clamp(pixelScale / -p.z, 2.0, 32.0);
-                }`,
-            fragmentShader: `varying vec3 tint;
-                void main() {
-                    float r = length(gl_PointCoord - 0.5) * 2.0;
-                    if (r > 1.0) discard;
-                    float glow = exp(-5.0 * r * r) * (1.0 - smoothstep(0.65, 1.0, r));
-                    gl_FragColor = vec4(mix(tint, vec3(1.0), exp(-35.0 * r * r)), glow);
-                }`
-        }));
-        headPoints.frustumCulled = false;
-        scene.add(headPoints);
-        // Soft light around sampled trail positions, without a full-screen
-        // bloom pass or large render targets on mobile devices.
-        const glowStride = 8;
-        const glowCount = count * Math.ceil(history / glowStride);
-        const glowPositions = new Float32Array(glowCount * 3);
-        const glowColors = new Float32Array(glowCount * 3);
-        const glowGeometry = new T.BufferGeometry();
-        glowGeometry.setAttribute('position', new T.BufferAttribute(glowPositions, 3).setUsage(T.DynamicDrawUsage));
-        glowGeometry.setAttribute('color', new T.BufferAttribute(glowColors, 3));
-        for (let i = 0, n = 0; i < count; i++) {
-            const color = particles[i].charge > 0 ? cyan : amber;
-            for (let j = 0; j < history; j += glowStride, n++) {
-                color.clone().multiplyScalar(0.12 * (1 - j / history) ** 2).toArray(glowColors, n * 3);
-            }
-        }
-        const glowMaterial = headPoints.material.clone();
-        glowMaterial.fragmentShader = `varying vec3 tint;
-            void main() {
-                float r = length(gl_PointCoord - 0.5) * 2.0;
-                if (r > 1.0) discard;
-                gl_FragColor = vec4(tint, exp(-4.0 * r * r) * (1.0 - smoothstep(0.5, 1.0, r)));
-            }`;
-        const glow = new T.Points(glowGeometry, glowMaterial);
-        glow.frustumCulled = false;
-        scene.add(glow);
         let field = 1,
             paused = reducedMotion.matches,
             visible = false,
@@ -213,49 +259,30 @@
             previous = 0,
             accumulator = 0,
             raf;
-        const t = new T.Vector3(),
-            s = new T.Vector3(),
-            prime = new T.Vector3(),
-            cross = new T.Vector3();
-
         function integrate() {
-            particles.forEach(p => {
-                const r2 = Math.max(0.01, p.position.x ** 2 + p.position.z ** 2);
-                // Boris magnetic rotation: preserves speed without rescaling.
-                t.set(-p.position.z, 0, p.position.x).multiplyScalar(p.charge * 7 * field * 3.25 / r2 * step / 2);
-                s.copy(t).multiplyScalar(2 / (1 + t.lengthSq()));
-                prime.copy(p.velocity).add(cross.copy(p.velocity).cross(t));
-                p.velocity.add(cross.copy(prime).cross(s));
-                p.position.addScaledVector(p.velocity, step);
-
-                if ((Math.hypot(p.position.x, p.position.z) - 3.25) ** 2 + p.position.y ** 2 > 0.82 ** 2) {
-                    p.position.copy(p.initialPosition);
-                    p.velocity.copy(p.initialVelocity);
-                    p.history.forEach(v => v.copy(p.position));
-                }
-                p.cursor = (p.cursor + 1) % history;
-                p.history[p.cursor].copy(p.position);
-            });
+            particles.forEach(p => advanceTrail(p, field, step));
         }
 
         for (let i = 0; i < history; i++) integrate();
 
         function draw() {
-            let glowIndex = 0;
             particles.forEach((p, i) => {
-                p.position.toArray(heads, i * 3);
-                for (let j = 0; j < history - 1; j++) {
-                    const offset = (i * (history - 1) + j) * 6;
-                    p.history[(p.cursor - j + history) % history].toArray(trailPositions, offset);
-                    p.history[(p.cursor - j - 1 + history) % history].toArray(trailPositions, offset + 3);
-                }
-                for (let j = 0; j < history; j += glowStride) {
-                    p.history[(p.cursor - j + history) % history].toArray(glowPositions, glowIndex++ * 3);
+                for (let j = 0; j < history; j++) {
+                    const offset = (i * history + j) * 6;
+                    const point = p.history[(p.cursor - j + history) % history];
+                    const next = p.history[(p.cursor - Math.min(j + 1, history - 1) + history) % history];
+                    point.toArray(trailPositions, offset);
+                    point.toArray(trailPositions, offset + 3);
+                    next.toArray(trailNext, offset);
+                    next.toArray(trailNext, offset + 3);
+                    const alphaIndex = (i * history + j) * 2;
+                    trailAlpha[alphaIndex] = p.opacity * (1 - j / (history - 1)) ** 1.5;
+                    trailAlpha[alphaIndex + 1] = trailAlpha[alphaIndex];
                 }
             });
-            glowGeometry.attributes.position.needsUpdate = true;
             trailsGeometry.attributes.position.needsUpdate = true;
-            headGeometry.attributes.position.needsUpdate = true;
+            trailsGeometry.attributes.nextPosition.needsUpdate = true;
+            trailsGeometry.attributes.trailAlpha.needsUpdate = true;
             yaw += (targetYaw - yaw) * 0.12;
             pitch += (targetPitch - pitch) * 0.12;
             camera.position.set(distance * Math.cos(pitch) * Math.sin(yaw), distance * Math.sin(pitch), distance * Math.cos(pitch) * Math.cos(yaw));
@@ -270,8 +297,7 @@
             previous = now;
             if (!visible || document.hidden) return;
             if (!paused) {
-                if (!dragging) targetYaw += elapsed * 0.035;
-                accumulator += elapsed;
+                accumulator += elapsed * playbackRate;
                 while (accumulator >= step) {
                     integrate();
                     accumulator -= step;
@@ -335,8 +361,19 @@
         });
         on(container.querySelector('input'), 'input', e => {
             field = Number(e.target.value);
-            container.querySelector('output').value = field.toFixed(1);
+            updateReadouts();
         });
+        on(container.querySelector('[data-field]'), 'click', e => {
+            fieldLines.visible = !fieldLines.visible;
+            e.currentTarget.setAttribute('aria-pressed', String(fieldLines.visible));
+        });
+        function updateReadouts() {
+            container.querySelector('[data-current]').value = field.toFixed(1);
+            container.querySelector('[data-inner-field]').value = (7 * field * 3.25 / (3.25 - 0.82)).toFixed(2);
+            container.querySelector('[data-outer-field]').value = (7 * field * 3.25 / (3.25 + 0.82)).toFixed(2);
+            container.querySelector('[data-radius]').value = (1 / (7 * field)).toFixed(3);
+        }
+        updateReadouts();
         on(container.querySelector('[data-reset]'), 'click', () => {
             targetYaw = 0.45;
             targetPitch = 0.49;
@@ -352,10 +389,9 @@
                 height = container.clientHeight;
             camera.aspect = width / Math.max(height, 1);
             distance = fittedDistance();
-            headPoints.material.uniforms.pixelScale.value = height * renderer.getPixelRatio() * 0.24;
-            glowMaterial.uniforms.pixelScale.value = height * renderer.getPixelRatio() * 0.42;
             camera.updateProjectionMatrix();
             renderer.setSize(width, height);
+            trails.material.uniforms.viewport.value.set(width, height);
             draw();
         }
         const resizeObserver = new ResizeObserver(resize);
