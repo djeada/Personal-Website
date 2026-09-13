@@ -4,13 +4,38 @@ const articles = [
   "/articles/parallel_and_concurrent_programming/08_designing_parallel_programs.html",
   "/articles/parallel_and_concurrent_programming/09_gpu_programming.html",
   "/articles/databases_notes/10_nosql_databases/04_crud_in_sql_vs_nosql.html",
+  "/articles/statistics_notes/spatial_statistics/spatial_validation.html",
 ];
 
 const viewports = [
   { name: "small-phone", width: 320, height: 720 },
   { name: "phone", width: 390, height: 844 },
   { name: "tablet", width: 768, height: 1024 },
+  { name: "wide-tablet", width: 900, height: 1024 },
 ];
+
+test("related statistics articles preserve category levels and the current branch", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(articles[3], { waitUntil: "domcontentloaded" });
+  const related = page.locator("#related-articles");
+  await expect(related.locator('a[aria-current="page"]')).toHaveText("Spatial Validation");
+  await expect(related.locator("details[open] > summary")).toHaveText("Spatial Statistics");
+  const distributions = related.locator("details").filter({
+    has: page.locator("summary", { hasText: /^Random Variables and Distributions$/ }),
+  }).first();
+  await distributions.locator(":scope > summary").click();
+  const continuous = distributions.locator("details").filter({
+    has: page.locator("summary", { hasText: /^Continuous$/ }),
+  });
+  await continuous.locator(":scope > summary").click();
+  await expect(continuous.getByRole("link", { name: "Normal Distribution", exact: true })).toBeVisible();
+  const dimensions = await related.evaluate(el => ({ width: el.clientWidth, scroll: el.scrollWidth }));
+  expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.width + 1);
+  await page.setViewportSize({ width: 900, height: 1024 });
+  await expect(related).toBeHidden();
+  await page.locator("#table-of-contents-toggle").click();
+  await expect(related).toBeVisible();
+});
 
 for (const article of articles) {
   for (const viewport of viewports) {
@@ -124,7 +149,7 @@ test("ASCII diagrams preserve leading indentation on their first lines", async (
 test("article actions align with the metadata header on desktop", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto(
-    "/articles/statistics_notes/statistical_inference/resampling.html",
+    "/articles/statistics_notes/resampling_and_model_assessment/resampling.html",
     { waitUntil: "domcontentloaded" },
   );
 

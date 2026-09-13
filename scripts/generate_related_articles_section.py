@@ -157,12 +157,15 @@ def populate_ol_with_tree(soup, ol_tag, articles_tree, path_parts=[]):
                 file_li.append(a)
                 ol_tag.append(file_li)
         else:
-
-            li.string = beautify(key)
+            group = soup.new_tag("details")
+            summary = soup.new_tag("summary")
+            summary.string = beautify(key)
+            group.append(summary)
             sub_ol = soup.new_tag("ol")
             new_path_parts = path_parts + [key]
             populate_ol_with_tree(soup, sub_ol, value, path_parts=new_path_parts)
-            li.append(sub_ol)
+            group.append(sub_ol)
+            li.append(group)
             ol_tag.append(li)
 
 
@@ -197,11 +200,29 @@ def wrap_article_and_related_articles(
         )
 
 
-def generate_related_articles(html: str, articles_in_dir) -> str:
+def generate_related_articles(html: str, articles_in_dir, current_article=None) -> str:
     """Generate the list of related articles for a given HTML."""
     soup = BeautifulSoup(html, "html.parser")
 
     articles_wrapper = create_articles_wrapper(soup, articles_in_dir)
+
+    if current_article is not None:
+        relative = Path(current_article).relative_to(INPUT_ARTICLES_DIR).as_posix()
+        for link in articles_wrapper.find_all("a"):
+            if link["href"] == f"https://adamdjellouli.com/articles/{relative}":
+                link["aria-current"] = "page"
+                for parent in link.parents:
+                    if parent.name == "details":
+                        parent["open"] = ""
+
+    if soup.find(id="related-articles"):
+        return re.sub(
+            r"<div\b[^>]*\bid=[\"\']related-articles[\"\'][^>]*>.*?</div>",
+            lambda _: str(articles_wrapper),
+            html,
+            count=1,
+            flags=re.DOTALL,
+        )
 
     wrap_article_and_related_articles(soup, articles_wrapper)
 
@@ -210,7 +231,7 @@ def generate_related_articles(html: str, articles_in_dir) -> str:
 
 def process_file(file, articles_in_dir):
     html = file.read_text()
-    html_with_related_articles = generate_related_articles(html, articles_in_dir)
+    html_with_related_articles = generate_related_articles(html, articles_in_dir, file)
     file.write_text(html_with_related_articles)
 
 

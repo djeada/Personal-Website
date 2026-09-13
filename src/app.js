@@ -612,7 +612,7 @@ function initTableOfContentsToggle() {
     let resizeHandler = null;
 
     const setupMobileToggle = () => {
-        const isMobile = window.innerWidth <= 768;
+        const isMobile = window.innerWidth <= 1023;
 
         if (isMobile && !toggleButton) {
 
