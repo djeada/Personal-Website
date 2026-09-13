@@ -55,8 +55,71 @@
     }
     if (typeof window === 'undefined') return;
 
+    // Styles are injected once so the script is self-contained.
+    const STYLE_ID = 'ring-lab-style';
+    const STYLES = `
+.ring-lab{--bg:#101820;--panel:rgba(16,24,32,.78);--line:rgba(125,165,171,.22);--text:#e6eef0;--muted:#8ea3a8;--teal:#7da5ab;--copper:#b7977b;
+  position:relative;min-height:640px;overflow:hidden;border-radius:14px;
+  background:radial-gradient(120% 90% at 50% 100%,#172431 0%,var(--bg) 70%);
+  color:var(--text);font:14px/1.45 "Inter","Segoe UI",system-ui,sans-serif}
+.ring-lab canvas{position:absolute;inset:0;width:100%!important;height:100%!important;display:block;outline:none;cursor:grab}
+.ring-lab canvas:active{cursor:grabbing}
+.ring-lab canvas:focus-visible{box-shadow:inset 0 0 0 2px var(--teal)}
+.ring-lab>:not(canvas){position:absolute;z-index:2;pointer-events:none}
+.ring-lab>:not(canvas) button,.ring-lab>:not(canvas) input,.ring-lab>:not(canvas) a,.ring-lab>:not(canvas) summary,.ring-lab details[open]{pointer-events:auto}
+.ring-lab__heading{top:28px;left:28px;max-width:320px}
+.ring-lab__eyebrow{display:block;margin-bottom:10px;font-size:11px;letter-spacing:.06em;color:var(--muted)}
+.ring-lab__heading h3{margin:0 0 6px;font-size:30px;font-weight:500;line-height:1.1;letter-spacing:-.01em}
+.ring-lab__heading p{margin:0;color:var(--muted)}
+.ring-lab__equation{top:28px;right:28px;text-align:right;font-size:22px;font-variant-numeric:tabular-nums}
+.ring-lab__equation span{display:block;margin-top:6px;font-size:11px;letter-spacing:.04em;color:var(--muted)}
+.ring-lab__metrics{left:28px;top:50%;transform:translateY(-50%);display:grid;gap:14px}
+.ring-lab__metrics div{padding-left:12px;border-left:2px solid var(--line)}
+.ring-lab__metrics span{display:block;font-size:11px;letter-spacing:.04em;color:var(--muted)}
+.ring-lab__metrics output{display:block;font-size:22px;font-variant-numeric:tabular-nums}
+.ring-lab__readout{left:28px;right:28px;bottom:112px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 24px;font-size:12px;color:var(--muted)}
+.ring-lab__readout i{display:inline-block;width:10px;height:10px;margin-right:6px;border-radius:50%;vertical-align:-1px;background:linear-gradient(90deg,var(--teal) 50%,var(--copper) 50%)}
+.ring-lab__controls{left:28px;right:28px;bottom:28px;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:14px 18px;border:1px solid var(--line);border-radius:10px;background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.ring-lab__controls label{flex:1 1 260px;display:grid;grid-template-columns:auto auto;justify-content:space-between;align-items:center;gap:6px 12px;font-size:12px;color:var(--muted)}
+.ring-lab__controls label>span{color:var(--text);font-variant-numeric:tabular-nums}
+.ring-lab__controls input[type=range]{grid-column:1/-1;width:100%;margin:0;accent-color:var(--teal)}
+.ring-lab__controls>div{display:flex;gap:8px;flex-wrap:wrap}
+.ring-lab__controls button{padding:8px 14px;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--text);font:inherit;font-size:13px;cursor:pointer;transition:background-color 120ms,border-color 120ms}
+.ring-lab__controls button:hover{background:rgba(125,165,171,.12)}
+.ring-lab__controls button[aria-pressed=true]{border-color:var(--teal);background:rgba(125,165,171,.18)}
+.ring-lab__controls button:focus-visible,.ring-lab__controls input:focus-visible,.ring-lab__model summary:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.ring-lab__model{right:28px;bottom:112px;max-width:380px;font-size:12px;color:var(--muted)}
+.ring-lab__model summary{display:inline-block;padding:6px 10px;border:1px solid var(--line);border-radius:6px;color:var(--text);cursor:pointer;list-style:none}
+.ring-lab__model summary::-webkit-details-marker{display:none}
+.ring-lab__model[open]{padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.ring-lab__model[open] summary{border-color:var(--teal)}
+.ring-lab__model p{margin:10px 0 0;line-height:1.5}
+.ring-lab__model a{color:var(--teal);text-decoration:underline;text-underline-offset:2px}
+@media(max-width:720px){
+  .ring-lab{min-height:720px;font-size:13px}
+  .ring-lab__heading,.ring-lab__equation,.ring-lab__metrics,.ring-lab__readout,.ring-lab__controls,.ring-lab__model{left:16px;right:16px}
+  .ring-lab__heading{top:16px;max-width:none}
+  .ring-lab__heading h3{font-size:24px}
+  .ring-lab__equation{top:auto;bottom:200px;text-align:left;font-size:18px}
+  .ring-lab__metrics{top:118px;transform:none;grid-template-columns:repeat(3,1fr);gap:10px}
+  .ring-lab__metrics output{font-size:17px}
+  .ring-lab__readout{bottom:150px}
+  .ring-lab__model{bottom:150px;left:auto}
+  .ring-lab__controls{bottom:16px;flex-direction:column;align-items:stretch}
+}
+@media(prefers-reduced-motion:reduce){.ring-lab__controls button{transition:none}}`;
+
+    function injectStyles() {
+        if (document.getElementById(STYLE_ID)) return;
+        const style = document.createElement('style');
+        style.id = STYLE_ID;
+        style.textContent = STYLES;
+        document.head.appendChild(style);
+    }
+
     window.createRingUniverseSimulation = function(container) {
         if (!container || !window.THREE) return null;
+        injectStyles();
         const T = window.THREE;
         const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
         const scene = new T.Scene();
@@ -71,12 +134,12 @@
         renderer.toneMappingExposure = 0.9;
         container.classList.add('ring-lab');
         container.innerHTML = `
-          <div class="ring-lab__heading"><span class="ring-lab__eyebrow">FIELD ATLAS / 01</span><h3>The toroidal field.</h3><p>Follow the geometry of a magnetic force.</p></div>
-          <div class="ring-lab__equation" aria-label="Magnetic field equals mu zero N I over two pi r">B(r) = μ₀NI / 2πr<span>IDEAL AIR CORE · WINDING SHOWN IN CUTAWAY</span></div>
-          <div class="ring-lab__metrics"><div><span>INNER FIELD</span><output data-inner-field></output></div><div><span>OUTER FIELD</span><output data-outer-field></output></div><div><span>REFERENCE GYRORADIUS</span><output data-radius></output></div></div>
-          <div class="ring-lab__readout"><span><i></i> TEAL · POSITIVE CHARGE &nbsp; / &nbsp; COPPER · NEGATIVE CHARGE</span><span>Opposite charges spiral in opposite directions. Stronger fields tighten the spiral.</span></div>
+          <div class="ring-lab__heading"><span class="ring-lab__eyebrow">Field atlas</span><h3>The toroidal field.</h3><p>Follow the geometry of a magnetic force.</p></div>
+          <div class="ring-lab__equation" aria-label="Magnetic field equals mu zero N I over two pi r">B(r) = μ₀NI / 2πr<span>Ideal air core, winding shown in cutaway</span></div>
+          <div class="ring-lab__metrics"><div><span>Inner field</span><output data-inner-field></output></div><div><span>Outer field</span><output data-outer-field></output></div><div><span>Reference gyroradius</span><output data-radius></output></div></div>
+          <div class="ring-lab__readout"><span><i></i> Teal is positive charge, copper is negative</span><span>Opposite charges spiral in opposite directions. Stronger fields tighten the spiral.</span></div>
           <div class="ring-lab__controls"><label>Coil current <span><output data-current>1.0</output> ×</span><input aria-label="Coil current" type="range" min="0.4" max="2" step="0.1" value="1"></label><div><button type="button" data-field aria-pressed="true">Field lines</button><button type="button" data-pause>Pause</button><button type="button" data-reset>Reset view</button></div></div>
-          <details class="ring-lab__model"><summary>Controls &amp; physical model</summary><p>Drag to orbit · Arrow keys to rotate · + / − to zoom · 0.35× playback.</p><p>dv/dt = (q/m) v × B. Normalized units: major radius R = 3.25, tube radius a = 0.82, reference field B₀ = 7, equal |q/m| = 1. The reference gyroradius is v⊥ / (|q/m| B₀), with v⊥ = 1.</p><p>A complete winding is modeled; its front half is omitted to expose the field. Current selects a prescribed static field; induction, collisions and particle self-fields are omitted. Test particles drift out of a pure toroidal field, fade, and are reinjected.</p><p><a href="https://openstax.org/books/university-physics-volume-2/pages/12-6-solenoids-and-toroids">Field model</a> · <a href="https://www.particleincell.com/2011/vxb-rotation/">Particle integration</a></p></details>`;
+          <details class="ring-lab__model"><summary>Controls &amp; physical model</summary><p>Drag to orbit. Arrow keys rotate, + and − zoom. Playback runs at 0.35×.</p><p>dv/dt = (q/m) v × B. Normalized units: major radius R = 3.25, tube radius a = 0.82, reference field B₀ = 7, equal |q/m| = 1. The reference gyroradius is v⊥ / (|q/m| B₀), with v⊥ = 1.</p><p>A complete winding is modeled; its front half is omitted to expose the field. Current selects a prescribed static field; induction, collisions and particle self-fields are omitted. Test particles drift out of a pure toroidal field, fade, and are reinjected.</p><p><a href="https://openstax.org/books/university-physics-volume-2/pages/12-6-solenoids-and-toroids">Field model</a> · <a href="https://www.particleincell.com/2011/vxb-rotation/">Particle integration</a></p></details>`;
         renderer.domElement.tabIndex = 0;
         renderer.domElement.setAttribute('role', 'img');
         renderer.domElement.setAttribute('aria-label', 'Interactive toroidal magnetic field with charged particle trajectories. Drag or use arrow keys to orbit, plus and minus to zoom.');
